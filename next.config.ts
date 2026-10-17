@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The capture worker (/api/render/*) drives a real browser; keep it out of the bundle.
   serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
+  // File tracing misses data files these packages read at runtime (browsers.json, the Chromium pack).
+  outputFileTracingIncludes: {
+    "/api/render/*": [
+      "./node_modules/playwright-core/**/*",
+      "./node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
+      "./node_modules/@sparticuz/chromium/**/*",
+      "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/**/*",
+    ],
+  },
   async rewrites() {
     if (!convexSiteUrl) return [];
     return [
