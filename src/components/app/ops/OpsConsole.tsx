@@ -63,7 +63,7 @@ export function OpsConsole() {
         <p className="text-ink-2">Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited.</p>
         <nav aria-label="Console sections" className="-mx-1 flex gap-1 overflow-x-auto pb-1">
           {SECTIONS.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <a key={id} href={`#${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-[6px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">
               {label}
             </a>
           ))}

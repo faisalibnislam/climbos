@@ -78,7 +78,7 @@ export function Audiences({ strategy }: { strategy: Strategy }) {
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {strategy.audiences.map((a) => (
-            <li key={a.name} className="flex flex-col gap-2 rounded-[14px] border border-line bg-surface-2 p-4">
+            <li key={a.name} className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface-2 p-4">
               <h3 className="font-semibold text-ink">{a.name}</h3>
               <p className="text-[0.95rem] leading-relaxed text-ink-2">
                 <span className="font-medium text-ink">What we think: </span>
@@ -149,7 +149,7 @@ export function Channels({ slug, strategy, canEdit, currency }: { slug: string; 
           {channels.map((c, i) => {
             const st = CHANNEL_STATUS[c.status] ?? { label: c.status, tone: "neutral" as Tone };
             return (
-              <li key={c.key} className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface p-4 sm:p-5">
+              <li key={c.key} className="flex flex-col gap-4 rounded-[8px] border border-line bg-surface p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-ink-3">Priority {i + 1}</span>
@@ -228,7 +228,7 @@ export function Experiments({ experiments }: { experiments: PlanView["experiment
           {experiments.map((e) => {
             const st = EXPERIMENT_STATUS[e.status] ?? { label: e.status, tone: "neutral" as Tone };
             return (
-              <li key={e.id} className="flex flex-col gap-3 rounded-[14px] border border-line bg-surface-2 p-4">
+              <li key={e.id} className="flex flex-col gap-3 rounded-[8px] border border-line bg-surface-2 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h3 className="font-semibold text-ink">{e.name}</h3>
                   <Badge tone={st.tone}>{st.label}</Badge>
@@ -332,7 +332,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           <h3 className="mb-3 text-lg font-semibold text-ink">Your audiences</h3>
           <ul className="grid gap-3 md:grid-cols-2">
             {insights.audiences.map((a) => (
-              <li key={a.name} className="flex flex-col gap-1.5 rounded-[12px] border border-line p-3">
+              <li key={a.name} className="flex flex-col gap-1.5 rounded-[8px] border border-line p-3">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{a.name}</span>
                   <Badge tone={CONFIDENCE_TONE[a.confidence.toLowerCase()] ?? "neutral"}>{`${a.confidence.charAt(0).toUpperCase()}${a.confidence.slice(1)} confidence`}</Badge>
@@ -350,7 +350,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           ) : (
             <ul className="flex flex-col gap-3">
               {insights.competitors.map((c) => (
-                <li key={c.name} className="flex flex-col gap-1 rounded-[12px] border border-line p-3">
+                <li key={c.name} className="flex flex-col gap-1 rounded-[8px] border border-line p-3">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink">{c.name}</span>
                     {c.url ? (
@@ -392,7 +392,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           <h3 className="mb-3 text-lg font-semibold text-ink">Strengths, weaknesses, opportunities and threats</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {swot.map((s) => (
-              <div key={s.key} className="rounded-[12px] border border-line bg-surface-2 p-3">
+              <div key={s.key} className="rounded-[8px] border border-line bg-surface-2 p-3">
                 <h4 className="mb-1.5 font-semibold text-ink">{s.label}</h4>
                 <BulletList items={insights.swot[s.key]} empty="None noted." />
               </div>
@@ -408,7 +408,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
             <>
               <ol className="flex flex-col gap-3 sm:hidden">
                 {insights.journey.map((j) => (
-                  <li key={j.stage} className="rounded-[12px] border border-line p-3">
+                  <li key={j.stage} className="rounded-[8px] border border-line p-3">
                     <h4 className="font-semibold text-ink">{j.stage}</h4>
                     <p className="mt-1 text-[0.95rem] text-ink-2">
                       <span className="font-medium text-ink">What we see: </span>
@@ -445,7 +445,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           ) : (
             <ol className="flex flex-col gap-3">
               {insights.opportunities.map((o) => (
-                <li key={o.title} className="flex flex-col gap-1 rounded-[12px] border border-line p-3">
+                <li key={o.title} className="flex flex-col gap-1 rounded-[8px] border border-line p-3">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink">{o.title}</span>
                     <Badge>{`Effort: ${o.effort}`}</Badge>

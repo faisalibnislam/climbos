@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
 /*
- * ClimbOS design tokens. Layout, sizing and style take inspiration from
- * Apollo.io; the colours are ClimbOS's own alpine identity: pine green for
- * actions and feature panels, a sunrise orange accent (always with dark
- * text), and cool slate neutrals. Text/background pairs meet WCAG 2.2 AA.
- * Status is never conveyed by colour alone.
+ * ClimbOS design tokens ("Summit"). Layout and sizing follow Apollo.io;
+ * the surface language follows Airly's own taskeni.app and Meetrao: a
+ * sage-grey ground, white panels with hairlines instead of shadows, tight
+ * corners (6px controls, 8px cards) and a Spectral / Inter pairing (EB Garamond for marketing headlines).
+ * Pine is the brand and primary action colour; sunrise is a highlight that
+ * never carries small text. Text/background pairs meet WCAG 2.2 AA. Status
+ * is never conveyed by colour alone.
  */
 :root {
-  --bg: #f9fafb;
+  --bg: #eef0ee;
   --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --surface-3: #e4e7ec;
-  --ink: #101828;
-  --ink-2: #344054;
-  --ink-3: #5d6679;
-  /* Hairlines are translucent ink, like Apollo: cards 8%, controls 12%. */
-  --line: rgb(16 24 40 / 0.09);
-  --line-strong: rgb(16 24 40 / 0.16);
+  --surface-2: #f5f6f5;
+  --surface-3: #e3e7e4;
+  --ink: #1c2220;
+  --ink-2: #434b47;
+  --ink-3: #59615c;
+  /* Hairlines are translucent ink: panels 9%, controls 17%. */
+  --line: rgb(28 34 32 / 0.09);
+  --line-strong: rgb(28 34 32 / 0.17);
 
   /* Pine: primary actions, links, focus, feature panels. 800 on white = 7.9:1. */
   --brand-950: #052e22;
@@ -25,52 +27,54 @@
   --brand-800: #0b5d46;
   --brand-700: #0f6e53;
   --brand-600: #158a67;
-  --brand-200: #bfe3d4;
-  --brand-100: #e2f3ec;
-  --brand-50: #f1f9f6;
+  --brand-200: #c6dfd3;
+  --brand-100: #e3efe8;
+  --brand-50: #f1f7f3;
 
-  /* Sunrise accent: highlights and active states, always with dark text. */
-  --sun: #ff9a4d;
-  --sun-soft: #fff0e3;
+  /* Sunrise: highlights, active markers and focus glow; dark text only. */
+  --sun: #ec8b5e;
+  --sun-soft: #f8e8df;
   --pine: #0b3b2e;
-  --coral: #e8664f;
+  --coral: #cf7656;
 
-  --amber-800: #7a4d00;
-  --amber-500: #f0a020;
-  --amber-100: #fdf1d8;
-  --red-800: #a8261b;
-  --red-500: #e5483a;
-  --red-100: #fde6e3;
-  --blue-800: #1d4f91;
-  --blue-500: #3d7ad6;
-  --blue-100: #e3edfb;
-  --violet-800: #563a9c;
-  --violet-500: #7c5cd6;
-  --violet-100: #eee9fb;
-  --green-800: #146c43;
-  --green-500: #23a065;
-  --green-100: #ddf3e7;
-  --teal-800: #0b6470;
-  --teal-500: #1c9aab;
-  --teal-100: #dcf1f3;
-  --pink-800: #a1295e;
-  --pink-500: #e05596;
-  --pink-100: #fbe6f0;
-  --orange-800: #9a4209;
-  --orange-500: #ff8a3d;
-  --orange-100: #ffeedd;
+  /* Status: soft fills with deep inks (taskeni palette discipline). */
+  --amber-800: #7a5a12;
+  --amber-500: #e2b55a;
+  --amber-100: #f8f1df;
+  --red-800: #a23f28;
+  --red-500: #cf5f45;
+  --red-100: #fbede8;
+  --blue-800: #2f6670;
+  --blue-500: #6aa8b0;
+  --blue-100: #e8f2f3;
+  --violet-800: #574a8f;
+  --violet-500: #9488c9;
+  --violet-100: #efedf8;
+  --green-800: #476428;
+  --green-500: #8db766;
+  --green-100: #edf4e5;
+  --teal-800: #20666a;
+  --teal-500: #5fb0b1;
+  --teal-100: #e4f2f1;
+  --pink-800: #8f3a5a;
+  --pink-500: #d98aa6;
+  --pink-100: #f9eaf0;
+  --orange-800: #8a4512;
+  --orange-500: #e3955c;
+  --orange-100: #f9ece1;
 
-  /* Feature panels: deep pine, like a forest at dawn. */
-  --gradient-hero: linear-gradient(140deg, #0b3b2e 0%, #0b5d46 100%);
-  --gradient-soft: linear-gradient(140deg, #f5f6f8 0%, #f1f9f6 100%);
+  /* Feature panels: flat deep pine. */
+  --gradient-hero: linear-gradient(160deg, #0b3b2e 0%, #0b5d46 100%);
+  --gradient-soft: linear-gradient(160deg, #f5f6f5 0%, #f1f7f3 100%);
 
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --shadow-sm: 0 4px 8px -2px rgb(16 24 40 / 0.04), 0 2px 8px -2px rgb(16 24 40 / 0.07);
-  --shadow: 0 4px 8px -2px rgb(16 24 40 / 0.05), 0 2px 8px -2px rgb(16 24 40 / 0.09);
-  --shadow-lg: 0 2px 6px rgb(16 24 40 / 0.05), 0 16px 40px rgb(16 24 40 / 0.1);
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  /* Almost flat: panels separate by hairline; only floating layers cast a shadow. */
+  --shadow-sm: 0 1px 1px rgb(28 34 32 / 0.03);
+  --shadow: 0 1px 2px rgb(28 34 32 / 0.05);
+  --shadow-lg: 0 2px 6px rgb(28 34 32 / 0.05), 0 14px 34px -10px rgb(28 34 32 / 0.18);
 }
 
 @theme inline {
@@ -124,10 +128,13 @@
   --font-display: var(--font-display-serif);
   --font-mono: var(--font-mono-ui);
 
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
+  /* Tight corners: controls 6px, cards 8px. */
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow);
   --shadow-lg: var(--shadow-lg);
@@ -154,8 +161,8 @@ body {
 }
 
 ::selection {
-  background: var(--brand-200);
-  color: var(--brand-950);
+  background: var(--sun-soft);
+  color: var(--ink);
 }
 
 .skip-link {
@@ -221,7 +228,7 @@ body {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: climb-shimmer 1.4s ease infinite;
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 /* ---- Design-system utilities (appended by the marketing/design-system owner) ---- */
@@ -307,10 +314,15 @@ body {
   background: var(--gradient-soft);
 }
 
-/* Product UI headings: Inter, medium weight, tight tracking (Apollo-style
-   density). Marketing pages use serif headlines. Unlayered on purpose so
-   headings stay consistent whatever weight utility a component uses. */
-h1,
+/* Headings: page titles (h1) use Spectral, paired with Inter like Meetrao;
+   marketing headlines use EB Garamond at display sizes; section and card headings stay
+   Inter for density. Unlayered on purpose so headings stay consistent
+   whatever weight utility a component uses. */
+h1 {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
 h2 {
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -321,7 +333,14 @@ h3 {
 }
 .marketing h1,
 .marketing h2 {
-  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-family: var(--font-marketing-serif), var(--font-display-serif), ui-serif, Georgia, serif;
   font-weight: 500;
   letter-spacing: -0.015em;
+}
+/* Big numbers (metrics, prices) in the serif. */
+.num-serif {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
 }

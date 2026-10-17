@@ -76,7 +76,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
       {artifact.status === "approved" ? (
         artifact.canEdit ? (
           <form
-            className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface-2 p-4"
+            className="flex flex-col gap-4 rounded-[8px] border border-line bg-surface-2 p-4"
             noValidate
             onSubmit={(e) => {
               e.preventDefault();

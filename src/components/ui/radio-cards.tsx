@@ -37,7 +37,7 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
           value={o.value}
           disabled={o.disabled}
           className={cn(
-            "group relative flex min-h-16 w-full items-start gap-3 rounded-[14px] border border-line-strong bg-surface p-4 text-left shadow-sm transition-colors",
+            "group relative flex min-h-16 w-full items-start gap-3 rounded-[8px] border border-line-strong bg-surface p-4 text-left shadow-sm transition-colors",
             "hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-50",
             "data-[state=checked]:ring-1 data-[state=checked]:ring-brand-800 disabled:cursor-not-allowed disabled:opacity-50",
           )}

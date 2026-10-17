@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** Surface container with a restrained border. Compose with CardHeader/CardContent/CardFooter. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-xl border border-line bg-surface shadow-sm", className)} {...props} />
+    <div className={cn("rounded-xl border border-line bg-surface", className)} {...props} />
   );
 }
 

@@ -122,7 +122,7 @@ export function LivePreview() {
       onSubmit={onSubmit}
       noValidate
       aria-label="Get a free preview for your website"
-      className="rounded-[22px] border border-line bg-surface p-5 shadow-lg sm:p-7"
+      className="rounded-[6px] border border-line bg-surface p-5 shadow-lg sm:p-7"
     >
       <Field label="Your website" hint="Your homepage address, like formkit.app" error={websiteError ?? undefined}>
         <div className="relative">
@@ -251,7 +251,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
   return (
     <section
       aria-labelledby="preview-heading"
-      className="rounded-[22px] border border-line bg-surface p-5 shadow-lg animate-fade-in sm:p-7"
+      className="rounded-[6px] border border-line bg-surface p-5 shadow-lg animate-fade-in sm:p-7"
     >
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         {liveMessage}
@@ -273,7 +273,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
           Try another website
         </Button>
       </div>
-      <p className="mt-3 flex items-start gap-2 rounded-[10px] bg-surface-2 px-3 py-2 text-sm text-ink-2">
+      <p className="mt-3 flex items-start gap-2 rounded-[6px] bg-surface-2 px-3 py-2 text-sm text-ink-2">
         <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
         <span>
           <strong className="font-semibold text-ink">Preview</strong> — based only on your public homepage. Nothing is published.
@@ -332,7 +332,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
           ) : null}
 
           {data.business ? (
-            <div className="mt-6 rounded-[14px] border border-line bg-bg p-4 animate-step-in">
+            <div className="mt-6 rounded-[8px] border border-line bg-bg p-4 animate-step-in">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">What we understood</h3>
               <p className="mt-2 text-[1.0625rem] leading-relaxed text-ink">{data.business.summary}</p>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -355,7 +355,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
                 {data.facts.slice(0, 8).map((f, i) => {
                   const conf = f.confidence.toLowerCase();
                   return (
-                    <li key={i} className="flex flex-col gap-1.5 rounded-[12px] border border-line bg-surface px-3.5 py-2.5 sm:flex-row sm:items-start sm:justify-between">
+                    <li key={i} className="flex flex-col gap-1.5 rounded-[8px] border border-line bg-surface px-3.5 py-2.5 sm:flex-row sm:items-start sm:justify-between">
                       <span className="text-[0.95rem] leading-snug text-ink">{f.statement}</span>
                       <span className="flex shrink-0 items-center gap-2">
                         <Badge tone={confidenceTone[conf] ?? "neutral"}>
@@ -386,7 +386,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
               <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">First growth ideas</h3>
               <ul className="mt-3 grid gap-3">
                 {data.ideas.slice(0, 3).map((idea, i) => (
-                  <li key={i} className="rounded-[14px] border border-line bg-surface p-4 shadow-sm">
+                  <li key={i} className="rounded-[8px] border border-line bg-surface p-4 shadow-sm">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone="green" icon={<Lightbulb />}>
                         {idea.channel}

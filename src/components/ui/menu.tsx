@@ -16,7 +16,7 @@ export function DropdownMenuContent({ className, sideOffset = 6, align = "end", 
       <RMenu.Content
         sideOffset={sideOffset}
         align={align}
-        className={cn("z-50 min-w-48 rounded-[12px] border border-line bg-surface p-1.5 shadow-lg", className)}
+        className={cn("z-50 min-w-48 rounded-[8px] border border-line bg-surface p-1.5 shadow-lg", className)}
         {...props}
       />
     </RMenu.Portal>

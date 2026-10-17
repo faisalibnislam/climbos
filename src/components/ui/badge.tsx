@@ -40,7 +40,7 @@ export function Badge({ tone = "neutral", icon, className, children, ...props }:
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-full items-center gap-1 rounded-full border-0 px-2 text-xs font-medium leading-5",
+        "inline-flex h-5 max-w-full items-center gap-1 rounded-[5px] border-0 px-1.5 text-xs font-medium leading-5",
         "[&_svg]:size-3 [&_svg]:shrink-0",
         toneClasses[tone],
         className,

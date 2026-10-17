@@ -128,7 +128,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
                 setError(null);
                 setResult(null);
               }}
-              className="block w-full rounded-[12px] border border-line-strong bg-surface p-2 text-sm text-ink file:mr-3 file:min-h-9 file:rounded-[10px] file:border-0 file:bg-brand-50 file:px-3 file:font-medium file:text-brand-900"
+              className="block w-full rounded-[8px] border border-line-strong bg-surface p-2 text-sm text-ink file:mr-3 file:min-h-9 file:rounded-[6px] file:border-0 file:bg-brand-50 file:px-3 file:font-medium file:text-brand-900"
             />
           </div>
 

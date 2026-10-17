@@ -670,7 +670,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
             <p className="text-sm text-ink-3">We’ll measure success with these. Untick anything that doesn’t apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
             <ul className="mt-3 space-y-2">
               {events.map((ev, i) => (
-                <li key={ev.key} className="flex items-start gap-3 rounded-[10px] border border-line p-3">
+                <li key={ev.key} className="flex items-start gap-3 rounded-[6px] border border-line p-3">
                   <input
                     id={`ev-${ev.key}`}
                     type="checkbox"

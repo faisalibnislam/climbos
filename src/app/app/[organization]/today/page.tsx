@@ -58,7 +58,7 @@ function StatCard({ icon: Icon, tone, label, value, hint }: { icon: LucideIcon; 
         <p className="text-[13px] font-medium text-ink-3">{label}</p>
         <IconTile icon={Icon} tone={tone} size="xs" />
       </div>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-ink">{value}</p>
+      <p className="num-serif mt-1.5 text-[28px] leading-8 text-ink">{value}</p>
       <p className="mt-0.5 text-xs text-ink-3">{hint}</p>
     </div>
   );

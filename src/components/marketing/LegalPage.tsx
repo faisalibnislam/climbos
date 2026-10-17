@@ -23,7 +23,7 @@ export function LegalPage({
     <Container className="py-14 sm:py-20">
       <article className="mx-auto max-w-3xl">
         {draft ? (
-          <div className="mb-8 flex gap-3 rounded-[12px] border border-[#f1dca6] bg-amber-100 p-4 text-amber-800">
+          <div className="mb-8 flex gap-3 rounded-[8px] border border-[#f1dca6] bg-amber-100 p-4 text-amber-800">
             <FileWarning aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
             <p className="leading-relaxed">
               <strong className="font-semibold">Draft — pending legal review.</strong> This is a plain-English working draft and

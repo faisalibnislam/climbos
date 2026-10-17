@@ -162,7 +162,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
         />
       </Field>
       {email ? (
-        <details className="rounded-[12px] border border-line bg-surface-2 p-3 text-[0.95rem]">
+        <details className="rounded-[8px] border border-line bg-surface-2 p-3 text-[0.95rem]">
           <summary className="min-h-11 cursor-pointer content-center font-medium text-ink">Read email {Number(emailIndex) + 1}</summary>
           <p className="mt-2 font-semibold text-ink">Subject: {email.subject}</p>
           <p className="mt-2 whitespace-pre-wrap break-words leading-relaxed text-ink-2">{email.text}</p>

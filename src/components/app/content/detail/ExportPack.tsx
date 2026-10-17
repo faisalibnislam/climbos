@@ -76,7 +76,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
       <p className="text-sm text-ink-2">{data.pack.notice}</p>
       <ul className="flex flex-col gap-4">
         {data.pack.items.map((it) => (
-          <li key={it.platform} className="flex flex-col gap-2 rounded-[12px] border border-line bg-surface-2 p-3">
+          <li key={it.platform} className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface-2 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold text-ink">{it.platformLabel}</span>
               <Badge tone={it.withinLimit ? "green" : "red"} icon={it.withinLimit ? <Check /> : <TriangleAlert />}>

@@ -234,7 +234,7 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
                       </span>
                       {s.label}
                     </span>
-                    <span className="tracking-tight text-2xl font-extrabold tabular-nums text-ink">
+                    <span className="num-serif text-[28px] leading-8 tabular-nums text-ink">
                       {s.hasData ? formatNumber(Math.round(s.total)) : "No data"}
                     </span>
                   </div>

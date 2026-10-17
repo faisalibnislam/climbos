@@ -33,7 +33,7 @@ function ImageBlock({ version, square }: { version: VersionView; square?: boolea
 }
 
 function Frame({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-md overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-md overflow-hidden rounded-[8px] border border-line bg-surface shadow-sm", className)}>{children}</div>;
 }
 
 function Hashtags({ tags }: { tags: string[] }) {
@@ -115,7 +115,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
         <div className="px-4 py-4">
           {body}
           {version.callToAction ? (
-            <span className="mt-4 inline-block rounded-[10px] bg-brand-800 px-4 py-2 text-sm font-semibold text-white">{version.callToAction}</span>
+            <span className="mt-4 inline-block rounded-[6px] bg-brand-800 px-4 py-2 text-sm font-semibold text-white">{version.callToAction}</span>
           ) : null}
         </div>
       </Frame>

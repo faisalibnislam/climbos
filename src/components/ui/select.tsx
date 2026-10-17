@@ -58,7 +58,7 @@ export function Select({
         <RSelect.Content
           position="popper"
           sideOffset={6}
-          className="z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[12px] border border-line bg-surface shadow-lg"
+          className="z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[8px] border border-line bg-surface shadow-lg"
         >
           <RSelect.Viewport className="p-1.5">
             {options.map((o) => (

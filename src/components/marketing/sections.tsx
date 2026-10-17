@@ -171,7 +171,7 @@ export function CapabilityGrid({ headingId = "capabilities-heading" }: { heading
               ))}
             </ul>
             {c.note ? (
-              <p className="mt-4 rounded-[10px] bg-surface-2 px-3.5 py-2.5 text-sm leading-relaxed text-ink-2">{c.note}</p>
+              <p className="mt-4 rounded-[6px] bg-surface-2 px-3.5 py-2.5 text-sm leading-relaxed text-ink-2">{c.note}</p>
             ) : null}
           </li>
         ))}
@@ -323,7 +323,7 @@ export function FinalCta({ headingId = "final-cta-heading" }: { headingId?: stri
   return (
     <section aria-labelledby={headingId} className="pb-20 sm:pb-28">
       <Container>
-        <div className="rounded-[28px] bg-brand-800 px-6 py-12 text-center sm:px-12 sm:py-16">
+        <div className="rounded-[6px] bg-brand-800 px-6 py-12 text-center sm:px-12 sm:py-16">
           <h2 id={headingId} className="mx-auto max-w-2xl font-display tracking-tight text-[2rem] font-extrabold leading-tight text-white sm:text-5xl">
             Ready to see what your growth team would do first?
           </h2>

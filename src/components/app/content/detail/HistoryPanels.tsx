@@ -71,7 +71,7 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
               ) : null}
             </div>
             {isOpen ? (
-              <div id={panelId} className="rounded-[12px] border border-line bg-surface-2 p-3 text-[0.95rem] leading-relaxed text-ink-2">
+              <div id={panelId} className="rounded-[8px] border border-line bg-surface-2 p-3 text-[0.95rem] leading-relaxed text-ink-2">
                 {v.headline ? <p className="font-semibold text-ink">{v.headline}</p> : null}
                 <p className="whitespace-pre-wrap break-words">{v.body}</p>
                 {v.hashtags.length ? <p className="mt-2 break-words text-ink-3">{v.hashtags.map((t) => `#${t.replace(/^#/, "")}`).join(" ")}</p> : null}

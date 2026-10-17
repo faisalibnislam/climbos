@@ -66,7 +66,7 @@ export function Toaster() {
           <div
             key={t.id}
             role={t.tone === "danger" ? "alert" : "status"}
-            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-[12px] border border-line bg-surface p-4 shadow-lg animate-fade-up"
+            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-[8px] border border-line bg-surface p-4 shadow-lg animate-fade-up"
           >
             <Icon aria-hidden="true" className={cn("mt-0.5 size-5 shrink-0", toneCls[t.tone])} />
             <div className="min-w-0 flex-1">

@@ -91,7 +91,7 @@ function CalendarInner({ slug, now }: { slug: string; now: number }) {
             Today
           </Button>
         </div>
-        <div role="group" aria-label="Calendar view" className="inline-flex rounded-[12px] border border-line bg-surface-2 p-1">
+        <div role="group" aria-label="Calendar view" className="inline-flex rounded-[8px] border border-line bg-surface-2 p-1">
           {(["week", "month"] as const).map((v) => (
             <button
               key={v}
@@ -99,7 +99,7 @@ function CalendarInner({ slug, now }: { slug: string; now: number }) {
               aria-pressed={view === v}
               onClick={() => setView(v)}
               className={cn(
-                "min-h-10 flex-1 rounded-[9px] px-4 text-[0.95rem] font-medium text-ink-2",
+                "min-h-10 flex-1 rounded-[6px] px-4 text-[0.95rem] font-medium text-ink-2",
                 view === v && "bg-surface font-semibold text-ink shadow-sm",
               )}
             >
@@ -175,7 +175,7 @@ function CalendarGrid({
             <li
               key={k}
               className={cn(
-                "flex min-w-0 flex-col gap-1.5 rounded-[12px] border border-line bg-surface p-3 md:rounded-none md:border-0",
+                "flex min-w-0 flex-col gap-1.5 rounded-[8px] border border-line bg-surface p-3 md:rounded-none md:border-0",
                 view === "month" ? "md:min-h-28" : "md:min-h-56",
                 list.length === 0 && !isToday && "hidden md:flex",
                 outside && "md:bg-surface-2",

@@ -246,7 +246,7 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
 function EstimatePanel({ slug, job, quantity, images }: { slug: string; job: Job; quantity?: number; images?: number }) {
   const est = useQuery(api.content.estimate, { slug, job, quantity, images });
   return (
-    <section aria-labelledby="estimate-heading" className="rounded-[14px] border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
+    <section aria-labelledby="estimate-heading" className="rounded-[8px] border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
       <h3 id="estimate-heading" className="font-semibold text-ink">
         Before you start
       </h3>
