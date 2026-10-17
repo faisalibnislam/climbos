@@ -79,20 +79,30 @@ export async function POST(req: Request) {
     mark("desktop done");
     if (late()) return NextResponse.json({ url: url.toString(), title, shots });
 
-    const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
-    const m = await mobile.newPage();
-    await m.route("**/*", (route) => (safePublicUrl(route.request().url()) ? route.continue() : route.abort()));
-    await m.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 25_000 });
-    await m.waitForLoadState("networkidle", { timeout: 6_000 }).catch(() => undefined);
-    await m.addStyleTag({ content: CLEAN_PAGE_CSS });
-    await m.waitForTimeout(400);
-    shots.push({ kind: "mobile", label: `${title || url.hostname} (mobile)`, width: 390, height: 844, png: (await m.screenshot({ type: "png" })).toString("base64") });
-    await mobile.close();
+    // Mobile view is a bonus: cap it so a slow page never costs the desktop shots.
+    const mobileShot = async () => {
+      const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1 ClimbOS-Capture/1.0" });
+      try {
+        const m = await mobile.newPage();
+        await m.route("**/*", (route) => (safePublicUrl(route.request().url()) ? route.continue() : route.abort()));
+        await m.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 12_000 });
+        mark("mobile loaded");
+        await m.waitForLoadState("networkidle", { timeout: 4_000 }).catch(() => undefined);
+        await m.addStyleTag({ content: CLEAN_PAGE_CSS });
+        await m.waitForTimeout(300);
+        return (await m.screenshot({ type: "png", timeout: 8_000 })).toString("base64");
+      } finally {
+        void mobile.close().catch(() => undefined);
+      }
+    };
+    const mobilePng = await Promise.race([mobileShot().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 20_000))]);
+    if (mobilePng) shots.push({ kind: "mobile", label: `${title || url.hostname} (mobile)`, width: 390, height: 844, png: mobilePng });
     mark("mobile done");
   } catch (e) {
     if (!shots.length) return NextResponse.json({ error: `Couldn't capture this page: ${(e as Error).message.slice(0, 200)}` }, { status: 502 });
   } finally {
-    await browser.close();
+    // Never let a stuck browser hold the response.
+    await Promise.race([browser.close().catch(() => undefined), new Promise((r) => setTimeout(r, 3_000))]);
   }
   return NextResponse.json({ url: url.toString(), title, shots });
 }
