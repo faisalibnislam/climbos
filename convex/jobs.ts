@@ -25,6 +25,7 @@ import { type ActionCtx, internalAction } from "./_generated/server";
 import { fixtureOutput, type FixtureContext } from "./ai/fixtures";
 import { callModel, generateImage, type ModelResult } from "./ai/providers";
 import { researchWebsite } from "./ai/research";
+import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 
 class JobStop extends Error {
@@ -378,7 +379,7 @@ export const createContent = internalAction({
         }
 
         // Creative Director: images for the first N social posts (max 2 attempts each, metered).
-        const withImages: (typeof items[number] & { imageStorageId?: Id<"_storage"> })[] = items.map((i) => ({ ...i }));
+        const withImages: (typeof items[number] & { imageStorageId?: Id<"_storage">; imageR2Key?: string })[] = items.map((i) => ({ ...i }));
         let delivered = 0;
         let attempts = 0;
         const imageCount = args.job === "content_social" ? Math.min(args.images ?? 0, 2, withImages.length) : 0;
@@ -386,7 +387,10 @@ export const createContent = internalAction({
           const item = withImages[i];
           const s = await begin(ctx, args.runId, 10 + i, "image", "Create image", "creative_director");
           if (s.checkpoint !== undefined) {
-            if (typeof s.checkpoint === "string") item.imageStorageId = s.checkpoint as Id<"_storage">;
+            if (typeof s.checkpoint === "string") {
+              if (s.checkpoint.startsWith("r2:")) item.imageR2Key = s.checkpoint.slice(3);
+              else item.imageStorageId = s.checkpoint as Id<"_storage">;
+            }
             continue;
           }
           if (job.run.isFixture) {
@@ -395,7 +399,7 @@ export const createContent = internalAction({
           }
           const rates = getRateVersion(job.run.rateVersionId);
           const prompt = `Brand illustration for ${job.business?.name ?? "a small business"}: ${item.imagePrompt}. Clean, modern, soft natural light, no text, no logos, no real people's faces, no fake product screenshots.`;
-          let stored: Id<"_storage"> | undefined;
+          let stored: string | undefined; // "r2:<key>" or a Convex storage id
           for (let a = 0; a < 2 && !stored; a++) {
             attempts++;
             const img = await generateImage(prompt, rates);
@@ -403,11 +407,19 @@ export const createContent = internalAction({
               stepId: s.stepId!,
               records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }],
             });
-            if (img.ok) stored = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
-            else if (img.kind === "provider_unavailable") break;
+            if (img.ok) {
+              if (r2Configured()) {
+                const key = r2Key(job.org._id, "images", img.mimeType.split("/")[1] ?? "png");
+                await r2Put(key, img.bytes, img.mimeType);
+                stored = `r2:${key}`;
+              } else {
+                stored = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
+              }
+            } else if (img.kind === "provider_unavailable") break;
           }
           if (stored) {
-            item.imageStorageId = stored;
+            if (stored.startsWith("r2:")) item.imageR2Key = stored.slice(3);
+            else item.imageStorageId = stored as Id<"_storage">;
             delivered++;
           }
           await ctx.runMutation(internal.engine.completeStep, { stepId: s.stepId!, output: JSON.stringify(stored ?? null) });

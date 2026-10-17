@@ -10,6 +10,7 @@ import { createRunWithReservation } from "./engine";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 const DIRECT_PUBLISH: Partial<Record<Doc<"artifacts">["channel"], Doc<"connections">["provider"]>> = {
@@ -32,7 +33,7 @@ async function versionView(
     destinationUrl: v.destinationUrl ?? null,
     hashtags: v.hashtags,
     altText: v.altText ?? null,
-    imageUrl: v.imageStorageId ? await ctx.storage.getUrl(v.imageStorageId) : null,
+    imageUrl: await imageUrlFor(ctx, v),
     imageLabel: v.imageLabel ?? null,
     imagePrompt: v.imagePrompt ?? null,
     unsupportedClaims: v.unsupportedClaims,
@@ -75,7 +76,7 @@ export const list = query({
           createdByRole: a.createdByRole ?? null,
           updatedAt: a.updatedAt,
           preview: ver?.body.slice(0, 220) ?? "",
-          hasImage: Boolean(ver?.imageStorageId),
+          hasImage: Boolean(ver?.imageStorageId || ver?.imageR2Key),
           flags: ver?.unsupportedClaims.length ?? 0,
         };
       }),
@@ -215,6 +216,7 @@ export const edit = mutation({
       throw appError("INVALID", "Links must start with https://");
     }
     const imageStorageId = args.removeImage ? undefined : prev?.imageStorageId;
+    const imageR2Key = args.removeImage ? undefined : prev?.imageR2Key;
     const ch = await contentHash({
       headline: args.headline,
       body,
@@ -222,7 +224,7 @@ export const edit = mutation({
       destinationUrl: args.destinationUrl,
       hashtags: args.hashtags,
       altText: args.altText,
-      imageRef: imageStorageId,
+      imageRef: imageR2Key ?? imageStorageId,
       channel: a.channel,
     });
     if (prev && prev.contentHash === ch && (!args.title || args.title === a.title)) return { changed: false };
@@ -239,8 +241,9 @@ export const edit = mutation({
       hashtags: args.hashtags.slice(0, 30).map((h) => h.slice(0, 60)),
       altText: args.altText?.slice(0, 1000),
       imageStorageId,
+      imageR2Key,
       imagePrompt: prev?.imagePrompt,
-      imageLabel: imageStorageId ? prev?.imageLabel : undefined,
+      imageLabel: imageStorageId || imageR2Key ? prev?.imageLabel : undefined,
       claimFactIds: prev?.claimFactIds ?? [],
       unsupportedClaims: [],
       contentHash: ch,
@@ -386,7 +389,7 @@ export const exportPack = query({
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     if (!ver) return null;
-    const imageUrl = ver.imageStorageId ? await ctx.storage.getUrl(ver.imageStorageId) : null;
+    const imageUrl = await imageUrlFor(ctx, ver);
     const social: DraftPlatform[] = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest", "youtube"];
     const platforms = (social as string[]).includes(a.channel) ? [a.channel as DraftPlatform] : (["linkedin", "x", "facebook"] as DraftPlatform[]);
     const pack = buildManualExportPack(

@@ -53,7 +53,7 @@ Create an OAuth client (type Web) in Google Cloud. Set the redirect URI to `http
 | Facebook Pages + Meta Ads (Graph v26.0) | `META_APP_ID`, `META_APP_SECRET`, `META_ADS_ACCESS_TIER` (limited or full) | App Review for `pages_manage_posts`, `pages_read_engagement`, `ads_management` and `ads_read`; Business Verification; Marketing API access tier |
 | Instagram (Instagram Login) | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | App Review for `instagram_business_basic` and `instagram_business_content_publish`. Business or Creator accounts only. |
 | Firecrawl | `FIRECRAWL_API_KEY` | None. Without it, the built-in bounded fetcher is used. |
-| Cloudflare R2 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Recognized, but the adapter isn't wired yet; Convex storage is used |
+| Cloudflare R2 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (a **private** bucket; an API token with Object Read & Write on that bucket only) | None. When set, new AI images and privacy exports go to R2 behind presigned URLs. |
 | PostHog | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` | None. Session replay is off and text is masked. |
 
 Customers connect Stripe (a **restricted read-only** key) and their own Resend key themselves in Connections. Neither needs platform setup.

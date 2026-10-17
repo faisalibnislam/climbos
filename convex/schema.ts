@@ -567,6 +567,8 @@ export default defineSchema({
     hashtags: v.array(v.string()),
     altText: v.optional(v.string()),
     imageStorageId: v.optional(v.id("_storage")),
+    /** Set instead of imageStorageId when Cloudflare R2 is configured. */
+    imageR2Key: v.optional(v.string()),
     imagePrompt: v.optional(v.string()),
     imageLabel: v.optional(v.string()),
     claimFactIds: v.array(v.id("businessFacts")),
@@ -1109,6 +1111,7 @@ export default defineSchema({
     subject: v.optional(v.string()),
     requestedBy: v.id("users"),
     resultStorageId: v.optional(v.id("_storage")),
+    resultR2Key: v.optional(v.string()),
     note: v.optional(v.string()),
     createdAt: v.number(),
     completedAt: v.optional(v.number()),

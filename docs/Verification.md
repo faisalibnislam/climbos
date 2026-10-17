@@ -84,6 +84,7 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
 | Polar (checkout, portal, webhooks, reconciliation) | Webhook processing tested end-to-end in Convex tests; signatures verified against the official SDK. **Sandbox not yet verified**: no token or products |
 | Firecrawl / built-in website reader | The built-in fetcher's SSRF and robots logic is unit-tested. The live fetch runs in production once AI keys exist |
 | GA4, Search Console, Google Ads, Meta Ads, Facebook Pages, Instagram, Stripe, customer Resend | Implementation-tested against mocked provider responses on current API versions (Google Ads v26, Graph v26.0). **Awaiting credentials and provider approvals**; they show "Setup needed" in the product |
-| Cloudflare R2, PostHog | R2 is recognized but **not wired** (Convex storage is used). PostHog loads only when its key is set |
+| Cloudflare R2 | Key format and presigned-URL signing are unit-tested (`tests/unit/r2.test.ts`). **Not live-verified**: no R2 credentials |
+| PostHog | Loads only when its key is set (session replay off, text masked). **Not live-verified** |
 
 Nothing in this repository claims a live provider connection that hasn't been made.

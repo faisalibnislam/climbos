@@ -17,6 +17,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { fleetStopped } from "./lib/access";
+import { imageUrlFor } from "./lib/media";
 
 /**
  * Publishing executor. Immediately before any external write it re-checks:
@@ -53,7 +54,7 @@ export const publishContext = internalQuery({
       .query("actionReceipts")
       .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
       .first();
-    const imageUrl = ver?.imageStorageId ? await ctx.storage.getUrl(ver.imageStorageId) : null;
+    const imageUrl = ver ? await imageUrlFor(ctx, ver) : null;
     return {
       artifact: a,
       org,

@@ -8,6 +8,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";
 import { latestSubscription } from "./lib/access";
+import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess, requireUser } from "./lib/tenancy";
 
 /* ---------------- Team ---------------- */
@@ -363,8 +364,14 @@ export const runExport = internalAction({
     if (!req) return;
     await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "running" });
     const json = await ctx.runQuery(internal.settings.exportData, { orgId: req.orgId });
-    const storageId = await ctx.storage.store(new Blob([json], { type: "application/json" }));
-    await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultStorageId: storageId });
+    if (r2Configured()) {
+      const key = r2Key(req.orgId, "exports", "json");
+      await r2Put(key, json, "application/json");
+      await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultR2Key: key });
+    } else {
+      const storageId = await ctx.storage.store(new Blob([json], { type: "application/json" }));
+      await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultStorageId: storageId });
+    }
   },
 });
 
@@ -374,9 +381,9 @@ export const getPrivacyRequest = internalQuery({
 });
 
 export const setPrivacyStatus = internalMutation({
-  args: { requestId: v.id("privacyRequests"), status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")), resultStorageId: v.optional(v.id("_storage")), note: v.optional(v.string()) },
-  handler: async (ctx, { requestId, status, resultStorageId, note }) => {
-    await ctx.db.patch(requestId, { status, resultStorageId, note, completedAt: status === "done" || status === "failed" ? Date.now() : undefined });
+  args: { requestId: v.id("privacyRequests"), status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")), resultStorageId: v.optional(v.id("_storage")), resultR2Key: v.optional(v.string()), note: v.optional(v.string()) },
+  handler: async (ctx, { requestId, status, resultStorageId, resultR2Key, note }) => {
+    await ctx.db.patch(requestId, { status, resultStorageId, resultR2Key, note, completedAt: status === "done" || status === "failed" ? Date.now() : undefined });
   },
 });
 
@@ -390,7 +397,15 @@ export const privacyRequests = query({
       .order("desc")
       .take(20);
     return Promise.all(
-      rows.map(async (r) => ({ id: r._id, kind: r.kind, status: r.status, createdAt: r.createdAt, completedAt: r.completedAt ?? null, url: r.resultStorageId ? await ctx.storage.getUrl(r.resultStorageId) : null, note: r.note ?? null })),
+      rows.map(async (r) => ({
+        id: r._id,
+        kind: r.kind,
+        status: r.status,
+        createdAt: r.createdAt,
+        completedAt: r.completedAt ?? null,
+        url: r.resultR2Key ? await r2SignedUrl(r.resultR2Key, 900) : r.resultStorageId ? await ctx.storage.getUrl(r.resultStorageId) : null,
+        note: r.note ?? null,
+      })),
     );
   },
 });
@@ -478,6 +493,7 @@ export const purgeWorkspaceBatch = internalMutation({
           const versions = await ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", r._id)).take(100);
           for (const ver of versions) {
             if (ver.imageStorageId) await ctx.storage.delete(ver.imageStorageId).catch(() => undefined);
+            if (ver.imageR2Key) await ctx.scheduler.runAfter(0, internal.settings.deleteR2Object, { key: ver.imageR2Key });
             await ctx.db.delete(ver._id);
           }
         }
@@ -513,5 +529,12 @@ export const purgeWorkspaceBatch = internalMutation({
       .order("desc")
       .first();
     if (req && req.kind === "delete_workspace") await ctx.db.patch(req._id, { status: "done", completedAt: Date.now(), note: "Billing records, usage costs and the audit trail are retained for accounting." });
+  },
+});
+
+export const deleteR2Object = internalAction({
+  args: { key: v.string() },
+  handler: async (_ctx, { key }) => {
+    if (r2Configured()) await r2Delete(key).catch(() => undefined);
   },
 });

@@ -52,7 +52,7 @@ shared/ (pure TypeScript, runs in browser, Node and Convex)
 | **Convex Auth** (email code via Resend, Google, anonymous for demo) | No second paid auth vendor. Product user seats aren't developer seats. |
 | **Cache Components off** in Next.js | Almost every route depends on the session cookie, and data is reactive on the client. Prerendering static shells bought little and broke auth. |
 | **Polar via REST** for checkout, portal and subscriptions | The 1.0 SDK is a fresh rewrite. Signature verification mirrors the SDK exactly, and a test checks it against the official `validateEvent`. |
-| **Convex file storage for images and exports** | R2 env vars are recognized by setup checks, but the R2 adapter isn't wired yet. See *Known limitations* in the README. |
+| **Cloudflare R2 for images and exports when configured** | `convex/lib/r2.ts` stores tenant-prefixed objects (`orgs/<orgId>/images/…`, `orgs/<orgId>/exports/…`) and serves them only through short-lived presigned URLs: 1 hour for images (long enough for Instagram to fetch), 15 minutes for exports. Without R2 variables, Convex file storage is used. Workspace deletion removes R2 objects too. |
 | **Fixture adapters are separate modules** | Demo workspaces (`organizations.kind = "demo"`) use `ai/fixtures.ts` and fixture connections (`isFixture`). Production adapters never return fake success. |
 
 ## Request and job lifecycle

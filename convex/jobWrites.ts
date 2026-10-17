@@ -343,6 +343,7 @@ type ArtifactInput = {
   altText?: string;
   imagePrompt?: string;
   imageStorageId?: Id<"_storage">;
+  imageR2Key?: string;
   factIndexes: number[];
   scheduledFor?: number;
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
@@ -379,7 +380,7 @@ export async function insertArtifact(
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags,
     altText: item.altText,
-    imageRef: item.imageStorageId,
+    imageRef: item.imageR2Key ?? item.imageStorageId,
     channel: item.channel,
   });
   const versionId = await ctx.db.insert("artifactVersions", {
@@ -393,8 +394,9 @@ export async function insertArtifact(
     hashtags: item.hashtags.slice(0, 12),
     altText: item.altText,
     imageStorageId: item.imageStorageId,
+    imageR2Key: item.imageR2Key,
     imagePrompt: item.imagePrompt,
-    imageLabel: item.imageStorageId ? "AI-generated illustration" : undefined,
+    imageLabel: item.imageStorageId || item.imageR2Key ? "AI-generated illustration" : undefined,
     claimFactIds: valid.map((i) => params.factIds[i]),
     unsupportedClaims: unsupported,
     contentHash: ch,
@@ -417,6 +419,7 @@ const artifactInputValidator = v.object({
   altText: v.optional(v.string()),
   imagePrompt: v.optional(v.string()),
   imageStorageId: v.optional(v.id("_storage")),
+  imageR2Key: v.optional(v.string()),
   factIndexes: v.array(v.number()),
   scheduledFor: v.optional(v.number()),
   role: v.string(),
