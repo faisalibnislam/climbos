@@ -16,8 +16,8 @@
 | # | Gap | Why it matters | Promise | Decision |
 |---|---|---|---|---|
 | 1 | **Unified Inbox** for social comments and DMs, outbound email replies, website leads and reviews, each with AI triage and a suggested reply | Replies are where customers come from. Owners lose leads across five apps. | 2, 3 | **Build now.** One model (`inbox` threads) fed by community, outbound and capture. |
-| 2 | **Own booking pages** with availability, buffers, ICS invites, reminders and no-show follow-up | "Books the calls" is impossible without them. Built in-house, no Calendly needed. | 3 | **Build now** (part of outbound). |
-| 3 | **Leads pipeline (mini-CRM)**: New → Contacted → Replied → Booked → Won/Lost, with source and value | Turns activity into outcomes, which the owner needs to see. | 3, 5 | **Build now.** |
+| 2 | **Own booking pages** with availability, buffers, ICS invites, reminders and no-show follow-up | "Books the calls" is impossible without them. Built in-house, no Calendly needed. | 3 | **Built** 18 Oct: `/book/[slug]`, time zones, buffers, ICS. Reminders and no-show follow-up next. |
+| 3 | **Leads pipeline (mini-CRM)**: New → Contacted → Replied → Booked → Won/Lost, with source and value | Turns activity into outcomes, which the owner needs to see. | 3, 5 | **Built** (stages: found → approved → emailed → replied → booked → won). |
 | 4 | **Tracked links**: auto-UTM plus our own short links on every post, email and ad | Without attribution there's no ROI story and no learning loop. | 5 | **Build now.** `/l/:code` redirect with click logging. |
 | 5 | **Safety window** for autopilot: "Goes out at 9:00. Stop it?", with a 2-hour heads-up by email and a one-click stop | The trust that makes "fully auto" acceptable. | 2 | **Build now.** |
 | 6 | **One-tap approvals from email** (signed, expiring, single-use links) plus a daily "needs your OK" email | Owners approve on their phone between jobs. | 2 | **Build now.** |

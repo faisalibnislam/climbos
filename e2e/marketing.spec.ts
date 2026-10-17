@@ -6,7 +6,7 @@ test.describe("public site", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByText(/approve anything that goes live/i).first()).toBeVisible();
-    await expect(page.getByText(/no contact database|doesn't sell or include a contact database/i).first()).toBeVisible();
+    await expect(page.getByText(/doesn't sell a contact database/i).first()).toBeVisible();
     await page.getByRole("button", { name: /show me/i }).click();
     await expect(page.getByText(/enter your website|add your website|website/i).first()).toBeVisible();
     await expectAccessible(page, "landing");

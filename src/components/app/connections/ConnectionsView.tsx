@@ -58,8 +58,8 @@ export function ConnectionsView({ slug }: { slug: string }) {
                 ) : null}
                 {g.key === "data" ? (
                   <Callout tone="info" title="ClimbOS has no contact database">
-                    ClimbOS doesn&apos;t sell, include or scrape contact details. It works only with customers and leads you already have and are allowed to contact.
-                    Finding new prospects needs a data provider you license yourself.
+                    ClimbOS doesn&apos;t sell a contact database. Find customers researches businesses from public sources, with a source for every fact. For email
+                    lookups at scale, connect a data provider you license.
                   </Callout>
                 ) : null}
                 <div className="flex flex-col gap-3">

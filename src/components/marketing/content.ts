@@ -191,16 +191,16 @@ export const CAPABILITIES: Capability[] = [
   {
     letter: "E",
     title: "Sales engine",
-    summary: "Turn the leads you already have into customers.",
+    summary: "Drop your website link. We find the people who need you, write the emails and book the calls.",
     items: [
-      "Lead scoring from your CRM, inbound leads or customer lists",
-      "Personal outreach drafts",
-      "Email sequences and follow-ups",
-      "Sales funnels",
-      "Conversion tracking",
-      "Upsell opportunities",
+      "Finds companies that fit, each with a source you can check",
+      "A personal first line for each, from that source",
+      "Short email sequences and follow-ups",
+      "Your own booking page and calendar invites",
+      "A simple pipeline: found, emailed, replied, booked",
+      "Scoring for leads you already have",
     ],
-    note: "ClimbOS doesn't sell or include a contact database. It works with leads you already have or data you license and connect yourself.",
+    note: "ClimbOS doesn't sell a contact database. It finds businesses from public sources and shows where every fact came from. You approve who gets an email.",
   },
   {
     letter: "F",
@@ -293,8 +293,8 @@ export const LANDING_FAQ = [
     a: "Facebook and Instagram business accounts publish directly once connected. For LinkedIn, X, TikTok, Pinterest and YouTube, you get ready-to-post drafts and export packs until their official integrations are available. Google Ads and Meta ad campaigns are created paused and launched only with your approval.",
   },
   {
-    q: "Does ClimbOS come with a list of leads?",
-    a: "No. ClimbOS doesn't sell or include a contact database. It works with leads you already have or data you license and connect yourself.",
+    q: "Does ClimbOS find leads for me?",
+    a: "Yes. Give it your website and it finds companies that need you from public sources, with evidence for each, writes the emails and gives you a booking page. It doesn't sell a contact database, and nothing is sent until you approve.",
   },
   {
     q: "Can you guarantee results?",

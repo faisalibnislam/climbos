@@ -1,6 +1,6 @@
 # Verification
 
-Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 1.47.
+Last run: **18 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 1.47.
 
 ## Automated checks
 
@@ -9,9 +9,11 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
 | TypeScript, web + shared | `npx tsc --noEmit -p tsconfig.json` | Clean |
 | TypeScript, Convex | `npx tsc --noEmit -p convex/tsconfig.json` (also `convex deploy --typecheck enable`) | Clean |
 | Lint | `pnpm lint` | 0 errors |
-| Unit + Convex integration tests | `pnpm test` | **239 passed** (16 files) |
+| Unit + Convex integration tests | `pnpm test` | **389 passed** (31 files) |
 | Production build | `pnpm build` | Passes; 32 routes |
-| End-to-end + accessibility | `pnpm test:e2e` against the dev deployment | **16 passed** (public site + demo flow) |
+| End-to-end + accessibility | `pnpm test:e2e` against the dev deployment | **18 passed** (public site, demo flow, outbound + booking; axe WCAG 2.2 AA) |
+| Engine benchmark | `pnpm bench` | See `docs/EngineV2.md` → Benchmark results |
+| Prod smoke | curl + capture worker | Pages 200, MCP 401 without token, screenshot worker 200 in ~20 s |
 | Economics gate | `pnpm econ:export` | PASS: every plan ≥ 30% at heavy use and under combined stress |
 
 ## What the tests prove (mapped to the acceptance list)

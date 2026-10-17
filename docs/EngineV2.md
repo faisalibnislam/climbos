@@ -203,17 +203,37 @@ Design:
 
 Everything is driven by tokens in `src/app/globals.css`. WCAG 2.2 AA is kept, and the axe suite runs on every change.
 
-## Progress
+## Progress (18 Oct 2026)
 
 | Area | Status |
 |---|---|
-| Research (strategy, content, lead gen, platform, design/video) | Done |
-| Skills (24 playbooks + rubrics) | Done |
-| Agent runtime, Claude turn layer, lint, specs | Done |
-| Convex integration (`CLIMBOS_ENGINE=v2`) | Done, off by default |
-| Benchmark harness | Done; first runs under way |
-| UI (Apollo-inspired) | Tokens, shell, Today, onboarding, landing, content, connections, settings re-skinned; editor and new areas next |
-| Design system, Social autopilot, Lead data platform, Outreach, Reprice | Not started |
+| Research, skills (30 playbooks + rubrics), runtime, lint, specs | Done |
+| Convex integration | **On in dev and prod** (`CLIMBOS_ENGINE=v2`, set 18 Oct) |
+| Benchmark harness (3 judges, both orders) | Done; rounds A1, A2, B, C1 run |
+| Design system "Summit", UI audit, mobile | Done (axe clean on every e2e screen) |
+| Social autopilot (planner, trust ladder, safety window, email approvals) | Done |
+| Growth plays (creative, base-rate forecasts) | Done |
+| Real visuals (screenshots, product photos, Gemini edits) | Done; prod worker verified |
+| Climb AI side panel, point mode, MCP server | Done |
+| Outbound: find customers, sequences, booking pages | **Done** (export to send; mailbox sending next) |
+| Lead data platform (Hunter, shared DB), mailbox sending | Not started: needs owner keys |
+| Reprice from measured costs | Not started |
+
+## Benchmark results
+
+Pairwise, v2.x engine vs Opus one-shot (`v0f`); a win needs both orders to agree.
+
+| Round | Engine | Pairs | Opus judge | Sonnet judge | Fable judge | Notes |
+|---|---|---|---|---|---|---|
+| A2 | v2.1 | 36 | 61% | 55% | — | Tied absolute scores at 5× cost; losses from `[NEEDS FACT]` placeholders |
+| B | v2.2 | 11* | 6W 5T 0L | 9W 1T 1L | 4W 3T 3L | Absolute 7.20 vs 6.75; weakest: Instagram, ads |
+| C1 | v2.3 | 3* | 2W 0T 1L | 1W 2T 0L | 2W 0T 0L | Social only |
+
+\* The Anthropic credit balance ran out mid-run; the remaining pairs errored and are excluded.
+
+- Combined Phase B: **19 wins, 9 ties, 4 losses (83% excl. ties)**.
+- Cost: about $0.4–1.9 per v2 job vs $0.1–0.5 one-shot.
+- v2.4 (18 Oct) fixes the judges' loss reasons: third-person brand voice, keyword-stuffed hooks, hidden stated offers, wall-of-text notes, under-delivered counts. **Not yet re-benchmarked** (needs API credit).
 
 ## Phases
 
