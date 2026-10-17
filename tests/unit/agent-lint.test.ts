@@ -40,11 +40,13 @@ describe("assessment", () => {
     shipRule: { minEach: 3, minAverage: 4 },
   };
   it("ships only when gates pass, lint is clean and scores clear the bar", () => {
-    const good = { gates: [{ id: "G1", pass: true, note: "" }], scores: [{ id: "C1", score: 4, note: "", fix: "" }, { id: "C2", score: 5, note: "", fix: "" }], strengths: [], fixes: [] };
+    const good = { gates: [{ id: "G1", pass: true, note: "" }], scores: [{ id: "C1", score: 4, note: "", fix: "" }, { id: "C2", score: 5, note: "", fix: "" }, { id: "XV", score: 4, note: "", fix: "" }], strengths: [], fixes: [] };
     expect(assess(good, [], rubric).ship).toBe(true);
     expect(assess(good, [{ severity: "error", rule: "length", message: "" }], rubric).ship).toBe(false);
     expect(assess({ ...good, gates: [{ id: "G1", pass: false, note: "" }] }, [], rubric).ship).toBe(false);
-    expect(assess({ ...good, scores: [{ id: "C1", score: 5, note: "", fix: "" }, { id: "C2", score: 2, note: "", fix: "" }] }, [], rubric).ship).toBe(false);
+    expect(assess({ ...good, scores: [{ id: "C1", score: 5, note: "", fix: "" }, { id: "C2", score: 2, note: "", fix: "" }, { id: "XV", score: 5, note: "", fix: "" }] }, [], rubric).ship).toBe(false);
+    // The holistic expert verdict always counts: a weak verdict blocks shipping.
+    expect(assess({ ...good, scores: [...good.scores.slice(0, 2), { id: "XV", score: 2, note: "", fix: "" }] }, [], rubric).ship).toBe(false);
     // Missing criteria count as 1.
     expect(assess({ ...good, scores: [{ id: "C1", score: 5, note: "", fix: "" }] }, [], rubric).minimum).toBe(1);
   });

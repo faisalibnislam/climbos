@@ -34,7 +34,7 @@ When something is missing:
 
 | Item | Limit | Target |
 |---|---|---|
-| Post length | ~63,000 characters | 40–150 characters for most posts; longer only for a genuine story |
+| Post length | ~63,000 characters | Most posts 50–150 words: a one-line hook, 2–4 short paragraphs, one clear next step. One-liners only for quick announcements; true stories can run longer |
 | Hashtags | — | 0–2, local or specific |
 | Emoji | — | At most 1 per 150 characters; never as bullets |
 | Exclamation marks | — | At most 1 per post |
@@ -89,7 +89,7 @@ Local groups are communities, not ad boards. Many ban promotion outright or allo
 - Reader knows exactly what, when, where, how much and how to act, with every detail confirmed.
 - Rooted in at least one real local detail people would recognise.
 - Original photo or video brief with alt text; nothing stock or reposted.
-- 40–150 characters unless it is a genuine story; story posts still under ~120 words.
+- Most posts 50–150 words with a strong first line; one-liners only for quick announcements. A thin two-line post that just restates a fact and a CTA is a failure, not "short and punchy".
 - One CTA using the most practical method (phone, booking link, directions).
 - Sounds like the owner talking to a neighbour; varied rhythm; no hype.
 - Group posts are disclosed, helpful first, link-free unless allowed and tailored to the thread.
@@ -115,7 +115,7 @@ Local groups are communities, not ad boards. Many ban promotion outright or allo
 - [ ] One CTA with a practical method.
 - [ ] Original visual brief with alt text; no stock or reposted media.
 - [ ] 0–2 hashtags; at most one exclamation mark; emoji rule met.
-- [ ] Length fits the type (40–150 characters for most posts).
+- [ ] Length fits the type (most posts 50–150 words with a real hook and a reason to care; no two-line stubs).
 - [ ] Events: name, date, times, place, cost, booking, accessibility, plus a distinct announcement and reminder.
 - [ ] Group posts: disclosure, help first, rules check flagged for the owner, no links unless allowed.
 - [ ] No bait, no share-to-enter giveaways, no banned phrases.
