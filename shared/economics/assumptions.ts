@@ -1,12 +1,16 @@
+import type { RoleKey } from "./roles";
+
 /**
  * Editable economic assumptions (workbook "Assumptions" sheet). Defaults are the
  * research-time values; change a copy, never the frozen default.
  */
 
-export type PlanKey = "starter" | "growth" | "pro" | "business";
+export type PlanKey = "basic" | "starter" | "growth" | "pro" | "business";
 export type UsageProfile = "low" | "base" | "heavy";
 
-export const PLAN_KEYS: readonly PlanKey[] = ["starter", "growth", "pro", "business"];
+export const PLAN_KEYS: readonly PlanKey[] = ["basic", "starter", "growth", "pro", "business"];
+/** The four plans modeled by the original workbook (regression fixture). */
+export const WORKBOOK_PLAN_KEYS: readonly PlanKey[] = ["starter", "growth", "pro", "business"];
 export const USAGE_PROFILES: readonly UsageProfile[] = ["low", "base", "heavy"];
 
 export interface PlanDefinition {
@@ -20,6 +24,20 @@ export interface PlanDefinition {
   brands: number;
   seats: number;
   connections: number;
+  /**
+   * How the shared fixed footprint is allocated to one customer of this plan.
+   * "per_customer": footprint / customers (workbook rule).
+   * "price_weighted": the per-customer share scaled by listPrice / referencePrice
+   * (never more than the per-customer share). Used for plans priced far below
+   * the reference plan, where a flat per-head share would misstate their cost.
+   */
+  fixedAllocation: "per_customer" | "price_weighted";
+  /**
+   * Guaranteed monthly role runs regardless of workload scaling (for example one
+   * monthly strategy refresh on the smallest plan). Any runs above the scaled
+   * expectation are costed explicitly in every usage profile.
+   */
+  minimumRoleRuns?: Partial<Record<RoleKey, number>>;
 }
 
 export interface Assumptions {
@@ -76,6 +94,8 @@ export interface Assumptions {
     cacheStorageUsd: number;
   };
   plans: Record<PlanKey, PlanDefinition>;
+  /** Reference plan for price-weighted fixed allocation. */
+  fixedAllocationReferencePlan: PlanKey;
   profiles: Record<UsageProfile, { volumeFactor: number; supportFactor: number }>;
 }
 
@@ -131,7 +151,20 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = Object.freeze({
     byoSenderBudgetUsd: 40,
     cacheStorageUsd: 0,
   },
+  fixedAllocationReferencePlan: "starter",
   plans: {
+    basic: {
+      key: "basic",
+      name: "Basic",
+      listPriceUsd: 19,
+      workloadFactor: 0.04,
+      baseSupportMinutes: 1,
+      brands: 1,
+      seats: 1,
+      connections: 2,
+      fixedAllocation: "price_weighted",
+      minimumRoleRuns: { ceo: 1, cmo: 1 },
+    },
     starter: {
       key: "starter",
       name: "Starter",
@@ -141,6 +174,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = Object.freeze({
       brands: 1,
       seats: 1,
       connections: 3,
+      fixedAllocation: "per_customer",
     },
     growth: {
       key: "growth",
@@ -151,6 +185,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = Object.freeze({
       brands: 1,
       seats: 3,
       connections: 6,
+      fixedAllocation: "per_customer",
     },
     pro: {
       key: "pro",
@@ -161,6 +196,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = Object.freeze({
       brands: 3,
       seats: 8,
       connections: 15,
+      fixedAllocation: "per_customer",
     },
     business: {
       key: "business",
@@ -171,6 +207,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = Object.freeze({
       brands: 5,
       seats: 20,
       connections: 30,
+      fixedAllocation: "per_customer",
     },
   },
   profiles: {

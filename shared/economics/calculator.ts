@@ -287,6 +287,20 @@ export function fixedFootprintUsd(a: Assumptions, rates: RateVersion): number {
   );
 }
 
+/** Share of the shared fixed footprint allocated to one customer of a plan. */
+export function fixedAllocationUsd(
+  plan: PlanKey,
+  customers: number,
+  a: Assumptions,
+  rates: RateVersion,
+): number {
+  const perCustomer = fixedFootprintUsd(a, rates) / customers;
+  const def = a.plans[plan];
+  if (def.fixedAllocation === "per_customer") return perCustomer;
+  const reference = a.plans[a.fixedAllocationReferencePlan].listPriceUsd;
+  return perCustomer * Math.min(1, def.listPriceUsd / reference);
+}
+
 export function computeProfile(
   plan: PlanKey,
   profile: UsageProfile,
@@ -302,10 +316,21 @@ export function computeProfile(
   const u = prof.volumeFactor;
   const scale = w * u;
 
-  const baseText = roleTextCosts(resolved).totalUsd;
+  const roleCosts = roleTextCosts(resolved).rows;
+  const baseText = roleCosts.reduce((sum, r) => sum + r.totalUsd, 0);
+  // Guaranteed runs above the scaled expectation are costed explicitly.
+  let minimumRunsText = 0;
+  for (const [role, minRuns] of Object.entries(planDef.minimumRoleRuns ?? {}) as [RoleKey, number][]) {
+    const row = roleCosts.find((r) => r.role === role);
+    if (!row || row.runs === 0) continue;
+    const deficit = Math.max(0, minRuns - row.runs * scale);
+    minimumRunsText += (row.totalUsd / row.runs) * deficit;
+  }
 
   const lineUsd: Record<CostLineKey, number> = {
-    textAi: (baseText * (1 + a.retryQaReserve) + g.cacheStorageUsd) * scale,
+    textAi:
+      (baseText * (1 + a.retryQaReserve) + g.cacheStorageUsd) * scale +
+      minimumRunsText * (1 + a.retryQaReserve),
     images: g.deliveredImages * g.attemptsPerDeliveredImage * s.imageAttempt * scale,
     research: (g.searchCalls * s.searchCall + g.scrapeCredits * s.scrapeCredit) * scale,
     transactionalEmail: g.transactionalEmails * s.transactionalEmail * scale,
@@ -329,7 +354,7 @@ export function computeProfile(
     integrations: g.integrationReserveUsd * scale,
     support: planDef.baseSupportMinutes * prof.supportFactor * s.supportPerMinute,
     observability: g.observabilityVariableUsd * scale,
-    fixedAllocated: fixedFootprintUsd(a, rates) / a.payingCustomers,
+    fixedAllocated: fixedAllocationUsd(plan, a.payingCustomers, a, rates),
   };
 
   const lines = Object.fromEntries(
@@ -369,7 +394,7 @@ export function computeProfile(
     microsToUsd(lines.hosting + lines.storage + lines.analytics + lines.integrations) * st.infraMultiplier +
     microsToUsd(lines.support) * st.supportMultiplier +
     microsToUsd(lines.observability) * st.infraMultiplier +
-    fixedFootprintUsd(a, rates) / st.customerCount;
+    fixedAllocationUsd(plan, st.customerCount, a, rates);
   const stressDirectMicros = usdToMicros(stressDirectUsd);
   const aStress = effectivePaymentRate({
     percent: pay.percent,
@@ -446,8 +471,12 @@ export function computePlanCaps(plan: PlanKey, inputs: CalculatorInputs = {}): P
   const resolved = resolve(inputs);
   const heavy = computeProfile(plan, "heavy", resolved);
   const scale = heavy.workloadFactor * heavy.usageFactor;
+  const minimums = resolved.assumptions.plans[plan].minimumRoleRuns ?? {};
   const roleRuns = Object.fromEntries(
-    ROLE_BUDGETS.map((r) => [r.key, Math.floor(Number((r.baseRunsPerMonth * scale).toPrecision(12)))]),
+    ROLE_BUDGETS.map((r) => [
+      r.key,
+      Math.max(Math.floor(Number((r.baseRunsPerMonth * scale).toPrecision(12))), minimums[r.key] ?? 0),
+    ]),
   ) as Record<RoleKey, number>;
   const { aiWalletUsdUnrounded, ...rest } = heavy.caps;
   return {

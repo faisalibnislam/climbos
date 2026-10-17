@@ -1,0 +1,522 @@
+"use node";
+
+import { v } from "convex/values";
+import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
+import type { ModelKey } from "../shared/economics/rates";
+import { estimateTokens, MODEL_SPECS, worstCaseStepMicros } from "../shared/ai/models";
+import {
+  type AdDraftsOutput,
+  type BusinessInsights,
+  type BusinessProfile,
+  type ChatIntentOutput,
+  type EmailSequenceOutput,
+  factsBlock,
+  type SeoBriefOutput,
+  type SocialPostsOutput,
+  type StrategyOutput,
+  systemPrompt,
+  TASKS,
+  type TaskType,
+  untrusted,
+} from "../shared/ai/tasks";
+import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+import { type ActionCtx, internalAction } from "./_generated/server";
+import { fixtureOutput, type FixtureContext } from "./ai/fixtures";
+import { callModel, generateImage, type ModelResult } from "./ai/providers";
+import { researchWebsite } from "./ai/research";
+import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
+
+class JobStop extends Error {
+  constructor(
+    public reason: string,
+    public userMessage: string,
+  ) {
+    super(reason);
+  }
+}
+
+type JobCtx = NonNullable<Awaited<ReturnType<typeof loadContext>>>;
+
+async function loadContext(ctx: ActionCtx, runId: Id<"workflowRuns">) {
+  return ctx.runQuery(internal.jobWrites.jobContext, { runId });
+}
+
+const STOP_MESSAGES: Record<string, string> = {
+  paused: "Activity is paused, so this job stopped before doing anything else.",
+  canceled: "This job was canceled.",
+  step_budget: "This job reached its step limit. Try a smaller request.",
+  repair_budget: "The AI's answer didn't pass our checks, and the retry limit was reached. Nothing was saved.",
+  research_budget: "This job reached its research limit.",
+  uncertain: "We couldn't confirm the outcome of a previous attempt, so we stopped to avoid doing it twice.",
+};
+
+/** Begin a checkpointed step. Returns the stored output if it already completed. */
+async function begin(
+  ctx: ActionCtx,
+  runId: Id<"workflowRuns">,
+  index: number,
+  kind: "model" | "research" | "image" | "provider_write" | "compute",
+  label: string,
+  role?: Doc<"workflowSteps">["role"],
+  isRepair = false,
+) {
+  const b = await ctx.runMutation(internal.engine.beginStep, { runId, index, kind, label, role, isRepair });
+  if (b.reason === "checkpoint") return { checkpoint: JSON.parse(b.checkpoint ?? "null") as unknown, stepId: b.stepId! };
+  if (!b.proceed) throw new JobStop(b.reason, STOP_MESSAGES[b.reason] ?? "This job stopped.");
+  return { checkpoint: undefined, stepId: b.stepId };
+}
+
+function usageRecord(provider: string, model: string, r: ModelResult) {
+  const usage = r.usage ?? { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0 };
+  const records = [
+    {
+      type: "model_call" as const,
+      provider,
+      model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      reasoningTokens: usage.reasoningTokens,
+      cacheReadTokens: usage.cacheReadTokens,
+      cacheWriteTokens: usage.cacheWriteTokens,
+      quantity: 1,
+      costMicros: r.ok ? r.costMicros : r.costMicros,
+      estimated: false,
+    },
+  ];
+  if (r.ok && r.searchCostMicros > 0) {
+    records.push({ ...records[0], type: "search_call" as never, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: usage.webSearches, costMicros: r.searchCostMicros });
+  }
+  return records;
+}
+
+/** Fit untrusted context into the step's input budget. */
+function clipToBudget(system: string, task: string, context: string, inputBudget: number): string {
+  const fixed = estimateTokens(system + task) + 200;
+  const allowedTokens = Math.max(500, inputBudget - fixed);
+  const allowedChars = Math.floor((allowedTokens * 4) / 1.1);
+  return context.length > allowedChars ? context.slice(0, allowedChars) : context;
+}
+
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Run one model task with schema validation, at most one repair, and a
+ * cross-provider fallback that must reserve its own worst-case cost first.
+ */
+async function runModelTask<T>(
+  ctx: ActionCtx,
+  job: JobCtx,
+  index: number,
+  taskType: TaskType,
+  taskText: string,
+  untrustedContext: string,
+  fixture: FixtureContext,
+): Promise<T> {
+  const task = TASKS[taskType];
+  const { run } = job;
+  const step = await begin(ctx, run._id, index, "model", task.label, task.role);
+  if (step.checkpoint !== undefined) return step.checkpoint as T;
+  const stepId = step.stepId!;
+
+  if (run.isFixture) {
+    const output = task.schema.parse(fixtureOutput(taskType, fixture)) as T;
+    await ctx.runMutation(internal.engine.recordUsage, {
+      stepId,
+      records: [{ type: "model_call", provider: "fixture", model: "demo-fixture", inputTokens: estimateTokens(taskText + untrustedContext), outputTokens: estimateTokens(JSON.stringify(output)), reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 0, estimated: true }],
+    });
+    await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(output) });
+    return output;
+  }
+
+  const rates = getRateVersion(run.rateVersionId);
+  const route = CURRENT_ROUTING.routes[task.role];
+  const system = systemPrompt(task.role);
+  const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
+  const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "anthropic" ? 2 : 0);
+
+  const attempt = async (modelKey: ModelKey, extra = ""): Promise<ModelResult> => {
+    const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: MODEL_SPECS[modelKey].provider });
+    if (circuit === "open") return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", costMicros: 0 };
+    let res = await callModel({ modelKey, system, user: user + extra, schema: task.schema, inputBudget: task.inputBudget, outputBudget: task.outputBudget, webSearches: searches(modelKey) }, rates);
+    if (!res.ok && res.kind === "rate_limited" && (res.retryAfterMs ?? 0) <= 10_000) {
+      await sleep((res.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
+      res = await callModel({ modelKey, system, user: user + extra, schema: task.schema, inputBudget: task.inputBudget, outputBudget: task.outputBudget, webSearches: searches(modelKey) }, rates);
+    }
+    await ctx.runMutation(internal.engine.recordUsage, { stepId, records: usageRecord(MODEL_SPECS[modelKey].provider, res.ok ? res.actualModelId : MODEL_SPECS[modelKey].apiModelId, res) });
+    if (res.ok || res.kind === "invalid_output" || res.kind === "refused") {
+      await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: true });
+    } else if (res.kind === "provider_error" || res.kind === "timeout") {
+      await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: false });
+    }
+    return res;
+  };
+
+  let res = await attempt(route.primary);
+  if (!res.ok && res.kind === "invalid_output") {
+    // One repair, counted against the run's repair budget.
+    await begin(ctx, run._id, index + 1000, "model", `${task.label} (repair)`, task.role, true);
+    res = await attempt(route.primary, `\n\nYour previous answer failed validation: ${res.message}. Return only valid JSON matching the schema.`);
+  }
+  if (!res.ok && ["provider_unavailable", "provider_error", "timeout", "rate_limited"].includes(res.kind)) {
+    const fallbackCost = worstCaseStepMicros(route.fallback, task.inputBudget, task.outputBudget, rates);
+    const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: run._id, costMicros: fallbackCost });
+    if (reserved.ok) res = await attempt(route.fallback);
+  }
+  if (!res.ok) {
+    await ctx.runMutation(internal.engine.failStep, { stepId, error: `${res.kind}: ${res.message}` });
+    const message =
+      res.kind === "provider_unavailable"
+        ? "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later."
+        : res.kind === "refused"
+          ? "The AI declined this request. Try rephrasing it."
+          : res.kind === "invalid_output"
+            ? "The AI's answer didn't pass our quality checks. Nothing was saved."
+            : "The AI service had a problem. Nothing was saved; please try again.";
+    throw new JobStop(res.kind, message);
+  }
+  await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(res.output) });
+  return res.output as T;
+}
+
+function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureContext {
+  return {
+    businessName: job.business?.name ?? job.org.name,
+    website: job.business?.website,
+    facts: job.facts,
+    goal: job.goal?.statement,
+    ...extra,
+  };
+}
+
+function businessBrief(job: JobCtx): string {
+  const b = job.business;
+  return [
+    `BUSINESS: ${b?.name ?? job.org.name}${b?.website ? ` (${b.website})` : ""}`,
+    b?.summary ? `SUMMARY: ${b.summary}` : "",
+    `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
+    job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${(job.goal.monthlyAdBudgetMinor / 100).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
+    job.brand ? `BRAND VOICE: ${job.brand.voice}. Avoid: ${job.brand.doNots.join("; ")}` : "",
+    factsBlock(job.facts),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function finish(
+  ctx: ActionCtx,
+  runId: Id<"workflowRuns">,
+  status: "verified" | "failed",
+  extra: { output?: unknown; userMessage?: string; error?: string; meters?: Record<string, number> } = {},
+) {
+  await ctx.runMutation(internal.engine.finishRun, {
+    runId,
+    status,
+    output: extra.output === undefined ? undefined : JSON.stringify(extra.output),
+    userMessage: extra.userMessage,
+    error: extra.error,
+    meters: extra.meters,
+  });
+}
+
+async function guarded(ctx: ActionCtx, runId: Id<"workflowRuns">, body: () => Promise<void>, onFail?: (msg: string) => Promise<void>) {
+  try {
+    await body();
+  } catch (e) {
+    const msg = e instanceof JobStop ? e.userMessage : "Something went wrong. Nothing was published; you can try again.";
+    await finish(ctx, runId, "failed", { userMessage: msg, error: (e as Error).message?.slice(0, 300) });
+    if (onFail) await onFail(msg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Jobs                                                                 */
+/* ------------------------------------------------------------------ */
+
+export const onboardingResearch = internalAction({
+  args: { runId: v.id("workflowRuns"), ownerText: v.optional(v.string()) },
+  handler: async (ctx, { runId, ownerText }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job?.business) return;
+    const business = job.business;
+    await guarded(ctx, runId, async () => {
+      // Step 0: bounded website research (skipped when the owner pasted their own description).
+      let pagesText = "";
+      let pagesFetched = 0;
+      const step = await begin(ctx, runId, 0, "research", "Read your website");
+      let pages: { url: string; title?: string; excerpt?: string; status: "ok" | "blocked_by_robots" | "failed"; text: string }[] = [];
+      if (step.checkpoint !== undefined) {
+        pages = step.checkpoint as typeof pages;
+      } else {
+        if (job.run.isFixture || !business.website) {
+          pages = business.website
+            ? [{ url: business.website, title: business.name, status: "ok", text: job.facts.map((f) => f.statement).join("\n") }]
+            : [];
+        } else {
+          const res = await researchWebsite(business.website, 2);
+          pagesFetched = res.pagesFetched;
+          pages = res.pages.map((p) => ({ url: p.url, title: p.title, excerpt: p.text.slice(0, 600), status: p.status, text: `${p.text}\n${p.prices.join("\n")}` }));
+          await ctx.runMutation(internal.engine.recordUsage, {
+            stepId: step.stepId!,
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+          });
+        }
+        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(pages) });
+      }
+      pagesText = pages
+        .filter((p) => p.status === "ok")
+        .map((p) => untrusted(p.url, p.text, 12_000))
+        .join("\n\n");
+      if (ownerText) pagesText += `\n\n${untrusted("owner-supplied description", ownerText, 8_000)}`;
+      if (!pagesText.trim()) {
+        await ctx.runMutation(internal.jobWrites.saveResearch, { runId, businessId: business._id, pages: pages.map(({ text: _t, ...p }) => p) });
+        throw new JobStop("no_content", "We couldn't read your website (it may block automated visitors). Paste a short description of your business instead and we'll continue.");
+      }
+
+      // Step 1: Data Analyst extracts a sourced business profile.
+      const profile = await runModelTask<BusinessProfile>(
+        ctx,
+        job,
+        1,
+        "business_profile",
+        `TASK: Build a concise, factual business profile from the website content below. Every fact must come from the content and cite the page URL it came from in sourceUrl. Mark anything uncertain as low confidence. Business name given by the owner: "${business.name}". Suggest 2-4 success events that define a valuable customer action for this type of business.`,
+        pagesText,
+        fixtureCtx(job),
+      );
+      await ctx.runMutation(internal.jobWrites.saveResearch, {
+        runId,
+        businessId: business._id,
+        pages: pages.map(({ text: _t, ...p }) => p),
+        profile: JSON.stringify(profile),
+      });
+
+      // Step 2: CMO builds business intelligence (audience, competitors, SWOT, journey).
+      const insights = await runModelTask<BusinessInsights>(
+        ctx,
+        job,
+        2,
+        "business_insights",
+        `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}`,
+        pagesText,
+        fixtureCtx(job),
+      );
+      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
+      await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
+    });
+  },
+});
+
+export const buildStrategy = internalAction({
+  args: { runId: v.id("workflowRuns") },
+  handler: async (ctx, { runId }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(ctx, runId, async () => {
+      const insights = job.business?.insights;
+      const strategy = await runModelTask<StrategyOutput>(
+        ctx,
+        job,
+        0,
+        "growth_strategy",
+        `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
+        "",
+        fixtureCtx(job),
+      );
+      await ctx.runMutation(internal.jobWrites.saveStrategy, { runId, strategy: JSON.stringify(strategy), factIds: job.facts.map((f) => f.id) });
+      await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
+    });
+  },
+});
+
+export const createContent = internalAction({
+  args: {
+    runId: v.id("workflowRuns"),
+    job: v.union(v.literal("content_social"), v.literal("content_ads"), v.literal("content_email"), v.literal("content_seo")),
+    channel: v.optional(v.string()),
+    quantity: v.optional(v.number()),
+    images: v.optional(v.number()),
+    brief: v.optional(v.string()),
+    cardId: v.optional(v.id("actionCards")),
+  },
+  handler: async (ctx, args) => {
+    const job = await loadContext(ctx, args.runId);
+    if (!job) return;
+    const factIds = job.facts.map((f) => f.id);
+    const brief = args.brief ? `\n\nOWNER REQUEST: ${untrusted("owner request", args.brief, 1500)}` : "";
+    await guarded(
+      ctx,
+      args.runId,
+      async () => {
+        const fx = fixtureCtx(job, { channel: args.channel, quantity: args.quantity, request: args.brief });
+        let items: ReturnType<typeof socialToArtifacts> = [];
+        let posts = 0;
+        if (args.job === "content_social") {
+          const qty = Math.max(1, Math.min(args.quantity ?? 3, 6));
+          const out = await runModelTask<SocialPostsOutput>(
+            ctx,
+            job,
+            0,
+            "social_posts",
+            `TASK: Write ${qty} social posts${args.channel ? ` for ${args.channel}` : " across Instagram, Facebook and LinkedIn"} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
+            "",
+            fx,
+          );
+          out.posts = out.posts.slice(0, qty);
+          posts = out.posts.length;
+          items = socialToArtifacts(out, Date.now());
+        } else if (args.job === "content_ads") {
+          const out = await runModelTask<AdDraftsOutput>(ctx, job, 0, "ad_drafts", `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${businessBrief(job)}${brief}`, "", fx);
+          items = adsToArtifacts(out, job.business?.website);
+        } else if (args.job === "content_email") {
+          const out = await runModelTask<EmailSequenceOutput>(ctx, job, 0, "email_sequence", `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}`, "", fx);
+          items = emailToArtifacts(out);
+        } else {
+          const out = await runModelTask<SeoBriefOutput>(ctx, job, 0, "seo_brief", `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft.\n\n${businessBrief(job)}${brief}`, "", fx);
+          items = seoToArtifacts(out);
+        }
+
+        // Creative Director: images for the first N social posts (max 2 attempts each, metered).
+        const withImages: (typeof items[number] & { imageStorageId?: Id<"_storage"> })[] = items.map((i) => ({ ...i }));
+        let delivered = 0;
+        let attempts = 0;
+        const imageCount = args.job === "content_social" ? Math.min(args.images ?? 0, 2, withImages.length) : 0;
+        for (let i = 0; i < imageCount; i++) {
+          const item = withImages[i];
+          const s = await begin(ctx, args.runId, 10 + i, "image", "Create image", "creative_director");
+          if (s.checkpoint !== undefined) {
+            if (typeof s.checkpoint === "string") item.imageStorageId = s.checkpoint as Id<"_storage">;
+            continue;
+          }
+          if (job.run.isFixture) {
+            await ctx.runMutation(internal.engine.completeStep, { stepId: s.stepId!, output: JSON.stringify(null) });
+            continue; // demo: no image generated; a labeled placeholder is shown instead
+          }
+          const rates = getRateVersion(job.run.rateVersionId);
+          const prompt = `Brand illustration for ${job.business?.name ?? "a small business"}: ${item.imagePrompt}. Clean, modern, soft natural light, no text, no logos, no real people's faces, no fake product screenshots.`;
+          let stored: Id<"_storage"> | undefined;
+          for (let a = 0; a < 2 && !stored; a++) {
+            attempts++;
+            const img = await generateImage(prompt, rates);
+            await ctx.runMutation(internal.engine.recordUsage, {
+              stepId: s.stepId!,
+              records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }],
+            });
+            if (img.ok) stored = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
+            else if (img.kind === "provider_unavailable") break;
+          }
+          if (stored) {
+            item.imageStorageId = stored;
+            delivered++;
+          }
+          await ctx.runMutation(internal.engine.completeStep, { stepId: s.stepId!, output: JSON.stringify(stored ?? null) });
+        }
+
+        await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds });
+        await finish(ctx, args.runId, "verified", {
+          output: { artifacts: withImages.length },
+          meters: { socialPosts: posts, imageAttempts: attempts, deliveredImages: delivered },
+        });
+        if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "done" });
+      },
+      async () => {
+        if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
+      },
+    );
+  },
+});
+
+export const chatIntent = internalAction({
+  args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), text: v.string() },
+  handler: async (ctx, { runId, messageId, text }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(
+      ctx,
+      runId,
+      async () => {
+        const out = await runModelTask<ChatIntentOutput>(
+          ctx,
+          job,
+          0,
+          "chat_intent",
+          `TASK: The owner sent a message. Reply briefly and propose up to 3 concrete actions the team can prepare. Actions only prepare drafts or proposals; anything external needs approval later. Use channel values like instagram, facebook, linkedin, x, email, google_search_ad, meta_ad, blog. If the request needs data or access we don't have, propose a connect_account action.\n\n${businessBrief(job)}\n\nOWNER MESSAGE:`,
+          untrusted("owner chat message", text, 2000),
+          fixtureCtx(job, { request: text }),
+        );
+        await ctx.runMutation(internal.jobWrites.saveChatResult, { runId, messageId, result: JSON.stringify(out), isFixture: job.run.isFixture });
+        await finish(ctx, runId, "verified");
+      },
+      async (msg) => {
+        await ctx.runMutation(internal.jobWrites.markChatFailed, { messageId, message: msg });
+      },
+    );
+  },
+});
+
+export const explainResults = internalAction({
+  args: { runId: v.id("workflowRuns"), metricsJson: v.string(), cardId: v.optional(v.id("actionCards")) },
+  handler: async (ctx, { runId, metricsJson, cardId }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(ctx, runId, async () => {
+      const out = await runModelTask<unknown>(
+        ctx,
+        job,
+        0,
+        "metric_explanation",
+        `TASK: Explain these computed results in plain English for the owner. Use ONLY the numbers given. Say clearly what is observed, what is attributed and what is projected, and what is uncertain.\n\n${businessBrief(job)}\n\nCOMPUTED RESULTS (from ClimbOS statistics code):\n${metricsJson.slice(0, 12_000)}`,
+        "",
+        fixtureCtx(job),
+      );
+      await finish(ctx, runId, "verified", { output: out });
+      if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
+    });
+  },
+});
+
+export const conversionAudit = internalAction({
+  args: { runId: v.id("workflowRuns"), cardId: v.optional(v.id("actionCards")) },
+  handler: async (ctx, { runId, cardId }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job?.business) return;
+    const website = job.business.website;
+    await guarded(ctx, runId, async () => {
+      const step = await begin(ctx, runId, 0, "research", "Read key pages");
+      let text = "";
+      if (step.checkpoint !== undefined) text = step.checkpoint as string;
+      else {
+        if (!job.run.isFixture && website) {
+          const res = await researchWebsite(website, 1);
+          text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, p.text, 10_000)).join("\n\n");
+          await ctx.runMutation(internal.engine.recordUsage, {
+            stepId: step.stepId!,
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+          });
+        }
+        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(text) });
+      }
+      const out = await runModelTask<unknown>(ctx, job, 1, "conversion_audit", `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${businessBrief(job)}`, text, fixtureCtx(job));
+      await finish(ctx, runId, "verified", { output: out, meters: { scrapeCredits: text ? 2 : 0 } });
+      if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
+    });
+  },
+});
+
+export const simplePlanJob = internalAction({
+  args: { runId: v.id("workflowRuns"), task: v.union(v.literal("retention_plan"), v.literal("sales_sequence")), cardId: v.optional(v.id("actionCards")) },
+  handler: async (ctx, { runId, task, cardId }) => {
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(ctx, runId, async () => {
+      const text =
+        task === "retention_plan"
+          ? "TASK: Design customer segments and retention plays (trigger, message, channel) for people who already use the product and agreed to hear from the business."
+          : "TASK: Define the ideal customer, qualification questions and a follow-up sequence for leads the business ALREADY has (inbound or CRM). Never imply access to a contact database.";
+      const out = await runModelTask<unknown>(ctx, job, 0, task, `${text}\n\n${businessBrief(job)}`, "", fixtureCtx(job));
+      await finish(ctx, runId, "verified", { output: out });
+      if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
+    });
+  },
+});

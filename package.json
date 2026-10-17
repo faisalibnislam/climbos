@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "econ:export": "tsx scripts/economics-export.ts",
-    "setup:check": "tsx scripts/setup-check.ts"
+    "setup:check": "tsx scripts/setup-check.ts",
+    "env:sync": "node scripts/env-sync.mjs",
+    "auth:keys": "node scripts/generate-auth-keys.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

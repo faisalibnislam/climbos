@@ -24,6 +24,7 @@ import {
   topupEconomics,
   USAGE_PROFILES,
   usdToMicros,
+  WORKBOOK_PLAN_KEYS,
   VERIFIED_2026_10_17,
 } from "../../shared/economics";
 import { ROLE_BUDGETS } from "../../shared/economics/roles";
@@ -65,11 +66,11 @@ describe("agents sheet", () => {
 });
 
 describe("twelve plan/profile rows reproduce the workbook", () => {
-  for (const plan of PLAN_KEYS) {
+  for (const plan of WORKBOOK_PLAN_KEYS) {
     USAGE_PROFILES.forEach((profile, i) => {
       it(`${plan} / ${profile}`, () => {
         const r = computeProfile(plan, profile);
-        const w = WORKBOOK.plans[plan];
+        const w = WORKBOOK.plans[plan as keyof typeof WORKBOOK.plans];
         expect(microsToUsd(r.revenueMicros)).toBeCloseTo(w.revenue, 6);
         for (const key of COST_LINE_KEYS) {
           expect(microsToUsd(r.lines[key])).toBeCloseTo(w.lines[key][i], 5);
@@ -99,7 +100,7 @@ describe("twelve plan/profile rows reproduce the workbook", () => {
   }
 
   it("heavy stress margins are 36.6%–40.2% and all ≥ 30%", () => {
-    const heavy = computeAllProfiles().filter((r) => r.profile === "heavy");
+    const heavy = computeAllProfiles().filter((r) => r.profile === "heavy" && r.plan !== "basic");
     const margins = heavy.map((r) => Number((r.stress.grossMargin * 100).toFixed(1)));
     expect(margins).toEqual([36.6, 40.2, 36.6, 37.2]);
     expect(marginGuard().ok).toBe(true);
@@ -241,8 +242,25 @@ describe("entitlements", () => {
     }
   });
 
-  it("AI wallets round down to $20 / $58 / $145 / $349", () => {
-    expect(PLAN_KEYS.map((p) => CURRENT_ENTITLEMENTS.plans[p].aiWalletMicros / 1_000_000)).toEqual([20, 58, 145, 349]);
+  it("AI wallets round down to $2 / $20 / $58 / $145 / $349", () => {
+    expect(PLAN_KEYS.map((p) => CURRENT_ENTITLEMENTS.plans[p].aiWalletMicros / 1_000_000)).toEqual([2, 20, 58, 145, 349]);
+  });
+
+  it("Basic ($19) passes the stress gate with price-weighted fixed allocation", () => {
+    const heavy = computeProfile("basic", "heavy");
+    expect(heavy.stress.grossMargin).toBeGreaterThanOrEqual(0.3);
+    expect(heavy.grossMargin).toBeGreaterThanOrEqual(0.3);
+    expect(heavy.stress.minimumListPriceUsd).toBeLessThan(19);
+    // Fixed share is 19/169 of the per-customer share.
+    expect(microsToUsd(heavy.lines.fixedAllocated)).toBeCloseTo((111.25 / 100) * (19 / 169), 6);
+    // Guaranteed monthly strategy refresh even on the smallest plan.
+    expect(computePlanCaps("basic").roleRuns.ceo).toBe(1);
+  });
+
+  it("strict per-head allocation at ten customers would fail Basic (documented risk)", () => {
+    const a = cloneAssumptions();
+    a.plans.basic.fixedAllocation = "per_customer";
+    expect(computeProfile("basic", "heavy", { assumptions: a }).stress.grossMargin).toBeLessThan(0.3);
   });
 });
 
@@ -269,8 +287,9 @@ describe("CSV export", () => {
   it("exports twelve rows plus a header", () => {
     const csv = economicsCsv();
     const lines = csv.trim().split("\n");
-    expect(lines).toHaveLength(13);
+    expect(lines).toHaveLength(16);
     expect(lines[0]).toContain("gross_margin");
-    expect(lines[1].startsWith("starter,low,169,")).toBe(true);
+    expect(lines[1].startsWith("basic,low,19,")).toBe(true);
+    expect(lines[4].startsWith("starter,low,169,")).toBe(true);
   });
 });
