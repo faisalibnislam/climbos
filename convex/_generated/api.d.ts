@@ -42,6 +42,7 @@ import type * as ops from "../ops.js";
 import type * as orgs from "../orgs.js";
 import type * as preview from "../preview.js";
 import type * as previewRunner from "../previewRunner.js";
+import type * as publicConfig from "../publicConfig.js";
 import type * as publish from "../publish.js";
 import type * as settings from "../settings.js";
 import type * as workspace from "../workspace.js";
@@ -87,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   orgs: typeof orgs;
   preview: typeof preview;
   previewRunner: typeof previewRunner;
+  publicConfig: typeof publicConfig;
   publish: typeof publish;
   settings: typeof settings;
   workspace: typeof workspace;

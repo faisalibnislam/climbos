@@ -1,8 +1,16 @@
-// Creates ClimbOS products in Polar (sandbox by default) and writes the product
-// ids into .env.local. Idempotent: existing products with the same name are reused.
-// Requires POLAR_ACCESS_TOKEN (and optional POLAR_SERVER=production) in .env.local.
-// Usage: node scripts/polar-setup.mjs [--file .env.local]
+// Sets up everything ClimbOS needs in Polar (sandbox by default), using only an
+// organization access token:
+//   1. the six products (5 monthly plans + the one-off capacity pack),
+//   2. a webhook endpoint pointing at this env file's Convex deployment,
+// then writes POLAR_PRODUCT_* and POLAR_WEBHOOK_SECRET into the env file.
+// Idempotent: products with the same name and an endpoint with the same URL are reused.
+// Never prints secret values.
+// Requires POLAR_ACCESS_TOKEN (and optional POLAR_SERVER=production) in the env file.
+// Usage: node scripts/polar-setup.mjs [--file .env.local] [--sync]
+//   --sync  also copies the results into the matching Convex deployment
+//           (production when --file is .env.production.local).
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const fileIdx = process.argv.indexOf("--file");
 const file = fileIdx >= 0 ? process.argv[fileIdx + 1] : ".env.local";
@@ -24,6 +32,26 @@ if (!token) {
   process.exit(1);
 }
 const base = env.POLAR_SERVER === "production" ? "https://api.polar.sh" : "https://sandbox-api.polar.sh";
+
+const siteUrl = env.NEXT_PUBLIC_CONVEX_SITE_URL;
+if (!siteUrl) {
+  console.error("NEXT_PUBLIC_CONVEX_SITE_URL is empty in " + file + " (needed for the webhook URL)");
+  process.exit(1);
+}
+const webhookUrl = new URL("/webhooks/polar", siteUrl).toString();
+// Everything convex/billing.ts processes: checkouts, orders (incl. refunds) and subscriptions.
+const WEBHOOK_EVENTS = [
+  "checkout.created", "checkout.updated",
+  "order.created", "order.paid", "order.updated", "order.refunded",
+  "subscription.created", "subscription.active", "subscription.updated", "subscription.canceled",
+  "subscription.uncanceled", "subscription.revoked", "subscription.past_due",
+];
+
+function setEnvLine(name, value) {
+  const line = `${name}=${value}`;
+  const re = new RegExp(`^${name}=.*$`, "m");
+  envText = re.test(envText) ? envText.replace(re, line) : `${envText.trimEnd()}\n${line}\n`;
+}
 
 const PRODUCTS = [
   { env: "POLAR_PRODUCT_BASIC", name: "ClimbOS Basic", cents: 1900, recurring: true, description: "Your AI growth team in miniature: a monthly plan and a few ready-to-post drafts." },
@@ -58,8 +86,27 @@ for (const p of PRODUCTS) {
   } else {
     console.log(`• reusing ${p.name}`);
   }
-  const line = `${p.env}=${product.id}`;
-  envText = new RegExp(`^${p.env}=.*$`, "m").test(envText) ? envText.replace(new RegExp(`^${p.env}=.*$`, "m"), line) : `${envText.trimEnd()}\n${line}\n`;
+  setEnvLine(p.env, product.id);
 }
+
+const endpoints = (await api("/v1/webhooks/endpoints?limit=100")).items ?? [];
+let endpoint = endpoints.find((e) => e.url === webhookUrl);
+if (endpoint) {
+  endpoint = await api(`/v1/webhooks/endpoints/${endpoint.id}`, { method: "PATCH", body: JSON.stringify({ events: WEBHOOK_EVENTS, format: "raw", enabled: true }) });
+  console.log(`• reusing webhook → ${webhookUrl}`);
+} else {
+  endpoint = await api("/v1/webhooks/endpoints", { method: "POST", body: JSON.stringify({ url: webhookUrl, name: "ClimbOS", format: "raw", events: WEBHOOK_EVENTS }) });
+  console.log(`✔ created webhook → ${webhookUrl}`);
+}
+if (!endpoint.secret) throw new Error("Polar didn't return a webhook secret; copy it from the Polar dashboard into POLAR_WEBHOOK_SECRET.");
+setEnvLine("POLAR_WEBHOOK_SECRET", endpoint.secret);
+
 writeFileSync(file, envText);
-console.log(`Product ids written to ${file}. Next: pnpm env:sync`);
+console.log(`Product ids and webhook secret written to ${file}.`);
+
+if (process.argv.includes("--sync")) {
+  const prod = file.includes("production");
+  execFileSync("node", ["scripts/env-sync.mjs", ...(prod ? ["--prod"] : []), "--file", file], { stdio: "inherit" });
+} else {
+  console.log(`Next: node scripts/env-sync.mjs${file.includes("production") ? " --prod" : ""} --file ${file}`);
+}

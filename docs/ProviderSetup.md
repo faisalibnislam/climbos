@@ -19,30 +19,71 @@ Without keys, real workspaces show "AI providers aren't available". The demo sti
 
 ## 3. Resend (platform email: sign-in codes, invitations, alerts, digests)
 
-1. Verify **climbos.app** in Resend (SPF/DKIM DNS records on Vercel DNS).
-2. Set `AUTH_RESEND_KEY` and `RESEND_FROM="ClimbOS <hello@climbos.app>"`.
-3. Add a webhook at `https://<deployment>.convex.site/webhooks/resend` for the events `email.delivered`, `email.bounced` and `email.complained`. Set `RESEND_WEBHOOK_SECRET` (`whsec_…`).
+**Done on 17 Oct 2026:**
+- **Domain.** `climbos.app` was added to Resend (us-east-1, send-only, open and click tracking off). Its DNS records were added on Vercel DNS: DKIM `resend._domainkey` TXT, SPF `send` MX + TXT, return-path `rsend` CNAME, and a monitor-only `_dmarc` TXT (`p=none`).
+- **Webhooks.** These are created for `email.delivered`, `email.bounced`, `email.complained`, `email.failed` and `email.suppressed`, at:
+  - prod: `https://kindly-quail-695.convex.site/webhooks/resend`
+  - dev: `https://vivid-zebra-520.convex.site/webhooks/resend`
+- **Webhook secrets.** Their signing secrets are set as `RESEND_WEBHOOK_SECRET` directly on each Convex deployment.
+- **Sender.** `RESEND_FROM="ClimbOS <hello@climbos.app>"`.
+
+**Left to do:**
+1. Create an API key in Resend with **Sending access**, limited to the `climbos.app` domain.
+2. Put it in `AUTH_RESEND_KEY` in both env files and run the sync.
+
+The sign-in page shows email sign-in once the key is present in Convex. No rebuild is needed.
 
 Customer marketing never goes through this account. Customers connect their own Resend key in Connections.
 
 ## 4. Polar (billing)
 
-1. Create a **sandbox** organization at sandbox.polar.sh and an organization access token with product, checkout, subscription and customer-session scopes. Set `POLAR_SERVER=sandbox` and `POLAR_ACCESS_TOKEN`.
-2. Create products. Either run `node scripts/polar-setup.mjs` (it creates the plans and the pack in the sandbox and prints the product ids) or create them by hand:
-   - Monthly recurring: Basic $19, Starter $169, Growth $449, Pro $999, Business $2,299.
-   - One-time: "Extra capacity pack" $29.
-   - Set `POLAR_PRODUCT_BASIC`, `_STARTER`, `_GROWTH`, `_PRO`, `_BUSINESS` and `_BOOST_29`.
-3. Add a webhook at `https://<deployment>.convex.site/webhooks/polar` for the events `subscription.created`, `.active`, `.updated`, `.canceled`, `.uncanceled`, `.past_due`, `.revoked`, `.cycled`, `order.created`, `order.paid`, `order.updated`, `order.refunded`, `checkout.updated` and `customer.state_changed`. Set `POLAR_WEBHOOK_SECRET`.
-4. Test the full cycle in the sandbox: checkout → `order.paid` → allowance granted, then upgrade, top-up, refund and cancel.
-5. Before production, confirm with Polar:
+Everything except the token is scripted. `pnpm polar:setup --file <env file> --sync` does the following:
+- creates (or reuses) the five monthly plans and the one-off capacity pack: Basic $19, Starter $169, Growth $449, Pro $999, Business $2,299, Extra capacity pack $29;
+- creates (or updates) the webhook endpoint `<NEXT_PUBLIC_CONVEX_SITE_URL>/webhooks/polar` with every event ClimbOS processes;
+- writes `POLAR_PRODUCT_*` and `POLAR_WEBHOOK_SECRET` into the env file, then copies them into the matching Convex deployment.
+
+Steps:
+1. At **sandbox.polar.sh**, create an organization. Then go to Settings → Developers → New token, and create an organization access token with these scopes:
+   - `products:read` and `products:write`
+   - `checkouts:read` and `checkouts:write`
+   - `customer_sessions:write`
+   - `customers:read` and `customers:write`
+   - `subscriptions:read` and `subscriptions:write`
+   - `orders:read`
+   - `refunds:read`
+   - `webhooks:read` and `webhooks:write`
+2. Put it in `POLAR_ACCESS_TOKEN`, with `POLAR_SERVER=sandbox`, in **both** env files. Each environment gets its own webhook and secret, so dev and prod get separate endpoints in the same sandbox organization.
+3. Run the setup for each env file:
+   - `pnpm polar:setup --file .env.local --sync`
+   - `pnpm polar:setup --file .env.production.local --sync`
+4. Test the full cycle in the sandbox: checkout → `order.paid` → allowance granted. Then try an upgrade, a top-up, a refund and a cancellation.
+5. For real payments, repeat steps 1–3 on polar.sh with `POLAR_SERVER=production`. Before that, confirm with Polar:
    - seller eligibility and product acceptance;
    - payout country and currency;
    - whether prices are tax-inclusive or tax-exclusive (ClimbOS prices exclude tax);
    - the actual fee schedule. The model assumes Polar Starter, 5% + $0.50, plus 1.5% for non-US cards. Do **not** assume an Early Member tariff.
 
-## 5. Google sign-in (optional)
+## 5. Google sign-in
 
-Create an OAuth client (type Web) in Google Cloud. Set the redirect URI to `https://<deployment>.convex.site/api/auth/callback/google`. Set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in Convex and `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=true` in the web env.
+OAuth runs on our own domain. `CUSTOM_AUTH_SITE_URL` on the Convex deployment points Convex Auth at the site, and `next.config.ts` proxies `/api/auth/signin/*` and `/api/auth/callback/*` to the deployment. Google therefore only ever sees climbos.app. The "Continue with Google" button appears by itself once both Google values exist in Convex; no rebuild is needed.
+
+**Done on 17 Oct 2026:**
+- `CUSTOM_AUTH_SITE_URL` is set to `https://climbos.app` (prod) and `http://localhost:3000` (dev).
+- The proxy routes are deployed.
+
+**Left to do in Google Cloud:**
+1. Create a project, for example "ClimbOS".
+2. **OAuth consent screen (Google Auth Platform → Branding).**
+   - App name "ClimbOS", support email, logo optional.
+   - Home page `https://climbos.app`, privacy policy `https://climbos.app/privacy`, terms `https://climbos.app/terms`.
+   - Authorized domain `climbos.app`.
+   - Audience: External, and **publish** the app.
+   - Sign-in uses only `openid`, `email` and `profile`, so no Google verification review is needed for sign-in.
+3. **Clients → Create client → Web application.**
+   - Authorized JavaScript origins: `https://climbos.app` and `http://localhost:3000`.
+   - Authorized redirect URIs: `https://climbos.app/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/google`.
+4. Put the client ID and secret in `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in both env files, and run the sync.
+5. *Optional:* the same Google Cloud project can hold the separate GA4 / Search Console / Ads OAuth client described below. Those scopes do need verification.
 
 ## 6. Integrations (optional; missing values show "Setup needed")
 
@@ -65,6 +106,6 @@ Customers connect Stripe (a **restricted read-only** key) and their own Resend k
   - `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`: the **production** Convex deployment.
   - `NEXT_PUBLIC_SITE_URL=https://climbos.app`
   - `CLIMBOS_SERVER_SECRET`: same value as in Convex prod.
-  - `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED`, and optionally `NEXT_PUBLIC_POSTHOG_*`.
+  - optionally `NEXT_PUBLIC_POSTHOG_*`. (Sign-in methods are decided by Convex at runtime; there's no web flag for them.)
 - **Done on 17 Oct 2026:** the project is linked to GitHub, the framework is set to Next.js, production and preview variables are set, and `climbos.app` and `www.climbos.app` are attached. Production webhooks therefore point at `https://kindly-quail-695.convex.site/webhooks/polar` and `/webhooks/resend`.
 - **Optional:** build with `npx convex deploy --cmd 'pnpm build'` plus `CONVEX_DEPLOY_KEY` so that Convex and the site deploy together.

@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/field";
 import { safeNextPath } from "@/lib/utils";
 
-const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE_ENABLED === "true";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Step = "email" | "code";
@@ -20,6 +21,9 @@ export function SignInForm() {
   const { signIn } = useAuthActions();
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"), "/app");
+  // Decided by the backend at runtime: a method appears once its keys are configured.
+  const options = useQuery(api.publicConfig.signInOptions, {});
+  const emailOff = options?.email === false;
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -107,6 +111,12 @@ export function SignInForm() {
         </Callout>
       ) : null}
 
+      {emailOff && step === "email" ? (
+        <Callout tone="info" title="Email sign-in is almost ready">
+          Sign-in codes by email aren&apos;t switched on yet.{options?.google ? " You can continue with Google below," : " Meanwhile,"} you can look around in the demo.
+        </Callout>
+      ) : null}
+
       {step === "email" ? (
         <form onSubmit={sendCode} noValidate className="flex flex-col gap-4">
           <Field label="Email address" hint="We'll email you an 8-digit sign-in code. No password needed." error={fieldError ?? undefined}>
@@ -123,7 +133,7 @@ export function SignInForm() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </Field>
-          <Button type="submit" size="lg" loading={busy === "send"} loadingText="Sending…" disabled={busy !== null && busy !== "send"}>
+          <Button type="submit" size="lg" loading={busy === "send"} loadingText="Sending…" disabled={emailOff || (busy !== null && busy !== "send")}>
             <Mail aria-hidden="true" />
             Email me a code
           </Button>
@@ -171,7 +181,7 @@ export function SignInForm() {
         </form>
       )}
 
-      {GOOGLE_ENABLED && step === "email" ? (
+      {options?.google && step === "email" ? (
         <>
           <div className="flex items-center gap-3 text-sm text-ink-3" aria-hidden="true">
             <span className="h-px flex-1 bg-line" />

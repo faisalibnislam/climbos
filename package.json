@@ -15,6 +15,7 @@
     "econ:export": "tsx scripts/economics-export.ts",
     "setup:check": "tsx scripts/setup-check.ts",
     "env:sync": "node scripts/env-sync.mjs",
+    "polar:setup": "node scripts/polar-setup.mjs",
     "auth:keys": "node scripts/generate-auth-keys.mjs"
   },
   "dependencies": {

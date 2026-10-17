@@ -194,8 +194,14 @@ export const sendPlatformEmail = internalAction({
 export const applyResendEvent = internalMutation({
   args: { type: v.string(), resendId: v.optional(v.string()), toHashes: v.array(v.string()) },
   handler: async (ctx, { type, resendId, toHashes }) => {
-    const status =
-      type === "email.delivered" ? "delivered" : type === "email.bounced" ? "bounced" : type === "email.complained" ? "complained" : null;
+    const STATUS = {
+      "email.delivered": "delivered",
+      "email.bounced": "bounced",
+      "email.complained": "complained",
+      "email.failed": "failed",
+      "email.suppressed": "suppressed",
+    } as const;
+    const status = (STATUS as Record<string, (typeof STATUS)[keyof typeof STATUS]>)[type] ?? null;
     if (resendId && status) {
       const log = await ctx.db
         .query("emailLog")

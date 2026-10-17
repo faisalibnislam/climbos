@@ -11,6 +11,7 @@ import {
   type ChatIntentOutput,
   type EmailSequenceOutput,
   factsBlock,
+  stripFactMarkers,
   type SeoBriefOutput,
   type SocialPostsOutput,
   type StrategyOutput,
@@ -138,7 +139,7 @@ async function runModelTask<T>(
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
   const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "anthropic" ? 2 : 0);
 
-  const attempt = async (modelKey: ModelKey, extra = ""): Promise<ModelResult> => {
+  const attempt = async (modelKey: ModelKey, extra = "", usageStepId: Id<"workflowSteps"> = stepId): Promise<ModelResult> => {
     const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: MODEL_SPECS[modelKey].provider });
     if (circuit === "open") return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", costMicros: 0 };
     let res = await callModel({ modelKey, system, user: user + extra, schema: task.schema, inputBudget: task.inputBudget, outputBudget: task.outputBudget, webSearches: searches(modelKey) }, rates);
@@ -146,7 +147,7 @@ async function runModelTask<T>(
       await sleep((res.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
       res = await callModel({ modelKey, system, user: user + extra, schema: task.schema, inputBudget: task.inputBudget, outputBudget: task.outputBudget, webSearches: searches(modelKey) }, rates);
     }
-    await ctx.runMutation(internal.engine.recordUsage, { stepId, records: usageRecord(MODEL_SPECS[modelKey].provider, res.ok ? res.actualModelId : MODEL_SPECS[modelKey].apiModelId, res) });
+    await ctx.runMutation(internal.engine.recordUsage, { stepId: usageStepId, records: usageRecord(MODEL_SPECS[modelKey].provider, res.ok ? res.actualModelId : MODEL_SPECS[modelKey].apiModelId, res) });
     if (res.ok || res.kind === "invalid_output" || res.kind === "refused") {
       await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: true });
     } else if (res.kind === "provider_error" || res.kind === "timeout") {
@@ -157,9 +158,37 @@ async function runModelTask<T>(
 
   let res = await attempt(route.primary);
   if (!res.ok && res.kind === "invalid_output") {
-    // One repair, counted against the run's repair budget.
-    await begin(ctx, run._id, index + 1000, "model", `${task.label} (repair)`, task.role, true);
-    res = await attempt(route.primary, `\n\nYour previous answer failed validation: ${res.message}. Return only valid JSON matching the schema.`);
+    // One repair, counted against the run's repair budget and recorded as its own step.
+    let repair: Awaited<ReturnType<typeof begin>>;
+    try {
+      repair = await begin(ctx, run._id, index + 1000, "model", `${task.label} (repair)`, task.role, true);
+    } catch (e) {
+      await ctx.runMutation(internal.engine.failStep, { stepId, error: `${res.kind}: ${res.message}` });
+      throw e;
+    }
+    if (repair.checkpoint !== undefined) {
+      // Repair already finished before a restart: reuse its saved answer (its cost was recorded then).
+      res = {
+        ok: true,
+        provider: MODEL_SPECS[route.primary].provider as "anthropic" | "google",
+        actualModelId: MODEL_SPECS[route.primary].apiModelId,
+        output: repair.checkpoint,
+        rawText: "",
+        usage: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0 },
+        costMicros: 0,
+        searchCostMicros: 0,
+        finishReason: "checkpoint",
+        sourceUrls: [],
+      };
+    } else {
+      // A cut-off answer can't be fixed by asking again at the same length, so ask for a shorter one.
+      const hint = /cut off/i.test(res.message)
+        ? "Your previous answer was too long and was cut off. Answer again, much more briefly: keep each text field to one or two short sentences and use only as many list items as the schema requires."
+        : `Your previous answer failed validation: ${res.message}. Return only valid JSON matching the schema.`;
+      res = await attempt(route.primary, `\n\n${hint}`, repair.stepId!);
+      if (res.ok) await ctx.runMutation(internal.engine.completeStep, { stepId: repair.stepId!, output: JSON.stringify(res.output) });
+      else await ctx.runMutation(internal.engine.failStep, { stepId: repair.stepId!, error: `${res.kind}: ${res.message}` });
+    }
   }
   if (!res.ok && ["provider_unavailable", "provider_error", "timeout", "rate_limited"].includes(res.kind)) {
     const fallbackCost = worstCaseStepMicros(route.fallback, task.inputBudget, task.outputBudget, rates);
@@ -178,8 +207,9 @@ async function runModelTask<T>(
             : "The AI service had a problem. Nothing was saved; please try again.";
     throw new JobStop(res.kind, message);
   }
-  await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(res.output) });
-  return res.output as T;
+  const output = stripFactMarkers(res.output);
+  await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(output) });
+  return output as T;
 }
 
 function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureContext {

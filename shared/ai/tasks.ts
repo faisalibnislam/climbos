@@ -232,12 +232,12 @@ export interface TaskContract {
 export const TASKS: Record<TaskType, TaskContract> = {
   business_profile: { type: "business_profile", role: "data_analyst", label: "Understand the business", schema: BusinessProfileSchema, inputBudget: 12_000, outputBudget: 2_500, allowWebSearch: false },
   preview_ideas: { type: "preview_ideas", role: "cmo", label: "First growth ideas", schema: PreviewIdeasSchema, inputBudget: 4_000, outputBudget: 900, allowWebSearch: false },
-  business_insights: { type: "business_insights", role: "cmo", label: "Business insights", schema: BusinessInsightsSchema, inputBudget: 12_000, outputBudget: 3_000, allowWebSearch: true },
-  growth_strategy: { type: "growth_strategy", role: "ceo", label: "Growth plan", schema: StrategySchema, inputBudget: 16_000, outputBudget: 4_000, allowWebSearch: false },
-  social_posts: { type: "social_posts", role: "social_media_manager", label: "Social posts", schema: SocialPostsSchema, inputBudget: 4_000, outputBudget: 2_400, allowWebSearch: false },
+  business_insights: { type: "business_insights", role: "cmo", label: "Business insights", schema: BusinessInsightsSchema, inputBudget: 12_000, outputBudget: 6_000, allowWebSearch: true },
+  growth_strategy: { type: "growth_strategy", role: "ceo", label: "Growth plan", schema: StrategySchema, inputBudget: 16_000, outputBudget: 7_000, allowWebSearch: false },
+  social_posts: { type: "social_posts", role: "social_media_manager", label: "Social posts", schema: SocialPostsSchema, inputBudget: 4_000, outputBudget: 3_500, allowWebSearch: false },
   ad_drafts: { type: "ad_drafts", role: "ads_manager", label: "Ad drafts", schema: AdDraftsSchema, inputBudget: 6_000, outputBudget: 1_500, allowWebSearch: false },
-  email_sequence: { type: "email_sequence", role: "customer_success_manager", label: "Email sequence", schema: EmailSequenceSchema, inputBudget: 5_000, outputBudget: 2_500, allowWebSearch: false },
-  seo_brief: { type: "seo_brief", role: "seo_specialist", label: "SEO page", schema: SeoBriefSchema, inputBudget: 10_000, outputBudget: 3_500, allowWebSearch: true },
+  email_sequence: { type: "email_sequence", role: "customer_success_manager", label: "Email sequence", schema: EmailSequenceSchema, inputBudget: 5_000, outputBudget: 3_500, allowWebSearch: false },
+  seo_brief: { type: "seo_brief", role: "seo_specialist", label: "SEO page", schema: SeoBriefSchema, inputBudget: 10_000, outputBudget: 6_000, allowWebSearch: true },
   chat_intent: { type: "chat_intent", role: "coo", label: "Understand request", schema: ChatIntentSchema, inputBudget: 3_000, outputBudget: 700, allowWebSearch: false },
   metric_explanation: { type: "metric_explanation", role: "data_analyst", label: "Explain results", schema: MetricExplanationSchema, inputBudget: 8_000, outputBudget: 1_200, allowWebSearch: false },
   conversion_audit: { type: "conversion_audit", role: "cso", label: "Conversion audit", schema: ConversionAuditSchema, inputBudget: 10_000, outputBudget: 2_000, allowWebSearch: false },
@@ -284,7 +284,25 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 
 export function factsBlock(facts: { statement: string; category: string }[]): string {
   if (facts.length === 0) return "CONFIRMED FACTS: (none yet — keep claims general)";
-  return `CONFIRMED FACTS:\n${facts.map((f, i) => `[${i}] (${f.category}) ${f.statement}`).join("\n")}`;
+  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads):\n${facts.map((f, i) => `[${i}] (${f.category}) ${f.statement}`).join("\n")}`;
+}
+
+/**
+ * Removes fact-index markers like " [2]" or "[0][3]" from every string in a
+ * model answer. Facts are linked through structured index fields; bare
+ * numbers in prose mean nothing to an owner.
+ */
+export function stripFactMarkers<T>(value: T): T {
+  if (typeof value === "string") {
+    return value
+      .replace(/\s*(?:\[\d{1,3}(?:\s*,\s*\d{1,3})*\])+(?=[\s.,;:!?)]|$)/g, "")
+      .replace(/\s+([.,;:!?])/g, "$1") as T;
+  }
+  if (Array.isArray(value)) return value.map((v) => stripFactMarkers(v)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripFactMarkers(v)])) as T;
+  }
+  return value;
 }
 
 /** Post-validation: drop fact indexes that don't exist; report them as unsupported. */
