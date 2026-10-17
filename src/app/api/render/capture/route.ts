@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { CLEAN_PAGE_CSS, launchBrowser, safePublicUrl } from "@/lib/render/browser";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 interface Shot {
   kind: "desktop" | "mobile" | "section";
@@ -25,7 +25,12 @@ export async function POST(req: Request) {
   if (!url) return NextResponse.json({ error: "Only public http(s) pages can be captured." }, { status: 400 });
   const maxSections = Math.max(0, Math.min(6, body.sections ?? 4));
 
+  const t0 = Date.now();
+  const mark = (stage: string) => console.log(`[capture] ${stage} +${Date.now() - t0}ms`);
+  // Leave room to respond: skip optional crops and the mobile view when time runs short.
+  const late = () => Date.now() - t0 > 75_000;
   const browser = await launchBrowser();
+  mark("browser");
   const shots: Shot[] = [];
   let title = "";
   try {
@@ -34,6 +39,7 @@ export async function POST(req: Request) {
     // Never follow the page to private hosts (redirect-based SSRF).
     await page.route("**/*", (route) => (safePublicUrl(route.request().url()) ? route.continue() : route.abort()));
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 25_000 });
+    mark("desktop loaded");
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => undefined);
     await page.addStyleTag({ content: CLEAN_PAGE_CSS });
     await page.waitForTimeout(600);
@@ -63,12 +69,15 @@ export async function POST(req: Request) {
       return out;
     }, maxSections);
     for (const s of sections) {
+      if (late()) break;
       await page.evaluate((y) => window.scrollTo(0, y), s.y);
       await page.waitForTimeout(400);
       const png = await page.screenshot({ type: "png", clip: { x: 0, y: s.y, width: 1440, height: s.h }, fullPage: true });
       shots.push({ kind: "section", label: s.label, width: 1440, height: Math.round(s.h), png: png.toString("base64") });
     }
     await desktop.close();
+    mark("desktop done");
+    if (late()) return NextResponse.json({ url: url.toString(), title, shots });
 
     const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
     const m = await mobile.newPage();
@@ -79,6 +88,7 @@ export async function POST(req: Request) {
     await m.waitForTimeout(400);
     shots.push({ kind: "mobile", label: `${title || url.hostname} (mobile)`, width: 390, height: 844, png: (await m.screenshot({ type: "png" })).toString("base64") });
     await mobile.close();
+    mark("mobile done");
   } catch (e) {
     if (!shots.length) return NextResponse.json({ error: `Couldn't capture this page: ${(e as Error).message.slice(0, 200)}` }, { status: 502 });
   } finally {
