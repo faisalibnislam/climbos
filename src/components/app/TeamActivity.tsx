@@ -25,7 +25,8 @@ export function TeamActivity({ slug }: { slug: string }) {
           "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-ui font-medium transition-colors",
           busy ? "bg-brand-50 text-brand-900 hover:bg-brand-100" : "bg-green-100 text-green-800 hover:brightness-95",
         )}
-        aria-label={busy ? `${work.active.length} jobs in progress. Show details` : `${work.justFinished.length} jobs just finished. Show details`}
+        // Starts with the visible text so voice-control users can say what they see.
+        aria-label={`${label}: show details`}
       >
         {busy ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <CircleCheck aria-hidden className="size-4" />}
         <span className="hidden sm:inline">{label}</span>

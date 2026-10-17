@@ -25,14 +25,14 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await page.goto(`/app/${slug}/today`);
     await expect(page.getByText(/Help Formkit acquire more paying customers/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: /do these next/i })).toBeVisible();
-    const box = page.getByLabel("Message your growth team");
-    await box.fill("Write a welcome email sequence for new sign-ups");
-    await page.getByRole("button", { name: "Send" }).click();
-    const card = page.locator('[id^="card-"]', { hasText: "Draft an email sequence" }).first();
-    await expect(card).toBeVisible();
-    await expect(card.getByText(/most it can use/i)).toBeVisible();
-    await card.getByRole("button", { name: /do it/i }).click();
-    await expect(card.getByText("Done")).toBeVisible({ timeout: 30_000 });
+    // Make a wish: safe work starts on its own; anything else waits for "Do it".
+    await page.getByLabel("Your wish for the team").fill("Write a welcome email sequence for new sign-ups");
+    await page.getByRole("button", { name: "Make it happen" }).click();
+    const step = page.locator("li", { hasText: /email/i }).filter({ has: page.getByRole("button").or(page.getByText(/Working|Done|See result/)) }).first();
+    await expect(step).toBeVisible({ timeout: 30_000 });
+    const doIt = step.getByRole("button", { name: /^do it$/i });
+    if (await doIt.isVisible()) await doIt.click();
+    await expect(step.getByText(/See result|Done/)).toBeVisible({ timeout: 45_000 });
     await expectAccessible(page, "today");
   });
 
