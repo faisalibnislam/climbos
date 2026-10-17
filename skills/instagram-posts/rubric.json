@@ -1,0 +1,93 @@
+{
+  "id": "instagram-posts",
+  "title": "Instagram post (feed image, carousel or Reel, with caption)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, result or 'bestseller' label that isn't in confirmed facts or cited research, on slides, in the script or in the caption. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Limits and format: 5 hashtags or fewer; caption under 2,200 characters with the hook in the first ~125; carousel 20 slides or fewer; Reel 3 minutes or shorter; every image or slide has alt text; every Reel has burned-in captions and text kept out of the bottom ~20% and right edge." },
+    { "id": "G3", "text": "Policy and originality: no engagement bait (tag a friend, comment YES, like if), no reposted or watermarked content, no unlicensed music, no fake screenshots or reviews, no stock people presented as customers or staff, no banned phrases from copy-fundamentals." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "First frame / slide 1",
+      "anchors": {
+        "1": "Logo, title card, greeting or a static product shot with no hook.",
+        "3": "Clear hook and image, but the payoff is held back or the headline runs long.",
+        "5": "Payoff-first visual with a specific hook (10 words or fewer on slide 1, 8 or fewer on a Reel's first frame) that works on its own in the feed."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Save and send value",
+      "anchors": {
+        "1": "Pure promotion; nobody would save or send it.",
+        "3": "Mildly useful or pleasant, but no obvious person to send it to.",
+        "5": "A reader would send it to a specific person or save it to use later; the send or save reason is built into the content."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Slide or beat progression",
+      "anchors": {
+        "1": "Repetitive or random order; several points per slide or beat.",
+        "3": "Logical order, one point each, but slides don't create a reason to keep swiping or watching.",
+        "5": "Each slide or beat carries one point and opens a loop the next one closes; summary slide and single CTA land the idea."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Specificity and proof",
+      "anchors": {
+        "1": "Vague adjectives (handmade with love, amazing quality); no numbers or process.",
+        "3": "Some real details, but the central claim lacks a number, mechanism or quote.",
+        "5": "Central claim carried by a confirmed number, process detail or permitted customer phrase; unmistakably this business."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Caption and hashtags",
+      "anchors": {
+        "1": "Emoji wall or hashtag block; first line wasted; generic tags.",
+        "3": "Readable caption with sensible tags, but the first line doesn't stand alone or lacks the search phrase.",
+        "5": "First ~125 characters stand alone with the search phrase; caption adds what the visual lacks; 3-5 specific CamelCase tags."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Producibility of the brief",
+      "anchors": {
+        "1": "No visual direction, or needs a studio, crew, models or stock.",
+        "3": "Visuals described but vague (\"nice product photo\") or some shots impractical for a small business.",
+        "5": "Slide-by-slide or shot-by-shot brief the owner can produce with a phone and existing assets in one session, using real photos or footage."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Accessibility",
+      "anchors": {
+        "1": "No alt text, no captions, text on low-contrast or busy backgrounds.",
+        "3": "Alt text present but generic (\"product photo\"); captions mentioned but not specified.",
+        "5": "Alt text per image describing subject, action and on-image text; burned-in captions; readable contrast; CamelCase hashtags."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Voice and positioning fit",
+      "anchors": {
+        "1": "Generic brand voice or hype; off-positioning.",
+        "3": "Clean and on-brand but not tied to a specific pillar, objection or customer phrase.",
+        "5": "Sounds like the owner; expresses one positioning element in the customer's words."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "CTA",
+      "anchors": {
+        "1": "Missing, vague (\"Shop now!\") or bait.",
+        "3": "Clear ask but generic, or more than one ask.",
+        "5": "One ask matched to awareness (save, send to a named kind of person, or link in bio with exactly what they'll find)."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

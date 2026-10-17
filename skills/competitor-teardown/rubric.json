@@ -1,0 +1,94 @@
+{
+  "id": "competitor-teardown",
+  "title": "Competitor teardown and battlecards",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; every competitor headline, price and claim is verbatim with URL and capture date." },
+    { "id": "G2", "text": "No invented estimates: no competitor revenue, ad spend, traffic, customer count or hidden price unless a cited public source states it." },
+    { "id": "G3", "text": "Fair comparison: no false, unverifiable or disparaging statements about competitors; landmine questions are true of the competitor on public evidence." },
+    { "id": "G4", "text": "Access and ethics: no data from logins, fake accounts or quote requests under false pretences." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Competitive set",
+      "anchors": {
+        "1": "Only the competitors the owner named, or giants buyers never consider; no substitutes.",
+        "3": "Direct competitors found with some method, one generic substitute ('DIY').",
+        "5": "Three rings: 3–5 direct found via high-intent searches and VoC, 2–3 substitutes including a non-product alternative with switching evidence, 1–2 aspirational; inclusion reasons stated."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Messaging teardown",
+      "anchors": {
+        "1": "Summaries in the analyst's words ('they focus on quality').",
+        "3": "Headlines quoted but claims, proof and CTA incomplete; no style classification.",
+        "5": "Verbatim hero, subhead, category, audience, top claims, proof types, CTA and risk reducers per competitor; style, value theme and 10-second clarity judged with reasons."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Pricing and offer",
+      "anchors": {
+        "1": "Missing, or prices guessed.",
+        "3": "Published prices listed but not comparable; offer terms partial.",
+        "5": "Model, entry price, anchor tier, trial, contract, guarantee, discounts and lead magnet captured; normalised to one unit with maths shown; hidden pricing flagged as a signal."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Channel footprint",
+      "anchors": {
+        "1": "Vague verdicts ('strong on social', 'weak SEO').",
+        "3": "Some observed evidence (a few ads, follower counts) without dates or coverage of search and directories.",
+        "5": "Observed evidence across search, ad libraries, social, directories and partnerships, with dates; long-running ads labelled 'likely profitable'; unchecked sources listed with a manual check."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Review mining",
+      "anchors": {
+        "1": "No competitor review evidence.",
+        "3": "A few quotes per competitor, no counts.",
+        "5": "Loves and complaints per competitor with n of N reviews read, critical reviews prioritised, customer words captured."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Field map",
+      "anchors": {
+        "1": "No map, or axes invented (e.g. 'innovation vs. tradition').",
+        "3": "Map with plausible axes but placements unjustified.",
+        "5": "Two axes drawn from VoC themes, every player placed with an evidence note, the empty or weakly held position named."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Gap analysis",
+      "anchors": {
+        "1": "Generic opportunities ('create better content').",
+        "3": "Specific gaps with some evidence, no why-empty check.",
+        "5": "Message, segment, offer and channel gaps, each with evidence counts, a why-empty check, a risk and the cheapest test; checked against what the business can deliver."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Battlecards",
+      "anchors": {
+        "1": "None, or one-sided attack sheets.",
+        "3": "Battlecards with claims and weak spots but no honest concessions or landmine questions.",
+        "5": "One screen per competitor: who they win with, verbatim claim, proof, normalised price, counted weak spots, where they are better, one-sentence counter-position, a fair landmine question."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Threat and owner summary",
+      "anchors": {
+        "1": "No forward look; no prioritisation.",
+        "3": "Lists threats or gaps without ranking.",
+        "5": "One named threat with an early warning sign; top 3 gaps ranked by evidence and fit; parity items and what not to copy."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

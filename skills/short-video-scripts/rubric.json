@@ -1,0 +1,93 @@
+{
+  "id": "short-video-scripts",
+  "title": "Short-video script (TikTok, Reels, Shorts; organic or ad)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, result, customer reaction, testimonial or before/after that isn't in confirmed facts or cited research; no actor or AI avatar presented as a real customer or employee; no mocked-up product screens. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Limits and format: the script includes a timed beat table, on-screen text, voiceover, shot list, caption and CTA; length fits the platform and use (Reels up to 3 minutes; TikTok in-feed ads 5-60 s); the hook lands within 0-2 s; text is kept out of the bottom ~20% and right edge; hashtags fit the platform (Instagram 5 max; none in non-Spark TikTok ad captions)." },
+    { "id": "G3", "text": "Policy: paid, gifted or creator content carries a paid-partnership label or clear #ad; realistic AI-generated voice or visuals are labelled; only licensed audio; no reposted or watermarked footage; no engagement bait; no banned phrases from copy-fundamentals." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Hook (0-2 s)",
+      "anchors": {
+        "1": "Logo, intro, \"Hey guys\" or a slow establishing shot.",
+        "3": "States the topic in time, but the first frame is static or the line is generic.",
+        "5": "Payoff or pattern-break first frame plus a spoken line of 10 words or fewer naming the viewer's situation or a confirmed number, mirrored on screen."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Nativeness",
+      "anchors": {
+        "1": "Polished TV-ad script or brochure voiceover.",
+        "3": "Phone-shot, but the lines sound scripted or salesy.",
+        "5": "Indistinguishable from good organic content; talks like a person; format native to the platform."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Beat structure and retention",
+      "anchors": {
+        "1": "No timings; talking description instead of visuals; several ideas.",
+        "3": "Timed beats in a sensible order, but some beats tell instead of show or carry more than one fact.",
+        "5": "Hook, setup, value, proof, CTA with timings; one fact and a new visual per beat; end frame loops or lands cleanly."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Filmability",
+      "anchors": {
+        "1": "Needs crew, actors, a studio or unconfirmed locations; no shot list.",
+        "3": "Doable with effort; shot list vague (\"some B-roll\").",
+        "5": "Shot list the owner can film on a phone in one session with confirmed people and places, with framing, action, duration and practical notes."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Searchability",
+      "anchors": {
+        "1": "No search phrase anywhere.",
+        "3": "Keywords in the caption only.",
+        "5": "The viewer's search phrase is spoken, on screen and in the caption's first line."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Sound-off readiness and accessibility",
+      "anchors": {
+        "1": "No captions; key message only in the voiceover; text in unsafe zones.",
+        "3": "Captions noted, but on-screen text repeats paragraphs or strays into unsafe zones.",
+        "5": "Burned-in captions for every spoken word, short on-screen text per cut that tells the story alone, all inside the safe zone."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Specificity and proof",
+      "anchors": {
+        "1": "Adjectives and claims with no evidence.",
+        "3": "Some real details, but the proof beat is vague or missing.",
+        "5": "A confirmed number, permitted quote or real result shot carries the proof beat; unmistakably this business."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "CTA",
+      "anchors": {
+        "1": "Missing, vague or bait.",
+        "3": "Clear but generic, or only spoken or only on screen.",
+        "5": "One platform-appropriate action, spoken and on screen, matched to awareness level and backed by a real process (someone replies, link exists)."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Positioning and customer language",
+      "anchors": {
+        "1": "Generic category content; off-positioning.",
+        "3": "On-topic but not tied to a specific pillar, objection or trigger.",
+        "5": "Expresses one positioning element through the viewer's own words and situation."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

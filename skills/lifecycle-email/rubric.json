@@ -1,0 +1,20 @@
+{
+  "id": "lifecycle-email",
+  "title": "Lifecycle email sequence (opted-in contacts)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no customer story, review, number, result, sender identity or deadline that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G2", "text": "Format: every email has a stated job, subject (30–50 characters), a preheader that adds information, a named sender, exactly one primary CTA, and a body of 50–150 words (up to ~200 for onboarding how-to); the sequence names its trigger, timing and exit on conversion." },
+    { "id": "G3", "text": "Consent and compliance: audience is opted in or an existing-customer lawful basis is stated; no deceptive subjects (fake Re:/Fwd:, false urgency); one-click unsubscribe plus body link and a postal address are specified; auto-renewing trials get a pre-charge notice." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Sequence logic", "anchors": { "1": "Same pitch repeated; no triggers or exits.", "3": "Varied topics on a fixed calendar; exit on conversion missing or vague.", "5": "Each email has a distinct job matched to the stage, behaviour triggers where relevant, branches on clicks, immediate exit on conversion and priority versus other flows." } },
+    { "id": "C2", "name": "Subject and preheader", "anchors": { "1": "Clickbait, generic ('Newsletter #12') or deceptive.", "3": "Clear but flat; preheader repeats the subject.", "5": "Specific, honest and intriguing with the key noun first; preheader adds new information." } },
+    { "id": "C3", "name": "Human voice", "anchors": { "1": "Corporate template, 'Dear Valued Customer', hype words.", "3": "Friendly but generic; no named person.", "5": "Reads like a note from a named person to one reader; first line about the reader; invites a reply where useful." } },
+    { "id": "C4", "name": "Single idea and CTA", "anchors": { "1": "Several ideas and many links of equal weight.", "3": "One main idea but 2–3 competing CTAs.", "5": "One idea developed and one CTA with outcome-specific link text; any secondary point in a P.S." } },
+    { "id": "C5", "name": "Relevance to the reader's stage", "anchors": { "1": "Content ignores what the contact did or didn't do.", "3": "Stage-appropriate but generic.", "5": "Uses known behaviour (what they signed up for, what they haven't done) and answers the objection most likely at that point, from VOC." } },
+    { "id": "C6", "name": "Deliverability hygiene", "anchors": { "1": "Image-heavy, link-heavy, spammy wording, no authentication or unsubscribe notes.", "3": "Mostly text; deliverability requirements incomplete.", "5": "Plain-text-leaning, 1–3 links, alt text, SPF/DKIM/DMARC, one-click unsubscribe, complaint ceiling and sunset rule covered." } },
+    { "id": "C7", "name": "Measurement", "anchors": { "1": "Open rate as the goal, or no metrics.", "3": "Clicks named but no per-email success measure.", "5": "Per-email job metric (clicks, replies, conversions), unsubscribe and complaint monitoring, and one meaningful test; opens explicitly excluded." } },
+    { "id": "C8", "name": "Specificity", "anchors": { "1": "Could be any business's email.", "3": "Some specifics; key lines generic.", "5": "Concrete details from confirmed facts (times, prices, steps, names) in every email." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

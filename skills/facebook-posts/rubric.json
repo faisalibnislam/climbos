@@ -1,0 +1,93 @@
+{
+  "id": "facebook-posts",
+  "title": "Facebook post (Page post, group post, event or offer)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, offer term, price, date, time, event detail, customer, review or quote that isn't in confirmed facts or cited research. Missing practical details are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Limits and format: 0-2 hashtags; at most one exclamation mark; at most one emoji per 150 characters and none as bullets; one CTA; length fits the post type (40-150 characters for most posts, longer only for a genuine story)." },
+    { "id": "G3", "text": "Policy: no engagement bait (like if, share if, comment YES, tag a friend), no share-to-enter or tag-to-enter giveaways, no fake urgency, no stock or reposted media presented as the business's own, no named or pictured people without confirmed consent, and group posts disclose the owner's connection to the business." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "First line",
+      "anchors": {
+        "1": "Greeting, generic question or brand intro (\"Happy Friday everyone!\").",
+        "3": "States the topic clearly but flatly; needs the rest of the post to make sense.",
+        "5": "News or a scene with a specific detail that works on its own for someone who reads only that line."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Local relevance",
+      "anchors": {
+        "1": "Could be posted by any business anywhere.",
+        "3": "Mentions the town or area but nothing locals would recognise.",
+        "5": "Rooted in a real local detail (street, event, season, regular, staff member) people nearby recognise."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Practical clarity",
+      "anchors": {
+        "1": "Missing what, when, where or how to act.",
+        "3": "Most practical details present, but the reader still has to look something up.",
+        "5": "Reader knows exactly what, when, where, how much and how to act, without leaving the post."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Originality",
+      "anchors": {
+        "1": "Stock image, meme or reposted content; generic copy.",
+        "3": "Own photo but generic copy, or a first-hand story with a vague visual.",
+        "5": "Original photo or video brief the owner can shoot, plus a first-hand detail only this business has."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Specificity and proof",
+      "anchors": {
+        "1": "Adjectives only (friendly, stress-free, best in town).",
+        "3": "Some real details but the central claim is vague.",
+        "5": "The central claim is carried by a concrete detail, process or confirmed number; passes the competitor swap test."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Voice and community tone",
+      "anchors": {
+        "1": "Corporate, salesy or AI-sounding; hype and exclamation marks.",
+        "3": "Friendly but generic.",
+        "5": "Sounds like the owner talking to a neighbour; warm, plain, specific; positioning expressed in customer words."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "CTA",
+      "anchors": {
+        "1": "Missing, vague or bait.",
+        "3": "Clear but not the most practical method for a local reader, or more than one ask.",
+        "5": "One action with the most practical method (call a named person, book link, directions) and what happens next."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Format fit (event, offer or group)",
+      "anchors": {
+        "1": "Event or offer missing core fields; group post is an undisclosed ad.",
+        "3": "Core fields present, but accessibility, terms or companion posts missing; group post disclosed but pitch-first.",
+        "5": "Events complete (name, date, times, place, cost, booking, accessibility) with distinct announcement and reminder; offers carry full terms; group posts help first, disclosed and tailored to the thread. Score 5 for plain Page posts that need none of this."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Accessibility",
+      "anchors": {
+        "1": "No alt text; key details only inside an image.",
+        "3": "Alt text present but generic.",
+        "5": "Descriptive alt text including any on-image text; all practical details also in the post text; videos captioned."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "seo-pages",
+  "title": "SEO page brief or draft (AI-search era)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no statistic, market price, case study, author credential, review or competitor claim that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G2", "text": "Spam policy: not a scaled or templated page (no city-swap, doorway or near-duplicate location pages); passes the city-swap test; no keyword stuffing or hidden text." },
+    { "id": "G3", "text": "Format: title ≈ 50–60 characters, meta description ≈ 150–160 characters, one H1, a short slug, a named (or [NEEDS FACT]) author, and schema limited to visible content with no self-serving review markup." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Intent match", "anchors": { "1": "Wrong page type for the query (e.g. a blog essay for a transactional query).", "3": "Right type, generic execution.", "5": "Exactly the format the SERP rewards, chosen from a stated SERP read, and executed better than what ranks." } },
+    { "id": "C2", "name": "Information gain", "anchors": { "1": "Rehash of the top 10 results.", "3": "Some unique detail, buried.", "5": "Own data, prices, photos, worked examples or experience no competing page has, placed early." } },
+    { "id": "C3", "name": "Answer-first structure and fan-out", "anchors": { "1": "Answers buried after preamble; headings are vague.", "3": "Intro answers the query; some H2s bury their answers or sub-questions are missing.", "5": "Intro answers in 1–2 sentences; every H2 is a real sub-question answered in its first sentence; 5–10 fan-out questions covered." } },
+    { "id": "C4", "name": "E-E-A-T and trust signals", "anchors": { "1": "Anonymous, unsourced, undated.", "3": "Author named; sources or dates missing.", "5": "Named author with relevant experience, last-reviewed date, sourced external figures, original photos, contact and business details consistent with the Business Profile." } },
+    { "id": "C5", "name": "Internal linking and cluster fit", "anchors": { "1": "No internal links, or the page competes with an existing page.", "3": "A few links with generic anchors.", "5": "Up, across and down links plus 2–3 inbound links with descriptive anchors, inside a tight cluster around what the business sells." } },
+    { "id": "C6", "name": "Title, meta and snippet quality", "anchors": { "1": "Stuffed, truncated or generic title and meta.", "3": "Within limits but bland.", "5": "Query words near the front in natural order; meta answers and gives a reason to click; opening paragraph quotable if Google rewrites." } },
+    { "id": "C7", "name": "AI answer visibility", "anchors": { "1": "Ignores AI features or recommends gimmicks (special AI files or schema).", "3": "Mentions AI Overviews without specific actions.", "5": "Snippet-eligible, quotable factual sentences, consistent facts across site and profiles, fan-out coverage, prompt-check and AI-referral tracking recommended." } },
+    { "id": "C8", "name": "Conversion path", "anchors": { "1": "No next step, or several competing CTAs.", "3": "Generic 'contact us'.", "5": "One CTA that fits the intent, linked to the money page." } },
+    { "id": "C9", "name": "Voice and readability", "anchors": { "1": "AI tells, throat-clearing intro, hedging filler.", "3": "Clean but bland.", "5": "Plain, specific, expert voice; tables and lists where they help; no filler." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

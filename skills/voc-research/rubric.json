@@ -1,0 +1,85 @@
+{
+  "id": "voc-research",
+  "title": "Voice-of-customer research bank",
+  "gates": [
+    { "id": "G1", "text": "Truth: every quoted snippet and phrase-bank entry is verbatim and traceable to a listed URL; no claim, number, customer or quote that isn't in confirmed facts or cited research." },
+    { "id": "G2", "text": "No fabricated customer evidence: every count (n of N) matches the snippets collected; no composite quotes, personas or inferred demographics." },
+    { "id": "G3", "text": "Pools separated: own-customer, competitor-customer and category-general evidence are never merged into one count or percentage." },
+    { "id": "G4", "text": "Privacy and access: no reviewer names or personal profile data stored; no content obtained behind logins, paywalls or CAPTCHAs." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Source coverage",
+      "anchors": {
+        "1": "One source type (e.g. only the business's own testimonials) or sources that don't match where this buyer talks.",
+        "3": "Two or three source types, roughly fitting the business type, but competitor reviews or forums thin.",
+        "5": "Three or more source types matched to the business type: own reviews, top competitors' critical reviews and 2+ forum threads; inaccessible sources listed."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Coding quality",
+      "anchors": {
+        "1": "No coding, or themes asserted without tagging snippets.",
+        "3": "Snippets tagged with themes but four forces applied loosely; generic praise counted as evidence.",
+        "5": "Every snippet coded for force, job, alternative, trigger, objection and segment clues where stated; generic praise excluded from themes."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Counts and ranking",
+      "anchors": {
+        "1": "No counts; 'many customers say'.",
+        "3": "Counts given for some themes, denominators or source spread missing.",
+        "5": "Every theme ranked with n of N, number of distinct sources and intensity; findings vs signals labelled by the 3-snippets/2-sources rule."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Phrase bank",
+      "anchors": {
+        "1": "Paraphrased or business-voice phrases; no sources.",
+        "3": "Verbatim phrases with sources but ungrouped or mostly unusable in copy.",
+        "5": "20–40 verbatim phrases grouped by problem, category, trigger, outcome, objection and proof; high-confidence language marked; words to use/avoid list."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Objection list",
+      "anchors": {
+        "1": "Missing or generic ('price', 'trust').",
+        "3": "Objections in customer words with frequency, but counters generic or missing.",
+        "5": "Objections in customer words with force, frequency and source; each counter typed (risk reversal, proof, migration help, anchor) and marked existing vs 'owner to decide'."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Insights as tensions",
+      "anchors": {
+        "1": "Platitudes ('customers value quality').",
+        "3": "Specific observations but no tension or implication.",
+        "5": "3–7 insights, each a want-versus-fear tension with counts and a concrete implication for positioning, offer or copy."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Honesty about limits",
+      "anchors": {
+        "1": "Presents thin or skewed evidence as conclusive.",
+        "3": "Mentions sample size but not date range, skew or authenticity.",
+        "5": "States N per pool, date range, inaccessible sources, platform skew and review-authenticity flags; confidence label per insight."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Downstream usefulness",
+      "anchors": {
+        "1": "A data dump with no direction.",
+        "3": "Some suggestions for copy or positioning.",
+        "5": "Hand-off gives headline candidates in customer words, theme-rooted ad angles, top objections for FAQs and the open questions only the owner can answer."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

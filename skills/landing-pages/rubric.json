@@ -1,0 +1,21 @@
+{
+  "id": "landing-pages",
+  "title": "Landing page copy or page brief",
+  "gates": [
+    { "id": "G1", "text": "Truth: no testimonial, name, rating, customer count, logo, press mention, statistic, guarantee or deadline that isn't in confirmed facts or cited research. Missing proof is marked [NEEDS FACT: ...]; no sample or illustrative quotes." },
+    { "id": "G2", "text": "Structure: a hero with H1, subhead, one primary CTA (verb + outcome) and proof; one conversion goal for the page; a written thank-you step; a stated or explicitly assumed traffic source." },
+    { "id": "G3", "text": "Compliance: no fake urgency or scarcity, no promised results the business can't guarantee, marketing consent (if collected) is a separate unticked checkbox with a privacy link, no unsourced superlatives." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Message match", "anchors": { "1": "H1 unrelated to the ad or email that sends traffic.", "3": "Same theme as the ad, but different words or offer.", "5": "The ad's key words, promise, offer and price repeated in H1 and subhead." } },
+    { "id": "C2", "name": "5-second clarity", "anchors": { "1": "Clever or vague headline; offer buried.", "3": "Clear what it is, but who it's for or the price is buried.", "5": "What, who, price and next step instantly clear on a phone screen." } },
+    { "id": "C3", "name": "Proof density and placement", "anchors": { "1": "No proof, or invented proof.", "3": "Generic testimonials or proof grouped far from claims.", "5": "Specific, attributed, numeric proof beside each claim; strongest proof in the hero." } },
+    { "id": "C4", "name": "Objection coverage", "anchors": { "1": "Objections ignored.", "3": "Generic FAQ not drawn from VOC.", "5": "Top 3–5 VOC objections each answered where they arise, with concrete reducers (trial, guarantee, import help, named person)." } },
+    { "id": "C5", "name": "Friction and form", "anchors": { "1": "Long form, several competing CTAs, unclear next step.", "3": "Reasonable form; some unneeded fields or vague button text.", "5": "Minimum justified fields, visible labels, outcome button, friction-removing micro-copy, one action, clear thank-you step." } },
+    { "id": "C6", "name": "Section order fits awareness", "anchors": { "1": "Order ignores the reader (e.g. long problem section for brand-search traffic, offer-first for cold traffic).", "3": "Standard template applied without adjusting for awareness or price.", "5": "Opening, order and length chosen from the awareness level and commitment, with the reasoning visible in the brief." } },
+    { "id": "C7", "name": "Readability and voice", "anchors": { "1": "Jargon, hype, AI tells, long dense paragraphs.", "3": "Clean but bland; 'we' leads.", "5": "Grade 5–8 (consumer), paragraphs of 3 lines or fewer, descriptive subheads, 'you' leads, VOC phrases, sounds like this business." } },
+    { "id": "C8", "name": "Specificity", "anchors": { "1": "Could be any competitor's page.", "3": "Some specifics; key claims vague.", "5": "Prices, times, places, process and names throughout; fails the competitor swap test." } },
+    { "id": "C9", "name": "Build and measurement notes", "anchors": { "1": "No visual, mobile or measurement guidance.", "3": "Some notes, generic.", "5": "Real visuals listed, mobile CTA and tap targets, speed flagged, conversion event named, one big-swing test proposed." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

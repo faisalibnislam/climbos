@@ -1,0 +1,45 @@
+{
+  "id": "cold-outreach",
+  "title": "Cold email sequence (B2B, small business sender)",
+  "gates": [
+    { "id": "G1", "text": "Truth and grounding: every prospect-specific claim (name, title, company, observation, trigger) maps to a stored source URL; every claim about the sender (results, customers, guarantees, prices) is in the confirmed facts. Gaps use [NEEDS FACT: ...]. Nothing invented or 'plausible'." },
+    { "id": "G2", "text": "Compliance: the prospect passes jurisdiction rules (no DE/AT, UK sole traders/partnerships, or CA/AU inferred addresses); each message carries real sender name, role and company, postal address and a plain-text opt-out line; UK/EU first emails carry the Article 14 source and privacy line; Canada carries a contact method." },
+    { "id": "G3", "text": "Deliverability and format: plain text; step 1 has no links (except the UK/EU privacy pointer in the footer), images, attachments or tracking; step 1 body 125 words or fewer and follow-ups 60 or fewer; subjects 2-5 words with no emojis, ALL CAPS or '$'; no visible merge fields or 'Hi Info'; no calendar link in cold steps." },
+    { "id": "G4", "text": "Honesty: no fake 'Re:'/'Fwd:' on a first touch, no implied prior relationship or referral that did not happen, no false urgency or scarcity, no flattery or private-life references, no fabricated sender persona." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Relevance of the observation", "anchors": {
+      "1": "Generic pitch that could go to anyone; no observation or a vague one ('I love your website').",
+      "3": "Industry-relevant but not specific to this company, or specific but not connected to a problem the sender solves.",
+      "5": "One specific, sourced observation tied to a problem this company plausibly has right now; it could not be sent unchanged to a neighbouring business." } },
+    { "id": "C2", "name": "Clarity of value and proof", "anchors": {
+      "1": "Feature list or jargon; the reader cannot say what is offered.",
+      "3": "Value stated but vague ('grow your business', 'save time') or proof missing.",
+      "5": "One concrete outcome with a number, named comparable customer (with permission) or a one-sentence mechanism from the confirmed facts." } },
+    { "id": "C3", "name": "Brevity and readability", "anchors": {
+      "1": "Over 150 words or a wall of text; hard to read on a phone.",
+      "3": "Step 1 at 90-130 words, or follow-ups over 60; readable but padded.",
+      "5": "Step 1 at 50-90 words, follow-ups 25-60, 3-5 short paragraphs, plain words, scannable on a phone." } },
+    { "id": "C4", "name": "CTA", "anchors": {
+      "1": "Several asks, or a hard meeting demand with a link.",
+      "3": "A single ask but high-friction (e.g. '30-minute call this week?') in a cold step.",
+      "5": "A single, low-friction, interest-based question answerable in one word, on the right rung for the step." } },
+    { "id": "C5", "name": "Tone and peer voice", "anchors": {
+      "1": "Manipulative or sycophantic, or full of AI tells and clichés ('I hope this finds you well', 'game-changer').",
+      "3": "Neutral but salesy; some clichés or a stiff, templated feel.",
+      "5": "Reads like a capable peer wrote it to one person: plain, respectful, specific, in the prospect's language and spelling, with no banned phrases." } },
+    { "id": "C6", "name": "Subject line", "anchors": {
+      "1": "Clickbait, deceptive, hype-filled or spammy.",
+      "3": "Honest but generic ('Quick question', 'Partnership').",
+      "5": "2-5 plain words naming something specific to the prospect or the observation; two honest options given." } },
+    { "id": "C7", "name": "Sequence and follow-up value", "anchors": {
+      "1": "Follow-ups repeat the pitch or say 'bumping this'; guilt-tripping close.",
+      "3": "Follow-ups vary wording but add little new; spacing or step count off the defaults without reason.",
+      "5": "Steps on business days 0/3/7/14; each follow-up adds a new angle, proof or resource and stands alone; a warm, honest close-out; stops on any reply." } },
+    { "id": "C8", "name": "Personalisation safety and variation", "anchors": {
+      "1": "Variables with no source or fallback; a fallback that would produce a broken or false sentence; one identical body for every mailbox.",
+      "3": "Fallbacks exist but some read awkwardly, or variants only swap merge fields.",
+      "5": "Every variable has a stated source and a natural, true fallback; role accounts get no first name; 2-3 structural variants for multi-mailbox use; any test is one big swing measured on replies." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

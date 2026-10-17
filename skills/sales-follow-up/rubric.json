@@ -1,0 +1,45 @@
+{
+  "id": "sales-follow-up",
+  "title": "Inbound lead, quote and proposal follow-up",
+  "gates": [
+    { "id": "G1", "text": "Truth and grounding: every price, date, lead time, guarantee, review, customer example and availability claim is in the confirmed facts or the lead's own message. Gaps use [NEEDS FACT: ...]. No invented discounts, slots or 'spaces left'." },
+    { "id": "G2", "text": "Consent and compliance: calls only where the lead gave a number for that purpose or asked to be called; SMS only with text consent or after the lead texted first, identifying the business and honouring STOP; no marketing emails without marketing consent; any opt-out ends contact on every channel; contact only at reasonable hours." },
+    { "id": "G3", "text": "Format: each message has one job and one ask; emails 150 words or fewer; texts one or two short sentences; voicemails under 20 seconds; no message that is only 'just checking in' or 'any update?'; quote follow-up at most 4 touches unless the lead re-engages; plan marked for owner approval." },
+    { "id": "G4", "text": "Ethics: no false urgency or scarcity, no guilt or shaming, no criticism of competitors or the lead's other quotes, no arguing after a no, no more than 2 unanswered call attempts." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "First response quality", "anchors": {
+      "1": "Generic acknowledgement ('Thanks for your enquiry, we'll be in touch') that answers nothing.",
+      "3": "Answers the question but ignores the lead's details, or the next step is vague ('let me know').",
+      "5": "Answers the actual question in the first two lines, echoes a specific detail the lead gave, asks at most two deciding questions, and offers one concrete next step with options." } },
+    { "id": "C2", "name": "Listening and specificity", "anchors": {
+      "1": "Template copy that could go to any lead.",
+      "3": "Uses the lead's name and job type but not their specifics or words.",
+      "5": "Reflects the lead's own words, job details and constraints throughout; nothing generic." } },
+    { "id": "C3", "name": "Follow-up cadence and value", "anchors": {
+      "1": "Repeats 'just checking in' or the same pitch; no plan or endless chasing.",
+      "3": "Sensible timing but touches add little new.",
+      "5": "Cadence matches the situation (day 0/2/5-7/10-14 for quotes); every touch adds new information, proof or an easier path to yes; ends with a clear close-out." } },
+    { "id": "C4", "name": "Objection handling with proof", "anchors": {
+      "1": "Argues, dismisses, discounts without basis, or criticises a competitor.",
+      "3": "Addresses the objection but with assertion rather than proof, or skips the next step.",
+      "5": "Acknowledges in the lead's words, clarifies if needed, answers with one real proof item from the facts, and offers a smaller or reversible step; accepts a second no." } },
+    { "id": "C5", "name": "Closing ask", "anchors": {
+      "1": "No ask, or 'let me know your thoughts'.",
+      "3": "An ask exists but is open-ended or high-effort.",
+      "5": "A specific, easy ask (two options, a date, or a one-word reply); any hold or deadline is real." } },
+    { "id": "C6", "name": "Channel scripts", "anchors": {
+      "1": "Call or SMS scripts are monologues, pushy, or used without consent.",
+      "3": "Scripts are usable but miss permission, discovery or a written confirmation step.",
+      "5": "Call script opens with reason and permission, has 2-3 discovery questions, recaps and books a next step; voicemail and SMS are short, identify the business and fit consent." } },
+    { "id": "C7", "name": "Tone", "anchors": {
+      "1": "Pushy, needy, guilt-laden or corporate call-centre voice.",
+      "3": "Polite but stiff or salesy.",
+      "5": "Warm, confident and plain, like a good owner talking to a neighbour; respectful of the lead's time and decision." } },
+    { "id": "C8", "name": "Plan clarity and stop conditions", "anchors": {
+      "1": "Loose messages with no timing, channel or stop rule.",
+      "3": "Timing and channels given but stop conditions or open facts missing.",
+      "5": "Situation, allowed channels with reasons, each touch's timing and text, prepared objection answers, stop conditions and [NEEDS FACT] list all present and ready for owner approval." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

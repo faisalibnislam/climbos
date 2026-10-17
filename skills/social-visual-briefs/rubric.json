@@ -1,0 +1,84 @@
+{
+  "id": "social-visual-briefs",
+  "title": "Social visual brief (image, carousel, cover frame or ad static)",
+  "gates": [
+    { "id": "G1", "text": "Truth: nothing on or in the visual states or implies a claim, number, review, rating, result, customer or endorsement that isn't in confirmed facts or cited research. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Format: each visual has a stated aspect ratio and placement; on-image text sits inside the platform's safe area (central 3:4 for Instagram grid; clear of the bottom ~20% and right edge for 9:16 video); carousels are 20 slides or fewer; alt text is provided for every image." },
+    { "id": "G3", "text": "Honest depiction and rights: no fake or mocked-up screenshots, dashboards, reviews or messages; no stock or AI-generated people presented as the business's customers, staff or owner; no AI imagery of the product, premises or before/after presented as real; no real people, customer data or competitor marks without consent or rights." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "One message",
+      "anchors": {
+        "1": "Several messages or none; the visual competes with the copy.",
+        "3": "One main message, but secondary elements dilute it or it doesn't match the copy's idea.",
+        "5": "One message statable in under 10 words that shows or proves the copy's idea."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Hierarchy and focal point",
+      "anchors": {
+        "1": "No focal point; everything the same weight; logo-first.",
+        "3": "A focal point exists but the order of reading is unclear.",
+        "5": "One focal point and a clear first, second, third reading order specified in relative sizes and positions."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Text density and legibility",
+      "anchors": {
+        "1": "Paragraphs on the image, tiny or script type, text over busy detail.",
+        "3": "Short-ish text but more than one support line, or contrast not addressed.",
+        "5": "Exact headline of about 8-10 words or fewer plus at most one support line, large and high-contrast; key text also in caption or alt text."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Brand kit use",
+      "anchors": {
+        "1": "Ignores the brand kit or uses arbitrary colours and fonts.",
+        "3": "Brand colours mentioned loosely; inconsistent across a series.",
+        "5": "Colours, fonts, logo rule and photo treatment specified by token and kept consistent across every slide or variant."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Platform fit and safe zones",
+      "anchors": {
+        "1": "No ratio or placement; text where the interface covers it.",
+        "3": "Ratio stated, but crops or safe areas only partly handled.",
+        "5": "Ratio, placement, crop and safe area handled for every version; carousel slide 1 works standalone."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Image-type choice",
+      "anchors": {
+        "1": "Stock or AI imagery standing in for the real business; fake screenshot.",
+        "3": "Honest choice but not the strongest for the job (illustration where a real photo would prove more).",
+        "5": "Honest, job-fitting choice (real photo, typographic card, chart of confirmed data, real screenshot) with the reason stated."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Producibility",
+      "anchors": {
+        "1": "Vague (\"eye-catching modern graphic\"); producer must guess.",
+        "3": "Mostly clear, but key details (shot framing, exact data, layout) missing.",
+        "5": "The owner or a designer can shoot or build it without questions: subject, framing, light, layout, exact words and data, using assets that exist or can be shot on a phone."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Accessibility",
+      "anchors": {
+        "1": "No alt text; meaning carried by colour alone; low contrast.",
+        "3": "Alt text generic; contrast mentioned but not specified.",
+        "5": "Alt text with subject, action and full on-image text (chart numbers included); contrast meets WCAG AA; meaning never depends on colour alone."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

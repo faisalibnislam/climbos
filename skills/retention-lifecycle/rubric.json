@@ -1,0 +1,94 @@
+{
+  "id": "retention-lifecycle",
+  "title": "Retention and lifecycle plan",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; offers and guarantees not confirmed by the owner are marked 'owner to decide'." },
+    { "id": "G2", "text": "Consent: marketing messages only to contacts with marketing consent or a valid existing-customer basis; SMS marketing only with separate SMS opt-in; every marketing message has a working unsubscribe; no cold-sourced contacts in lifecycle flows." },
+    { "id": "G3", "text": "Review and referral compliance: no review gating, no fake or bought reviews, no incentives tied to positive sentiment or forbidden by the platform, no collecting friends' contact details for the business to message." },
+    { "id": "G4", "text": "No manipulative tactics: no fake urgency, fake scarcity or misleading subject lines." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Lifecycle diagnosis",
+      "anchors": {
+        "1": "Jumps to a template sequence with no diagnosis.",
+        "3": "Generic stages listed; value moment or repeat cycle vague.",
+        "5": "Value moment and repeat cycle defined from data (or labelled assumptions); biggest leak named with numbers where available; flows ordered by the leak they fix."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Flow logic",
+      "anchors": {
+        "1": "Broadcast calendar or flows without triggers.",
+        "3": "Triggers and timing set; exclusions or exits missing.",
+        "5": "Each flow has trigger, audience, consent basis, exclusions, exit conditions and behavioural branches."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Timing fit",
+      "anchors": {
+        "1": "Arbitrary fixed day counts for every customer.",
+        "3": "Timing roughly sensible but not tied to the cycle.",
+        "5": "Timing anchored to the value moment and the repeat or use-up cycle, with the source of each interval stated."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Message design",
+      "anchors": {
+        "1": "Several CTAs per message; corporate voice; same pitch repeated.",
+        "3": "Clear messages, jobs overlap.",
+        "5": "Each message has one distinct job, one CTA, a named sender, customer language from VoC, subject and preheader direction, and invites replies."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Offer discipline",
+      "anchors": {
+        "1": "Discounts lead every flow.",
+        "3": "Discounts used sparingly but not checked against margin.",
+        "5": "Value and service first; discounts justified with margin maths, never in a first touch; non-price rewards preferred."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Review and referral mechanics",
+      "anchors": {
+        "1": "Missing, or non-compliant (gated, incentivised).",
+        "3": "A review ask and referral idea without timing or mechanics.",
+        "5": "Non-selective review ask at the value moment with a direct link and reply policy; referral via self-sent link or code at a peak moment, reward disclosed and margin-checked."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Business-type fit",
+      "anchors": {
+        "1": "Same ecommerce template for any business.",
+        "3": "Some tailoring.",
+        "5": "Flows, value moment, cycle and metrics match the business type (rebooking for local, activation for SaaS, replenishment for DTC, renewals for agencies)."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Measurement",
+      "anchors": {
+        "1": "Open rates or no metrics.",
+        "3": "Click metrics but no revenue-linked outcome.",
+        "5": "One revenue-linked metric per flow, clicks over opens, unsubscribe and complaint guardrails, holdout or labelled before/after comparison."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Build plan and effort fit",
+      "anchors": {
+        "1": "A dozen flows with no order or effort.",
+        "3": "Flows ordered, effort unstated.",
+        "5": "3–4 flows in order with hours, tool requirements (events, fields, consent flags), owners and go-live dates within the owner's capacity."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "growth-strategy",
+  "title": "90-day growth strategy for a small business",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; every number is sourced, from the owner's data, or labelled 'assumption' with a validation date." },
+    { "id": "G2", "text": "Budget fit: planned spend and owner hours add up to no more than what was stated." },
+    { "id": "G3", "text": "Prioritisation: a ranked plan with no more than 3 active acquisition channels (1 primary, 1 secondary, at most 1 hygiene item) for a business under ~$50k/month revenue." },
+    { "id": "G4", "text": "Safe and compliant: no fake or incentivised reviews, review gating, bought followers, scraping in breach of terms, misleading claims, or advice that ignores regulated-industry rules." }
+  ],
+  "criteria": [
+    {
+      "id": "S1",
+      "name": "Diagnosis",
+      "anchors": {
+        "1": "Jumps straight to tactics.",
+        "3": "Generic SWOT or several 'challenges'.",
+        "5": "Names the single biggest constraint (message unclear, no demand capture, conversion leak, CAC above margin, retention leak, capacity) with evidence, after auditing what already works."
+      }
+    },
+    {
+      "id": "S3",
+      "name": "Unit economics",
+      "anchors": {
+        "1": "None.",
+        "3": "Mentions CAC or LTV without computing them.",
+        "5": "Computes affordable CAC from price and margin with maths shown, checks each channel against it, and recommends a price or offer change if nothing fits."
+      }
+    },
+    {
+      "id": "S4",
+      "name": "Focus and prioritisation",
+      "anchors": {
+        "1": "5+ channels with equal weight.",
+        "3": "3–4 channels, loosely ranked.",
+        "5": "1 primary + 1 secondary chosen by modified ICE with CAC-fit and time-to-signal gates; explicit not-doing list with a reason per channel."
+      }
+    },
+    {
+      "id": "S5",
+      "name": "Business-type fit",
+      "anchors": {
+        "1": "Same playbook for any business.",
+        "3": "Some tailoring to the business type.",
+        "5": "Channel mix matches business type, price point, buying behaviour, geography and the owner's skills."
+      }
+    },
+    {
+      "id": "S6",
+      "name": "Specificity and executability",
+      "anchors": {
+        "1": "'Leverage social media', 'create valuable content'.",
+        "3": "Named tactics with vague steps.",
+        "5": "Each action names asset, channel, audience, cadence, owner, hours and spend; week-1 checklist of 5 items or fewer."
+      }
+    },
+    {
+      "id": "S7",
+      "name": "Measurement",
+      "anchors": {
+        "1": "No metrics, or vanity metrics.",
+        "3": "Lagging metrics only.",
+        "5": "North Star in the owner's terms plus 3–5 leading indicators with weekly targets from a stated baseline; tracking setup specified (UTMs, server-side conversions, 'how did you hear', weekly scorecard)."
+      }
+    },
+    {
+      "id": "S8",
+      "name": "Experiment design",
+      "anchors": {
+        "1": "No tests, or A/B tests impossible at this traffic.",
+        "3": "Tests listed without decision rules.",
+        "5": "Pre-registered tests sized to real volume with run time and kill/scale thresholds; a day-45 decision point."
+      }
+    },
+    {
+      "id": "S10",
+      "name": "Positioning linkage",
+      "anchors": {
+        "1": "Strategy unrelated to positioning.",
+        "3": "Mentions positioning.",
+        "5": "Channels, offers and creative explicitly carry the chosen position and VoC language."
+      }
+    },
+    {
+      "id": "S11",
+      "name": "Current-landscape awareness",
+      "anchors": {
+        "1": "Pre-2024 playbook (blog-first SEO, interest targeting, company-page posting).",
+        "3": "Mentions AI search in passing.",
+        "5": "Adjusts channels for AI search, Meta and Google automation, founder-led LinkedIn and measurement loss, with sourced figures stated as ranges."
+      }
+    },
+    {
+      "id": "S12",
+      "name": "Risks and sequencing",
+      "anchors": {
+        "1": "No risks, no phases.",
+        "3": "Risks listed without mitigations or dates.",
+        "5": "Foundation, test and commit phases with dependencies; risks and assumptions each with a mitigation and a validation date."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

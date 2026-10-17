@@ -1,0 +1,85 @@
+{
+  "id": "positioning",
+  "title": "Positioning document and messaging hierarchy",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; gaps are marked [NEEDS FACT: …]." },
+    { "id": "G2", "text": "No fabricated customer evidence: no personas, quotes, review counts or demographics that cannot be traced to a source." },
+    { "id": "G3", "text": "Swap test: the core positioning line and headline options do not work unchanged for the top named competitor." },
+    { "id": "G4", "text": "No superlative fog: no unsourced 'best', '#1', 'leading', 'world-class', 'seamless' or 'cutting-edge'." }
+  ],
+  "criteria": [
+    {
+      "id": "P1",
+      "name": "Alternatives",
+      "anchors": {
+        "1": "Only lists named competitors, or none.",
+        "3": "Lists competitors and one generic substitute.",
+        "5": "Names the real status-quo alternatives, including a non-product one, with evidence of switching ('switched from…') and counts."
+      }
+    },
+    {
+      "id": "P2",
+      "name": "Differentiation",
+      "anchors": {
+        "1": "Parity claims (quality, service, affordable); fails the swap test.",
+        "3": "Some unique attributes, weakly evidenced.",
+        "5": "Unique attributes tied to value through a so-what chain, each evidenced; parity attributes removed; passes the swap test."
+      }
+    },
+    {
+      "id": "P3",
+      "name": "Value specificity",
+      "anchors": {
+        "1": "Abstract benefits ('save time', 'peace of mind').",
+        "3": "Outcomes named but not quantified or grounded in customer words.",
+        "5": "Concrete outcomes in customer language, quantified where data exists, clustered into 1–3 themes."
+      }
+    },
+    {
+      "id": "P4",
+      "name": "Best-fit segment",
+      "anchors": {
+        "1": "'Small businesses' or 'everyone'.",
+        "3": "Firmographic or demographic segment only.",
+        "5": "Segment by observable traits plus a trigger event plus disqualifiers."
+      }
+    },
+    {
+      "id": "P5",
+      "name": "Market frame and style",
+      "anchors": {
+        "1": "Missing or vague category.",
+        "3": "Category named with no reasoning.",
+        "5": "Frame chosen from 2–3 candidates tested for obviousness of value and price expectation; style (big fish small pond / head-to-head / new category) justified with rejected options."
+      }
+    },
+    {
+      "id": "P6",
+      "name": "Customer evidence",
+      "anchors": {
+        "1": "None, or invented personas.",
+        "3": "Some quotes, mostly from the business's own site.",
+        "5": "Verbatim VoC across 3+ sources with counts and links behind each value theme."
+      }
+    },
+    {
+      "id": "P7",
+      "name": "Messaging usability",
+      "anchors": {
+        "1": "Abstract statements only.",
+        "3": "A headline plus pillars.",
+        "5": "3 headline and 3 subhead options on different angles, pillars with proof, objection lines, words to use/avoid, and a pitch narrative in section or slide order."
+      }
+    },
+    {
+      "id": "P8",
+      "name": "Honesty about confidence",
+      "anchors": {
+        "1": "Everything stated as fact.",
+        "3": "Some caveats, no structure.",
+        "5": "High/Medium/Low confidence per component with the reason; a 2–3 week validation plan with metric, minimum volume, decision rule and dates."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

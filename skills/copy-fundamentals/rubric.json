@@ -1,0 +1,94 @@
+{
+  "id": "copy-fundamentals",
+  "title": "Copy fundamentals (universal rubric for any marketing copy)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story, offer term, deadline or result that isn't in confirmed facts or cited research. Missing facts appear as visible [NEEDS FACT: ...] markers, never as plausible inventions. VoC phrases are not presented as attributed testimonials without confirmed permission." },
+    { "id": "G2", "text": "Banned language: no phrase from the hard-fail banned list (unless it appears in the owner's own brand-voice samples), no unsourced superlatives (best, #1, leading, fastest), no ALL CAPS words, at most one exclamation mark." },
+    { "id": "G3", "text": "Limits and format: the piece respects the channel's character, hashtag and emoji limits and has exactly one primary CTA." },
+    { "id": "G4", "text": "Policy: no engagement bait (comment YES, tag a friend, like if), no fake urgency or scarcity, no personal-attribute phrasing aimed at the reader." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Specificity",
+      "anchors": {
+        "1": "Generic; every key sentence passes the competitor swap test (could be any business).",
+        "3": "Some numbers, names or scenes, but the central claim is still vague or could be a competitor's.",
+        "5": "Every claim concrete (number, name, time, place, process); the piece is unmistakably this business and fails the swap test everywhere."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Audience fit and customer language",
+      "anchors": {
+        "1": "No identifiable reader; written in the business's internal or category jargon.",
+        "3": "Right segment but a generic situation; customer language absent or paraphrased into marketing-speak.",
+        "5": "Speaks to one reader in one moment (the trigger from the positioning), using verbatim or near-verbatim customer phrases for the problem or outcome."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Single idea",
+      "anchors": {
+        "1": "Several competing messages, or a list of features with no through-line.",
+        "3": "One main idea with digressions or a second pitch tacked on.",
+        "5": "One idea statable in under 12 words, fully developed; every line serves it and each paragraph follows from the last."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Proof",
+      "anchors": {
+        "1": "Claims with no support, or support that is a superlative.",
+        "3": "Some proof present but not next to the claims it supports, or weakest proof used when stronger was available.",
+        "5": "Each claim has evidence within two sentences; the strongest available proof (number, named quote, mechanism) appears in the first third."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Mechanism",
+      "anchors": {
+        "1": "Says that it works, never how.",
+        "3": "Mechanism mentioned but abstract (\"our proven process\").",
+        "5": "Explains the concrete how (step, ingredient, rule, tool) in plain words, so the reader believes the outcome."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Hook / opening",
+      "anchors": {
+        "1": "Throat-clearing, brand intro or a generic truth.",
+        "3": "Clear topic but predictable; no tension or specific detail.",
+        "5": "Stops the reader with a specific number, scene or tension in the first line, and the body pays it off completely."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Voice and rhythm",
+      "anchors": {
+        "1": "Robotic: AI tells, framework seams, uniform sentence lengths, disconnected slogans.",
+        "3": "Clean but bland; could be any brand's house style.",
+        "5": "Sounds like this owner or brand (matches voice samples); varied sentence length; reads naturally aloud at the right reading level."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "CTA",
+      "anchors": {
+        "1": "Missing, vague (\"Learn more\") or several competing asks.",
+        "3": "One clear ask, but generic or higher-friction than the awareness level allows.",
+        "5": "One specific, low-friction action matched to awareness level, with the outcome stated and only true friction-removers."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Positioning alignment",
+      "anchors": {
+        "1": "Contradicts or ignores the positioning (wrong customer, wrong alternative, off-brand claim).",
+        "3": "Consistent with the positioning but doesn't express a specific pillar, objection or alternative.",
+        "5": "Clearly expresses one positioning element (value pillar, objection counter, alternative's trade-off or trigger moment) in reader language, without pasting positioning jargon."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

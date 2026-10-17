@@ -1,0 +1,84 @@
+{
+  "id": "x-posts",
+  "title": "X post or thread",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, metric, milestone, screenshot, customer or quote that isn't in confirmed facts or cited research. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Limits and format: every post is 280 characters or fewer (unless the brief says Premium, in which case the first 280 stand alone); threads are 4-8 posts; 0-2 hashtags; no link in the hook post; at most one exclamation mark per post." },
+    { "id": "G3", "text": "Policy: no engagement bait, no fake or mocked-up screenshots, no impersonation or misleading quote-posts, no banned phrases from copy-fundamentals; every image has alt text." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Compression",
+      "anchors": {
+        "1": "Padding, filler words, throat-clearing; obvious cuts available.",
+        "3": "Tight-ish, but a few words or a clause could go without loss.",
+        "5": "Every word earns its place; quotable as written; nothing can be cut without losing meaning."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Hook / first line",
+      "anchors": {
+        "1": "\"🧵 THREAD\", hype listicle opener or a generic truth.",
+        "3": "Clear topic but no number, finding or tension.",
+        "5": "A specific number, claim or finding in the first line that works on its own and is paid off."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Specificity and proof",
+      "anchors": {
+        "1": "Opinions or tips with no evidence; could come from anyone.",
+        "3": "Some specifics but the central claim lacks a number or first-hand detail.",
+        "5": "Central claim backed by the business's confirmed number, observation or mechanism inside the post itself."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Insight",
+      "anchors": {
+        "1": "Platitude nobody would disagree with.",
+        "3": "Useful but expected; a peer would nod and scroll.",
+        "5": "A defensible point a knowledgeable peer could argue with or would quote, grounded in evidence."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Standalone-ness (threads)",
+      "anchors": {
+        "1": "Posts depend on each other; \"This\"/\"It\" openers; padded single idea.",
+        "3": "Mostly self-contained, with one or two dependent posts.",
+        "5": "Every post works alone if screenshotted; each carries one distinct point; final post lands the takeaway. Score 5 for a single post that fully stands alone."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Link placement and CTA",
+      "anchors": {
+        "1": "Link in the hook post, or a vague \"check it out\".",
+        "3": "Link mid-thread or CTA generic.",
+        "5": "Hook link-free; link in a reply or final post with one line on what it is; at most one ask."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Voice and positioning fit",
+      "anchors": {
+        "1": "Brand-speak, hype or emoji decoration; off-positioning.",
+        "3": "Clean but generic; not tied to a positioning element.",
+        "5": "Sounds like a sharp, specific person; expresses one positioning element in the customer's words."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Channel fit and assets",
+      "anchors": {
+        "1": "Pasted from another channel; fake or stock visuals; no alt text.",
+        "3": "Written for X but visuals or alt text vague; no channel-fit note where one was needed.",
+        "5": "Native to X (length, rhythm, reply-ready); real screenshots or charts of confirmed data with alt text; channel-fit note when the business is local."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "conversion-audit",
+  "title": "Money-page conversion audit",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; rewrites contain no invented proof, prices, guarantees or testimonials." },
+    { "id": "G2", "text": "Impact honesty: every expected impact is labelled a hypothesis with a reason; no promised percentage lifts and no cross-industry averages used as targets." },
+    { "id": "G3", "text": "Observed vs unverified: visuals, mobile layout, speed and analytics are only described if observed or measured; everything else is labelled 'not verified' with the check that would confirm it." },
+    { "id": "G4", "text": "No dark patterns or non-compliance: no fake urgency or scarcity, hidden fees, pre-ticked consent, confirmshaming, review gating, or removal of legally required information." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Context and page job",
+      "anchors": {
+        "1": "Generic audit with no page job, traffic source or buyer stage.",
+        "3": "Page type named; traffic source or awareness stage missing.",
+        "5": "Page type, single job, main traffic source and awareness stage stated and used to judge every finding."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Message match and clarity",
+      "anchors": {
+        "1": "Not checked, or 'headline could be stronger'.",
+        "3": "Clarity judged in general terms; ad copy not compared.",
+        "5": "H1 compared to the actual source copy; 5-second test answered for what, who, price/next step and why-this, with the hero quoted."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Offer and proof",
+      "anchors": {
+        "1": "'Add social proof.'",
+        "3": "Proof and offer noted, not ranked or located.",
+        "5": "Offer, risk reversal and real urgency assessed; proof inventoried and ranked by the hierarchy, with placement next to claims checked."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Objection coverage",
+      "anchors": {
+        "1": "Objections not considered.",
+        "3": "Generic FAQ suggestions.",
+        "5": "Top 3–5 objections from VoC (or reviews) each mapped to where it arises on the page, with an answer using confirmed facts."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "CTA, friction, mobile, speed and trust",
+      "anchors": {
+        "1": "Skipped, or guessed (e.g. 'the page is slow') without data.",
+        "3": "Some dimensions covered; others ignored rather than flagged.",
+        "5": "CTA wording and count, form fields and steps, mobile, measured speed against thresholds, trust cues and tracking each assessed or flagged 'not verified' with the check needed."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Prioritisation",
+      "anchors": {
+        "1": "Unranked list of 20+ tips.",
+        "3": "Ranked, but blockers mixed with polish; no fix/test split.",
+        "5": "Blocker/major/minor classes; fix now / test / later split; 12 or fewer items; top 3 named first with reasons."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Fix specificity",
+      "anchors": {
+        "1": "'Improve the headline', 'make the CTA stronger'.",
+        "3": "Direction given, copy partly written.",
+        "5": "Each fix gives the exact replacement copy or change, effort in hours, and a hero rewrite (H1, subhead, CTA, micro-copy, proof chip) from confirmed facts."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Verification plan",
+      "anchors": {
+        "1": "No way to tell if fixes worked.",
+        "3": "A metric named for some fixes.",
+        "5": "Each fix names the metric or check that verifies it; uncertain big swings are handed to a pre-registered test; tracking gaps fixed first."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

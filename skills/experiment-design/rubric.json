@@ -1,0 +1,85 @@
+{
+  "id": "experiment-design",
+  "title": "Small-sample experiment plan or readout",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; baselines come from the business's data or are labelled as assumptions." },
+    { "id": "G2", "text": "Pre-registration: every test has its metric, minimum volume, run time and scale/kill/iterate thresholds stated before launch; readouts apply the registered rule unchanged." },
+    { "id": "G3", "text": "No false statistics: no p-values or 'statistically significant' claims from peeked, under-powered or unregistered tests; before/after results are labelled directional." },
+    { "id": "G4", "text": "Honest and compliant: no deceptive fake doors, fake scarcity or payment without a clear refund promise; email tests only to contacts with consent or a lawful basis, with unsubscribe intact." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Decision and hypothesis",
+      "anchors": {
+        "1": "No decision named; hypothesis is a hunch ('let's see if blue works').",
+        "3": "Hypothesis stated but not tied to evidence or to a decision.",
+        "5": "Names the decision the test informs; hypothesis grounded in VoC counts, competitor gaps or audit findings."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Test type and funnel level",
+      "anchors": {
+        "1": "Page-level A/B test on purchases at a traffic level that can't finish.",
+        "3": "Reasonable test type but metric lower in the funnel than the volume supports.",
+        "5": "Test type (message lab, smoke test, reply test, sequential, holdout, conversations) matched to volume; metric at the highest funnel step that still reflects the decision, with a secondary read."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Volume maths and run time",
+      "anchors": {
+        "1": "No volume or run-time estimate.",
+        "3": "A volume target with no maths or baseline.",
+        "5": "Volume per variant computed from a sourced baseline and the target swing, maths shown, converted into a run time within about 6 weeks or the design changed."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Effect size realism",
+      "anchors": {
+        "1": "Tests micro-tweaks (button colour, single words).",
+        "3": "Moderate changes that may not be detectable at this volume.",
+        "5": "Big swings (offer, positioning, price, guarantee, channel) that could plausibly move the metric 30%+."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Decision rule and guardrails",
+      "anchors": {
+        "1": "'See what happens.'",
+        "3": "A single success threshold, no kill rule or guardrails.",
+        "5": "Scale, kill and iterate-once thresholds stated as business thresholds; guardrail metrics with limits (refunds, unsubscribes, complaints, bounce, lead quality, margin)."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Controls and confounds",
+      "anchors": {
+        "1": "Several changes at once; no mention of confounds.",
+        "3": "One change, but audience, budget or timing not held constant.",
+        "5": "One change per test; audience, budget, schedule and weekday mix matched; seasonality and other changes listed; no overlapping tests on one audience; algorithmic selection called out."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Readout honesty",
+      "anchors": {
+        "1": "Claims a winner with no denominators, or moves the goalposts.",
+        "3": "Numbers reported, rule applied loosely, no confidence label.",
+        "5": "Denominators per variant, registered rule quoted and applied, strong/directional label with reasons, confounds, verbatim qualitative evidence, one next action."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Cost fit and sequencing",
+      "anchors": {
+        "1": "Tests exceed the budget or hours, or run all at once.",
+        "3": "Affordable tests, unranked.",
+        "5": "Cost and hours stated per test within the owner's budget; backlog ranked by impact on the goal, confidence and cost, run sequentially on shared audiences."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

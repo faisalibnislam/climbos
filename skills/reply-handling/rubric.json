@@ -1,0 +1,41 @@
+{
+  "id": "reply-handling",
+  "title": "Reply classification and response drafting",
+  "gates": [
+    { "id": "G1", "text": "Truth and grounding: every fact in the draft (price, feature, availability, customer, meeting time, data source) is in the confirmed facts, the thread or the prospect record. Gaps use [NEEDS FACT: ...]. When asked where data came from, the stored source is given truthfully." },
+    { "id": "G2", "text": "Compliance: any opt-out signal (including 'no' or 'stop' in answer to the opt-out line) is labelled unsubscribe and suppressed with no selling; complaints are labelled as complaints, not softened; referred contacts are logged for compliance checks, never emailed directly; data requests are flagged to the owner." },
+    { "id": "G3", "text": "Format and safety: no reply is drafted to an auto-reply; the sequence is stopped for every human reply; drafts are plain text in the same thread, with at most one link and one next step; every draft is held for owner approval." },
+    { "id": "G4", "text": "Conduct: no arguing, defending, lecturing, guilt, pressure or false urgency; no second push after a no." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Label accuracy", "anchors": {
+      "1": "Wrong label, or a mixed reply labelled by its least protective signal (e.g. 'remove me, but what's the price?' labelled question).",
+      "3": "Right family but imprecise (e.g. not-now labelled not-interested), or confidence and secondary signals missing.",
+      "5": "Exactly one correct primary label using the precedence order, with confidence and secondary signals noted." } },
+    { "id": "C2", "name": "System actions", "anchors": {
+      "1": "Actions missing or wrong (no suppression on opt-out, no reschedule on out-of-office).",
+      "3": "Main action given but one is missing (e.g. no owner alert on a complaint, no invalid flag when someone has left).",
+      "5": "All required actions listed: stop, suppress, reschedule with the correct date, invalid, referral logging, owner alert." } },
+    { "id": "C3", "name": "Responsiveness to the ask", "anchors": {
+      "1": "Ignores what the person asked and pitches instead.",
+      "3": "Addresses the ask but buries it or answers only part.",
+      "5": "Does exactly what was asked in the first line (delivers the promised summary or example, answers the question) before anything else." } },
+    { "id": "C4", "name": "Next step", "anchors": {
+      "1": "No next step, or several competing asks.",
+      "3": "A next step that is vague ('let me know') or heavier than the situation warrants.",
+      "5": "One next step fitted to the label: two concrete times or a booking link for positive replies, a light offer after a question, permission to check back for not-now, nothing for opt-outs." } },
+    { "id": "C5", "name": "Objection and no handling", "anchors": {
+      "1": "Argues, repeats the pitch, or pushes after a no.",
+      "3": "Polite but generic, or answers an objection without proof or a smaller step.",
+      "5": "One calm answer with a proof item or clarifying question and a smaller step; a no gets a brief, gracious close and nothing more." } },
+    { "id": "C6", "name": "Tone and brevity", "anchors": {
+      "1": "Defensive, robotic or salesy; long.",
+      "3": "Courteous but stiff or longer than needed.",
+      "5": "Brief (usually 25-100 words), human and gracious, in the prospect's language and spelling." } },
+    { "id": "C7", "name": "Owner note", "anchors": {
+      "1": "No note, or a note that hides a risk.",
+      "3": "Note present but misses a risk or a [NEEDS FACT] item.",
+      "5": "One or two lines naming what the person wants, label and confidence, risks (legal request, anger) and open facts." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

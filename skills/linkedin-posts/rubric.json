@@ -1,0 +1,93 @@
+{
+  "id": "linkedin-posts",
+  "title": "LinkedIn post (founder, company Page or document post)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story or first-person experience that isn't in confirmed facts, founder material or cited research. Missing load-bearing details are visible [NEEDS FACT: ...] questions." },
+    { "id": "G2", "text": "Limits and format: under 3,000 characters; the hook is complete within ~140 characters; 0-3 hashtags; no external link in the post body unless the brief requires it; at most one exclamation mark; no emoji bullets, headers or Unicode bold text." },
+    { "id": "G3", "text": "Policy and platform safety: no engagement bait (Agree?, comment YES, like if, repost to help, polls for reach), no banned phrases from copy-fundamentals, no tagging or quoting people without confirmed permission, no fake screenshots or stock people presented as customers or staff." }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "Above-the-fold hook",
+      "anchors": {
+        "1": "Starts with an announcement (\"I'm excited to...\"), a generic truth or a feature line.",
+        "3": "Clear topic but no tension, number or scene; a reader could skip it without curiosity.",
+        "5": "Specific number, scene or tension in under ~140 characters that compels \"see more\" and is fully paid off by the body."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Expertise signal",
+      "anchors": {
+        "1": "Opinion or advice with no basis in the author's experience or data.",
+        "3": "Some experience shown, but details are ones any practitioner could write.",
+        "5": "First-hand operational detail (a real number, decision, mistake or customer exchange) only this author or business could know."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Argument that builds",
+      "anchors": {
+        "1": "Wall of text, or one-line broetry where each line is a standalone slogan.",
+        "3": "Readable short paragraphs, but some could be removed without breaking anything.",
+        "5": "Short paragraphs that form one cause-and-effect argument; removing any paragraph breaks what follows."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Specificity and proof",
+      "anchors": {
+        "1": "No numbers, names or mechanism; claims unsupported.",
+        "3": "Some specifics but the central claim lacks proof or the proof arrives only at the end.",
+        "5": "Central claim carries a confirmed number, customer phrase or mechanism by the middle of the post; nothing vague survives."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Positioning and customer language",
+      "anchors": {
+        "1": "Off-positioning or generic category talk; no reader identifiable.",
+        "3": "On-topic for the business but doesn't express a specific pillar, objection, alternative or trigger.",
+        "5": "Expresses one positioning element for the best-fit reader, in their own words (VoC), without positioning jargon."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Takeaway and comment-worthiness",
+      "anchors": {
+        "1": "Ends in a moral, a pitch or bait; nothing for peers to add.",
+        "3": "A takeaway that invites generic agreement, or a closing question anyone could answer with \"yes\".",
+        "5": "An actionable takeaway plus a close that gives peers something substantive to add or dispute from their own experience."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Product placement",
+      "anchors": {
+        "1": "Reads as an ad: feature list, pricing, \"DM me for a demo\" as the point.",
+        "3": "Product mentioned naturally but more than once, or before the lesson lands.",
+        "5": "Product appears at most once as the consequence of the lesson (founder post), or through a concrete asset (Page post), or not at all."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Voice",
+      "anchors": {
+        "1": "Corporate or AI-sounding: hype words, framework seams, uniform sentences.",
+        "3": "Clean but could be any founder or brand.",
+        "5": "Sounds like this specific person or brand talking to a peer; varied rhythm; matches voice samples."
+      }
+    },
+    {
+      "id": "C9",
+      "name": "Visual and accessibility",
+      "anchors": {
+        "1": "No visual decision, or a stock/fake image; no alt text; hashtags not readable by screen readers.",
+        "3": "A sensible visual or text-only choice, but the brief or alt text is vague.",
+        "5": "Deliberate choice (text-only, real photo, document or captioned video) with a producible brief, descriptive alt text, CamelCase hashtags; document posts repeat the key point in the post text."
+      }
+    }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

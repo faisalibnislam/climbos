@@ -1,0 +1,21 @@
+{
+  "id": "meta-ads",
+  "title": "Meta ads (creative concepts, copy, briefs, structure)",
+  "gates": [
+    { "id": "G1", "text": "Truth: no claim, number, review, customer, quote, UGC creator, press mention, scarcity or deadline that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G2", "text": "Limits and format: every hook complete within the first 125 characters of primary text; headlines ≤ 40 characters (flag any over 27); 3–5 concepts; each concept has primary text, 3 headlines, a CTA button and a creative brief." },
+    { "id": "G3", "text": "Policy: no personal-attribute phrasing (race, religion, age, sexual orientation, gender identity, disability, health, financial status, criminal record, name); no before-and-after body images or ideal-body implication; special ad category declared where the business fits one; no fake buttons or notifications." },
+    { "id": "G4", "text": "Approval and budget: everything drafted as paused for owner approval; daily budget × 30.4 within the stated monthly budget; no promised results or guarantees the business hasn't confirmed." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Concept diversity", "anchors": { "1": "Variants differ only in wording, colour or CTA; effectively one concept.", "3": "Two distinct angles; others are near-variants or share buyer and format.", "5": "3–5 concepts, each differing from every other on at least two of buyer, angle and format, with visually distinct first frames." } },
+    { "id": "C2", "name": "Hook (first 125 characters)", "anchors": { "1": "Opens with brand name, throat-clearing or a personal-attribute question.", "3": "Clear but generic; could be any brand in the category.", "5": "Names a specific situation or outcome in VOC words, stands alone without 'See more', and the body pays it off." } },
+    { "id": "C3", "name": "Proof and offer clarity", "anchors": { "1": "No offer, or vague claims with no evidence.", "3": "Offer present; proof generic or far from the claim.", "5": "Offer, price or terms clear in headline and text; strongest confirmed proof in the first two lines." } },
+    { "id": "C4", "name": "Creative brief quality", "anchors": { "1": "No brief, or 'lifestyle image of product'.", "3": "Describes the visual but not the first 3 seconds, ratios or on-screen text.", "5": "Ratio(s), exact first 3 seconds, on-screen text for sound-off, shot list with real products and people, safe zones, end frame, and what the owner must film and how long it takes." } },
+    { "id": "C5", "name": "Native feel and voice", "anchors": { "1": "Banner-ad tone, hype words, emoji bullets, multiple exclamation marks.", "3": "Clean but corporate; 'we' leads.", "5": "Reads like a post from a real person; 'you' leads; short varied lines; no AI tells." } },
+    { "id": "C6", "name": "Evidence behind each concept", "anchors": { "1": "Angles picked with no link to buyers or VOC.", "3": "Angles plausible but evidence not stated.", "5": "Each concept names its buyer, awareness level and the VOC phrase, review theme or fact it rests on." } },
+    { "id": "C7", "name": "Structure and budget fit", "anchors": { "1": "Small budget split across many ad sets or interests; no budget math.", "3": "Simple structure but optimisation event or learning-phase fit not considered.", "5": "One campaign and ad set for small budgets, budget math shown, optimisation event chosen against the ~50 events/week learning threshold, custom-audience exclusions set." } },
+    { "id": "C8", "name": "Automation and test plan", "anchors": { "1": "Advantage+ settings ignored; no test rule.", "3": "Settings mentioned; test rule vague ('see what works').", "5": "Each Advantage+ setting decided with a reason; pre-registered per-concept kill rule tied to the owner's target; refresh plan replaces losers with new concepts." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}
