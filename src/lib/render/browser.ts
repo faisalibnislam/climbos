@@ -8,7 +8,11 @@ export async function launchBrowser(): Promise<Browser> {
   const { chromium } = await import("playwright-core");
   if (process.env.VERCEL) {
     const sparticuz = (await import("@sparticuz/chromium")).default;
-    return chromium.launch({ executablePath: await sparticuz.executablePath(), args: sparticuz.args, headless: true });
+    // --single-process hangs when a second browser context opens (the mobile view);
+    // we load untrusted sites, so keep same-origin and mixed-content protections on.
+    const drop = new Set(["--single-process", "--disable-web-security", "--allow-running-insecure-content"]);
+    const args = sparticuz.args.filter((a) => !drop.has(a));
+    return chromium.launch({ executablePath: await sparticuz.executablePath(), args, headless: true });
   }
   return chromium.launch({ headless: true });
 }
