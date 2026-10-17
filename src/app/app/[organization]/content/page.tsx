@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { Palette } from "lucide-react";
+import { buttonClasses } from "@/components/ui";
 import { SectionIcon } from "@/components/app/SectionIcon";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -27,7 +30,12 @@ export default function ContentPage() {
             </p>
           </div>
         </div>
-        <CreateContentDialog slug={slug} />
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/studio/${slug}/new`} className={buttonClasses({ variant: "secondary" })}>
+            <Palette className="size-[18px]" aria-hidden="true" /> Design studio
+          </Link>
+          <CreateContentDialog slug={slug} />
+        </div>
       </header>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <ContentTabs slug={slug} />

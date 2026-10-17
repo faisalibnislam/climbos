@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
  *    (Next.js applies it automatically); network access is limited to ClimbOS,
  *    Convex and the optional analytics host.
  */
-const isProtected = createRouteMatcher(["/app(.*)", "/onboarding(.*)", "/ops(.*)"]);
+const isProtected = createRouteMatcher(["/app(.*)", "/onboarding(.*)", "/ops(.*)", "/studio(.*)"]);
 const isSignIn = createRouteMatcher(["/sign-in"]);
 
 function contentSecurityPolicy(nonce: string): string {

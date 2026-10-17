@@ -161,6 +161,6 @@ export interface DesignDoc {
 }
 
 export const DEFAULT_BRAND: BrandKit = {
-  colors: { primary: "#2f47e0", secondary: "#7c3aed", accent: "#ffd166", dark: "#0e1225", light: "#f5f7fb" },
+  colors: { primary: "#0b5d46", secondary: "#0b3b2e", accent: "#ff9a4d", dark: "#101828", light: "#f5f6f8" },
   fonts: { heading: "Plus Jakarta Sans", body: "Plus Jakarta Sans" },
 };
