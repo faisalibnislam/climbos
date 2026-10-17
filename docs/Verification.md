@@ -9,7 +9,7 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
 | TypeScript, web + shared | `npx tsc --noEmit -p tsconfig.json` | Clean |
 | TypeScript, Convex | `npx tsc --noEmit -p convex/tsconfig.json` (also `convex deploy --typecheck enable`) | Clean |
 | Lint | `pnpm lint` | 0 errors |
-| Unit + Convex integration tests | `pnpm test` | **238 passed** (15 files) |
+| Unit + Convex integration tests | `pnpm test` | **239 passed** (16 files) |
 | Production build | `pnpm build` | Passes; 32 routes |
 | End-to-end + accessibility | `pnpm test:e2e` against the dev deployment | **16 passed** (public site + demo flow) |
 | Economics gate | `pnpm econ:export` | PASS: every plan ≥ 30% at heavy use and under combined stress |
@@ -73,16 +73,22 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
   - Action cards appeared twice.
   - The parser mistook an email domain for a website and missed "I run …" names.
   - The Vercel project had no framework set, so every route returned 404 until it was set to Next.js.
+- **Found with live AI (17 Oct 2026) and fixed:**
+  - Claude answers for business insights and the growth plan were cut off at their output limits (3,000 and 4,000 tokens). A repair at the same limit can't fix a cut-off answer.
+  - Repair steps were never closed, so they stayed "running".
+  - "[n]" fact markers appeared in text owners read.
+  - After the fixes, a fresh onboarding finished first time: research $0.07, plan $0.04.
 
 ## Adapter verification status
 
 | Adapter | Status |
 |---|---|
 | Demo fixtures (AI, Instagram, Google Ads, GA4, Search Console, Stripe) | **Fixture-verified** (deterministic, labelled demo) |
-| Claude (`claude-sonnet-5-5`, `claude-haiku-5-5`) | Implementation-tested with code paths and schemas. **Not yet live-verified**: no `ANTHROPIC_API_KEY` provided |
-| Gemini (`gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-flash-lite-image`) | Implementation-tested. **Not yet live-verified**: no `GEMINI_API_KEY` |
-| Resend (sign-in codes, platform mail, webhooks) | Implementation-tested (signature tests). **Not live-verified**: no `AUTH_RESEND_KEY`, so email sign-in doesn't work yet |
-| Polar (checkout, portal, webhooks, reconciliation) | Webhook processing tested end-to-end in Convex tests; signatures verified against the official SDK. **Sandbox not yet verified**: no token or products |
+| Claude (`claude-sonnet-5-5`, `claude-haiku-5-5`) | **Live-verified 17 Oct 2026** on dev and production. Real onboarding for two public businesses: research, insights and a growth plan. Real answers exposed output limits that were too tight; budgets were raised and the repair path fixed (see below). |
+| Gemini (`gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-flash-lite-image`) | **Live-verified** for text: fact extraction in onboarding and the landing-page preview on climbos.app. All model ids confirmed in the key's model list. Image generation is not yet exercised live. |
+| Resend (sign-in codes, platform mail, webhooks) | `climbos.app` is **verified** (DKIM, SPF, return-path). Dev and prod webhooks are created, and both accepted correctly signed test events (HTTP 200) and rejected unsigned ones (403). **Email sign-in still needs `AUTH_RESEND_KEY`.** Until then the sign-in page says email codes aren't on yet. |
+| Polar (checkout, portal, webhooks, reconciliation) | Webhook processing tested end-to-end in Convex tests; signatures verified against the official SDK. `pnpm polar:setup` creates the products and the webhook. **Sandbox not yet verified**: no token |
+| Google sign-in | The OAuth proxy on climbos.app reaches the Convex auth routes (dev and prod), and `CUSTOM_AUTH_SITE_URL` is set. **Awaiting a Google Cloud OAuth client**; the button appears automatically once it's configured |
 | Firecrawl / built-in website reader | The built-in fetcher's SSRF and robots logic is unit-tested. The live fetch runs in production once AI keys exist |
 | GA4, Search Console, Google Ads, Meta Ads, Facebook Pages, Instagram, Stripe, customer Resend | Implementation-tested against mocked provider responses on current API versions (Google Ads v26, Graph v26.0). **Awaiting credentials and provider approvals**; they show "Setup needed" in the product |
 | Cloudflare R2 | Key format and presigned-URL signing are unit-tested (`tests/unit/r2.test.ts`). **Not live-verified**: no R2 credentials |
