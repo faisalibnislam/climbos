@@ -80,7 +80,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-9 w-2/3" />
         <Skeleton className="h-6 w-48" />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Skeleton className="h-96 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>

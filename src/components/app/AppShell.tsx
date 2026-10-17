@@ -131,13 +131,13 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
-              className="mx-auto flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
+              className="mx-auto flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
               <Sparkles className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
               <span className="flex-1 truncate">Tell your team what you want…</span>
               <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <TeamActivity slug={slug} />
               <Button
                 size="sm"
@@ -149,7 +149,7 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
                 <Sparkles aria-hidden /> <span className="hidden md:inline">Climb AI</span>
               </Button>
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
-              <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "w-8 px-0 text-ink-2" })} aria-label="Activity">
+              <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "hidden w-8 px-0 text-ink-2 sm:inline-flex" })} aria-label="Activity">
                 <Bell className="size-4" aria-hidden />
               </Link>
               <AccountMenu />
@@ -164,7 +164,7 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
       {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
         <ul className="grid grid-cols-5">
-          {NAV.filter((n) => !n.href && !["connections", "images"].includes(n.key)).map((item) => {
+          {NAV.filter((n) => !["connections", "images", "studio"].includes(n.key)).map((item) => {
             const active = section === item.key;
             return (
               <li key={item.key}>

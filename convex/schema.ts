@@ -1372,6 +1372,8 @@ export default defineSchema({
         state: v.union(v.literal("closed"), v.literal("open"), v.literal("half_open")),
         failures: v.number(),
         openedAt: v.optional(v.number()),
+        alertedAt: v.optional(v.number()),
+        reason: v.optional(v.string()),
       }),
     ),
     previewDailyBudgetMicros: v.number(),

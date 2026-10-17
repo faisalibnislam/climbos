@@ -133,3 +133,18 @@ ${button(i.approveUrl, "Approve")} ${button(i.openUrl, "Review first", false)}
     ),
   };
 }
+
+export function providerDownEmail(params: { provider: string; reason: string; url: string }) {
+  const { provider, reason, url } = params;
+  return {
+    subject: `ClimbOS ops: ${provider} is failing (${reason})`,
+    text: `${provider} calls are failing: ${reason}. New AI work pauses and retries every minute. Owners see "AI providers aren't available". Console: ${url}`,
+    html: layout(
+      "Provider alert",
+      `<h1 style="margin:0 0 8px;font-size:22px">${escapeHtml(provider)} is failing</h1>
+<p style="margin:0 0 8px;color:#454a44"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
+<p style="margin:0 0 20px;color:#454a44">New AI work pauses and retries every minute. Nothing is charged to customers for failed work.</p>
+<p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">Open the ops console</a></p>`,
+    ),
+  };
+}

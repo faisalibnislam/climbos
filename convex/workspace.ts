@@ -42,11 +42,16 @@ export const today = query({
       .query("actionCards")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "running"))
       .take(10);
-    const runs = await ctx.db
-      .query("workflowRuns")
-      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(8);
+    // Real jobs only (not the chat plumbing behind Climb AI and wishes).
+    const runs = (
+      await ctx.db
+        .query("workflowRuns")
+        .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+        .order("desc")
+        .take(30)
+    )
+      .filter((r) => r.kind !== "climb_chat" && r.kind !== "chat_intent")
+      .slice(0, 6);
     const messages = await ctx.db
       .query("chatMessages")
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
@@ -107,7 +112,7 @@ export const today = query({
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)
         .map(cardView),
-      recent: runs.map((r) => ({ id: r._id, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
+      recent: runs.map((r) => ({ id: r._id, kind: r.kind, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
       chat: messages
         .reverse()
         .map((m) => ({ id: m._id, author: m.author, text: m.text, understood: m.understood ?? null, status: m.status, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),

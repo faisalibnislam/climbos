@@ -49,7 +49,7 @@ export type ModelResult =
     }
   | {
       ok: false;
-      kind: "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused";
+      kind: "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit";
       message: string;
       retryAfterMs?: number;
       usage?: ModelUsage;
@@ -161,6 +161,9 @@ async function callAnthropic(req: ModelRequest, rates: RateVersion): Promise<Mod
       }
       if (e.status === 401 || e.status === 403) {
         return { ok: false, kind: "provider_unavailable", message: "Claude rejected the server credentials.", costMicros: 0 };
+      }
+      if (e.status === 400 && /credit balance|billing/i.test(e.message)) {
+        return { ok: false, kind: "spend_limit", message: "The AI account is out of credit.", costMicros: 0 };
       }
       return { ok: false, kind: "provider_error", message: `Claude error (${e.status ?? "network"}).`, costMicros: 0 };
     }

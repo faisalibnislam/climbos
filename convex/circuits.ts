@@ -1,5 +1,8 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { providerDownEmail } from "./lib/emailTemplates";
+import { operatorEmails } from "./lib/tenancy";
 import { DEFAULT_PREVIEW_DAILY_BUDGET_MICROS } from "./preview";
 
 /** Provider circuit breakers: open after 5 consecutive failures, half-open after 60s. */
@@ -36,15 +39,45 @@ export const circuitState = internalQuery({
   },
 });
 
+const ALERT_EVERY_MS = 6 * 60 * 60_000;
+
+/**
+ * Record one provider call. `billing` failures (out of credit, spend limit)
+ * open the circuit at once: retrying won't help until the account is topped up.
+ * Opening a circuit emails the operators (at most every 6 hours).
+ */
 export const recordProviderResult = internalMutation({
-  args: { provider: v.string(), ok: v.boolean() },
-  handler: async (ctx, { provider, ok }) => {
+  args: { provider: v.string(), ok: v.boolean(), billing: v.optional(v.boolean()), reason: v.optional(v.string()) },
+  handler: async (ctx, { provider, ok, billing, reason }) => {
     const fleet = await ensureFleet(ctx);
-    const circuits = fleet.circuits.filter((c) => c.provider !== provider);
     const prev = fleet.circuits.find((c) => c.provider === provider) ?? { provider, state: "closed" as const, failures: 0 };
-    const failures = ok ? 0 : prev.failures + 1;
+    if (ok && prev.state === "closed" && prev.failures === 0) return; // hot path: nothing to change
+    const circuits = fleet.circuits.filter((c) => c.provider !== provider);
+    const failures = ok ? 0 : billing ? Math.max(prev.failures + 1, FAILURE_THRESHOLD) : prev.failures + 1;
     const state = ok ? ("closed" as const) : failures >= FAILURE_THRESHOLD ? ("open" as const) : prev.state === "open" ? ("open" as const) : ("closed" as const);
-    circuits.push({ provider, state, failures, openedAt: state === "open" ? (prev.state === "open" ? prev.openedAt : Date.now()) : undefined });
-    await ctx.db.patch(fleet._id, { circuits, updatedAt: Date.now() });
+    const now = Date.now();
+    const opening = state === "open" && prev.state !== "open";
+    const alert = opening && (!("alertedAt" in prev) || !prev.alertedAt || now - prev.alertedAt > ALERT_EVERY_MS);
+    const why = reason ?? (billing ? "billing" : "repeated errors");
+    circuits.push({
+      provider,
+      state,
+      failures,
+      openedAt: state === "open" ? (prev.state === "open" ? prev.openedAt : now) : undefined,
+      alertedAt: alert ? now : "alertedAt" in prev ? prev.alertedAt : undefined,
+      reason: state === "open" ? why : undefined,
+    });
+    await ctx.db.patch(fleet._id, { circuits, updatedAt: now });
+    if (alert) await ctx.scheduler.runAfter(0, internal.circuits.alertOps, { provider, reason: why });
+  },
+});
+
+export const alertOps = internalAction({
+  args: { provider: v.string(), reason: v.string() },
+  handler: async (ctx, { provider, reason }) => {
+    const mail = providerDownEmail({ provider, reason, url: `${process.env.SITE_URL ?? "https://climbos.app"}/ops` });
+    for (const to of operatorEmails()) {
+      await ctx.runAction(internal.notifications.sendPlatformEmail, { to, template: "ops_provider_down", ...mail });
+    }
   },
 });

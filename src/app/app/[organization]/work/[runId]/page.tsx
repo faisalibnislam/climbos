@@ -45,7 +45,7 @@ export default function WorkPage() {
       {run.isFixture ? <StatusPill status="demo" /> : null}
       {run.status === "failed" && run.userMessage ? <Callout tone="danger" title="This job didn't finish">{run.userMessage}</Callout> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         <div className="flex min-w-0 flex-col gap-6">
           {active ? (
             <Card>

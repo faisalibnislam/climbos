@@ -178,8 +178,8 @@ async function runModelTask<T>(
     await ctx.runMutation(internal.engine.recordUsage, { stepId: usageStepId, records: usageRecord(MODEL_SPECS[modelKey].provider, res.ok ? res.actualModelId : MODEL_SPECS[modelKey].apiModelId, res) });
     if (res.ok || res.kind === "invalid_output" || res.kind === "refused") {
       await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: true });
-    } else if (res.kind === "provider_error" || res.kind === "timeout") {
-      await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: false });
+    } else if (res.kind === "provider_error" || res.kind === "timeout" || res.kind === "spend_limit") {
+      await ctx.runMutation(internal.circuits.recordProviderResult, { provider: MODEL_SPECS[modelKey].provider, ok: false, billing: res.kind === "spend_limit", reason: res.message.slice(0, 120) });
     }
     return res;
   };
@@ -218,7 +218,7 @@ async function runModelTask<T>(
       else await ctx.runMutation(internal.engine.failStep, { stepId: repair.stepId!, error: `${res.kind}: ${res.message}` });
     }
   }
-  if (!res.ok && ["provider_unavailable", "provider_error", "timeout", "rate_limited"].includes(res.kind)) {
+  if (!res.ok && ["provider_unavailable", "provider_error", "timeout", "rate_limited", "spend_limit"].includes(res.kind)) {
     const fallbackCost = worstCaseStepMicros(route.fallback, task.inputBudget, task.outputBudget, rates);
     const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: run._id, costMicros: fallbackCost });
     if (reserved.ok) res = await attempt(route.fallback);
@@ -226,7 +226,7 @@ async function runModelTask<T>(
   if (!res.ok) {
     await ctx.runMutation(internal.engine.failStep, { stepId, error: `${res.kind}: ${res.message}` });
     const message =
-      res.kind === "provider_unavailable"
+      res.kind === "provider_unavailable" || res.kind === "spend_limit"
         ? "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later."
         : res.kind === "refused"
           ? "The AI declined this request. Try rephrasing it."
@@ -309,8 +309,8 @@ async function runAgentTask<T>(
         await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(req.modelKey, r, rates) });
       }
       const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
-      if (healthy || ["provider_error", "timeout"].includes(r.ok ? "" : r.kind)) {
-        await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: healthy });
+      if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
+        await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: healthy, billing: !r.ok && r.kind === "spend_limit", reason: r.ok ? undefined : r.message.slice(0, 120) });
       }
       return r;
     },

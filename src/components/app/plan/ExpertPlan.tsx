@@ -72,7 +72,7 @@ const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
 
 export function NorthStar({ expert }: { expert: ExpertView }) {
   return (
-    <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
       <Card>
         <CardContent className="flex flex-col gap-2">
           <p className="text-overline">Diagnosis</p>

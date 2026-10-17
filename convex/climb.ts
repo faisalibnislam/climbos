@@ -238,7 +238,15 @@ export const respond = action({
       if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) {
-        failed = r.kind === "rate_limited" ? "Climb AI is busy right now. Try again in a moment." : "Climb AI had a problem answering. Try again.";
+        if (["provider_error", "timeout", "spend_limit"].includes(r.kind)) {
+          await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: false, billing: r.kind === "spend_limit", reason: r.message.slice(0, 120) });
+        }
+        failed =
+          r.kind === "rate_limited"
+            ? "Climb AI is busy right now. Try again in a moment."
+            : r.kind === "spend_limit" || r.kind === "provider_unavailable"
+              ? "Climb AI is offline for a moment. We've been alerted."
+              : "Climb AI had a problem answering. Try again.";
         break;
       }
       messages.push(...r.appended);

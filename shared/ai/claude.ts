@@ -279,6 +279,9 @@ export async function claudeTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
       if (e.status === 429 && body?.error?.details?.error_code === "enforced_spend_limit_reached") {
         return { ok: false, kind: "spend_limit", message: "The AI account's spend limit was reached.", usage, costMicros: cost(), appended };
       }
+      if (e.status === 400 && /credit balance|billing/i.test(e.message)) {
+        return { ok: false, kind: "spend_limit", message: "The AI account is out of credit.", usage, costMicros: cost(), appended };
+      }
       if (e.status === 429 || e.status === 529) {
         return { ok: false, kind: "rate_limited", message: "Claude is busy right now.", retryAfterMs: retryAfterMs(e.headers), usage, costMicros: cost(), appended };
       }

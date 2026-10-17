@@ -12,10 +12,8 @@ import {
   FileCheck2,
   Hourglass,
   Lightbulb,
-  ShieldCheck,
   Sparkles,
   Target,
-  Users,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -23,10 +21,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
-import { cn } from "@/lib/utils";
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorMessage } from "@/components/app/errors";
-import { microsToDisplay, relativeTime } from "@/components/app/money";
+import { relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
 import { useNow } from "@/components/app/content/shared";
@@ -110,7 +107,6 @@ export default function TodayPage() {
   }
 
   const firstName = data.userName && !data.userName.includes("@") ? data.userName.split(" ")[0] : null;
-  const workingRoles = new Set(data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).flatMap((r) => r.roles));
 
   const suggested = data.cards.filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id)));
   const running = data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).length;
@@ -161,7 +157,7 @@ export default function TodayPage() {
       />
       <WishFeed slug={slug} chat={data.chat} />
 
-      <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.45fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
           {/* Next actions */}
           <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
@@ -196,11 +192,17 @@ export default function TodayPage() {
             )}
           </section>
           {suggested.length > 0 && (
-            <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
-              <h2 id="suggested-heading" className="heading-section">Suggested by your plan</h2>
-              {suggested.map((c) => (
-                <ActionCard key={c.id} slug={slug} card={c} />
-              ))}
+            <section aria-labelledby="suggested-heading" className="rounded-xl border border-line bg-surface">
+              <h2 id="suggested-heading" className="heading-section px-5 pt-4">
+                Ideas from your plan
+              </h2>
+              <ul className="mt-2 divide-y divide-line border-t border-line">
+                {suggested.map((c) => (
+                  <li key={c.id}>
+                    <ActionCard slug={slug} card={c} />
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
         </div>
@@ -229,19 +231,18 @@ export default function TodayPage() {
               </div>
             </div>
           </section>
-          <TeamPanel working={workingRoles} />
         </div>
       </div>
 
       {/* At a glance */}
-      <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-3">
         <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} hint="Nothing goes live without you" />
         <StatCard icon={Zap} tone="blue" label="Working now" value={running} hint={running ? "Jobs in progress" : "Your team is ready"} />
         <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} hint="Finished jobs" />
-        <StatCard icon={Users} tone="violet" label="Your AI team" value={10} hint="Specialists on your business" />
+
       </section>
 
-      <RecentWork data={data} />
+      <RecentWork slug={slug} data={data} />
       <div className="md:hidden">
         <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
       </div>
@@ -255,73 +256,59 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
   const [busy, setBusy] = useState(false);
   const status = card.status;
   return (
-    <div id={`card-${card.id}`} className="rounded-xl border border-line bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="heading-card flex items-center gap-2.5">
-          <IconTile icon={Lightbulb} tone="brand" size="sm" />
-          {card.title}
-        </p>
-        {status === "running" && <Badge tone="blue" icon={<Clock3 />}>Working</Badge>}
-        {status === "done" && <Badge tone="green" icon={<CheckCircle2 />}>Done</Badge>}
-        {status === "failed" && <Badge tone="red">Didn’t finish</Badge>}
-        {status === "blocked" && <Badge tone="amber">Needs setup</Badge>}
+    <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-ink">{card.title}</p>
+        <Tooltip content={card.proposedEffect}>
+          <p tabIndex={0} className="truncate text-xs text-ink-3">
+            {card.description}
+          </p>
+        </Tooltip>
       </div>
-      <p className="mt-1 text-sm text-ink-2">{card.description}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {card.roles.map((r) => (
-          <span key={r} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 py-0.5 pl-0.5 pr-2.5 text-xs font-medium text-ink-2">
-            <RoleAvatar role={r} size="xs" /> {ROLE_META[r]?.title ?? r}
-          </span>
-        ))}
+      <div className="flex shrink-0 items-center gap-2">
+        {status === "running" ? (
+          <Badge tone="blue" icon={<Clock3 />}>
+            Working
+          </Badge>
+        ) : status === "done" ? (
+          card.runId ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/app/${slug}/work/${card.runId}`}>See result</Link>
+            </Button>
+          ) : (
+            <Badge tone="green" icon={<CheckCircle2 />}>
+              Done
+            </Badge>
+          )
+        ) : status === "failed" ? (
+          <Badge tone="red">Didn’t finish</Badge>
+        ) : status === "blocked" ? (
+          <Badge tone="amber">Needs setup</Badge>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await run({ slug, cardId: card.id as Id<"actionCards"> });
+                } catch (e) {
+                  toast({ tone: "danger", title: errorMessage(e) });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {card.kind === "note" ? "Got it" : "Do it"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+              Not now
+            </Button>
+          </>
+        )}
       </div>
-      <dl className="mt-3 grid gap-1 text-ui">
-        <div className="flex gap-2">
-          <dt className="text-ink-3">What happens:</dt>
-          <dd className="text-ink">{card.proposedEffect}</dd>
-        </div>
-        {card.costEstimateMicros > 0 && (
-          <div className="flex gap-2">
-            <dt className="text-ink-3">Most it can use:</dt>
-            <dd className="text-ink">{microsToDisplay(card.costEstimateMicros)} of this month’s AI capacity</dd>
-          </div>
-        )}
-        {card.blockedReason && (
-          <div className="flex gap-2">
-            <dt className="text-ink-3">Why it’s waiting:</dt>
-            <dd className="text-ink">{card.blockedReason}</dd>
-          </div>
-        )}
-      </dl>
-      {status === "proposed" && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await run({ slug, cardId: card.id as Id<"actionCards"> });
-                toast({ tone: "info", title: "Started. You'll see the drafts in Content when they're ready." });
-              } catch (e) {
-                toast({ tone: "danger", title: errorMessage(e) });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <ShieldCheck aria-hidden /> {card.kind === "note" ? "Mark done" : "Do it"}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-            Not now
-          </Button>
-        </div>
-      )}
-      {status === "done" && (
-        <Link href={`/app/${slug}/content?status=in_review`} className={buttonClasses({ variant: "link", className: "mt-3" })}>
-          Review the drafts <ArrowRight aria-hidden />
-        </Link>
-      )}
     </div>
   );
 }
@@ -374,33 +361,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   );
 }
 
-function TeamPanel({ working }: { working: Set<string> }) {
-  return (
-    <section aria-labelledby="team-heading">
-      <h2 id="team-heading" className="heading-section">Your AI team</h2>
-      <p className="mt-0.5 text-sm text-ink-3">Ten specialists sharing one brain about your business.</p>
-      <ul className="mt-4 grid grid-cols-2 gap-2">
-        {Object.entries(ROLE_META).map(([key, r]) => {
-          const active = working.has(key);
-          return (
-            <li key={key} className={cn("flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-ui", active ? "border-brand-200 bg-brand-50" : "border-line bg-surface")}>
-              <RoleAvatar role={key} size="sm" />
-              <span className="min-w-0">
-                <span className="block truncate font-medium text-ink">{r.title.replace("AI ", "")}</span>
-                <span className={cn("flex items-center gap-1 text-xs", active ? "font-semibold text-brand-800" : "text-ink-3")}>
-                  <span aria-hidden="true" className={cn("size-1.5 rounded-full", active ? "animate-soft-pulse bg-brand-800" : "bg-green-500")} />
-                  {active ? "Working now" : "Ready"}
-                </span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-function RecentWork({ data }: { data: Today }) {
+function RecentWork({ slug, data }: { slug: string; data: Today }) {
   return (
     <section aria-labelledby="recent-heading">
       <h2 id="recent-heading" className="heading-section">Latest work</h2>
@@ -416,10 +377,12 @@ function RecentWork({ data }: { data: Today }) {
               {data.recent.map((r) => {
                 const s = RUN_STATUS[r.status] ?? { label: r.status, tone: "neutral" as const };
                 return (
-                  <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 last:border-b-0">
+                  <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-ink">{r.title}</span>
+                      <Link href={r.kind === "strategy" ? `/app/${slug}/plan` : `/app/${slug}/work/${r.id}`} className="block text-sm font-medium text-ink after:absolute after:inset-0">
+                        {r.title}
+                      </Link>
                       <span className="block text-xs text-ink-3">
                         {r.roles.map((x) => ROLE_META[x]?.short).join(", ")} · {relativeTime(r.createdAt)}
                         {r.isFixture ? " · demo" : ""}

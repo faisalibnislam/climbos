@@ -1,0 +1,1545 @@
+[
+ {
+  "case": "plausible",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "summary": "Four plays in 90 days. Rescue trials that never send data. Spend $400/month on German and French cookie-banner search ads. Pitch EU agencies that sell GDPR-ready sites. Run one capped AI-traffic launch post. The trial rescue is the biggest, most bankable lever; the other three test new demand cheaply.",
+     "positioning": "The simple, cookieless alternative to Google Analytics. No personal data and no cookie banner for your stats. A script 54x smaller than GA. Independent, profitable and EU-based, trusted by 21,000+ paying subscribers.",
+     "audiences": [
+      {
+       "name": "Stalled trial users",
+       "hypothesis": "Many trials never connect a site, so they never see value or pay.",
+       "evidence": "Assumption to verify with trial data. The no-card 30-day trial lowers the bar to sign up but not to install."
+      },
+      {
+       "name": "DACH and French site owners with cookie-banner pain",
+       "hypothesis": "Local-language consent searches cost less and convert better than crowded English 'GA alternative' terms.",
+       "evidence": "No cookies or personal data, plus an EU base, matches DSGVO/RGPD-driven searches. Click costs are unverified until Keyword Planner is checked."
+      },
+      {
+       "name": "EU web agencies selling GDPR-friendly builds",
+       "hypothesis": "Agencies that already market privacy will add cookieless analytics to every client site.",
+       "evidence": "The site names agencies and white-label as audiences, and the Growth and Business plans allow multiple sites. Low confidence: no partner incentive is confirmed."
+      },
+      {
+       "name": "Indie hackers, SaaS founders and publishers curious about AI traffic",
+       "hypothesis": "An honest post on AI-tool referrers, using Plausible's own public data, can reach HN and Reddit front pages.",
+       "evidence": "The site says Plausible shows visits from ChatGPT, Perplexity and Claude. This needs checking before publishing."
+      }
+     ],
+     "channels": [
+      {
+       "key": "email_lifecycle",
+       "name": "Trial rescue sequence + dashboard banner",
+       "why": "Converts trials you already pay nothing to acquire. Highest score of the four plays.",
+       "priority": 1,
+       "deliverables": [
+        "4 behavior-triggered emails (day 2 platform setup guide, day 5 GA import, day 10 personal help reply, day 25 trial-ending reminder)",
+        "Dashboard banner copy for sites with no data",
+        "50/50 holdout split logic spec",
+        "Tracking sheet: first-data rate within 7 days, trial-to-paid by arm"
+       ],
+       "dependencies": [
+        "Engineering hook to flag 'no pageview at 48h' and to randomize",
+        "Support person to answer day-10 replies",
+        "Baseline trial counts from last month"
+       ],
+       "measurement": "Holdout vs. treatment first-data rate within 7 days and trial-to-paid rate, after 200 trials per arm.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "search_ads",
+       "name": "German and French cookie-banner search ads",
+       "why": "A cheap test of local-language consent demand, where EU-based and cookieless matter most.",
+       "priority": 2,
+       "deliverables": [
+        "German and French exact/phrase keyword lists with brand and job/free negatives",
+        "Responsive search ads in both languages using only confirmed claims",
+        "UTM-tagged links to the migration and vs-GA pages",
+        "Weekly cost-per-trial report"
+       ],
+       "dependencies": [
+        "Keyword Planner volume and bid check before launch",
+        "'Free Trial Started' goal imported as the Google Ads conversion",
+        "Decision on whether landing pages need German/French versions"
+       ],
+       "measurement": "Cost per trial started and trial-to-site-connected rate per language. Judge at $600 spent.",
+       "suggestedMonthlyAdSpend": 400
+      },
+      {
+       "key": "sales_outreach",
+       "name": "EU agency personal outreach",
+       "why": "One agency account can bring many client sites. Costs owner time, not ad budget.",
+       "priority": 3,
+       "deliverables": [
+        "Qualified list of 200 EU agencies that market GDPR/DSGVO builds",
+        "Two email angles (client-banner pain vs. all client sites in one account) plus 2 follow-ups",
+        "Simple pipeline sheet: sent, replied, trial, paid"
+       ],
+       "dependencies": [
+        "Owner approval of the email copy",
+        "Sending inbox and LinkedIn account",
+        "Confirm that agency and white-label page claims are current"
+       ],
+       "measurement": "Reply rate and trials on client sites per 100 messages, then paid multi-site accounts.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "social_organic",
+       "name": "AI-traffic launch post (HN + Reddit)",
+       "why": "Low cost, high upside, and it fits a transparent brand voice. Most posts won't hit the front page.",
+       "priority": 4,
+       "deliverables": [
+        "Founder post built on Plausible's own public dashboard data",
+        "5-minute 'check your AI traffic' how-to",
+        "Show HN title and 2-3 subreddit versions",
+        "UTM links and a 14-day results note"
+       ],
+       "dependencies": [
+        "A real, interesting finding in Plausible's own referrers",
+        "Owner confirms the exact AI-referral claims",
+        "Subreddit rules allow the post"
+       ],
+       "measurement": "Visits in 48h and UTM-tagged trials in 14 days. The $100 Reddit boost is spent only if the post gains traction without paid help.",
+       "suggestedMonthlyAdSpend": 100
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Trial rescue holdout",
+       "hypothesis": "Nudging trials with no pageviews at 48h raises the first-data rate by 5+ points and lifts trial-to-paid.",
+       "population": "New trials with zero pageviews 48h after signup, randomized 50/50",
+       "method": "holdout",
+       "primaryMetric": "First pageview received within 7 days of signup",
+       "guardrails": [
+        "Unsubscribe rate under 1% per email (assumption)",
+        "Support reply load handled within 1 business day",
+        "Trial-to-paid rate not lower in the treatment arm"
+       ],
+       "durationDays": 28,
+       "stoppingRule": "Stop at 200 trials per arm or 4 weeks. Kill if the lift is under 3 points. Roll out if it's 5+ points and trial-to-paid improves."
+      },
+      {
+       "name": "DE vs FR consent-pain search ads",
+       "hypothesis": "At least one language delivers trials under $40 each.",
+       "population": "Searchers in DE/AT/CH and FR using consent and cookie-free analytics terms",
+       "method": "ab_split",
+       "primaryMetric": "Cost per Free Trial Started",
+       "guardrails": [
+        "Spend capped at $400/month",
+        "Brand terms excluded",
+        "Trials connect a site at or above the site-wide rate"
+       ],
+       "durationDays": 28,
+       "stoppingRule": "Judge at $600 total spend. Kill if cost per trial is over $80 or there are under 5 trials. Move the full budget to a language under $40."
+      },
+      {
+       "name": "Agency outreach subject angle",
+       "hypothesis": "The client-banner-pain angle gets more replies than the multi-site convenience angle.",
+       "population": "First 100 qualified EU agencies, alternating between the two angles",
+       "method": "ab_split",
+       "primaryMetric": "Reply rate",
+       "guardrails": [
+        "Personal, one-to-one emails only, with an easy opt-out",
+        "Spam complaints at zero"
+       ],
+       "durationDays": 18,
+       "stoppingRule": "After 100 messages, kill if there are under 3 replies or zero trials. Scale to 400 agencies if 5%+ reply and 2+ agencies trial a client site."
+      },
+      {
+       "name": "AI-traffic launch post",
+       "hypothesis": "An honest AI-referrer post brings 1,000+ visits and 10+ trials.",
+       "population": "HN and Reddit readers reached by a single post",
+       "method": "pre_post_observational",
+       "primaryMetric": "UTM-tagged trials started within 14 days",
+       "guardrails": [
+        "Only Plausible's own site data, never customer data",
+        "No reposting",
+        "Owner time capped at 6 hours"
+       ],
+       "durationDays": 14,
+       "stoppingRule": "Kill if under 1,000 visits in 48h or under 10 trials in 14 days, and move the hours to agencies. Over 50 trials: localize the post for the DE/FR ad pages."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $500/month ($400 search, $100 capped launch boost), paid directly to platforms",
+      "Small team, so owner time is capped at about 4 hours a week, plus 6 hours once for the launch post (assumption)",
+      "No legal compliance promises: describe what the product does, not GDPR outcomes",
+      "Only confirmed claims in copy: 54x smaller script, no cookies or personal data, 21,000+ paying subscribers, 313B+ pageviews, independent, self-funded, profitable, EU-based",
+      "Customer names and quotes stay out until the owner confirms them"
+     ],
+     "measurementPlan": "Use Plausible itself: a 'Free Trial Started' goal with UTMs per play (gads_de, gads_fr, outreach_agency, hn, reddit), plus billing data for trial-to-paid. One weekly sheet tracks trials, first-data rate, cost per trial and new paid by source. The trial rescue uses a true holdout. The other plays are judged against their kill and scale thresholds.",
+     "firstActions": [
+      {
+       "title": "Pull last month's trial cohort: total trials, zero pageviews at 48h and day 30, and trial-to-paid",
+       "why": "This sizes the rescue play and sets the North Star baseline.",
+       "role": "Owner / data"
+      },
+      {
+       "title": "Run the DE and FR keyword lists through Google Keyword Planner",
+       "why": "Check volume and bid ranges before spending a dollar.",
+       "role": "Paid search"
+      },
+      {
+       "title": "Check Plausible's own referrers for ChatGPT, Perplexity and Claude",
+       "why": "Decides whether there is a real, shareable story for the launch post.",
+       "role": "Founder"
+      },
+      {
+       "title": "Build the first 50 qualified EU agencies",
+       "why": "Gets outreach started in week 2.",
+       "role": "Outreach"
+      }
+     ],
+     "diagnosis": "Strong product, proof and trust story. Growth now depends on converting more of the trials you already get and finding cheaper EU demand than English 'GA alternative' terms. [NEEDS FACT: How many trials start each month, and what share become paid?]",
+     "affordableCac": "Benchmark-based guardrail: kill paid channels above $80 per trial, scale below $40. At an assumed 9-18% trial-to-paid (ChartMogul, First Page Sage), that implies roughly $220-890 per paying customer. Check this against plan revenue on the pricing page before scaling.",
+     "notDoing": [
+      {
+       "channel": "English 'Google Analytics alternative' search ads",
+       "why": "Crowded and costly. $500/month would buy too few clicks to learn anything."
+      },
+      {
+       "channel": "Meta ads",
+       "why": "Weak intent for analytics tools and a poor fit with a privacy-first brand."
+      },
+      {
+       "channel": "New SEO content program",
+       "why": "Rankings rarely pay off within 90 days. Migration and vs-GA pages already exist and are reused as landing pages."
+      },
+      {
+       "channel": "Affiliate or partner commission program",
+       "why": "No incentive is confirmed. Test agency interest first with plain outreach."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying subscribers per month",
+      "baseline": "Pull from billing in week 1 (last 3 months' average)",
+      "target": "Baseline plus 10-25 extra paying customers over 90 days from the four plays combined (assumption, based on the play p50 estimates)"
+     },
+     "leadingIndicators": [
+      {
+       "metric": "First-data rate within 7 days for rescued trials vs. holdout",
+       "weeklyTarget": "Treatment 5+ points above holdout",
+       "source": "Product database"
+      },
+      {
+       "metric": "Cost per trial (DE and FR search ads)",
+       "weeklyTarget": "Under $40, kill above $80",
+       "source": "Google Ads + Plausible goal"
+      },
+      {
+       "metric": "Agency messages sent / replies",
+       "weeklyTarget": "40 sent, 2+ replies",
+       "source": "Outreach pipeline sheet"
+      },
+      {
+       "metric": "Trials started by UTM source",
+       "weeklyTarget": "Rising week over week across plays",
+       "source": "Plausible goals"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Set up",
+       "days": "1-14",
+       "focus": "Trial baseline, holdout build, keyword check, ad launch, agency list, launch post decision."
+      },
+      {
+       "name": "Test",
+       "days": "15-45",
+       "focus": "Run all four plays to their stopping rules and launch the HN post once."
+      },
+      {
+       "name": "Scale winners",
+       "days": "46-90",
+       "focus": "Roll out the rescue to every trial if it wins, move ad budget to the winning language, extend outreach to 400 agencies if it clears the bar, and cut the rest."
+      }
+     ],
+     "weekOneChecklist": [
+      "Pull last month's trial cohort and paid conversion",
+      "Confirm the 'Free Trial Started' goal and UTM naming",
+      "Spec the 48h no-data trigger and the 50/50 split with engineering",
+      "Approve the 4 rescue emails and banner copy",
+      "Check DE and FR keywords in Keyword Planner",
+      "Decide whether the migration and vs-GA pages need DE/FR versions",
+      "Review AI-referrer data for the launch post",
+      "Qualify the first 50 agencies"
+     ],
+     "risks": [
+      {
+       "risk": "Few trials actually stall, so the rescue has little room to help",
+       "mitigation": "Size it on day 1. If stalled trials are rare, move effort to a 'connected but no goals set' trigger."
+      },
+      {
+       "risk": "English landing pages convert poorly for German and French clickers",
+       "mitigation": "Compare conversion by language early and translate the hero section if the cost per trial is over $80."
+      },
+      {
+       "risk": "Ad or post copy implies guaranteed GDPR compliance",
+       "mitigation": "Describe only what the product does: no cookies, no personal data."
+      },
+      {
+       "risk": "Cold outreach is seen as spam",
+       "mitigation": "Personal, low-volume emails with a clear opt-out, sent only to agencies with public GDPR service pages."
+      },
+      {
+       "risk": "The launch post flops",
+       "mitigation": "Cap it at 6 hours and $100, never repost, and move the time to agency outreach."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Rescue trials that never connect a site",
+       "oneLiner": "Automatically nudge trial users whose dashboard has no pageviews 48 hours after signup, and offer them setup help.",
+       "kind": "bankable",
+       "audience": "New 30-day trial users whose site has sent zero pageviews by hour 48.",
+       "trigger": "No pageview received 48 hours after signup, checked again on day 5 and day 10.",
+       "hook": "Your dashboard is still empty. Most setups take one snippet. Here is the exact step for your site builder, or reply and we'll check it with you.",
+       "mechanic": "Emails sent when the user does (or doesn't do) something, plus a banner in the dashboard. Day 2: setup guide matched to their platform. Day 5: offer the GA import. Day 10: a person replies to help. Day 25: a plain reminder that the trial is ending. Send half the eligible trials the sequence and hold back the other half to measure the lift.",
+       "assetUsed": "The current 30-day no-card trial, the Google Analytics import, the live demo, and the small, light script (54x smaller than GA), which makes setup quick.",
+       "funnel": [
+        "Trial started",
+        "No data at 48h",
+        "Rescue email opened",
+        "First pageview received",
+        "Trial converts to paid"
+       ],
+       "unit": "Extra paying customers per 1,000 trials",
+       "p10": 2,
+       "p50": 7,
+       "p90": 15,
+       "horizonDays": 90,
+       "confidence": "high",
+       "biggestUnknown": "What share of trials never connect a site today. If it's already small, this play has little room to help.",
+       "test": "Randomly split trial signups that hit the no-data trigger 50/50 for 4 weeks, or until each side has 200 trials. Compare first-data rate within 7 days and trial-to-paid rate.",
+       "killIf": "After 200 trials per side, the share of rescued users who connect their site is less than 3 percentage points above the hold-out group.",
+       "scaleIf": "First-data rate rises by 5 or more points and trial-to-paid improves. Then roll it out to every trial and add the same trigger for 'connected but no goals set'.",
+       "scores": [
+        8,
+        8,
+        7,
+        7
+       ],
+       "firstActionToday": "Pull last month's trials and count how many had zero pageviews at 48 hours and at day 30. That number sizes this play.",
+       "climbosCanDo": "Write the 4-email rescue sequence and the dashboard banner copy, set up the split-test plan, and build the tracking sheet."
+      },
+      {
+       "name": "Cookie-banner pain search ads in German and French",
+       "oneLiner": "Spend $400/month on Google Search ads in German and French, aimed at people trying to remove cookie banners or replace GA, instead of the crowded English 'GA alternative' terms.",
+       "kind": "creative",
+       "audience": "Site owners in Germany, Austria, Switzerland and France searching in their own language for analytics without cookies or consent banners.",
+       "trigger": "Searches like 'Webanalyse ohne Cookies', 'Google Analytics Alternative DSGVO', 'Cookie-Banner entfernen Analytics', 'analytics sans cookies' and 'alternative Google Analytics RGPD'.",
+       "hook": "Ad copy: 'Webanalyse ohne Cookies. Keine personenbezogenen Daten, kein Cookie-Banner für Ihre Statistik. Unabhängig, aus der EU. 30 Tage kostenlos testen.' (English: 'Analytics without cookies. No personal data, no cookie banner for your stats. Independent, from the EU. Try it free for 30 days.')",
+       "mechanic": "Exact-match and phrase-match keywords only, with brand terms excluded. Send clicks to the existing migration and 'vs Google Analytics' pages. Count a Free Trial Started as the conversion. In 3 months, $1,200 at a $3-6 click (assumed, set against the WordStream $5.26 average) gives about 200-400 clicks. At 5.1% trial rate (Unbounce) that's about 10-20 trials, which at 9-18% trial-to-paid means about 1-4 customers. Upside comes if local-language clicks are cheaper.",
+       "assetUsed": "No cookies or personal data, so no banners or consent forms. Independent, self-funded, EU-based company. 21,000+ paying subscribers. The 30-day no-card trial.",
+       "funnel": [
+        "Local-language search",
+        "Ad click",
+        "Migration or vs-GA page",
+        "Trial started",
+        "Paid"
+       ],
+       "unit": "New paying customers",
+       "p10": 1,
+       "p50": 3,
+       "p90": 7,
+       "horizonDays": 90,
+       "confidence": "medium",
+       "biggestUnknown": "Real click prices for German and French consent-related searches, and whether the landing pages need translating for these visitors to convert.",
+       "test": "Run two ad groups: German consent-pain terms and French consent-pain terms. $400/month split evenly, judged after 4 weeks or $600 spent.",
+       "killIf": "Cost per trial is above $80, or fewer than 5 trials come in, after $600 spent.",
+       "scaleIf": "Cost per trial is under $40 and trials connect a site at or above the site-wide rate. Then shift the whole budget to the winning language and add Dutch and Nordic terms.",
+       "scores": [
+        5,
+        6,
+        8,
+        7
+       ],
+       "firstActionToday": "Run the German and French keyword lists through Google Keyword Planner and check search volume and top-of-page bid ranges before spending anything.",
+       "climbosCanDo": "Build the keyword lists, negative keywords, and responsive search ads in German and French using only confirmed claims, and send a weekly cost-per-trial report."
+      },
+      {
+       "name": "EU agencies that sell 'GDPR-ready' websites",
+       "oneLiner": "Send short personal emails to 200 web agencies that already promise clients GDPR-friendly sites, suggesting Plausible as the analytics they add to every build.",
+       "kind": "creative",
+       "audience": "Small EU web and WordPress agencies whose own sites market GDPR, DSGVO or privacy-friendly builds.",
+       "trigger": "The agency's service page mentions GDPR/DSGVO compliance, or its portfolio sites show a consent banner loaded mainly for analytics.",
+       "hook": "You already sell privacy-friendly sites. Analytics without cookies means one less thing behind the banner on every client build, and you see all client sites in one account.",
+       "mechanic": "Personal cold email and LinkedIn messages, 40 per week for 5 weeks, each with one line specific to that agency. The ask is to start a trial on one client site. Assumptions: 3-8% reply, about 40% of replies start a trial, 25% of those pay. Each agency account can cover several sites.",
+       "assetUsed": "Multi-site and team access on the Growth and Business plans (from the site), the white-label/agency pages, no cookies or personal data, and EU base.",
+       "funnel": [
+        "Agency found and qualified",
+        "Personal email or DM",
+        "Reply",
+        "Trial on a client site",
+        "Paid multi-site account"
+       ],
+       "unit": "New paying agency accounts",
+       "p10": 1,
+       "p50": 3,
+       "p90": 7,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether agencies switch analytics for clients without a referral or partner incentive, and none is confirmed.",
+       "test": "Send 100 messages in 2.5 weeks using two subject angles (client-banner pain vs. managing many sites in one place). Track reply rate and trial starts.",
+       "killIf": "Fewer than 3 replies, or zero trials, from the first 100 messages.",
+       "scaleIf": "5% or more reply and at least 2 agencies trial a client site. Then extend to 400 agencies and turn the winning angle into a dedicated agency page.",
+       "scores": [
+        6,
+        4,
+        5,
+        5
+       ],
+       "firstActionToday": "Build a list of 50 EU agencies whose service pages mention GDPR or DSGVO, and note the analytics script on each agency's own portfolio sites.",
+       "climbosCanDo": "Research and qualify the agency list, write the two personal email versions and follow-ups for owner approval, and track replies in a simple pipeline."
+      },
+      {
+       "name": "'How much of your traffic comes from AI?' launch post",
+       "oneLiner": "A transparent founder post showing how Plausible's own public dashboard reports visits from ChatGPT, Perplexity and Claude, launched once on Hacker News and Reddit.",
+       "kind": "moonshot",
+       "audience": "Indie hackers, SaaS founders, developers and publishers who are curious whether AI tools send them traffic.",
+       "trigger": "The current interest in AI search sending visitors. Launch on a weekday morning, US Eastern time.",
+       "hook": "We looked at where AI chat tools show up in our own referrers. Here is what a cookieless dashboard shows, and how to check yours in 5 minutes.",
+       "mechanic": "One honest post using only Plausible's own site data from its public live demo. No customer data, which keeps the 'we don't sell or use your data' promise. Submit to Show HN plus relevant subreddits that allow it. Capped at 6 owner hours and $100 to boost on Reddit only if it gets traction without paid help. Assumption: a front-page HN post brings 10k-30k visits. At 1-2% trial and about 15% paid, that's 15-90 customers. Most posts don't reach the front page, so p50 is low.",
+       "assetUsed": "The public live demo, the AI-referral reporting the site describes (check exact claims first), the 54x lighter script, and the independent, profitable, self-funded story.",
+       "funnel": [
+        "HN/Reddit post",
+        "Visit to post and live demo",
+        "Trial started",
+        "Site connected",
+        "Paid"
+       ],
+       "unit": "New paying customers",
+       "p10": 0,
+       "p50": 5,
+       "p90": 60,
+       "horizonDays": 30,
+       "confidence": "low",
+       "biggestUnknown": "Whether Plausible's own referrer data shows a story interesting enough to reach the front page.",
+       "test": "Publish once, then measure trials with UTM tags from HN and Reddit for 14 days.",
+       "killIf": "Under 1,000 visits in 48 hours, or under 10 trials in 14 days. Don't repost; move the hours back to the agency play.",
+       "scaleIf": "Over 50 trials from the post. Then turn it into a German and French version for the search-ad landing pages, and a quarterly update post.",
+       "scores": [
+        7,
+        2,
+        6,
+        8
+       ],
+       "firstActionToday": "Open Plausible's own dashboard, filter referrers for ChatGPT, Perplexity and Claude, and decide whether there's a real, shareable finding.",
+       "climbosCanDo": "Draft the post and the 5-minute how-to from the owner's real dashboard numbers, write a short HN title and Reddit versions, and set up UTM links."
+      }
+     ],
+     "portfolioNote": "I'd put the $500/month into German- and French-language search ads ($400) plus one capped launch test ($100). Fixing the existing trials is likely the biggest lever, because 21,000+ paying subscribers suggests strong trial volume. [NEEDS FACT: How many trials start each month, and what share become paid?] Benchmarks used: no-card trials convert 8.9% to paid (ChartMogul 2026) up to 18.2% (First Page Sage). SaaS landing pages convert 3.8%, or 5.1% from Google search (Unbounce). The average Google Ads click costs $5.26 (WordStream/LocaliQ 2025). Scores are impact, confidence, ease and speed, each out of 10."
+    },
+    "costMicros": 429835,
+    "ms": 144171
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 163999,
+    "ms": 307282
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "tartine",
+  "type": "local_food",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "summary": "Four plays over 60 days, $300/month on Meta (about $600 total), about 3 owner hours a week. The base is an order-by countdown to people who already know Tartine. Office outreach targets group orders. Meta ads reach Tartine Bread readers outside California with Goldbelly shipping. A capped gift-guide pitch is the long shot.",
+     "positioning": "Your holiday table, baked by Tartine: a San Francisco bakery since 2002 that you can pre-order for pickup or get shipped nationwide through Goldbelly. Lead with craft and planning ahead. Make no 'best' or price claims.",
+     "audiences": [
+      {
+       "name": "Bay Area regulars and recent site visitors",
+       "hypothesis": "They already want Tartine for the holidays. They need a clear order-by date and a direct link to act before the deadline.",
+       "evidence": "The site already runs a holiday pastry and pies pre-order banner. Insights list 4 Bay Area locations with a regular local customer base."
+      },
+      {
+       "name": "SF office managers and executive assistants",
+       "hypothesis": "They plan December team events 1-3 weeks ahead. A timely, personal note with an order-by date will win some group orders.",
+       "evidence": "Special order cakes need seven days' notice and are picked up at 600 Guerrero St. Digital Bloom reports timeline hooks get about 2.3x the replies."
+      },
+      {
+       "name": "Tartine Bread readers outside California",
+       "hypothesis": "Home bakers who know the book but can't visit will buy a shipped holiday order for themselves or as a gift.",
+       "evidence": "Tartine ships nationwide through Goldbelly. The site links to the Tartine books."
+      },
+      {
+       "name": "Gift-guide readers",
+       "hypothesis": "A link in an online holiday guide sends ready-to-buy gift shoppers to Goldbelly or gift cards.",
+       "evidence": "The Infatuation's SF holiday pie guide already lists Tartine, per play research. The site sells gift cards online."
+      }
+     ],
+     "channels": [
+      {
+       "key": "email_lifecycle",
+       "name": "Owned countdown: email, Google Business Profile Offer posts, counter QR cards",
+       "why": "Cheapest reach to people who already buy. Email alone is the largest part of the forecast.",
+       "priority": 1,
+       "deliverables": [
+        "3 emails: announce, halfway, last call",
+        "Weekly Offer post on each Bay Area Google Business Profile",
+        "Counter and bag QR card text",
+        "Unique UTM link or QR code per touchpoint"
+       ],
+       "dependencies": [
+        "Confirmed holiday order-by date and pickup details",
+        "Access to the email platform and Google Business Profiles",
+        "Counter space and printing"
+       ],
+       "measurement": "Attributed pre-orders per send, post and QR code via UTMs and the 'How did you hear about us?' field. Target at least 0.26% placed orders per send (Branvas benchmark).",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "meta_ads",
+       "name": "Meta ads: local retargeting plus Tartine Bread readers outside CA",
+       "why": "Two $150/month ad sets. One converts warm locals. The other is the only scalable way to reach out-of-state book readers for Goldbelly.",
+       "priority": 2,
+       "deliverables": [
+        "Retargeting ad set: site visitors from the last 30 days, Instagram engagers, small radius around SF locations",
+        "Interest ad set: sourdough and baking-book interests, California excluded, 2 creatives (bread and holiday pastry)",
+        "UTM links to the pre-order page and the Goldbelly shop",
+        "Weekly spend, CPC, CTR and orders report"
+       ],
+       "dependencies": [
+        "Meta Business Manager and pixel access",
+        "3 product photos Tartine has rights to use",
+        "Goldbelly dashboard showing orders by date"
+       ],
+       "measurement": "CPC against the $0.72 benchmark and cost per attributed order against the $38.57 CPA benchmark (2025 WordStream, as compiled by Fibbler/Enrich Labs). Goldbelly orders are compared with the prior 4 weeks.",
+       "suggestedMonthlyAdSpend": 300
+      },
+      {
+       "key": "sales_outreach",
+       "name": "Office holiday group orders",
+       "why": "A few group orders can outweigh many single pre-orders. December party planning matches the outreach timing.",
+       "priority": 3,
+       "deliverables": [
+        "List of 150 office managers and EAs near SF locations",
+        "Personal email and LinkedIn message plus 1 follow-up",
+        "Shared sheet tracking replies, orders and order size"
+       ],
+       "dependencies": [
+        "[NEEDS FACT: Does Tartine take catering or large group orders, and through which page or contact?]",
+        "One named person to answer group-order replies"
+       ],
+       "measurement": "Replies per 100 messages (benchmark 0.45% to 3-5%, per Belkins and Digital Bloom), group orders and order size.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "partnerships",
+       "name": "Gift-guide pitch blitz (capped)",
+       "why": "Low-cost long shot. One placement can send gift buyers to Goldbelly and gift cards.",
+       "priority": 4,
+       "deliverables": [
+        "25 personal pitches to online holiday gift and pre-order guide editors",
+        "1 follow-up each",
+        "Log of replies and placements"
+       ],
+       "dependencies": [
+        "Approved pitch angle",
+        "Named press contact"
+       ],
+       "measurement": "Guide placements with a link, plus UTM clicks to Goldbelly and gift cards. Hard cap of 6 hours.",
+       "suggestedMonthlyAdSpend": 0
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Countdown email holdout",
+       "hypothesis": "The 3-email countdown drives pre-orders that would not have happened anyway.",
+       "population": "Email subscribers. A random 10% is held out from all countdown emails.",
+       "method": "holdout",
+       "primaryMetric": "Holiday pre-orders per 1,000 subscribers, mailed group vs holdout (matched by email at checkout)",
+       "guardrails": [
+        "Unsubscribe rate per send under 0.5% (assumption)",
+        "Spam complaints under 0.1% (assumption)"
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Ends at the holiday order deadline. Drop the holdout early only if the email platform cannot split the list."
+      },
+      {
+       "name": "Shipping ad creative: bread vs holiday pastry",
+       "hypothesis": "Book readers respond more to a bread-led ad than to a holiday pastry ad.",
+       "population": "US Meta users with sourdough and baking-book interests, California excluded",
+       "method": "ab_split",
+       "primaryMetric": "Goldbelly link clicks per $ and attributed Goldbelly orders",
+       "guardrails": [
+        "CTR at least 0.8% after 5,000 impressions",
+        "CPC under $1.50"
+       ],
+       "durationDays": 28,
+       "stoppingRule": "Move the budget to the winner after each version gets 5,000 impressions. Stop both if 0 extra Goldbelly orders after $150."
+      },
+      {
+       "name": "Countdown vs same weeks last year",
+       "hypothesis": "The full owned and paid countdown lifts total holiday pre-orders above last year's same weeks.",
+       "population": "All holiday pre-orders at Bay Area pickup",
+       "method": "pre_post_observational",
+       "primaryMetric": "Weekly holiday pre-orders vs the same week last year",
+       "guardrails": [
+        "Pickup capacity not exceeded",
+        "No rise in missed or late pickups"
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Ends at the order deadline. Pause Meta retargeting if CPC is over $1.50 after $75 or 0 attributed orders after $150."
+      },
+      {
+       "name": "Office outreach opener: pies vs special order cake",
+       "hypothesis": "Leading with pre-ordered holiday pies gets more replies than leading with a special order cake, because pies need less planning.",
+       "population": "150 SF office managers and EAs, split evenly",
+       "method": "ab_split",
+       "primaryMetric": "Reply rate per 100 messages",
+       "guardrails": [
+        "Unsubscribe or complaint rate under 1% (assumption)",
+        "Every message is personal, with no bulk blasts"
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Stop if fewer than 2 replies from the first 100 messages, or 0 orders after 150."
+      }
+     ],
+     "constraints": [
+      "Ad budget is $300/month on Meta, paid directly to the platform. That is about $600 over 60 days.",
+      "About 3 owner hours a week. ClimbOS drafts everything and the owner approves.",
+      "Special order cakes need seven days' notice, with pickup only at 600 Guerrero St.",
+      "Shipping runs through Goldbelly, so attribution depends on its reporting.",
+      "No prices, reviews or testimonials are confirmed, so copy cannot use them.",
+      "No 'best' claims, fake deadlines or fake scarcity. Only the real order-by date is used."
+     ],
+     "measurementPlan": "One sheet, updated weekly. Every touchpoint gets a unique UTM link or QR code. The pre-order form adds a 'How did you hear about us?' field. Goldbelly orders are compared with the prior 4 weeks. Total pre-orders are compared with the same weeks last year. The email holdout gives the cleanest read on email's incremental lift.",
+     "firstActions": [
+      {
+       "title": "Confirm the holiday order-by date, pickup locations and pickup windows",
+       "why": "Every email, post, ad and pitch hangs on this date.",
+       "role": "owner"
+      },
+      {
+       "title": "Confirm how group and catering orders are taken, and who replies",
+       "why": "The office play can't launch without it.",
+       "role": "owner"
+      },
+      {
+       "title": "Add the 'How did you hear about us?' field to the pre-order form and pull last year's weekly pre-order counts",
+       "why": "Without these there is no attribution and no baseline.",
+       "role": "owner"
+      },
+      {
+       "title": "Draft the 3 emails, GBP Offer posts, QR card text, both Meta ad sets and all UTM links",
+       "why": "Owned channels and retargeting are the fastest orders.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Build the 150-contact office list and the 25-editor pitch list",
+       "why": "Outreach has to land before December planning closes.",
+       "role": "ClimbOS"
+      }
+     ],
+     "diagnosis": "Demand for holiday pre-orders already exists, but the message is one banner on a crowded home page, with no countdown and no source tracking. The fastest gain is pushing a clear order-by date through channels Tartine already owns, then measuring what works.",
+     "affordableCac": "Average order value and margin are not confirmed, so true affordable CAC is unknown. Working ceilings (assumption): $20 per local pre-order and $38 per Goldbelly order, matching the $38.57 Food & Beverage CPA benchmark (WordStream 2025, via Fibbler). Revise these once order values are known.",
+     "notDoing": [
+      {
+       "channel": "Google search ads",
+       "why": "$300/month is too thin to split. Branded searches likely already find Tartine without paying (assumption)."
+      },
+      {
+       "channel": "SEO content",
+       "why": "It won't rank inside a 60-day holiday window."
+      },
+      {
+       "channel": "New organic social programs (TikTok, daily posting)",
+       "why": "Too much owner time. Instagram is used only as a source for the ad audience."
+      },
+      {
+       "channel": "Korea locations",
+       "why": "Too little information on that audience, and the goal is US holiday pre-orders and catering."
+      },
+      {
+       "channel": "Paid influencers",
+       "why": "No budget, and the results are hard to attribute in 60 days."
+      }
+     ],
+     "northStar": {
+      "metric": "Attributed holiday pre-orders and group orders (UTM, QR or 'How did you hear' field), including Goldbelly orders from ads",
+      "baseline": "0 attributed today, because nothing is tagged. Last year's same-week pre-order totals, pulled by the owner, serve as the total-volume baseline.",
+      "target": "About 90 attributed orders in 60 days: p50 sum of the plays (80 countdown, 8 shipping, 4 office). Range about 28-232. Assumption-based, and moves with the real email list size."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Placed-order rate per countdown email",
+       "weeklyTarget": "At least 0.26% per send (Branvas benchmark)",
+       "source": "Email platform and UTM orders"
+      },
+      {
+       "metric": "Meta CPC and CTR per ad set",
+       "weeklyTarget": "CPC at or below $0.72 (benchmark). CTR at least 0.8%.",
+       "source": "Meta Ads Manager"
+      },
+      {
+       "metric": "QR scans and GBP Offer post clicks",
+       "weeklyTarget": "Rising week over week through the deadline (directional)",
+       "source": "QR tool and Google Business Profile insights"
+      },
+      {
+       "metric": "Office outreach sent and reply rate",
+       "weeklyTarget": "50 sent, at least 2 replies per 100",
+       "source": "Shared outreach sheet"
+      },
+      {
+       "metric": "Goldbelly orders vs prior 4-week average",
+       "weeklyTarget": "Above the prior average",
+       "source": "Goldbelly merchant dashboard"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Launch",
+       "days": "1-7",
+       "focus": "Confirm the date and group-order process. Add tracking. Send the announcement email, GBP posts and QR cards. Launch both Meta ad sets and send all 25 pitches."
+      },
+      {
+       "name": "Push and prune",
+       "days": "8-35",
+       "focus": "Halfway email. 3 weekly outreach batches with follow-ups. Apply the kill and scale rules on Meta. Move budget to the winning ad set and creative."
+      },
+      {
+       "name": "Last call",
+       "days": "36-60",
+       "focus": "Last-call email and final GBP posts before the order-by date. Shipping ads continue only if they hit the $38 order ceiling."
+      },
+      {
+       "name": "Review and next year",
+       "days": "61-90",
+       "focus": "Results by source vs last year. Save office buyers and guide editors for early outreach about 4 months before next season."
+      }
+     ],
+     "weekOneChecklist": [
+      "Owner: confirm the order-by date, pickup windows and group-order contact",
+      "Owner: add the 'How did you hear about us?' field to the pre-order form",
+      "Owner: share email, Meta, GBP and Goldbelly access, plus 3 usable photos",
+      "Owner: pull last year's weekly holiday pre-order counts",
+      "ClimbOS: build all UTM links and QR codes and the weekly source sheet",
+      "Send the announcement email, with a 10% holdout",
+      "Publish a GBP Offer post for each Bay Area location",
+      "Print QR cards for counters and bags",
+      "Launch the retargeting and California-excluded shipping ad sets at $150/month each",
+      "Send the first 50 office messages and all 25 gift-guide pitches"
+     ],
+     "risks": [
+      {
+       "risk": "The seven-day lead and single pickup point at 600 Guerrero St. confuse buyers or turn away late ones.",
+       "mitigation": "Put the lead time and pickup location in every message and button. Point last-minute buyers to holiday pre-orders or Goldbelly."
+      },
+      {
+       "risk": "Goldbelly can't tie orders to ads.",
+       "mitigation": "Use UTM links plus a prior-4-week comparison. Treat the result as directional and cap spend with the kill rules."
+      },
+      {
+       "risk": "The email list is far smaller than the assumed 10,000.",
+       "mitigation": "Re-forecast in week 1 from the real list size and shift weight to retargeting and QR codes."
+      },
+      {
+       "risk": "Group orders exceed kitchen or pickup capacity.",
+       "mitigation": "Set a daily group-order cap with the owner before outreach starts."
+      },
+      {
+       "risk": "Location lists on the site don't match (LA counts, Encino), which can mislead ads.",
+       "mitigation": "Ads name only confirmed pickup and shipping paths. Flag the mismatch for a site fix."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Holiday order-by countdown",
+       "oneLiner": "Every place a customer already sees Tartine gets one message: pre-order holiday pastry and pies, and here's the order-by date. Paid Meta ads retarget people who already know the bakery.",
+       "kind": "bankable",
+       "audience": "Bay Area locals and regulars who already visit, follow or subscribe, plus people who visited the site in the last 30 days",
+       "trigger": "The weeks before the holiday order deadline, when hosts plan their table",
+       "hook": "Your holiday table, baked by Tartine. Pre-order holiday pastry and pies before the order-by date.",
+       "mechanic": "Send three emails: announce, halfway, last call. Post a weekly Offer post on Google Business Profile for each Bay Area location. Put QR cards at the counter and on bags. Run $150 a month of Meta ads to site visitors and Instagram engagers, plus a small radius around SF locations. Each touchpoint gets its own UTM link or QR code.",
+       "assetUsed": "The existing pre-order page (the site already says 'Click here to pre-order your holiday pastry and pies'), the email list, Instagram, Google Business Profiles and counter space",
+       "funnel": [
+        "Sees email, post, counter card or ad",
+        "Clicks UTM link or scans QR",
+        "Lands on holiday pre-order page",
+        "Completes pre-order",
+        "Picks up"
+       ],
+       "unit": "Attributed holiday pre-orders",
+       "p10": 25,
+       "p50": 80,
+       "p90": 200,
+       "horizonDays": 60,
+       "confidence": "medium",
+       "biggestUnknown": "Email list size and how many pre-orders came in last year. Paid ads alone forecast about 8 orders: $300 / $0.72 CPC ≈ 415 clicks × 1.89% (WordStream, as compiled by Fibbler). Email at 0.26% per send (Branvas) gives about 78 orders across 3 sends to 10,000 subscribers. That list size is an assumption, so the range will move with the real list.",
+       "test": "Week 1: send the announcement email, publish GBP Offer posts, put QR cards at the counters and launch the Meta retargeting ad set. Track orders by source each week against the same week last year.",
+       "killIf": "Pause the Meta ad set if CPC is over $1.50 after $75, or if it has 0 attributed pre-orders after $150. Drop any owned channel that gets 0 attributed orders after 2 sends or posts.",
+       "scaleIf": "If paid cost per pre-order is under $20, move up to $100 from the shipping play here. Add a fourth last-call email if each send gets at least 0.3% placed orders.",
+       "scores": [
+        7,
+        7,
+        9,
+        8,
+        9
+       ],
+       "firstActionToday": "Confirm the holiday order-by date and pickup details. Then approve the 3-email countdown and the first Google Business Profile Offer post.",
+       "climbosCanDo": "Write the 3 emails, the GBP posts, the counter card text and the Meta ads. Build the UTM links and QR codes and a weekly source report."
+      },
+      {
+       "name": "Office holiday orders",
+       "oneLiner": "Contact office managers and executive assistants at Bay Area companies near the bakery. Offer pre-ordered holiday pies and tarts and special order cakes for team gatherings.",
+       "kind": "creative",
+       "audience": "Office managers, executive assistants and people-ops leads at SF companies with in-person teams that hold holiday events",
+       "trigger": "December team lunches and office parties, which are usually planned 1-3 weeks ahead",
+       "hook": "Ordering for the team this December? Pre-order Tartine holiday pies and pastry, and plan seven days ahead for a special order cake.",
+       "mechanic": "Proven B2B outreach with a timeline hook. Send 150 personal emails or LinkedIn messages in 3 batches, each with one follow-up. Lead with the order-by date. Send replies to a single contact for group orders.",
+       "assetUsed": "Special order cakes (seven-day lead, pickup at 600 Guerrero St.), holiday pre-orders and the brand story since 2002",
+       "funnel": [
+        "Personal email or LinkedIn message",
+        "Reply or click to pre-order page",
+        "Order quantity and date confirmed",
+        "Pickup",
+        "Repeat order next year"
+       ],
+       "unit": "Group orders from offices",
+       "p10": 1,
+       "p50": 4,
+       "p90": 12,
+       "horizonDays": 45,
+       "confidence": "low",
+       "biggestUnknown": "[NEEDS FACT: Does Tartine take catering or large group orders, and through which page or contact?] Reply rates run from 0.45% (Belkins, strict cold) to 3-5% (Digital Bloom). Timeline hooks get about 2.3x higher replies (Digital Bloom).",
+       "test": "Send 50 messages a week for 3 weeks, each with 1 follow-up. Track replies, orders and order size in one sheet.",
+       "killIf": "Stop if fewer than 2 replies come from the first 100 messages, or if there are 0 orders after 150 messages.",
+       "scaleIf": "If 3 or more orders come from the first 100, add 100 more contacts. Save every buyer for an early-invite list next year.",
+       "scores": [
+        6,
+        4,
+        6,
+        6,
+        8
+       ],
+       "firstActionToday": "Confirm how Tartine handles large group or catering orders, and who answers them.",
+       "climbosCanDo": "Build a list of 150 office contacts near the SF locations. Write the outreach and follow-ups. Track replies and orders in a shared sheet."
+      },
+      {
+       "name": "Tartine Bread readers, shipped",
+       "oneLiner": "Meta ads aimed at sourdough home bakers and Tartine Bread readers outside California. They send people to Goldbelly holiday shipping.",
+       "kind": "creative",
+       "audience": "US home bakers with sourdough and baking-book interests who live outside SF and LA",
+       "trigger": "Holiday gifting and hosting season, for people who know the book but can't visit a bakery",
+       "hook": "You've baked from the book. This holiday, taste it from the bakery that started it all in San Francisco in 2002, shipped nationwide through Goldbelly.",
+       "mechanic": "Interest-targeted paid social, a proven method aimed at a less obvious audience: book readers, not locals. Spend $150 a month, exclude California and use UTM links to the Goldbelly shop.",
+       "assetUsed": "The Tartine Bread book audience, the founding story (Elisabeth Prueitt and Chad Robertson, 2002) and nationwide shipping through Goldbelly",
+       "funnel": [
+        "Sees ad in feed",
+        "Clicks to Tartine's Goldbelly shop",
+        "Pre-orders or orders a holiday shipment",
+        "Receives it as a gift or for their own table"
+       ],
+       "unit": "Goldbelly orders during the flight",
+       "p10": 2,
+       "p50": 8,
+       "p90": 20,
+       "horizonDays": 60,
+       "confidence": "medium",
+       "biggestUnknown": "Whether Goldbelly reporting can tie orders to the ads. The forecast is $300 / $0.72 CPC ≈ 415 clicks × 1.89% conversion (WordStream, as compiled by Fibbler). The benchmark CPA is about $38.57.",
+       "test": "Run 2 ad versions (bread-focused and holiday pastry-focused) with $150 each month. Compare Goldbelly link clicks with the Goldbelly order count against the 4 weeks before.",
+       "killIf": "Stop if CTR is under 0.8% after 5,000 impressions, or if there are 0 extra Goldbelly orders after $150.",
+       "scaleIf": "If cost per order is $38 or less, move the order-by countdown's unused budget here and add a lookalike audience.",
+       "scores": [
+        6,
+        5,
+        8,
+        8,
+        8
+       ],
+       "firstActionToday": "Check that the Goldbelly merchant dashboard shows orders by date and referral source. Share 3 product photos the bakery has rights to use.",
+       "climbosCanDo": "Write the 2 ad versions, set up audiences that exclude California, build UTM links and report clicks against Goldbelly orders each week."
+      },
+      {
+       "name": "Gift-guide pitch blitz",
+       "oneLiner": "Send 25 personal pitches to editors of online holiday gift and pre-order guides. Pitch shipping through Goldbelly and gift cards.",
+       "kind": "moonshot",
+       "audience": "Food and lifestyle editors of rolling online holiday gift guides, plus local SF and LA holiday pre-order guides",
+       "trigger": "Online gift guides are updated through the season. The Infatuation's SF holiday pie guide already lists Tartine.",
+       "hook": "A San Francisco bakery since 2002 that ships nationwide through Goldbelly, with gift cards for the people you can't bake for.",
+       "mechanic": "One-to-one PR pitches with one follow-up. Muck Rack research cited by Carve Communications says 92% of journalists prefer one-to-one pitches. Capped at 6 owner/ClimbOS hours and $0.",
+       "assetUsed": "The founding story, the Vogue and New York Times quotes already on the site, Goldbelly shipping and online gift cards",
+       "funnel": [
+        "Personal pitch",
+        "Editor replies",
+        "Listed in a guide with a link",
+        "Reader clicks through to Goldbelly or gift cards",
+        "Order"
+       ],
+       "unit": "Guide placements with a link",
+       "p10": 0,
+       "p50": 1,
+       "p90": 3,
+       "horizonDays": 45,
+       "confidence": "low",
+       "biggestUnknown": "Whether guides still have room this late. Many print guides close months ahead. Sword and the Script found 26% of reporters say they always or usually respond to pitches.",
+       "test": "Send 25 personal pitches in week 1 and one follow-up in week 2. Track replies and placements.",
+       "killIf": "Stop at the 6-hour cap, or if there are 0 positive replies after 25 pitches plus follow-ups.",
+       "scaleIf": "If 2 or more placements land, start a list of guide editors for next year and pitch earlier, about 4 months before the holidays.",
+       "scores": [
+        5,
+        3,
+        7,
+        5,
+        8
+       ],
+       "firstActionToday": "Approve the pitch angle and name who answers press requests.",
+       "climbosCanDo": "Find 25 guide editors who fit, write each personal pitch and follow-up, and log replies and placements."
+      }
+     ],
+     "portfolioNote": "Spend $150 a month on each of two Meta plays, for $600 over 60 days. Expect about 3 owner hours a week. Measure everything through one place: unique UTM links and QR codes for each play, plus a 'How did you hear about us?' field on the pre-order form. Compare each week with the same weeks last year. The order-by countdown is the base. Office orders aim at catering. Shipping to Tartine Bread readers reaches buyers outside SF and LA. Gift-guide pitching is a capped long shot. Scores are impact, confidence, ease, speed and brand fit, each 1-10. Forecasts use Meta benchmarks from the 2025 WordStream report as compiled by Enrich Labs and Fibbler: Restaurants & Food traffic CPC $0.72, Food & Beverage conversion 1.89%, CPA $38.57. Email uses a 0.26% placed-order rate from Branvas's Food & Beverage benchmark. Cold outreach uses Belkins (0.45% reply rate) and Digital Bloom (3-5%). Where no benchmark exists, the forecast is marked as an assumption."
+    },
+    "costMicros": 543326,
+    "ms": 174656
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 772635,
+    "ms": 307543
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "animalz",
+  "type": "agency",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "summary": "Four $0-ad plays aimed at about 20 qualified discovery calls in 90 days (median assumption; range roughly 6-50). Lead with AI Answer Gap Snapshot outbound, warm it with past-client job-changers and VC portfolio workshops, and cap the AI Shortlist Index moonshot at 40 hours. Owner time is about 6-8 hours a week; ClimbOS drafts and researches.",
+     "positioning": "The B2B SaaS content and SEO agency that shows prospects where they stand in AI answers before asking for a call. The proof is a free snapshot, backed by AEO, SEO and 10 years of SaaS content work since 2015.",
+     "audiences": [
+      {
+       "name": "Heads of marketing or content at recently funded B2B SaaS companies (Series A-C, last 6 months) or companies hiring a content marketer",
+       "hypothesis": "They have a fresh budget and a staffing gap, and will take a 20-minute call when shown a concrete AI-answer gap against named rivals.",
+       "evidence": "Funding announcements and job posts are public signals of growth spend. Animalz sells AEO, content strategy and production. Reply and booking rates are assumptions; Apollo puts broad B2B cold email at 3-6%."
+      },
+      {
+       "name": "Past-client marketers who have moved to a new SaaS or tech company",
+       "hypothesis": "New marketing leaders review agencies in their first quarter, and people who already trust Animalz reply far more than cold prospects.",
+       "evidence": "Animalz has served SaaS clients since 2015 and grew through reputation and word of mouth. About 20 movers and a 30-60% reply rate are assumptions to check in week 1."
+      },
+      {
+       "name": "Platform and portfolio-support leads at SaaS-focused VC firms",
+       "hypothesis": "Platform teams need useful portfolio sessions, and AI search is a live topic. One yes puts Animalz in front of dozens of portfolio marketers.",
+       "evidence": "VCs are already a named Animalz client group. The 57% registrant attendance rate is from ON24 2024 data via MarketingProfs; yes rates are assumptions."
+      },
+      {
+       "name": "SaaS marketing leaders in categories where AI tools favor rivals",
+       "hypothesis": "A personal result card showing their AI-recommendation rank against competitors earns more replies than generic cold email.",
+       "evidence": "Assumption of a 5-10% reply rate, set above Apollo's 3-6% benchmark because the card is about the vendor itself. Untested."
+      }
+     ],
+     "channels": [
+      {
+       "key": "sales_outreach",
+       "name": "AI Answer Gap Snapshot outbound",
+       "why": "This is the bankable play. It demonstrates the AEO service before the call and targets companies with public buying signals.",
+       "priority": 1,
+       "deliverables": [
+        "Weekly list of about 17 funded or hiring B2B SaaS companies with the marketing lead identified",
+        "Prompt sets of 5 buyer-intent prompts per category, run in ChatGPT and Perplexity",
+        "1-page snapshot template and 2-minute Loom script",
+        "3-step email sequence in two versions: AI-answer opener and Revive content-decay opener",
+        "Calendly link with UTM per play"
+       ],
+       "dependencies": [
+        "Sending inbox with opt-out line and physical address (CAN-SPAM)",
+        "Owner approval of template and sequence",
+        "UTM tracking live on booking links"
+       ],
+       "measurement": "Reply rate and qualified calls booked per 50 sends, tracked by UTM and the form's 'how did you hear about Animalz' answer. Scale at 8% or higher reply and 3 or more qualified calls from the first 50. Kill if reply rate stays under 3% after 50 sends.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "retention",
+       "name": "Champion job-change program",
+       "why": "Warmest audience and lowest effort. Past clients already know the work and are now new buyers somewhere else.",
+       "priority": 2,
+       "deliverables": [
+        "Cleaned, de-duplicated sheet of every past-client marketing contact since 2015",
+        "Job-change flags from public LinkedIn profiles",
+        "Personal note for each mover, sent by whoever knew them best, offering a free 30-minute first-90-days content plan",
+        "Soft referral ask for colleagues still at the old client",
+        "Monthly re-check routine"
+       ],
+       "dependencies": [
+        "Owner exports contacts from CRM or invoices",
+        "Former account leads available to send notes"
+       ],
+       "measurement": "Replies and calls booked within 14 days of the first 15 notes. Scale at 3 or more calls. Kill if fewer than 3 replies or under 10 movers found in total.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "partnerships",
+       "name": "VC portfolio AEO workshop",
+       "why": "One VC yes reaches many SaaS marketers at once, and VCs are an existing client group that may also buy whitepapers.",
+       "priority": 3,
+       "deliverables": [
+        "List of 15 SaaS-focused VC firms with platform leads named",
+        "Pitch email and follow-up",
+        "45-minute workshop outline and slides built on the AEO service and the '20 Techniques That Get You Cited in Answer Engines' article",
+        "Live teardown of 2 portfolio companies",
+        "Post-session email offering an AI Answer Gap Snapshot"
+       ],
+       "dependencies": [
+        "Snapshot process from the outbound play",
+        "Owner or senior strategist to present"
+       ],
+       "measurement": "VC yes rate, attendance and snapshot requests per attendee, plus qualified calls tagged by UTM. Scale if the first session yields 2 or more qualified calls. Kill on no yes from 15 pitches or no snapshot requests from the first session.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "seo_content",
+       "name": "SaaS AI Shortlist Index (capped moonshot)",
+       "why": "Reuses the snapshot prompt data in an original study that Animalz can promote like a client whitepaper, then turns each vendor's result into an outreach hook.",
+       "priority": 4,
+       "deliverables": [
+        "5-category pilot with 10 prompts each, logged with citation tallies",
+        "50 personal result-card emails",
+        "If the pilot passes: full 30-category report, LinkedIn launch post, newsletter feature, and pitches to SaaS marketing podcasts and newsletters"
+       ],
+       "dependencies": [
+        "Prompt library from the outbound play",
+        "Hard cap of 40 team hours, tracked weekly",
+        "Point-in-time disclaimer on all AI-output findings"
+       ],
+       "measurement": "Replies and qualified calls from the first 50 result cards. Scale at 5 or more replies and 1 or more qualified call. Kill if fewer than 2 replies or the 40-hour cap is hit before launch.",
+       "suggestedMonthlyAdSpend": 0
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Snapshot opener test: AI-answer vs content decay",
+       "hypothesis": "Opening with an AI-answer screenshot gets a higher reply rate than opening with a Revive content-decay angle.",
+       "population": "First 50 funded or hiring B2B SaaS marketing leads, split 25/25 at random",
+       "method": "ab_split",
+       "primaryMetric": "Reply rate, then calls booked per arm",
+       "guardrails": [
+        "Unsubscribe or spam-complaint rate under 1%",
+        "No claims of guaranteed rankings or AI citations",
+        "Snapshots labeled as point-in-time results"
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Stop after 50 sends plus 7 days for replies. Keep the winning opener. Kill the play if both arms stay under 3% reply."
+      },
+      {
+       "name": "Champion first-15 test",
+       "hypothesis": "Past-client movers contacted by the person who knew them best will reply at 30% or higher and book 3 or more calls.",
+       "population": "First 15 past-client marketers found to have changed companies in the last 12 months",
+       "method": "pre_post_observational",
+       "primaryMetric": "Calls booked within 14 days",
+       "guardrails": [
+        "Personal notes only, no automated sequence",
+        "At most one follow-up"
+       ],
+       "durationDays": 14,
+       "stoppingRule": "Scale to a monthly routine at 3 or more calls. Kill at fewer than 3 replies."
+      },
+      {
+       "name": "VC platform pitch and first workshop",
+       "hypothesis": "At least 2 of 15 VC platform leads will host a session, and the first session will yield 2 or more qualified calls.",
+       "population": "15 SaaS-focused VC firms with platform teams, warm contacts first",
+       "method": "pre_post_observational",
+       "primaryMetric": "Qualified calls per session",
+       "guardrails": [
+        "Session stays educational with no pitch in the main content",
+        "Teardowns only with the portfolio company's consent"
+       ],
+       "durationDays": 42,
+       "stoppingRule": "Kill on no yes after 15 pitches or no snapshot requests from session 1. Repeat monthly if 2 or more qualified calls."
+      },
+      {
+       "name": "AI Shortlist Index pilot",
+       "hypothesis": "Vendor-specific result cards earn 5 or more replies per 50 and at least 1 qualified call.",
+       "population": "About 50 vendors across the first 5 SaaS categories",
+       "method": "pre_post_observational",
+       "primaryMetric": "Replies and qualified calls per 50 cards",
+       "guardrails": [
+        "40-hour cap",
+        "Methodology and date published with results",
+        "No disparaging language about any vendor"
+       ],
+       "durationDays": 30,
+       "stoppingRule": "Kill at fewer than 2 replies or if the cap is reached. Build all 30 categories only if the scale bar is met."
+      }
+     ],
+     "constraints": [
+      "$0 ad spend; every channel is time-funded.",
+      "Owner time about 6-8 hours a week; ClimbOS handles research and drafts.",
+      "Cold email must follow CAN-SPAM: accurate sender, opt-out, postal address. Check legitimate-interest rules before emailing EU or UK prospects.",
+      "Use the 5x organic traffic and 172% YoY MQL proof points without naming clients unless the client approves.",
+      "Never promise rankings or AI citations. AI answers change, so snapshots are dated point-in-time results.",
+      "Moonshot hard-capped at 40 hours."
+     ],
+     "measurementPlan": "One sheet, updated every Friday: per play, count sends, replies, calls booked and qualified calls. Each play gets its own UTM'd Calendly link, cross-checked against the form's 'how did you hear about Animalz' answer. A call counts as qualified only if it is B2B SaaS, has a real content budget and has a decision-maker on the call. Review kill and scale rules at day 21, 45 and 70.",
+     "firstActions": [
+      {
+       "title": "Set up per-play UTM booking links and the Friday tracking sheet",
+       "why": "Without this, no play can be judged or killed on evidence.",
+       "role": "Owner with ClimbOS"
+      },
+      {
+       "title": "Pick 10 SaaS companies funded this month; run 5 prompts for 2 and send those snapshots personally",
+       "why": "Tests the bankable play's hook with real prospects on day one.",
+       "role": "Owner"
+      },
+      {
+       "title": "Export all past-client marketing contacts into one sheet",
+       "why": "Unlocks the warmest, lowest-effort play.",
+       "role": "Owner"
+      },
+      {
+       "title": "Send the first 3 VC platform pitch notes to firms already in your network",
+       "why": "VC calendars book weeks out, so pitching must start now to run a session before day 60.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "Animalz has strong proof and a timely AEO offer, but relies on inbound and a single 'Let's talk' ask. With $0 ads and 90 days, the fastest route is proactive outreach that shows the AEO work up front, plus warm channels it isn't systematically using: past-client movers and VC portfolios.",
+     "affordableCac": "Cash CAC is $0 because there is no ad spend. Real cost is time: about 80-100 owner hours for about 20 qualified calls (assumption), roughly 4-5 owner hours per call. [NEEDS FACT: What is your average first-year client value and discovery-call-to-client close rate?] With those, we can set a ceiling for paid channels next quarter.",
+     "notDoing": [
+      {
+       "channel": "Search and Meta ads",
+       "why": "Budget is $0, and B2B SaaS agency keywords are crowded with competitors."
+      },
+      {
+       "channel": "New SEO blog content program",
+       "why": "Payback usually runs past 90 days. The existing blog supports outreach instead."
+      },
+      {
+       "channel": "Daily LinkedIn posting calendar",
+       "why": "Slow to produce booked calls. LinkedIn is used only for the Index launch and outreach."
+      },
+      {
+       "channel": "Pricing page and site rework",
+       "why": "Worth doing, but it needs owner-approved figures. Deferred to next quarter; only tracking changes now."
+      },
+      {
+       "channel": "Newsletter nurture sequences",
+       "why": "Not tied to calls in 90 days. The newsletter is used only to distribute the Index."
+      }
+     ],
+     "northStar": {
+      "metric": "Qualified discovery calls booked (B2B SaaS, real content budget, decision-maker on the call)",
+      "baseline": "Not tracked by source today. Set it in week 1 from the last 90 days of Calendly and contact-form data.",
+      "target": "About 20 qualified calls in 90 days, about 2 a week by weeks 6-12 (median assumption from the play funnels, not a promise)"
+     },
+     "leadingIndicators": [
+      {
+       "metric": "AI Answer Gap Snapshots sent",
+       "weeklyTarget": "17 (30 if the scale bar is met)",
+       "source": "Outreach tool and tracking sheet"
+      },
+      {
+       "metric": "Snapshot reply rate",
+       "weeklyTarget": "8% or higher (kill below 3% after 50 sends)",
+       "source": "Outreach tool"
+      },
+      {
+       "metric": "Champion notes sent to movers",
+       "weeklyTarget": "15 in week 1, then all remaining movers by week 4",
+       "source": "Tracking sheet"
+      },
+      {
+       "metric": "VC platform pitches sent",
+       "weeklyTarget": "5 a week until 15 are sent",
+       "source": "Tracking sheet"
+      },
+      {
+       "metric": "Qualified calls booked, all plays",
+       "weeklyTarget": "1 in weeks 1-4, 2 or more in weeks 5-12",
+       "source": "UTM'd Calendly links plus form 'how did you hear' field"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Test",
+       "days": "1-21",
+       "focus": "Set up tracking. Send 50 split-tested snapshots, the first 15 champion notes and 15 VC pitches. Start the 5-category Index pilot."
+      },
+      {
+       "name": "Scale winners",
+       "days": "22-56",
+       "focus": "Apply kill and scale rules. Raise snapshot volume to 30 a week if it passes. Run the first VC workshop. Send the 50 pilot result cards."
+      },
+      {
+       "name": "Compound",
+       "days": "57-90",
+       "focus": "Repeat workshops and ask VCs for peer-fund intros. Launch the full Index if the pilot passes. Make the champion check monthly. Write next-quarter plan from call-source data."
+      }
+     ],
+     "weekOneChecklist": [
+      "Create UTM'd Calendly links for each of the 4 plays and the Friday tracking sheet",
+      "Write down the qualified-call definition and pull last 90 days of calls as baseline",
+      "Approve the snapshot template, 5-prompt sets and both email-sequence versions drafted by ClimbOS",
+      "Send the first 2 snapshots personally, then 15 more from the ClimbOS-built list",
+      "Export past-client contacts; ClimbOS flags movers and drafts notes",
+      "Send the first 15 champion notes from whoever knew each person best",
+      "Approve the VC list and pitch; send the first 5 pitches",
+      "Pick the 5 pilot Index categories and approve the 50 prompts"
+     ],
+     "risks": [
+      {
+       "risk": "AI-answer gaps read as a novelty, not a budget-worthy problem.",
+       "mitigation": "The A/B test runs a content-decay opener against the AI-answer opener; switch to the winner by day 21."
+      },
+      {
+       "risk": "Cold email hurts sender reputation.",
+       "mitigation": "Low volume (about 17 a week), heavy personalization, opt-out in every email, and a separate sending domain if volume grows."
+      },
+      {
+       "risk": "Too few past-client movers to matter.",
+       "mitigation": "Kill at under 10 movers. Add promotions and former colleagues as triggers instead."
+      },
+      {
+       "risk": "VCs see the workshop as a sales pitch.",
+       "mitigation": "Keep the session purely educational and offer snapshots only afterwards, on request."
+      },
+      {
+       "risk": "The moonshot eats owner time.",
+       "mitigation": "Hard 40-hour cap tracked weekly, with a 5-category pilot gate before the full build."
+      },
+      {
+       "risk": "AI answers change between snapshot and call.",
+       "mitigation": "Date every snapshot and frame it as a point-in-time view, never a guarantee."
+      }
+     ],
+     "plays": [
+      {
+       "name": "AI Answer Gap Snapshot outbound",
+       "oneLiner": "Before asking for a call, show recently funded SaaS companies whether ChatGPT and Perplexity recommend them or their rivals.",
+       "kind": "bankable",
+       "audience": "Heads of marketing or content at B2B SaaS companies that announced a Series A-C round in the last 6 months or are hiring a content marketer.",
+       "trigger": "A funding announcement or a content or SEO job post. Both are public signals that the company is about to spend on growth and is short on content staff.",
+       "hook": "We asked ChatGPT and Perplexity five questions your buyers ask. Here's who they recommended, and whether you came up.",
+       "mechanic": "Personalized outbound with a free audit. Run 5 buyer-intent prompts for the prospect's category in 2-3 AI tools. Screenshot who gets cited. Send a 1-page snapshot or a 2-minute Loom, then 2 follow-ups. The ask is a 20-minute review of the gaps. Next step: the free Revive content refresh tool or the AEO program.",
+       "assetUsed": "The AEO service, the '20 Techniques That Get You Cited in Answer Engines' article (animalz.co/blog), the Revive content refresh tool, and the 5x organic traffic and 172% YoY MQL growth proof points.",
+       "funnel": [
+        "200 prospects over 12 weeks, about 17 a week",
+        "Reply rate 8-15% (assumption; Apollo puts broad B2B cold email at 3-6%, and targeted, personalized outreach does better), so about 20 replies",
+        "About 40% of replies book a call (assumption), so about 8 calls",
+        "About 75% of those calls are qualified, judged against the ideal client definition (assumption)"
+       ],
+       "unit": "qualified discovery calls booked",
+       "p10": 3,
+       "p50": 8,
+       "p90": 16,
+       "horizonDays": 90,
+       "confidence": "medium",
+       "biggestUnknown": "Whether AI-answer visibility is a painful enough problem for funded SaaS marketers to take a call. It could also read as a novelty.",
+       "test": "Send 50 snapshots in weeks 1-3 to two groups of 25: one opens with the AI-answer screenshot, the other with the Revive content-decay angle. Measure reply rate and calls booked for each.",
+       "killIf": "Reply rate stays under 3% (the bottom of Apollo's broad benchmark) after 50 sends, or no calls are booked from 75 sends.",
+       "scaleIf": "Reply rate is 8% or higher and at least 3 qualified calls come from the first 50 sends. Then go to 30 a week and give the snapshot work to a junior strategist.",
+       "scores": [
+        8,
+        7,
+        7
+       ],
+       "firstActionToday": "Pick 10 SaaS companies that announced funding this month. Run the 5 prompts for 2 of them and send those 2 snapshots yourself.",
+       "climbosCanDo": "Build the weekly list of funded and hiring SaaS companies from public sources, write the prompt sets for each category, and draft the snapshot template plus the 3-step email sequence for your review."
+      },
+      {
+       "name": "Champion job-change program",
+       "oneLiner": "Contact past-client marketers who have moved to a new SaaS company, where they now need content again.",
+       "kind": "creative",
+       "audience": "Marketing and content leads Animalz has worked with since 2015 who have since moved to a different B2B SaaS or tech company.",
+       "trigger": "A job change on LinkedIn in the last 12 months. New marketing leaders usually review agencies and plans in their first quarter.",
+       "hook": "Congrats on the new role. If the content program there needs a reset, we already know how you like to work.",
+       "mechanic": "Track champions as they change jobs, then send a personal note from the owner or their former account lead. Offer a free 30-minute first-90-days content plan session. Add a soft referral ask for any colleague still at the old client.",
+       "assetUsed": "Past-client relationships and the agency's word-of-mouth reputation (founded 2015, NYC), plus the Content Refresh and SEO Forecasting tools as conversation starters.",
+       "funnel": [
+        "Export every past-client marketing contact and check LinkedIn for job changes, about 20 movers (assumption)",
+        "Reply rate 30-60% from people who already know you (assumption)",
+        "About 40% of replies book a call (assumption), so about 5 calls"
+       ],
+       "unit": "qualified discovery calls booked",
+       "p10": 2,
+       "p50": 5,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "medium",
+       "biggestUnknown": "[NEEDS FACT: About how many past-client marketing contacts can you export from your CRM or invoices since 2015?]",
+       "test": "In week 1, message the first 15 movers you find, with each note sent by the person who knew them best. Measure replies and calls booked within 14 days.",
+       "killIf": "Fewer than 3 replies from the first 15 messages, or under 10 movers found across the whole list.",
+       "scaleIf": "3 or more calls from the first 15. Then turn it into a standing monthly check and add champions' former colleagues and promotions as triggers.",
+       "scores": [
+        7,
+        7,
+        9
+       ],
+       "firstActionToday": "Export all past-client contacts into one sheet and mark anyone whose LinkedIn shows a new company.",
+       "climbosCanDo": "Clean and de-duplicate the contact export, flag likely job changes from public profiles, and draft a short personal note for each mover that names the work you did together."
+      },
+      {
+       "name": "VC portfolio AEO workshop",
+       "oneLiner": "Give VC platform teams a free 'getting cited in AI answers' workshop for their portfolio marketers. One yes reaches dozens of SaaS companies.",
+       "kind": "creative",
+       "audience": "Platform and portfolio-support leads at SaaS-focused VC firms, and through them the marketing leads at their portfolio companies.",
+       "trigger": "VC platform teams have to keep supplying useful sessions to portfolio companies, and AI search is a topic founders are asking about now.",
+       "hook": "A 45-minute working session for your portfolio: how SaaS companies get cited in ChatGPT and Perplexity, with a live teardown of 2 portfolio companies.",
+       "mechanic": "Partner-hosted webinar or workshop. The VC invites and hosts, and Animalz teaches. Attendees get an optional AI Answer Gap Snapshot afterwards, and that is where the call is booked.",
+       "assetUsed": "VCs are already a named client group. The AEO service and the '20 Techniques' article supply the curriculum. Survey-driven whitepapers are a second offer for the VC's own brand.",
+       "funnel": [
+        "Pitch 15 VC platform leads",
+        "2-3 say yes (assumption)",
+        "About 25 registrants per session (assumption)",
+        "57% of registrants attend (ON24 2024 data via MarketingProfs), so about 14 per session",
+        "15-25% ask for a snapshot (assumption), and about half of those book a call, for roughly 5 calls"
+       ],
+       "unit": "qualified discovery calls booked",
+       "p10": 1,
+       "p50": 5,
+       "p90": 12,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether VC platform teams will give an agency time with their portfolio without seeing it as a sales pitch.",
+       "test": "Pitch 15 VC platform leads over 3 weeks and run the first session. Measure the yes rate, attendance, and snapshot requests per attendee.",
+       "killIf": "No yes from 15 pitches, or the first session produces no snapshot requests.",
+       "scaleIf": "The first session produces 2 or more qualified calls. Then repeat it monthly, ask the VC for an intro to a peer fund, and pitch the VC a whitepaper for its own brand.",
+       "scores": [
+        7,
+        5,
+        6
+       ],
+       "firstActionToday": "List 15 SaaS-focused VC firms with a platform team, starting with any already in your network, and send the first 3 pitch notes.",
+       "climbosCanDo": "Research the platform leads at each firm, draft the pitch email and the 45-minute workshop outline and slides, and write the follow-up email offering the snapshot."
+      },
+      {
+       "name": "The SaaS AI Shortlist Index (capped)",
+       "oneLiner": "Publish an original study of which SaaS vendors AI tools recommend across about 30 categories, then send each company its result.",
+       "kind": "moonshot",
+       "audience": "Marketing leaders at SaaS companies in the categories studied, especially those AI tools leave out, plus SaaS marketing newsletters and podcasts.",
+       "trigger": "The launch of the study, and later each company's own result showing where it stands against its rivals.",
+       "hook": "We asked AI tools hundreds of buyer questions across about 30 SaaS categories. Here's who gets recommended, and who's invisible.",
+       "mechanic": "Original research published as a report, promoted the way you would promote a client's report: a LinkedIn launch, a newsletter feature, pitches to SaaS marketing podcasts and newsletters, and a personal result card sent to every vendor in the index with an offer to walk through it.",
+       "assetUsed": "Animalz's survey-driven whitepaper method used on its own brand, the prompt data built up by the snapshot outbound play, and the newsletter and podcast for distribution.",
+       "funnel": [
+        "Run about 300 prompts across 30 categories, reusing the snapshot prompts",
+        "Send result cards to about 150 vendors",
+        "Reply rate 5-10% (assumption, set above Apollo's 3-6% broad benchmark because each card is about the vendor itself)",
+        "About 30% of replies book a call (assumption), so about 3 calls, plus inbound from the report itself (not counted)"
+       ],
+       "unit": "qualified discovery calls booked",
+       "p10": 0,
+       "p50": 3,
+       "p90": 12,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the findings are surprising enough to get picked up beyond Animalz's own channels.",
+       "test": "Hard cap: 40 owner and team hours and $0. Build 5 categories first and send those 50 result cards before building the full index.",
+       "killIf": "Fewer than 2 replies from the first 50 result cards, or the 40-hour cap is reached before launch.",
+       "scaleIf": "5 or more replies and at least 1 qualified call from the first 50 cards. Then finish all 30 categories and plan to refresh the index every quarter.",
+       "scores": [
+        8,
+        3,
+        5
+       ],
+       "firstActionToday": "Choose the first 5 SaaS categories and write 10 buyer-intent prompts for each, reusing the snapshot prompts.",
+       "climbosCanDo": "Run and log the prompts, tally citation counts for each category, draft the report and the result-card emails, and draft the pitches to podcasts and newsletters for your approval."
+      }
+     ],
+     "portfolioNote": "Four plays at $0 ad spend. Combined median estimate: about 20 qualified discovery calls in 90 days. That figure is an assumption built from the base rates cited in each play, not a promise. The bankable play is cold outreach that opens with a free AI-answer gap snapshot, which shows prospects your AEO work before any call. The two creative plays use warm channels most agencies ignore: past-client marketers who have moved to new companies, and VC firms' portfolio companies. The moonshot reuses the snapshot data in a public study and is capped at 40 hours. Owner time is about 6-8 hours a week, and ClimbOS does the drafting and research. Track every play the same way: a UTM link on each Calendly link, the form's 'how did you hear about Animalz' answer, and a weekly count of calls that fit your ideal client (B2B SaaS, a real content budget, a decision-maker on the call). Scores are impact, confidence and ease, each out of 10."
+    },
+    "costMicros": 434236,
+    "ms": 146373
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 806564,
+    "ms": 310906
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 58444
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 59995
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "finch",
+  "type": "b2c_app",
+  "task": "strategy",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 57373
+   },
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 61252
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "cfsbk",
+  "type": "local_fitness",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 55359
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 57301
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "pilot",
+  "type": "b2b_service",
+  "task": "strategy",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 57520
+   },
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 58869
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "tinyhabits",
+  "type": "creator",
+  "task": "strategy",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 58139
+   },
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 58541
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ },
+ {
+  "case": "bellbrothers",
+  "type": "local_service",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 57889
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"},\"reque",
+    "costMicros": 0,
+    "ms": 58222
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ }
+]

@@ -146,7 +146,7 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; sugge
               setText(s);
               requestAnimationFrame(() => area.current?.focus());
             }}
-            className="inline-flex h-8 items-center rounded-lg border border-line bg-surface-2 px-2.5 text-ui text-ink-2 transition-colors hover:border-line-strong hover:bg-surface hover:text-ink"
+            className="inline-flex min-h-8 items-center rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-left text-ui text-ink-2 transition-colors hover:border-line-strong hover:bg-surface hover:text-ink"
           >
             {s}
           </button>
