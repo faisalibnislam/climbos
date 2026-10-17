@@ -2,9 +2,9 @@
   "id": "seo-pages",
   "title": "SEO page brief or draft (AI-search era)",
   "gates": [
-    { "id": "G1", "text": "Truth: no statistic, market price, case study, author credential, review or competitor claim that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G1", "text": "Truth: no statistic, market price, case study, author credential, review or competitor claim that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Spam policy: not a scaled or templated page (no city-swap, doorway or near-duplicate location pages); passes the city-swap test; no keyword stuffing or hidden text." },
-    { "id": "G3", "text": "Format: title ≈ 50–60 characters, meta description ≈ 150–160 characters, one H1, a short slug, a named (or [NEEDS FACT]) author, and schema limited to visible content with no self-serving review markup." }
+    { "id": "G3", "text": "Format: title ≈ 50–60 characters, meta description ≈ 150–160 characters, one H1, a short slug, a named author (the business or its owner when no writer is confirmed), and schema limited to visible content with no self-serving review markup." }
   ],
   "criteria": [
     { "id": "C1", "name": "Intent match", "anchors": { "1": "Wrong page type for the query (e.g. a blog essay for a transactional query).", "3": "Right type, generic execution.", "5": "Exactly the format the SERP rewards, chosen from a stated SERP read, and executed better than what ranks." } },

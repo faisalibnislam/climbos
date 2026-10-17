@@ -2,7 +2,7 @@
   "id": "instagram-posts",
   "title": "Instagram post (feed image, carousel or Reel, with caption)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, customer, quote, result or 'bestseller' label that isn't in confirmed facts or cited research, on slides, in the script or in the caption. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, result or 'bestseller' label that isn't in confirmed facts or cited research, on slides, in the script or in the caption. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: 5 hashtags or fewer; caption under 2,200 characters with the hook in the first ~125; carousel 20 slides or fewer; Reel 3 minutes or shorter; every image or slide has alt text; every Reel has burned-in captions and text kept out of the bottom ~20% and right edge." },
     { "id": "G3", "text": "Policy and originality: no engagement bait (tag a friend, comment YES, like if), no reposted or watermarked content, no unlicensed music, no fake screenshots or reviews, no stock people presented as customers or staff, no banned phrases from copy-fundamentals." }
   ],

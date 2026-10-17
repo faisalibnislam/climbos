@@ -2,10 +2,11 @@
   "id": "copy-fundamentals",
   "title": "Copy fundamentals (universal rubric for any marketing copy)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story, offer term, deadline or result that isn't in confirmed facts or cited research. Missing facts appear as visible [NEEDS FACT: ...] markers, never as plausible inventions. VoC phrases are not presented as attributed testimonials without confirmed permission." },
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story, offer term, deadline or result that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy. VoC phrases are not presented as attributed testimonials without confirmed permission." },
     { "id": "G2", "text": "Banned language: no phrase from the hard-fail banned list (unless it appears in the owner's own brand-voice samples), no unsourced superlatives (best, #1, leading, fastest), no ALL CAPS words, at most one exclamation mark." },
     { "id": "G3", "text": "Limits and format: the piece respects the channel's character, hashtag and emoji limits and has exactly one primary CTA." },
-    { "id": "G4", "text": "Policy: no engagement bait (comment YES, tag a friend, like if), no fake urgency or scarcity, no personal-attribute phrasing aimed at the reader." }
+    { "id": "G4", "text": "Policy: no engagement bait (comment YES, tag a friend, like if), no fake urgency or scarcity, no personal-attribute phrasing aimed at the reader." },
+    { "id": "G5", "text": "Voice and promise: on the brand's own channels the copy speaks as the brand (we/our/you), never about it in the third person; every count or promise in a title, hook or alt text is delivered by the piece." }
   ],
   "criteria": [
     {

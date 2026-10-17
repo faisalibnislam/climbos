@@ -92,6 +92,18 @@ When something is missing:
 - **Say what happens next** when it isn't obvious ("We'll reply with a fixed quote the same day" only if confirmed).
 - **Never bait.** "Comment YES", "Tag someone who", "Like if you agree" are demoted by LinkedIn and Meta and read as cheap. A sincere question peers can answer from experience is fine.
 - Real deadlines only. If the brief has no deadline, there is no urgency.
+- **Use the strongest confirmed offer.** If the site states it (free trial, no card, free quote, live demo), it is a confirmed fact: lead with it. Hiding a stated offer "until confirmed" loses the reader.
+
+### Voice and channel-native craft (lessons from blind expert reviews)
+
+| Do | Not |
+|---|---|
+| On the brand's own channels, write as the brand: "we", "our", "you" | "The team says…", "The site's own claim is…" (sounds like an outside reviewer) |
+| Hooks a person would say out loud, ≤ 12 words, pain or reveal first | Keyword strings or SEO-style openers ("Privacy-friendly analytics: GDPR-compliant…") |
+| Speak to the channel's audience (Instagram/TikTok/Facebook: the buyer, in plain words) | Niche demos for specialists (dev tools, settings panels) unless the buyer is that specialist |
+| Production notes a small team can shoot in an afternoon | Hex codes, safe-zone specs, fallback plans, long honesty notes |
+| Count what you promise: "6 things" means six | A title, hook or alt text that promises more than the piece delivers |
+| Notes to the owner: ≤ 5 bullets | A wall of text the owner must study before posting |
 
 ## Writing a set (several posts, ads or emails at once)
 
@@ -135,6 +147,7 @@ Expert copy has every one of these traits; mediocre copy is missing at least two
 - Use emoji as bullets or decoration, hashtag blocks, ALL CAPS words or more than one exclamation mark.
 - Paste the same copy across channels. Each channel version is a rewrite from the core idea.
 - Pitch the product before the reader feels the problem when the reader is cold.
+- Write about the brand in the third person on its own channels.
 
 ## Checklist before answering
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hookBeforeFold, lintCopy, maxLength, untracedNumbers } from "../../shared/agents/lint";
 import { assess } from "../../shared/agents/runtime";
+import { lintVoice, promisedCount } from "../../shared/agents/specs";
 import type { Rubric } from "../../shared/agents/types";
 
 describe("copy lint", () => {
@@ -49,5 +50,19 @@ describe("assessment", () => {
     expect(assess({ ...good, scores: [...good.scores.slice(0, 2), { id: "XV", score: 2, note: "", fix: "" }] }, [], rubric).ship).toBe(false);
     // Missing criteria count as 1.
     expect(assess({ ...good, scores: [{ id: "C1", score: 5, note: "", fix: "" }] }, [], rubric).minimum).toBe(1);
+  });
+});
+
+describe("voice and promise lints", () => {
+  it("flags reviewer-style third person on the brand's own channel", () => {
+    expect(lintVoice("The team says openly that ads fund nothing.", "posts[0]")).toHaveLength(1);
+    expect(lintVoice("The site's own claim is that no training is needed.", "p")).toHaveLength(1);
+    expect(lintVoice("We built it so you never need a cookie banner.", "p")).toHaveLength(0);
+  });
+  it("reads the count a title promises", () => {
+    expect(promisedCount("Carousel: 6 things your website doesn't need")).toBe(6);
+    expect(promisedCount("Five mistakes bakers make")).toBe(5);
+    expect(promisedCount("2 ways")).toBeNull();
+    expect(promisedCount("Our holiday menu")).toBeNull();
   });
 });

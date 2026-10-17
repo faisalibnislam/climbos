@@ -2,7 +2,7 @@
   "id": "lifecycle-email",
   "title": "Lifecycle email sequence (opted-in contacts)",
   "gates": [
-    { "id": "G1", "text": "Truth: no customer story, review, number, result, sender identity or deadline that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G1", "text": "Truth: no customer story, review, number, result, sender identity or deadline that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Format: every email has a stated job, subject (30–50 characters), a preheader that adds information, a named sender, exactly one primary CTA, and a body of 50–150 words (up to ~200 for onboarding how-to); the sequence names its trigger, timing and exit on conversion." },
     { "id": "G3", "text": "Consent and compliance: audience is opted in or an existing-customer lawful basis is stated; no deceptive subjects (fake Re:/Fwd:, false urgency); one-click unsubscribe plus body link and a postal address are specified; auto-renewing trials get a pre-charge notice." }
   ],

@@ -222,8 +222,28 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
     if (p.format === "carousel" || p.format === "document") issues.push(...minItems(p.slides, 3, `${path}.slides`, "slides for a carousel"), ...maxItems(p.slides, 20, `${path}.slides`, "slides"));
     if (p.format === "reel" && !p.videoScript.trim()) issues.push({ severity: "error", rule: "missing", message: "A Reel needs a script.", path: `${path}.videoScript` });
     if (!p.altText.trim() && p.format !== "text" && p.format !== "thread") issues.push({ severity: "error", rule: "accessibility", message: "Visual posts need alt text.", path: `${path}.altText` });
+    issues.push(...lintVoice([p.body, ...p.slides, p.videoScript, p.firstComment].join("\n"), path));
+    const promised = promisedCount([p.title, p.hook, p.altText].join(" "));
+    if (promised && (p.format === "carousel" || p.format === "document") && p.slides.length < promised + 1) {
+      issues.push({ severity: "error", rule: "promise", message: `The post promises ${promised} items but has ${p.slides.length} slides (with the cover). Deliver every item or change the number.`, path: `${path}.slides` });
+    }
   });
   return issues;
+}
+
+/** Own-channel copy speaks as the brand; reviewer-style third person reads as an outsider. */
+export function lintVoice(text: string, path: string): LintIssue[] {
+  const m = text.match(/\b(?:the (?:team|company|brand|founders?|business) (?:says|claims|notes|admits|states)|the (?:site|website|company)'s own (?:claim|words)|according to (?:the|their) (?:site|website|homepage))\b/i);
+  return m ? [{ severity: "error", rule: "voice", message: `Write as the brand ("we", "our"), not about it: "${m[0]}".`, path }] : [];
+}
+
+/** "6 things", "five ways": the number a title or hook promises. */
+export function promisedCount(text: string): number | null {
+  const words: Record<string, number> = { three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+  const m = text.match(/\b(\d{1,2}|three|four|five|six|seven|eight|nine|ten) (?:things|ways|reasons|tips|mistakes|steps|signs|ideas|myths|questions|rules|lessons)\b/i);
+  if (!m) return null;
+  const n = words[m[1].toLowerCase()] ?? Number(m[1]);
+  return n >= 3 && n <= 20 ? n : null;
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {

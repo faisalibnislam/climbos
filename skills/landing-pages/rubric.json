@@ -2,7 +2,7 @@
   "id": "landing-pages",
   "title": "Landing page copy or page brief",
   "gates": [
-    { "id": "G1", "text": "Truth: no testimonial, name, rating, customer count, logo, press mention, statistic, guarantee or deadline that isn't in confirmed facts or cited research. Missing proof is marked [NEEDS FACT: ...]; no sample or illustrative quotes." },
+    { "id": "G1", "text": "Truth: no testimonial, name, rating, customer count, logo, press mention, statistic, guarantee or deadline that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy; no sample or illustrative quotes." },
     { "id": "G2", "text": "Structure: a hero with H1, subhead, one primary CTA (verb + outcome) and proof; one conversion goal for the page; a written thank-you step; a stated or explicitly assumed traffic source." },
     { "id": "G3", "text": "Compliance: no fake urgency or scarcity, no promised results the business can't guarantee, marketing consent (if collected) is a separate unticked checkbox with a privacy link, no unsourced superlatives." }
   ],

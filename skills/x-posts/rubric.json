@@ -2,7 +2,7 @@
   "id": "x-posts",
   "title": "X post or thread",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, metric, milestone, screenshot, customer or quote that isn't in confirmed facts or cited research. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: no claim, number, metric, milestone, screenshot, customer or quote that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: every post is 280 characters or fewer (unless the brief says Premium, in which case the first 280 stand alone); threads are 4-8 posts; 0-2 hashtags; no link in the hook post; at most one exclamation mark per post." },
     { "id": "G3", "text": "Policy: no engagement bait, no fake or mocked-up screenshots, no impersonation or misleading quote-posts, no banned phrases from copy-fundamentals; every image has alt text." }
   ],

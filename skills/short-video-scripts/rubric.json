@@ -2,7 +2,7 @@
   "id": "short-video-scripts",
   "title": "Short-video script (TikTok, Reels, Shorts; organic or ad)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, result, customer reaction, testimonial or before/after that isn't in confirmed facts or cited research; no actor or AI avatar presented as a real customer or employee; no mocked-up product screens. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: no claim, number, result, customer reaction, testimonial or before/after that isn't in confirmed facts or cited research; no actor or AI avatar presented as a real customer or employee; no mocked-up product screens. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: the script includes a timed beat table, on-screen text, voiceover, shot list, caption and CTA; length fits the platform and use (Reels up to 3 minutes; TikTok in-feed ads 5-60 s); the hook lands within 0-2 s; text is kept out of the bottom ~20% and right edge; hashtags fit the platform (Instagram 5 max; none in non-Spark TikTok ad captions)." },
     { "id": "G3", "text": "Policy: paid, gifted or creator content carries a paid-partnership label or clear #ad; realistic AI-generated voice or visuals are labelled; only licensed audio; no reposted or watermarked footage; no engagement bait; no banned phrases from copy-fundamentals." }
   ],

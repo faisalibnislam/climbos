@@ -2,7 +2,7 @@
   "id": "facebook-posts",
   "title": "Facebook post (Page post, group post, event or offer)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, offer term, price, date, time, event detail, customer, review or quote that isn't in confirmed facts or cited research. Missing practical details are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: no claim, number, offer term, price, date, time, event detail, customer, review or quote that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: 0-2 hashtags; at most one exclamation mark; at most one emoji per 150 characters and none as bullets; one CTA; length fits the post type (40-150 characters for most posts, longer only for a genuine story)." },
     { "id": "G3", "text": "Policy: no engagement bait (like if, share if, comment YES, tag a friend), no share-to-enter or tag-to-enter giveaways, no fake urgency, no stock or reposted media presented as the business's own, no named or pictured people without confirmed consent, and group posts disclose the owner's connection to the business." }
   ],

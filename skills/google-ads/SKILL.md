@@ -115,6 +115,12 @@ When something is missing:
 - The automation settings are stated with a reason, including URL exclusions.
 - The budget math is shown and the structure fits it.
 
+## The budget note (owner-facing)
+
+- At most 6 bullets, about 90 words: daily spend, structure, what we test, the kill/scale rule, the expected result range (labelled as an estimate).
+- A small budget is concentrated, not spread: fewer concepts, one campaign, the highest-intent terms or the strongest offer. Say what it buys and why it is still worth it, or recommend waiting.
+- Put the full settings list in the structured fields, not in the note.
+
 ## Never do
 
 - Never set anything live, raise a budget, or exceed the stated monthly cap.

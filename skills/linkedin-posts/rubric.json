@@ -2,7 +2,7 @@
   "id": "linkedin-posts",
   "title": "LinkedIn post (founder, company Page or document post)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story or first-person experience that isn't in confirmed facts, founder material or cited research. Missing load-bearing details are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: no claim, number, customer, quote, story or first-person experience that isn't in confirmed facts, founder material or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: under 3,000 characters; the hook is complete within ~140 characters; 0-3 hashtags; no external link in the post body unless the brief requires it; at most one exclamation mark; no emoji bullets, headers or Unicode bold text." },
     { "id": "G3", "text": "Policy and platform safety: no engagement bait (Agree?, comment YES, like if, repost to help, polls for reach), no banned phrases from copy-fundamentals, no tagging or quoting people without confirmed permission, no fake screenshots or stock people presented as customers or staff." }
   ],

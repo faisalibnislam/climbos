@@ -2,7 +2,7 @@
   "id": "social-visual-briefs",
   "title": "Social visual brief (image, carousel, cover frame or ad static)",
   "gates": [
-    { "id": "G1", "text": "Truth: nothing on or in the visual states or implies a claim, number, review, rating, result, customer or endorsement that isn't in confirmed facts or cited research. Missing facts are visible [NEEDS FACT: ...] questions." },
+    { "id": "G1", "text": "Truth: nothing on or in the visual states or implies a claim, number, review, rating, result, customer or endorsement that isn't in confirmed facts or cited research. Gaps are designed around (show what is confirmed); never a placeholder on the visual or in the brief." },
     { "id": "G2", "text": "Format: each visual has a stated aspect ratio and placement; on-image text sits inside the platform's safe area (central 3:4 for Instagram grid; clear of the bottom ~20% and right edge for 9:16 video); carousels are 20 slides or fewer; alt text is provided for every image." },
     { "id": "G3", "text": "Honest depiction and rights: no fake or mocked-up screenshots, dashboards, reviews or messages; no stock or AI-generated people presented as the business's customers, staff or owner; no AI imagery of the product, premises or before/after presented as real; no real people, customer data or competitor marks without consent or rights." }
   ],

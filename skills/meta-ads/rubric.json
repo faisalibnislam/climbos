@@ -2,7 +2,7 @@
   "id": "meta-ads",
   "title": "Meta ads (creative concepts, copy, briefs, structure)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, review, customer, quote, UGC creator, press mention, scarcity or deadline that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]." },
+    { "id": "G1", "text": "Truth: no claim, number, review, customer, quote, UGC creator, press mention, scarcity or deadline that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Limits and format: every hook complete within the first 125 characters of primary text; headlines ≤ 40 characters (flag any over 27); 3–5 concepts; each concept has primary text, 3 headlines, a CTA button and a creative brief." },
     { "id": "G3", "text": "Policy: no personal-attribute phrasing (race, religion, age, sexual orientation, gender identity, disability, health, financial status, criminal record, name); no before-and-after body images or ideal-body implication; special ad category declared where the business fits one; no fake buttons or notifications." },
     { "id": "G4", "text": "Approval and budget: everything drafted as paused for owner approval; daily budget × 30.4 within the stated monthly budget; no promised results or guarantees the business hasn't confirmed." }

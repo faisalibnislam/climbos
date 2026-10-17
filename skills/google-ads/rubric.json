@@ -2,7 +2,7 @@
   "id": "google-ads",
   "title": "Google Search campaign (RSA asset set, keywords, negatives, assets, guardrails)",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, rating, review count, price, guarantee, CPC or search volume that isn't in confirmed facts or cited research. Gaps are marked [NEEDS FACT: ...]; estimates are labelled as assumptions." },
+    { "id": "G1", "text": "Truth: no claim, number, rating, review count, price, guarantee, CPC or search volume that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy; estimates are labelled as assumptions." },
     { "id": "G2", "text": "Limits: every headline ≤ 30 characters, description ≤ 90, display path ≤ 15, sitelink text ≤ 25 and sitelink description lines ≤ 35, callout and snippet value ≤ 25, PMax long headline ≤ 90 with one PMax description ≤ 60. Up to 15 headlines and 4 descriptions per RSA (15 and 4 unless the brief asks otherwise)." },
     { "id": "G3", "text": "Editorial policy: no emoji, no exclamation mark in headlines, no ALL-CAPS words (acronyms excepted), no repeated punctuation, no phone numbers in ad text, no 'click here', no 'best'/'#1'/'leading' without a confirmed third-party source, no competitor trademarks in ad text." },
     { "id": "G4", "text": "Approval and budget: everything is drafted as paused for owner approval; total daily budgets × 30.4 do not exceed the stated monthly budget; no promised results (leads, rankings, ROI) and no guarantee the business hasn't confirmed." }
