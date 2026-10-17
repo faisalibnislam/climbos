@@ -174,6 +174,7 @@ export const ChatIntentSchema = z.object({
         "email_send",
         "connect_account",
         "set_up_autopilot",
+        "find_customers",
         "note",
       ]),
       title: z.string(),

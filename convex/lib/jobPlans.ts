@@ -11,6 +11,8 @@ import {
   emailSpec,
   growthPlaysSpec,
   insightsSpec,
+  outreachSpec,
+  prospectingSpec,
   researchFor,
   retentionSpec,
   salesSpec,
@@ -103,6 +105,10 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       return plan("Plan sales follow-ups", ["cso"], ["sales_sequence"], agentSteps(any(salesSpec())), {});
     case "social_calendar":
       return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 }))), {});
+    case "outbound": {
+      const r = { maxSearches: searches("prospecting") };
+      return plan("Find customers and write the emails", ["cso"], [], [...agentSteps(any(prospectingSpec()), r), ...agentSteps(any(outreachSpec()))], { searchCalls: r.maxSearches });
+    }
     default:
       return null; // chat intent and explanations stay single-call
   }
@@ -126,7 +132,8 @@ export type JobKind =
   | "conversion_audit"
   | "retention_plan"
   | "sales_sequence"
-  | "social_calendar";
+  | "social_calendar"
+  | "outbound";
 
 export interface JobPlan {
   kind: JobKind;
@@ -153,7 +160,7 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
 
 export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string } = {}, opts: { fixture?: boolean } = {}): JobPlan {
   // The weekly planner exists only as an agent: real workspaces always get it.
-  if ((engineV2() || kind === "social_calendar") && !opts.fixture) {
+  if ((engineV2() || kind === "social_calendar" || kind === "outbound") && !opts.fixture) {
     const v2 = v2Plan(kind, params);
     if (v2) return v2;
   }
@@ -219,6 +226,9 @@ export function planJob(kind: JobKind, params: { quantity?: number; images?: num
     case "social_calendar":
       // Demo and v1: a deterministic plan from the business facts (no model call).
       return { kind, title: "Plan next week's posts", roles: ["social_media_manager"], tasks: [], steps: [], meters: {} };
+    case "outbound":
+      // Demo: deterministic example prospects (no model call).
+      return { kind, title: "Find customers and write the emails", roles: ["cso"], tasks: [], steps: [], meters: {} };
   }
 }
 

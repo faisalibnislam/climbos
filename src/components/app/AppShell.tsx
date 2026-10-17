@@ -16,6 +16,8 @@ import {
   Settings,
   Images,
   Plane,
+  Target,
+  Menu,
   Sparkles,
   Bell,
   Palette,
@@ -43,6 +45,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Kbd,
+  Sheet,
+  SheetClose,
   Skeleton,
   Toaster,
   toast,
@@ -55,12 +59,15 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "plan", label: "Growth plan", icon: Compass, group: "Grow" },
   { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
   { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
+  { key: "outbound", label: "Find customers", icon: Target, group: "Grow" },
   { key: "images", label: "Images", icon: Images, group: "Grow" },
   { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
   { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
   { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
 ];
 const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
+/** Bottom-bar destinations on phones; everything else lives under More. */
+const MOBILE_PRIMARY = ["today", "plan", "content", "results"];
 
 /**
  * Authenticated app frame: five primary destinations, Settings, a workspace
@@ -161,10 +168,10 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile bottom navigation */}
+      {/* Mobile bottom navigation: four destinations and More */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
         <ul className="grid grid-cols-5">
-          {NAV.filter((n) => !["connections", "images", "studio"].includes(n.key)).map((item) => {
+          {NAV.filter((n) => MOBILE_PRIMARY.includes(n.key)).map((item) => {
             const active = section === item.key;
             return (
               <li key={item.key}>
@@ -179,6 +186,44 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
               </li>
             );
           })}
+          <li>
+            <Sheet
+              side="bottom"
+              title="More"
+              trigger={
+                <button
+                  type="button"
+                  className={cn(
+                    "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-2xs font-medium",
+                    NAV.some((n) => !MOBILE_PRIMARY.includes(n.key) && n.key === section) || section === "settings" ? "text-brand-800" : "text-ink-3 hover:text-ink",
+                  )}
+                >
+                  <Menu className="size-5" aria-hidden />
+                  More
+                </button>
+              }
+            >
+              <ul className="grid grid-cols-3 gap-2 pb-[env(safe-area-inset-bottom)]">
+                {[...NAV.filter((n) => !MOBILE_PRIMARY.includes(n.key)), { key: "settings", label: "Settings", icon: Settings, group: "" }].map((item) => (
+                  <li key={item.key}>
+                    <SheetClose asChild>
+                      <Link
+                        href={item.key === "studio" ? `/studio/${slug}/new` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
+                        aria-current={section === item.key ? "page" : undefined}
+                        className={cn(
+                          "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 text-center text-ui font-medium",
+                          section === item.key ? "border-brand-800 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink hover:bg-surface-2",
+                        )}
+                      >
+                        <item.icon className="size-5" aria-hidden />
+                        {item.label}
+                      </Link>
+                    </SheetClose>
+                  </li>
+                ))}
+              </ul>
+            </Sheet>
+          </li>
         </ul>
       </nav>
     </div>

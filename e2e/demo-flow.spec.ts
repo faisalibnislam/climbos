@@ -89,6 +89,29 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await expectAccessible(page, "policies");
   });
 
+  test("outbound: find customers, approve them, and a prospect books a call", async () => {
+    await page.goto(`/app/${slug}/outbound`);
+    await page.getByRole("button", { name: "Find customers" }).click();
+    await expect(page.getByText(/Ideal customer/i)).toBeVisible({ timeout: 30_000 });
+    await expectAccessible(page, "outbound");
+    await page.getByRole("checkbox", { name: "Select all" }).click();
+    await page.getByRole("button", { name: /^Approve$/ }).click();
+    await expect(page.getByRole("button", { name: /Export \d+ approved/ })).toBeEnabled();
+    await page.getByRole("tab", { name: /Emails/ }).click();
+    await expect(page.getByText(/First email/i)).toBeVisible();
+
+    const href = await page.locator("a[href^='/book/']").first().getAttribute("href");
+    await page.goto(href!);
+    await expect(page.getByRole("heading", { name: /Pick a day/ })).toBeVisible();
+    await expectAccessible(page, "booking page");
+    await page.getByRole("heading", { name: /Pick a time/ }).locator("xpath=following-sibling::div[1]").getByRole("button").first().click();
+    await page.getByLabel("Your name").fill("Test Guest");
+    await page.getByLabel("Work email").fill("guest@example.com");
+    await page.getByRole("button", { name: "Confirm the call" }).click();
+    await expect(page.getByRole("heading", { name: /You're booked/ })).toBeVisible();
+    await expectAccessible(page, "booking confirmed");
+  });
+
   test("pause all activity, then resume", async () => {
     await page.goto(`/app/${slug}/today`);
     await page.getByRole("button", { name: /pause all activity/i }).first().click();
@@ -101,7 +124,7 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("mobile layout: no horizontal scroll and pause is reachable @mobile", async ({ page }) => {
     const s = await openDemo(page);
-    for (const path of ["today", "content", "plan", "results", "connections"]) {
+    for (const path of ["today", "content", "plan", "results", "connections", "outbound", "autopilot"]) {
       await page.goto(`/app/${s}/${path}`);
       await expect(page.locator("main#main")).toHaveCount(1);
       await expectNoHorizontalScroll(page);

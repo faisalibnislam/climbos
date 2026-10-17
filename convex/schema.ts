@@ -448,6 +448,97 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_org_email", ["orgId", "emailHash"]),
 
+  /* ---------------- Outbound: find customers, write the emails, book the calls ---------------- */
+  outboundCampaigns: defineTable({
+    orgId: v.id("organizations"),
+    title: v.string(),
+    /** Owner's optional steer: who, where, how many. */
+    brief: v.object({ who: v.string(), where: v.string(), count: v.number() }),
+    status: v.union(v.literal("researching"), v.literal("review"), v.literal("failed"), v.literal("archived")),
+    icp: v.optional(
+      v.object({ summary: v.string(), mustHaves: v.array(v.string()), disqualifiers: v.array(v.string()), triggers: v.array(v.string()), decisionMaker: v.string() }),
+    ),
+    sequence: v.array(v.object({ day: v.number(), subject: v.string(), body: v.string(), purpose: v.string() })),
+    ownerNotes: v.array(v.string()),
+    excluded: v.array(v.object({ company: v.string(), reason: v.string() })),
+    runId: v.optional(v.id("workflowRuns")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_org_created", ["orgId", "createdAt"]),
+
+  prospects: defineTable({
+    orgId: v.id("organizations"),
+    campaignId: v.id("outboundCampaigns"),
+    company: v.string(),
+    domain: v.string(),
+    website: v.string(),
+    location: v.string(),
+    sizeBand: v.string(),
+    why: v.string(),
+    evidence: v.array(v.object({ url: v.string(), observation: v.string() })),
+    trigger: v.string(),
+    fit: v.number(),
+    timing: v.number(),
+    contact: v.string(),
+    /** Only an address published verbatim on the prospect's own site. */
+    publicEmail: v.optional(v.string()),
+    firstLine: v.string(),
+    stage: v.union(
+      v.literal("suggested"),
+      v.literal("approved"),
+      v.literal("skipped"),
+      v.literal("contacted"),
+      v.literal("replied"),
+      v.literal("booked"),
+      v.literal("won"),
+      v.literal("lost"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_org_stage", ["orgId", "stage"])
+    .index("by_org_domain", ["orgId", "domain"]),
+
+  bookingPages: defineTable({
+    orgId: v.id("organizations"),
+    slug: v.string(),
+    title: v.string(),
+    durationMin: v.number(),
+    timezone: v.string(),
+    /** 1 = Monday … 7 = Sunday. */
+    days: v.array(v.number()),
+    startHour: v.number(),
+    endHour: v.number(),
+    bufferMin: v.number(),
+    noticeHours: v.number(),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_org", ["orgId"]),
+
+  bookings: defineTable({
+    orgId: v.id("organizations"),
+    pageId: v.id("bookingPages"),
+    prospectId: v.optional(v.id("prospects")),
+    name: v.string(),
+    emailHash: v.string(),
+    emailCiphertext: v.string(),
+    emailIv: v.string(),
+    emailKeyId: v.string(),
+    company: v.optional(v.string()),
+    note: v.optional(v.string()),
+    startAt: v.number(),
+    endAt: v.number(),
+    status: v.union(v.literal("confirmed"), v.literal("cancelled")),
+    createdAt: v.number(),
+  })
+    .index("by_page_start", ["pageId", "startAt"])
+    .index("by_org_start", ["orgId", "startAt"]),
+
   /* ---------------- Strategy ---------------- */
   strategies: defineTable({
     orgId: v.id("organizations"),
@@ -908,6 +999,7 @@ export default defineSchema({
       v.literal("email_send"),
       v.literal("connect_account"),
       v.literal("set_up_autopilot"),
+      v.literal("find_customers"),
       v.literal("note"),
     ),
     roles: v.array(agentRoleValidator),

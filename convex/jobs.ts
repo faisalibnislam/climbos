@@ -36,6 +36,8 @@ import {
   conversionAuditSpec,
   emailSpec,
   insightsSpec,
+  outreachSpec,
+  prospectingSpec,
   researchFor,
   retentionSpec,
   salesSpec,
@@ -45,10 +47,13 @@ import {
   socialCalendarSpec,
   socialSpec,
   strategySpec,
+  type OutreachOutput,
   type PlaysOutput,
+  type ProspectsOutput,
   type SocialCalendar,
 } from "../shared/agents/specs";
 import { fixtureCalendar } from "../shared/autopilot/fixture";
+import { fixtureOutbound } from "../shared/outbound";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -775,6 +780,68 @@ export const planSocialWeek = internalAction({
   },
 });
 
+/** Outbound: find evidenced prospects, then write the sequence and openers. Nothing is sent. */
+export const findCustomers = internalAction({
+  args: { runId: v.id("workflowRuns"), campaignId: v.id("outboundCampaigns"), cardId: v.optional(v.id("actionCards")) },
+  handler: async (ctx, args) => {
+    const startedAt = Date.now();
+    const job = await loadContext(ctx, args.runId);
+    if (!job) return;
+    const cc = await ctx.runQuery(internal.outbound.campaignContext, { campaignId: args.campaignId });
+    if (!cc) return;
+    const name = job.business?.name ?? job.org.name;
+    await guarded(
+      ctx,
+      args.runId,
+      async () => {
+        let found: ProspectsOutput;
+        let outreach: OutreachOutput;
+        if (job.run.isFixture || job.run.engine !== "v2") {
+          ({ prospects: found, outreach } = fixtureOutbound({ businessName: name, ...cc.brief }));
+        } else {
+          const steer = [
+            cc.brief.who ? `Owner's steer on who to find: ${untrusted("owner request", cc.brief.who, 300)}` : "No steer on who: derive the ideal customer from the positioning and facts.",
+            cc.brief.where ? `Where: ${untrusted("owner request", cc.brief.where, 120)}` : "Where: the business's own market (from its site, currency and time zone).",
+          ].join("\n");
+          found = await runAgentTask<ProspectsOutput>(
+            ctx,
+            job,
+            0,
+            prospectingSpec(),
+            agentInput(
+              job,
+              `Find ${cc.brief.count} real companies that need ${name} now, from public web sources only, each with evidence URLs, a trigger if one exists, fit and timing scores, and the decision-maker role. Write the ICP first.\n${steer}\nApply the jurisdiction rules from the playbook (exclude anyone you may not cold-email). Never invent a company, person or email; only copy an email that is published verbatim on a cited page.${cc.knownDomains.length ? `\nAlready in the pipeline (skip): ${cc.knownDomains.join(", ").slice(0, 3000)}` : ""}${planContext(job)}`,
+              { research: researchFor("prospecting", { website: job.business?.website, businessName: name }) },
+            ),
+            startedAt,
+            { task: "sales_sequence", text: "", context: "", ctx: fixtureCtx(job) },
+          );
+          outreach = await runAgentTask<OutreachOutput>(
+            ctx,
+            job,
+            100,
+            outreachSpec(),
+            agentInput(
+              job,
+              `Write the cold email sequence for these prospects (one template for all, 3-4 steps on business days 0, 3, 7 and 14) and one opener per prospect for {{firstLine}}, built only on that prospect's cited evidence. Sender: ${name}. The system adds the greeting name, footer, opt-out line and booking link, so don't write them. CTA: an interest question or a short call.\n\nICP: ${JSON.stringify(found.icp)}\n\nPROSPECTS:\n${JSON.stringify(found.prospects.map((p) => ({ company: p.company, why: p.why, trigger: p.trigger, evidence: p.evidence, contact: p.contact }))).slice(0, 16_000)}${planContext(job)}`,
+            ),
+            startedAt,
+            { task: "sales_sequence", text: "", context: "", ctx: fixtureCtx(job) },
+          );
+        }
+        const saved = await ctx.runMutation(internal.outbound.saveResult, { campaignId: args.campaignId, prospects: found, outreach });
+        await finish(ctx, args.runId, "verified", { output: { prospects: saved?.added ?? 0, emails: outreach.sequence.length } });
+        if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "done" });
+      },
+      async () => {
+        await ctx.runMutation(internal.outbound.markFailed, { campaignId: args.campaignId });
+        if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
+      },
+      () => ctx.scheduler.runAfter(0, internal.jobs.findCustomers, args),
+    );
+  },
+});
+
 /**
  * A wish: the owner says what they want; the COO turns it into concrete work.
  * Safe internal work (drafts, plans, audits, analysis) starts by itself
@@ -813,7 +880,7 @@ export const chatIntent = internalAction({
             "- `reply`: 1-2 short sentences (under 35 words), warm and specific: what the team is doing now, and when anything needs the owner. Never promise results or invent numbers.",
             "- `brief`: carry the owner's exact specifics (products, dates, offers, tone, audience, deadlines) plus the angle and why. Mention which confirmed facts to use. Up to 120 words.",
             "- Pick what really moves the owner's goal, not just what they literally said: e.g. \"more holiday orders\" may need posts AND a pre-order email AND an ad draft. Think beyond social and email when it fits (partnerships, creators, reviews, launches, local plays) and put those ideas in a note or plan refresh brief.",
-            "- Kinds: generate_content (channel: instagram, facebook, linkedin, x, tiktok, pinterest, youtube, email, google_search_ad, meta_ad, blog; quantity = number of posts, max 6), refresh_plan, research (conversion audit of their website), analyze_results, set_up_autopilot (when they want posting to run by itself; put channels and cadence in brief), connect_account (when the wish needs an account we don't have; channel = provider), note (advice or an idea the team can't execute yet), schedule_content/ad_change/email_send (only to prepare something external for approval).",
+            "- Kinds: generate_content (channel: instagram, facebook, linkedin, x, tiktok, pinterest, youtube, email, google_search_ad, meta_ad, blog; quantity = number of posts, max 6), refresh_plan, research (conversion audit of their website), analyze_results, set_up_autopilot (when they want posting to run by itself; put channels and cadence in brief), find_customers (outbound: find companies or people who need this business, write cold emails, book calls; brief = who and where, quantity = how many prospects, 10-30; nothing is sent), connect_account (when the wish needs an account we don't have; channel = provider), note (advice or an idea the team can't execute yet), schedule_content/ad_change/email_send (only to prepare something external for approval).",
             "- Anything that would publish, send or spend is prepared for approval, never done directly.",
             "",
             businessBrief(job),

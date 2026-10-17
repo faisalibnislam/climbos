@@ -586,7 +586,7 @@ export const saveChatResult = internalMutation({
     const waiting: string[] = [];
     for (const a of out.actions.slice(0, 4)) {
       const job = jobForAction(a.kind, a.channel);
-      const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }) : null;
+      const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
       const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
       const cost = plan ? estimateJobMicros(plan) : 0;
@@ -600,7 +600,9 @@ export const saveChatResult = internalMutation({
             ? a.kind === "set_up_autopilot"
               ? "Opens autopilot with these settings filled in. Nothing changes until you save."
               : "Opens the connection page."
-            : plan
+            : a.kind === "find_customers"
+              ? "Finds evidenced prospects and drafts the emails. Nothing is sent until you choose."
+              : plan
               ? `Creates drafts only (${plan.title.toLowerCase()}). Nothing is published.`
               : "A note for your team. No cost.",
         kind: a.kind,

@@ -94,6 +94,16 @@ export async function fakeTurn(req: ClaudeTurnRequest, rates: RateVersion): Prom
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
     }
+    // Outbound: three distinct, evidenced prospects and a mergeable sequence.
+    const o = output as { prospects?: Record<string, unknown>[]; sequence?: Record<string, unknown>[]; firstLines?: unknown[] };
+    if (o && typeof o === "object" && Array.isArray(o.prospects)) {
+      const tmpl = o.prospects[0];
+      o.prospects = ["alpha", "beta", "gamma"].map((n, i) => ({ ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: `https://${n}.example.com/about`, observation: `${marker} observation` }], publicEmail: "", fit: 80 - i * 10, timing: 60 }));
+    }
+    if (o && typeof o === "object" && Array.isArray(o.sequence) && Array.isArray(o.firstLines)) {
+      o.sequence = [0, 3].map((day, i) => ({ day, subject: `${marker} note`, body: i === 0 ? `{{firstLine}}\n${marker} body` : `${marker} follow-up`, purpose: "test" }));
+      o.firstLines = ["alpha", "beta", "gamma"].map((n) => ({ company: `${marker.replace("fake-v2", "fake-v1")} ${n}`, line: `${marker} opener for ${n}` }));
+    }
   }
   const text = typeof output === "string" ? output : JSON.stringify(output);
   return {

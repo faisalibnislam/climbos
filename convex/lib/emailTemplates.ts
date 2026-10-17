@@ -148,3 +148,20 @@ export function providerDownEmail(params: { provider: string; reason: string; ur
     ),
   };
 }
+
+export function bookingEmail(params: { title: string; when: string; minutes: number; withName: string; startAt: number; endAt: number; note: string | null }) {
+  const { title, when, minutes, withName, startAt, endAt, note } = params;
+  const fmt = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(startAt)}/${fmt(endAt)}&details=${encodeURIComponent(`Call with ${withName}`)}`;
+  return {
+    subject: `Confirmed: ${title}, ${when}`,
+    text: `${title}\n${when} (${minutes} min) with ${withName}.${note ? `\nNote: ${note}` : ""}\nAdd to Google Calendar: ${gcal}`,
+    html: layout(
+      "Call confirmed",
+      `<h1 style="margin:0 0 8px;font-size:22px">${escapeHtml(title)}</h1>
+<p style="margin:0 0 4px;color:#454a44"><strong>${escapeHtml(when)}</strong> · ${minutes} min · with ${escapeHtml(withName)}</p>
+${note ? `<p style="margin:0 0 12px;color:#454a44">Note: ${escapeHtml(note)}</p>` : ""}
+<p style="margin:16px 0 0">${button(gcal, "Add to Google Calendar")}</p>`,
+    ),
+  };
+}

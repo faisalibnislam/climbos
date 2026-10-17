@@ -122,6 +122,7 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
 
 function resultHref(slug: string, card: CardView): string | null {
   if (card.job === "strategy") return `/app/${slug}/plan`;
+  if (card.job === "outbound") return `/app/${slug}/outbound`;
   if (card.runId) return `/app/${slug}/work/${card.runId}`;
   return null;
 }

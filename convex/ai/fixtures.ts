@@ -216,10 +216,14 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
     case "chat_intent": {
       const text = (ctx.request ?? "").toLowerCase();
       const actions: ChatIntentOutput["actions"] = [];
+      const outbound = /find (?:me )?(?:more )?(?:customers|clients|leads|people)|prospect|outreach|cold email|book(?:s|ed)? (?:the )?calls/.test(text);
+      if (outbound) {
+        actions.push({ kind: "find_customers", title: "Find customers and write the emails", description: "Finds companies that need you, with evidence, and drafts the emails. Nothing is sent.", channel: "", quantity: 15, brief: ctx.request ?? "" });
+      }
       if (/post|instagram|social|linkedin|facebook/.test(text)) {
         actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "" });
       }
-      if (/email|newsletter|welcome/.test(text)) {
+      if (!outbound && /email|newsletter|welcome/.test(text)) {
         actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "" });
       }
       if (/ad|google|meta|budget/.test(text)) {

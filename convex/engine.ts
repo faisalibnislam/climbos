@@ -109,7 +109,7 @@ async function patchRunStatus(ctx: MutationCtx, run: Doc<"workflowRuns">, to: Ru
  * PAYMENT_REQUIRED style errors with plain-language messages.
  */
 /** Job kinds that exist only as Engine v2 agents. */
-export const AGENT_ONLY_KINDS = new Set(["social_calendar"]);
+export const AGENT_ONLY_KINDS = new Set(["social_calendar", "outbound"]);
 
 export async function createRunWithReservation(
   ctx: MutationCtx,

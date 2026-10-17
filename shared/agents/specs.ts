@@ -539,8 +539,140 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
   );
 }
 
+/* ---------------- Outbound: find the people, write the emails ---------------- */
+
+export const ProspectsOutputSchema = z.object({
+  icp: z.object({
+    /** One sentence: who, where, what situation. */
+    summary: z.string(),
+    mustHaves: z.array(z.string()),
+    disqualifiers: z.array(z.string()),
+    triggers: z.array(z.string()),
+    /** The role that owns the problem, e.g. "Owner" or "Head of marketing". */
+    decisionMaker: z.string(),
+  }),
+  prospects: z.array(
+    z.object({
+      company: z.string(),
+      website: z.string(),
+      location: z.string(),
+      /** "1-10", "11-50", "51-200" or "unknown". */
+      sizeBand: z.string(),
+      /** One line: why they need this business now. */
+      why: z.string(),
+      evidence: z.array(z.object({ url: z.string(), observation: z.string() })),
+      /** A dated or observable trigger, or "". */
+      trigger: z.string(),
+      fit: z.number(),
+      timing: z.number(),
+      /** Who to contact: a name and title only if published on their own site, else the role. */
+      contact: z.string(),
+      /** A published contact email copied verbatim from the evidence, else "". */
+      publicEmail: z.string(),
+    }),
+  ),
+  excluded: z.array(z.object({ company: z.string(), reason: z.string() })),
+});
+export type ProspectsOutput = z.infer<typeof ProspectsOutputSchema>;
+
+export const OutreachOutputSchema = z.object({
+  sequence: z.array(
+    z.object({
+      /** Business days after the first email (0, 3, 7, 14). */
+      day: z.number(),
+      subject: z.string(),
+      /** Plain text. Use {{firstLine}} where the personal opener goes in step 1; no greeting name, no footer. */
+      body: z.string(),
+      purpose: z.string(),
+    }),
+  ),
+  firstLines: z.array(z.object({ company: z.string(), line: z.string() })),
+  /** At most 3 bullets for the owner: what to check before sending. */
+  ownerNotes: z.array(z.string()),
+});
+export type OutreachOutput = z.infer<typeof OutreachOutputSchema>;
+
+function lintProspects(out: ProspectsOutput, input: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = lintCopy({ icp: out.icp.summary }, { evidence: evidenceOf(input) });
+  if (out.prospects.length < 3) issues.push({ severity: "error", rule: "count", message: "Find at least 3 qualified companies, or explain in excluded why the market is thin.", path: "prospects" });
+  const seen = new Set<string>();
+  out.prospects.forEach((p, i) => {
+    const path = `prospects[${i}]`;
+    const host = domainOf(p.website);
+    if (!host) issues.push({ severity: "error", rule: "source", message: `${p.company}: needs its real website.`, path: `${path}.website` });
+    if (host && seen.has(host)) issues.push({ severity: "error", rule: "duplicate", message: `${p.company} is listed twice.`, path });
+    if (host) seen.add(host);
+    if (!p.evidence.some((e) => /^https?:\/\//.test(e.url))) issues.push({ severity: "error", rule: "evidence", message: `${p.company}: every prospect needs at least one evidence URL.`, path: `${path}.evidence` });
+    if (p.publicEmail && !p.evidence.some((e) => e.observation.toLowerCase().includes(p.publicEmail.toLowerCase()))) {
+      issues.push({ severity: "error", rule: "invented_email", message: `${p.company}: only use an email copied verbatim from a cited page (quote it in evidence).`, path: `${path}.publicEmail` });
+    }
+    if (p.fit < 0 || p.fit > 100 || p.timing < 0 || p.timing > 100) issues.push({ severity: "error", rule: "range", message: "fit and timing are 0-100.", path });
+  });
+  return issues;
+}
+
+function lintOutreach(out: OutreachOutput, input: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = lintCopy({ sequence: out.sequence.map((s) => ({ subject: s.subject, body: s.body.replace(/\{\{firstLine\}\}/g, "") })), firstLines: out.firstLines.map((f) => f.line) }, { evidence: evidenceOf(input), publishable: true });
+  if (out.sequence.length < 2 || out.sequence.length > 5) issues.push({ severity: "error", rule: "count", message: "Write 2-5 steps.", path: "sequence" });
+  out.sequence.forEach((s, i) => {
+    const words = s.body.replace(/\{\{firstLine\}\}/g, "").split(/\s+/).filter(Boolean).length;
+    const max = i === 0 ? 110 : 70;
+    if (words > max) issues.push({ severity: "error", rule: "length", message: `Step ${i + 1} is ${words} words; keep it under ${max}.`, path: `sequence[${i}].body` });
+    if (s.subject.split(/\s+/).length > 6) issues.push({ severity: "warn", rule: "subject", message: "Subject lines are 2-5 plain words.", path: `sequence[${i}].subject` });
+    if (/[!$]|\bfree\b/i.test(s.subject)) issues.push({ severity: "error", rule: "subject", message: "No '!', '$' or 'free' in subject lines.", path: `sequence[${i}].subject` });
+  });
+  if (out.sequence[0] && !out.sequence[0].body.includes("{{firstLine}}")) issues.push({ severity: "error", rule: "personalisation", message: "Step 1 needs {{firstLine}} where the personal opener goes.", path: "sequence[0].body" });
+  return issues;
+}
+
+function domainOf(url: string): string | null {
+  try {
+    return new URL(/^https?:\/\//.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Finds and evidences companies that need this business now (public web only). */
+export function prospectingSpec(o: SpecOptions = {}): AgentSpec<ProspectsOutput> {
+  return base(
+    {
+      id: "prospecting",
+      role: "cso",
+      label: "Find customers",
+      skills: ["owner-brevity", "prospecting", "positioning"],
+      schema: ProspectsOutputSchema,
+      rubric: rubricOf("prospecting"),
+      criticSkills: ["prospecting"],
+      lint: lintProspects,
+      maxTokens: { research: 32_000, draft: 32_000, critic: 12_000 },
+    },
+    o,
+    "lean",
+  );
+}
+
+/** Writes the cold sequence and one sourced opener per prospect. */
+export function outreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
+  return base(
+    {
+      id: "cold_outreach",
+      role: "cso",
+      label: "Write the emails",
+      skills: ["owner-brevity", "cold-outreach", "copy-fundamentals"],
+      schema: OutreachOutputSchema,
+      rubric: rubricOf("cold-outreach"),
+      criticSkills: ["copy-fundamentals"],
+      lint: lintOutreach,
+      maxTokens: { research: 8_000, draft: 24_000, critic: 12_000 },
+    },
+    o,
+    "lean",
+  );
+}
+
 /** Research briefs per job (what the research phase should find). */
-export function researchFor(task: TaskType | "business_insights", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
+export function researchFor(task: TaskType | "business_insights" | "prospecting", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
   switch (task) {
     case "growth_strategy":
@@ -574,6 +706,12 @@ Only report what you actually found, with URLs.`,
         maxSearches: 3,
         maxFetches: 3,
         brief: `Look for competitors' current ads and offers (Google results for the main keywords, competitor landing pages) and the exact phrases buyers use. Note claims competitors make so ours can differ.`,
+      };
+    case "prospecting":
+      return {
+        maxSearches: 10,
+        maxFetches: 8,
+        brief: `Find real companies that are a strong fit to buy from ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}. Use public web sources only: category + location searches, directories, marketplaces, association member lists, job boards (hiring triggers), local news. Open each candidate's own website. For each, note: name, website, location, size clues, a dated or observable trigger, the decision-maker role (a name only if it's on their own team page), and any contact email published verbatim on their site. Record the URL for every observation. Skip anything you can't verify.`,
       };
     case "conversion_audit":
       return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };
