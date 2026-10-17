@@ -179,7 +179,7 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
 
   return (
     <div className="flex flex-col gap-4">
-      <p role="status" aria-live="polite" className="text-[0.95rem] leading-relaxed text-ink-2">
+      <p role="status" aria-live="polite" className="text-sm text-ink-2">
         {statusLine}
       </p>
 

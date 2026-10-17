@@ -16,6 +16,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { audit } from "./lib/audit";
+import { onPublishOutcome } from "./lib/autopilot";
 import { fleetStopped } from "./lib/access";
 import { imageUrlFor } from "./lib/media";
 
@@ -117,6 +118,7 @@ export const finishReceipt = internalMutation({
     const status = args.status === "verified" || args.status === "fixture_verified" ? "published" : args.status === "uncertain" ? "uncertain" : "failed";
     await ctx.db.patch(a._id, { status, updatedAt: now });
     if (status === "published" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
+    await onPublishOutcome(ctx, a._id, status);
     await audit(ctx, { orgId: a.orgId, actorType: "system", action: `publish.${args.status}`, subjectType: "artifact", subjectId: a._id, summary: `${a.title}: ${args.summary}` });
   },
 });

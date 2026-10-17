@@ -4,8 +4,8 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
-import { Callout } from "@/components/ui";
-import { formatNumber } from "@/lib/utils";
+import { Callout, Table, TableFrame, TBody, Td, Th, THead, Tr } from "@/components/ui";
+import { cn, formatNumber } from "@/lib/utils";
 import { formatPercent } from "./format";
 import { Definition, ValueKind } from "./Provenance";
 import { LoadingBlock } from "./QueryBoundary";
@@ -27,48 +27,44 @@ function cellTone(fraction: number): string {
 function CohortTable({ data }: { data: Cohorts }) {
   const months = data.rows[0]?.retention.length ?? 0;
   return (
-    <div className="w-full overflow-x-auto rounded-[var(--radius)] border border-line bg-surface">
-      <table className="w-full border-collapse text-left text-[0.95rem]">
+    <TableFrame>
+      <Table>
         <caption className="sr-only">Share of each month&apos;s new customers who paid again in later months</caption>
-        <thead>
-          <tr className="border-b border-line text-sm text-ink-2">
-            <th scope="col" className="px-4 py-3 font-semibold">
-              First paid
-            </th>
-            <th scope="col" className="px-4 py-3 text-right font-semibold">
-              Customers
-            </th>
+        <THead>
+          <tr>
+            <Th>First paid</Th>
+            <Th numeric>Customers</Th>
             {Array.from({ length: months }, (_, k) => (
-              <th key={k} scope="col" className="px-3 py-3 text-right font-semibold whitespace-nowrap">
+              <Th key={k} numeric className="px-3">
                 {k === 0 ? "Month 1" : `+${k} mo`}
-              </th>
+              </Th>
             ))}
           </tr>
-        </thead>
-        <tbody>
+        </THead>
+        <TBody>
           {data.rows.map((row) => (
-            <tr key={row.cohort} className="border-b border-line">
-              <th scope="row" className="px-4 py-3 font-medium whitespace-nowrap text-ink">
+            <Tr key={row.cohort}>
+              <th scope="row" className="h-11 whitespace-nowrap px-4 py-2 text-left align-middle font-medium text-ink">
                 {monthLabel(row.cohort)}
               </th>
-              <td className="px-4 py-3 text-right tabular-nums">{formatNumber(row.size)}</td>
+              <Td numeric>{formatNumber(row.size)}</Td>
               {row.retention.map((r, k) =>
                 r === null ? (
-                  <td key={k} className="px-3 py-3 text-right text-ink-3">
+                  <Td key={k} numeric className="px-3 text-ink-3">
                     <span aria-hidden="true">·</span>
                     <span className="sr-only">Month not over yet</span>
-                  </td>
+                  </Td>
                 ) : (
-                  <td key={k} className={`px-3 py-3 text-right tabular-nums text-ink ${cellTone(r)}`}>
+                  <Td key={k} numeric className={cn("px-3 text-ink", cellTone(r))}>
                     {formatPercent(r, 0)}
-                  </td>
+                  </Td>
                 ),
               )}
-            </tr>
+            </Tr>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TBody>
+      </Table>
+    </TableFrame>
   );
 }
 
@@ -80,10 +76,10 @@ export function CohortsSection({ slug }: { slug: string }) {
   return (
     <section aria-labelledby="cohorts-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="cohorts-heading" className="flex flex-wrap items-center gap-2 text-xl font-semibold text-ink">
+        <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
           Do customers keep paying? <ValueKind kind="observed" />
         </h2>
-        <p className="mt-1 text-ink-2">Customers grouped by the month they first paid, and how many paid again in each month after.</p>
+        <p className="mt-0.5 text-sm text-ink-3">Customers grouped by the month they first paid, and how many paid again in each month after.</p>
       </div>
       {data === undefined ? (
         <LoadingBlock label="Loading customer cohorts…" lines={3} />
@@ -95,7 +91,7 @@ export function CohortsSection({ slug }: { slug: string }) {
       ) : (
         <>
           {latestFull ? (
-            <p className="text-ink">
+            <p className="text-sm text-ink">
               Of the {formatNumber(latestFull.size)} customers who first paid in {monthLabel(latestFull.cohort)},{" "}
               <strong className="font-semibold">{formatPercent(latestFull.retention[1] ?? 0, 0)}</strong> paid again the next month.
             </p>

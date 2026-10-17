@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -6,7 +7,7 @@ export function Kbd({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return (
     <kbd
       className={cn(
-        "inline-flex min-w-6 items-center justify-center rounded-[6px] border border-line-strong border-b-2 bg-surface px-1.5 font-mono text-xs text-ink-2",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong bg-surface px-1 font-sans text-2xs font-medium text-ink-3",
         className,
       )}
       {...props}
@@ -45,7 +46,7 @@ export interface AvatarProps {
   className?: string;
 }
 
-const avatarSizes = { sm: "size-8 text-xs", md: "size-10 text-sm", lg: "size-14 text-lg" };
+const avatarSizes = { sm: "size-6 text-2xs", md: "size-8 text-xs", lg: "size-10 text-sm" };
 
 /** Round avatar with image, falling back to initials. */
 export function Avatar({ name, src, size = "md", className }: AvatarProps) {
@@ -74,5 +75,17 @@ export function Avatar({ name, src, size = "md", className }: AvatarProps) {
         </>
       )}
     </span>
+  );
+}
+
+/** "← Back to …" link at the top of detail pages (client-side navigation). */
+export function BackLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
+  return (
+    <Link href={href} className={cn("inline-flex h-8 items-center gap-1 rounded-lg px-2 -ml-2 text-ui font-medium text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink", className)}>
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 3.5 5.5 8l4.5 4.5" />
+      </svg>
+      {children}
+    </Link>
   );
 }

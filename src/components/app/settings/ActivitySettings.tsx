@@ -34,20 +34,20 @@ export function ActivitySettings({ slug }: { slug: string }) {
           <h2 id="activity-heading" className="sr-only">
             Activity log, newest first
           </h2>
-          <ol className="flex flex-col divide-y divide-line rounded-[var(--radius-lg)] border border-line bg-surface">
+          <ol className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
             {results.map((e) => {
               const a = ACTOR[e.actorType] ?? ACTOR.system;
               return (
                 <li key={e.id} className="flex flex-col gap-1.5 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                   <div className="min-w-0">
-                    <p className="leading-relaxed text-ink">{e.summary}</p>
+                    <p className="text-sm text-ink">{e.summary}</p>
                     <p className="mt-0.5 font-mono text-xs text-ink-3">{e.action}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                     <Badge tone={a.tone} icon={a.icon}>
                       {a.label}
                     </Badge>
-                    <time dateTime={new Date(e.createdAt).toISOString()} title={formatDateTime(e.createdAt)} className="text-sm text-ink-3">
+                    <time dateTime={new Date(e.createdAt).toISOString()} title={formatDateTime(e.createdAt)} className="text-xs text-ink-3">
                       {relativeTime(e.createdAt)}
                     </time>
                   </div>

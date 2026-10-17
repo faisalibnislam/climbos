@@ -1,7 +1,8 @@
 "use client";
 
-import { Heart, ImageIcon, MessageCircle, Search } from "lucide-react";
+import { Heart, ImageIcon, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { SocialIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { channelLabel } from "../shared";
 import { hostOf, type VersionView } from "./model";
@@ -33,7 +34,7 @@ function ImageBlock({ version, square }: { version: VersionView; square?: boolea
 }
 
 function Frame({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-md overflow-hidden rounded-[8px] border border-line bg-surface shadow-sm", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-md overflow-hidden rounded-xl border border-line bg-surface", className)}>{children}</div>;
 }
 
 function Hashtags({ tags }: { tags: string[] }) {
@@ -41,16 +42,17 @@ function Hashtags({ tags }: { tags: string[] }) {
   return <p className="mt-2 break-words text-blue-800">{tags.map((t) => `#${t.replace(/^#/, "")}`).join(" ")}</p>;
 }
 
-function AccountRow({ name, sub }: { name: string; sub?: string }) {
+function AccountRow({ name, sub, channel }: { name: string; sub?: string; channel: string }) {
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5">
+    <div className="flex items-center gap-2 px-3 py-2">
       <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-900">
         {name.replace(/^@/, "").slice(0, 1).toUpperCase() || "Y"}
       </span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-ink">{name}</span>
         {sub ? <span className="block text-xs text-ink-3">{sub}</span> : null}
       </span>
+      <SocialIcon network={channel} size="md" />
     </div>
   );
 }
@@ -61,19 +63,19 @@ function AccountRow({ name, sub }: { name: string; sub?: string }) {
  */
 export function ChannelPreview({ channel, version, accountLabel }: { channel: string; version: VersionView; accountLabel?: string | null }) {
   const account = accountLabel ?? "Your business";
-  const body = <p className="whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-ink">{version.body}</p>;
+  const body = <p className="whitespace-pre-wrap break-words text-sm text-ink">{version.body}</p>;
 
   if (channel === "instagram") {
     return (
       <Frame>
-        <AccountRow name={account} />
+        <AccountRow name={account} channel={channel} />
         <ImageBlock version={version} square />
-        <div className="flex gap-3 px-3 pt-2.5 text-ink-2" aria-hidden="true">
+        <div className="flex gap-3 px-3 pt-3 text-ink-2" aria-hidden="true">
           <Heart className="size-5" />
           <MessageCircle className="size-5" />
         </div>
         <div className="px-3 pb-4 pt-2">
-          <p className="whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-ink">
+          <p className="whitespace-pre-wrap break-words text-sm text-ink">
             <span className="font-semibold">{account} </span>
             {version.body}
           </p>
@@ -88,13 +90,13 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
     return (
       <Frame className="p-4">
         <div className="flex items-center gap-2 text-ink-3" aria-hidden="true">
-          <Search className="size-4" />
+          <SocialIcon network="google" size="sm" />
           <span className="text-xs">Search results</span>
         </div>
         <p className="mt-3 text-xs font-semibold text-ink">Sponsored</p>
         <p className="mt-0.5 break-words text-sm text-ink-2">{host}</p>
-        <p className="mt-1 break-words text-lg leading-snug text-blue-800">{version.headline || "Your headline"}</p>
-        <p className="mt-1 whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-ink-2">{version.body}</p>
+        <p className="mt-1 break-words text-base font-medium text-blue-800">{version.headline || "Your headline"}</p>
+        <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-2">{version.body}</p>
       </Frame>
     );
   }
@@ -115,7 +117,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
         <div className="px-4 py-4">
           {body}
           {version.callToAction ? (
-            <span className="mt-4 inline-block rounded-[6px] bg-brand-800 px-4 py-2 text-sm font-semibold text-white">{version.callToAction}</span>
+            <span className="mt-4 inline-flex h-9 items-center rounded-lg bg-brand-800 px-4 text-ui font-medium text-white">{version.callToAction}</span>
           ) : null}
         </div>
       </Frame>
@@ -127,7 +129,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
     return (
       <Frame className="p-4">
         <p className="text-xs text-ink-3">{host}</p>
-        <p className="mt-1 break-words tracking-tight text-xl font-extrabold leading-snug text-ink">{version.headline || "Page title"}</p>
+        <p className="heading-section mt-1 break-words">{version.headline || "Page title"}</p>
         <div className="mt-3 max-h-96 overflow-y-auto">{body}</div>
       </Frame>
     );
@@ -136,7 +138,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
   const isAd = channel === "meta_ad" || channel === "linkedin_ad";
   return (
     <Frame>
-      <AccountRow name={account} sub={isAd ? "Sponsored" : channelLabel(channel)} />
+      <AccountRow name={account} sub={isAd ? "Sponsored" : channelLabel(channel)} channel={channel} />
       <div className="px-3 pb-3">
         {version.headline && !isAd ? <p className="mb-1 font-semibold text-ink">{version.headline}</p> : null}
         {body}
@@ -144,12 +146,12 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
       </div>
       {version.imageUrl || channel === "pinterest" || channel === "youtube" || channel === "tiktok" ? <ImageBlock version={version} square={channel === "pinterest"} /> : null}
       {isAd ? (
-        <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-2 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-2 px-3 py-2">
           <span className="min-w-0">
             <span className="block truncate text-xs text-ink-3">{hostOf(version.destinationUrl) ?? "yourwebsite.com"}</span>
             <span className="block truncate text-sm font-semibold text-ink">{version.headline || "Headline"}</span>
           </span>
-          {version.callToAction ? <span className="shrink-0 rounded-[8px] bg-surface-3 px-3 py-1.5 text-sm font-semibold text-ink">{version.callToAction}</span> : null}
+          {version.callToAction ? <span className="inline-flex h-8 shrink-0 items-center rounded-lg bg-surface-3 px-3 text-ui font-medium text-ink">{version.callToAction}</span> : null}
         </div>
       ) : null}
     </Frame>

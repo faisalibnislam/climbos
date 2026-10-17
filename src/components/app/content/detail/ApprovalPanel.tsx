@@ -96,12 +96,12 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
             </ConfirmDialog>
           </div>
         ) : (
-          <p className="text-[0.95rem] text-ink-2">Waiting for approval from {PERMISSION_WHO.approve}. You can still edit the draft if your role allows it.</p>
+          <p className="text-sm text-ink-2">Waiting for approval from {PERMISSION_WHO.approve}. You can still edit the draft if your role allows it.</p>
         )
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-ink">Decisions</h3>
+        <h3 className="heading-card mb-2">Decisions</h3>
         <ApprovalsList approvals={artifact.approvals} now={now} />
       </div>
     </div>

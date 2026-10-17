@@ -312,6 +312,66 @@ export function salesSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SalesSe
   );
 }
 
+/* ---------------- Social autopilot: weekly calendar ---------------- */
+
+export const SocialCalendarSchema = z.object({
+  weekTheme: z.string(),
+  pillars: z.array(z.object({ name: z.string(), why: z.string() })),
+  slots: z.array(
+    z.object({
+      channel: z.string(),
+      /** 1 = Monday … 7 = Sunday, in the business's time zone. */
+      day: z.number(),
+      pillar: z.string(),
+      purpose: z.enum(["teach", "prove", "connect", "ask"]),
+      format: postFormat,
+      idea: z.string(),
+      angle: z.string(),
+      hookDraft: z.string(),
+      proof: z.string(),
+      callToAction: z.string(),
+      needsOwner: z.boolean(),
+      ownerNote: z.string(),
+    }),
+  ),
+  learningsApplied: z.array(z.string()),
+});
+export type SocialCalendar = z.infer<typeof SocialCalendarSchema>;
+
+/** Plans next week's slots; `cadence` is posts per channel this week. */
+export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptions = {}): AgentSpec<SocialCalendar> {
+  const channelSkills = [...new Set(Object.keys(cadence).map((c) => CHANNEL_SKILL[c]).filter(Boolean))];
+  return base(
+    {
+      id: "social_calendar",
+      role: "social_media_manager",
+      label: "Weekly content plan",
+      skills: ["social-calendar", "positioning", ...channelSkills.slice(0, 2)],
+      schema: SocialCalendarSchema,
+      rubric: rubricOf("social-calendar"),
+      criticSkills: ["copy-fundamentals"],
+      lint: (out, input) => {
+        const issues = lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) });
+        for (const [channel, n] of Object.entries(cadence)) {
+          const got = out.slots.filter((s) => s.channel === channel).length;
+          if (got !== n) issues.push({ severity: "error", rule: "count", message: `${channel} needs exactly ${n} slot${n === 1 ? "" : "s"}; the plan has ${got}.`, path: "slots" });
+        }
+        out.slots.forEach((s, i) => {
+          if (!(s.channel in cadence)) issues.push({ severity: "error", rule: "channel", message: `"${s.channel}" isn't one of this week's channels.`, path: `slots[${i}].channel` });
+          if (!Number.isInteger(s.day) || s.day < 1 || s.day > 7) issues.push({ severity: "error", rule: "day", message: "day must be 1 (Monday) to 7 (Sunday).", path: `slots[${i}].day` });
+        });
+        const ideas = out.slots.map((s) => s.idea.trim().toLowerCase());
+        if (new Set(ideas).size !== ideas.length) issues.push({ severity: "error", rule: "duplicate", message: "Two slots share the same idea; every slot needs its own.", path: "slots" });
+        if (out.pillars.length > 4) issues.push({ severity: "warn", rule: "focus", message: "More than 4 pillars dilutes the week.", path: "pillars" });
+        return issues;
+      },
+      maxTokens: { research: 16_000, draft: 24_000, critic: 16_000 },
+    },
+    o,
+    { draft: SONNET },
+  );
+}
+
 /** Research briefs per job (what the research phase should find). */
 export function researchFor(task: TaskType | "business_insights", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";

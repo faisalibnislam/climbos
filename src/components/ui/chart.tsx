@@ -36,34 +36,34 @@ export function ChartFrame({ title, description, source, legend, table, headingL
   const [showTable, setShowTable] = useState(false);
   const tableId = useId();
   return (
-    <figure className={cn("flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-4 sm:p-5", className)}>
+    <figure className={cn("flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:p-5", className)}>
       <figcaption className="flex flex-col gap-1">
-        <H className="text-base font-semibold text-ink">{title}</H>
-        {description ? <p className="text-sm leading-relaxed text-ink-2">{description}</p> : null}
+        <H className="heading-card">{title}</H>
+        {description ? <p className="text-ui text-ink-3">{description}</p> : null}
       </figcaption>
       {children}
       {legend}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
-        {source ? <p className="text-[0.8125rem] text-ink-3">{source}</p> : <span />}
+        {source ? <p className="text-ui text-ink-3">{source}</p> : <span />}
         <button
           type="button"
           aria-expanded={showTable}
           aria-controls={tableId}
           onClick={() => setShowTable((v) => !v)}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 text-sm font-medium text-brand-800 hover:underline"
+          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink"
         >
-          <Table2 aria-hidden="true" className="size-4" />
+          <Table2 aria-hidden="true" className="size-3.5" />
           {showTable ? "Hide table" : "View as table"}
-          <ChevronDown aria-hidden="true" className={cn("size-4 transition-transform", showTable && "rotate-180")} />
+          <ChevronDown aria-hidden="true" className={cn("size-3.5 transition-transform", showTable && "rotate-180")} />
         </button>
       </div>
       <div id={tableId} hidden={!showTable} className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
+        <table className="w-full border-collapse text-left text-ui">
           <caption className="sr-only">{title} — data table</caption>
           <thead>
             <tr className="border-b border-line">
               {table.columns.map((c, i) => (
-                <th key={c} scope="col" className={cn("px-3 py-2 font-semibold text-ink-2", i > 0 && "text-right")}>
+                <th key={c} scope="col" className={cn("h-9 bg-surface-2 px-3 text-xs font-medium text-ink-3", i > 0 && "text-right")}>
                   {c}
                 </th>
               ))}
@@ -107,7 +107,7 @@ function niceMax(v: number): number {
 function YAxis({ max, format }: { max: number; format: (n: number) => string }) {
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   return (
-    <div aria-hidden="true" className="relative w-12 shrink-0 text-right text-[11px] tabular-nums text-ink-3">
+    <div aria-hidden="true" className="relative w-12 shrink-0 text-right text-2xs tabular-nums text-ink-3">
       {ticks.map((t) => (
         <span key={t} className="absolute right-1.5 -translate-y-1/2" style={{ top: `${(1 - t) * 100}%` }}>
           {format(max * t)}
@@ -121,7 +121,7 @@ function Gridlines() {
   return (
     <>
       {[0, 25, 50, 75, 100].map((y) => (
-        <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="var(--line)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="var(--chart-grid)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
       ))}
     </>
   );
@@ -129,7 +129,7 @@ function Gridlines() {
 
 function XLabels({ labels, every = 1 }: { labels: string[]; every?: number }) {
   return (
-    <div aria-hidden="true" className="ml-12 flex text-[11px] text-ink-3">
+    <div aria-hidden="true" className="ml-12 flex text-2xs text-ink-3">
       {labels.map((l, i) => (
         <span key={`${l}-${i}`} className="min-w-0 flex-1 truncate px-0.5 pt-1.5 text-center">
           {i % every === 0 ? l : ""}
@@ -141,7 +141,7 @@ function XLabels({ labels, every = 1 }: { labels: string[]; every?: number }) {
 
 export function ChartLegend({ items }: { items: { label: string; kind: "solid" | "dashed" | "band" | "bar" | "bar-projected" }[] }) {
   return (
-    <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-[0.8125rem] text-ink-2">
+    <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-ui text-ink-2">
       {items.map((it) => (
         <li key={it.label} className="flex items-center gap-2">
           <svg aria-hidden="true" width="22" height="10" viewBox="0 0 22 10">
@@ -234,7 +234,7 @@ export function BarChart({ data, valueLabel, categoryLabel = "Period", format = 
           </div>
         </div>
         <XLabels labels={data.map((d) => (d.projected ? `${d.label}*` : d.label))} every={data.length > 8 ? 2 : 1} />
-        {hasProjected ? <p className="ml-12 mt-1 text-[11px] text-ink-3">* Projected</p> : null}
+        {hasProjected ? <p className="ml-12 mt-1 text-2xs text-ink-3">* Projected</p> : null}
       </div>
     </ChartFrame>
   );
@@ -313,7 +313,7 @@ export function LineChart({ points, valueLabel, categoryLabel = "Period", format
             {firstProjected > 0 ? (
               <span
                 aria-hidden="true"
-                className="absolute top-0 rounded bg-surface px-1 text-[11px] font-medium text-brand-800"
+                className="absolute top-0 rounded bg-surface px-1 text-2xs font-medium text-brand-800"
                 style={{ left: `calc(${xAt(firstProjected - 1)}% + 4px)` }}
               >
                 Projected →
@@ -367,7 +367,7 @@ export function LineChart({ points, valueLabel, categoryLabel = "Period", format
             ))}
           </div>
         </div>
-        <div aria-hidden="true" className="relative ml-12 h-5 text-[11px] text-ink-3">
+        <div aria-hidden="true" className="relative ml-12 h-5 text-2xs text-ink-3">
           {points.map((p, i) => {
             const every = n > 8 ? Math.ceil(n / 6) : 1;
             if (i % every !== 0 && i !== n - 1) return null;

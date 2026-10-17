@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { newId } from "@shared/design/ops";
 import { TEMPLATES, templatePage } from "@shared/design/templates";
 import type { DesignDoc, ImageLayer, Layer, ShapeLayer, TextLayer } from "@shared/design/types";
+import { Button, IconButton, Input, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { DesignThumbnail, type AssetResolver } from "../DesignRenderer";
 import { DESIGN_FONTS } from "../fonts";
@@ -51,8 +52,13 @@ export function PanelBody({ panel, editor, resolve, assets, onUpload }: { panel:
   }
 }
 
-function PanelTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="px-1 pb-3 font-sans text-base font-semibold tracking-normal text-ink">{children}</h2>;
+/** Panel section label: an h2 for the outline, styled as an overline like every editor group label. */
+function PanelTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <h2 className={cn("px-1 pb-2", className)}>
+      <span className="text-overline">{children}</span>
+    </h2>
+  );
 }
 
 function TemplatesPanel({ editor, resolve }: { editor: Editor; resolve: AssetResolver }) {
@@ -74,7 +80,7 @@ function TemplatesPanel({ editor, resolve }: { editor: Editor; resolve: AssetRes
               apply([{ op: "add_page", page: fresh, index }, { op: "remove_page", pageId: page.id }], []);
               editor.dispatch({ type: "page", pageId: fresh.id });
             }}
-            className="group overflow-hidden rounded-lg border border-line text-left transition hover:border-brand-600"
+            className="group overflow-hidden rounded-xl border border-line bg-surface text-left transition-colors hover:border-brand-600 hover:bg-surface-2"
           >
             <DesignThumbnail doc={{ ...doc, pages: [tp] }} width={132} resolve={resolve} />
             <span className="block px-2 py-1.5 text-xs font-medium text-ink-2 group-hover:text-ink">{t.name}</span>
@@ -84,6 +90,8 @@ function TemplatesPanel({ editor, resolve }: { editor: Editor; resolve: AssetRes
     </div>
   );
 }
+
+const presetClasses = "rounded-lg border border-line bg-surface px-3 py-3 text-left text-ink transition-colors hover:border-brand-600 hover:bg-surface-2";
 
 function TextPanel({ editor }: { editor: Editor }) {
   const { doc, page, apply } = editor;
@@ -119,17 +127,17 @@ function TextPanel({ editor }: { editor: Editor }) {
   return (
     <div className="flex flex-col gap-2">
       <PanelTitle>Text</PanelTitle>
-      <button type="button" onClick={() => add("heading")} className="rounded-lg border border-line bg-surface px-3 py-3 text-left text-2xl font-semibold hover:border-brand-600">
-        Add a heading
+      <button type="button" onClick={() => add("heading")} className={presetClasses}>
+        <span className="text-2xl font-semibold">Add a heading</span>
       </button>
-      <button type="button" onClick={() => add("subheading")} className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-lg font-semibold hover:border-brand-600">
-        Add a subheading
+      <button type="button" onClick={() => add("subheading")} className={presetClasses}>
+        <span className="text-lg font-semibold">Add a subheading</span>
       </button>
-      <button type="button" onClick={() => add("body")} className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-sm hover:border-brand-600">
-        Add body text
+      <button type="button" onClick={() => add("body")} className={presetClasses}>
+        <span className="text-sm">Add body text</span>
       </button>
-      <button type="button" onClick={() => add("pill")} className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left hover:border-brand-600">
-        <span className="rounded-full bg-sun px-2.5 py-1 text-xs font-bold tracking-widest text-ink">LABEL PILL</span>
+      <button type="button" onClick={() => add("pill")} className={presetClasses}>
+        <span className="rounded-full bg-sun px-2.5 py-1 text-xs font-semibold tracking-widest text-ink">LABEL PILL</span>
       </button>
     </div>
   );
@@ -178,25 +186,27 @@ function ElementsPanel({ editor }: { editor: Editor }) {
       <PanelTitle>Shapes</PanelTitle>
       <div className="grid grid-cols-4 gap-2">
         {SHAPES.map((sh) => (
-          <button key={sh.shape} type="button" title={sh.label} aria-label={`Add ${sh.label.toLowerCase()}`} onClick={() => addShape(sh.shape)} className="grid aspect-square place-items-center rounded-lg border border-line bg-surface hover:border-brand-600">
-            <ShapeGlyph shape={sh.shape} />
-          </button>
+          <Tooltip key={sh.shape} content={sh.label}>
+            <button type="button" aria-label={`Add ${sh.label.toLowerCase()}`} onClick={() => addShape(sh.shape)} className="grid aspect-square place-items-center rounded-lg border border-line bg-surface transition-colors hover:border-brand-600 hover:bg-surface-2">
+              <ShapeGlyph shape={sh.shape} />
+            </button>
+          </Tooltip>
         ))}
       </div>
-      <PanelTitle>
-        <span className="mt-5 block">Icons</span>
-      </PanelTitle>
+      <PanelTitle className="mt-6">Icons</PanelTitle>
       <label className="block px-1">
         <span className="sr-only">Search icons</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder="Search icons (e.g. coffee, heart)" className="h-9 w-full rounded-md border border-line bg-surface px-2.5 text-sm" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder="Search icons (e.g. coffee, heart)" className="h-8" />
       </label>
       <div className="mt-3 grid grid-cols-6 gap-1.5">
         {matches.map((name) => {
           const I = (icons as Record<string, LucideIcon>)[name];
           return (
-            <button key={name} type="button" title={name} aria-label={`Add ${name} icon`} onClick={() => addIcon(name)} className="grid aspect-square place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink">
-              <I className="size-5" aria-hidden="true" />
-            </button>
+            <Tooltip key={name} content={name}>
+              <button type="button" aria-label={`Add ${name} icon`} onClick={() => addIcon(name)} className="grid aspect-square place-items-center rounded-lg text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink">
+                <I className="size-5" aria-hidden="true" />
+              </button>
+            </Tooltip>
           );
         })}
       </div>
@@ -249,19 +259,21 @@ function PhotosPanel({ editor, assets, onUpload }: { editor: Editor; assets: Upl
     <div>
       <PanelTitle>Photos</PanelTitle>
       <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple className="sr-only" onChange={(e) => e.target.files && onUpload(e.target.files)} aria-label="Upload images" />
-      <button type="button" onClick={() => input.current?.click()} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-800 text-sm font-medium text-white hover:bg-brand-900">
-        <Upload className="size-4" aria-hidden="true" /> Upload your photos
-      </button>
+      <Button variant="secondary" onClick={() => input.current?.click()} className="w-full">
+        <Upload aria-hidden="true" /> Upload your photos
+      </Button>
       <p className="mt-2 px-1 text-xs text-ink-3">{target ? "Click a photo to replace the selected image." : "Click a photo to add it. Select an image first to replace it."} Only use photos you have the rights to.</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {assets.map((a) => (
-          <button key={a.id} type="button" onClick={() => use(a)} className="overflow-hidden rounded-lg border border-line hover:border-brand-600" title={a.name}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={a.url} alt={a.name} className="aspect-square w-full object-cover" />
-          </button>
+          <Tooltip key={a.id} content={a.name}>
+            <button type="button" onClick={() => use(a)} className="overflow-hidden rounded-lg border border-line transition-colors hover:border-brand-600">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.url} alt={a.name} className="aspect-square w-full object-cover" />
+            </button>
+          </Tooltip>
         ))}
       </div>
-      {assets.length === 0 ? <p className="mt-6 rounded-lg border border-dashed border-line-strong p-4 text-center text-sm text-ink-3">Your uploaded photos and logos appear here.</p> : null}
+      {assets.length === 0 ? <p className="mt-6 rounded-xl border border-dashed border-line-strong bg-surface p-4 text-center text-ui text-ink-3">Your uploaded photos and logos appear here.</p> : null}
     </div>
   );
 }
@@ -272,24 +284,26 @@ function BrandPanel({ editor }: { editor: Editor }) {
   const slots = Object.keys(doc.brand.colors) as (keyof DesignDoc["brand"]["colors"])[];
   return (
     <div className="flex flex-col gap-4">
-      <PanelTitle>Brand kit</PanelTitle>
-      <p className="-mt-2 px-1 text-xs text-ink-3">Every layer that uses a brand colour or font updates when you change it here.</p>
+      <div>
+        <PanelTitle>Brand kit</PanelTitle>
+        <p className="px-1 text-xs text-ink-3">Every layer that uses a brand colour or font updates when you change it here.</p>
+      </div>
       <div className="grid grid-cols-1 gap-2">
         {slots.map((k) => (
-          <label key={k} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium capitalize text-ink-2">
+          <label key={k} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface py-1 pl-3 pr-1 text-ui font-medium capitalize text-ink-2">
             {k}
-            <input type="color" value={doc.brand.colors[k]} onChange={(e) => apply([{ op: "set_brand", brand: { colors: { [k]: e.target.value } } }])} className="h-8 w-14 cursor-pointer rounded border border-line" />
+            <input type="color" value={doc.brand.colors[k]} onChange={(e) => apply([{ op: "set_brand", brand: { colors: { [k]: e.target.value } } }])} className="h-8 w-14 cursor-pointer rounded-lg border border-line-strong bg-surface px-1" />
           </label>
         ))}
       </div>
       <div className="flex flex-col gap-2">
-        <span className="px-1 text-sm font-medium text-ink-2">Heading font</span>
+        <span className="px-1 text-ui font-medium text-ink-2">Heading font</span>
         <SelectField label="Heading font" value={doc.brand.fonts.heading} className="w-full" onChange={(heading) => apply([{ op: "set_brand", brand: { fonts: { heading } } }])} options={DESIGN_FONTS.map((f) => ({ value: f.family, label: f.family, style: { fontFamily: f.family } }))} />
-        <span className="px-1 text-sm font-medium text-ink-2">Body font</span>
+        <span className="px-1 text-ui font-medium text-ink-2">Body font</span>
         <SelectField label="Body font" value={doc.brand.fonts.body} className="w-full" onChange={(body) => apply([{ op: "set_brand", brand: { fonts: { body } } }])} options={DESIGN_FONTS.map((f) => ({ value: f.family, label: f.family, style: { fontFamily: f.family } }))} />
       </div>
       <div>
-        <span className="px-1 text-sm font-medium text-ink-2">Logo</span>
+        <span className="px-1 text-ui font-medium text-ink-2">Logo</span>
         <input
           ref={logoInput}
           type="file"
@@ -304,12 +318,12 @@ function BrandPanel({ editor }: { editor: Editor }) {
             reader.readAsDataURL(file);
           }}
         />
-        <button type="button" onClick={() => logoInput.current?.click()} className="mt-2 flex h-20 w-full items-center justify-center rounded-lg border border-dashed border-line-strong bg-surface hover:border-brand-600">
+        <button type="button" onClick={() => logoInput.current?.click()} className="mt-2 flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-line-strong bg-surface transition-colors hover:border-brand-600 hover:bg-surface-2">
           {doc.brand.logoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={doc.brand.logoSrc} alt="Current logo" className="max-h-14 max-w-[80%] object-contain" />
           ) : (
-            <span className="text-sm text-ink-3">Upload your logo</span>
+            <span className="text-ui text-ink-3">Upload your logo</span>
           )}
         </button>
       </div>
@@ -326,6 +340,8 @@ function layerLabel(l: Layer): string {
   return "Group";
 }
 
+const layerAction = "text-ink-3 hover:bg-surface hover:text-ink";
+
 function LayersPanel({ editor }: { editor: Editor }) {
   const { page, state, dispatch, apply } = editor;
   const ordered = [...page.layers].reverse();
@@ -338,22 +354,14 @@ function LayersPanel({ editor }: { editor: Editor }) {
           const i = page.layers.findIndex((x) => x.id === l.id);
           const selected = state.selected.includes(l.id);
           return (
-            <li key={l.id} className={cn("flex items-center gap-1 rounded-md border px-1.5 py-1", selected ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-surface-2")}>
-              <button type="button" onClick={() => dispatch({ type: "select", ids: [l.id] })} className={cn("min-w-0 flex-1 truncate px-1 text-left text-sm", l.hidden ? "text-ink-3 line-through" : "text-ink")}>
+            <li key={l.id} className={cn("flex items-center rounded-lg border px-1 transition-colors", selected ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-surface-2")}>
+              <button type="button" onClick={() => dispatch({ type: "select", ids: [l.id] })} className={cn("h-8 min-w-0 flex-1 truncate px-1 text-left text-ui", l.hidden ? "text-ink-3 line-through" : "text-ink")}>
                 {layerLabel(l)}
               </button>
-              <button type="button" title="Move up" aria-label="Move layer up" disabled={i === page.layers.length - 1} onClick={() => apply([{ op: "move_layer", pageId: page.id, layerId: l.id, toIndex: i + 1 }])} className="rounded p-1 text-ink-3 hover:text-ink disabled:opacity-30">
-                <ChevronUp className="size-4" aria-hidden="true" />
-              </button>
-              <button type="button" title="Move down" aria-label="Move layer down" disabled={i === 0} onClick={() => apply([{ op: "move_layer", pageId: page.id, layerId: l.id, toIndex: i - 1 }])} className="rounded p-1 text-ink-3 hover:text-ink disabled:opacity-30">
-                <ChevronDown className="size-4" aria-hidden="true" />
-              </button>
-              <button type="button" title={l.hidden ? "Show" : "Hide"} aria-label={l.hidden ? "Show layer" : "Hide layer"} onClick={() => apply([{ op: "update_layer", pageId: page.id, layerId: l.id, props: { hidden: !l.hidden } }])} className="rounded p-1 text-ink-3 hover:text-ink">
-                {l.hidden ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
-              </button>
-              <button type="button" title={l.locked ? "Unlock" : "Lock"} aria-label={l.locked ? "Unlock layer" : "Lock layer"} onClick={() => apply([{ op: "update_layer", pageId: page.id, layerId: l.id, props: { locked: !l.locked } }])} className="rounded p-1 text-ink-3 hover:text-ink">
-                {l.locked ? <Lock className="size-4" aria-hidden="true" /> : <Unlock className="size-4" aria-hidden="true" />}
-              </button>
+              <IconButton size="sm" aria-label="Move layer up" icon={<ChevronUp />} disabled={i === page.layers.length - 1} onClick={() => apply([{ op: "move_layer", pageId: page.id, layerId: l.id, toIndex: i + 1 }])} className={layerAction} />
+              <IconButton size="sm" aria-label="Move layer down" icon={<ChevronDown />} disabled={i === 0} onClick={() => apply([{ op: "move_layer", pageId: page.id, layerId: l.id, toIndex: i - 1 }])} className={layerAction} />
+              <IconButton size="sm" aria-label={l.hidden ? "Show layer" : "Hide layer"} icon={l.hidden ? <EyeOff /> : <Eye />} onClick={() => apply([{ op: "update_layer", pageId: page.id, layerId: l.id, props: { hidden: !l.hidden } }])} className={layerAction} />
+              <IconButton size="sm" aria-label={l.locked ? "Unlock layer" : "Lock layer"} icon={l.locked ? <Lock /> : <Unlock />} onClick={() => apply([{ op: "update_layer", pageId: page.id, layerId: l.id, props: { locked: !l.locked } }])} className={layerAction} />
             </li>
           );
         })}

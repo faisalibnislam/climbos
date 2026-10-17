@@ -5,7 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Button, Callout, ConfirmDialog, Field, Input, RadioCards, Switch, toast } from "@/components/ui";
+import { Button, Callout, ConfirmDialog, Field, Input, RadioCards, Switch, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { relativeTime } from "../money";
 import { LoadingBlock } from "../results/QueryBoundary";
@@ -60,8 +60,8 @@ export function PoliciesSettings({ slug }: { slug: string }) {
               Approval rules are created when you finish setting up your workspace. <Link href="/onboarding">Continue setup</Link>.
             </Callout>
           )}
-          <section aria-labelledby="always-heading" className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-            <h2 id="always-heading" className="text-lg font-semibold text-ink">
+          <section aria-labelledby="always-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <h2 id="always-heading" className="heading-section">
               Always needs your approval
             </h2>
             <p className="text-ink-2">Whatever mode you choose, these always wait for a person to approve them:</p>
@@ -133,10 +133,10 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
       <fieldset disabled={!canManage} className="flex flex-col gap-6 disabled:opacity-80">
         <section aria-labelledby="mode-heading" className="flex flex-col gap-3">
           <div>
-            <h2 id="mode-heading" className="text-lg font-semibold text-ink">
+            <h2 id="mode-heading" className="heading-section">
               How ClimbOS works for you
             </h2>
-            <p className="text-sm text-ink-3">Current rules: version {policy.version}</p>
+            <p className="mt-0.5 text-xs text-ink-3">Current rules: version {policy.version}</p>
           </div>
           <RadioCards
             aria-labelledby="mode-heading"
@@ -156,13 +156,13 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
           />
           {allowedModes.length < MODES.length ? (
             <p className="text-sm text-ink-3">
-              Some modes need a higher plan. <Link className="font-medium text-brand-800 underline" href={`/app/${slug}/settings/billing`}>See plans</Link>
+              Some modes need a higher plan. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>See plans</Link>
             </p>
           ) : null}
         </section>
 
-        <section aria-labelledby="limits-heading" className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-          <h2 id="limits-heading" className="text-lg font-semibold text-ink">
+        <section aria-labelledby="limits-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+          <h2 id="limits-heading" className="heading-section">
             Limits and standing permissions
           </h2>
           <Switch

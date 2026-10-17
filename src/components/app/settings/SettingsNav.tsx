@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "../results/QueryBoundary";
 
 export const SETTINGS_SECTIONS = [
   { key: "team", label: "Team", icon: Users, tone: "brand" },
@@ -22,7 +23,7 @@ export function SettingsNav({ slug }: { slug: string }) {
   const current = pathname.split("/")[4] ?? "team";
   return (
     <nav aria-label="Settings" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:w-52 lg:shrink-0 lg:overflow-visible lg:px-0">
-      <p className="mb-1 hidden px-2 text-xs font-medium text-ink-3 lg:block">Settings</p>
+      <p className="text-overline mb-1 hidden px-2 lg:block">Settings</p>
       <ul className="flex gap-1 lg:flex-col">
         {SETTINGS_SECTIONS.map((s) => {
           const active = current === s.key;
@@ -32,8 +33,8 @@ export function SettingsNav({ slug }: { slug: string }) {
                 href={`/app/${slug}/settings/${s.key}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
-                  active && "bg-[rgb(16_24_40/0.07)] font-medium text-ink",
+                  "flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
+                  active && "bg-surface-3/70 font-medium text-ink",
                 )}
               >
                 <s.icon aria-hidden="true" className="size-4 shrink-0" />
@@ -50,13 +51,6 @@ export function SettingsNav({ slug }: { slug: string }) {
 /** Title block used by each settings page (one h1 per page). */
 export function SettingsHeader({ title, intro, actions }: { title: string; intro?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-[13px] text-ink-3">Settings</p>
-        <h1 className="text-[28px] leading-9 text-ink">{title}</h1>
-        {intro ? <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-ink-3">{intro}</p> : null}
-      </div>
-      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
-    </header>
+    <PageHeader eyebrow="Settings" title={title} intro={intro} actions={actions} section="settings" />
   );
 }

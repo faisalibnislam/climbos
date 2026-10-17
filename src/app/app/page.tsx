@@ -24,7 +24,7 @@ export default function AppIndex() {
   }, [me, router]);
   return (
     <main id="main" className="grid min-h-dvh place-items-center">
-      <p className="flex items-center gap-3 text-ink-2" role="status">
+      <p className="flex items-center gap-2 text-sm text-ink-2" role="status">
         <Spinner /> Opening your workspace…
       </p>
     </main>

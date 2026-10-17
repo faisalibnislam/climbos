@@ -30,12 +30,14 @@ import {
   Button,
   Callout,
   ConfirmDialog,
+  buttonClasses,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Kbd,
   Skeleton,
   Toaster,
   toast,
@@ -92,7 +94,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1 pt-4">
-            <Link href={`/app/${slug}/settings/billing`} className="mb-1 flex h-8 items-center justify-center rounded-lg bg-sun text-[13px] font-medium text-ink hover:brightness-95">
+            <Link href={`/app/${slug}/settings/billing`} className={buttonClasses({ variant: "accent", size: "sm", className: "mb-1 w-full" })}>
               Plans and usage
             </Link>
             <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
@@ -111,15 +113,15 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
-              className="mx-auto flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-[13px] text-ink-3 hover:border-ink-3"
+              className="mx-auto flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
               <Search className="size-4 shrink-0" aria-hidden="true" />
               <span className="flex-1 truncate">Ask your team or search…</span>
-              <kbd className="hidden rounded border border-line px-1.5 text-[11px] text-ink-3 sm:inline">⌘K</kbd>
+              <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1.5">
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
-              <Link href={`/app/${slug}/settings/activity`} className="grid size-8 place-items-center rounded-lg text-ink-2 hover:bg-surface-2" aria-label="Activity">
+              <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "w-8 px-0 text-ink-2" })} aria-label="Activity">
                 <Bell className="size-4" aria-hidden />
               </Link>
               <AccountMenu />
@@ -141,7 +143,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
                 <Link
                   href={`/app/${slug}/${item.key}`}
                   aria-current={active ? "page" : undefined}
-                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium", active ? "text-brand-800" : "text-ink-3 hover:text-ink")}
+                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-brand-800" : "text-ink-3 hover:text-ink")}
                 >
                   <item.icon className="size-5" aria-hidden />
                   {item.key === "plan" ? "Plan" : item.label}
@@ -165,7 +167,7 @@ function NavGroup({ label, children }: { label: string; children: ReactNode }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex h-7 items-center justify-between rounded-lg px-2 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink"
+        className="text-overline flex h-7 items-center justify-between rounded-lg px-2 hover:bg-surface-2 hover:text-ink"
       >
         {label}
         <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden="true" />
@@ -181,8 +183,8 @@ function NavLink({ href, active, icon, children }: { href: string; active: boole
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] transition-colors",
-        active ? "bg-[rgb(16_24_40/0.07)] font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        "relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui transition-colors",
+        active ? "bg-surface-3/70 font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
@@ -194,17 +196,17 @@ function NavLink({ href, active, icon, children }: { href: string; active: boole
 function WorkspaceSwitcher({ slug }: { slug: string }) {
   const me = useQuery(api.orgs.me);
   const router = useRouter();
-  if (!me) return <Skeleton className="h-12 w-full" />;
+  if (!me) return <Skeleton className="h-10 w-full" />;
   const current = me.orgs.find((o) => o.slug === slug);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-surface-2">
+        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-surface-2">
           <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-800 text-xs font-semibold text-white">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-medium text-ink">{current?.name ?? "…"}</span>
+            <span className="block truncate text-ui font-medium text-ink">{current?.name ?? "…"}</span>
           </span>
           <ChevronDown className="size-4 shrink-0 text-ink-3" aria-hidden />
         </button>
@@ -234,7 +236,7 @@ function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="grid size-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold text-ink-2 hover:ring-2 hover:ring-line-strong" aria-label={`Account: ${me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}`}>
+        <button type="button" className="grid size-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold text-ink-2 hover:ring-2 hover:ring-line-strong" aria-label={`Account: ${me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}`}>
           {(me.isAnonymous ? "G" : (me.name ?? me.email ?? "A")).slice(0, 2).toUpperCase()}
         </button>
       </DropdownMenuTrigger>
@@ -261,13 +263,14 @@ function DemoBanner({ slug }: { slug: string }) {
   return (
     <div className="bg-hero-gradient px-4 py-2 text-sm text-white" role="note">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1">
-        <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[0.8125rem] font-bold">Demo data</span>
+        <span className="inline-flex h-5 items-center rounded-md bg-white/20 px-1.5 text-xs font-medium">Demo data</span>
         <span>
           Formkit example with synthetic numbers. Nothing here posts, emails or spends real money.
         </span>
         <span className="ml-auto flex gap-3">
           <button
-            className="font-semibold underline underline-offset-2"
+            type="button"
+            className={buttonClasses({ variant: "link", className: "text-white decoration-white/50 hover:decoration-white" })}
             onClick={async () => {
               try {
                 const res = await reset({ slug });
@@ -279,7 +282,7 @@ function DemoBanner({ slug }: { slug: string }) {
           >
             Reset demo
           </button>
-          <Link href="/sign-in?switch=1&next=/onboarding" className="font-semibold underline underline-offset-2">
+          <Link href="/sign-in?switch=1&next=/onboarding" className={buttonClasses({ variant: "link", className: "text-white decoration-white/50 hover:decoration-white" })}>
             Use my own business
           </Link>
         </span>
@@ -294,7 +297,7 @@ function PausedBanner({ slug, canResume }: { slug: string; canResume: boolean })
     <div className="border-b border-amber-800/20 bg-amber-100 px-4 py-2.5 text-sm text-amber-800" role="status">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3">
         <PauseCircle className="size-4" aria-hidden />
-        <strong>All activity is paused.</strong>
+        <strong className="font-semibold">All activity is paused.</strong>
         <span>No new posts, emails, ads or AI jobs will start. You can still read, edit and export.</span>
         {canResume && (
           <ConfirmDialog
@@ -324,8 +327,8 @@ export function PauseAllButton({ slug, paused, variant }: { slug: string; paused
     return variant === "compact" ? (
       <Badge tone="amber" icon={<PauseCircle />}>Paused</Badge>
     ) : (
-      <div className="flex h-8 items-center gap-2 rounded-lg bg-amber-100 px-2 text-[13px] font-medium text-amber-800">
-        <PlayCircle className="size-5" aria-hidden /> Activity paused
+      <div className="flex h-8 items-center gap-2 rounded-lg bg-amber-100 px-2 text-ui font-medium text-amber-800">
+        <PlayCircle className="size-4" aria-hidden /> Activity paused
       </div>
     );
   }

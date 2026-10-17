@@ -85,7 +85,7 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent title={copy.title} description="Least privilege: give ClimbOS only the access it needs.">
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <div className="text-[0.95rem] leading-relaxed text-ink-2">{copy.steps}</div>
+          <div className="text-sm text-ink-2">{copy.steps}</div>
           <Field label={copy.label} hint={copy.hint} error={error ?? undefined}>
             <Input
               type="password"

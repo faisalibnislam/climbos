@@ -139,9 +139,9 @@ function BillingBody({
       {blocked ? <Callout tone="info">{blocked}</Callout> : null}
 
       {/* Current plan + access state */}
-      <section aria-labelledby="plan-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
+      <section aria-labelledby="plan-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 id="plan-heading" className="text-lg font-semibold text-ink">
+          <h2 id="plan-heading" className="heading-section">
             {currentPlan ? `${currentPlan.name} plan` : "No plan yet"}
           </h2>
           {sub ? <Badge tone={sub.access === "full" ? "green" : sub.access === "grace_read_only" ? "amber" : "neutral"}>{STATUS_TEXT[sub.status] ?? sub.status}</Badge> : null}
@@ -171,9 +171,9 @@ function BillingBody({
       </section>
 
       {/* Usage */}
-      <section aria-labelledby="usage-heading" className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
+      <section aria-labelledby="usage-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
         <div>
-          <h2 id="usage-heading" className="text-lg font-semibold text-ink">
+          <h2 id="usage-heading" className="heading-section">
             This month&apos;s allowance
           </h2>
           {data.period ? (
@@ -188,7 +188,7 @@ function BillingBody({
           <div className="flex flex-col gap-5">
             {data.period.walletFraction === null ? (
               <div className="flex flex-col gap-0.5">
-                <p className="text-[0.95rem] font-medium text-ink">AI work capacity</p>
+                <p className="text-sm font-medium text-ink">AI work capacity</p>
                 <p className="text-sm text-ink-2">Not applicable — this period has no AI work limit.</p>
               </div>
             ) : (
@@ -224,8 +224,8 @@ function BillingBody({
 
       {/* Top-up */}
       {data.topupProducts.length > 0 ? (
-        <section aria-labelledby="topup-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-          <h2 id="topup-heading" className="text-lg font-semibold text-ink">
+        <section aria-labelledby="topup-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+          <h2 id="topup-heading" className="heading-section">
             Need more this month?
           </h2>
           {data.topupProducts.map((t) => {
@@ -233,10 +233,10 @@ function BillingBody({
             return (
               <div key={t.key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-medium text-ink">
+                  <p className="heading-card">
                     {t.name} — {formatUsd(t.priceUsd)}
                   </p>
-                  <p className="text-sm leading-relaxed text-ink-2">{t.description}</p>
+                  <p className="text-sm text-ink-2">{t.description}</p>
                   <p className="text-sm font-medium text-ink-2">Bought only when you click; never automatic.</p>
                   {sub?.access !== "full" ? <p className="text-sm text-ink-3">Available once you have an active plan.</p> : null}
                 </div>
@@ -252,7 +252,7 @@ function BillingBody({
       {/* Plans */}
       <section aria-labelledby="plans-heading" className="flex flex-col gap-3">
         <div>
-          <h2 id="plans-heading" className="text-lg font-semibold text-ink">
+          <h2 id="plans-heading" className="heading-section">
             Plans
           </h2>
           <p className="mt-0.5 text-ink-2">Monthly prices in US dollars. Change or cancel at any time.</p>
@@ -261,20 +261,20 @@ function BillingBody({
           {data.plans.map((p) => {
             const isCurrent = sub?.access === "full" && sub.planKey === p.key;
             return (
-              <li key={p.key} className={cn("flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-surface p-5", isCurrent ? "border-brand-800 ring-1 ring-brand-800" : "border-line")}>
+              <li key={p.key} className={cn("flex flex-col gap-3 rounded-xl border bg-surface p-5", isCurrent ? "border-brand-800 ring-1 ring-brand-800" : "border-line")}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-ink">{p.name}</h3>
+                  <h3 className="heading-card">{p.name}</h3>
                   {isCurrent ? (
                     <Badge tone="green" icon={<CircleCheck />}>
                       Your plan
                     </Badge>
                   ) : null}
                 </div>
-                <p className="tracking-tight text-3xl font-extrabold text-ink">
+                <p className="metric">
                   {formatUsd(p.priceUsd)}
-                  <span className="text-base font-normal text-ink-3"> / month</span>
+                  <span className="font-sans text-sm font-normal tracking-normal text-ink-3"> / month</span>
                 </p>
-                <p className="text-sm leading-relaxed text-ink-2">{p.tagline}</p>
+                <p className="text-sm text-ink-2">{p.tagline}</p>
                 <ul className="list-disc space-y-1 pl-5 text-sm text-ink-2">
                   {p.highlights.map((h) => (
                     <li key={h}>{h}</li>
@@ -289,11 +289,11 @@ function BillingBody({
                       Switch in billing portal
                     </Button>
                   ) : (
-                    <Button className="w-full" disabled={!canBuy || !p.available} loading={busy === p.key} loadingText="Opening checkout…" onClick={() => onCheckout(p.key as ProductKey)}>
+                    <Button variant="secondary" className="w-full" disabled={!canBuy || !p.available} loading={busy === p.key} loadingText="Opening checkout…" onClick={() => onCheckout(p.key as ProductKey)}>
                       Choose {p.name}
                     </Button>
                   )}
-                  {!p.available && data.billingConfigured && !isCurrent ? <p className="mt-1 text-sm text-ink-3">Not available to buy yet.</p> : null}
+                  {!p.available && data.billingConfigured && !isCurrent ? <p className="mt-1 text-xs text-ink-3">Not available to buy yet.</p> : null}
                 </div>
               </li>
             );
@@ -303,7 +303,7 @@ function BillingBody({
 
       {/* History */}
       <section aria-labelledby="history-heading" className="flex flex-col gap-3">
-        <h2 id="history-heading" className="text-lg font-semibold text-ink">
+        <h2 id="history-heading" className="heading-section">
           Payment history
         </h2>
         <DataTable
@@ -341,7 +341,7 @@ function SubscriptionMessage({ sub }: { sub: NonNullable<Billing["subscription"]
   if (sub.cancelAtPeriodEnd) {
     return (
       <p className="text-ink-2">
-        Cancelled — you keep full access until <strong className="text-ink">{dateOnly(sub.currentPeriodEnd)}</strong>. Nothing more will be charged.
+        Cancelled — you keep full access until <strong className="font-semibold text-ink">{dateOnly(sub.currentPeriodEnd)}</strong>. Nothing more will be charged.
       </p>
     );
   }

@@ -18,6 +18,7 @@ import {
   RadioCards,
   Select,
   Skeleton,
+  SocialIcon,
   Textarea,
 } from "@/components/ui";
 import { microsToDisplay } from "../money";
@@ -59,7 +60,7 @@ export function CreateContentDialog({ slug }: { slug: string }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="lg">
+        <Button>
           <Sparkles aria-hidden="true" /> Create content
         </Button>
       </DialogTrigger>
@@ -147,7 +148,7 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
       ) : null}
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-[0.95rem] font-medium text-ink">What should the team create?</legend>
+        <legend className="mb-1.5 text-ui font-medium text-ink">What should the team create?</legend>
         <RadioCards
           aria-label="What should the team create?"
           value={job}
@@ -160,7 +161,19 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
       {isSocial ? (
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Channel">
-            <Select value={channel} onValueChange={(v) => setChannel(v as SocialChannel)} options={SOCIAL_CHANNELS} />
+            <Select
+              value={channel}
+              onValueChange={(v) => setChannel(v as SocialChannel)}
+              options={SOCIAL_CHANNELS.map((c) => ({
+                value: c.value,
+                label: (
+                  <span className="inline-flex items-center gap-2">
+                    <SocialIcon network={c.value} size="sm" />
+                    {c.label}
+                  </span>
+                ),
+              }))}
+            />
           </Field>
           <Field label="How many posts?" hint="Between 1 and 6.">
             <Select
@@ -194,7 +207,7 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
       >
         <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, BRIEF_MAX))} rows={3} autosize maxRows={8} maxLength={BRIEF_MAX} />
       </Field>
-      <p className="-mt-4 text-right text-sm tabular-nums text-ink-3">
+      <p className="-mt-4 text-right text-xs tabular-nums text-ink-3">
         {brief.length} / {BRIEF_MAX} characters
       </p>
 
@@ -232,7 +245,7 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
       <ul className="mt-2 flex flex-col gap-1">
         {drafts.map((d) => (
           <li key={d.id}>
-            <Link href={`/app/${slug}/content/${d.id}`} onClick={onOpen} className="inline-flex min-h-11 items-center gap-2">
+            <Link href={`/app/${slug}/content/${d.id}`} onClick={onOpen} className="inline-flex min-h-9 items-center gap-2">
               {d.title}
               <span className="font-normal text-ink-3">· {channelLabel(d.channel)} · {artifactStatusMeta(d.status).label}</span>
             </Link>
@@ -246,8 +259,8 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
 function EstimatePanel({ slug, job, quantity, images }: { slug: string; job: Job; quantity?: number; images?: number }) {
   const est = useQuery(api.content.estimate, { slug, job, quantity, images });
   return (
-    <section aria-labelledby="estimate-heading" className="rounded-[8px] border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
-      <h3 id="estimate-heading" className="font-semibold text-ink">
+    <section aria-labelledby="estimate-heading" className="rounded-lg border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
+      <h3 id="estimate-heading" className="heading-card">
         Before you start
       </h3>
       {est === undefined ? (
@@ -256,7 +269,7 @@ function EstimatePanel({ slug, job, quantity, images }: { slug: string; job: Job
           <Skeleton className="h-4 w-1/2" />
         </div>
       ) : (
-        <div className="mt-2 flex flex-col gap-3 text-[0.95rem] leading-relaxed text-ink-2">
+        <div className="mt-2 flex flex-col gap-3 text-sm text-ink-2">
           <p>
             <span className="font-semibold text-ink">{est.title}.</span> Uses up to <span className="font-semibold text-ink">{microsToDisplay(est.maxCostMicros)}</span> of
             your monthly AI capacity. Unused capacity is returned when the job finishes.

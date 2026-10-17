@@ -13,16 +13,16 @@ import { cn } from "@/lib/utils";
 export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet" | "brand" | "teal" | "pink" | "orange";
 
 export const toneClasses: Record<Tone, string> = {
-  neutral: "bg-surface-2 text-ink-2 border-line",
-  green: "bg-green-100 text-green-800 border-[#abefc6]",
-  amber: "bg-amber-100 text-amber-800 border-[#fedf89]",
-  red: "bg-red-100 text-red-800 border-[#fecdca]",
-  blue: "bg-blue-100 text-blue-800 border-[#b2ddff]",
-  violet: "bg-violet-100 text-violet-800 border-[#d9d6fe]",
-  brand: "bg-brand-100 text-brand-900 border-brand-200",
-  teal: "bg-teal-100 text-teal-800 border-[#a5f0fc]",
-  pink: "bg-pink-100 text-pink-800 border-[#fcceee]",
-  orange: "bg-orange-100 text-orange-800 border-[#f9dbaf]",
+  neutral: "bg-surface-3/70 text-ink-2",
+  green: "bg-green-100 text-green-800",
+  amber: "bg-amber-100 text-amber-800",
+  red: "bg-red-100 text-red-800",
+  blue: "bg-blue-100 text-blue-800",
+  violet: "bg-violet-100 text-violet-800",
+  brand: "bg-brand-100 text-brand-900",
+  teal: "bg-teal-100 text-teal-800",
+  pink: "bg-pink-100 text-pink-800",
+  orange: "bg-orange-100 text-orange-800",
 };
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -40,7 +40,7 @@ export function Badge({ tone = "neutral", icon, className, children, ...props }:
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-full items-center gap-1 rounded-[5px] border-0 px-1.5 text-xs font-medium leading-5",
+        "inline-flex h-5 max-w-full items-center gap-1 rounded-md px-1.5 text-xs font-medium leading-5",
         "[&_svg]:size-3 [&_svg]:shrink-0",
         toneClasses[tone],
         className,

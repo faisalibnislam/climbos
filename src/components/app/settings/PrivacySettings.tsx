@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Badge, Button, Callout, ConfirmDialog, DataTable, Field, Input, toast } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, DataTable, Field, Input, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
@@ -53,11 +53,11 @@ function ExportSection({ slug }: { slug: string }) {
   }
 
   return (
-    <section aria-labelledby="export-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-      <h2 id="export-heading" className="text-lg font-semibold text-ink">
+    <section aria-labelledby="export-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+      <h2 id="export-heading" className="heading-section">
         Export your data
       </h2>
-      <p className="leading-relaxed text-ink-2">
+      <p className="text-sm text-ink-2">
         One JSON file with your business profile, plans, content, results and activity. Passwords, keys and connection tokens are never included.
       </p>
       <div>
@@ -72,7 +72,7 @@ function ExportSection({ slug }: { slug: string }) {
           </Callout>
         ) : null}
       </div>
-      <h3 className="mt-2 font-semibold text-ink">Recent requests</h3>
+      <h3 className="heading-card mt-2">Recent requests</h3>
       {requests === undefined ? (
         <LoadingBlock label="Loading requests…" lines={1} />
       ) : (
@@ -99,12 +99,12 @@ function ExportSection({ slug }: { slug: string }) {
                 header: "Result",
                 cell: (r) =>
                   r.url ? (
-                    <a href={r.url} download className="inline-flex min-h-11 items-center gap-1.5 font-medium text-brand-800 underline-offset-4 hover:underline">
+                    <a href={r.url} download className={buttonClasses({ variant: "link" })}>
                       <Download aria-hidden="true" className="size-4" />
                       Download
                     </a>
                   ) : (
-                    <span className="text-sm text-ink-3">{r.note ?? "—"}</span>
+                    <span className="text-ink-3">{r.note ?? "—"}</span>
                   ),
               },
             ]}
@@ -132,11 +132,11 @@ function DeleteContactSection({ slug }: { slug: string }) {
   }
 
   return (
-    <section aria-labelledby="contact-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-      <h2 id="contact-heading" className="text-lg font-semibold text-ink">
+    <section aria-labelledby="contact-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+      <h2 id="contact-heading" className="heading-section">
         Delete a person&apos;s details
       </h2>
-      <p className="leading-relaxed text-ink-2">
+      <p className="text-sm text-ink-2">
         Use this when a customer or lead asks to be forgotten. Their contact record and consent history are deleted. A one-way fingerprint of the address is kept so
         they&apos;re never emailed again.
       </p>
@@ -185,11 +185,11 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const matches = org ? typed.trim() === org.name : false;
 
   return (
-    <section aria-labelledby="delete-ws-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[#f3c9c3] bg-surface p-5">
-      <h2 id="delete-ws-heading" className="text-lg font-semibold text-red-800">
+    <section aria-labelledby="delete-ws-heading" className="flex flex-col gap-3 rounded-xl border border-red-500/25 bg-surface p-5">
+      <h2 id="delete-ws-heading" className="heading-section text-red-800!">
         Delete this workspace
       </h2>
-      <p className="leading-relaxed text-ink-2">
+      <p className="text-sm text-ink-2">
         Everything stops straight away. Your business profile, plans, content, results, contacts and connections (including stored keys) are then permanently
         deleted. Billing records, usage costs and the activity log are kept, as required for accounting, with personal details minimized.
       </p>

@@ -17,8 +17,8 @@ export function opsError(err: unknown): string {
 
 export function OpsSection({ id, title, count, children }: { id: string; title: string; count?: number; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-6 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-4 sm:p-5">
-      <h2 id={`${id}-h`} className="flex flex-wrap items-center gap-2 text-lg font-semibold text-ink">
+    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-6 flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:p-5">
+      <h2 id={`${id}-h`} className="heading-section flex flex-wrap items-center gap-2">
         {title}
         {count !== undefined ? <Badge tone={count > 0 ? "amber" : "neutral"}>{count > 0 ? `${count} open` : "None open"}</Badge> : null}
       </h2>

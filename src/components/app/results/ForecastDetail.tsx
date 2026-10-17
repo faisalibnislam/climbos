@@ -6,7 +6,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { BacktestResult, HorizonSummary } from "@shared/forecasting";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Callout, DataTable, LineChart, type DataTableColumn } from "@/components/ui";
+import { Callout, DataTable, LineChart, Stat, StatGroup, buttonClasses, type DataTableColumn } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { formatDateTime } from "../money";
 import { ForecastStatusBadge } from "./ForecastsSection";
@@ -20,8 +20,8 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
   const f = useQuery(api.analytics.getForecast, { slug, forecastId: forecastId as Id<"forecastRuns"> });
 
   const back = (
-    <Link href={`/app/${slug}/results`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline">
-      <ArrowLeft aria-hidden="true" className="size-4" />
+    <Link href={`/app/${slug}/results`} className={buttonClasses({ variant: "ghost", size: "sm", className: "-ml-2.5 self-start text-ink-2" })}>
+      <ArrowLeft aria-hidden="true" />
       Back to Results
     </Link>
   );
@@ -68,7 +68,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <div className="flex flex-col gap-3">
         {back}
-        <h1 className="text-[28px] leading-9 text-ink">
+        <h1 className="heading-page">
           {f.metric.label}: next {f.horizonDays} days
         </h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -76,7 +76,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
           <ValueKind kind="projected" />
           <DemoBadge show={f.isFixture} />
         </div>
-        <dl className="grid gap-x-6 gap-y-1 text-sm text-ink-2 sm:grid-cols-2">
+        <dl className="grid gap-x-6 gap-y-1 text-ui text-ink-2 sm:grid-cols-2">
           <div className="flex gap-1.5">
             <dt className="text-ink-3">Method:</dt>
             <dd>{FORECAST_METHOD_LABELS[f.method] ?? f.method}</dd>
@@ -119,7 +119,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
       )}
 
       <section aria-labelledby="chart-heading" className="flex flex-col gap-3">
-        <h2 id="chart-heading" className="text-xl font-semibold text-ink">
+        <h2 id="chart-heading" className="heading-section">
           History and projection
         </h2>
         <LineChart
@@ -138,11 +138,11 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
         </Definition>
       </section>
 
-      <section aria-labelledby="read-heading" className="flex flex-col gap-2">
-        <h2 id="read-heading" className="text-xl font-semibold text-ink">
+      <section aria-labelledby="read-heading" className="flex flex-col gap-3">
+        <h2 id="read-heading" className="heading-section">
           How to read this
         </h2>
-        <ul className="list-disc space-y-1.5 pl-5 leading-relaxed text-ink-2">
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-2">
           <li>The solid line is what really happened (observed). The dashed line is a projection, not a promise.</li>
           {calibrated ? (
             <>
@@ -159,7 +159,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
 
       {f.assumptions.length > 0 || f.warnings.length > 0 ? (
         <section aria-labelledby="assumptions-heading" className="flex flex-col gap-3">
-          <h2 id="assumptions-heading" className="text-xl font-semibold text-ink">
+          <h2 id="assumptions-heading" className="heading-section">
             Assumptions and warnings
           </h2>
           {f.warnings.length > 0 ? (
@@ -172,7 +172,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
             </Callout>
           ) : null}
           {f.assumptions.length > 0 ? (
-            <ul className="list-disc space-y-1 pl-5 leading-relaxed text-ink-2">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-ink-2">
               {f.assumptions.map((a) => (
                 <li key={a}>{a}</li>
               ))}
@@ -183,34 +183,30 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
 
       <BacktestSection backtest={backtest} fmt={fmt} />
 
-      <section aria-labelledby="coverage-heading" className="flex flex-col gap-2">
-        <h2 id="coverage-heading" className="text-xl font-semibold text-ink">
+      <section aria-labelledby="coverage-heading" className="flex flex-col gap-3">
+        <h2 id="coverage-heading" className="heading-section">
           Held-out check
         </h2>
         {cal.heldOutCount > 0 && (cal.heldOutCoverage80 !== null || cal.heldOutCoverage95 !== null) ? (
           <>
-            <p className="leading-relaxed text-ink-2">
+            <p className="text-sm text-ink-2">
               We hid the most recent {formatNumber(cal.heldOutCount)} predictions from the calibration and checked how often the real value fell inside the range.
             </p>
-            <dl className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[var(--radius)] border border-line bg-surface p-4">
-                <dt className="text-sm text-ink-2">80% range contained the actual value</dt>
-                <dd className="num-serif text-[28px] leading-8 tabular-nums text-ink">
-                  {cal.heldOutCoverage80 !== null ? formatPercent(cal.heldOutCoverage80) : "—"}
-                </dd>
-                <dd className="text-sm text-ink-3">Target: 80%</dd>
-              </div>
-              <div className="rounded-[var(--radius)] border border-line bg-surface p-4">
-                <dt className="text-sm text-ink-2">95% range contained the actual value</dt>
-                <dd className="num-serif text-[28px] leading-8 tabular-nums text-ink">
-                  {cal.heldOutCoverage95 !== null ? formatPercent(cal.heldOutCoverage95) : "—"}
-                </dd>
-                <dd className="text-sm text-ink-3">Target: 95%</dd>
-              </div>
-            </dl>
+            <StatGroup className="lg:grid-cols-2">
+              <Stat
+                label="80% range contained the actual value"
+                value={cal.heldOutCoverage80 !== null ? formatPercent(cal.heldOutCoverage80) : "—"}
+                sublabel="Target: 80%"
+              />
+              <Stat
+                label="95% range contained the actual value"
+                value={cal.heldOutCoverage95 !== null ? formatPercent(cal.heldOutCoverage95) : "—"}
+                sublabel="Target: 95%"
+              />
+            </StatGroup>
           </>
         ) : (
-          <p className="text-ink-2">{cal.reason ?? "Not enough history to hold any days back for checking yet."}</p>
+          <p className="text-sm text-ink-2">{cal.reason ?? "Not enough history to hold any days back for checking yet."}</p>
         )}
         {cal.residualCounts.length > 0 ? (
           <Definition summary="Technical details">
@@ -250,20 +246,20 @@ function BacktestSection({ backtest, fmt }: { backtest: BacktestResult | null; f
   const reasons = backtest ? [...new Set(backtest.byHorizon.flatMap((h) => [h.wape.reason, h.baseline.wape.reason]).filter((r): r is string => Boolean(r)))] : [];
   return (
     <section aria-labelledby="backtest-heading" className="flex flex-col gap-3">
-      <h2 id="backtest-heading" className="text-xl font-semibold text-ink">
+      <h2 id="backtest-heading" className="heading-section">
         How accurate was this method on past data?
       </h2>
       {!backtest ? (
-        <p className="text-ink-2">No backtest yet — there isn&apos;t enough history to test the method on past days.</p>
+        <p className="text-sm text-ink-2">No backtest yet — there isn&apos;t enough history to test the method on past days.</p>
       ) : (
         <>
-          <p className="leading-relaxed text-ink-2">
+          <p className="text-sm text-ink-2">
             We pretended to stand at {formatNumber(backtest.originDates.length)} past dates, forecast forward using only what was known then, and compared with what
             really happened. The baseline is &ldquo;same weekday last week&rdquo; (seasonal naive), scored on exactly the same days.
           </p>
           <DataTable caption="Backtest accuracy by forecast length, compared with the seasonal-naive baseline" columns={columns} rows={backtest.byHorizon} rowKey={(r) => String(r.horizon)} />
           {reasons.length > 0 ? (
-            <ul className="list-disc pl-5 text-sm text-ink-3">
+            <ul className="list-disc pl-5 text-xs text-ink-3">
               {reasons.map((r) => (
                 <li key={r}>{r}</li>
               ))}
@@ -271,7 +267,7 @@ function BacktestSection({ backtest, fmt }: { backtest: BacktestResult | null; f
           ) : null}
           <Definition summary="What MAE and WAPE mean">
             <p>
-              <strong>MAE</strong> (mean absolute error) is the average size of a daily miss, in the metric&apos;s own units. <strong>WAPE</strong> (weighted
+              <strong className="font-semibold">MAE</strong> (mean absolute error) is the average size of a daily miss, in the metric&apos;s own units. <strong className="font-semibold">WAPE</strong> (weighted
               absolute percentage error) is total misses divided by the total actual value. Lower is better for both.
             </p>
           </Definition>

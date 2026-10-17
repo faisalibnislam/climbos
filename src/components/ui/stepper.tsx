@@ -45,7 +45,7 @@ export function StepList({ steps, className }: { steps: StepItem[]; className?: 
                 <CircleX className="size-6 fill-red-800 text-white" />
               ) : s.status === "running" ? (
                 <span className="grid size-6 place-items-center rounded-full bg-brand-100 text-brand-800">
-                  <Spinner className="text-[15px]" />
+                  <Spinner className="text-base" />
                 </span>
               ) : (
                 <Circle className="size-6 text-line-strong" />

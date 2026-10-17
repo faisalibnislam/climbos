@@ -88,8 +88,8 @@ export function CommandPalette({ slug }: { slug: string }) {
   if (!open) return null;
   const clamp = Math.min(active, Math.max(0, commands.length - 1));
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 px-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
-      <div role="dialog" aria-modal="true" aria-label="Ask or search" className="w-full max-w-lg overflow-hidden rounded-xl border border-line bg-surface shadow-lg" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[rgb(26_29_27/0.42)] px-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
+      <div role="dialog" aria-modal="true" aria-label="Ask or search" className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-surface shadow-lg" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search className="size-4 text-ink-3" aria-hidden="true" />
           <input
@@ -117,17 +117,17 @@ export function CommandPalette({ slug }: { slug: string }) {
             aria-expanded="true"
             aria-controls="palette-list"
             aria-activedescendant={commands[clamp] ? `cmd-${commands[clamp].id}` : undefined}
-            className="h-12 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
+            className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
           />
         </div>
-        <ul id="palette-list" role="listbox" className="max-h-80 overflow-y-auto p-1.5">
+        <ul id="palette-list" role="listbox" className="max-h-80 overflow-y-auto p-1">
           {commands.map((c, i) => (
             <li key={c.id} id={`cmd-${c.id}`} role="option" aria-selected={i === clamp}>
               <button
                 type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={c.run}
-                className={cn("flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px]", i === clamp ? "bg-surface-2 text-ink" : "text-ink-2")}
+                className={cn("flex min-h-8 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-ui", i === clamp ? "bg-surface-2 text-ink" : "text-ink-2")}
               >
                 <c.icon className={cn("size-4 shrink-0", c.id === "ask" ? "text-brand-800" : "text-ink-3")} aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{c.label}</span>

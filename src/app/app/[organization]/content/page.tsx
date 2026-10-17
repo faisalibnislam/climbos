@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { Palette } from "lucide-react";
-import { buttonClasses } from "@/components/ui";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
+import { Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
+import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { AdsPanel } from "@/components/app/content/Campaigns";
 import { ContentCalendar } from "@/components/app/content/ContentCalendar";
 import { ContentList, FilterChips, filterKeyFromParam } from "@/components/app/content/ContentList";
@@ -18,19 +18,22 @@ type Tab = (typeof TABS)[number];
 export default function ContentPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[28px] leading-9 text-ink">Content</h1>
-          <p className="max-w-2xl text-[15px] leading-relaxed text-ink-3">Everything your AI team has created. Nothing is posted, sent or spent until you approve it.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/studio/${slug}/new`} className={buttonClasses({ variant: "secondary" })}>
-            <Palette className="size-[18px]" aria-hidden="true" /> Design studio
-          </Link>
-          <CreateContentDialog slug={slug} />
-        </div>
-      </header>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        section="content"
+        title="Content"
+        intro="Everything your AI team has created. Nothing is posted, sent or spent until you approve it."
+        actions={
+          <>
+            <Button asChild variant="secondary">
+              <Link href={`/studio/${slug}/new`}>
+                <Palette aria-hidden="true" /> Design studio
+              </Link>
+            </Button>
+            <CreateContentDialog slug={slug} />
+          </>
+        }
+      />
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <ContentTabs slug={slug} />
       </Suspense>
@@ -67,17 +70,17 @@ function ContentTabs({ slug }: { slug: string }) {
         <TabsTrigger value="calendar">Calendar</TabsTrigger>
         <TabsTrigger value="ads">Ads</TabsTrigger>
       </TabsList>
-      <TabsContent value="list" className="mt-5 flex flex-col gap-5">
+      <TabsContent value="list" className="flex flex-col gap-4">
         <h2 className="sr-only">Content list</h2>
         <FilterChips value={filterKey} onChange={(k) => setParams({ status: k === "problems" ? "uncertain" : k })} />
         <ContentList slug={slug} filterKey={filterKey} />
       </TabsContent>
-      <TabsContent value="calendar" className="mt-5">
+      <TabsContent value="calendar">
         <SectionBoundary label="the calendar">
           <ContentCalendar slug={slug} />
         </SectionBoundary>
       </TabsContent>
-      <TabsContent value="ads" className="mt-5">
+      <TabsContent value="ads">
         <SectionBoundary label="your ad campaigns">
           <AdsPanel slug={slug} />
         </SectionBoundary>

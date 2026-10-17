@@ -2,7 +2,7 @@
 
 import { compareScenarios, simulateFunnel, type FunnelInput, type FunnelResult } from "@shared/forecasting";
 import { useMemo, useState } from "react";
-import { Callout, Field, Input, Select } from "@/components/ui";
+import { Callout, Field, Input, Select, Table, TableFrame, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { formatPercent } from "./format";
 import { Definition, ValueKind } from "./Provenance";
@@ -90,8 +90,8 @@ function ScenarioInputs({
     />
   );
   return (
-    <fieldset className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-      <legend className="px-1 font-semibold text-ink">{name}</legend>
+    <fieldset className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+      <legend className="heading-card px-1">{name}</legend>
       <Field label="Website visits in one month" error={errors.visits}>
         {input("visits", { step: "1" })}
       </Field>
@@ -153,10 +153,10 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
   return (
     <section aria-labelledby="scenario-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="scenario-heading" className="flex flex-wrap items-center gap-2 text-xl font-semibold text-ink">
+        <h2 id="scenario-heading" className="heading-section flex flex-wrap items-center gap-2">
           Scenario calculator <ValueKind kind="assumption" />
         </h2>
-        <p className="mt-1 text-ink-2">
+        <p className="mt-0.5 text-sm text-ink-3">
           No history needed. Type in your own numbers and compare two &ldquo;what if&rdquo; scenarios. This is plain arithmetic on your assumptions — not a
           forecast — so there&apos;s no likely range.
         </p>
@@ -183,34 +183,26 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
       </div>
 
       <div aria-live="polite" className="flex flex-col gap-3">
-        <div className="w-full overflow-x-auto rounded-[var(--radius)] border border-line bg-surface">
-          <table className="w-full border-collapse text-left text-[0.95rem]">
-            <caption className="px-4 pt-3 text-left text-sm font-medium text-ink-2">Scenario results (assumption-based, {currency})</caption>
-            <thead>
-              <tr className="border-b border-line text-sm text-ink-2">
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Result
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">
-                  Scenario A
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">
-                  Scenario B
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">
-                  Difference (B − A)
-                </th>
+        <TableFrame>
+          <Table>
+            <caption className="heading-card px-4 pb-1 pt-3 text-left">Scenario results (assumption-based, {currency})</caption>
+            <THead>
+              <tr>
+                <Th>Result</Th>
+                <Th numeric>Scenario A</Th>
+                <Th numeric>Scenario B</Th>
+                <Th numeric>Difference (B − A)</Th>
               </tr>
-            </thead>
-            <tbody>
+            </THead>
+            <TBody>
               {rows.map((row, i) => (
-                <tr key={row.label} className="border-b border-line last:border-b-0">
-                  <th scope="row" className="px-4 py-3 font-medium text-ink">
+                <Tr key={row.label}>
+                  <th scope="row" className="h-11 px-4 py-2 text-left align-middle font-medium text-ink">
                     {row.label}
                   </th>
-                  <td className="px-4 py-3 text-right tabular-nums">{ra.result ? row.get(ra.result) : "Check inputs"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{rb.result ? row.get(rb.result) : "Check inputs"}</td>
-                  <td className="px-4 py-3 text-right font-medium tabular-nums">
+                  <Td numeric>{ra.result ? row.get(ra.result) : "Check inputs"}</Td>
+                  <Td numeric>{rb.result ? row.get(rb.result) : "Check inputs"}</Td>
+                  <Td numeric className="font-medium">
                     {cmp
                       ? i === 0
                         ? count(cmp.deltaNewPayingAccounts, true)
@@ -218,12 +210,12 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
                           ? money(cmp.deltaNewCohortMrrAtMaturation, currency, true)
                           : money(cmp.deltaExpectedMrrAtHorizon, currency, true)
                       : "—"}
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </Table>
+        </TableFrame>
         {cmp ? (
           <p className="text-sm text-ink-2">
             {cmp.relativeMrrChange === null

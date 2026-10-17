@@ -5,6 +5,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Spinner } from "./spinner";
 import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button-styles";
+import { Tooltip } from "./menu";
 
 export type { ButtonSize, ButtonVariant };
 
@@ -54,19 +55,26 @@ export interface IconButtonProps extends Omit<ButtonProps, "children" | "loading
   /** Required: icon-only buttons must have an accessible name. */
   "aria-label": string;
   icon: ReactNode;
+  /** Hover/focus hint. Defaults to the aria-label; pass `false` to turn it off (e.g. inside a menu trigger that already explains itself). */
+  tooltip?: ReactNode | false;
 }
 
-/** Square icon-only button (44×44 at md). `aria-label` is required. */
+/**
+ * Square icon-only button, same heights as Button (32/36/40). `aria-label` is
+ * required and doubles as a hover/focus tooltip so icons are never a guess.
+ */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { icon, size = "md", variant = "ghost", className, ...props },
+  { icon, size = "md", variant = "ghost", className, tooltip, ...props },
   ref,
 ) {
-  const square = size === "sm" ? "w-9 px-0" : size === "lg" ? "w-13 px-0" : "w-11 px-0";
-  return (
+  const square = size === "sm" ? "w-8 px-0" : size === "lg" ? "w-10 px-0" : "w-9 px-0";
+  const button = (
     <Button ref={ref} size={size} variant={variant} className={cn(square, className)} {...props}>
       <span aria-hidden="true" className="inline-flex">
         {icon}
       </span>
     </Button>
   );
+  if (tooltip === false) return button;
+  return <Tooltip content={tooltip ?? props["aria-label"]}>{button}</Tooltip>;
 });

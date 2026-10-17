@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { newId } from "@shared/design/ops";
 import type { DesignDoc } from "@shared/design/types";
+import { Button, IconButton, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import "../design-fonts.css";
 import { DesignThumbnail, type AssetResolver } from "../DesignRenderer";
 import { EditorCanvas } from "./Canvas";
+import { Divider } from "./controls";
 import { PanelBody, PANELS, type PanelKey, type UploadedAsset } from "./Panels";
 import { Toolbar } from "./Toolbar";
 import { duplicatePage, useEditor, withNewIds } from "./useEditor";
@@ -115,37 +117,31 @@ export function DesignEditor({
     <div className="flex h-dvh flex-col bg-surface-2 text-ink">
       {/* Top bar */}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
-        <Link href={backHref} className="inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">
-          <ArrowLeft className="size-4" aria-hidden="true" /> Back
-        </Link>
-        <h1 className="ml-1 truncate font-sans text-base font-semibold tracking-normal">{title}</h1>
+        <Button asChild variant="ghost" size="sm" className="text-ink-2 hover:text-ink">
+          <Link href={backHref}>
+            <ArrowLeft aria-hidden="true" /> Back
+          </Link>
+        </Button>
+        <h1 className="heading-section ml-1 truncate">{title}</h1>
         <span className="text-xs text-ink-3" role="status">
           {saveStatus}
         </span>
         <div className="ml-auto flex items-center gap-1">
-          <button type="button" onClick={() => dispatch({ type: "undo" })} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo" className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2 disabled:opacity-30">
-            <Undo2 className="size-4" aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => dispatch({ type: "redo" })} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo" className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2 disabled:opacity-30">
-            <Redo2 className="size-4" aria-hidden="true" />
-          </button>
-          <span aria-hidden="true" className="mx-1 h-6 w-px bg-line" />
-          <button type="button" onClick={() => dispatch({ type: "zoom", zoom: Math.max(0.1, (state.zoom || 0.5) - 0.1) })} title="Zoom out" aria-label="Zoom out" className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2">
-            <Minus className="size-4" aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => dispatch({ type: "zoom", zoom: 0 })} title="Fit to screen" className="h-9 min-w-14 rounded-md px-2 text-xs font-medium text-ink-2 hover:bg-surface-2">
-            {zoomPct ? `${zoomPct}%` : "Fit"}
-          </button>
-          <button type="button" onClick={() => dispatch({ type: "zoom", zoom: Math.min(3, (state.zoom || 0.5) + 0.1) })} title="Zoom in" aria-label="Zoom in" className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2">
-            <Plus className="size-4" aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => dispatch({ type: "zoom", zoom: 0 })} title="Fit" aria-label="Fit to screen" className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2">
-            <Maximize2 className="size-4" aria-hidden="true" />
-          </button>
+          <IconButton size="sm" aria-label="Undo" tooltip="Undo (⌘Z)" icon={<Undo2 />} onClick={() => dispatch({ type: "undo" })} disabled={!canUndo} className="text-ink-2 hover:text-ink" />
+          <IconButton size="sm" aria-label="Redo" tooltip="Redo (⇧⌘Z)" icon={<Redo2 />} onClick={() => dispatch({ type: "redo" })} disabled={!canRedo} className="text-ink-2 hover:text-ink" />
+          <Divider />
+          <IconButton size="sm" aria-label="Zoom out" icon={<Minus />} onClick={() => dispatch({ type: "zoom", zoom: Math.max(0.1, (state.zoom || 0.5) - 0.1) })} className="text-ink-2 hover:text-ink" />
+          <Tooltip content="Fit to screen">
+            <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "zoom", zoom: 0 })} className="min-w-14 px-2 tabular-nums text-ink-2 hover:text-ink">
+              {zoomPct ? `${zoomPct}%` : "Fit"}
+            </Button>
+          </Tooltip>
+          <IconButton size="sm" aria-label="Zoom in" icon={<Plus />} onClick={() => dispatch({ type: "zoom", zoom: Math.min(3, (state.zoom || 0.5) + 0.1) })} className="text-ink-2 hover:text-ink" />
+          <IconButton size="sm" aria-label="Fit to screen" icon={<Maximize2 />} onClick={() => dispatch({ type: "zoom", zoom: 0 })} className="text-ink-2 hover:text-ink" />
           {onExport ? (
-            <button type="button" onClick={() => onExport(committed, pageIndex)} className="ml-2 inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-800 px-3.5 text-sm font-medium text-white hover:bg-brand-900">
-              <Download className="size-4" aria-hidden="true" /> Download
-            </button>
+            <Button size="sm" onClick={() => onExport(committed, pageIndex)} className="ml-2">
+              <Download aria-hidden="true" /> Download
+            </Button>
           ) : null}
         </div>
       </header>
@@ -159,7 +155,7 @@ export function DesignEditor({
               type="button"
               onClick={() => setPanel(panel === p.key ? null : p.key)}
               aria-pressed={panel === p.key}
-              className={cn("flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] font-medium", panel === p.key ? "bg-brand-50 text-brand-900" : "text-ink-3 hover:bg-surface-2 hover:text-ink")}
+              className={cn("flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-2xs font-medium transition-colors", panel === p.key ? "bg-brand-50 text-brand-900" : "text-ink-3 hover:bg-surface-2 hover:text-ink")}
             >
               <p.icon className="size-5" aria-hidden="true" />
               {p.label}
@@ -188,37 +184,48 @@ export function DesignEditor({
                 onClick={() => dispatch({ type: "page", pageId: p.id })}
                 aria-current={p.id === page.id}
                 aria-label={`Page ${i + 1}`}
-                className={cn("relative shrink-0 overflow-hidden rounded-md border-2", p.id === page.id ? "border-brand-600" : "border-transparent hover:border-line-strong")}
+                className={cn("relative shrink-0 overflow-hidden rounded-lg border-2 transition-colors", p.id === page.id ? "border-brand-600" : "border-transparent hover:border-line-strong")}
               >
                 <DesignThumbnail doc={doc} pageIndex={i} width={Math.round((56 * doc.width) / doc.height)} resolve={resolve} />
-                <span className="absolute bottom-0.5 left-1 rounded bg-black/60 px-1 text-[10px] font-medium text-white">{i + 1}</span>
+                <span className="absolute bottom-1 left-1 rounded-sm bg-ink/70 px-1 text-2xs font-medium text-white">{i + 1}</span>
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() => {
-                const blank = { id: newId("p"), background: { kind: "solid" as const, color: "brand:light" }, layers: [] };
-                apply([{ op: "add_page", page: blank, index: pageIndex + 1 }]);
-                dispatch({ type: "page", pageId: blank.id });
-              }}
+            <Tooltip content="Add page">
+              <button
+                type="button"
+                onClick={() => {
+                  const blank = { id: newId("p"), background: { kind: "solid" as const, color: "brand:light" }, layers: [] };
+                  apply([{ op: "add_page", page: blank, index: pageIndex + 1 }]);
+                  dispatch({ type: "page", pageId: blank.id });
+                }}
+                disabled={doc.pages.length >= 20}
+                className="grid h-14 w-12 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-ink-3 transition-colors hover:border-brand-600 hover:bg-surface-2 hover:text-ink disabled:opacity-55"
+                aria-label="Add page"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <Divider />
+            <IconButton
+              size="sm"
+              aria-label="Duplicate page"
+              icon={<Copy />}
               disabled={doc.pages.length >= 20}
-              className="grid h-14 w-12 shrink-0 place-items-center rounded-md border border-dashed border-line-strong text-ink-3 hover:border-brand-600 hover:text-ink disabled:opacity-40"
-              title="Add page"
-              aria-label="Add page"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-            </button>
-            <span aria-hidden="true" className="mx-1 h-8 w-px bg-line" />
-            <button type="button" title="Duplicate page" aria-label="Duplicate page" disabled={doc.pages.length >= 20} onClick={() => {
-              const copy = duplicatePage(page);
-              apply([{ op: "add_page", page: copy, index: pageIndex + 1 }]);
-              dispatch({ type: "page", pageId: copy.id });
-            }} className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-surface-2 disabled:opacity-30">
-              <Copy className="size-4" aria-hidden="true" />
-            </button>
-            <button type="button" title="Delete page" aria-label="Delete page" disabled={doc.pages.length <= 1} onClick={() => apply([{ op: "remove_page", pageId: page.id }])} className="grid size-9 place-items-center rounded-md text-ink-2 hover:bg-red-100 hover:text-red-800 disabled:opacity-30">
-              <Trash2 className="size-4" aria-hidden="true" />
-            </button>
+              onClick={() => {
+                const copy = duplicatePage(page);
+                apply([{ op: "add_page", page: copy, index: pageIndex + 1 }]);
+                dispatch({ type: "page", pageId: copy.id });
+              }}
+              className="text-ink-2 hover:text-ink"
+            />
+            <IconButton
+              size="sm"
+              aria-label="Delete page"
+              icon={<Trash2 />}
+              disabled={doc.pages.length <= 1}
+              onClick={() => apply([{ op: "remove_page", pageId: page.id }])}
+              className="text-ink-2 hover:bg-red-100 hover:text-red-800"
+            />
             <span className="ml-auto text-xs text-ink-3">
               Page {pageIndex + 1} of {doc.pages.length} · {doc.width}×{doc.height}
             </span>

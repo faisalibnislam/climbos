@@ -30,7 +30,7 @@ export function FlaggedClaims({ claims }: { claims: string[] }) {
 
 export function VersionHistory({ artifact, myUserId, now }: { artifact: ArtifactView; myUserId: string | null; now: number | null }) {
   const [open, setOpen] = useState<string | null>(null);
-  if (artifact.versions.length === 0) return <p className="text-ink-3">No versions yet.</p>;
+  if (artifact.versions.length === 0) return <p className="text-sm text-ink-3">No versions yet.</p>;
   return (
     <ol className="flex flex-col divide-y divide-line">
       {artifact.versions.map((v, i) => {
@@ -40,11 +40,11 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
           <li key={v.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex flex-wrap items-center gap-2 font-medium text-ink">
+                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
                   Version {v.version}
                   {i === 0 ? <Badge tone="green">Current</Badge> : null}
                 </span>
-                <span className="text-sm text-ink-3">
+                <span className="text-xs text-ink-3">
                   {v.editedByRole ? (
                     <>
                       Written by <RoleName role={v.editedByRole} />
@@ -65,13 +65,13 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
                 </span>
               </div>
               {i > 0 ? (
-                <Button size="sm" variant="ghost" aria-expanded={isOpen} aria-controls={panelId} onClick={() => setOpen(isOpen ? null : v.id)} className="min-h-11">
+                <Button size="sm" variant="ghost" aria-expanded={isOpen} aria-controls={panelId} onClick={() => setOpen(isOpen ? null : v.id)}>
                   {isOpen ? "Hide text" : "View text"}
                 </Button>
               ) : null}
             </div>
             {isOpen ? (
-              <div id={panelId} className="rounded-[8px] border border-line bg-surface-2 p-3 text-[0.95rem] leading-relaxed text-ink-2">
+              <div id={panelId} className="rounded-lg border border-line bg-surface-2 p-3 text-sm text-ink-2">
                 {v.headline ? <p className="font-semibold text-ink">{v.headline}</p> : null}
                 <p className="whitespace-pre-wrap break-words">{v.body}</p>
                 {v.hashtags.length ? <p className="mt-2 break-words text-ink-3">{v.hashtags.map((t) => `#${t.replace(/^#/, "")}`).join(" ")}</p> : null}
@@ -96,7 +96,7 @@ const FACT_STATE: Record<string, { label: string; tone: Tone }> = {
 
 export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
   if (facts.length === 0) {
-    return <p className="text-[0.95rem] text-ink-3">This draft doesn&apos;t rely on specific facts about your business.</p>;
+    return <p className="text-sm text-ink-3">This draft doesn&apos;t rely on specific facts about your business.</p>;
   }
   const unreviewed = facts.filter((f) => f.reviewState === "needs_review" || f.reviewState === "rejected").length;
   return (
@@ -111,7 +111,7 @@ export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
           const s = FACT_STATE[f.reviewState] ?? { label: f.reviewState, tone: "neutral" as Tone };
           return (
             <li key={f.id} className="flex flex-col gap-1.5">
-              <span className="text-[0.95rem] leading-relaxed text-ink">{f.statement}</span>
+              <span className="text-sm text-ink">{f.statement}</span>
               <Badge tone={s.tone} className="self-start">
                 {s.label}
               </Badge>
@@ -149,9 +149,9 @@ export function ApprovalsList({ approvals, now }: { approvals: ArtifactView["app
           <li key={a.id} className="flex flex-col gap-1">
             <span className="flex flex-wrap items-center gap-2">
               <Badge tone={l.tone}>{l.label}</Badge>
-              {a.decidedAt && now ? <span className="text-sm text-ink-3">{relativeTime(a.decidedAt, now)}</span> : null}
+              {a.decidedAt && now ? <span className="text-xs text-ink-3">{relativeTime(a.decidedAt, now)}</span> : null}
             </span>
-            {l.detail ? <span className="text-sm text-ink-3">{l.detail}</span> : null}
+            {l.detail ? <span className="text-xs text-ink-3">{l.detail}</span> : null}
           </li>
         );
       })}
@@ -180,7 +180,7 @@ const PROVIDER_LABEL: Record<string, string> = {
 
 export function ReceiptsTimeline({ receipts, now }: { receipts: ArtifactView["receipts"]; now: number | null }) {
   if (receipts.length === 0) {
-    return <p className="text-[0.95rem] text-ink-3">Nothing has been sent or exported yet. Every attempt to publish or export shows up here.</p>;
+    return <p className="text-sm text-ink-3">Nothing has been sent or exported yet. Every attempt to publish or export shows up here.</p>;
   }
   return (
     <ol className="flex flex-col gap-4">
@@ -190,12 +190,12 @@ export function ReceiptsTimeline({ receipts, now }: { receipts: ArtifactView["re
           <li key={r.id} className="flex gap-3">
             <meta.Icon aria-hidden="true" className={cn("mt-0.5 size-5 shrink-0", meta.cls)} />
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className={cn("font-semibold", meta.cls)}>{meta.label}</span>
-              <span className="text-sm text-ink-2">
+              <span className={cn("text-sm font-semibold", meta.cls)}>{meta.label}</span>
+              <span className="text-xs text-ink-3">
                 {PROVIDER_LABEL[r.provider] ?? channelLabel(r.provider)}
                 {now ? ` · ${formatDateTime(r.createdAt)}` : ""}
               </span>
-              <span className="break-words text-[0.95rem] text-ink-2">{r.summary}</span>
+              <span className="break-words text-sm text-ink-2">{r.summary}</span>
               {r.externalId ? <span className="break-all text-xs text-ink-3">Platform reference: {r.externalId}</span> : null}
             </div>
           </li>

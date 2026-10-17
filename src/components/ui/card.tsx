@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-/** Surface container with a restrained border. Compose with CardHeader/CardContent/CardFooter. */
+/** White panel with a hairline border and 8px corners (no shadow). Compose with CardHeader/CardContent/CardFooter. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("rounded-xl border border-line bg-surface", className)} {...props} />
@@ -20,12 +20,12 @@ export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
 
 /** Card heading. Choose `as` to fit the page's heading order. */
 export function CardTitle({ as: Tag = "h3", className, ...props }: CardTitleProps) {
-  return <Tag className={cn("text-base font-semibold leading-snug tracking-tight text-ink", className)} {...props} />;
+  return <Tag className={cn("heading-card", className)} {...props} />;
 }
 
 /** Secondary text under a card title. */
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm leading-relaxed text-ink-3", className)} {...props} />;
+  return <p className={cn("text-ui text-ink-3", className)} {...props} />;
 }
 
 /** Main card body. */

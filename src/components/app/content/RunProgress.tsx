@@ -98,7 +98,7 @@ export function RunProgress({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <H className="font-semibold text-ink">{run.title}</H>
+        <H className="heading-card">{run.title}</H>
         <span className="flex flex-wrap gap-2">
           {run.isFixture ? <Badge tone="violet">Demo: simulated</Badge> : null}
           <Badge tone={RUN_STATUS_TONE[run.status] ?? "neutral"}>{label}</Badge>

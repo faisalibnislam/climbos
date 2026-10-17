@@ -1,5 +1,18 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * tailwind-merge must know the design system's custom scale, or it reads
+ * `text-ui` / `text-2xs` as colours and drops `text-white` (and vice versa).
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: { text: ["2xs", "ui"] },
+    classGroups: {
+      "font-size": ["heading-page", "heading-section", "heading-card", "heading-dialog", "text-overline", "metric"],
+    },
+  },
+});
 
 /** Merge class names, resolving Tailwind conflicts (later classes win). */
 export function cn(...inputs: ClassValue[]): string {

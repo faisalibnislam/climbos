@@ -5,9 +5,10 @@ import { api } from "@convex/_generated/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, Skeleton } from "@/components/ui";
+import { Badge, Button, Callout, IconButton, Skeleton, SocialIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { ArtifactStatus, CHANNEL_ICONS, SectionBoundary, browserTimeZone, channelLabel, useNow } from "./shared";
+import { Segmented } from "@/components/ui/segmented";
+import { ArtifactStatus, SectionBoundary, browserTimeZone, channelLabel, useNow } from "./shared";
 
 type View = "week" | "month";
 
@@ -78,35 +79,25 @@ function CalendarInner({ slug, now }: { slug: string; now: number }) {
     <section aria-labelledby="calendar-heading" className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="secondary" className="w-11 px-0" aria-label={view === "week" ? "Previous week" : "Previous month"} onClick={() => shift(-1)}>
-            <ChevronLeft aria-hidden="true" />
-          </Button>
-          <h2 id="calendar-heading" className="min-w-0 flex-1 text-center text-lg font-semibold text-ink sm:min-w-56" aria-live="polite">
+          <IconButton variant="secondary" aria-label={view === "week" ? "Previous week" : "Previous month"} icon={<ChevronLeft />} onClick={() => shift(-1)} />
+          <h2 id="calendar-heading" className="heading-section min-w-0 flex-1 text-center sm:min-w-56" aria-live="polite">
             {range.title}
           </h2>
-          <Button variant="secondary" className="w-11 px-0" aria-label={view === "week" ? "Next week" : "Next month"} onClick={() => shift(1)}>
-            <ChevronRight aria-hidden="true" />
-          </Button>
+          <IconButton variant="secondary" aria-label={view === "week" ? "Next week" : "Next month"} icon={<ChevronRight />} onClick={() => shift(1)} />
           <Button variant="ghost" onClick={() => setAnchor(startOfDay(new Date(now)))}>
             Today
           </Button>
         </div>
-        <div role="group" aria-label="Calendar view" className="inline-flex rounded-[8px] border border-line bg-surface-2 p-1">
-          {(["week", "month"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => setView(v)}
-              className={cn(
-                "min-h-10 flex-1 rounded-[6px] px-4 text-[0.95rem] font-medium text-ink-2",
-                view === v && "bg-surface font-semibold text-ink shadow-sm",
-              )}
-            >
-              {v === "week" ? "Week" : "Month"}
-            </button>
-          ))}
-        </div>
+        <Segmented<View>
+          label="Calendar view"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "week", label: "Week" },
+            { value: "month", label: "Month" },
+          ]}
+          className="self-start sm:self-auto"
+        />
       </div>
       <p className="text-sm text-ink-3">
         Times are shown in your time zone ({browserTimeZone()}). “Scheduled in ClimbOS” means ClimbOS will send it then; it isn&apos;t on the platform until the
@@ -159,12 +150,12 @@ function CalendarGrid({
       ) : null}
       <div aria-hidden="true" className="hidden grid-cols-7 gap-px md:grid">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-2 pb-2 text-sm font-semibold text-ink-3">
+          <div key={d} className="px-3 pb-2 text-xs font-medium text-ink-3">
             {d}
           </div>
         ))}
       </div>
-      <ol className="flex flex-col gap-2 md:grid md:grid-cols-7 md:gap-px md:overflow-hidden md:rounded-[var(--radius)] md:border md:border-line md:bg-line">
+      <ol className="flex flex-col gap-2 md:grid md:grid-cols-7 md:gap-px md:overflow-hidden md:rounded-xl md:border md:border-line md:bg-line">
         {days.map((d) => {
           const k = dayKey(d);
           const list = byDay.get(k) ?? [];
@@ -175,7 +166,7 @@ function CalendarGrid({
             <li
               key={k}
               className={cn(
-                "flex min-w-0 flex-col gap-1.5 rounded-[8px] border border-line bg-surface p-3 md:rounded-none md:border-0",
+                "flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-surface p-3 md:rounded-none md:border-0",
                 view === "month" ? "md:min-h-28" : "md:min-h-56",
                 list.length === 0 && !isToday && "hidden md:flex",
                 outside && "md:bg-surface-2",
@@ -183,9 +174,9 @@ function CalendarGrid({
               )}
               aria-current={isToday ? "date" : undefined}
             >
-              <h3 className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-semibold text-ink md:hidden">{fullDate}</span>
-                <span className={cn("hidden font-semibold md:inline", outside ? "text-ink-3" : "text-ink")}>
+              <h3 className="heading-card flex flex-wrap items-center gap-2">
+                <span className="md:hidden">{fullDate}</span>
+                <span className={cn("hidden md:inline", outside ? "text-ink-3" : "text-ink")}>
                   <span className="sr-only">{fullDate}</span>
                   <span aria-hidden="true">{d.getDate()}</span>
                 </span>
@@ -194,19 +185,18 @@ function CalendarGrid({
               {items === undefined ? (
                 <Skeleton className="h-8 w-full" />
               ) : list.length === 0 ? (
-                <p className="text-sm text-ink-3 md:sr-only">Nothing scheduled.</p>
+                <p className="text-xs text-ink-3 md:sr-only">Nothing scheduled.</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {list.map((it) => {
-                    const Icon = CHANNEL_ICONS[it.channel];
                     return (
                       <li key={it.id}>
                         <Link
                           href={`/app/${slug}/content/${it.id}`}
-                          className="flex min-h-11 flex-col gap-1 rounded-[8px] border border-line bg-surface-2 p-2 text-sm hover:border-brand-700"
+                          className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 p-2 text-ui transition-colors hover:border-brand-700"
                         >
-                          <span className="flex items-center gap-1.5 text-ink-3">
-                            {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
+                          <span className="flex items-center gap-1.5 text-xs text-ink-3">
+                            <SocialIcon network={it.channel} size="xs" />
                             <span>
                               {new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {channelLabel(it.channel)}
                             </span>

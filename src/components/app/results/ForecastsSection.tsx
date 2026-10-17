@@ -52,20 +52,22 @@ export function ForecastsSection({ slug, data }: { slug: string; data: Overview 
   return (
     <section aria-labelledby="forecasts-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="forecasts-heading" className="flex flex-wrap items-center gap-2 text-xl font-semibold text-ink">
+        <h2 id="forecasts-heading" className="heading-section flex flex-wrap items-center gap-2">
           Forecasts <ValueKind kind="projected" />
         </h2>
-        <p className="mt-1 text-ink-2">
+        <p className="mt-0.5 text-sm text-ink-3">
           Statistical projections from your own history. Every forecast is tested against past data first; if the test isn&apos;t convincing, we say so instead of
           showing a range.
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5" aria-describedby="new-forecast-hint">
-        <h3 className="font-semibold text-ink">New forecast</h3>
-        <p id="new-forecast-hint" className="-mt-2 text-sm text-ink-3">
-          Uses all the daily history we have for that number. It takes a few seconds and costs nothing.
-        </p>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5" aria-describedby="new-forecast-hint">
+        <div>
+          <h3 className="heading-card">New forecast</h3>
+          <p id="new-forecast-hint" className="mt-0.5 text-ui text-ink-3">
+            Uses all the daily history we have for that number. It takes a few seconds and costs nothing.
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
           <Field label="What to forecast">
             <Select
@@ -103,20 +105,20 @@ export function ForecastsSection({ slug, data }: { slug: string; data: Overview 
       </form>
 
       {data.forecasts.length === 0 ? (
-        <p className="text-ink-2">No forecasts yet.</p>
+        <p className="text-sm text-ink-3">No forecasts yet.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-lg)] border border-line bg-surface">
+        <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
           {data.forecasts.map((f) => (
             <li key={f.id}>
               <Link
                 href={`/app/${slug}/results/forecasts/${f.id}`}
-                className="flex min-h-16 flex-col gap-1.5 px-5 py-3 hover:bg-surface-2 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-1.5 px-5 py-3 transition-colors hover:bg-surface-2 sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="flex flex-col">
-                  <span className="font-medium text-ink">
+                  <span className="text-sm font-medium text-ink">
                     {METRIC_LABELS[f.metricKey] ?? f.metricKey} · next {f.horizonDays} days
                   </span>
-                  <span className="text-sm text-ink-3">Created {relativeTime(f.createdAt)}</span>
+                  <span className="text-xs text-ink-3">Created {relativeTime(f.createdAt)}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-2">
                   <ForecastStatusBadge status={f.status} />

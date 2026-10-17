@@ -39,9 +39,12 @@ import {
   retentionSpec,
   salesSpec,
   seoSpec,
+  socialCalendarSpec,
   socialSpec,
   strategySpec,
+  type SocialCalendar,
 } from "../shared/agents/specs";
+import { fixtureCalendar } from "../shared/autopilot/fixture";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -287,6 +290,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
+  meta?: { shipped?: boolean | null },
 ): Promise<T> {
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
@@ -342,6 +346,7 @@ async function runAgentTask<T>(
   };
   try {
     const result = await runAgent(spec, input, deps);
+    if (meta) meta.shipped = result.assessment?.ship ?? null;
     return result.output as T;
   } catch (e) {
     if (e instanceof AgentYield) throw e;
@@ -562,6 +567,7 @@ export const createContent = internalAction({
       args.runId,
       async () => {
         const fx = fixtureCtx(job, { channel: args.channel, quantity: args.quantity, request: args.brief });
+        const review: { shipped?: boolean | null } = {};
         let items: ReturnType<typeof socialToArtifacts> = [];
         let posts = 0;
         if (args.job === "content_social") {
@@ -583,8 +589,11 @@ export const createContent = internalAction({
               ctx: fx,
               text: `TASK: Write ${qty} social posts${args.channel ? ` for ${args.channel}` : " across Instagram, Facebook and LinkedIn"} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
             },
+            review,
           );
           out.posts = out.posts.slice(0, qty);
+          // A run for one channel only ever produces posts for that channel.
+          if (args.channel) out.posts = out.posts.map((p) => ({ ...p, channel: args.channel as typeof p.channel }));
           posts = out.posts.length;
           items = socialToArtifacts(out, Date.now());
         } else if (args.job === "content_ads") {
@@ -673,17 +682,71 @@ export const createContent = internalAction({
           await ctx.runMutation(internal.engine.completeStep, { stepId: s.stepId!, output: JSON.stringify(stored ?? null) });
         }
 
-        await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds });
+        const artifactIds = await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds });
         await finish(ctx, args.runId, "verified", {
           output: { artifacts: withImages.length },
           meters: { socialPosts: posts, imageAttempts: attempts, deliveredImages: delivered },
         });
+        // Autopilot runs: attach drafts to their calendar slots and route each (auto vs ask).
+        if (args.job === "content_social") await ctx.runMutation(internal.autopilot.routeDrafts, { runId: args.runId, artifactIds, reviewShipped: review.shipped ?? null });
         if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "done" });
       },
       async () => {
         if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
+        await ctx.runMutation(internal.autopilot.draftingFailed, { runId: args.runId });
       },
       () => ctx.scheduler.runAfter(0, internal.jobs.createContent, args),
+    );
+  },
+});
+
+/** Social autopilot: plan a week of posts (Engine v2 agent, or a deterministic plan for demos). */
+export const planSocialWeek = internalAction({
+  args: { runId: v.id("workflowRuns"), weekOf: v.string(), fromDay: v.number() },
+  handler: async (ctx, args) => {
+    const startedAt = Date.now();
+    const job = await loadContext(ctx, args.runId);
+    if (!job) return;
+    const pc = await ctx.runQuery(internal.autopilot.planningContext, args);
+    if (!pc) return;
+    await guarded(
+      ctx,
+      args.runId,
+      async () => {
+        let plan: SocialCalendar;
+        if (job.run.isFixture || job.run.engine !== "v2") {
+          plan = fixtureCalendar(pc.cadence, pc.fromDay, job.business?.name ?? job.org.name, job.facts.map((f) => f.statement));
+        } else {
+          const cadenceText = Object.entries(pc.cadence).map(([c, n]) => `${c}: ${n}`).join(", ");
+          const days = pc.dates.map((d, i) => `${i + 1} = ${new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })}`).join("; ");
+          plan = await runAgentTask<SocialCalendar>(
+            ctx,
+            job,
+            0,
+            socialCalendarSpec(pc.cadence),
+            agentInput(
+              job,
+              [
+                `Plan the organic social posts for the week of ${pc.dates[0]} (days: ${days}).`,
+                `Exactly this many slots per channel: ${cadenceText}. Use only days ${pc.fromDay} to 7.`,
+                `Consider holidays, seasons and events in this week that matter to this business's customers in its country (time zone ${pc.timezone}).`,
+                pc.postingHours.length ? `The owner prefers posting around these local hours: ${pc.postingHours.join(", ")}.` : "",
+                pc.alwaysAskTopics.length ? `Always-ask topics (flag needsOwner if a slot touches them): ${pc.alwaysAskTopics.join("; ")}.` : "",
+                pc.history ? `WHAT HAPPENED IN RECENT WEEKS (apply it and say how in learningsApplied):\n${pc.history}` : "No history yet: this is the first planned week. Plan it as a deliberate test (two contrasting formats on the main channel) and say so in learningsApplied.",
+                planContext(job),
+              ]
+                .filter(Boolean)
+                .join("\n\n"),
+            ),
+            startedAt,
+            { task: "social_posts", text: "", context: "", ctx: fixtureCtx(job) },
+          );
+        }
+        await ctx.runMutation(internal.autopilot.saveWeekPlan, { runId: args.runId, weekOf: args.weekOf, fromDay: args.fromDay, plan });
+        await finish(ctx, args.runId, "verified", { output: { slots: plan.slots.length } });
+      },
+      undefined,
+      () => ctx.scheduler.runAfter(0, internal.jobs.planSocialWeek, args),
     );
   },
 });

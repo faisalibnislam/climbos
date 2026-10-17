@@ -3,23 +3,34 @@ import type { ReactNode } from "react";
 import {
   ArrowRight,
   Ban,
+  BarChart3,
   ChevronDown,
+  CircleCheck,
   CirclePause,
   ClipboardList,
+  Compass,
   Lock,
+  MessageSquareText,
+  PenTool,
   ReceiptText,
   Scale,
-  ShieldCheck,
-  Wallet,
-  MessageSquareText,
   Search,
-  Compass,
-  PenTool,
-  CircleCheck,
-  BarChart3,
+  ShieldCheck,
   Sparkles,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { buttonClasses } from "@/components/ui/button-styles";
+import { IconTile } from "@/components/ui/icon-tile";
+import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";
+import type { Tone } from "@/components/ui/badge";
+import { RoleAvatar } from "@/components/app/RoleAvatar";
+import { cn, formatUsd } from "@/lib/utils";
+import { CAPABILITIES, CTA, ROLES, STEPS, TRUST, WONT_DO } from "./content";
+import { Container, Section, SectionHeading } from "./layout";
+import { LivePreview } from "./LivePreview";
+import { getPlans, lowestPrice, planLimitLines, RECOMMENDED_PLAN } from "./plans";
+import { RecommendedBadge } from "./pricing";
 
 const ROLE_KEYS: Record<string, string> = {
   creative: "creative_director",
@@ -32,51 +43,51 @@ const ROLE_KEYS: Record<string, string> = {
 
 const STEP_ICONS: LucideIcon[] = [MessageSquareText, Search, Compass, PenTool, CircleCheck, BarChart3];
 const STEP_TONES: Tone[] = ["brand", "violet", "pink", "orange", "green", "teal"];
-import { buttonClasses } from "@/components/ui/button-styles";
-import { IconTile } from "@/components/ui/icon-tile";
-import type { Tone } from "@/components/ui/badge";
-import { RoleAvatar } from "@/components/app/RoleAvatar";
-import { cn, formatUsd } from "@/lib/utils";
-import { CAPABILITIES, CTA, ROLES, STEPS, TRUST, WONT_DO } from "./content";
-import { Container, Section, SectionHeading } from "./layout";
-import { LivePreview } from "./LivePreview";
-import { getPlans, lowestPrice, planLimitLines, RECOMMENDED_PLAN } from "./plans";
 
-/** Landing hero (Apollo-style): a large white panel in a soft frame, serif headline, live preview. */
+/** Networks named in a capability's note, shown as real platform marks (the note text names them). */
+const CAPABILITY_NETWORKS: Record<string, SocialNetwork[]> = {
+  C: ["facebook", "instagram", "linkedin", "x", "tiktok", "pinterest", "youtube"],
+  D: ["google", "facebook", "linkedin"],
+};
+
+/** Inline text link used inside marketing copy. */
+const textLink = "font-medium text-brand-800 underline underline-offset-4 hover:decoration-2";
+
+/** Landing hero: a flat white showcase panel, EB Garamond headline, live preview. */
 export function Hero() {
   return (
-    <section aria-labelledby="hero-heading" className="bg-surface-3/60 px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-5">
-      <div className="rounded-2xl border border-line bg-surface px-4 pb-14 pt-14 sm:pb-20 sm:pt-20">
+    <section aria-labelledby="hero-heading" className="bg-bg p-3 sm:p-5">
+      <div className="rounded-2xl border border-line bg-surface px-4 py-14 sm:py-20">
         <Container className="flex flex-col items-center text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3.5 py-1.5 text-sm font-medium text-ink-2">
+          <p className="inline-flex items-center gap-2 text-overline">
             <span aria-hidden="true" className="size-2 rounded-full bg-sun" />
             Your AI growth team, ready in minutes
           </p>
-          <h1 id="hero-heading" className="mt-6 max-w-3xl text-[2.75rem] leading-[1.02] text-ink sm:text-6xl lg:text-7xl">
+          <h1 id="hero-heading" className="mt-4 max-w-3xl text-5xl text-ink sm:text-6xl lg:text-7xl">
             Tell us your goal. We&apos;ll help you grow.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2 sm:text-xl">
+          <p className="mt-5 max-w-2xl text-lg text-ink-2">
             Ten AI specialists research your business, build the plan, create the work and measure what happens.{" "}
-            <strong className="font-medium text-ink">You approve anything that goes live.</strong>
+            <strong className="font-semibold text-ink">You approve anything that goes live.</strong>
           </p>
           <div className="mt-10 w-full max-w-2xl text-left">
             <LivePreview />
           </div>
-          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] text-ink-2">
+          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink-2">
             {[
               "Nothing posts, sends or spends without your OK",
               "Plans from " + formatUsd(lowestPrice()) + " a month",
               "No sign-up for the preview",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
-                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-pine" />
+                <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
                 {t}
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-[0.95rem] text-ink-2">
+          <p className="mt-6 text-sm text-ink-2">
             Want to look around first?{" "}
-            <Link href={CTA.demo.href} className="font-medium text-ink underline underline-offset-4">
+            <Link href={CTA.demo.href} className={textLink}>
               Try the demo
             </Link>{" "}
             — no account needed.
@@ -97,20 +108,20 @@ export function HowItWorks({ headingId = "how-heading", compact = false }: { hea
         title="From goal to results, in six clear steps"
         intro="You bring the goal and the final say. ClimbOS does the research, the planning, the making and the measuring."
       />
-      <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative rounded-xl border border-line bg-surface p-6 transition hover:border-line-strong">
+          <li key={s.title} className="rounded-xl border border-line bg-surface p-5">
             <span className="flex items-center justify-between">
-              <IconTile icon={STEP_ICONS[i] ?? Sparkles} tone={STEP_TONES[i] ?? "brand"} size="lg" />
-              <span aria-hidden="true" className="text-sm font-extrabold text-ink-3">
+              <IconTile icon={STEP_ICONS[i] ?? Sparkles} tone={STEP_TONES[i] ?? "brand"} />
+              <span aria-hidden="true" className="text-ui font-medium tabular-nums text-ink-3">
                 0{i + 1}
               </span>
             </span>
-            <h3 className="mt-5 text-lg font-bold leading-snug text-ink">
+            <h3 className="mt-4 heading-section">
               <span className="sr-only">Step {i + 1}: </span>
               {s.title}
             </h3>
-            <p className="mt-2 leading-relaxed text-ink-2">{s.body}</p>
+            <p className="mt-1.5 text-sm text-ink-2">{s.body}</p>
           </li>
         ))}
       </ol>
@@ -121,20 +132,20 @@ export function HowItWorks({ headingId = "how-heading", compact = false }: { hea
 /** Ten-role executive team grid. */
 export function TeamGrid({ headingId = "team-heading" }: { headingId?: string }) {
   return (
-    <Section id="team" labelledBy={headingId} className="bg-surface-2/60">
+    <Section id="team" labelledBy={headingId} className="bg-surface">
       <SectionHeading
         id={headingId}
         eyebrow="Your AI executive team"
         title="Ten specialists. One shared brain."
         intro="These specialists collaborate through one central intelligence system, not ten separate chatbots. Every plan includes all ten."
       />
-      <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {ROLES.map((r) => (
           <li key={r.key} className="flex flex-col rounded-xl border border-line bg-surface p-5">
             <RoleAvatar role={ROLE_KEYS[r.key] ?? r.key} size="lg" />
-            <h3 className="mt-4 font-bold leading-snug text-ink">{r.title}</h3>
-            <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink-2">{r.body}</p>
-            {r.note ? <p className="mt-2 text-sm text-ink-3">{r.note}</p> : null}
+            <h3 className="mt-4 heading-section">{r.title}</h3>
+            <p className="mt-1.5 text-sm text-ink-2">{r.body}</p>
+            {r.note ? <p className="mt-2 text-xs text-ink-3">{r.note}</p> : null}
           </li>
         ))}
       </ul>
@@ -152,29 +163,37 @@ export function CapabilityGrid({ headingId = "capabilities-heading" }: { heading
         title="One team for all the growth work"
         intro="Instead of juggling agencies, freelancers and a stack of tools, ClimbOS handles the whole picture — and every piece knows what the others are doing."
       />
-      <ul className="mt-12 grid gap-4 md:grid-cols-2">
-        {CAPABILITIES.map((c) => (
-          <li key={c.letter} className="flex flex-col rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-sm">
-            <div className="flex items-baseline gap-3">
-              <span aria-hidden="true" className="font-display tracking-tight text-xl font-extrabold text-brand-700">
-                {c.letter}
-              </span>
-              <h3 className="text-xl font-semibold text-ink">{c.title}</h3>
-            </div>
-            <p className="mt-1.5 text-ink-2">{c.summary}</p>
-            <ul className="mt-4 grid gap-x-4 gap-y-1.5 text-[0.95rem] text-ink sm:grid-cols-2">
-              {c.items.map((it) => (
-                <li key={it} className="flex items-start gap-2">
-                  <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full bg-brand-600" />
-                  {it}
-                </li>
-              ))}
-            </ul>
-            {c.note ? (
-              <p className="mt-4 rounded-[6px] bg-surface-2 px-3.5 py-2.5 text-sm leading-relaxed text-ink-2">{c.note}</p>
-            ) : null}
-          </li>
-        ))}
+      <ul className="mt-10 grid gap-4 md:grid-cols-2">
+        {CAPABILITIES.map((c) => {
+          const networks = CAPABILITY_NETWORKS[c.letter];
+          return (
+            <li key={c.letter} className="flex flex-col rounded-xl border border-line bg-surface p-5">
+              <div className="flex items-baseline gap-2.5">
+                <span aria-hidden="true" className="heading-section text-brand-700">
+                  {c.letter}
+                </span>
+                <h3 className="heading-section">{c.title}</h3>
+              </div>
+              <p className="mt-1.5 text-sm text-ink-2">{c.summary}</p>
+              <ul className="mt-4 grid gap-x-4 gap-y-1.5 text-sm text-ink sm:grid-cols-2">
+                {c.items.map((it) => (
+                  <li key={it} className="flex items-start gap-2">
+                    <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-brand-600" />
+                    {it}
+                  </li>
+                ))}
+              </ul>
+              {networks ? (
+                <div aria-hidden="true" className="mt-4 flex flex-wrap items-center gap-2.5">
+                  {networks.map((n) => (
+                    <SocialIcon key={n} network={n} size="lg" />
+                  ))}
+                </div>
+              ) : null}
+              {c.note ? <p className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-sm text-ink-2">{c.note}</p> : null}
+            </li>
+          );
+        })}
       </ul>
     </Section>
   );
@@ -182,33 +201,31 @@ export function CapabilityGrid({ headingId = "capabilities-heading" }: { heading
 
 const trustIcons: LucideIcon[] = [ClipboardList, CirclePause, Wallet, Scale, Lock, ReceiptText];
 
-/** "Safe by design" trust section. */
+/** "Safe by design" trust section (the one pine feature section). */
 export function TrustSection({ headingId = "trust-heading" }: { headingId?: string }) {
   return (
     <Section id="safe-by-design" labelledBy={headingId} className="bg-brand-950 text-brand-50">
-      <div className="max-w-2xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-200">Safe by design</p>
-        <h2 id={headingId} className="mt-2 font-display text-[2rem] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[2.6rem]">
-          You stay in charge. Always.
-        </h2>
-        <p className="mt-4 text-lg leading-relaxed text-brand-100">
-          Growth tools shouldn&apos;t feel risky. These rules are built into how ClimbOS works — not settings you have to find.
-        </p>
-      </div>
-      <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <SectionHeading
+        id={headingId}
+        inverse
+        eyebrow="Safe by design"
+        title="You stay in charge. Always."
+        intro="Growth tools shouldn't feel risky. These rules are built into how ClimbOS works — not settings you have to find."
+      />
+      <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TRUST.map((t, i) => {
           const Icon = trustIcons[i] ?? ShieldCheck;
           return (
-            <li key={t.title} className="rounded-[var(--radius-lg)] border border-white/10 bg-white/[0.04] p-6">
-              <Icon aria-hidden="true" className="size-6 text-brand-200" />
-              <h3 className="mt-4 text-lg font-semibold text-white">{t.title}</h3>
-              <p className="mt-2 leading-relaxed text-brand-100">{t.body}</p>
+            <li key={t.title} className="rounded-xl border border-brand-800 bg-brand-900 p-5">
+              <Icon aria-hidden="true" className="size-5 text-brand-200" />
+              <h3 className="mt-4 heading-section text-white">{t.title}</h3>
+              <p className="mt-1.5 text-sm text-brand-100">{t.body}</p>
             </li>
           );
         })}
       </ul>
       <p className="mt-10">
-        <Link href="/security" className="inline-flex min-h-11 items-center gap-2 font-medium text-white underline underline-offset-4">
+        <Link href="/security" className="inline-flex min-h-11 items-center gap-2 text-base font-medium text-white underline underline-offset-4">
           How we handle security and your data
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
@@ -229,11 +246,11 @@ export function WontDo({ headingId = "wont-heading" }: { headingId?: string }) {
       />
       <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {WONT_DO.map((w) => (
-          <li key={w.title} className="flex gap-3 rounded-[var(--radius)] border border-line bg-surface p-5">
+          <li key={w.title} className="flex gap-3 rounded-xl border border-line bg-surface p-5">
             <Ban aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-red-800" />
             <div>
-              <h3 className="font-semibold text-ink">{w.title}</h3>
-              <p className="mt-1 text-[0.95rem] leading-relaxed text-ink-2">{w.body}</p>
+              <h3 className="heading-section">{w.title}</h3>
+              <p className="mt-1 text-sm text-ink-2">{w.body}</p>
             </div>
           </li>
         ))}
@@ -246,7 +263,7 @@ export function WontDo({ headingId = "wont-heading" }: { headingId?: string }) {
 export function PricingTeaser({ headingId = "pricing-teaser-heading" }: { headingId?: string }) {
   const plans = getPlans();
   return (
-    <Section id="pricing" labelledBy={headingId} className="bg-surface-2/60">
+    <Section id="pricing" labelledBy={headingId} className="bg-surface">
       <SectionHeading
         id={headingId}
         eyebrow="Pricing"
@@ -260,28 +277,28 @@ export function PricingTeaser({ headingId = "pricing-teaser-heading" }: { headin
             <li
               key={p.key}
               className={cn(
-                "flex flex-col rounded-[var(--radius-lg)] border bg-surface p-5",
+                "relative flex flex-col rounded-xl border bg-surface p-5",
                 recommended ? "border-brand-800 ring-1 ring-brand-800" : "border-line",
               )}
             >
-              <h3 className="font-semibold text-ink">{p.name}</h3>
-              {recommended ? <p className="mt-1 text-xs font-semibold text-brand-800">Recommended for small teams</p> : null}
-              <p className="mt-2">
-                <span className="font-display tracking-tight text-3xl font-extrabold text-ink">{formatUsd(p.priceUsd)}</span>
+              {recommended ? <RecommendedBadge /> : null}
+              <h3 className="heading-section">{p.name}</h3>
+              <p className="mt-2 flex items-baseline gap-1">
+                <span className="metric">{formatUsd(p.priceUsd)}</span>
                 <span className="text-sm text-ink-3"> / month</span>
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-ink-2">{p.tagline}</p>
-              <p className="mt-3 text-sm text-ink-3">{planLimitLines(p)[1]}</p>
+              <p className="mt-2 text-sm text-ink-2">{p.tagline}</p>
+              <p className="mt-3 text-xs text-ink-3">{planLimitLines(p)[1]}</p>
             </li>
           );
         })}
       </ul>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link href="/pricing" className={buttonClasses({ variant: "secondary", size: "lg" })}>
-          Compare plans
-        </Link>
         <Link href={CTA.start.href} className={buttonClasses({ size: "lg" })}>
           {CTA.start.label}
+        </Link>
+        <Link href="/pricing" className={buttonClasses({ variant: "secondary", size: "lg" })}>
+          Compare plans
         </Link>
       </div>
     </Section>
@@ -293,23 +310,26 @@ export function Faq({
   items,
   headingId = "faq-heading",
   title = "Questions, answered",
+  className,
 }: {
   items: readonly { q: string; a: ReactNode }[];
   headingId?: string;
   title?: string;
+  /** Section background override, e.g. "bg-surface" to alternate with the section above. */
+  className?: string;
 }) {
   return (
-    <Section id="faq" labelledBy={headingId}>
+    <Section id="faq" labelledBy={headingId} className={className}>
       <div className="grid gap-10 lg:grid-cols-[1fr_1.6fr]">
         <SectionHeading id={headingId} eyebrow="FAQ" title={title} />
-        <div className="divide-y divide-line rounded-[var(--radius-lg)] border border-line bg-surface">
+        <div className="divide-y divide-line rounded-xl border border-line bg-surface">
           {items.map((f) => (
             <details key={f.q} className="group px-5 [&_summary::-webkit-details-marker]:hidden">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 text-left font-semibold text-ink">
-                <h3 className="text-base font-semibold">{f.q}</h3>
-                <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" />
+              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 text-left">
+                <h3 className="heading-section">{f.q}</h3>
+                <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-ink-3 transition-transform group-open:rotate-180" />
               </summary>
-              <div className="pb-5 leading-relaxed text-ink-2">{f.a}</div>
+              <div className="pb-5 text-sm text-ink-2">{f.a}</div>
             </details>
           ))}
         </div>
@@ -318,39 +338,27 @@ export function Faq({
   );
 }
 
-/** Closing call to action. */
-export function FinalCta({ headingId = "final-cta-heading" }: { headingId?: string }) {
+/** Closing call to action on a flat pine panel. */
+export function FinalCta({ headingId = "final-cta-heading", className }: { headingId?: string; className?: string }) {
   return (
-    <section aria-labelledby={headingId} className="pb-20 sm:pb-28">
-      <Container>
-        <div className="rounded-[6px] bg-brand-800 px-6 py-12 text-center sm:px-12 sm:py-16">
-          <h2 id={headingId} className="mx-auto max-w-2xl font-display tracking-tight text-[2rem] font-extrabold leading-tight text-white sm:text-5xl">
-            Ready to see what your growth team would do first?
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-brand-100">
-            Start with your website. You&apos;ll see a plan before you&apos;re asked to approve anything.
-          </p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              href={CTA.start.href}
-              className={buttonClasses({ size: "lg", className: "bg-white text-brand-900 hover:bg-brand-50 active:bg-brand-100" })}
-            >
-              {CTA.start.label}
-              <ArrowRight aria-hidden="true" />
-            </Link>
-            <Link
-              href={CTA.demo.href}
-              className={buttonClasses({
-                variant: "ghost",
-                size: "lg",
-                className: "border border-white/40 text-white hover:bg-white/10 active:bg-white/15",
-              })}
-            >
-              {CTA.demo.label}
-            </Link>
-          </div>
+    <Section labelledBy={headingId} className={className}>
+      <div className="rounded-2xl bg-brand-800 px-6 py-12 text-center sm:px-12 sm:py-16">
+        <h2 id={headingId} className="mx-auto max-w-2xl text-3xl text-white sm:text-4xl">
+          Ready to see what your growth team would do first?
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-base text-brand-100">
+          Start with your website. You&apos;ll see a plan before you&apos;re asked to approve anything.
+        </p>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href={CTA.start.href} className={buttonClasses({ variant: "accent", size: "lg" })}>
+            {CTA.start.label}
+            <ArrowRight aria-hidden="true" />
+          </Link>
+          <Link href={CTA.demo.href} className={buttonClasses({ variant: "secondary", size: "lg" })}>
+            {CTA.demo.label}
+          </Link>
         </div>
-      </Container>
-    </section>
+      </div>
+    </Section>
   );
 }

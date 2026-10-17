@@ -47,26 +47,26 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
-      <section aria-labelledby="you-heading" className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-        <h2 id="you-heading" className="text-lg font-semibold text-ink">
+      <section aria-labelledby="you-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+        <h2 id="you-heading" className="heading-section">
           About you
         </h2>
         <Field label="Your name" hint="Shown to your team in approvals and the activity log." optional>
           <Input autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <div className="flex flex-col gap-1">
-          <p className="text-[0.95rem] font-medium text-ink">Email</p>
-          <p className="text-ink-2">{prefs.email ?? "No email on this account"}</p>
-          <p className="text-sm text-ink-3">This is the address you sign in with.</p>
+          <p className="text-ui font-medium text-ink">Email</p>
+          <p className="text-sm text-ink-2">{prefs.email ?? "No email on this account"}</p>
+          <p className="text-xs text-ink-3">This is the address you sign in with.</p>
         </div>
       </section>
 
-      <section aria-labelledby="email-heading" className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-        <h2 id="email-heading" className="text-lg font-semibold text-ink">
+      <section aria-labelledby="email-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+        <h2 id="email-heading" className="heading-section">
           Emails from ClimbOS
         </h2>
         <div className="flex flex-col gap-2">
-          <p id="digest-label" className="text-[0.95rem] font-medium text-ink">
+          <p id="digest-label" className="text-ui font-medium text-ink">
             Progress summary
           </p>
           <RadioCards

@@ -58,12 +58,12 @@ export default function DemoPage() {
         ) : (
           <div className="mt-8 space-y-3" role="status">
             <Spinner />
-            <p className="font-semibold tracking-tight text-2xl text-ink">Setting up the Formkit demo…</p>
-            <p className="text-ink-2">A private sandbox with synthetic data. Nothing in it posts, emails or spends money.</p>
+            <p className="heading-page">Setting up the Formkit demo…</p>
+            <p className="text-sm text-ink-2">A private sandbox with synthetic data. Nothing in it posts, emails or spends money.</p>
           </div>
         )}
         <p className="mt-10 text-sm text-ink-3">
-          Prefer your own business? <Link className="font-semibold text-brand-800 underline" href="/sign-in?next=/onboarding">Start with your website</Link>
+          Prefer your own business? <Link className="font-medium text-brand-800 underline underline-offset-4" href="/sign-in?next=/onboarding">Start with your website</Link>
         </p>
       </div>
     </main>

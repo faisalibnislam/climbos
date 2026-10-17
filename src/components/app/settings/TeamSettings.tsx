@@ -5,7 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Avatar, Badge, Button, Callout, ConfirmDialog, Field, Input, Meter, Select, toast } from "@/components/ui";
+import { Avatar, Badge, Button, Callout, ConfirmDialog, Field, Input, Meter, Select, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { relativeTime } from "../money";
 import { LoadingBlock } from "../results/QueryBoundary";
@@ -32,8 +32,8 @@ export function TeamSettings({ slug }: { slug: string }) {
         <LoadingBlock label="Loading team…" />
       ) : (
         <>
-          <section aria-labelledby="seats-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-            <h2 id="seats-heading" className="text-lg font-semibold text-ink">
+          <section aria-labelledby="seats-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <h2 id="seats-heading" className="heading-section">
               Seats
             </h2>
             <Meter
@@ -43,7 +43,7 @@ export function TeamSettings({ slug }: { slug: string }) {
               unit="seats"
               footnote={
                 <>
-                  Pending invitations count as seats. <Link className="font-medium text-brand-800 underline" href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
+                  Pending invitations count as seats. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
                 </>
               }
             />
@@ -56,10 +56,10 @@ export function TeamSettings({ slug }: { slug: string }) {
           )}
 
           <section aria-labelledby="members-heading" className="flex flex-col gap-3">
-            <h2 id="members-heading" className="text-lg font-semibold text-ink">
+            <h2 id="members-heading" className="heading-section">
               People ({team.members.length})
             </h2>
-            <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-lg)] border border-line bg-surface">
+            <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
               {team.members.map((m) => (
                 <MemberRow key={m.id} slug={slug} member={m} team={team} />
               ))}
@@ -67,14 +67,14 @@ export function TeamSettings({ slug }: { slug: string }) {
           </section>
 
           <section aria-labelledby="roles-heading" className="flex flex-col gap-3">
-            <h2 id="roles-heading" className="text-lg font-semibold text-ink">
+            <h2 id="roles-heading" className="heading-section">
               What each role can do
             </h2>
             <dl className="grid gap-3 sm:grid-cols-2">
               {team.roles.map((r) => (
-                <div key={r.key} className="rounded-[var(--radius)] border border-line bg-surface p-4">
-                  <dt className="font-semibold text-ink">{ROLE_NAMES[r.key] ?? r.key}</dt>
-                  <dd className="mt-0.5 text-sm leading-relaxed text-ink-2">{r.description}</dd>
+                <div key={r.key} className="rounded-xl border border-line bg-surface p-4">
+                  <dt className="heading-card">{ROLE_NAMES[r.key] ?? r.key}</dt>
+                  <dd className="mt-1 text-sm text-ink-2">{r.description}</dd>
                 </div>
               ))}
             </dl>
@@ -116,8 +116,8 @@ function InviteForm({ slug, team }: { slug: string; team: Team }) {
   }
 
   return (
-    <section aria-labelledby="invite-heading" className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-      <h2 id="invite-heading" className="text-lg font-semibold text-ink">
+    <section aria-labelledby="invite-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+      <h2 id="invite-heading" className="heading-section">
         Invite someone
       </h2>
       {full ? (
@@ -177,11 +177,11 @@ function MemberRow({ slug, member, team }: { slug: string; member: Member; team:
       <div className="flex min-w-0 items-center gap-3">
         <Avatar name={display} size="sm" />
         <div className="min-w-0">
-          <p className="truncate font-medium text-ink">
+          <p className="truncate text-sm font-medium text-ink">
             {display}
-            {member.isYou ? <span className="ml-1.5 text-sm font-normal text-ink-3">(you)</span> : null}
+            {member.isYou ? <span className="ml-1.5 text-xs font-normal text-ink-3">(you)</span> : null}
           </p>
-          {member.name && member.email ? <p className="truncate text-sm text-ink-3">{member.email}</p> : null}
+          {member.name && member.email ? <p className="truncate text-xs text-ink-3">{member.email}</p> : null}
           <div className="mt-1 flex flex-wrap gap-1.5">
             {member.status === "invited" ? (
               <Badge tone="amber">
@@ -192,7 +192,7 @@ function MemberRow({ slug, member, team }: { slug: string; member: Member; team:
             )}
           </div>
           {error ? (
-            <p role="alert" className="mt-1 text-sm font-medium text-red-800">
+            <p role="alert" className="mt-1 text-ui font-medium text-red-800">
               {error}
             </p>
           ) : null}

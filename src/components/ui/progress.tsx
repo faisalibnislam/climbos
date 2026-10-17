@@ -63,7 +63,7 @@ export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], foot
   const ratio = max > 0 ? used / max : used > 0 ? 1 : 0;
   const pct = Math.round(ratio * 100);
   const level = ratio >= thresholds[2] ? 3 : ratio >= thresholds[1] ? 2 : ratio >= thresholds[0] ? 1 : 0;
-  const bar = ["bg-brand-700", "bg-[#b7791f]", "bg-amber-800", "bg-red-800"][level];
+  const bar = ["bg-brand-700", "bg-chart-5", "bg-amber-800", "bg-red-800"][level];
   const state = [
     null,
     { text: `${Math.round(thresholds[0] * 100)}% used — heads up`, Icon: TriangleAlert, cls: "text-amber-800" },
@@ -76,7 +76,7 @@ export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], foot
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <span className="text-[0.95rem] font-medium text-ink">{label}</span>
+        <span className="text-sm font-medium text-ink">{label}</span>
         <span className="text-sm tabular-nums text-ink-2">{valueText}</span>
       </div>
       <div

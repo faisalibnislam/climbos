@@ -19,29 +19,29 @@ export function Checkbox({ label, description, id, className, ...props }: Checkb
   const descId = description ? `${cid}-desc` : undefined;
   return (
     <div className={cn("flex items-start gap-3", className)}>
-      <span className="flex min-h-11 items-center">
+      <span className="flex min-h-9 items-center">
         <RCheckbox.Root
           id={cid}
           aria-describedby={descId}
-          className="peer grid size-5 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-white transition-colors hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 data-[state=indeterminate]:border-brand-800 data-[state=indeterminate]:bg-brand-800 disabled:opacity-50"
+          className="peer grid size-4 place-items-center rounded-[4px] border-[1.5px] border-control bg-surface text-white transition-colors hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 data-[state=indeterminate]:border-brand-800 data-[state=indeterminate]:bg-brand-800 disabled:opacity-50"
           {...props}
         >
           <RCheckbox.Indicator className="inline-flex">
             {props.checked === "indeterminate" ? (
-              <Minus aria-hidden="true" className="size-3.5" strokeWidth={3} />
+              <Minus aria-hidden="true" className="size-3" strokeWidth={3} />
             ) : (
-              <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
+              <Check aria-hidden="true" className="size-3" strokeWidth={3} />
             )}
           </RCheckbox.Indicator>
         </RCheckbox.Root>
       </span>
       {label ? (
-        <span className="flex min-h-11 flex-col justify-center py-2.5">
-          <label htmlFor={cid} className="cursor-pointer text-[0.95rem] font-medium leading-snug text-ink">
+        <span className="flex min-h-9 flex-col justify-center py-2">
+          <label htmlFor={cid} className="cursor-pointer text-ui font-medium text-ink">
             {label}
           </label>
           {description ? (
-            <span id={descId} className="mt-0.5 text-sm leading-relaxed text-ink-3">
+            <span id={descId} className="mt-0.5 text-ui text-ink-3">
               {description}
             </span>
           ) : null}
@@ -66,29 +66,29 @@ export function Switch({ label, description, id, className, showStateText = true
   const on = props.checked ?? undefined;
   return (
     <div className={cn("flex items-start justify-between gap-4", className)}>
-      <span className="flex min-h-11 flex-col justify-center">
-        <label htmlFor={sid} className="cursor-pointer text-[0.95rem] font-medium text-ink">
+      <span className="flex min-h-9 flex-col justify-center">
+        <label htmlFor={sid} className="cursor-pointer text-ui font-medium text-ink">
           {label}
         </label>
         {description ? (
-          <span id={descId} className="mt-0.5 text-sm leading-relaxed text-ink-3">
+          <span id={descId} className="mt-0.5 text-ui text-ink-3">
             {description}
           </span>
         ) : null}
       </span>
-      <span className="flex min-h-11 items-center gap-2.5">
+      <span className="flex min-h-9 items-center gap-2">
         {showStateText && on !== undefined ? (
-          <span aria-hidden="true" className="w-7 text-sm font-medium text-ink-2">
+          <span aria-hidden="true" className="w-7 text-ui font-medium text-ink-2">
             {on ? "On" : "Off"}
           </span>
         ) : null}
         <RSwitch.Root
           id={sid}
           aria-describedby={descId}
-          className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-line-strong bg-surface-3 transition-colors data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border border-control bg-surface-3 transition-colors data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
           {...props}
         >
-          <RSwitch.Thumb className="block size-5 translate-x-[3px] rounded-full bg-white shadow-sm transition-transform data-[state=checked]:translate-x-[23px]" />
+          <RSwitch.Thumb className="block size-4 translate-x-[1px] rounded-full bg-white shadow-sm transition-transform data-[state=checked]:translate-x-[17px]" />
         </RSwitch.Root>
       </span>
     </div>

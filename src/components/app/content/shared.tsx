@@ -4,32 +4,21 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { ConvexError } from "convex/values";
 import {
-  AtSign,
-  Briefcase,
-  Camera,
+  Archive,
   CircleAlert,
   CircleCheck,
   CircleQuestionMark,
   Clock,
   FileText,
-  Globe,
   Hourglass,
-  Mail,
-  Megaphone,
-  Pin,
-  Search,
-  Send,
-  SquarePlay,
-  ThumbsUp,
-  Music2,
-  Archive,
   Pencil,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Component, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
-import { Badge, Button, Callout, IconTile, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, SocialIcon } from "@/components/ui";
 import { RoleAvatar } from "../RoleAvatar";
 import { cn } from "@/lib/utils";
 import { ARTIFACT_STATUS, CHANNEL_LABELS, ROLE_META, roleTitle } from "../roles";
@@ -228,7 +217,7 @@ export class SectionBoundary extends Component<BoundaryProps, BoundaryState> {
       return (
         <div className={cn("flex flex-col gap-4", this.props.className)}>
           {this.props.pageHeading ? (
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink">{this.props.pageHeading}</h1>
+            <h1 className="heading-page">{this.props.pageHeading}</h1>
           ) : null}
           <ErrorCallout error={this.state.error} onRetry={this.retry} />
           {this.props.label ? <p className="sr-only">Couldn&apos;t load {this.props.label}.</p> : null}
@@ -247,48 +236,15 @@ function SectionKey({ children }: { children: ReactNode }) {
 /* Channels, statuses, roles                                            */
 /* ------------------------------------------------------------------ */
 
-export const CHANNEL_TONES: Record<string, Tone> = {
-  instagram: "pink",
-  facebook: "blue",
-  linkedin: "brand",
-  x: "neutral",
-  tiktok: "violet",
-  pinterest: "red",
-  youtube: "red",
-  google_search_ad: "orange",
-  meta_ad: "blue",
-  linkedin_ad: "brand",
-  email: "teal",
-  website: "green",
-  blog: "violet",
-};
-
-export const CHANNEL_ICONS: Record<string, LucideIcon> = {
-  instagram: Camera,
-  facebook: ThumbsUp,
-  linkedin: Briefcase,
-  x: AtSign,
-  tiktok: Music2,
-  pinterest: Pin,
-  youtube: SquarePlay,
-  google_search_ad: Search,
-  meta_ad: Megaphone,
-  linkedin_ad: Megaphone,
-  email: Mail,
-  website: Globe,
-  blog: FileText,
-};
-
 export function channelLabel(channel: string): string {
   return CHANNEL_LABELS[channel] ?? channel;
 }
 
-/** Generic channel icon (never a real platform logo) + text label. */
+/** Platform mark (decorative) + the channel's name as text. */
 export function ChannelTag({ channel, className }: { channel: string; className?: string }) {
-  const Icon = CHANNEL_ICONS[channel] ?? Globe;
   return (
-    <span className={cn("inline-flex items-center gap-2 text-sm font-semibold text-ink-2", className)}>
-      <IconTile icon={Icon} tone={CHANNEL_TONES[channel] ?? "neutral"} size="sm" />
+    <span className={cn("inline-flex items-center gap-2 text-ui font-medium text-ink-2", className)}>
+      <SocialIcon network={channel} variant="tile" size="md" />
       {channelLabel(channel)}
     </span>
   );
@@ -320,7 +276,7 @@ export function ArtifactStatus({ status, showHelp = false, className }: { status
       <Badge tone={meta.tone} icon={<Icon />}>
         {meta.label}
       </Badge>
-      {showHelp && meta.help ? <span className="text-sm leading-snug text-ink-3">{meta.help}</span> : null}
+      {showHelp && meta.help ? <span className="text-xs text-ink-3">{meta.help}</span> : null}
     </span>
   );
 }

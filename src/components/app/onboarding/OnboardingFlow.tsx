@@ -14,6 +14,7 @@ import {
   Callout,
   Card,
   CardContent,
+  Checkbox,
   Field,
   Input,
   RadioCards,
@@ -21,6 +22,7 @@ import {
   Skeleton,
   StepList,
   Textarea,
+  buttonClasses,
   toast,
   Toaster,
 } from "@/components/ui";
@@ -64,6 +66,11 @@ const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[]
   plan: { title: "Building your plan", roles: ["ceo", "cmo"], points: ["Who to reach and what to say", "1–2 channels to focus on, with costs", "How we'll measure progress"] },
   done: { title: "All set", roles: ["ceo"], points: [] },
 };
+
+/** Segmented-control look shared with Tabs: 32px track, 28px options. */
+const segmentClasses =
+  "inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-ui font-medium text-ink-3 transition-colors hover:text-ink";
+const segmentActive = "bg-surface text-ink shadow-sm";
 
 const TIMEZONE = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
 
@@ -125,10 +132,10 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
     <div className="min-h-dvh bg-bg">
       <Toaster />
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Logo />
           {slug ? (
-            <Link href={`/app/${slug}/today`} className="text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">
+            <Link href={`/app/${slug}/today`} className={buttonClasses({ variant: "ghost", size: "sm", className: "text-ink-2" })}>
               Save and finish later
             </Link>
           ) : null}
@@ -137,7 +144,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
           {STEP_ORDER.map((s, i) => (
             <li key={s} className="flex flex-1 flex-col gap-1.5">
               <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-ink" : i === idx ? "bg-sun" : "bg-surface-3")} aria-hidden />
-              <span className={cn("hidden text-xs font-semibold md:block", i <= idx ? "text-ink" : "text-ink-3")}>
+              <span className={cn("hidden text-xs font-medium md:block", i <= idx ? "text-ink" : "text-ink-3")}>
                 {i < idx ? <Check className="mr-1 inline size-3.5 text-brand-800" aria-hidden /> : null}
                 {STEP_LABEL[s]}
               </span>
@@ -150,22 +157,22 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
       </header>
       <main id="main" className="mx-auto grid max-w-6xl gap-8 px-4 pb-24 pt-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-ink-2">
+          <p className="text-overline">
             Step {idx + 1} of {STEP_ORDER.length} · {STEP_LABEL[step]}
           </p>
-          <div className="mt-4">{children}</div>
+          <div className="mt-1">{children}</div>
         </div>
         {help.points.length ? (
-          <aside className="hidden h-fit rounded-xl border border-line bg-surface p-6 lg:block" aria-label={help.title}>
+          <aside className="hidden h-fit rounded-xl border border-line bg-surface p-5 lg:block" aria-label={help.title}>
             <div className="flex">
               {help.roles.map((r, i) => (
-                <RoleAvatar key={r} role={r} size="md" className={cn("ring-4 ring-surface", i > 0 && "-ml-2")} />
+                <RoleAvatar key={r} role={r} size="md" className={cn("ring-2 ring-surface", i > 0 && "-ml-2")} />
               ))}
             </div>
-            <p className="mt-4 text-lg font-bold text-ink">{help.title}</p>
+            <p className="heading-card mt-4">{help.title}</p>
             <ul className="mt-3 space-y-3">
               {help.points.map((p) => (
-                <li key={p} className="flex gap-2.5 text-[0.95rem] text-ink-2">
+                <li key={p} className="flex gap-2.5 text-sm text-ink-2">
                   <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-white">
                     <Check className="size-3" aria-hidden />
                   </span>
@@ -244,16 +251,16 @@ function BusinessStep({
 
   return (
     <Shell step="business">
-      <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">Let’s meet your business</h1>
-      <p className="mt-3 max-w-xl text-lg text-ink-2">
+      <h1 className="heading-page">Let’s meet your business</h1>
+      <p className="mt-1 max-w-xl text-sm text-ink-3">
         Tell us about it in your own words. Your AI growth team reads your website, and you check everything before it’s used.
       </p>
 
-      <div className="mt-6 inline-flex rounded-full border border-line bg-surface p-1 shadow-sm" role="tablist" aria-label="How do you want to start?">
-        <button role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn("flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold", mode === "chat" ? "bg-brand-800 text-white" : "text-ink-2 hover:bg-surface-2")}>
+      <div className="mt-6 inline-flex gap-0.5 rounded-lg border border-line bg-surface-2 p-0.5" role="tablist" aria-label="How do you want to start?">
+        <button type="button" role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn(segmentClasses, mode === "chat" && segmentActive)}>
           <MessageSquareText className="size-4" aria-hidden /> Just tell us
         </button>
-        <button role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn("flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold", mode === "form" ? "bg-brand-800 text-white" : "text-ink-2 hover:bg-surface-2")}>
+        <button type="button" role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn(segmentClasses, mode === "form" && segmentActive)}>
           <ListChecks className="size-4" aria-hidden /> Step by step
         </button>
       </div>
@@ -262,9 +269,9 @@ function BusinessStep({
 
       {mode === "chat" ? (
         <div className="mt-6 space-y-4">
-          <div className="rounded-xl border border-ink bg-surface shadow-sm">
-            <div className="rounded-xl p-4 sm:p-5">
-              <label htmlFor="intro-chat" className="text-sm font-bold text-ink">
+          <div className="rounded-xl border border-line-strong bg-surface transition-colors focus-within:border-brand-700">
+            <div className="rounded-xl p-4">
+              <label htmlFor="intro-chat" className="text-ui font-medium text-ink">
                 Tell us about your business and what you want
               </label>
               <Textarea
@@ -274,7 +281,7 @@ function BusinessStep({
                 rows={4}
                 autosize
                 placeholder="e.g. We are Formkit (formkit.app). Help us get more paying customers in the next 90 days. I can spend $600 a month on ads."
-                className="mt-2 border-0 px-0 text-lg shadow-none focus-visible:outline-none"
+                className="mt-2 border-0 px-0 text-sm focus-visible:outline-none"
               />
               <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
                 <span className="text-xs text-ink-3">Include your website if you have one.</span>
@@ -291,7 +298,7 @@ function BusinessStep({
                     })
                   }
                 >
-                  Start <ArrowUp className="size-4" aria-hidden />
+                  Start <ArrowUp aria-hidden />
                 </Button>
               </div>
             </div>
@@ -303,21 +310,22 @@ function BusinessStep({
                 "We're Formkit (formkit.app). Help us get more paying customers in 90 days.",
                 "I'm a wedding photographer in Austin. I want more bookings for next spring.",
               ].map((ex) => (
-                <button
+                <Button
                   key={ex}
-                  type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setChat(ex)}
-                  className="min-h-10 rounded-full border border-line bg-surface px-3.5 text-left text-sm font-medium text-ink-2 shadow-sm transition hover:border-brand-200 hover:text-ink"
+                  className="h-auto min-h-8 justify-start whitespace-normal py-1.5 text-left font-normal text-ink-2 hover:text-ink"
                 >
-                  <Sparkles className="mr-1.5 inline size-3.5 text-brand-800" aria-hidden />
+                  <Sparkles className="text-brand-800" aria-hidden />
                   {ex}
-                </button>
+                </Button>
               ))}
             </div>
           )}
             {chat.trim().length > 8 && (
-              <div className="rounded-2xl border border-line bg-surface p-4 text-sm shadow-sm" aria-live="polite">
-                <p className="flex items-center gap-2 font-bold text-ink">
+              <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
+                <p className="heading-card flex flex-wrap items-center gap-2">
                   <Sparkles className="size-4 text-brand-800" aria-hidden /> Here’s what we understood <span className="font-normal text-ink-3">(you can change it later)</span>
                 </p>
                 <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
@@ -338,7 +346,7 @@ function BusinessStep({
         </div>
       ) : (
         <Card className="mt-6">
-          <CardContent className="space-y-5 p-5 sm:p-6">
+          <CardContent className="space-y-5">
             <Field label="Business name" required>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Formkit" autoComplete="organization" />
             </Field>
@@ -351,9 +359,9 @@ function BusinessStep({
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} autosize />
               </Field>
             )}
-            <button type="button" className="text-sm font-medium text-brand-800 underline underline-offset-2" onClick={() => setNoWebsite((v) => !v)}>
+            <Button variant="link" className="whitespace-normal text-left" onClick={() => setNoWebsite((v) => !v)}>
               {noWebsite ? "I have a website after all" : "No website, or it's private? Describe your business instead"}
-            </button>
+            </Button>
             <div>
               <Button size="lg" loading={busy} loadingText="Setting up your team…" onClick={() => submit({ name, website: noWebsite ? undefined : website, ownerText: noWebsite ? description : undefined })}>
                 Continue
@@ -363,7 +371,7 @@ function BusinessStep({
         </Card>
       )}
       <p className="mt-6 text-sm text-ink-3">
-        Want to look around first? <Link href="/demo" className="font-semibold text-brand-800 underline underline-offset-2">Open the Formkit demo</Link>
+        Want to look around first? <Link href="/demo" className={buttonClasses({ variant: "link" })}>Open the Formkit demo</Link>
       </p>
     </Shell>
   );
@@ -428,14 +436,14 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
   });
   return (
     <div>
-      <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">
+      <h1 className="heading-page">
         {failed ? "We need a little help" : `Getting to know ${state.business?.name ?? "your business"}…`}
       </h1>
       {!failed ? (
         <>
-          <p className="mt-3 text-lg text-ink-2">This usually takes under a minute. You’ll check everything before anything is used.</p>
+          <p className="mt-1 text-sm text-ink-3">This usually takes under a minute. You’ll check everything before anything is used.</p>
           <Card className="mt-6">
-            <CardContent className="p-6" aria-live="polite">
+            <CardContent aria-live="polite">
               <StepList steps={steps} />
             </CardContent>
           </Card>
@@ -471,7 +479,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
         <>
           <Callout tone="warning" className="mt-4">{research?.userMessage ?? "We couldn’t finish reading your website."}</Callout>
           <Card className="mt-6">
-            <CardContent className="space-y-4 p-6">
+            <CardContent className="space-y-4">
               <Field label="Describe your business in a few sentences" hint="What you sell, who buys it, prices if you’re happy to share, and what makes you different. We’ll label these facts as supplied by you.">
                 <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={6} autosize />
               </Field>
@@ -548,15 +556,15 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
     <div>
       {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
         <>
-          <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
-          <p className="mt-3 text-lg text-ink-2">
+          <h1 className="heading-page">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
+          <p className="mt-1 text-sm text-ink-3">
             Add three to five short facts: what you sell, who it’s for, and what makes you different. Your team only uses facts you’ve confirmed, so it never invents claims.
           </p>
         </>
       ) : (
         <>
-          <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
-          <p className="mt-3 text-lg text-ink-2">
+          <h1 className="heading-page">Is this right?</h1>
+          <p className="mt-1 text-sm text-ink-3">
             {state.business?.summary ?? "Here’s what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
           </p>
         </>
@@ -583,10 +591,10 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-[17px] leading-relaxed text-ink">{f.statement}</p>
+                  <p className="mt-2 text-sm text-ink">{f.statement}</p>
                 )}
                 {f.sources.length > 0 && (
-                  <p className="mt-2 text-sm text-ink-3">
+                  <p className="mt-2 text-xs text-ink-3">
                     Source:{" "}
                     {f.sources.map((s, i) =>
                       s && s.url ? (
@@ -646,9 +654,9 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         </CardContent>
       </Card>
 
-      <h2 className="mt-10 font-semibold tracking-tight text-2xl text-ink">A few details</h2>
+      <h2 className="heading-section mt-8">A few details</h2>
       <Card className="mt-4">
-        <CardContent className="grid gap-5 p-5 sm:grid-cols-2">
+        <CardContent className="grid gap-5 sm:grid-cols-2">
           <Field label="Type of business">
             <Select
               value={businessType}
@@ -666,21 +674,21 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
             <Select value={currency} onValueChange={setCurrency} options={["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD", "AED"].map((c) => ({ value: c, label: c }))} />
           </Field>
           <div className="sm:col-span-2">
-            <p className="text-sm font-medium text-ink">What counts as a valuable customer action?</p>
-            <p className="text-sm text-ink-3">We’ll measure success with these. Untick anything that doesn’t apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
+            <p className="text-ui font-medium text-ink">What counts as a valuable customer action?</p>
+            <p className="mt-0.5 text-xs text-ink-3">We’ll measure success with these. Untick anything that doesn’t apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
             <ul className="mt-3 space-y-2">
               {events.map((ev, i) => (
-                <li key={ev.key} className="flex items-start gap-3 rounded-[6px] border border-line p-3">
-                  <input
+                <li key={ev.key} className="rounded-xl border border-line px-3">
+                  <Checkbox
                     id={`ev-${ev.key}`}
-                    type="checkbox"
-                    className="mt-1 size-5 accent-brand-800"
                     checked={ev.confirmed}
-                    onChange={(e) => setEvents(events.map((x, j) => (j === i ? { ...x, confirmed: e.target.checked } : x)))}
+                    onCheckedChange={(c) => setEvents(events.map((x, j) => (j === i ? { ...x, confirmed: c === true } : x)))}
+                    label={
+                      <>
+                        {ev.label} — <span className="font-normal text-ink-2">{ev.definition}</span>
+                      </>
+                    }
                   />
-                  <label htmlFor={`ev-${ev.key}`} className="text-sm">
-                    <span className="font-medium text-ink">{ev.label}</span> — <span className="text-ink-2">{ev.definition}</span>
-                  </label>
                 </li>
               ))}
               {events.length === 0 && (
@@ -713,7 +721,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         >
           Looks right — continue
         </Button>
-        <span className="text-sm text-ink-3">Any facts still unchecked will be marked as confirmed.</span>
+        <span className="text-xs text-ink-3">Any facts still unchecked will be marked as confirmed.</span>
       </div>
     </div>
   );
@@ -744,8 +752,8 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   };
   return (
     <div>
-      <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">What would you like to achieve?</h1>
-      <p className="mt-3 text-lg text-ink-2">Pick one to start. You can change it anytime.</p>
+      <h1 className="heading-page">What would you like to achieve?</h1>
+      <p className="mt-1 text-sm text-ink-3">Pick one to start. You can change it anytime.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       <RadioCards
         className="mt-6"
@@ -763,7 +771,7 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
         ]}
       />
       <Card className="mt-6">
-        <CardContent className="grid gap-5 p-5 sm:grid-cols-2">
+        <CardContent className="grid gap-5 sm:grid-cols-2">
           <Field label="Your goal in a sentence" className="sm:col-span-2">
             <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
           </Field>
@@ -806,8 +814,8 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <div>
-      <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">How hands-on do you want to be?</h1>
-      <p className="mt-3 text-lg text-ink-2">Whatever you choose, nothing goes live, gets sent or spends money without the safeguards below.</p>
+      <h1 className="heading-page">How hands-on do you want to be?</h1>
+      <p className="mt-1 text-sm text-ink-3">Whatever you choose, nothing goes live, gets sent or spends money without the safeguards below.</p>
       <RadioCards
         className="mt-6"
         columns={1}
@@ -821,7 +829,7 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
         ]}
       />
       <Callout tone="info" className="mt-6" title="Always your call">
-        The first post on any channel, new ads, new audiences, budget increases, discounts and website changes always need your approval. You can press <strong>Pause all activity</strong> at any time.
+        The first post on any channel, new ads, new audiences, budget increases, discounts and website changes always need your approval. You can press <strong className="font-semibold">Pause all activity</strong> at any time.
       </Callout>
       <Button
         size="lg"
@@ -867,7 +875,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
 
   return (
     <div>
-      <h1 className="font-semibold tracking-tight text-3xl leading-tight text-ink sm:text-4xl">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
+      <h1 className="heading-page">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       {!state.canRunAi && !ready && state.accessMessage && (
         <Callout tone="warning" className="mt-4" title="Your free starter allowance is used up">
@@ -879,7 +887,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       )}
       {!ready && (running || busy) && (
         <Card className="mt-6">
-          <CardContent className="p-6" aria-live="polite">
+          <CardContent aria-live="polite">
             <StepList
               steps={[
                 { key: "ceo", label: `${ROLE_META.ceo.emoji} ${ROLE_META.ceo.title} is setting priorities for your goal`, status: "running" },
@@ -909,7 +917,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       )}
       {ready && (
         <>
-          <p className="mt-3 text-lg text-ink-2">Review it, approve it, and your team gets to work. Nothing goes live without you.</p>
+          <p className="mt-1 text-sm text-ink-3">Review it, approve it, and your team gets to work. Nothing goes live without you.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button
               size="lg"

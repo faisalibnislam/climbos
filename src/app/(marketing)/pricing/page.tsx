@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CircleCheck, PackagePlus } from "lucide-react";
-import { Container, Section, SectionHeading } from "@/components/marketing/layout";
+import { Container, PageHero, Section, SectionHeading } from "@/components/marketing/layout";
 import { PlanCards, PlanComparison } from "@/components/marketing/pricing";
 import { getTopup, lowestPrice } from "@/components/marketing/plans";
 import { Faq, FinalCta } from "@/components/marketing/sections";
@@ -54,40 +54,41 @@ export default function PricingPage() {
 
   return (
     <>
-      <section aria-labelledby="pricing-heading" className="hero-glow">
-        <Container className="pb-8 pt-14 text-center sm:pt-20">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">Pricing</p>
-          <h1 id="pricing-heading" className="mx-auto mt-2 max-w-3xl font-display text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-6xl">
-            Your whole growth team, one monthly price
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">
-            Every plan includes all ten AI roles. Limits are monthly maximums — nothing is charged automatically.
-          </p>
-          <ul className="mx-auto mt-6 flex max-w-3xl flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] text-ink-2">
-            {["Prices in USD", "Ad spend paid directly to Google or Meta", "Alerts at 70%, 90% and 100%"].map((t) => (
-              <li key={t} className="flex items-center gap-1.5">
-                <CircleCheck aria-hidden="true" className="size-4 text-brand-700" />
-                {t}
-              </li>
-            ))}
-          </ul>
+      <section aria-labelledby="pricing-heading" className="bg-bg">
+        <Container className="pb-8 pt-14 sm:pt-20">
+          <PageHero
+            id="pricing-heading"
+            align="center"
+            eyebrow="Pricing"
+            title="Your whole growth team, one monthly price"
+            lead="Every plan includes all ten AI roles. Limits are monthly maximums — nothing is charged automatically."
+          >
+            <ul className="mx-auto mt-6 flex max-w-3xl flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink-2">
+              {["Prices in USD", "Ad spend paid directly to Google or Meta", "Alerts at 70%, 90% and 100%"].map((t) => (
+                <li key={t} className="flex items-center gap-2">
+                  <CircleCheck aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </PageHero>
         </Container>
       </section>
 
-      <section aria-labelledby="plans-heading" className="pb-16">
+      <section aria-labelledby="plans-heading" className="bg-bg pb-16">
         <div className="mx-auto w-full max-w-[90rem] px-5 sm:px-8">
           <h2 id="plans-heading" className="sr-only">
             Plans
           </h2>
           <PlanCards />
-          <p className="mt-6 text-center text-sm text-ink-3">
+          <p className="mt-6 text-center text-xs text-ink-3">
             Prices exclude applicable sales tax or VAT, which may be added at checkout. You choose a plan inside the app after
             signing up.
           </p>
         </div>
       </section>
 
-      <Section labelledBy="compare-heading" className="bg-surface-2/60">
+      <Section labelledBy="compare-heading" className="bg-surface">
         <SectionHeading
           id="compare-heading"
           title="Compare plans"
@@ -99,17 +100,17 @@ export default function PricingPage() {
       <Section labelledBy="extras-heading">
         <SectionHeading id="extras-heading" title="Extra capacity, only when you ask" />
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-6">
-            <PackagePlus aria-hidden="true" className="size-6 text-brand-700" />
-            <h3 className="mt-3 text-lg font-semibold text-ink">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <PackagePlus aria-hidden="true" className="size-5 text-brand-700" />
+            <h3 className="mt-4 heading-section">
               {topup.name} · {formatUsd(topup.priceUsd)}
             </h3>
-            <p className="mt-2 leading-relaxed text-ink-2">{topup.description}</p>
-            <p className="mt-2 text-sm text-ink-3">Bought from Settings → Billing, one click at a time.</p>
+            <p className="mt-1.5 text-sm text-ink-2">{topup.description}</p>
+            <p className="mt-2 text-xs text-ink-3">Bought from Settings → Billing, one click at a time.</p>
           </div>
-          <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-6">
-            <h3 className="text-lg font-semibold text-ink">Paid directly to other providers</h3>
-            <ul className="mt-3 flex flex-col gap-2 leading-relaxed text-ink-2">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <h3 className="heading-section">Paid directly to other providers</h3>
+            <ul className="mt-3 flex flex-col gap-2 text-sm text-ink-2">
               <li>
                 <strong className="font-semibold text-ink">Ad spend</strong> — paid to Google or Meta from your own ad account. Never
                 marked up.
@@ -137,7 +138,7 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      <Faq items={faq} headingId="pricing-faq-heading" title="Pricing questions" />
+      <Faq items={faq} headingId="pricing-faq-heading" title="Pricing questions" className="bg-surface" />
       <FinalCta />
     </>
   );

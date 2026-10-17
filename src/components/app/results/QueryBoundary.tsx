@@ -41,12 +41,12 @@ export function ErrorState({
   const copy = STATE_COPY[info.code] ?? STATE_COPY.UNKNOWN;
   const H = headingLevel;
   return (
-    <div role="alert" className={cn("flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-6 py-10 text-center", className)}>
-      <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-surface-2 text-ink-2 [&_svg]:size-6">
+    <div role="alert" className={cn("flex flex-col items-center gap-2 rounded-xl border border-line bg-surface px-6 py-10 text-center", className)}>
+      <span aria-hidden="true" className="mb-1 grid size-10 place-items-center rounded-lg bg-surface-2 text-ink-2 ring-1 ring-line [&_svg]:size-5">
         {copy.icon}
       </span>
-      <H className="text-lg font-semibold text-ink">{copy.title}</H>
-      <p className="max-w-md leading-relaxed text-ink-2">{info.message || copy.body}</p>
+      <H className="heading-section">{copy.title}</H>
+      <p className="max-w-md text-sm text-ink-3">{info.message || copy.body}</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {info.code === "UNAUTHENTICATED" ? (
           <Button asChild>
@@ -99,7 +99,7 @@ export function LoadingBlock({ label, lines = 3, className }: { label: string; l
         {label}
       </p>
       {Array.from({ length: lines }, (_, i) => (
-        <Skeleton key={i} className={cn("h-24 rounded-[var(--radius-lg)]", i === 0 && "h-10 w-1/2")} />
+        <Skeleton key={i} className={cn("h-24 rounded-xl", i === 0 && "h-10 w-1/2")} />
       ))}
     </div>
   );
@@ -123,9 +123,9 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0" data-section={section}>
-        {eyebrow ? <div className="mb-1 text-[13px] text-ink-3">{eyebrow}</div> : null}
-        <h1 className="text-[28px] leading-9 text-ink">{title}</h1>
-        {intro ? <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-ink-3">{intro}</p> : null}
+        {eyebrow ? <div className="mb-1 text-overline">{eyebrow}</div> : null}
+        <h1 className="heading-page">{title}</h1>
+        {intro ? <p className="mt-1 max-w-2xl text-sm text-ink-3">{intro}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </header>

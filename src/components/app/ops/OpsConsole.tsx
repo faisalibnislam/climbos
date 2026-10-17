@@ -5,10 +5,10 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { useState } from "react";
-import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, toast } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, buttonClasses, toast } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { formatDateTime, microsToDisplay, relativeTime } from "../money";
-import { LoadingBlock } from "../results/QueryBoundary";
+import { LoadingBlock, PageHeader } from "../results/QueryBoundary";
 import { FleetControls } from "./FleetControls";
 import { EconomicsSection, ReconciliationSection } from "./OpsEconomics";
 import { opsError, OpsSection } from "./opsShared";
@@ -58,17 +58,20 @@ export function OpsConsole() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Operator console</h1>
-        <p className="text-ink-2">Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited.</p>
-        <nav aria-label="Console sections" className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+      <div>
+        <PageHeader
+          section="ops"
+          title="Operator console"
+          intro="Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited."
+        />
+        <nav aria-label="Console sections" className="-mx-1 -mt-3 flex gap-1 overflow-x-auto pb-1">
           {SECTIONS.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-[6px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <a key={id} href={`#${id}`} className={buttonClasses({ variant: "ghost", size: "sm", className: "shrink-0 text-ink-2" })}>
               {label}
             </a>
           ))}
         </nav>
-      </header>
+      </div>
 
       {d.fleet.emergencyStop ? (
         <Callout tone="danger" title="Fleet stop is ON — no customer work is running">
@@ -83,11 +86,11 @@ export function OpsConsole() {
           <Stat label="Customer workspaces" value={formatNumber(d.customers.workspaces)} sublabel="Most recent 100 counted" />
           <Stat label="Needs attention" value={formatNumber(attention)} sublabel="Failed, uncertain, stuck, unresolved" />
         </StatGroup>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+        <div className="flex flex-wrap items-center gap-2 text-ui text-ink-2">
           <OkBadge ok={d.margin.ok} okText="Margin gate passing" badText={`Margin gate failing (${d.margin.failures.length})`} />
           <span>Rates {d.margin.rateVersion} · Entitlements {d.margin.entitlementVersion} · Routing {d.margin.routingVersion}</span>
         </div>
-        <p className="text-sm text-ink-2">
+        <p className="text-ui text-ink-2">
           Subscriptions:{" "}
           {Object.keys(subsByStatus).length === 0
             ? "none"
@@ -95,7 +98,7 @@ export function OpsConsole() {
                 .map(([s, n]) => `${n} ${s.replace(/_/g, " ")}`)
                 .join(" · ")}
         </p>
-        <h3 className="mt-2 font-semibold text-ink">Circuit breakers</h3>
+        <h3 className="heading-card mt-2">Circuit breakers</h3>
         <DataTable
           caption="Provider circuit breakers"
           hideCaption
@@ -139,7 +142,7 @@ export function OpsConsole() {
         />
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-ink">Connections expiring within 7 days ({d.connections.expiring.length})</h3>
+            <h3 className="heading-card">Connections expiring within 7 days ({d.connections.expiring.length})</h3>
             <DataTable
               caption="Expiring connections"
               hideCaption
@@ -154,7 +157,7 @@ export function OpsConsole() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-ink">Pending privacy requests ({d.privacy.length})</h3>
+            <h3 className="heading-card">Pending privacy requests ({d.privacy.length})</h3>
             <DataTable
               caption="Pending privacy requests"
               hideCaption
@@ -172,8 +175,8 @@ export function OpsConsole() {
       </OpsSection>
 
       <OpsSection id="jobs" title="Jobs needing attention" count={attention}>
-        <h3 className="font-semibold text-ink">Uncertain outcomes ({d.jobs.uncertain.length})</h3>
-        <p className="-mt-2 text-sm text-ink-3">Check the provider manually before resolving. Uncertain runs are never retried automatically.</p>
+        <h3 className="heading-card">Uncertain outcomes ({d.jobs.uncertain.length})</h3>
+        <p className="-mt-2 text-ui text-ink-3">Check the provider manually before resolving. Uncertain runs are never retried automatically.</p>
         <DataTable
           caption="Uncertain runs"
           hideCaption
@@ -195,7 +198,7 @@ export function OpsConsole() {
             },
           ]}
         />
-        <h3 className="mt-2 font-semibold text-ink">Failed in the last 7 days ({d.jobs.failed.length})</h3>
+        <h3 className="heading-card mt-2">Failed in the last 7 days ({d.jobs.failed.length})</h3>
         <DataTable
           caption="Failed runs"
           hideCaption
@@ -205,11 +208,11 @@ export function OpsConsole() {
           columns={[
             { key: "title", header: "Run", rowHeader: true },
             { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
-            { key: "error", header: "Error", cell: (r) => <span className="text-sm">{r.error ?? "—"}</span> },
+            { key: "error", header: "Error", cell: (r) => <span>{r.error ?? "—"}</span> },
             { key: "updated", header: "When", cell: (r) => relativeTime(r.updatedAt) },
           ]}
         />
-        <h3 className="mt-2 font-semibold text-ink">Stuck for over 10 minutes ({d.jobs.stuck.length})</h3>
+        <h3 className="heading-card mt-2">Stuck for over 10 minutes ({d.jobs.stuck.length})</h3>
         <DataTable
           caption="Stuck runs"
           hideCaption
@@ -223,7 +226,7 @@ export function OpsConsole() {
             { key: "updated", header: "Last update", cell: (r) => relativeTime(r.updatedAt) },
           ]}
         />
-        <h3 className="mt-2 font-semibold text-ink">Unresolved cost reservations ({d.jobs.unresolvedReservations.length})</h3>
+        <h3 className="heading-card mt-2">Unresolved cost reservations ({d.jobs.unresolvedReservations.length})</h3>
         <DataTable
           caption="Unresolved reservations"
           hideCaption
@@ -241,7 +244,7 @@ export function OpsConsole() {
       </OpsSection>
 
       <OpsSection id="webhooks" title="Webhooks" count={d.webhooks.failed.length + d.webhooks.lagging.length}>
-        <h3 className="font-semibold text-ink">Failed ({d.webhooks.failed.length})</h3>
+        <h3 className="heading-card">Failed ({d.webhooks.failed.length})</h3>
         <DataTable
           caption="Failed webhooks"
           hideCaption
@@ -251,7 +254,7 @@ export function OpsConsole() {
           columns={[
             { key: "type", header: "Event", rowHeader: true, cell: (w) => `${w.source} · ${w.type}` },
             { key: "attempts", header: "Attempts", align: "right", cell: (w) => formatNumber(w.attempts) },
-            { key: "error", header: "Error", cell: (w) => <span className="text-sm">{w.error ?? "—"}</span> },
+            { key: "error", header: "Error", cell: (w) => <span>{w.error ?? "—"}</span> },
             { key: "received", header: "Received", cell: (w) => relativeTime(w.receivedAt) },
             {
               key: "action",
@@ -279,7 +282,7 @@ export function OpsConsole() {
             },
           ]}
         />
-        <h3 className="mt-2 font-semibold text-ink">Waiting over 5 minutes ({d.webhooks.lagging.length})</h3>
+        <h3 className="heading-card mt-2">Waiting over 5 minutes ({d.webhooks.lagging.length})</h3>
         <DataTable
           caption="Lagging webhooks"
           hideCaption

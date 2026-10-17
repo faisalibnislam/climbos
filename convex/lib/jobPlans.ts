@@ -14,6 +14,7 @@ import {
   retentionSpec,
   salesSpec,
   seoSpec,
+  socialCalendarSpec,
   socialSpec,
   strategySpec,
 } from "../../shared/agents/specs";
@@ -97,6 +98,8 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       return plan("Plan retention and loyalty", ["customer_success_manager"], ["retention_plan"], agentSteps(any(retentionSpec())), {});
     case "sales_sequence":
       return plan("Plan sales follow-ups", ["cso"], ["sales_sequence"], agentSteps(any(salesSpec())), {});
+    case "social_calendar":
+      return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 }))), {});
     default:
       return null; // chat intent and explanations stay single-call
   }
@@ -119,7 +122,8 @@ export type JobKind =
   | "explain_results"
   | "conversion_audit"
   | "retention_plan"
-  | "sales_sequence";
+  | "sales_sequence"
+  | "social_calendar";
 
 export interface JobPlan {
   kind: JobKind;
@@ -208,6 +212,9 @@ export function planJob(kind: JobKind, params: { quantity?: number; images?: num
       return { kind, title: "Plan retention and loyalty", roles: ["customer_success_manager"], tasks: ["retention_plan"], steps: [modelStep("retention_plan")], meters: {} };
     case "sales_sequence":
       return { kind, title: "Plan sales follow-ups", roles: ["cso"], tasks: ["sales_sequence"], steps: [modelStep("sales_sequence")], meters: {} };
+    case "social_calendar":
+      // Demo and v1: a deterministic plan from the business facts (no model call).
+      return { kind, title: "Plan next week's posts", roles: ["social_media_manager"], tasks: [], steps: [], meters: {} };
   }
 }
 

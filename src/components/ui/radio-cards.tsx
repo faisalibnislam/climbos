@@ -37,7 +37,7 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
           value={o.value}
           disabled={o.disabled}
           className={cn(
-            "group relative flex min-h-16 w-full items-start gap-3 rounded-[8px] border border-line-strong bg-surface p-4 text-left shadow-sm transition-colors",
+            "group relative flex min-h-16 w-full items-start gap-3 rounded-xl border border-control bg-surface p-4 text-left transition-colors",
             "hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-50",
             "data-[state=checked]:ring-1 data-[state=checked]:ring-brand-800 disabled:cursor-not-allowed disabled:opacity-50",
           )}
@@ -48,12 +48,12 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
             </span>
           ) : null}
           <span className="flex min-w-0 flex-1 flex-col gap-1 pr-6">
-            <span className="font-medium leading-snug text-ink">{o.title}</span>
-            {o.description ? <span className="text-sm leading-relaxed text-ink-2">{o.description}</span> : null}
+            <span className="heading-card">{o.title}</span>
+            {o.description ? <span className="text-ui text-ink-3">{o.description}</span> : null}
           </span>
           <span
             aria-hidden="true"
-            className="absolute right-3.5 top-3.5 grid size-5 place-items-center rounded-full border-[1.5px] border-line-strong group-data-[state=checked]:border-transparent"
+            className="absolute right-3.5 top-3.5 grid size-5 place-items-center rounded-full border-[1.5px] border-control group-data-[state=checked]:border-transparent"
           >
             <RadioGroup.Indicator className="inline-flex">
               <CircleCheck className="size-5 fill-brand-800 text-white" />

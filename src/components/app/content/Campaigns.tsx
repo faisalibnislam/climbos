@@ -6,7 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, SocialIcon, toast, type Tone } from "@/components/ui";
 import { minorToDisplay } from "../money";
 import { ChannelTag, ErrorCallout, PERMISSION_WHO, useWorkspaceMember } from "./shared";
 
@@ -45,7 +45,7 @@ export function CampaignStatusPill({ status }: { status: string }) {
       <Badge tone={meta.tone} icon={<meta.Icon />}>
         {meta.label}
       </Badge>
-      {meta.help ? <span className="text-sm text-ink-3">{meta.help}</span> : null}
+      {meta.help ? <span className="text-xs text-ink-3">{meta.help}</span> : null}
     </span>
   );
 }
@@ -72,47 +72,47 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
   };
 
   const facts = (
-    <ul className="mt-2 flex flex-col gap-1 text-[0.95rem] text-ink-2">
+    <ul className="mt-2 flex flex-col gap-1 text-sm text-ink-2">
       <li>
-        <strong className="text-ink">Daily budget:</strong> {daily}
+        <strong className="font-semibold text-ink">Daily budget:</strong> {daily}
       </li>
       <li>
-        <strong className="text-ink">Dates:</strong> {formatDay(c.startDate)} to {formatDay(c.endDate)}
+        <strong className="font-semibold text-ink">Dates:</strong> {formatDay(c.startDate)} to {formatDay(c.endDate)}
         {days ? ` (${days} day${days === 1 ? "" : "s"})` : ""}
       </li>
       <li>
-        <strong className="text-ink">Most it can spend in total:</strong> {total}
+        <strong className="font-semibold text-ink">Most it can spend in total:</strong> {total}
       </li>
       <li className="break-words">
-        <strong className="text-ink">Sends people to:</strong> {c.destinationUrl ?? "no link set"}
+        <strong className="font-semibold text-ink">Sends people to:</strong> {c.destinationUrl ?? "no link set"}
       </li>
     </ul>
   );
 
   return (
-    <article className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-sm">
+    <article className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <ChannelTag channel={c.channel} />
         <CampaignStatusPill status={c.status} />
       </div>
-      <H className="break-words text-lg font-semibold leading-snug text-ink">{c.name}</H>
-      <dl className="grid gap-x-6 gap-y-2 text-[0.95rem] sm:grid-cols-2">
+      <H className="heading-card break-words">{c.name}</H>
+      <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-sm text-ink-3">Daily budget</dt>
+          <dt className="text-xs text-ink-3">Daily budget</dt>
           <dd className="font-medium text-ink">{daily} a day</dd>
         </div>
         <div>
-          <dt className="text-sm text-ink-3">Most it can spend</dt>
+          <dt className="text-xs text-ink-3">Most it can spend</dt>
           <dd className="font-medium text-ink">{total} in total</dd>
         </div>
         <div>
-          <dt className="text-sm text-ink-3">Dates</dt>
+          <dt className="text-xs text-ink-3">Dates</dt>
           <dd className="font-medium text-ink">
             {formatDay(c.startDate)} – {formatDay(c.endDate)}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-sm text-ink-3">Sends people to</dt>
+          <dt className="text-xs text-ink-3">Sends people to</dt>
           <dd className="break-words font-medium text-ink">{c.destinationUrl ?? "No link set"}</dd>
         </div>
       </dl>
@@ -190,7 +190,7 @@ export function AdsPanel({ slug }: { slug: string }) {
   const member = useWorkspaceMember(slug);
   return (
     <section aria-labelledby="ads-heading" className="flex flex-col gap-5">
-      <h2 id="ads-heading" className="text-xl font-semibold text-ink">
+      <h2 id="ads-heading" className="heading-section">
         Ad campaigns
       </h2>
       <Callout tone="info" title="How ads work in ClimbOS">
@@ -208,12 +208,18 @@ export function AdsPanel({ slug }: { slug: string }) {
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-1 text-[0.95rem] text-ink-2">
-            <li>
-              Google Ads: <strong className="text-ink">{data.googleAdsConnected ? "Connected" : "Not connected"}</strong>
+          <ul className="flex flex-col gap-2 text-sm text-ink-2">
+            <li className="flex items-center gap-2">
+              <SocialIcon network="google_search_ad" size="sm" />
+              <span>
+                Google Ads: <strong className="font-semibold text-ink">{data.googleAdsConnected ? "Connected" : "Not connected"}</strong>
+              </span>
             </li>
-            <li>
-              Meta (Facebook &amp; Instagram) ads: <strong className="text-ink">{data.metaAdsConnected ? "Connected" : "Not connected"}</strong>
+            <li className="flex items-center gap-2">
+              <SocialIcon network="meta_ad" size="sm" />
+              <span>
+                Meta (Facebook &amp; Instagram) ads: <strong className="font-semibold text-ink">{data.metaAdsConnected ? "Connected" : "Not connected"}</strong>
+              </span>
             </li>
           </ul>
           {!data.googleAdsConnected || !data.metaAdsConnected ? (
@@ -221,9 +227,9 @@ export function AdsPanel({ slug }: { slug: string }) {
               Connect an ad account in <Link href={`/app/${slug}/connections`}>Connections</Link> before ClimbOS can create campaigns there.
             </p>
           ) : null}
-          <p className="text-[0.95rem] text-ink-2">
+          <p className="text-sm text-ink-2">
             Your approved monthly ad budget:{" "}
-            <strong className="text-ink">{data.monthlyEnvelopeMinor > 0 ? minorToDisplay(data.monthlyEnvelopeMinor, data.currency) : "not set"}</strong>. Campaigns
+            <strong className="font-semibold text-ink">{data.monthlyEnvelopeMinor > 0 ? minorToDisplay(data.monthlyEnvelopeMinor, data.currency) : "not set"}</strong>. Campaigns
             can&apos;t be planned above it.
           </p>
           {data.campaigns.length === 0 ? (

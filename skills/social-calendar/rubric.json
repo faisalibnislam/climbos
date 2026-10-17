@@ -1,0 +1,17 @@
+{
+  "id": "social-calendar",
+  "title": "Weekly social calendar",
+  "gates": [
+    { "id": "G1", "text": "Truth: no slot relies on a result, customer, testimonial, offer, price, partnership or number that is not in the confirmed facts or cited research. Slots that need a missing fact say so in ownerNote." },
+    { "id": "G2", "text": "Shape: exactly the requested number of slots per channel, only the channels given, every slot has a distinct idea, and no two slots on the same channel fall on the same day unless the cadence requires it." },
+    { "id": "G3", "text": "Safety: no engagement bait, giveaways or contests unless requested, no news, tragedy or politics for reach, and every slot touching an always-ask topic, price, offer, regulated claim or named third party is flagged needsOwner." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Pillars from positioning", "anchors": { "1": "Generic themes (Motivation Monday, tips) unrelated to the business's positioning.", "3": "Pillars relate to the business but are broad categories (education, community).", "5": "3-4 pillars each tied to a specific value pillar, objection, alternative or trigger, with a stated reason for this week's goal." } },
+    { "id": "C2", "name": "Idea specificity", "anchors": { "1": "Slots are topics, not ideas; a writer would still have to decide what to say.", "3": "Most slots name a point, but several could belong to any business in the category.", "5": "Every slot names one specific, draftable point that only this business could post, with a strong platform-native hook." } },
+    { "id": "C3", "name": "Platform fit and variety", "anchors": { "1": "The same idea or format pasted across channels.", "3": "Formats differ by channel but some ideas are reused or formats are mismatched to the idea.", "5": "Each slot's format suits both the platform and the idea; the week mixes teach, prove, connect and ask in proportion to the goal." } },
+    { "id": "C4", "name": "Learning loop", "anchors": { "1": "Ignores last week's results, edits and rejections.", "3": "Mentions history but the plan doesn't visibly change because of it.", "5": "Concrete changes traceable to specific results, owner edits or rejections, or, with no history, a deliberate format test." } },
+    { "id": "C5", "name": "Goal alignment", "anchors": { "1": "The week has no visible link to the growth plan's goal or North Star.", "3": "Some slots serve the goal; the ask slots are missing or vague.", "5": "The week as a whole moves the North Star, with at least one clear, low-friction next step for ready buyers." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

@@ -18,6 +18,8 @@ crons.daily("retention: detailed activity", { hourUTC: 5, minuteUTC: 45 }, inter
 crons.daily("sync connections", { hourUTC: 6, minuteUTC: 0 }, internal.maintenance.syncAll, {});
 // Token expiry: mark connections needing action before they break.
 crons.daily("check token expiry", { hourUTC: 6, minuteUTC: 30 }, internal.maintenance.checkExpiry, {});
+// Social autopilot: plan next week for each enabled workspace (Thursday 9:00 local or later).
+crons.interval("autopilot planning", { minutes: 60 }, internal.autopilot.tick, {});
 // Owner digests at the frequency each user selected.
 crons.daily("digests", { hourUTC: 13, minuteUTC: 0 }, internal.maintenance.sendDigests, {});
 

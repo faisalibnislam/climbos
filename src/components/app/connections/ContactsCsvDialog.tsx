@@ -4,7 +4,7 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Download } from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
-import { Button, Callout, DataTable, Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger, Skeleton } from "@/components/ui";
+import { Button, Callout, DataTable, Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger, Label, Skeleton, buttonClasses } from "@/components/ui";
 import { formatNumber, plural } from "@/lib/utils";
 import { errorMessage } from "../errors";
 
@@ -84,17 +84,17 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
       >
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Callout tone="info" title="Consent is never assumed">
-            Only rows with consent = yes <strong>and</strong> a consent source <strong>and</strong> a consent date can receive marketing email. Everyone else is
+            Only rows with consent = yes <strong className="font-semibold">and</strong> a consent source <strong className="font-semibold">and</strong> a consent date can receive marketing email. Everyone else is
             imported as a contact for planning only — ClimbOS won&apos;t email them.
           </Callout>
           <div>
-            <h3 className="font-semibold text-ink">Columns</h3>
-            <p className="text-sm text-ink-3">The first row must contain the column names. Only email is required.</p>
-            <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+            <h3 className="heading-card">Columns</h3>
+            <p className="mt-0.5 text-ui text-ink-3">The first row must contain the column names. Only email is required.</p>
+            <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-ui sm:grid-cols-2">
               {COLUMNS.map((c) => (
                 <li key={c.name} className="flex flex-col">
                   <span>
-                    <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.8125rem] text-ink">{c.name}</code>{" "}
+                    <code className="rounded-sm bg-surface-2 px-1 py-0.5 font-mono text-xs text-ink">{c.name}</code>{" "}
                     <span className={c.required ? "font-medium text-ink" : "text-ink-3"}>{c.required ? "required" : "optional"}</span>
                   </span>
                   <span className="text-ink-3">{c.help}</span>
@@ -104,7 +104,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
             <a
               href={TEMPLATE_HREF}
               download="climbos-contacts-template.csv"
-              className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline"
+              className={buttonClasses({ variant: "link", className: "mt-3" })}
             >
               <Download aria-hidden="true" className="size-4" />
               Download a template (CSV)
@@ -112,10 +112,10 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={inputId} className="text-[0.95rem] font-medium text-ink">
+            <Label htmlFor={inputId}>
               Contact file
-            </label>
-            <p id={hintId} className="text-sm text-ink-3">
+            </Label>
+            <p id={hintId} className="text-xs text-ink-3">
               A .csv file, up to 5 MB and 10,000 rows.
             </p>
             <input
@@ -128,7 +128,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
                 setError(null);
                 setResult(null);
               }}
-              className="block w-full rounded-[8px] border border-line-strong bg-surface p-2 text-sm text-ink file:mr-3 file:min-h-9 file:rounded-[6px] file:border-0 file:bg-brand-50 file:px-3 file:font-medium file:text-brand-900"
+              className="block w-full rounded-lg border border-line-strong bg-surface p-1 text-ui text-ink file:mr-3 file:h-8 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-2 file:px-2.5 file:text-ui file:font-medium file:text-ink hover:file:bg-surface-3"
             />
           </div>
 
@@ -187,13 +187,13 @@ export function AudienceSummary({ slug }: { slug: string }) {
         <p role="status" className="sr-only">
           Loading audience…
         </p>
-        <Skeleton className="h-16 rounded-[var(--radius)]" />
+        <Skeleton className="h-16 rounded-xl" />
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-sm font-semibold text-ink-2">Who can be emailed</h4>
+      <h4 className="text-ui font-semibold text-ink-2">Who can be emailed</h4>
       <DataTable
         caption="Contacts by segment and how many can receive marketing email"
         hideCaption
@@ -208,9 +208,9 @@ export function AudienceSummary({ slug }: { slug: string }) {
           { key: "sendable", header: "Can be emailed", align: "right", cell: (s) => formatNumber(s.sendable) },
         ]}
       />
-      <p className="text-sm text-ink-3">{audience.note}</p>
+      <p className="text-xs text-ink-3">{audience.note}</p>
       {!audience.providerConnected && audience.segments.some((s) => s.sendable > 0) ? (
-        <p className="text-sm text-ink-3">To send email, connect your own Resend account under Email marketing.</p>
+        <p className="text-xs text-ink-3">To send email, connect your own Resend account under Email marketing.</p>
       ) : null}
     </div>
   );

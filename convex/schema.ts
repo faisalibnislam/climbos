@@ -665,6 +665,120 @@ export default defineSchema({
     active: v.boolean(),
   }).index("by_org_active", ["orgId", "active"]),
 
+  /* ---------------- Social autopilot ---------------- */
+  autopilotSettings: defineTable({
+    orgId: v.id("organizations"),
+    enabled: v.boolean(),
+    mode: v.union(v.literal("always_ask"), v.literal("trust_ladder"), v.literal("auto")),
+    channels: v.array(v.object({ channel: v.string(), postsPerWeek: v.number() })),
+    /** Owner's preferred local posting hours; empty = channel defaults. */
+    postingHours: v.array(v.number()),
+    alwaysAskTopics: v.array(v.string()),
+    /** Images for the first posts of each week (0-2), metered like manual jobs. */
+    imagesPerWeek: v.number(),
+    trust: v.array(v.object({ channel: v.string(), streak: v.number(), unlocked: v.boolean(), updatedAt: v.number() })),
+    lastPlannedWeek: v.optional(v.string()),
+    lastPlanRunId: v.optional(v.id("workflowRuns")),
+    pausedReason: v.optional(v.string()),
+    updatedBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_enabled", ["enabled"]),
+
+  calendarSlots: defineTable({
+    orgId: v.id("organizations"),
+    /** Local Monday of the week, "YYYY-MM-DD". */
+    weekOf: v.string(),
+    planRunId: v.optional(v.id("workflowRuns")),
+    channel: v.string(),
+    day: v.number(),
+    slotAt: v.number(),
+    pillar: v.string(),
+    purpose: v.string(),
+    format: v.string(),
+    idea: v.string(),
+    angle: v.string(),
+    hookDraft: v.string(),
+    callToAction: v.string(),
+    needsOwner: v.boolean(),
+    ownerNote: v.optional(v.string()),
+    status: v.union(
+      v.literal("planned"),
+      v.literal("drafting"),
+      v.literal("needs_approval"),
+      v.literal("scheduled"),
+      v.literal("ready_to_post"),
+      v.literal("published"),
+      v.literal("skipped"),
+      v.literal("failed"),
+    ),
+    artifactId: v.optional(v.id("artifacts")),
+    draftRunId: v.optional(v.id("workflowRuns")),
+    routing: v.optional(v.object({ decision: v.union(v.literal("auto"), v.literal("ask")), reasons: v.array(v.string()) })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org_week", ["orgId", "weekOf"])
+    .index("by_org_slot", ["orgId", "slotAt"])
+    .index("by_artifact", ["artifactId"])
+    .index("by_draft_run", ["draftRunId"]),
+
+  weekPlans: defineTable({
+    orgId: v.id("organizations"),
+    weekOf: v.string(),
+    runId: v.id("workflowRuns"),
+    weekTheme: v.string(),
+    pillars: v.array(v.object({ name: v.string(), why: v.string() })),
+    learningsApplied: v.array(v.string()),
+    createdAt: v.number(),
+  }).index("by_org_week", ["orgId", "weekOf"]),
+
+  communityMessages: defineTable({
+    orgId: v.id("organizations"),
+    channel: v.string(),
+    kind: v.union(v.literal("comment"), v.literal("dm"), v.literal("mention"), v.literal("review")),
+    externalId: v.string(),
+    artifactId: v.optional(v.id("artifacts")),
+    authorName: v.string(),
+    text: v.string(),
+    receivedAt: v.number(),
+    triage: v.optional(
+      v.object({
+        intent: v.union(v.literal("question"), v.literal("praise"), v.literal("complaint"), v.literal("lead"), v.literal("spam"), v.literal("other")),
+        urgency: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
+        needsOwner: v.boolean(),
+        reason: v.string(),
+      }),
+    ),
+    suggestedReply: v.optional(v.string()),
+    finalReply: v.optional(v.string()),
+    status: v.union(v.literal("new"), v.literal("suggested"), v.literal("replied"), v.literal("dismissed"), v.literal("escalated")),
+    isFixture: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org_status", ["orgId", "status"])
+    .index("by_org_external", ["orgId", "externalId"]),
+
+  postMetrics: defineTable({
+    orgId: v.id("organizations"),
+    artifactId: v.id("artifacts"),
+    channel: v.string(),
+    capturedAt: v.number(),
+    source: v.union(v.literal("platform"), v.literal("owner"), v.literal("fixture")),
+    impressions: v.optional(v.number()),
+    reach: v.optional(v.number()),
+    likes: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    saves: v.optional(v.number()),
+    clicks: v.optional(v.number()),
+  })
+    .index("by_org_captured", ["orgId", "capturedAt"])
+    .index("by_artifact", ["artifactId"]),
+
   /* ---------------- Chat and action cards ---------------- */
   chatMessages: defineTable({
     orgId: v.id("organizations"),

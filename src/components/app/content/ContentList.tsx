@@ -3,9 +3,9 @@
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { Flag, ImageIcon, Inbox } from "lucide-react";
+import { Check, Flag, ImageIcon, Inbox } from "lucide-react";
 import Link from "next/link";
-import { Button, EmptyState, Skeleton } from "@/components/ui";
+import { Button, Card, EmptyState, Skeleton, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatDateTime, relativeTime } from "../money";
 import { ArtifactStatus, ChannelTag, RoleName, SectionBoundary, useNow } from "./shared";
@@ -52,11 +52,13 @@ export function FilterChips({ value, onChange }: { value: string; onChange: (key
             type="button"
             aria-pressed={active}
             onClick={() => onChange(f.key)}
-            className={cn(
-              "inline-flex h-7 items-center rounded-lg border px-2.5 text-[13px] transition-colors",
-              active ? "border-ink bg-ink font-medium text-white" : "border-line-strong bg-[#fdfdfd] text-ink-2 hover:border-ink-3 hover:text-ink",
-            )}
+            className={buttonClasses({
+              variant: "secondary",
+              size: "sm",
+              className: cn(active ? "border-brand-800 bg-brand-50 text-brand-900 hover:bg-brand-50" : "text-ink-2 hover:text-ink"),
+            })}
           >
+            {active ? <Check aria-hidden="true" /> : null}
             {f.label}
           </button>
         );
@@ -130,12 +132,12 @@ function ListBody({
           Loading content…
         </span>
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-            <Skeleton className="h-4 w-24" />
+          <Card key={i} className="flex flex-col gap-3 p-4">
+            <Skeleton className="h-7 w-28" />
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-2/3" />
-          </div>
+          </Card>
         ))}
       </div>
     );
@@ -179,32 +181,32 @@ function ListBody({
 function ContentCard({ slug, item }: { slug: string; item: ListItem }) {
   const now = useNow();
   return (
-    <article className="relative flex h-full flex-col gap-2.5 rounded-xl border border-line bg-surface p-4 shadow-sm transition hover:border-line-strong focus-within:border-brand-700">
+    <article className="relative flex h-full flex-col gap-3 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line-strong hover:bg-surface-2 focus-within:border-brand-700">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ChannelTag channel={item.channel} />
         {item.scheduledFor && item.status === "scheduled" ? (
-          <span className="text-sm text-ink-3">For {now ? formatDateTime(item.scheduledFor) : "…"}</span>
+          <span className="text-xs text-ink-3">For {now ? formatDateTime(item.scheduledFor) : "…"}</span>
         ) : null}
       </div>
-      <h3 className="text-[15px] font-semibold leading-snug text-ink">
-        <Link href={`/app/${slug}/content/${item.id}`} className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none">
+      <h3 className="heading-card">
+        <Link href={`/app/${slug}/content/${item.id}`} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">
           {item.title}
         </Link>
       </h3>
       <ArtifactStatus status={item.status} showHelp />
-      {item.preview ? <p className="line-clamp-3 text-sm leading-relaxed text-ink-3">{item.preview}</p> : null}
-      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-2.5 text-xs text-ink-3">
+      {item.preview ? <p className="line-clamp-3 text-sm text-ink-3">{item.preview}</p> : null}
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-3 text-xs text-ink-3">
         <span>
           Created by <RoleName role={item.createdByRole} className="text-ink-2" />
         </span>
         {item.hasImage ? (
           <span className="inline-flex items-center gap-1">
-            <ImageIcon aria-hidden="true" className="size-4" /> Has image
+            <ImageIcon aria-hidden="true" className="size-3.5" /> Has image
           </span>
         ) : null}
         {item.flags > 0 ? (
           <span className="inline-flex items-center gap-1 font-medium text-amber-800">
-            <Flag aria-hidden="true" className="size-4" /> {item.flags} claim{item.flags === 1 ? "" : "s"} to check
+            <Flag aria-hidden="true" className="size-3.5" /> {item.flags} claim{item.flags === 1 ? "" : "s"} to check
           </span>
         ) : null}
         <span>Updated {now ? relativeTime(item.updatedAt, now) : "…"}</span>

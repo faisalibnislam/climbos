@@ -43,8 +43,8 @@ export function useFieldControl(own: { id?: string; "aria-describedby"?: string;
 }
 
 export const controlClasses =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink " +
-  "placeholder:text-ink-3 transition-colors hover:border-[#aeb6c9] " +
+  "w-full rounded-lg border border-control bg-surface px-3 text-ui text-ink " +
+  "placeholder:text-ink-3 transition-colors hover:border-control-hover " +
   "focus-visible:border-brand-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 " +
   "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3 " +
   "aria-[invalid=true]:border-red-800";
@@ -57,7 +57,7 @@ export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
 /** Form label. Always pair visible labels with inputs (never rely on placeholder). */
 export function Label({ className, optional, children, ...props }: LabelProps) {
   return (
-    <label className={cn("text-[13px] font-medium text-ink", className)} {...props}>
+    <label className={cn("text-ui font-medium text-ink", className)} {...props}>
       {children}
       {optional ? <span className="ml-1.5 font-normal text-ink-3">(optional)</span> : null}
     </label>
@@ -100,8 +100,8 @@ export function Field({ label, hint, error, optional, required = false, id, clas
         ) : null}
         {children}
         {error ? (
-          <p id={errorId} className="flex items-start gap-1.5 text-sm font-medium text-red-800">
-            <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <p id={errorId} className="flex items-start gap-1.5 text-ui font-medium text-red-800">
+            <CircleAlert aria-hidden="true" className="mt-px size-4 shrink-0" />
             <span>{error}</span>
           </p>
         ) : null}
@@ -110,13 +110,18 @@ export function Field({ label, hint, error, optional, required = false, id, clas
   );
 }
 
-/** Single-line text input (44px tall). Auto-wires to a surrounding <Field>. */
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
-  { className, id, required, "aria-describedby": describedBy, ...props },
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
+  /** sm 32px (dense panels, toolbars), md 36px (default), lg 40px (marketing, hero forms). */
+  size?: "sm" | "md" | "lg";
+}
+
+/** Single-line text input on the control-height scale. Auto-wires to a surrounding <Field>. */
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { className, id, required, size = "md", "aria-describedby": describedBy, ...props },
   ref,
 ) {
   const wiring = useFieldControl({ id, required, "aria-describedby": describedBy });
-  return <input ref={ref} className={cn(controlClasses, "h-9", className)} {...wiring} {...props} />;
+  return <input ref={ref} className={cn(controlClasses, size === "sm" ? "h-8 px-2.5" : size === "lg" ? "h-10 text-sm" : "h-9", className)} {...wiring} {...props} />;
 });
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -155,7 +160,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         else if (forwardedRef) forwardedRef.current = node;
       }}
       rows={rows}
-      className={cn(controlClasses, "min-h-11 py-2.5 leading-relaxed", autosize && "resize-none", className)}
+      className={cn(controlClasses, "min-h-9 py-2 leading-5", autosize && "resize-none", className)}
       onInput={(e) => {
         resize();
         onInput?.(e);

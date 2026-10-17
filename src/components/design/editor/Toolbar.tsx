@@ -28,6 +28,7 @@ import { DESIGN_FONTS, nearestWeight } from "../fonts";
 import { ColorControl, Divider, NumberField, SelectField, Slider, ToolButton } from "./controls";
 import { withNewIds, type Editor } from "./useEditor";
 import { useState } from "react";
+import { Checkbox, Tooltip } from "@/components/ui";
 
 const WEIGHT_NAMES: Record<number, string> = { 100: "Thin", 200: "Extra light", 300: "Light", 400: "Regular", 500: "Medium", 600: "Semibold", 700: "Bold", 800: "Extra bold", 900: "Black" };
 
@@ -39,14 +40,14 @@ export function Toolbar({ editor }: { editor: Editor }) {
   if (!selectedLayers.length) {
     return (
       <div className="flex min-h-12 flex-wrap items-center gap-2 px-3">
-        <span className="text-sm font-medium text-ink-2">Page background</span>
+        <span className="text-ui font-medium text-ink-2">Page background</span>
         <ColorControl
           label="Page background"
           value={page.background.kind === "solid" ? page.background.color : "#ffffff"}
           brand={doc.brand}
           onChange={(color) => apply([{ op: "set_background", pageId: page.id, background: { ...page.background, kind: "solid", color } }])}
         />
-        <span className="ml-2 text-sm text-ink-3">Select something on the page to edit it. Double-click text to type.</span>
+        <span className="ml-2 text-ui text-ink-3">Select something on the page to edit it. Double-click text to type.</span>
       </div>
     );
   }
@@ -104,10 +105,12 @@ export function Toolbar({ editor }: { editor: Editor }) {
       ) : null}
 
       <div className="ml-auto flex flex-wrap items-center gap-1">
-        <label className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3" title="Transparency">
-          Opacity
-          <input type="range" min={0} max={1} step={0.05} value={one?.opacity ?? 1} onChange={(e) => updateSelected({ opacity: Number(e.target.value) })} className="w-20 accent-[var(--brand-800)]" />
-        </label>
+        <Tooltip content="Transparency">
+          <label className="inline-flex h-8 items-center gap-2 text-ui font-medium text-ink-2">
+            Opacity
+            <input type="range" min={0} max={1} step={0.05} value={one?.opacity ?? 1} onChange={(e) => updateSelected({ opacity: Number(e.target.value) })} className="w-20 accent-brand-800" />
+          </label>
+        </Tooltip>
         {one ? <NumberField label="Rotation" value={one.rotation} min={-360} max={360} suffix="°" width="w-14" onChange={(rotation) => updateSelected({ rotation })} /> : null}
         <Divider />
         <ToolButton label="Centre horizontally" onClick={() => align("x")}>
@@ -263,16 +266,14 @@ function ImageControls({ layer, editor, showAdjust, setShowAdjust }: { layer: Im
         Adjust
       </ToolButton>
       {showAdjust ? (
-        <div className="grid w-full max-w-xl grid-cols-1 gap-1.5 rounded-lg border border-line bg-surface p-3 sm:grid-cols-2">
+        <div className="grid w-full max-w-xl grid-cols-1 gap-x-4 gap-y-1 rounded-xl border border-line bg-surface p-3 sm:grid-cols-2">
           <Slider label="Zoom" value={zoom} min={1} max={4} onChange={setZoom} />
           <Slider label="Left / right" value={layer.crop.x} min={0} max={Math.max(0, 1 - layer.crop.width)} onChange={(x) => set({ crop: { ...layer.crop, x } })} />
           <Slider label="Up / down" value={layer.crop.y} min={0} max={Math.max(0, 1 - layer.crop.height)} onChange={(y) => set({ crop: { ...layer.crop, y } })} />
           <Slider label="Brightness" value={f.brightness ?? 1} min={0.3} max={1.7} onChange={(brightness) => set({ filters: { ...f, brightness } })} />
           <Slider label="Contrast" value={f.contrast ?? 1} min={0.3} max={1.7} onChange={(contrast) => set({ filters: { ...f, contrast } })} />
           <Slider label="Saturation" value={f.saturation ?? 1} min={0} max={2} onChange={(saturation) => set({ filters: { ...f, saturation } })} />
-          <label className="flex items-center gap-2 text-xs font-medium text-ink-2">
-            <input type="checkbox" checked={Boolean(f.grayscale)} onChange={(e) => set({ filters: { ...f, grayscale: e.target.checked } })} /> Black and white
-          </label>
+          <Checkbox checked={Boolean(f.grayscale)} onCheckedChange={(v) => set({ filters: { ...f, grayscale: v === true } })} label="Black and white" />
         </div>
       ) : null}
     </>
@@ -284,9 +285,9 @@ function ShapeControls({ layer, editor }: { layer: ShapeLayer; editor: Editor })
   const set = (p: Partial<ShapeLayer>) => updateSelected(p as Partial<Layer>);
   return (
     <>
-      <span className="text-sm font-medium text-ink-2">Fill</span>
+      <span className="text-ui font-medium text-ink-2">Fill</span>
       <ColorControl label="Fill colour" value={layer.fill.kind === "solid" ? layer.fill.color : "#ffffff"} brand={doc.brand} onChange={(color) => set({ fill: { kind: "solid", color } })} />
-      <span className="ml-2 text-sm font-medium text-ink-2">Border</span>
+      <span className="ml-2 text-ui font-medium text-ink-2">Border</span>
       <ColorControl label="Border colour" value={layer.stroke?.color ?? "#101828"} brand={doc.brand} onChange={(color) => set({ stroke: { width: layer.stroke?.width ?? 4, color } })} />
       <NumberField label="Border width" value={layer.stroke?.width ?? 0} min={0} max={80} onChange={(width) => set({ stroke: width ? { width, color: layer.stroke?.color ?? "#101828" } : undefined })} />
       {layer.shape === "rect" ? <NumberField label="Corner radius" value={layer.radius} min={0} max={1000} onChange={(radius) => set({ radius })} /> : null}

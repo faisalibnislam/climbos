@@ -13,8 +13,8 @@ function CharCount({ id, value, limit }: { id: string; value: string; limit: Tex
   const n = limit.count(value);
   const over = n - limit.limit;
   return (
-    <p id={id} className={cn("flex items-center gap-1.5 text-sm tabular-nums", over > 0 ? "font-medium text-red-800" : "text-ink-3")}>
-      {over > 0 ? <CircleAlert aria-hidden="true" className="size-4" /> : null}
+    <p id={id} className={cn("flex items-center gap-1.5 text-xs tabular-nums", over > 0 ? "font-medium text-red-800" : "text-ink-3")}>
+      {over > 0 ? <CircleAlert aria-hidden="true" className="size-3.5" /> : null}
       {limit.label}: {n.toLocaleString("en-US")} of {limit.limit.toLocaleString("en-US")} characters
       {over > 0 ? ` — ${over.toLocaleString("en-US")} over the limit` : ""}
     </p>

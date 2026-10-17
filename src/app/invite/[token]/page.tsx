@@ -19,9 +19,9 @@ export default function InvitePage() {
   return (
     <main id="main" className="grid min-h-dvh place-items-center bg-bg px-4">
       <Card className="w-full max-w-md">
-        <CardContent className="space-y-5 p-8">
+        <CardContent className="space-y-5 p-6 sm:p-8">
           <Logo />
-          <h1 className="font-display tracking-tight font-extrabold text-2xl">You’re invited to a ClimbOS workspace</h1>
+          <h1 className="heading-page">You’re invited to a ClimbOS workspace</h1>
           {error && <Callout tone="danger">{error}</Callout>}
           {isLoading ? null : isAuthenticated ? (
             <Button
@@ -45,7 +45,7 @@ export default function InvitePage() {
               <Link href={`/sign-in?next=${encodeURIComponent(`/invite/${token}`)}`}>Sign in to accept</Link>
             </Button>
           )}
-          <p className="text-sm text-ink-3">Sign in with the email address the invitation was sent to.</p>
+          <p className="text-xs text-ink-3">Sign in with the email address the invitation was sent to.</p>
         </CardContent>
       </Card>
     </main>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div className="hero-glow flex min-h-dvh flex-1 flex-col">
+    <div className="flex min-h-dvh flex-1 flex-col bg-bg">
       <header className="mx-auto flex h-16 w-full max-w-6xl items-center px-5 sm:px-8">
         <Link href="/" className="-ml-1 inline-flex min-h-11 items-center rounded-lg px-1" aria-label="ClimbOS home">
           <Logo />
@@ -18,11 +18,9 @@ export default function NotFound() {
       </header>
       <main id="main" tabIndex={-1} className="flex flex-1 items-center justify-center px-5 py-16 focus:outline-none">
         <div className="max-w-lg text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">Page not found</p>
-          <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight tracking-tight text-ink sm:text-5xl">
-            This path doesn&apos;t lead anywhere — yet.
-          </h1>
-          <p className="mt-4 text-lg leading-relaxed text-ink-2">
+          <p className="text-overline">Page not found</p>
+          <h1 className="mt-2 heading-page">This path doesn&apos;t lead anywhere — yet.</h1>
+          <p className="mt-3 text-sm text-ink-2">
             The page may have moved, or the link might have a typo. Let&apos;s get you back on track.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">

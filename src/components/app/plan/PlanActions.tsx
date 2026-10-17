@@ -55,7 +55,7 @@ export function GeneratePlanButton({
           }
         }}
       />
-      <p className="text-sm text-ink-3">Up to {microsToDisplay(estimateMicros)} of AI capacity</p>
+      <p className="text-xs text-ink-3">Up to {microsToDisplay(estimateMicros)} of AI capacity</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );
@@ -80,7 +80,7 @@ export function StrategyRunWatcher({
   return (
     <Card className="border-brand-200">
       <CardContent className="flex flex-col gap-4">
-        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-[0.95rem] text-ink-2">Your new plan is below. Review it and approve it when you&apos;re happy.</p>} />
+        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-sm text-ink-2">Your new plan is below. Review it and approve it when you&apos;re happy.</p>} />
         {finished && startedRunId ? (
           <Button variant="ghost" className="self-start" onClick={onDismiss}>
             Hide progress
@@ -107,11 +107,11 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove }: { slug
     }
   };
   return (
-    <section aria-labelledby="review-heading" className="rounded-[var(--radius-lg)] border-2 border-amber-800/40 bg-amber-100 p-5 sm:p-6">
-      <h2 id="review-heading" className="text-xl font-semibold text-ink">
+    <section aria-labelledby="review-heading" className="rounded-xl border border-amber-500/30 bg-amber-100/60 p-5">
+      <h2 id="review-heading" className="heading-section">
         Review your plan (version {version})
       </h2>
-      <p className="mt-2 max-w-3xl leading-relaxed text-ink-2">
+      <p className="mt-1 max-w-3xl text-sm text-ink-2">
         Approving lets your team start drafting content for the active channels below. Every post, email and ad still needs its own approval before it goes
         anywhere, and approving the plan spends no money.
       </p>
@@ -137,7 +137,7 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove }: { slug
           </ConfirmDialog>
         </div>
       ) : (
-        <p className="mt-3 font-medium text-ink">Waiting for {PERMISSION_WHO.approve} to approve it.</p>
+        <p className="mt-3 text-sm font-medium text-ink">Waiting for {PERMISSION_WHO.approve} to approve it.</p>
       )}
       {error ? <ErrorCallout error={error} className="mt-4" /> : null}
     </section>

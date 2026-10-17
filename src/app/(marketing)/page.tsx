@@ -29,7 +29,7 @@ export default function HomePage() {
       <WontDo />
       <PricingTeaser />
       <Faq items={LANDING_FAQ} />
-      <FinalCta />
+      <FinalCta className="bg-surface" />
     </>
   );
 }

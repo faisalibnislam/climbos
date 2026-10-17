@@ -41,3 +41,9 @@ test.describe("public site", () => {
     await expect(page).toHaveURL(/\/sign-in/);
   });
 });
+
+test("design system reference renders every component accessibly", async ({ page }) => {
+  await page.goto("/design-system");
+  await expect(page.getByRole("heading", { level: 1, name: "Design system" })).toBeVisible();
+  await expectAccessible(page, "design system");
+});

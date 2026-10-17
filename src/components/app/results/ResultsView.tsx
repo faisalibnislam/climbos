@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import { ArrowRight, PlugZap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Callout, LineChart } from "@/components/ui";
+import { Button, Callout, LineChart, buttonClasses } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { minorToDisplay } from "../money";
 import { AttributionSection, PlatformClaimsSection } from "./AttributionSection";
@@ -16,7 +16,7 @@ import { changeText, formatMetric, formatPercent, freshnessText, longDate, short
 import { DemoBadge, Definition, ValueKind } from "./Provenance";
 import { LoadingBlock, PageHeader } from "./QueryBoundary";
 import { ScenarioCalculator } from "./ScenarioCalculator";
-import { Segmented } from "./Segmented";
+import { Segmented } from "@/components/ui/segmented";
 
 export type Overview = FunctionReturnType<typeof api.analytics.overview>;
 export type OverviewMetric = Overview["metrics"][number];
@@ -40,7 +40,7 @@ export function ResultsView({ slug }: { slug: string }) {
   const data = useQuery(api.analytics.overview, { slug, days });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <div>
         <PageHeader
           section="results"
@@ -49,7 +49,7 @@ export function ResultsView({ slug }: { slug: string }) {
           actions={<Segmented label="Time period" options={[...PERIODS]} value={days} onChange={(v) => setDays(v)} />}
         />
         {data ? (
-          <p className="text-sm text-ink-3">
+          <p className="-mt-3 text-xs text-ink-3">
             {longDate(data.from)} – {longDate(data.to)} · Days in {data.timezone} · Money in {data.currency}
           </p>
         ) : null}
@@ -83,20 +83,20 @@ export function ResultsView({ slug }: { slug: string }) {
 function GapsSection({ slug, gaps }: { slug: string; gaps: Overview["gaps"] }) {
   return (
     <section aria-labelledby="gaps-heading" className="flex flex-col gap-3">
-      <h2 id="gaps-heading" className="text-xl font-semibold text-ink">
+      <h2 id="gaps-heading" className="heading-section">
         Missing data
       </h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {gaps.map((g) => (
-          <li key={g.metric} className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-dashed border-line-strong bg-surface p-4">
-            <p className="flex items-start gap-2 font-medium text-ink">
-              <PlugZap aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-800" />
+          <li key={g.metric} className="flex flex-col gap-2 rounded-xl border border-dashed border-line-strong bg-surface p-4">
+            <p className="flex items-start gap-2 text-sm font-medium text-ink">
+              <PlugZap aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-800" />
               <span>{g.fix}</span>
             </p>
-            <p className="text-sm leading-relaxed text-ink-2">{g.message}</p>
+            <p className="text-ui text-ink-3">{g.message}</p>
             <Link
               href={`/app/${slug}/connections`}
-              className="mt-auto inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline"
+              className={buttonClasses({ variant: "link", className: "mt-auto self-start pt-1" })}
             >
               Go to Connections
               <ArrowRight aria-hidden="true" className="size-4" />
@@ -110,7 +110,7 @@ function GapsSection({ slug, gaps }: { slug: string; gaps: Overview["gaps"] }) {
 
 export function MetricMeta({ metric, showCurrency }: { metric: OverviewMetric; showCurrency?: boolean }) {
   return (
-    <p className="text-[0.8125rem] leading-relaxed text-ink-3">
+    <p className="text-xs text-ink-3">
       From {sourceLabel(metric.sourceName, metric.source)} · {freshnessText(metric.freshness)} · days in {metric.timezone}
       {showCurrency && metric.currency ? ` · ${metric.currency}` : ""}
     </p>
@@ -119,27 +119,27 @@ export function MetricMeta({ metric, showCurrency }: { metric: OverviewMetric; s
 
 function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetric; span: number }) {
   return (
-    <article className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
+    <article className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-base font-semibold text-ink">{metric.label}</h3>
+        <h3 className="heading-card">{metric.label}</h3>
         <ValueKind kind="observed" />
         <DemoBadge show={metric.isFixture} />
       </div>
       {metric.hasData ? (
         <>
-          <p className="text-4xl font-extrabold tabular-nums tracking-tight text-ink">
+          <p className="metric">
             {formatMetric(metric.total, metric.unit, metric.currency)}
           </p>
-          <p className="text-sm font-medium text-ink-2">{changeText(metric.total, metric.previousTotal, span)}</p>
+          <p className="text-ui font-medium text-ink-2">{changeText(metric.total, metric.previousTotal, span)}</p>
           {metric.previousTotal !== null ? (
-            <p className="text-sm text-ink-3">Previous {span} days: {formatMetric(metric.previousTotal, metric.unit, metric.currency)}</p>
+            <p className="text-xs text-ink-3">Previous {span} days: {formatMetric(metric.previousTotal, metric.unit, metric.currency)}</p>
           ) : null}
           <MetricMeta metric={metric} showCurrency />
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="text-lg font-medium text-ink-2">No data yet</p>
-          <Link href={`/app/${slug}/connections`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline">
+          <p className="text-sm font-medium text-ink-2">No data yet</p>
+          <Link href={`/app/${slug}/connections`} className={buttonClasses({ variant: "link", className: "self-start whitespace-normal text-left" })}>
             {METRIC_NEEDS[metric.key] ?? "Connect a data source"}
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
@@ -159,10 +159,10 @@ function OutcomeSection({ slug, data }: { slug: string; data: Overview }) {
   return (
     <section aria-labelledby="outcome-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="outcome-heading" className="text-xl font-semibold text-ink">
+        <h2 id="outcome-heading" className="heading-section">
           Business outcome
         </h2>
-        <p className="mt-1 text-ink-2">Money in and new customers, straight from your billing data.</p>
+        <p className="mt-0.5 text-sm text-ink-3">Money in and new customers, straight from your billing data.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {revenue ? <MetricCard slug={slug} metric={revenue} span={data.span} /> : null}
@@ -203,10 +203,10 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
   return (
     <section aria-labelledby="funnel-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="funnel-heading" className="text-xl font-semibold text-ink">
+        <h2 id="funnel-heading" className="heading-section">
           From visit to paying customer
         </h2>
-        <p className="mt-1 text-ink-2">How many people moved through each step in the last {data.span} days.</p>
+        <p className="mt-0.5 text-sm text-ink-3">How many people moved through each step in the last {data.span} days.</p>
       </div>
       {!anyData ? (
         <Callout
@@ -221,27 +221,27 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
           Connect Google Analytics 4 for visits and sign-ups, and your billing data for paying customers.
         </Callout>
       ) : (
-        <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-5">
+        <div className="rounded-xl border border-line bg-surface p-5">
           <ol className="flex flex-col gap-5">
             {steps.map((s, i) => {
               const r = rates[i];
               return (
                 <li key={s.key} className="flex flex-col gap-1.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <span className="flex items-center gap-2 font-medium text-ink">
+                    <span className="flex items-center gap-2 text-sm font-medium text-ink">
                       <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-brand-100 text-xs font-semibold text-brand-900">
                         {i + 1}
                       </span>
                       {s.label}
                     </span>
-                    <span className="num-serif text-[28px] leading-8 tabular-nums text-ink">
+                    <span className="metric">
                       {s.hasData ? formatNumber(Math.round(s.total)) : "No data"}
                     </span>
                   </div>
                   <div aria-hidden="true" className="h-2.5 w-full overflow-hidden rounded-full bg-surface-3">
                     <div className="h-full rounded-full bg-brand-700" style={{ width: `${s.hasData ? Math.max(1, (s.total / maxVal) * 100) : 0}%` }} />
                   </div>
-                  <p className="text-sm text-ink-3">
+                  <p className="text-xs text-ink-3">
                     {i > 0 ? (r ? <>Step rate {r.text} ({r.detail}) · </> : <>Step rate unavailable — needs data for both steps · </>) : null}
                     From {sourceLabel(s.sourceName, s.source)} · {freshnessText(s.freshness)}
                   </p>
@@ -249,7 +249,7 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
               );
             })}
           </ol>
-          <p className="mt-4 border-t border-line pt-3 text-sm leading-relaxed text-ink-3">
+          <p className="mt-5 border-t border-line pt-3 text-xs text-ink-3">
             All values are observed. Visits and sign-ups come from your analytics; paying customers come from billing. Because they are counted by different
             systems, step rates are approximate — not every paying customer is tracked back to a visit.
           </p>

@@ -3,51 +3,40 @@
 import { useAction, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import {
-  ArrowRight,
-  AtSign,
-  BarChart3,
-  Briefcase,
-  Camera,
-  Contact,
-  CreditCard,
-  FileSpreadsheet,
-  Globe,
-  Mail,
-  Megaphone,
-  Music2,
-  Pin,
-  RefreshCw,
-  Search,
-  SquarePlay,
-  ThumbsUp,
-  UserSearch,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, Contact, CreditCard, FileSpreadsheet, Globe, RefreshCw, UserSearch, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Callout, ConfirmDialog, IconTile, StatusPill, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, IconTile, SocialIcon, StatusPill, toast, type Tone } from "@/components/ui";
 
-/** Each provider's icon and colour, so connections are easy to scan. */
+/** Real network marks for social/ad/analytics providers; neutral icon tiles for the rest. */
+const PROVIDER_NETWORK: Record<string, string> = {
+  website: "website",
+  ga4: "google",
+  search_console: "google",
+  google_ads: "google",
+  meta_ads: "facebook",
+  facebook_pages: "facebook",
+  instagram: "instagram",
+  email_resend: "email",
+  linkedin: "linkedin",
+  x: "x",
+  tiktok: "tiktok",
+  pinterest: "pinterest",
+  youtube: "youtube",
+};
 const PROVIDER_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
-  website: { icon: Globe, tone: "green" },
-  ga4: { icon: BarChart3, tone: "orange" },
-  search_console: { icon: Search, tone: "blue" },
-  google_ads: { icon: Megaphone, tone: "amber" },
-  meta_ads: { icon: Megaphone, tone: "blue" },
-  facebook_pages: { icon: ThumbsUp, tone: "blue" },
-  instagram: { icon: Camera, tone: "pink" },
-  email_resend: { icon: Mail, tone: "teal" },
   stripe_revenue: { icon: CreditCard, tone: "violet" },
   csv_revenue: { icon: FileSpreadsheet, tone: "green" },
-  linkedin: { icon: Briefcase, tone: "brand" },
-  x: { icon: AtSign, tone: "neutral" },
-  tiktok: { icon: Music2, tone: "violet" },
-  pinterest: { icon: Pin, tone: "red" },
-  youtube: { icon: SquarePlay, tone: "red" },
   crm_csv: { icon: Contact, tone: "teal" },
   enrichment: { icon: UserSearch, tone: "brand" },
 };
+
+function ProviderMark({ provider }: { provider: string }) {
+  const network = PROVIDER_NETWORK[provider];
+  if (network) return <SocialIcon network={network} variant="tile" size="xl" />;
+  const v = PROVIDER_VISUAL[provider] ?? { icon: Globe, tone: "neutral" as Tone };
+  return <IconTile icon={v.icon} tone={v.tone} size="md" className="size-9" />;
+}
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { ApiKeyDialog } from "./ApiKeyDialog";
@@ -114,15 +103,15 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
   const headingId = `conn-${item.provider}`;
 
   return (
-    <article aria-labelledby={headingId} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-sm">
+    <article aria-labelledby={headingId} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3.5">
-          <IconTile icon={(PROVIDER_VISUAL[item.provider] ?? PROVIDER_VISUAL.website).icon} tone={(PROVIDER_VISUAL[item.provider] ?? PROVIDER_VISUAL.website).tone} size="lg" />
+        <div className="flex min-w-0 items-start gap-3">
+          <ProviderMark provider={item.provider} />
           <div className="min-w-0">
-            <h3 id={headingId} className="text-lg font-bold text-ink">
+            <h3 id={headingId} className="heading-card">
               {item.name}
             </h3>
-            <p className="mt-0.5 leading-relaxed text-ink-2">{item.description}</p>
+            <p className="mt-0.5 text-ui text-ink-3">{item.description}</p>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
@@ -138,7 +127,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       </div>
 
       {conn ? (
-        <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+        <dl className="grid gap-x-6 gap-y-1 text-ui sm:grid-cols-2">
           {conn.accountLabel ? (
             <div className="flex gap-1.5">
               <dt className="text-ink-3">Account:</dt>
@@ -167,17 +156,17 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       ) : null}
 
       <div>
-        <h4 className="text-sm font-semibold text-ink-2">What ClimbOS can do</h4>
-        <ul className="mt-2 flex flex-col divide-y divide-line rounded-[var(--radius)] border border-line">
+        <h4 className="text-ui font-semibold text-ink-2">What ClimbOS can do</h4>
+        <ul className="mt-2 flex flex-col divide-y divide-line rounded-xl border border-line">
           {item.capabilities.map((c) => {
             const s = CAPABILITY_STATE[c.state as CapabilityState] ?? CAPABILITY_STATE.unavailable;
             return (
               <li key={c.capability} className="flex flex-col gap-1.5 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0">
-                  <p className="font-medium text-ink">{c.label}</p>
-                  {c.reason ? <p className="text-sm leading-relaxed text-ink-2">{c.reason}</p> : null}
+                  <p className="text-ui font-medium text-ink">{c.label}</p>
+                  {c.reason ? <p className="mt-0.5 text-ui text-ink-2">{c.reason}</p> : null}
                   {c.fix && c.state !== "ready" ? (
-                    <p className="text-sm leading-relaxed text-ink-3">
+                    <p className="mt-0.5 text-ui text-ink-3">
                       <span className="font-medium text-ink-2">What to do:</span> {c.fix}
                     </p>
                   ) : null}
@@ -247,7 +236,7 @@ function Actions({
 
   if (isOAuth(item.connectMethod)) {
     buttons.push(
-      <Button key="connect" variant={connected ? "secondary" : "primary"} onClick={onConnect} loading={busy === "connect"} loadingText="Opening sign-in…" disabled={disabled}>
+      <Button key="connect" variant="secondary" onClick={onConnect} loading={busy === "connect"} loadingText="Opening sign-in…" disabled={disabled}>
         {connected ? "Reconnect" : `Connect ${item.name}`}
       </Button>,
     );
@@ -258,7 +247,7 @@ function Actions({
         slug={slug}
         provider={p}
         trigger={
-          <Button variant={connected ? "secondary" : "primary"} disabled={disabled}>
+          <Button variant="secondary" disabled={disabled}>
             {connected ? "Replace key" : "Connect with a key"}
           </Button>
         }
@@ -270,7 +259,7 @@ function Actions({
         key="csv"
         slug={slug}
         trigger={
-          <Button variant={connected ? "secondary" : "primary"} disabled={disabled}>
+          <Button variant="secondary" disabled={disabled}>
             {connected ? "Upload another file" : "Upload a revenue file"}
           </Button>
         }
@@ -323,7 +312,7 @@ function Actions({
         key="contacts"
         slug={slug}
         trigger={
-          <Button variant={item.connection ? "secondary" : "primary"} disabled={disabled}>
+          <Button variant="secondary" disabled={disabled}>
             {item.connection ? "Upload another list" : "Upload a contact list"}
           </Button>
         }
@@ -335,7 +324,7 @@ function Actions({
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-4">
       <div className="flex flex-wrap gap-2">{buttons}</div>
-      {readOnlyReason && !isManualExport ? <p className="text-sm text-ink-3">{readOnlyReason}</p> : null}
+      {readOnlyReason && !isManualExport ? <p className="text-xs text-ink-3">{readOnlyReason}</p> : null}
     </div>
   );
 }

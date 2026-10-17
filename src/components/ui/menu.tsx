@@ -16,7 +16,7 @@ export function DropdownMenuContent({ className, sideOffset = 6, align = "end", 
       <RMenu.Content
         sideOffset={sideOffset}
         align={align}
-        className={cn("z-50 min-w-48 rounded-[8px] border border-line bg-surface p-1.5 shadow-lg", className)}
+        className={cn("z-50 min-w-48 rounded-xl border border-line bg-surface p-1 shadow-lg", className)}
         {...props}
       />
     </RMenu.Portal>
@@ -35,7 +35,7 @@ export function DropdownMenuItem({ className, icon, danger, children, ...props }
   return (
     <RMenu.Item
       className={cn(
-        "flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-[8px] px-3 text-[0.95rem] outline-none",
+        "flex min-h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2.5 text-ui outline-none [&_svg]:size-4",
         "data-[highlighted]:bg-surface-2 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 [&_svg]:size-4",
         danger ? "text-red-800 data-[highlighted]:bg-red-100" : "text-ink",
         className,
@@ -54,7 +54,7 @@ export function DropdownMenuItem({ className, icon, danger, children, ...props }
 
 /** Non-interactive group heading inside a menu. */
 export function DropdownMenuLabel({ className, ...props }: ComponentProps<typeof RMenu.Label>) {
-  return <RMenu.Label className={cn("px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3", className)} {...props} />;
+  return <RMenu.Label className={cn("px-2.5 pb-1 pt-2 text-overline", className)} {...props} />;
 }
 
 /** Divider between menu groups. */
@@ -84,7 +84,7 @@ export function Tooltip({ content, children, side = "top", delayDuration = 300 }
           <RTooltip.Content
             side={side}
             sideOffset={6}
-            className="z-50 max-w-xs rounded-[8px] bg-ink px-3 py-2 text-sm leading-snug text-white shadow-lg"
+            className="z-50 max-w-xs rounded-md bg-ink px-2 py-1.5 text-xs text-white shadow-lg"
           >
             {content}
             <RTooltip.Arrow className="fill-ink" />

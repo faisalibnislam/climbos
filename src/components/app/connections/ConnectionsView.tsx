@@ -45,10 +45,10 @@ export function ConnectionsView({ slug }: { slug: string }) {
             return (
               <section key={g.key} aria-labelledby={`group-${g.key}`} className="flex flex-col gap-3">
                 <div>
-                  <h2 id={`group-${g.key}`} className="text-xl font-semibold text-ink">
+                  <h2 id={`group-${g.key}`} className="heading-section">
                     {g.title}
                   </h2>
-                  <p className="mt-1 text-ink-2">{g.intro}</p>
+                  <p className="mt-0.5 text-sm text-ink-3">{g.intro}</p>
                 </div>
                 {g.key === "publish" ? (
                   <Callout tone="info" title="Some platforms use drafts and export packs">

@@ -17,7 +17,7 @@ export default function OpsPage() {
   const isOperator = useQuery(api.ops.isOperatorQuery, {});
   if (isOperator === undefined) {
     return (
-      <p role="status" className="flex items-center justify-center gap-3 py-24 text-ink-2">
+      <p role="status" className="flex items-center justify-center gap-2 py-24 text-sm text-ink-2">
         <Spinner /> Loading…
       </p>
     );
@@ -33,10 +33,10 @@ export default function OpsPage() {
 function OpsNotFound() {
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">Page not found</p>
-      <h1 className="mt-3 text-4xl font-extrabold leading-tight tracking-tight text-ink">This path doesn&apos;t lead anywhere — yet.</h1>
-      <p className="mt-4 text-lg leading-relaxed text-ink-2">The page may have moved, or the link might have a typo.</p>
-      <div className="mt-8 flex justify-center">
+      <p className="text-overline">Page not found</p>
+      <h1 className="heading-page mt-1">This path doesn&apos;t lead anywhere — yet.</h1>
+      <p className="mt-2 text-sm text-ink-3">The page may have moved, or the link might have a typo.</p>
+      <div className="mt-6 flex justify-center">
         <Link href="/app" className={buttonClasses({ size: "lg" })}>
           Go to your workspace
         </Link>

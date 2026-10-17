@@ -108,7 +108,7 @@ export function ReconciliationSection() {
         <LoadingBlock label="Loading reconciliation…" lines={1} />
       ) : (
         <>
-          <p className="text-sm text-ink-2">{data.note}</p>
+          <p className="text-ui text-ink-2">{data.note}</p>
           <DataTable
             caption={`Realized variable margin by plan, ${data.month}`}
             rows={data.plans}
@@ -122,8 +122,8 @@ export function ReconciliationSection() {
               { key: "margin", header: "Variable margin", align: "right", cell: (r) => pct(r.variableMargin) },
             ]}
           />
-          <p className="text-sm text-ink-2">
-            Unresolved reservations held: <strong className="text-ink">{usd(data.unresolvedReservationsUsd)}</strong>
+          <p className="text-ui text-ink-2">
+            Unresolved reservations held: <strong className="font-semibold text-ink">{usd(data.unresolvedReservationsUsd)}</strong>
           </p>
         </>
       )}

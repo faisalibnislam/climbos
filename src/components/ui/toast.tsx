@@ -66,17 +66,17 @@ export function Toaster() {
           <div
             key={t.id}
             role={t.tone === "danger" ? "alert" : "status"}
-            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-[8px] border border-line bg-surface p-4 shadow-lg animate-fade-up"
+            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-line bg-surface p-3.5 shadow-lg animate-fade-up"
           >
             <Icon aria-hidden="true" className={cn("mt-0.5 size-5 shrink-0", toneCls[t.tone])} />
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-ink">{t.title}</p>
-              {t.description ? <p className="mt-0.5 text-sm text-ink-2">{t.description}</p> : null}
+              <p className="heading-card">{t.title}</p>
+              {t.description ? <p className="mt-0.5 text-ui text-ink-3">{t.description}</p> : null}
             </div>
             <button
               type="button"
               onClick={() => dismissToast(t.id)}
-              className="-m-2 grid size-11 shrink-0 place-items-center rounded-md text-ink-3 hover:text-ink"
+              className="-m-1 grid size-8 shrink-0 place-items-center rounded-md text-ink-3 hover:bg-surface-2 hover:text-ink"
               aria-label="Dismiss notification"
             >
               <X aria-hidden="true" className="size-4" />

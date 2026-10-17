@@ -58,7 +58,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-[0.95rem] leading-relaxed text-ink-2">
+      <p className="text-sm text-ink-2">
         Campaigns are created paused and only go live when you approve starting them. Ad spend is paid directly to {platform} from your own ad account, not to
         ClimbOS. After a pause, platforms may report a little spend from before it took effect.
       </p>
@@ -76,14 +76,14 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
       {artifact.status === "approved" ? (
         artifact.canEdit ? (
           <form
-            className="flex flex-col gap-4 rounded-[8px] border border-line bg-surface-2 p-4"
+            className="flex flex-col gap-4 rounded-lg border border-line bg-surface-2 p-4"
             noValidate
             onSubmit={(e) => {
               e.preventDefault();
               if (validate()) setConfirming(true);
             }}
           >
-            <h3 className="font-semibold text-ink">{related.length ? "Prepare another campaign" : "Prepare a campaign"}</h3>
+            <h3 className="heading-card">{related.length ? "Prepare another campaign" : "Prepare a campaign"}</h3>
             <p className="text-sm text-ink-2">
               Your approved monthly ad budget is {ads.monthlyEnvelopeMinor > 0 ? minorToDisplay(ads.monthlyEnvelopeMinor, currency) : "not set yet (set it in Settings → Policies)"}.
               Planned spend can&apos;t go above it.
@@ -99,10 +99,10 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
                 <Input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
               </Field>
             </div>
-            <p className="text-[0.95rem] text-ink-2" aria-live="polite">
+            <p className="text-sm text-ink-2" aria-live="polite">
               {days > 0 && total > 0 ? (
                 <>
-                  {days} day{days === 1 ? "" : "s"} × {majorToDisplay(dailyNum, currency)} = <strong className="text-ink">up to {majorToDisplay(total, currency)}</strong> in total.
+                  {days} day{days === 1 ? "" : "s"} × {majorToDisplay(dailyNum, currency)} = <strong className="font-semibold text-ink">up to {majorToDisplay(total, currency)}</strong> in total.
                 </>
               ) : (
                 "Enter a budget and dates to see the most this campaign can spend."
@@ -146,7 +146,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
           <p className="text-sm text-ink-2">Preparing a campaign needs {PERMISSION_WHO.edit}.</p>
         )
       ) : related.length === 0 ? (
-        <p className="text-[0.95rem] text-ink-3">Approve the ad text first. Then you can prepare a campaign here.</p>
+        <p className="text-sm text-ink-3">Approve the ad text first. Then you can prepare a campaign here.</p>
       ) : null}
     </div>
   );

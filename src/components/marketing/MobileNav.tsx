@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu } from "lucide-react";
+import { IconButton } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/dialog";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { CTA } from "./content";
@@ -16,11 +17,7 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
         open={open}
         onOpenChange={setOpen}
         title="Menu"
-        trigger={
-          <button type="button" className={buttonClasses({ variant: "ghost", className: "-mr-2 w-11 px-0" })} aria-label="Open menu">
-            <Menu aria-hidden="true" />
-          </button>
-        }
+        trigger={<IconButton aria-label="Open menu" icon={<Menu />} size="lg" className="-mr-2" />}
       >
         <nav aria-label="Mobile">
           <ul className="flex flex-col">
@@ -29,7 +26,7 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
                 <Link
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center rounded-lg px-2 text-lg font-medium text-ink hover:bg-surface-2"
+                  className={buttonClasses({ variant: "ghost", size: "lg", className: "w-full justify-start px-2" })}
                 >
                   {l.label}
                 </Link>

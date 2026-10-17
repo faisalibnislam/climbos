@@ -33,17 +33,17 @@ export function DialogContent({ title, description, hideClose, className, childr
       <RDialog.Content
         className={cn(
           "fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto",
-          "rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-lg animate-fade-up",
+          "rounded-2xl border border-line bg-surface p-6 shadow-lg animate-fade-up",
           className,
         )}
         {...(description ? {} : { "aria-describedby": undefined })}
         {...props}
       >
         <div className="flex items-start justify-between gap-4">
-          <RDialog.Title className="font-display tracking-tight text-xl font-extrabold leading-snug text-ink">{title}</RDialog.Title>
+          <RDialog.Title className="heading-dialog">{title}</RDialog.Title>
           {hideClose ? null : (
             <RDialog.Close
-              className={buttonClasses({ variant: "ghost", size: "sm", className: "-mr-2 -mt-1 w-9 px-0" })}
+              className={buttonClasses({ variant: "ghost", size: "sm", className: "-mr-2 -mt-1 w-8 px-0" })}
               aria-label="Close"
             >
               <X aria-hidden="true" />
@@ -51,7 +51,7 @@ export function DialogContent({ title, description, hideClose, className, childr
           )}
         </div>
         {description ? (
-          <RDialog.Description className="mt-2 leading-relaxed text-ink-2">{description}</RDialog.Description>
+          <RDialog.Description className="mt-1.5 text-sm text-ink-3">{description}</RDialog.Description>
         ) : null}
         <div className="mt-4">{children}</div>
       </RDialog.Content>
@@ -114,9 +114,9 @@ export function ConfirmDialog({
       {trigger ? <AlertDialog.Trigger asChild>{trigger}</AlertDialog.Trigger> : null}
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={overlayClasses} />
-        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-lg animate-fade-up">
-          <AlertDialog.Title className="font-display tracking-tight text-xl font-extrabold leading-snug text-ink">{title}</AlertDialog.Title>
-          <AlertDialog.Description className="mt-2 leading-relaxed text-ink-2">{description}</AlertDialog.Description>
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-surface p-6 shadow-lg animate-fade-up">
+          <AlertDialog.Title className="heading-dialog">{title}</AlertDialog.Title>
+          <AlertDialog.Description className="mt-1.5 text-sm text-ink-3">{description}</AlertDialog.Description>
           {children ? <div className="mt-4">{children}</div> : null}
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialog.Cancel asChild>
@@ -162,7 +162,7 @@ export interface SheetProps extends Omit<ComponentProps<typeof RDialog.Root>, "c
 const sideClasses = {
   right: "inset-y-0 right-0 h-dvh w-[min(24rem,calc(100vw-2.5rem))] border-l",
   left: "inset-y-0 left-0 h-dvh w-[min(24rem,calc(100vw-2.5rem))] border-r",
-  bottom: "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-[var(--radius-lg)] border-t",
+  bottom: "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-2xl border-t",
 };
 
 /** Side or bottom drawer built on Radix Dialog — used for mobile menus and detail panels. */
@@ -181,16 +181,16 @@ export function Sheet({ trigger, title, description, side = "right", hideTitle, 
           {...(description ? {} : { "aria-describedby": undefined })}
         >
           <div className="flex items-center justify-between gap-4">
-            <RDialog.Title className={cn("text-lg font-semibold text-ink", hideTitle && "sr-only")}>{title}</RDialog.Title>
+            <RDialog.Title className={cn("heading-dialog", hideTitle && "sr-only")}>{title}</RDialog.Title>
             <RDialog.Close
-              className={buttonClasses({ variant: "ghost", className: "ml-auto w-11 px-0" })}
+              className={buttonClasses({ variant: "ghost", size: "sm", className: "ml-auto w-8 px-0" })}
               aria-label="Close"
             >
               <X aria-hidden="true" />
             </RDialog.Close>
           </div>
           {description ? (
-            <RDialog.Description className="mt-1 text-sm text-ink-2">{description}</RDialog.Description>
+            <RDialog.Description className="mt-1 text-sm text-ink-3">{description}</RDialog.Description>
           ) : null}
           <div className="mt-3 flex-1">{children}</div>
         </RDialog.Content>

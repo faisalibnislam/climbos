@@ -27,13 +27,16 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
       return out;
     }
     case "array":
+      if (key === "factIndexes") return [];
       return s.items ? [sample(s.items, marker, key)] : [];
     case "number":
     case "integer":
       return key === "priority" ? 1 : key.toLowerCase().includes("index") ? 0 : 1;
     case "boolean":
-      return true;
+      return key === "needsOwner" ? false : true;
     default:
+      // A real channel keeps autopilot routing testable (it ignores unknown channels).
+      if (key === "channel") return "facebook";
       return /url/i.test(key) ? "https://example.com" : `${marker} ${key}`.trim();
   }
 }

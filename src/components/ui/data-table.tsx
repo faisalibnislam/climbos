@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Table, TableFrame, TBody, Td, Th, THead, Tr } from "./table";
 
 export interface DataTableColumn<T> {
   key: string;
@@ -31,7 +32,7 @@ export interface DataTableProps<T> {
 type SortState = { key: string; dir: "asc" | "desc" } | null;
 
 /**
- * Simple accessible table with caption, column headers and optional sorting
+ * Sortable list table built on the Table primitives, with caption, column headers and optional sorting
  * (sortable headers are buttons and expose aria-sort). Scrolls horizontally
  * inside its own container on small screens.
  */
@@ -52,25 +53,20 @@ export function DataTable<T>({ caption, hideCaption, columns, rows, rowKey, empt
   }, [rows, columns, sort]);
 
   return (
-    <div className={cn("w-full overflow-x-auto rounded-[var(--radius)] border border-line bg-surface", className)}>
-      <table className="w-full border-collapse text-left text-[0.95rem]">
-        <caption className={cn("px-4 pt-3 text-left text-sm font-medium text-ink-2", hideCaption && "sr-only")}>{caption}</caption>
-        <thead>
-          <tr className="border-b border-line">
+    <TableFrame className={className}>
+      <Table>
+        <caption className={cn("px-4 pb-1 pt-3 text-left heading-card", hideCaption && "sr-only")}>{caption}</caption>
+        <THead>
+          <tr>
             {columns.map((c) => {
               const active = sort?.key === c.key;
               const ariaSort = active ? (sort!.dir === "asc" ? "ascending" : "descending") : c.sortValue ? "none" : undefined;
               return (
-                <th
-                  key={c.key}
-                  scope="col"
-                  aria-sort={ariaSort}
-                  className={cn("whitespace-nowrap px-4 py-3 text-sm font-semibold text-ink-2", c.align === "right" && "text-right")}
-                >
+                <Th key={c.key} aria-sort={ariaSort} numeric={c.align === "right"}>
                   {c.sortValue ? (
                     <button
                       type="button"
-                      className={cn("inline-flex min-h-9 items-center gap-1.5 rounded-md hover:text-ink", c.align === "right" && "flex-row-reverse")}
+                      className={cn("inline-flex h-7 items-center gap-1 rounded-md hover:text-ink", c.align === "right" && "flex-row-reverse")}
                       onClick={() =>
                         setSort((s) => (s?.key === c.key ? { key: c.key, dir: s.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: "asc" }))
                       }
@@ -89,39 +85,38 @@ export function DataTable<T>({ caption, hideCaption, columns, rows, rowKey, empt
                   ) : (
                     c.header
                   )}
-                </th>
+                </Th>
               );
             })}
           </tr>
-        </thead>
-        <tbody>
+        </THead>
+        <TBody>
           {sorted.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-6 text-center text-ink-3">
+              <Td colSpan={columns.length} className="h-20 text-center text-ink-3">
                 {emptyText}
-              </td>
+              </Td>
             </tr>
           ) : (
             sorted.map((row, i) => (
-              <tr key={rowKey(row, i)} className="border-b border-line last:border-b-0">
+              <Tr key={rowKey(row, i)}>
                 {columns.map((c) => {
                   const content = c.cell ? c.cell(row) : String((row as Record<string, unknown>)[c.key] ?? "");
-                  const cls = cn("px-4 py-3 align-top text-ink", c.align === "right" && "text-right tabular-nums");
                   return c.rowHeader ? (
-                    <th key={c.key} scope="row" className={cn(cls, "font-medium")}>
+                    <th key={c.key} scope="row" className={cn("h-11 px-4 py-2 text-left align-middle font-medium", c.align === "right" && "text-right tabular-nums")}>
                       {content}
                     </th>
                   ) : (
-                    <td key={c.key} className={cls}>
+                    <Td key={c.key} numeric={c.align === "right"}>
                       {content}
-                    </td>
+                    </Td>
                   );
                 })}
-              </tr>
+              </Tr>
             ))
           )}
-        </tbody>
-      </table>
-    </div>
+        </TBody>
+      </Table>
+    </TableFrame>
   );
 }

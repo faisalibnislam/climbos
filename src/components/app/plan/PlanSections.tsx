@@ -6,7 +6,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
 import { ExternalLink } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { Badge, Callout, Card, CardContent, DataTable, Skeleton, Switch, toast, type Tone } from "@/components/ui";
+import { Badge, Callout, Card, CardContent, DataTable, Skeleton, Switch, buttonClasses, toast, type Tone } from "@/components/ui";
 import { microsToDisplay, minorToDisplay, relativeTime } from "../money";
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
@@ -22,10 +22,10 @@ export function PlanSection({ id, title, intro, children }: { id: string; title:
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 id={id} className="text-xl font-semibold text-ink">
+            <h2 id={id} className="heading-section">
               {title}
             </h2>
-            {intro ? <div className="max-w-3xl text-[0.95rem] leading-relaxed text-ink-2">{intro}</div> : null}
+            {intro ? <div className="max-w-3xl text-sm text-ink-3">{intro}</div> : null}
           </div>
           {children}
         </CardContent>
@@ -35,13 +35,13 @@ export function PlanSection({ id, title, intro, children }: { id: string; title:
 }
 
 function Prose({ text }: { text: string }) {
-  return <p className="max-w-3xl whitespace-pre-line leading-relaxed text-ink">{text}</p>;
+  return <p className="max-w-3xl whitespace-pre-line text-sm text-ink">{text}</p>;
 }
 
 function BulletList({ items, empty }: { items: string[]; empty?: string }) {
   if (items.length === 0) return empty ? <p className="text-ink-3">{empty}</p> : null;
   return (
-    <ul className="flex list-disc flex-col gap-1 pl-5 text-[0.95rem] leading-relaxed text-ink-2">
+    <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
       {items.map((i) => (
         <li key={i}>{i}</li>
       ))}
@@ -63,7 +63,7 @@ export function ShortVersion({ strategy }: { strategy: Strategy }) {
     <PlanSection id="short-heading" title="The short version">
       <Prose text={strategy.summary} />
       <div>
-        <h3 className="font-semibold text-ink">How you stand out</h3>
+        <h3 className="heading-card mb-1">How you stand out</h3>
         <Prose text={strategy.positioning} />
       </div>
     </PlanSection>
@@ -78,13 +78,13 @@ export function Audiences({ strategy }: { strategy: Strategy }) {
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {strategy.audiences.map((a) => (
-            <li key={a.name} className="flex flex-col gap-2 rounded-[8px] border border-line bg-surface-2 p-4">
-              <h3 className="font-semibold text-ink">{a.name}</h3>
-              <p className="text-[0.95rem] leading-relaxed text-ink-2">
+            <li key={a.name} className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-4">
+              <h3 className="heading-card">{a.name}</h3>
+              <p className="text-sm text-ink-2">
                 <span className="font-medium text-ink">What we think: </span>
                 {a.hypothesis}
               </p>
-              <p className="text-[0.95rem] leading-relaxed text-ink-2">
+              <p className="text-sm text-ink-2">
                 <span className="font-medium text-ink">Why we think so: </span>
                 {a.evidence}
               </p>
@@ -149,31 +149,31 @@ export function Channels({ slug, strategy, canEdit, currency }: { slug: string; 
           {channels.map((c, i) => {
             const st = CHANNEL_STATUS[c.status] ?? { label: c.status, tone: "neutral" as Tone };
             return (
-              <li key={c.key} className="flex flex-col gap-4 rounded-[8px] border border-line bg-surface p-4 sm:p-5">
+              <li key={c.key} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-ink-3">Priority {i + 1}</span>
-                    <h3 className="text-lg font-semibold text-ink">{c.name}</h3>
+                    <span className="text-overline">Priority {i + 1}</span>
+                    <h3 className="heading-card">{c.name}</h3>
                   </div>
                   <Badge tone={st.tone}>{st.label}</Badge>
                 </div>
-                <p className="leading-relaxed text-ink">{c.why}</p>
+                <p className="text-sm text-ink">{c.why}</p>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <h4 className="text-sm font-semibold text-ink">What the team delivers</h4>
+                    <h4 className="mb-1 text-ui font-semibold text-ink">What the team delivers</h4>
                     <BulletList items={c.deliverables} empty="Nothing listed." />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-ink">What it needs first</h4>
+                    <h4 className="mb-1 text-ui font-semibold text-ink">What it needs first</h4>
                     <BulletList items={c.dependencies} empty="Nothing — it can start right away." />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-ink">How we&apos;ll measure it</h4>
-                    <p className="text-[0.95rem] leading-relaxed text-ink-2">{c.measurement}</p>
+                    <h4 className="mb-1 text-ui font-semibold text-ink">How we&apos;ll measure it</h4>
+                    <p className="text-sm text-ink-2">{c.measurement}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-ink">Expected monthly cost</h4>
-                    <p className="text-[0.95rem] leading-relaxed text-ink-2">
+                    <h4 className="mb-1 text-ui font-semibold text-ink">Expected monthly cost</h4>
+                    <p className="text-sm text-ink-2">
                       Up to {microsToDisplay(c.monthlyCostMicros)} of AI capacity a month.
                       {c.adSpendMinor > 0 ? ` Plus about ${minorToDisplay(c.adSpendMinor, currency)} a month in ad spend, paid directly to the ad platform.` : " No ad spend."}
                     </p>
@@ -228,43 +228,43 @@ export function Experiments({ experiments }: { experiments: PlanView["experiment
           {experiments.map((e) => {
             const st = EXPERIMENT_STATUS[e.status] ?? { label: e.status, tone: "neutral" as Tone };
             return (
-              <li key={e.id} className="flex flex-col gap-3 rounded-[8px] border border-line bg-surface-2 p-4">
+              <li key={e.id} className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h3 className="font-semibold text-ink">{e.name}</h3>
+                  <h3 className="heading-card">{e.name}</h3>
                   <Badge tone={st.tone}>{st.label}</Badge>
                 </div>
-                <dl className="grid gap-3 text-[0.95rem] md:grid-cols-2">
+                <dl className="grid gap-3 text-sm md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <dt className="text-sm font-medium text-ink-3">What we&apos;re testing</dt>
-                    <dd className="leading-relaxed text-ink">{e.hypothesis}</dd>
+                    <dt className="text-xs font-medium text-ink-3">What we&apos;re testing</dt>
+                    <dd className="text-ink">{e.hypothesis}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">Who takes part</dt>
-                    <dd className="leading-relaxed text-ink">{e.population}</dd>
+                    <dt className="text-xs font-medium text-ink-3">Who takes part</dt>
+                    <dd className="text-ink">{e.population}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">How</dt>
-                    <dd className="leading-relaxed text-ink">{METHOD[e.method] ?? e.method}</dd>
+                    <dt className="text-xs font-medium text-ink-3">How</dt>
+                    <dd className="text-ink">{METHOD[e.method] ?? e.method}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">Main number to watch</dt>
-                    <dd className="leading-relaxed text-ink">{e.primaryMetric}</dd>
+                    <dt className="text-xs font-medium text-ink-3">Main number to watch</dt>
+                    <dd className="text-ink">{e.primaryMetric}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">How long</dt>
-                    <dd className="leading-relaxed text-ink">
+                    <dt className="text-xs font-medium text-ink-3">How long</dt>
+                    <dd className="text-ink">
                       {e.durationDays} day{e.durationDays === 1 ? "" : "s"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">Safety limits</dt>
+                    <dt className="text-xs font-medium text-ink-3">Safety limits</dt>
                     <dd>
                       <BulletList items={e.guardrails} empty="None listed." />
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-ink-3">When we stop</dt>
-                    <dd className="leading-relaxed text-ink">{e.stoppingRule}</dd>
+                    <dt className="text-xs font-medium text-ink-3">When we stop</dt>
+                    <dd className="text-ink">{e.stoppingRule}</dd>
                   </div>
                 </dl>
               </li>
@@ -288,7 +288,7 @@ export function PlanBasics({ strategy }: { strategy: Strategy }) {
         <Prose text={strategy.measurementPlan} />
       </PlanSection>
       <PlanSection id="review-date-heading" title="Next review">
-        <p className="leading-relaxed text-ink">
+        <p className="text-sm text-ink">
           <time dateTime={strategy.reviewDate}>{formatPlanDate(strategy.reviewDate)}</time>. The team checks results against this plan and suggests changes. Nothing
           changes without your approval.
         </p>
@@ -329,40 +329,40 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
     >
       <div className="flex flex-col gap-8">
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-ink">Your audiences</h3>
+          <h3 className="heading-card mb-3">Your audiences</h3>
           <ul className="grid gap-3 md:grid-cols-2">
             {insights.audiences.map((a) => (
-              <li key={a.name} className="flex flex-col gap-1.5 rounded-[8px] border border-line p-3">
+              <li key={a.name} className="flex flex-col gap-1.5 rounded-xl border border-line p-3">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-ink">{a.name}</span>
+                  <span className="text-sm font-semibold text-ink">{a.name}</span>
                   <Badge tone={CONFIDENCE_TONE[a.confidence.toLowerCase()] ?? "neutral"}>{`${a.confidence.charAt(0).toUpperCase()}${a.confidence.slice(1)} confidence`}</Badge>
                 </span>
-                <span className="text-[0.95rem] leading-relaxed text-ink-2">{a.description}</span>
+                <span className="text-sm text-ink-2">{a.description}</span>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-ink">Competitors</h3>
+          <h3 className="heading-card mb-3">Competitors</h3>
           {insights.competitors.length === 0 ? (
             <p className="text-ink-3">No competitors found yet.</p>
           ) : (
             <ul className="flex flex-col gap-3">
               {insights.competitors.map((c) => (
-                <li key={c.name} className="flex flex-col gap-1 rounded-[8px] border border-line p-3">
+                <li key={c.name} className="flex flex-col gap-1 rounded-xl border border-line p-3">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-ink">{c.name}</span>
+                    <span className="text-sm font-semibold text-ink">{c.name}</span>
                     {c.url ? (
-                      <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 break-all text-sm text-brand-800 underline underline-offset-4">
+                      <a href={c.url} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "link" })}>
                         Website <ExternalLink aria-hidden="true" className="size-3.5" />
                         <span className="sr-only">(opens in a new tab)</span>
                       </a>
                     ) : null}
                   </span>
-                  <span className="text-[0.95rem] leading-relaxed text-ink-2">{c.note}</span>
+                  <span className="text-sm text-ink-2">{c.note}</span>
                   {c.sourceUrl ? (
-                    <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-brand-800 underline underline-offset-4">
+                    <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "link", className: "self-start" })}>
                       Source <ExternalLink aria-hidden="true" className="size-3.5" />
                       <span className="sr-only">(opens in a new tab)</span>
                     </a>
@@ -379,21 +379,21 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <h3 className="mb-2 text-lg font-semibold text-ink">Positioning</h3>
+            <h3 className="heading-card mb-2">Positioning</h3>
             <Prose text={insights.positioning} />
           </div>
           <div>
-            <h3 className="mb-2 text-lg font-semibold text-ink">Pricing notes</h3>
+            <h3 className="heading-card mb-2">Pricing notes</h3>
             <Prose text={insights.pricingNotes} />
           </div>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-ink">Strengths, weaknesses, opportunities and threats</h3>
+          <h3 className="heading-card mb-3">Strengths, weaknesses, opportunities and threats</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {swot.map((s) => (
-              <div key={s.key} className="rounded-[8px] border border-line bg-surface-2 p-3">
-                <h4 className="mb-1.5 font-semibold text-ink">{s.label}</h4>
+              <div key={s.key} className="rounded-xl border border-line bg-surface-2 p-3">
+                <h4 className="mb-1.5 text-ui font-semibold text-ink">{s.label}</h4>
                 <BulletList items={insights.swot[s.key]} empty="None noted." />
               </div>
             ))}
@@ -401,20 +401,20 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-ink">Customer journey</h3>
+          <h3 className="heading-card mb-3">Customer journey</h3>
           {insights.journey.length === 0 ? (
             <p className="text-ink-3">Not mapped yet.</p>
           ) : (
             <>
               <ol className="flex flex-col gap-3 sm:hidden">
                 {insights.journey.map((j) => (
-                  <li key={j.stage} className="rounded-[8px] border border-line p-3">
-                    <h4 className="font-semibold text-ink">{j.stage}</h4>
-                    <p className="mt-1 text-[0.95rem] text-ink-2">
+                  <li key={j.stage} className="rounded-xl border border-line p-3">
+                    <h4 className="text-ui font-semibold text-ink">{j.stage}</h4>
+                    <p className="mt-1 text-sm text-ink-2">
                       <span className="font-medium text-ink">What we see: </span>
                       {j.observation}
                     </p>
-                    <p className="mt-1 text-[0.95rem] text-ink-2">
+                    <p className="mt-1 text-sm text-ink-2">
                       <span className="font-medium text-ink">Opportunity: </span>
                       {j.opportunity}
                     </p>
@@ -439,18 +439,18 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-ink">Top opportunities</h3>
+          <h3 className="heading-card mb-3">Top opportunities</h3>
           {insights.opportunities.length === 0 ? (
             <p className="text-ink-3">None yet.</p>
           ) : (
             <ol className="flex flex-col gap-3">
               {insights.opportunities.map((o) => (
-                <li key={o.title} className="flex flex-col gap-1 rounded-[8px] border border-line p-3">
+                <li key={o.title} className="flex flex-col gap-1 rounded-xl border border-line p-3">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-ink">{o.title}</span>
+                    <span className="text-sm font-semibold text-ink">{o.title}</span>
                     <Badge>{`Effort: ${o.effort}`}</Badge>
                   </span>
-                  <span className="text-[0.95rem] leading-relaxed text-ink-2">{o.why}</span>
+                  <span className="text-sm text-ink-2">{o.why}</span>
                 </li>
               ))}
             </ol>
@@ -473,7 +473,7 @@ export function Sources({ sources }: { sources: PlanView["sources"] }) {
           {sources.map((s) => (
             <li key={s.id} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
               <Badge className="shrink-0 self-start capitalize">{s.category}</Badge>
-              <span className="text-[0.95rem] leading-relaxed text-ink">{s.statement}</span>
+              <span className="text-sm text-ink">{s.statement}</span>
             </li>
           ))}
         </ul>
@@ -503,13 +503,13 @@ export function RecentWork({ slug }: { slug: string }) {
             return (
               <li key={r.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-ink">{r.title}</span>
+                  <span className="text-sm font-medium text-ink">{r.title}</span>
                   <span className="flex flex-wrap gap-2">
                     {r.isFixture ? <Badge tone="violet">Demo</Badge> : null}
                     <Badge tone={RUN_STATUS_TONE[r.status] ?? "neutral"}>{RUN_STATUS_LABEL[r.status] ?? r.status}</Badge>
                   </span>
                 </div>
-                <span className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink-3">
+                <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
                   <span className="flex flex-wrap gap-x-2">
                     {r.roles.map((role) => (
                       <RoleName key={role} role={role} className={ROLE_META[role] ? "" : "capitalize"} />

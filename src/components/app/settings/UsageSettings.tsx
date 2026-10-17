@@ -32,8 +32,8 @@ export function UsageSettings({ slug }: { slug: string }) {
             <Stat label="AI roles used" value={formatNumber(data.byRole.length)} />
           </StatGroup>
           {data.events >= 3000 ? <p className="text-sm text-ink-3">Showing the most recent 3,000 events.</p> : null}
-          <section aria-labelledby="by-role" className="flex flex-col gap-2">
-            <h2 id="by-role" className="text-lg font-semibold text-ink">
+          <section aria-labelledby="by-role" className="flex flex-col gap-3">
+            <h2 id="by-role" className="heading-section">
               By AI role
             </h2>
             <DataTable
@@ -51,8 +51,8 @@ export function UsageSettings({ slug }: { slug: string }) {
               ]}
             />
           </section>
-          <section aria-labelledby="by-model" className="flex flex-col gap-2">
-            <h2 id="by-model" className="text-lg font-semibold text-ink">
+          <section aria-labelledby="by-model" className="flex flex-col gap-3">
+            <h2 id="by-model" className="heading-section">
               By model or service
             </h2>
             <DataTable
@@ -62,7 +62,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               rowKey={(r) => r.model}
               emptyText="No usage recorded in the last 31 days."
               columns={[
-                { key: "model", header: "Model or service", rowHeader: true, cell: (r) => <span className="font-mono text-sm">{r.model}</span>, sortValue: (r) => r.model },
+                { key: "model", header: "Model or service", rowHeader: true, cell: (r) => <span className="font-mono text-ui">{r.model}</span>, sortValue: (r) => r.model },
                 { key: "calls", header: "Events", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
                 { key: "cost", header: "Provider cost", align: "right", cell: (r) => microsToDisplay(r.costMicros), sortValue: (r) => r.costMicros },
               ]}

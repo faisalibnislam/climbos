@@ -76,7 +76,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
 
   if (artifact.status !== "approved") {
     return (
-      <p className="text-[0.95rem] text-ink-2">
+      <p className="text-sm text-ink-2">
         {artifact.status === "draft" || artifact.status === "in_review"
           ? "Approve the email text first. Then you can send it through your own email provider."
           : "Sending is available while the email is approved."}
@@ -93,7 +93,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
   const providerName = providerSegments?.find((p) => p.id === providerSegmentId)?.name;
 
   const intro = (
-    <p className="text-[0.95rem] leading-relaxed text-ink-2">
+    <p className="text-sm text-ink-2">
       Sends through your own email provider. Only the {chosen ? chosen.sendable.toLocaleString("en-US") : "N"} people with a recorded opt-in will get it;
       unsubscribes, bounces and complaints are always excluded. Every email includes an unsubscribe link. Your provider bills you directly.
     </p>
@@ -162,10 +162,10 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
         />
       </Field>
       {email ? (
-        <details className="rounded-[8px] border border-line bg-surface-2 p-3 text-[0.95rem]">
-          <summary className="min-h-11 cursor-pointer content-center font-medium text-ink">Read email {Number(emailIndex) + 1}</summary>
+        <details className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm">
+          <summary className="min-h-8 cursor-pointer content-center text-ui font-medium text-ink">Read email {Number(emailIndex) + 1}</summary>
           <p className="mt-2 font-semibold text-ink">Subject: {email.subject}</p>
-          <p className="mt-2 whitespace-pre-wrap break-words leading-relaxed text-ink-2">{email.text}</p>
+          <p className="mt-2 whitespace-pre-wrap break-words text-ink-2">{email.text}</p>
         </details>
       ) : null}
 
@@ -189,7 +189,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
 
       <Field label="List in your Resend account" hint="The audience in your own Resend account to send through." error={fieldErrors.provider}>
         {providerSegments === null && !segError ? (
-          <span className="flex min-h-11 items-center gap-2 text-sm text-ink-3">
+          <span className="flex h-9 items-center gap-2 text-ui text-ink-3">
             <Spinner /> Loading your Resend lists…
           </span>
         ) : (

@@ -36,12 +36,11 @@ export default function ContentDetailPage() {
   const { organization: slug, artifactId } = useParams<{ organization: string; artifactId: string }>();
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <Link
-        href={`/app/${slug}/content`}
-        className="inline-flex min-h-11 items-center gap-2 self-start text-[0.95rem] font-medium text-brand-800 underline-offset-4 hover:underline"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" /> Back to content
-      </Link>
+      <Button asChild variant="ghost" size="sm" className="-ml-2.5 self-start text-ink-2 hover:text-ink">
+        <Link href={`/app/${slug}/content`}>
+          <ArrowLeft aria-hidden="true" /> Back to content
+        </Link>
+      </Button>
       <SectionBoundary pageHeading="This content isn't available" label="this content">
         <ArtifactDetail slug={slug} artifactId={artifactId as Id<"artifacts">} />
       </SectionBoundary>
@@ -54,7 +53,7 @@ function Section({ id, title, children, action }: { id: string; title: string; c
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id={id} className="text-lg font-semibold text-ink">
+          <h2 id={id} className="heading-section">
             {title}
           </h2>
           {action}
@@ -109,9 +108,9 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {artifact.canEdit && artifact.status !== "archived" ? <MoreMenu slug={slug} artifact={artifact} /> : null}
           </div>
         </div>
-        <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{artifact.title}</h1>
+        <h1 className="heading-page break-words">{artifact.title}</h1>
         <ArtifactStatus status={artifact.status} showHelp />
-        <p className="text-sm text-ink-3">
+        <p className="text-xs text-ink-3">
           Created by <RoleName role={artifact.createdByRole} className="text-ink-2" />
           {now ? (
             <>
@@ -140,8 +139,8 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
           ) : null}
 
           <Section id="preview-heading" title="Preview">
-            <p className="-mt-2 text-sm text-ink-3">An approximation of how it will look. Each platform displays text slightly differently.</p>
-            {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-ink-3">No text yet.</p>}
+            <p className="-mt-2 text-ui text-ink-3">An approximation of how it will look. Each platform displays text slightly differently.</p>
+            {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
             {locked ? <p className="text-sm text-ink-3">Published content can&apos;t be edited.</p> : null}
           </Section>
 
@@ -226,7 +225,7 @@ function FocusHeading({ children }: { children: ReactNode }) {
     ref.current?.focus();
   }, []);
   return (
-    <h2 ref={ref} tabIndex={-1} className="text-lg font-semibold text-ink outline-none">
+    <h2 ref={ref} tabIndex={-1} className="heading-section outline-none">
       {children}
     </h2>
   );

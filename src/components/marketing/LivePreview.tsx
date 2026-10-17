@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { Callout, Skeleton } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/field";
+import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";
 import { StepList, type StepItem } from "@/components/ui/stepper";
 import { cn } from "@/lib/utils";
 import { normalizeWebsite } from "./website";
@@ -37,6 +38,35 @@ const ROLE_NAMES: Record<string, string> = {
   data_analyst: "AI Data Analyst",
   customer_success_manager: "AI Customer Success Manager",
 };
+
+const CHANNEL_HINTS: [RegExp, SocialNetwork][] = [
+  [/instagram/i, "instagram"],
+  [/facebook|\bmeta\b/i, "facebook"],
+  [/linkedin/i, "linkedin"],
+  [/tiktok/i, "tiktok"],
+  [/youtube/i, "youtube"],
+  [/pinterest/i, "pinterest"],
+  [/threads/i, "threads"],
+  [/google/i, "google"],
+  [/\bx\b|twitter/i, "x"],
+  [/e-?mail|newsletter/i, "email"],
+  [/website|blog|seo|landing page/i, "website"],
+];
+
+/** Best-guess platform for an idea's free-text channel ("Instagram Reels", "Google Business Profile"). */
+function channelNetwork(channel: string): SocialNetwork | null {
+  return CHANNEL_HINTS.find(([re]) => re.test(channel))?.[1] ?? null;
+}
+
+/** The idea's channel as a neutral badge, led by the real platform mark when we can tell which one it is. */
+function ChannelBadge({ channel }: { channel: string }) {
+  const network = channelNetwork(channel);
+  return (
+    <Badge tone="neutral" icon={network ? <SocialIcon network={network} size="xs" /> : <Lightbulb />}>
+      {channel}
+    </Badge>
+  );
+}
 
 function roleName(role: string): string {
   const key = role.trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -122,11 +152,11 @@ export function LivePreview() {
       onSubmit={onSubmit}
       noValidate
       aria-label="Get a free preview for your website"
-      className="rounded-[6px] border border-line bg-surface p-5 shadow-lg sm:p-7"
+      className="rounded-xl border border-line bg-surface p-5 sm:p-6"
     >
       <Field label="Your website" hint="Your homepage address, like formkit.app" error={websiteError ?? undefined}>
         <div className="relative">
-          <Globe aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-ink-3" />
+          <Globe aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
           <Input
             ref={websiteRef}
             name="website"
@@ -140,23 +170,23 @@ export function LivePreview() {
             value={website}
             maxLength={300}
             onChange={(e) => setWebsite(e.target.value)}
-            className="h-14 pl-11 text-[1.0625rem]"
+            className="h-10 pl-9 text-sm"
           />
         </div>
       </Field>
 
       <fieldset className="mt-5" aria-describedby={goalError ? `${goalGroupId}-err` : undefined}>
-        <legend className="text-[0.95rem] font-medium text-ink">What do you want most right now?</legend>
+        <legend className="text-ui font-medium text-ink">What do you want most right now?</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {GOALS.map((g) => (
             <label
               key={g}
               className={cn(
-                "relative inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[0.95rem] font-medium transition-colors",
+                "relative inline-flex h-10 cursor-pointer select-none items-center rounded-lg border px-4 text-sm font-medium transition-colors",
                 "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-600",
                 goal === g
                   ? "border-brand-800 bg-brand-800 text-white"
-                  : "border-line-strong bg-surface text-ink hover:border-brand-700 hover:bg-brand-50",
+                  : "border-line-strong bg-surface text-ink hover:bg-surface-2",
               )}
             >
               <input
@@ -190,7 +220,7 @@ export function LivePreview() {
           Show me
           <ArrowRight aria-hidden="true" />
         </Button>
-        <p className="text-sm leading-snug text-ink-3">Free, no sign-up. We only read your public homepage.</p>
+        <p className="text-xs text-ink-3">Free, no sign-up. We only read your public homepage.</p>
       </div>
 
       {phase.kind === "error" ? (
@@ -251,19 +281,19 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
   return (
     <section
       aria-labelledby="preview-heading"
-      className="rounded-[6px] border border-line bg-surface p-5 shadow-lg animate-fade-in sm:p-7"
+      className="rounded-xl border border-line bg-surface p-5 animate-fade-in sm:p-6"
     >
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         {liveMessage}
       </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-brand-700">Live preview</p>
+          <p className="text-overline">Live preview</p>
           <h2
             id="preview-heading"
             ref={headingRef}
             tabIndex={-1}
-            className="mt-0.5 break-words font-display tracking-tight text-2xl font-extrabold leading-tight text-ink focus:outline-none"
+            className="mt-1 break-words text-2xl text-ink focus:outline-none"
           >
             {data?.business?.name ?? website}
           </h2>
@@ -273,7 +303,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
           Try another website
         </Button>
       </div>
-      <p className="mt-3 flex items-start gap-2 rounded-[6px] bg-surface-2 px-3 py-2 text-sm text-ink-2">
+      <p className="mt-3 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-sm text-ink-2">
         <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
         <span>
           <strong className="font-semibold text-ink">Preview</strong> — based only on your public homepage. Nothing is published.
@@ -332,16 +362,16 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
           ) : null}
 
           {data.business ? (
-            <div className="mt-6 rounded-[8px] border border-line bg-bg p-4 animate-step-in">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">What we understood</h3>
-              <p className="mt-2 text-[1.0625rem] leading-relaxed text-ink">{data.business.summary}</p>
+            <div className="mt-6 rounded-xl border border-line bg-surface-2 p-4 animate-step-in">
+              <h3 className="text-overline">What we understood</h3>
+              <p className="mt-2 text-base text-ink">{data.business.summary}</p>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="font-medium text-ink-3">Who it&apos;s for</dt>
+                  <dt className="text-ui font-medium text-ink-3">Who it&apos;s for</dt>
                   <dd className="text-ink">{data.business.audience}</dd>
                 </div>
                 <div>
-                  <dt className="font-medium text-ink-3">Category</dt>
+                  <dt className="text-ui font-medium text-ink-3">Category</dt>
                   <dd className="text-ink">{data.business.category}</dd>
                 </div>
               </dl>
@@ -350,13 +380,13 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
 
           {data.facts.length > 0 ? (
             <div className="mt-6 animate-step-in">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">What we found on your site</h3>
+              <h3 className="text-overline">What we found on your site</h3>
               <ul className="mt-3 flex flex-col gap-2">
                 {data.facts.slice(0, 8).map((f, i) => {
                   const conf = f.confidence.toLowerCase();
                   return (
-                    <li key={i} className="flex flex-col gap-1.5 rounded-[8px] border border-line bg-surface px-3.5 py-2.5 sm:flex-row sm:items-start sm:justify-between">
-                      <span className="text-[0.95rem] leading-snug text-ink">{f.statement}</span>
+                    <li key={i} className="flex flex-col gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2.5 sm:flex-row sm:items-start sm:justify-between">
+                      <span className="text-sm text-ink">{f.statement}</span>
                       <span className="flex shrink-0 items-center gap-2">
                         <Badge tone={confidenceTone[conf] ?? "neutral"}>
                           {conf === "high" || conf === "medium" || conf === "low" ? `${conf[0].toUpperCase()}${conf.slice(1)} confidence` : f.confidence}
@@ -366,7 +396,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
                             href={f.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer nofollow"
-                            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-800 underline underline-offset-2"
+                            className="inline-flex min-h-9 items-center gap-1 text-ui font-medium text-brand-800 underline underline-offset-4"
                           >
                             Source
                             <ExternalLink aria-hidden="true" className="size-3.5" />
@@ -383,19 +413,17 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
 
           {data.ideas.length > 0 ? (
             <div className="mt-6 animate-step-in">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">First growth ideas</h3>
+              <h3 className="text-overline">First growth ideas</h3>
               <ul className="mt-3 grid gap-3">
                 {data.ideas.slice(0, 3).map((idea, i) => (
-                  <li key={i} className="rounded-[8px] border border-line bg-surface p-4 shadow-sm">
+                  <li key={i} className="rounded-xl border border-line bg-surface p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone="green" icon={<Lightbulb />}>
-                        {idea.channel}
-                      </Badge>
-                      <span className="text-sm text-ink-3">Proposed by {roleName(idea.role)}</span>
+                      <ChannelBadge channel={idea.channel} />
+                      <span className="text-xs text-ink-3">Proposed by {roleName(idea.role)}</span>
                     </div>
-                    <h4 className="mt-2 font-semibold leading-snug text-ink">{idea.title}</h4>
-                    <p className="mt-1 text-[0.95rem] leading-relaxed text-ink-2">{idea.why}</p>
-                    <p className="mt-2 text-[0.95rem] leading-relaxed text-ink">
+                    <h4 className="mt-2 heading-card">{idea.title}</h4>
+                    <p className="mt-1 text-sm text-ink-2">{idea.why}</p>
+                    <p className="mt-2 text-sm text-ink">
                       <span className="font-medium">First step: </span>
                       {idea.firstStep}
                     </p>

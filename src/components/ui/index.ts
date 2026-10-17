@@ -8,10 +8,13 @@ export { Spinner, type SpinnerProps } from "./spinner";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, type CardTitleProps } from "./card";
 export { Badge, StatusPill, toneClasses, type BadgeProps, type StatusPillProps, type StatusKind, type Tone } from "./badge";
 export { IconTile } from "./icon-tile";
+export { SocialIcon, NetworkLabel, networkOf, networkName, type SocialIconProps, type SocialNetwork } from "./social-icon";
 export {
   Field,
   Label,
   Input,
+  controlClasses,
+  type InputProps,
   Textarea,
   useFieldControl,
   type FieldProps,
@@ -21,6 +24,10 @@ export {
 export { Select, type SelectOption, type SelectProps } from "./select";
 export { Checkbox, Switch, type CheckboxProps, type SwitchProps } from "./toggles";
 export { RadioCards, type RadioCardOption, type RadioCardsProps } from "./radio-cards";
+export { ChoiceChips, FilterChip, type ChoiceChip, type ChoiceChipsProps } from "./choice-chips";
+export { Segmented, type SegmentedOption } from "./segmented";
+export { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "./popover";
+export { FileInput, type FileInputProps } from "./file-input";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 export {
   Dialog,
@@ -62,7 +69,8 @@ export {
   type StatProps,
 } from "./feedback";
 export { DataTable, type DataTableColumn, type DataTableProps } from "./data-table";
-export { Avatar, Kbd, Separator, VisuallyHidden, type AvatarProps, type SeparatorProps } from "./misc";
+export { TableFrame, Table, THead, TBody, Tr, Th, Td, CellStack } from "./table";
+export { Avatar, BackLink, Kbd, Separator, VisuallyHidden, type AvatarProps, type SeparatorProps } from "./misc";
 export { Toaster, toast, dismissToast, type ToastItem, type ToastTone } from "./toast";
 export { StepList, Stepper, type StepItem, type StepStatus } from "./stepper";
 export {
@@ -77,3 +85,20 @@ export {
   type LineChartProps,
   type LinePoint,
 } from "./chart";
+export {
+  AreaChart,
+  Sparkline,
+  StatTrend,
+  DonutChart,
+  FunnelChart,
+  BarList,
+  Heatmap,
+  ProgressRing,
+  CHART_COLORS,
+  compactNumber,
+  type Series,
+  type Segment,
+  type FunnelStep,
+  type BarListItem,
+  type StatTrendProps,
+} from "./viz";

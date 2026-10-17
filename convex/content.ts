@@ -1,22 +1,19 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
-import { approvalHash, contentHash } from "../shared/policy";
+import { contentHash } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation } from "./engine";
-import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
+import { DIRECT_PUBLISH, invalidateApprovals, recordArtifactDecision } from "./lib/approvals";
+import { onOwnerDecision } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
-const DIRECT_PUBLISH: Partial<Record<Doc<"artifacts">["channel"], Doc<"connections">["provider"]>> = {
-  instagram: "instagram",
-  facebook: "facebook_pages",
-};
 
 async function versionView(
   ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> }; db: { get: (id: Id<"users">) => Promise<Doc<"users"> | null> } },
@@ -179,18 +176,6 @@ export const get = query({
   },
 });
 
-async function invalidateApprovals(ctx: MutationCtx, artifactId: Id<"artifacts">, reason: string) {
-  const approvals = await ctx.db
-    .query("approvals")
-    .withIndex("by_subject", (q) => q.eq("subjectType", "artifact").eq("subjectId", artifactId))
-    .take(20);
-  for (const ap of approvals) {
-    if (ap.status === "pending" || ap.status === "approved") {
-      await ctx.db.patch(ap._id, { status: "invalidated", invalidatedReason: reason });
-    }
-  }
-}
-
 /** Editing creates a new version. Any material change invalidates existing approvals. */
 export const edit = mutation({
   args: {
@@ -276,56 +261,10 @@ export const decide = mutation({
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "draft");
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     if (!ver) throw appError("INVALID", "Nothing to approve yet.");
-    const policy = await ctx.db
-      .query("autonomyPolicies")
-      .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
-      .first();
-    const policyVersion = policy?.version ?? (await activePolicyVersion(ctx, org._id));
-    const target = DIRECT_PUBLISH[a.channel];
-    const conn = target
-      ? await ctx.db
-          .query("connections")
-          .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", target))
-          .first()
-      : null;
-    const now = Date.now();
-    const expiresAt = now + (policy?.approvalTtlHours ?? 72) * 3_600_000;
-    const scope = {
-      connectionId: conn?.status === "connected" ? conn._id : undefined,
-      destination: a.channel,
-    };
-    const binding = {
-      orgId: org._id,
-      subjectType: "artifact",
-      subjectId: a._id,
-      actionKind: target && conn?.status === "connected" ? "publish" : "export",
-      contentHash: ver.contentHash,
-      scope,
-      policyVersion,
-      expiresAt,
-    };
-    await invalidateApprovals(ctx, a._id, "Superseded by a newer decision");
-    const approvalId = await ctx.db.insert("approvals", {
-      orgId: org._id,
-      subjectType: "artifact",
-      subjectId: a._id,
-      actionKind: binding.actionKind,
-      title: a.title,
-      contentHash: ver.contentHash,
-      scope,
-      costEstimateMicros: 0,
-      policyVersion,
-      approvalHash: await approvalHash(binding),
-      status: args.decision === "approve" ? "approved" : "rejected",
-      requestedBy: a.createdBy,
-      decidedBy: user._id,
-      decidedAt: now,
-      decisionNote: args.note?.slice(0, 500),
-      expiresAt,
-      createdAt: now,
-    });
-    await ctx.db.patch(a._id, { status: args.decision === "approve" ? "approved" : "draft", approvalId, updatedAt: now });
+    const approvalId = await recordArtifactDecision(ctx, { org, artifact: a, version: ver, decision: args.decision, decidedBy: user._id, note: args.note });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `content.${args.decision}d`, subjectType: "artifact", subjectId: a._id, summary: `${args.decision === "approve" ? "Approved" : "Sent back"} "${a.title}" (v${ver.version}).` });
+    // Autopilot slots: approving schedules the post for its planned time; decisions feed the trust ladder.
+    await onOwnerDecision(ctx, { org, artifactId: a._id, decision: args.decision, edited: ver.version > 1 && Boolean(ver.editedByUser), userId: user._id });
     return approvalId;
   },
 });

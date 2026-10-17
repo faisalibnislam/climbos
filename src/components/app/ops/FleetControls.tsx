@@ -21,14 +21,14 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
 
   return (
     <OpsSection id="controls" title="Fleet controls">
-      <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-line p-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-line p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold text-ink">Emergency stop</h3>
+          <h3 className="heading-card">Emergency stop</h3>
           <Badge tone={fleet.emergencyStop ? "red" : "green"}>{fleet.emergencyStop ? "Active — all customer work stopped" : "Off — running normally"}</Badge>
         </div>
         {fleet.emergencyStop ? (
           <>
-            <p className="text-sm text-ink-2">Reason: {fleet.stopReason ?? "none recorded"}</p>
+            <p className="text-ui text-ink-2">Reason: {fleet.stopReason ?? "none recorded"}</p>
             <div>
               <ConfirmDialog
                 title="Resume the fleet?"
@@ -86,9 +86,9 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
         />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-line p-4">
-        <h3 className="font-semibold text-ink">Preview budget</h3>
-        <p className="text-sm text-ink-2">Daily spend cap for anonymous website previews. Currently {microsToDisplay(fleet.previewDailyBudgetMicros)} per day.</p>
+      <div className="flex flex-col gap-3 rounded-xl border border-line p-4">
+        <h3 className="heading-card">Preview budget</h3>
+        <p className="text-ui text-ink-2">Daily spend cap for anonymous website previews. Currently {microsToDisplay(fleet.previewDailyBudgetMicros)} per day.</p>
         <form
           className="grid gap-3 sm:grid-cols-[14rem_auto] sm:items-end"
           onSubmit={(e) => {
