@@ -127,7 +127,7 @@ function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetr
       </div>
       {metric.hasData ? (
         <>
-          <p className="font-display text-4xl font-extrabold tabular-nums tracking-tight text-ink">
+          <p className="text-4xl font-extrabold tabular-nums tracking-tight text-ink">
             {formatMetric(metric.total, metric.unit, metric.currency)}
           </p>
           <p className="text-sm font-medium text-ink-2">{changeText(metric.total, metric.previousTotal, span)}</p>
@@ -234,7 +234,7 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
                       </span>
                       {s.label}
                     </span>
-                    <span className="font-display tracking-tight text-2xl font-extrabold tabular-nums text-ink">
+                    <span className="tracking-tight text-2xl font-extrabold tabular-nums text-ink">
                       {s.hasData ? formatNumber(Math.round(s.total)) : "No data"}
                     </span>
                   </div>

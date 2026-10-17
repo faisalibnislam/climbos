@@ -1,6 +1,5 @@
 "use client";
 
-import { SectionIcon } from "@/components/app/SectionIcon";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -56,7 +55,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
           <h2 id="goal-heading" className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-brand-800">
             <Target aria-hidden="true" className="size-4" /> Your goal
           </h2>
-          <p className="font-display tracking-tight text-xl font-extrabold leading-snug text-ink sm:text-2xl">{goal.statement}</p>
+          <p className="tracking-tight text-xl font-extrabold leading-snug text-ink sm:text-2xl">{goal.statement}</p>
           <p className="text-[0.95rem] text-ink-2">
             Over the next {goal.horizonDays} days ·{" "}
             {goal.monthlyAdBudget > 0 ? `Up to ${majorToDisplay(goal.monthlyAdBudget, goal.currency)} a month for ads, paid directly to the ad platforms` : "No ad budget"}
@@ -75,7 +74,7 @@ function PlanScreen({ slug }: { slug: string }) {
   if (plan === undefined) {
     return (
       <div className="flex flex-col gap-6" aria-busy="true">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Your growth plan</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Your growth plan</h1>
         <span className="sr-only" role="status">
           Loading your plan…
         </span>
@@ -93,9 +92,8 @@ function PlanScreen({ slug }: { slug: string }) {
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start gap-4">
-          <SectionIcon section="plan" />
           <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink">Your growth plan</h1>
+          <h1 className="text-[28px] leading-9 text-ink">Your growth plan</h1>
           {s && status ? (
             <p className="flex flex-wrap items-center gap-2 text-[0.95rem] text-ink-2">
               <Badge tone={status.tone}>{status.label}</Badge>

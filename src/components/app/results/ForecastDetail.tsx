@@ -68,7 +68,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <div className="flex flex-col gap-3">
         {back}
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
           {f.metric.label}: next {f.horizonDays} days
         </h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -195,14 +195,14 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
             <dl className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-[var(--radius)] border border-line bg-surface p-4">
                 <dt className="text-sm text-ink-2">80% range contained the actual value</dt>
-                <dd className="font-display tracking-tight text-2xl font-extrabold tabular-nums text-ink">
+                <dd className="tracking-tight text-2xl font-extrabold tabular-nums text-ink">
                   {cal.heldOutCoverage80 !== null ? formatPercent(cal.heldOutCoverage80) : "—"}
                 </dd>
                 <dd className="text-sm text-ink-3">Target: 80%</dd>
               </div>
               <div className="rounded-[var(--radius)] border border-line bg-surface p-4">
                 <dt className="text-sm text-ink-2">95% range contained the actual value</dt>
-                <dd className="font-display tracking-tight text-2xl font-extrabold tabular-nums text-ink">
+                <dd className="tracking-tight text-2xl font-extrabold tabular-nums text-ink">
                   {cal.heldOutCoverage95 !== null ? formatPercent(cal.heldOutCoverage95) : "—"}
                 </dd>
                 <dd className="text-sm text-ink-3">Target: 95%</dd>

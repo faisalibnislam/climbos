@@ -79,8 +79,18 @@ export function EditorCanvas({ editor, resolve }: { editor: Editor; resolve: Ass
     let bestY = tol;
     const gx: number[] = [];
     const gy: number[] = [];
-    for (const t of xs) for (const m of mx) if (Math.abs(t - m) < bestX) ((bestX = Math.abs(t - m)), (dx = t - m));
-    for (const t of ys) for (const m of my) if (Math.abs(t - m) < bestY) ((bestY = Math.abs(t - m)), (dy = t - m));
+    for (const t of xs)
+      for (const m of mx)
+        if (Math.abs(t - m) < bestX) {
+          bestX = Math.abs(t - m);
+          dx = t - m;
+        }
+    for (const t of ys)
+      for (const m of my)
+        if (Math.abs(t - m) < bestY) {
+          bestY = Math.abs(t - m);
+          dy = t - m;
+        }
     if (bestX < tol) for (const t of xs) if (mx.some((m) => Math.abs(m + dx - t) < 0.5)) gx.push(t);
     if (bestY < tol) for (const t of ys) if (my.some((m) => Math.abs(m + dy - t) < 0.5)) gy.push(t);
     return { dx, dy, guides: { x: [...new Set(gx)], y: [...new Set(gy)] } };

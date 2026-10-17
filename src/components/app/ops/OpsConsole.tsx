@@ -59,7 +59,7 @@ export function OpsConsole() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Operator console</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Operator console</h1>
         <p className="text-ink-2">Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited.</p>
         <nav aria-label="Console sections" className="-mx-1 flex gap-1 overflow-x-auto pb-1">
           {SECTIONS.map(([id, label]) => (

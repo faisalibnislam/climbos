@@ -109,7 +109,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {artifact.canEdit && artifact.status !== "archived" ? <MoreMenu slug={slug} artifact={artifact} /> : null}
           </div>
         </div>
-        <h1 className="break-words font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{artifact.title}</h1>
+        <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{artifact.title}</h1>
         <ArtifactStatus status={artifact.status} showHelp />
         <p className="text-sm text-ink-3">
           Created by <RoleName role={artifact.createdByRole} className="text-ink-2" />

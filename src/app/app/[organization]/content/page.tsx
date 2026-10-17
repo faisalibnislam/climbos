@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Palette } from "lucide-react";
 import { buttonClasses } from "@/components/ui";
-import { SectionIcon } from "@/components/app/SectionIcon";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
@@ -21,14 +20,9 @@ export default function ContentPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-4">
-          <SectionIcon section="content" />
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink">Content</h1>
-            <p className="max-w-2xl leading-relaxed text-ink-2">
-              Everything your AI team has created. Nothing is posted, sent or spent until you approve it.
-            </p>
-          </div>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[28px] leading-9 text-ink">Content</h1>
+          <p className="max-w-2xl text-[15px] leading-relaxed text-ink-3">Everything your AI team has created. Nothing is posted, sent or spent until you approve it.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/studio/${slug}/new`} className={buttonClasses({ variant: "secondary" })}>

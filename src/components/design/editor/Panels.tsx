@@ -119,7 +119,7 @@ function TextPanel({ editor }: { editor: Editor }) {
   return (
     <div className="flex flex-col gap-2">
       <PanelTitle>Text</PanelTitle>
-      <button type="button" onClick={() => add("heading")} className="rounded-lg border border-line bg-surface px-3 py-3 text-left font-display text-2xl font-semibold hover:border-brand-600">
+      <button type="button" onClick={() => add("heading")} className="rounded-lg border border-line bg-surface px-3 py-3 text-left text-2xl font-semibold hover:border-brand-600">
         Add a heading
       </button>
       <button type="button" onClick={() => add("subheading")} className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-lg font-semibold hover:border-brand-600">

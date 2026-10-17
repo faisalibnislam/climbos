@@ -270,7 +270,7 @@ function BillingBody({
                     </Badge>
                   ) : null}
                 </div>
-                <p className="font-display tracking-tight text-3xl font-extrabold text-ink">
+                <p className="tracking-tight text-3xl font-extrabold text-ink">
                   {formatUsd(p.priceUsd)}
                   <span className="text-base font-normal text-ink-3"> / month</span>
                 </p>

@@ -127,7 +127,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
     return (
       <Frame className="p-4">
         <p className="text-xs text-ink-3">{host}</p>
-        <p className="mt-1 break-words font-display tracking-tight text-xl font-extrabold leading-snug text-ink">{version.headline || "Page title"}</p>
+        <p className="mt-1 break-words tracking-tight text-xl font-extrabold leading-snug text-ink">{version.headline || "Page title"}</p>
         <div className="mt-3 max-h-96 overflow-y-auto">{body}</div>
       </Frame>
     );

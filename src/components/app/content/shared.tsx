@@ -228,7 +228,7 @@ export class SectionBoundary extends Component<BoundaryProps, BoundaryState> {
       return (
         <div className={cn("flex flex-col gap-4", this.props.className)}>
           {this.props.pageHeading ? (
-            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">{this.props.pageHeading}</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-ink">{this.props.pageHeading}</h1>
           ) : null}
           <ErrorCallout error={this.state.error} onRetry={this.retry} />
           {this.props.label ? <p className="sr-only">Couldn&apos;t load {this.props.label}.</p> : null}
