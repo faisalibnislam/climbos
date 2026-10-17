@@ -49,7 +49,7 @@ export function Hero() {
       <div className="rounded-2xl border border-line bg-surface px-4 pb-14 pt-14 sm:pb-20 sm:pt-20">
         <Container className="flex flex-col items-center text-center">
           <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3.5 py-1.5 text-sm font-medium text-ink-2">
-            <span aria-hidden="true" className="size-2 rounded-full bg-lime ring-1 ring-ink/20" />
+            <span aria-hidden="true" className="size-2 rounded-full bg-sun" />
             Your AI growth team, ready in minutes
           </p>
           <h1 id="hero-heading" className="mt-6 max-w-3xl text-[2.75rem] leading-[1.02] text-ink sm:text-6xl lg:text-7xl">
@@ -69,7 +69,7 @@ export function Hero() {
               "No sign-up for the preview",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
-                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-deep-teal" />
+                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-pine" />
                 {t}
               </li>
             ))}

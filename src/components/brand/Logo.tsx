@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * ClimbOS mark: a lime mountain path under a small white sun, on a black tile.
+ * ClimbOS mark: a white mountain path under a sunrise-orange sun, on a pine tile.
  * Matches `public/icon.svg`. Decorative by default; pass `title` to expose it.
  */
 export function LogoMark({ className, title }: { className?: string; title?: string }) {
@@ -14,9 +14,9 @@ export function LogoMark({ className, title }: { className?: string; title?: str
       aria-label={title}
       focusable="false"
     >
-      <rect width="32" height="32" rx="8" fill="#141414" />
-      <path d="M7 23l6.5-9 4 5 3-4L25 23z" fill="#ebf212" />
-      <circle cx="22" cy="9.5" r="2.5" fill="#ffffff" />
+      <rect width="32" height="32" rx="8" fill="#0b5d46" />
+      <path d="M7 23l6.5-9 4 5 3-4L25 23z" fill="#ffffff" />
+      <circle cx="22" cy="9.5" r="2.5" fill="#ff9a4d" />
     </svg>
   );
 }

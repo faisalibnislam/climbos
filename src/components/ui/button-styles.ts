@@ -9,9 +9,9 @@ const base =
   "[&_svg]:shrink-0";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-brand-800 text-white hover:bg-black active:bg-black",
+  primary: "bg-brand-800 text-white hover:bg-brand-900 active:bg-brand-950",
   secondary: "border border-ink bg-surface text-ink hover:bg-surface-2 active:bg-surface-3",
-  accent: "bg-lime text-black hover:brightness-95 active:brightness-90",
+  accent: "bg-sun text-ink hover:brightness-95 active:brightness-90",
   ghost: "text-ink hover:bg-surface-2 active:bg-surface-3",
   danger: "bg-red-800 text-white shadow-sm hover:bg-[#82190f] active:bg-[#6c140c]",
   link: "text-brand-800 underline underline-offset-4 decoration-brand-800/40 hover:decoration-brand-800 px-0! h-auto! min-h-0",

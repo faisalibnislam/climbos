@@ -150,7 +150,7 @@ function NavLink({ href, active, icon, children }: { href: string; active: boole
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex min-h-10 items-center gap-3 rounded-lg px-2 text-[15px] font-medium transition-colors [&_.nav-tile]:bg-transparent [&_.nav-tile]:text-current",
-        active ? "bg-lime-soft text-black [&_.nav-tile]:bg-lime" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        active ? "bg-brand-50 text-brand-900 font-semibold [&_.nav-tile]:bg-brand-800 [&_.nav-tile]:text-white" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
@@ -168,7 +168,7 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex min-h-14 w-full items-center justify-between gap-2.5 rounded-xl border border-line bg-surface px-2.5 text-left hover:border-line-strong">
-          <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-lime text-sm font-semibold text-black">
+          <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-sm font-semibold text-white">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">

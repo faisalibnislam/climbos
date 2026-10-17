@@ -173,7 +173,7 @@ export default function TodayPage() {
           </div>
           <Link
             href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-lime px-5 font-medium text-black transition hover:brightness-95"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-sun px-5 font-medium text-ink transition hover:brightness-95"
           >
             {data.goal ? "See the plan" : "Set a goal"} <ArrowRight className="size-4" aria-hidden />
           </Link>

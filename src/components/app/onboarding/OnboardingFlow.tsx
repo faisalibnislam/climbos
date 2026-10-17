@@ -136,7 +136,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
         <ol className="mx-auto flex max-w-6xl gap-2 px-4 pb-4" aria-label="Setup progress">
           {STEP_ORDER.map((s, i) => (
             <li key={s} className="flex flex-1 flex-col gap-1.5">
-              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-ink" : i === idx ? "bg-lime ring-1 ring-ink/20" : "bg-surface-3")} aria-hidden />
+              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-ink" : i === idx ? "bg-sun" : "bg-surface-3")} aria-hidden />
               <span className={cn("hidden text-xs font-semibold md:block", i <= idx ? "text-ink" : "text-ink-3")}>
                 {i < idx ? <Check className="mr-1 inline size-3.5 text-brand-800" aria-hidden /> : null}
                 {STEP_LABEL[s]}
@@ -166,7 +166,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
             <ul className="mt-3 space-y-3">
               {help.points.map((p) => (
                 <li key={p} className="flex gap-2.5 text-[0.95rem] text-ink-2">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-lime text-black">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-white">
                     <Check className="size-3" aria-hidden />
                   </span>
                   {p}

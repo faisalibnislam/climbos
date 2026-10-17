@@ -26,7 +26,7 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof RTabs
     <RTabs.Trigger
       className={cn(
         "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-[0.95rem] font-semibold text-ink-2 transition-colors",
-        "hover:bg-surface-2 hover:text-ink data-[state=active]:bg-ink data-[state=active]:text-white",
+        "hover:bg-surface-2 hover:text-ink data-[state=active]:bg-brand-800 data-[state=active]:text-white",
         className,
       )}
       {...props}

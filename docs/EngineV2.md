@@ -188,14 +188,20 @@ Design:
   - Snapchat needs Public Profile/Story publishing through Snap Kit/Marketing API partner access; to confirm.
   - Each platform shows its honest capability state until its approval exists, and falls back to "export pack + reminder" when it can't post.
 
-## UI direction (Apollo-inspired, from 17 Oct 2026)
+## UI direction (from 17 Oct 2026)
 
-The owner switched the direction from Instantly to **Apollo.io's design**:
-- **Canvas and panels:** a warm off-white canvas (#F7F5F2) with white panels in soft grey frames.
-- **Type:** serif headlines (Newsreader, open licence, standing in for Apollo's Season) with a clean grotesk body (Geist).
-- **Actions:** black buttons with 8px corners and an electric lime (#EBF212) accent CTA; lime marks the active navigation.
-- **Colour:** a deep teal (#1F4A4C) for feature panels and coral used sparingly; icon tiles stay muted.
-- **Tokens:** everything is driven by `src/app/globals.css`. WCAG 2.2 AA is kept and the axe suite runs on every change.
+**Layout and style** take inspiration from Apollo.io:
+- the panel-in-frame layout with white panels on a light canvas;
+- serif headlines (Newsreader) over a clean grotesk body (Geist);
+- 8px corners and consistent sizing and spacing;
+- calm, organised screens with muted icon tiles.
+
+**Colours are ClimbOS's own alpine identity, not Apollo's:**
+- **Pine** green (#0B5D46) for actions, links and feature panels.
+- A **sunrise** orange accent (#FF9A4D, always with dark text).
+- **Cool slate** neutrals.
+
+Everything is driven by tokens in `src/app/globals.css`. WCAG 2.2 AA is kept, and the axe suite runs on every change.
 
 ## Progress
 

@@ -1,73 +1,75 @@
 @import "tailwindcss";
 
 /*
- * ClimbOS design tokens (Apollo-inspired): warm off-white canvas, white
- * panels, black type and actions, an electric lime accent, a deep teal and a
- * coral used sparingly. Serif headlines, grotesk body. Text/background pairs
- * meet WCAG 2.2 AA. Status is never conveyed by colour alone.
+ * ClimbOS design tokens. Layout, sizing and style take inspiration from
+ * Apollo.io; the colours are ClimbOS's own alpine identity: pine green for
+ * actions and feature panels, a sunrise orange accent (always with dark
+ * text), and cool slate neutrals. Text/background pairs meet WCAG 2.2 AA.
+ * Status is never conveyed by colour alone.
  */
 :root {
-  --bg: #f7f5f2;
+  --bg: #f5f6f8;
   --surface: #ffffff;
-  --surface-2: #f2f0ed;
-  --surface-3: #e5e3e1;
-  --ink: #141414;
-  --ink-2: #3d3a37;
-  --ink-3: #625e5a;
-  --line: #e5e3e1;
-  --line-strong: #ccc9c6;
+  --surface-2: #f0f2f5;
+  --surface-3: #e4e7ec;
+  --ink: #101828;
+  --ink-2: #344054;
+  --ink-3: #5d6679;
+  --line: #e4e7ec;
+  --line-strong: #c9ced8;
 
-  /* "Brand" = black ink actions (buttons, links, focus); lime is the accent. */
-  --brand-950: #000000;
-  --brand-900: #000000;
-  --brand-800: #141414;
-  --brand-700: #2b2a29;
-  --brand-600: #1f4a4c;
-  --brand-200: #e5e3e1;
-  --brand-100: #efefeb;
-  --brand-50: #f7f5f2;
+  /* Pine: primary actions, links, focus, feature panels. 800 on white = 7.9:1. */
+  --brand-950: #052e22;
+  --brand-900: #073f2f;
+  --brand-800: #0b5d46;
+  --brand-700: #0f6e53;
+  --brand-600: #158a67;
+  --brand-200: #bfe3d4;
+  --brand-100: #e2f3ec;
+  --brand-50: #f1f9f6;
 
-  --lime: #ebf212;
-  --lime-soft: #f6fab0;
-  --deep-teal: #1f4a4c;
-  --coral: #e67e6c;
+  /* Sunrise accent: highlights and active states, always with dark text. */
+  --sun: #ff9a4d;
+  --sun-soft: #fff0e3;
+  --pine: #0b3b2e;
+  --coral: #e8664f;
 
-  --amber-800: #6e5400;
-  --amber-500: #c99a06;
-  --amber-100: #f6f0d8;
-  --red-800: #a12b1e;
-  --red-500: #d9503f;
-  --red-100: #f7e3e0;
-  --blue-800: #2c4a66;
-  --blue-500: #4f7aa3;
-  --blue-100: #e3ebf2;
-  --violet-800: #4e3a6b;
-  --violet-500: #7a62a3;
-  --violet-100: #ece7f1;
-  --green-800: #2f5d3a;
-  --green-500: #4c8a5b;
-  --green-100: #e5eee1;
-  --teal-800: #1f4a4c;
-  --teal-500: #3f7d7f;
-  --teal-100: #e1edec;
-  --pink-800: #8c3b2e;
-  --pink-500: #e67e6c;
-  --pink-100: #f8e6e1;
-  --orange-800: #8a4513;
-  --orange-500: #d27b3d;
-  --orange-100: #f7eadf;
+  --amber-800: #7a4d00;
+  --amber-500: #f0a020;
+  --amber-100: #fdf1d8;
+  --red-800: #a8261b;
+  --red-500: #e5483a;
+  --red-100: #fde6e3;
+  --blue-800: #1d4f91;
+  --blue-500: #3d7ad6;
+  --blue-100: #e3edfb;
+  --violet-800: #563a9c;
+  --violet-500: #7c5cd6;
+  --violet-100: #eee9fb;
+  --green-800: #146c43;
+  --green-500: #23a065;
+  --green-100: #ddf3e7;
+  --teal-800: #0b6470;
+  --teal-500: #1c9aab;
+  --teal-100: #dcf1f3;
+  --pink-800: #a1295e;
+  --pink-500: #e05596;
+  --pink-100: #fbe6f0;
+  --orange-800: #9a4209;
+  --orange-500: #ff8a3d;
+  --orange-100: #ffeedd;
 
-  /* Hero/feature panels: deep teal, never a rainbow gradient. */
-  --gradient-hero: linear-gradient(140deg, #1f4a4c 0%, #183c3e 100%);
-  --gradient-soft: linear-gradient(140deg, #f7f5f2 0%, #efefeb 100%);
+  /* Feature panels: deep pine, like a forest at dawn. */
+  --gradient-hero: linear-gradient(140deg, #0b3b2e 0%, #0b5d46 100%);
+  --gradient-soft: linear-gradient(140deg, #f5f6f8 0%, #f1f9f6 100%);
 
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --shadow-sm: 0 1px 2px rgb(20 20 20 / 0.04);
-  --shadow: 0 1px 2px rgb(20 20 20 / 0.04), 0 4px 16px rgb(20 20 20 / 0.05);
-  --shadow-lg: 0 2px 6px rgb(20 20 20 / 0.05), 0 16px 40px rgb(20 20 20 / 0.08);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.06);
+  --shadow-lg: 0 2px 6px rgb(16 24 40 / 0.05), 0 16px 40px rgb(16 24 40 / 0.1);
 }
 
 @theme inline {
@@ -112,9 +114,9 @@
   --color-orange-800: var(--orange-800);
   --color-orange-500: var(--orange-500);
   --color-orange-100: var(--orange-100);
-  --color-lime: var(--lime);
-  --color-lime-soft: var(--lime-soft);
-  --color-deep-teal: var(--deep-teal);
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-pine: var(--pine);
   --color-coral: var(--coral);
 
   --font-sans: var(--font-sans-ui);
