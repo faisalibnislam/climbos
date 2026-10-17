@@ -114,7 +114,7 @@ export default function TodayPage() {
           <p className="text-sm font-semibold text-ink-3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
             {greeting()}
-            {firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span>
+            {firstName ? `, ${firstName}` : ""}
           </h1>
           <p className="mt-1 text-ink-2">Here’s what your AI growth team is working on{data.org.name ? ` for ${data.org.name.replace(/ \(demo\)$/i, "")}` : ""}.</p>
         </div>
@@ -146,7 +146,7 @@ export default function TodayPage() {
       )}
 
       {/* Goal */}
-      <section aria-label="Your goal" className="bg-hero-gradient relative overflow-hidden rounded-[24px] p-6 text-white shadow-lg sm:p-8">
+      <section aria-label="Your goal" className="bg-hero-gradient relative overflow-hidden rounded-2xl p-6 text-white sm:p-8">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 right-24 size-48 rounded-full bg-white/10" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -157,7 +157,7 @@ export default function TodayPage() {
             <p className="text-sm font-bold uppercase tracking-wider text-white/80">Your goal</p>
             {data.goal ? (
               <>
-                <p className="mt-1 text-xl font-bold leading-snug sm:text-2xl">{data.goal.statement}</p>
+                <p className="mt-1 font-display text-2xl font-medium leading-snug sm:text-3xl">{data.goal.statement}</p>
                 <p className="mt-2 flex flex-wrap gap-2 text-sm">
                   <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{data.goal.horizonDays} days</span>
                   <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">
@@ -173,7 +173,7 @@ export default function TodayPage() {
           </div>
           <Link
             href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 font-semibold text-brand-900 shadow-sm transition hover:bg-brand-50"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-lime px-5 font-medium text-black transition hover:brightness-95"
           >
             {data.goal ? "See the plan" : "Set a goal"} <ArrowRight className="size-4" aria-hidden />
           </Link>

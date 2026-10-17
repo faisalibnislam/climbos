@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * ClimbOS mark: a rising mountain path under a small sun, on a blue-violet gradient tile.
+ * ClimbOS mark: a lime mountain path under a small white sun, on a black tile.
  * Matches `public/icon.svg`. Decorative by default; pass `title` to expose it.
  */
 export function LogoMark({ className, title }: { className?: string; title?: string }) {
@@ -14,15 +14,9 @@ export function LogoMark({ className, title }: { className?: string; title?: str
       aria-label={title}
       focusable="false"
     >
-      <defs>
-        <linearGradient id="climbos-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#3d5afe" />
-          <stop offset="1" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#climbos-mark)" />
-      <path d="M7 23l6.5-9 4 5 3-4L25 23z" fill="#ffffff" />
-      <circle cx="22" cy="9.5" r="2.5" fill="#ffd166" />
+      <rect width="32" height="32" rx="8" fill="#141414" />
+      <path d="M7 23l6.5-9 4 5 3-4L25 23z" fill="#ebf212" />
+      <circle cx="22" cy="9.5" r="2.5" fill="#ffffff" />
     </svg>
   );
 }
@@ -32,7 +26,7 @@ export function Logo({ className, markClassName }: { className?: string; markCla
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark className={markClassName} />
-      <span className="text-[1.25rem] font-extrabold tracking-tight text-ink">ClimbOS</span>
+      <span className="text-[1.25rem] font-semibold tracking-tight text-ink">ClimbOS</span>
     </span>
   );
 }

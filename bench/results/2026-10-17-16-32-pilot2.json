@@ -1,0 +1,1638 @@
+[
+ {
+  "case": "plausible",
+  "task": "strategy",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "summary": "Goal: more paying customers in 90 days with $500 a month in ads. Focus on people who already want to leave Google Analytics. Send them to a free trial, then make sure trial users set up their site. Use three channels: search ads for fast tests, search content for steady growth, and trial-page improvements to turn more visitors into paying customers. A free trial means paying customers show up weeks after signup, so start quickly. Results are not guaranteed.",
+    "positioning": "The simple, privacy-friendly alternative to Google Analytics. Clear numbers on one page. No cookies and no personal data, so no cookie banners or GDPR consent forms. The script is 54 times smaller, which helps site speed. Plausible is independent, self-funded, profitable and EU-based, and it does not sell customer data. Say what the product does and avoid promising legal outcomes.",
+    "audiences": [
+     {
+      "name": "Site owners tired of Google Analytics",
+      "hypothesis": "Owners of small and mid-sized sites who find Google Analytics too complex will start a trial if the offer is 'clear numbers, no training, no cookie banner'. They are the best first target.",
+      "evidence": "Insights rate this group as high confidence. The site calls Google Analytics overkill for most site owners. Plausible uses no cookies and no personal data, and its script is 54 times smaller."
+     },
+     {
+      "name": "Privacy-minded teams in the EU",
+      "hypothesis": "EU businesses that want to skip cookie banners will respond to a message about no cookies, no personal data and EU hosting.",
+      "evidence": "Insights rate this group as high confidence. The confirmed facts say Plausible needs no cookie banners or GDPR consent forms and is an EU-based company."
+     },
+     {
+      "name": "Agencies, SaaS and ecommerce teams",
+      "hypothesis": "A headline written for one of these groups will get more trial starts than the general headline, because they want goals and revenue tracking without a heavy setup.",
+      "evidence": "The site names these groups as audiences. Insights rate them medium confidence, so this needs testing before more money goes in."
+     }
+    ],
+    "channels": [
+     {
+      "key": "search_ads",
+      "name": "Search ads for people switching from Google Analytics",
+      "why": "These people are already looking for an alternative, so they are the closest to buying. Ads give data within weeks, while content takes months. A small budget works if you bid only on switch and alternative searches.",
+      "priority": 1,
+      "deliverables": [
+       "Two or three small ad groups: 'Google Analytics alternative', 'GA4 migration', and 'analytics without cookie banner'",
+       "Ad copy using only confirmed claims: no cookies, no personal data, 54 times smaller script, independent and EU-based",
+       "One landing page per ad group with the free trial as the single button",
+       "A list of negative keywords to block free-only and unrelated searches",
+       "Weekly report on cost per trial start and cost per paying customer"
+      ],
+      "dependencies": [
+       "Tracking for Free Trial Started and paid conversion, linked to the ad platform",
+       "Owner confirms current free trial terms before they are used in ads",
+       "Landing page tested for speed and mobile"
+      ],
+      "measurement": "Cost per trial start and cost per paying customer, from ad clicks through to paid. Review weekly. Pause any ad group that has spent about $75 with no trial starts.",
+      "suggestedMonthlyAdSpend": 500
+     },
+     {
+      "key": "seo_content",
+      "name": "GA4 switcher search content",
+      "why": "The brand story is built on replacing Google Analytics, and migration and comparison pages already exist. Helpful articles can bring steady, free traffic over time. Expect little effect in the first 90 days, but it builds a base.",
+      "priority": 2,
+      "deliverables": [
+       "Improve the existing 'vs Google Analytics' and 'Migrate from GA4' pages with a clear trial button",
+       "Three to four helpful articles, such as 'How to move from GA4 step by step' and 'Do you need a cookie banner for analytics?' (describe what Plausible does, with no legal promises)",
+       "One short article on seeing AI-tool traffic, only after the exact claims are checked",
+       "Internal links from articles to the trial page"
+      ],
+      "dependencies": [
+       "Owner or product team checks claims about features and AI traffic",
+       "Search tracking set up to see which pages bring trial starts"
+      ],
+      "measurement": "Trial starts from organic search visits, and search impressions and clicks for target phrases. Review monthly. Judge the effect over the longer term, not only in 90 days.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "conversion_optimization",
+      "name": "Trial page and setup improvements",
+      "why": "More of the visitors you already get can become trials, and more trials can become paying customers. This makes every ad dollar and article work harder.",
+      "priority": 3,
+      "deliverables": [
+       "Audience-specific headline versions for agencies, ecommerce and SaaS",
+       "Clearer setup path for new trial users, so they connect a site quickly",
+       "Confirmed customer proof added once the owner approves it. Until then, use only the 21,000 paying subscribers and 313 billion pageviews figures"
+      ],
+      "dependencies": [
+       "Tracking for Free Trial Started and First Data Integration",
+       "Enough traffic from ads and organic search to compare versions"
+      ],
+      "measurement": "Free Trial Started rate on the landing page, and the share of trial users who connect a site or import data within 7 days of signup.",
+      "suggestedMonthlyAdSpend": 0
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Audience-specific headline test",
+      "hypothesis": "A headline aimed at one group (for example agencies or ecommerce) will get a higher Free Trial Started rate than the general headline.",
+      "population": "New visitors to the landing page from search ads and organic search, split evenly between the general headline and one audience headline.",
+      "method": "ab_split",
+      "primaryMetric": "Free Trial Started rate (trial starts divided by visitors)",
+      "guardrails": [
+       "Page load speed stays fast",
+       "Cost per trial start does not rise noticeably",
+       "All claims stay within confirmed facts",
+       "Check trial-to-paid later to make sure the winner brings real customers"
+      ],
+      "durationDays": 28,
+      "stoppingRule": "Stop when each version has at least 1,000 visitors or after 4 weeks, whichever comes first. Keep the winner only if it is clearly ahead. If traffic is too low, call it a draw and test a bigger change."
+     },
+     {
+      "name": "Trial setup path test",
+      "hypothesis": "A clearer setup path will raise the share of trial users who connect a site or import data in the first 7 days. Those users are more likely to become paying customers.",
+      "population": "New trial signups, split evenly between the current setup experience and the clearer path.",
+      "method": "ab_split",
+      "primaryMetric": "First Data Integration rate within 7 days of signup",
+      "guardrails": [
+       "Trial start rate does not drop",
+       "Support questions do not rise",
+       "Compare trial-to-paid when enough trials have ended"
+      ],
+      "durationDays": 28,
+      "stoppingRule": "Stop after 4 weeks or when each version has 200 trial signups, whichever comes first. Then compare and keep the clearer path only if it is ahead."
+     }
+    ],
+    "constraints": [
+     "Ad budget is $500 a month, paid directly to ad platforms. The plan does not go over this.",
+     "Results are not guaranteed. Search content takes months to build and may have limited effect within 90 days.",
+     "Free trial terms, plan features and prices are not in the confirmed facts. Check them before using them in any ad or page.",
+     "Customer names and quotes on the site are not confirmed yet. Do not use them until the owner approves them.",
+     "Do not promise legal compliance. Describe what the product does: no cookies and no personal data.",
+     "Google Analytics is free, and rivals like Matomo make similar privacy claims. Messaging should stress simplicity and independence.",
+     "Traffic from a small budget may be too low for quick test results. Run tests for the full period and treat early numbers with care."
+    ],
+    "measurementPlan": "Before spending anything, set up tracking for Free Trial Started, First Data Integration and paid conversion, and link it to the ad platform. Report weekly on spend, trial starts, cost per trial start and the share of trials that connect a site. Report monthly on paying customers by source (search ads, organic search, other) and cost per paying customer. Because trials take weeks to end, judge ad performance on trial starts and setup rates first, and add paid conversions as they arrive. At day 45 and day 90, compare results with the starting point and move budget to the best-performing ad group.",
+    "firstActions": [
+     {
+      "title": "Set up conversion tracking from ad click to paid customer",
+      "why": "Without it, the plan cannot show which ads or pages bring paying customers. It is needed before any money is spent.",
+      "role": "Analytics specialist"
+     },
+     {
+      "title": "Build and launch the GA4 switcher search ads and matching landing pages",
+      "why": "Search ads reach people already looking to leave Google Analytics and give the fastest results. Using confirmed claims keeps the message accurate.",
+      "role": "Paid search specialist"
+     },
+     {
+      "title": "Confirm free trial terms, customer proof and AI-traffic claims with the owner",
+      "why": "These facts are not in the confirmed list. Confirming them lets ads, pages and articles use them safely.",
+      "role": "Growth lead (AI CEO) with the owner"
+     }
+    ]
+   },
+   "costMicros": 45576,
+   "ms": 28491
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": true,
+   "output": {
+    "summary": "Plausible doesn't need awareness. It needs more paying subscribers from a fixed $500/month ad budget, and that budget alone will barely move a base of over 21,000 paying subscribers. The plan pulls three levers. First, find and fix the leak between trial start and paid. Activation is the working hypothesis, confirmed or rejected by the end of week 2. Second, the primary acquisition engine is high-intent 'switching from GA4' and 'analytics without a cookie banner' pages, plus visibility in AI answers. Third, the secondary channel is a tightly scoped Google Search campaign on switcher intent: one big-swing angle test, judged on cost per trial start against a kill line. Channels were ranked with a modified ICE score plus two gates, whether the channel can hit the affordable acquisition cost and how fast it gives a signal. Switcher pages scored 64 of 125 and Search ads 24. Everything else is on the not-doing list with a reason, including a decision not to start a new founder-led LinkedIn programme. Measurement stays cookieless and on-brand: UTMs, Plausible's own goals, billing cohorts and a 'how did you hear about us?' question, with no Google tag on the site. Plan prices, margin, trial volume and conversion rates are not in the confirmed facts. Plan prices are copied on day 1 and the rest is pulled from billing and the product database in week 1. Every target is reset from that baseline. The decision point is the end of week 6: keep, retune or cut ads, and adopt or revert the onboarding change. If no paid channel can clear the affordable acquisition cost, the fallback is an offer change at trial end (annual billing, a stats recap), not more channels. Resources: $500/month ad spend and about 5.5 of an assumed 6 hours a week.",
+    "positioning": "Plausible is the simple, privacy-friendly alternative to Google Analytics. It gives clear numbers on one page with no cookies and no personal data, so there is no cookie banner or GDPR consent form to run. The script is 54 times smaller than Google Analytics, so the site stays fast. Proof: over 21,000 paying subscribers and over 313 billion pageviews tracked. Trust: independent, self-funded, profitable, EU-based, and it does not sell customer data. Four angles carry this position into every channel: (1) no cookie banner or consent form, (2) one-page simplicity, (3) a tiny script and a fast site, (4) independent EU ownership and no data selling. Grounding status: no voice-of-customer bank was provided, so today these angles rest on confirmed facts and on Plausible's own site copy ('no training needed', 'Google Analytics is overkill for most site owners'), not on customer words. Week-1 task: tag third-party reviews, free-text signup answers, and recent support and cancellation messages by angle. Record each verbatim quote with its source and count mentions per angle [NEEDS FACT: customer verbatims and counts per angle]. The angle customers raise more often leads ad and page headlines. If the counts contradict the order above, the counts win. Copy says what the product does (no cookies, no personal data). It never promises a legal compliance outcome.",
+    "audiences": [
+     {
+      "name": "Site owners switching away from GA4",
+      "hypothesis": "People already frustrated with GA4 search for alternatives and migration help. Because the pain is current, they convert to trial at a higher rate than generic analytics searchers. They are the primary audience for pages and ads.",
+      "evidence": "The homepage, the 'vs Google Analytics' page and the 'Migrate from GA4' page are all built around replacing GA, and the insights rate this audience high confidence. Search demand and the trial rate from these pages are not yet measured. Both come from Plausible's own dashboard and Search Console in week 1."
+     },
+     {
+      "name": "Privacy-minded teams in the EU",
+      "hypothesis": "Teams that want to drop the cookie banner respond more strongly to 'no cookies, no personal data, no consent form' and to the independent EU ownership story than to simplicity alone. This is the hypothesis the ads angle test checks.",
+      "evidence": "Confirmed product fact: no cookies, no personal data, no need for cookie banners or GDPR consent forms. Confirmed brand fact: EU-based, independent, does not sell data. The insights rate this audience high confidence. Its share of current signups comes from the week-1 source audit."
+     },
+     {
+      "name": "Agencies managing several client sites",
+      "hypothesis": "One agency can bring several sites, so each acquisition may be worth more. This audience is not a channel in this 90-day window. It is the candidate compounding asset for the final phase if the week-1 audit shows agencies already sign up in meaningful numbers.",
+      "evidence": "The site names agencies and white-label analytics as audiences, and the Growth and Business plans allow multiple sites and team members (insights, medium confidence). The agency share of subscribers and their revenue come from billing in week 1."
+     }
+    ],
+    "channels": [
+     {
+      "key": "conversion_optimization",
+      "name": "Constraint fix: trial activation (not an acquisition channel; protects every channel)",
+      "why": "A trial can't show value until the script is installed or GA4 data is imported, so activation is the likely leak. Fixing it raises the value of every trial from every source, including the organic and referral traffic that probably drives today's signups (to be confirmed). Modified ICE: Impact 5, Confidence 3, Ease 4 = 60. Fits the acquisition-cost limit: yes, no media cost. Time to signal: about 1–2 weeks, read on 7-day integration. Owner: lifecycle or growth owner. Cadence: build in weeks 1–2, then a weekly check. Hours: about 1 h/week in weeks 1–6, then about 0.5 h/week.",
+      "priority": 1,
+      "deliverables": [
+       "Week 1: funnel export by signup source covering trial started, script installed or data imported within 7 days, and paid at trial end",
+       "A rewritten day-0, day-2 and day-5 onboarding sequence aimed at one action, getting data flowing: install snippet for common site platforms, GA4 import link, and the 'check your installation' step. These are service messages to trial users; the owner checks consent and unsubscribe handling",
+       "A dashboard empty-state message for trials with no data after the first day, linking to install help",
+       "A pre-registered 50/50 split of new trial signups: new sequence vs current (see experiments)"
+      ],
+      "dependencies": [
+       "Access to trial and billing data",
+       "Confirmation that the 'Free Trial Started' and 'First Data Integration' goals named in the insights exist and fire correctly",
+       "Owner sign-off on email copy"
+      ],
+      "measurement": "Trial-to-first-data within 7 days and trial-to-paid per signup cohort, read from the product database and billing, not from ad platforms. One row on the weekly scorecard.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "seo_content",
+      "name": "Primary: high-intent switcher pages and AI-answer visibility",
+      "why": "Plausible's position is 'the alternative to Google Analytics', so the buyers closest to a decision are searching for GA4 alternatives, analytics without a cookie banner, and GA4 migration help. These are high-intent pages, not informational blog posts. That matters because AI summaries are cutting clicks on informational results: Pew Research Center (Jul 2025) found people clicked traditional results less often when Google showed an AI summary, and Google disputes such studies. Pages cited in AI answers keep more of their clicks (Seer Interactive, single study), so consistent facts across third-party sources also matter. Modified ICE: Impact 4 (existing comparison and migration pages already sit on this demand), Confidence 4 (the brand is built on this switch), Ease 4 (pages exist, writing is in-house) = 64. Fits the acquisition-cost limit: yes, it costs staff time only. Time to signal: about 2–4 weeks for rebuilt existing pages and longer for new ones. The score gap over ads outweighs ads' faster signal. Owner: marketer or writer. Cadence: one page rebuilt or published about every 2–3 weeks, a monthly AI-answer check, and weekly community answers. Hours: about 3 h/week.",
+      "priority": 2,
+      "deliverables": [
+       "Weeks 1–2: audit the 'vs Google Analytics' and 'Migrate from GA4' pages against the 10-second test (what it is, who it is for, why it's better). Each page gets one primary trial call to action and only confirmed proof: 21,000+ paying subscribers, 313 billion pageviews, a script 54 times smaller",
+       "4 new or rebuilt high-intent pages over the 90 days, chosen from the week-1 search-term pull. Examples: 'GA4 alternative for ecommerce / SaaS / EU sites', 'analytics without a cookie banner', and honest comparison pages against privacy-focused rivals such as Matomo. Every competitor claim is sourced and dated",
+       "An AI-traffic page built on the site's statement that Plausible shows visits from ChatGPT, Perplexity and Claude. The owner confirms the exact feature wording before publishing",
+       "Monthly AI-answer check: the same 6 prompts in ChatGPT, Perplexity, Gemini and Google AI Overviews, logging whether and how Plausible is described. Example prompt: 'which privacy-friendly analytics tool should an EU ecommerce store use instead of Google Analytics'",
+       "Consistency pass on third-party listings and review-site profiles so the same confirmed facts appear everywhere. Openly labelled staff answers in existing community threads where people ask for GA4 alternatives, about 0.5 h/week, with no astroturfing"
+      ],
+      "dependencies": [
+       "Week-1 search-term and entry-page data from Plausible's own dashboard and Google Search Console",
+       "Owner confirmation of feature claims and competitor facts",
+       "The winning ads angle feeds page headlines from week 7"
+      ],
+      "measurement": "Trial starts by entry page for switcher pages (Plausible goal conversions, with utm_medium=cpc excluded), AI-referral visits as a separate source row, the monthly AI-answer log, and signup answers naming search or an AI assistant.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "search_ads",
+      "name": "Secondary: Google Search ads on switcher intent (one big-swing angle test plus capture)",
+      "why": "$500/month can't buy scale, but it can answer one question fast: does paid switcher intent produce trial starts below the kill line, and which angle pulls harder? Modified ICE: Impact 2 (small budget against a large base), Confidence 3 (switcher searches exist because GA4 comparison pages exist, but conversion is unknown), Ease 4 = 24. Fits the acquisition-cost limit: unknown until tested, so spend is capped and judged at the end of week 6. Time to signal: about 1–2 weeks to the first cost-per-trial reads, the fastest of the survivors. Smart Bidding needs a Google conversion tag, which conflicts with the no-cookies promise. Bidding is therefore manual CPC or Maximize Clicks with a CPC cap, and conversions are read from Plausible by UTM. Owner: whoever runs ads. Cadence: about 2 h setup in week 1, then a weekly search-term review and scorecard input. Hours: about 1 h/week.",
+      "priority": 3,
+      "deliverables": [
+       "One Search campaign on 8–12 exact- and phrase-match terms around GA4 alternatives, cookieless or privacy-friendly analytics, and GA4 migration. Target markets are set by the owner in week 1, starting with countries that already send many trial starts in Plausible's own data",
+       "A negatives list on day 1: free, jobs, course, certification, login, tutorial, 'how to use GA4' and similar",
+       "A Google Ads experiment (50/50 traffic split) running two packages: privacy ads pointing to a no-cookie-banner page vs simplicity ads pointing to the GA4 comparison page. No Google tag on the site; every final URL carries utm_source=google&utm_medium=cpc&utm_campaign=switcher&utm_content=[angle]",
+       "Weekly search-term review: add negatives and pause any term whose spend exceeds the kill line with zero trials",
+       "Owner check of ad text against Google's trademark policy before using 'Google Analytics' in copy; comparison claims stay factual"
+      ],
+      "dependencies": [
+       "The kill line (maximum cost per trial start) computed in week 1",
+       "Owner approval to run paid ads at all, given the independent brand",
+       "Landing pages passing the 10-second test before ads point at them"
+      ],
+      "measurement": "Cost per trial start = Google Ads spend ÷ Plausible 'Free Trial Started' conversions with utm_source=google. Cost per paid subscriber = spend ÷ paid subscribers from those trials, read in 30-day cohorts because of the trial length. Cross-checked against signup survey answers.",
+      "suggestedMonthlyAdSpend": 500
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Search ads big swing: privacy package vs simplicity package",
+      "hypothesis": "Switchers respond more to 'no cookie banner or consent form' (ad plus matching privacy page) than to 'one-page simplicity' (ad plus GA4 comparison page). The two packages differ in angle and destination at once, so the swing is large enough to detect. Evidence: both are confirmed product facts, and they match the two high-confidence audiences in the insights. Decisions informed: (1) keep or cut ads, (2) which angle leads switcher page headlines from week 7.",
+      "population": "Google Search users matching the switcher keyword set in the chosen markets, split 50/50 with a Google Ads experiment. Same keywords, bids, schedule and budget in both arms.",
+      "method": "ab_split",
+      "primaryMetric": "Trial starts per click by arm, from Plausible UTM data, plus cost per trial start against the kill line. Ad CTR is a secondary early read only. Budget check: six weeks of the $500 monthly budget is about $700, so affordable clicks ≈ $700 ÷ actual CPC. CPC is unknown until week 2; the owner pulls Keyword Planner estimates in week 1. Clicks needed per arm to detect a doubling of the click-to-trial rate ≈ 16 × p × (1 − p) ÷ p², which simplifies to 16 × (1 − p) ÷ p, where p is the baseline click-to-trial rate. Planning example with an assumed p of 10%, to be replaced by week-2 data: about 144 clicks per arm, so roughly 290 clicks in total, which $700 buys only if CPC stays under about $2.40. If affordable clicks fall short of that, the arm comparison is labelled directional before launch.",
+      "guardrails": [
+       "Cost per trial start in each arm at or below the kill line",
+       "Under 20% of spend on terms later added as negatives",
+       "No change to landing pages, keywords or bids during the test",
+       "Total spend at or below $500 per calendar month"
+      ],
+      "durationDays": 42,
+      "stoppingRule": "These are business thresholds, not a significance test, and are set before launch. Decide when each arm reaches the required clicks or at the end of week 6, whichever comes first. Keep or cut ads: if neither arm's cost per trial is at or below the kill line, cut ads, return the budget and move to the offer fallback. Angle: if one arm's trial starts per click are at least 50% higher and it clears the kill line, move all spend to it and use its angle in page headlines. If the gap is under 10%, angle isn't the lever; keep the cheaper arm if it clears the kill line. Anything in between: iterate once with the 'tiny script' vs 'independent EU' pair. The only early stop is a guardrail breach."
+     },
+     {
+      "name": "Activation onboarding sequence vs current",
+      "hypothesis": "Trials that never get data flowing can't see the product's value. A setup-focused day-0/2/5 sequence plus a dashboard empty-state nudge will raise the share of trials with data within 7 days by at least 30% relative. Decision informed: whether the new sequence becomes the default, and whether activation is the real constraint.",
+      "population": "All new trial signups during the window, randomly split 50/50 at signup (for example by account ID parity). Existing trials are excluded.",
+      "method": "ab_split",
+      "primaryMetric": "Share of trials with first data integration (script detected or GA4 import) within 7 days. Secondary: trial-to-paid, read after the 30-day trial ends. Volume: the insights propose stopping at 200 trial signups per version. With an assumed 50% baseline (replace with week-1 data), detecting a 30% relative lift (an absolute gap of 15 points) needs about 16 × 0.5 × 0.5 ÷ 0.15² ≈ 180 per version, so 200 is enough. Run time = 200 ÷ weekly trial starts per version.",
+      "guardrails": [
+       "Unsubscribe rate on onboarding emails no higher than on the current sequence",
+       "Spam complaints below Gmail's published bulk-sender limit of 0.3%, aiming for 0.1% or lower (Gmail sender guidelines)",
+       "Support tickets per trial no higher than control"
+      ],
+      "durationDays": 30,
+      "stoppingRule": "Decide at 200 trial signups per version or after 4 weeks of enrolment (the insights' rule), whichever comes first. If the week-1 baseline turns out high (most trials already integrate), recompute the volume and accept that activation isn't the main leak. Scale: at least 30% relative lift in 7-day integration with guardrails holding, so the new sequence becomes the default. Kill: under 10%, so revert and treat the trial-end step or acquisition as the constraint. Iterate once: anything between."
+     },
+     {
+      "name": "Switcher page rebuild: before/after read",
+      "hypothesis": "Rebuilding the GA4 comparison and migration pages around one clear trial call to action and confirmed proof raises trial starts from those pages. Decision informed: whether to roll the same template out to the 4 new high-intent pages.",
+      "population": "Organic and AI-referred visitors landing on the rebuilt pages. Paid traffic is excluded by UTM so the ads test doesn't contaminate the read.",
+      "method": "pre_post_observational",
+      "primaryMetric": "Trial starts per 100 entrances on the rebuilt pages, comparing 4 weeks before with 4 weeks after on the same weekday mix, using Plausible goal conversions by entry page. Directional only: a before/after read is not causal proof.",
+      "guardrails": [
+       "No other change to those pages or the signup flow during the window",
+       "Confounds logged: launches, press, seasonality, Google core updates",
+       "Exit rate on the page not materially worse"
+      ],
+      "durationDays": 30,
+      "stoppingRule": "Read once, 4 weeks after the change; no peeking and reverting. A rise of 30% or more in trial starts per 100 entrances means applying the template to the new pages. Under 10%, keep the old structure and test a bigger swing (an audience-specific headline). In between, iterate once. Always labelled directional."
+     }
+    ],
+    "constraints": [
+     "Ad budget: $500/month, paid directly to ad platforms (owner brief). Tools add no extra spend: Plausible, Search Console and Google Ads are already available. Total monthly spend: $500 of $500",
+     "Weekly hours: not stated. Assumption: 6 h/week from one or two people, owner confirms in week 1. Allocation: activation about 1 h (lifecycle owner), switcher pages and AI visibility about 3 h (marketer or writer), Search ads about 1 h (ads owner), Monday scorecard about 0.5 h (data-minded team member). Total about 5.5 h of 6, leaving 0.5 h of buffer",
+     "Plan prices and average revenue per new subscriber: not in confirmed facts. Prices are copied from the pricing page on day 1, and the plan mix of new subscribers is pulled from billing in week 1",
+     "Gross margin: assumption of 80%, validate with the owner by the end of week 1",
+     "Payback target: 3 months, an assumption taken from the playbook default for SMB-priced SaaS. The owner confirms or replaces it by the end of week 1",
+     "Sales cycle: self-serve 30-day free trial with no credit card, per the site (insights). Paid conversions lag trial starts by about 30 days",
+     "Current customer sources and their shares: unknown, audited in week 1",
+     "Existing assets: over 21,000 paying subscribers and 313 billion pageviews tracked (confirmed); 'vs Google Analytics' and 'Migrate from GA4' pages, a live demo and the trial (insights)",
+     "Brand constraint: independent, privacy-first, does not sell data (confirmed). No Meta pixel or Google tag on the site; measurement stays cookieless",
+     "Claims constraint: copy says 'no cookies, no personal data, no cookie banner needed' (confirmed) and never promises legal compliance outcomes",
+     "Team: about 10 people, with no history of paid ads (insights, not a confirmed fact)"
+    ],
+    "measurementPlan": "One weekly scorecard sheet, filled every Monday in about 30 minutes by a named team member. Sources: (1) Plausible's own dashboard: 'Free Trial Started' and 'First Data Integration' goals (confirm they exist), conversions by source, UTM campaign and content, entry page, and AI referrers (chatgpt.com, perplexity.ai, gemini, claude) as a separate row. (2) The product database and billing for 7-day integration and trial-to-paid by signup cohort. This is the revenue truth and doesn't depend on platform attribution. (3) Google Ads spend, clicks, CPC and search terms. Cost per trial start and per paid subscriber are computed in the sheet from spend ÷ Plausible UTM conversions and billing. Google's own conversion column is not used, because no Google tag goes on the site. (4) A required 'How did you hear about us?' field at signup with fixed options (search, AI assistant, friend or colleague, social, community or forum, article, ad, other) plus free text, as an independent check. (5) A monthly AI-answer log: 6 prompts across 4 engines. UTMs go on every owned link: ads, emails, community posts and partner mentions. Paid conversions are read in 30-day cohorts, so the end-of-week-6 decisions rest on early reads (trial starts, cost per trial, 7-day integration) and are confirmed against paid conversions before day 90.",
+    "firstActions": [
+     {
+      "title": "Day 1: copy plan prices and compute the affordable acquisition cost and kill line",
+      "why": "Prices are the one input that can be had today. With the plan mix from billing, margin and payback target, they give the affordable cost per customer and the maximum cost per trial start the ads must beat. Without them the ads test has no kill line.",
+      "role": "Owner"
+     },
+     {
+      "title": "Pull the funnel and source baseline",
+      "why": "Trial volume, 7-day integration, trial-to-paid and current customer sources are unknown. The diagnosis, every target and every test's run time depend on them.",
+      "role": "Data-minded team member"
+     },
+     {
+      "title": "Add 'How did you hear about us?' to signup",
+      "why": "Shows what already works so the plan protects it before spending. It is also the attribution check that doesn't rely on any platform.",
+      "role": "Developer"
+     },
+     {
+      "title": "Build the voice-of-customer tally",
+      "why": "The four angles have no customer verbatims behind them yet. Tagging reviews, signup answers and support or cancellation messages by angle, with counts and quoted sources, decides which angle leads pages and ads.",
+      "role": "Marketer or writer"
+     },
+     {
+      "title": "Ship the onboarding rewrite on a 50/50 split and launch the Search experiment",
+      "why": "Both tests need weeks to reach volume, so they start in week 1 or 2 to finish by the end of week 6.",
+      "role": "Lifecycle owner and ads owner"
+     }
+    ],
+    "diagnosis": "Named constraint, a hypothesis to confirm by the end of week 2: a conversion leak between trial start and first data. A trial can't show value until the script is installed or GA4 data is imported. Evidence for it: the insights single out First Data Integration within 7 days as the activation metric to improve, and a self-serve, no-card 30-day trial is easy to start and easy to abandon. The evidence is thin, because no trial or activation numbers were provided. Why this comes before acquisition: $500/month in ads against a base of over 21,000 paying subscribers can add only a small number of customers, while an activation leak cuts the value of every trial from every source, organic and referral included. What would prove this wrong: (a) If week-1 data shows that most trials already integrate within 7 days (assumption for the bar: about three in four, set with the owner) and integrated trials convert to paid well, activation isn't the leak. The constraint is demand capture: pages and ads move to the front and activation work shrinks to a weekly check. (b) If integrated trials still don't convert to paid, the problem is perceived value or price at trial end. The next move is the trial-end offer fallback, not more traffic.",
+    "affordableCac": "Subscription formula: affordable cost to acquire a customer = monthly gross profit per new subscriber × payback months. Inputs: monthly revenue per new subscriber = plan prices (copied from the pricing page on day 1) weighted by the plan mix of new subscribers (from billing in week 1). Gross margin is an assumption of 80%, validated by the end of week 1. Payback is 3 months, an assumption taken from the playbook default for SMB-priced SaaS, which the owner confirms or replaces by the end of week 1. So affordable cost = revenue per new subscriber × 0.8 × 3. Ad kill line: maximum cost per trial start = affordable cost × trial-to-paid rate (from billing cohorts in week 1). Both numbers go at the top of the scorecard. Channel check: switcher pages, AI visibility and activation work cost staff time only, so they fit at any price. Google Search ads fit only if measured cost per trial start by the end of week 6 sits at or below the kill line, which is why spend is capped at $500/month. Meta ads, LinkedIn ads and outbound are rejected partly because a low monthly self-serve price is unlikely to carry them; this is rechecked once the real figure exists. If margin comes in below the assumption, the kill line drops in proportion and ads are the first line cut. Offer fallback if no paid channel clears the kill line: don't add channels. Instead test changes that raise value per customer at trial end: (1) prompt trial users to choose annual billing at conversion, which collects more cash up front and raises the affordable cost on a cash basis [NEEDS FACT: whether annual billing and any annual discount exist]; (2) a trial-end email recapping the user's own traffic stats before the trial lapses. No invented discounts, countdowns or scarcity.",
+    "notDoing": [
+     {
+      "channel": "Meta ads",
+      "why": "Modified ICE 2×1×2 = 4; fails the brand gate. Measuring Meta properly needs the Meta pixel or Conversions API, which sits badly with a no-cookies, no-data-selling brand, and the whole $500 is committed to the cleaner Search test."
+     },
+     {
+      "channel": "LinkedIn ads",
+      "why": "Modified ICE 1×1×2 = 2; fails the acquisition-cost gate. The $500 is committed to Search, and a low monthly self-serve price is unlikely to carry LinkedIn click costs. Rechecked once revenue per subscriber is known."
+     },
+     {
+      "channel": "New founder-led LinkedIn programme",
+      "why": "Decision: not starting one this quarter. Modified ICE 2×2×3 = 12. Buyers are self-serve site owners across many segments, not a narrow B2B buying committee where founder posts pay off. Creator reports estimate organic LinkedIn reach fell in 2025, and the assumed 6 hours are fully allocated. If founders already post, keep going and add UTMs to links. Revisit if signup answers show LinkedIn as a source."
+     },
+     {
+      "channel": "Outbound sales or cold email",
+      "why": "Modified ICE 2×1×1 = 2; fails the acquisition-cost gate. A self-serve monthly product can't carry outbound costs (confirm once revenue per subscriber is known). Revisit only for public sector buyers, where procurement differs, after day 90."
+     },
+     {
+      "channel": "Informational blog SEO as the engine",
+      "why": "Modified ICE 2×2×3 = 12. AI summaries are cutting clicks on how-to queries (Pew Research Center Jul 2025, Seer Interactive; disputed by Google). Writing time goes to high-intent switcher and comparison pages instead."
+     },
+     {
+      "channel": "New organic social programme",
+      "why": "Modified ICE 2×1×2 = 4. There is no evidence yet that social drives signups, and the hours are committed elsewhere. Revisit if signup answers show social matters."
+     },
+     {
+      "channel": "Agency partnership programme",
+      "why": "Modified ICE 3×2×2 = 12. Promising, since agencies are a named audience and multi-site plans exist, but there is no data yet on agency share or value. It is the candidate compounding asset for the final phase if the week-1 audit supports it."
+     },
+     {
+      "channel": "ChatGPT ads",
+      "why": "Attribution is immature and the $500 is committed to a cleaner test. AI visibility is pursued through citations and consistent facts instead."
+     }
+    ],
+    "northStar": {
+     "metric": "New paying subscribers per month from all sources, measured in 30-day trial cohorts from billing",
+     "baseline": "Average new paying subscribers per month over the last 3 months, pulled from billing in week 1 (not yet provided)",
+     "target": "Baseline +10% for the month ending on day 90. This is a planning assumption, not a benchmark. It is reset at the end of week 2 once baseline, trial volume and activation are known, and lowered rather than stretched if $500/month and the confirmed hours can't support it."
+    },
+    "leadingIndicators": [
+     {
+      "metric": "Trial starts per week, all sources",
+      "weeklyTarget": "At or above the trailing 12-week average (baseline from week 1); +5% from week 7 (assumption)",
+      "source": "Plausible goal 'Free Trial Started'"
+     },
+     {
+      "metric": "Share of trials with first data integration within 7 days",
+      "weeklyTarget": "Baseline from week 1, then at least +30% relative for the new-sequence cohort by the end of week 6 (the pre-registered scale threshold)",
+      "source": "Product database or Plausible goal 'First Data Integration'"
+     },
+     {
+      "metric": "Trial starts from switcher and comparison pages (organic and AI referrals, ads excluded)",
+      "weeklyTarget": "Baseline from week 1, then +30% relative after the rebuild (matches the test threshold; directional)",
+      "source": "Plausible conversions by entry page, with utm_medium=cpc excluded"
+     },
+     {
+      "metric": "Google Ads cost per trial start",
+      "weeklyTarget": "At or below the kill line by the end of week 6; spend paced to no more than $500 per month",
+      "source": "Google Ads spend ÷ Plausible conversions with utm_source=google"
+     },
+     {
+      "metric": "AI-referral visits and AI-answer mentions",
+      "weeklyTarget": "Weekly AI-referral visits trending up from baseline; monthly log shows Plausible named in more of the prompt-engine checks than the month before",
+      "source": "Plausible referrer report and the monthly prompt log"
+     }
+    ],
+    "phases": [
+     {
+      "name": "Foundation",
+      "days": "Weeks 1–2",
+      "focus": "Copy prices on day 1. Pull the baseline: trials, 7-day integration, trial-to-paid, sources, plan mix and margin. Compute the affordable acquisition cost and kill line, and confirm or reject the activation diagnosis by the end of week 2. Add 'how did you hear about us?', set UTM conventions and the weekly scorecard, and build the voice-of-customer tally. Audit the two switcher pages against the 10-second test. Ship the onboarding rewrite on a 50/50 split. Launch the Search experiment with negatives, UTMs and no Google tag. Run the first AI-answer check."
+     },
+     {
+      "name": "Test",
+      "days": "Weeks 3–6",
+      "focus": "Run the activation split and the Search experiment to their pre-registered volumes without peeking or stopping early. Weekly search-term review. Rebuild the two existing switcher pages and start the before/after read. Publish the first new high-intent page. End-of-week-6 decision: keep, retune or cut ads against the kill line; adopt or revert the onboarding sequence; confirm switcher pages as the primary engine, or swap if the falsifier triggered. If ads fail the kill line, start the trial-end offer fallback."
+     },
+     {
+      "name": "Commit and compound",
+      "days": "Week 7 to day 90",
+      "focus": "Roughly three quarters of effort on the primary: the remaining high-intent pages with the winning angle in headlines, the AI-answer consistency pass and genuine community answers. The rest goes to the secondary: ads on the winning package only, or the budget is withdrawn. Build one compounding asset: a library of tested switcher angles with results, reused across pages, ads and onboarding. If the audit shows agencies are a meaningful share of signups, scope an agency page and partner list for next quarter. Before day 90, read paid conversions from the earlier trial cohorts and reverse any end-of-week-6 call they contradict."
+     }
+    ],
+    "weekOneChecklist": [
+     "Copy plan prices from the pricing page and confirm margin and payback with the owner. Write the affordable acquisition cost and the kill line at the top of the scorecard (about 30 minutes)",
+     "Export the last 90 days: trial starts by source and entry page, 7-day integration rate, trial-to-paid by cohort, plan mix of new subscribers. Fill the scorecard's baseline row (about 1.5 hours)",
+     "Add a required 'How did you hear about us?' field with fixed options plus free text to signup (about 1 hour of developer time)",
+     "Draft the day-0/2/5 setup-focused onboarding emails and set the 50/50 random split for new trials (about 1.5 hours)",
+     "Build the Search campaign: 8–12 exact and phrase switcher terms, a negatives list, a 50/50 Google Ads experiment with the two packages, UTMs on every final URL, a monthly budget of $500, no Google tag on the site (about 2 hours)"
+    ],
+    "risks": [
+     {
+      "risk": "Paid ads clash with the independent, no-ads brand story",
+      "mitigation": "The owner explicitly approves the ads line before launch. Ads state only confirmed product facts and run without any tracking tag on the site. Validate in week 1."
+     },
+     {
+      "risk": "Without a Google conversion tag, Google can't optimise bids, so $500 may buy low-quality clicks or too few clicks for the angle test",
+      "mitigation": "Manual or capped bids on exact and phrase terms only, a day-1 negatives list and weekly search-term review. The click budget is checked against required volume in week 2; if it falls short, the arm comparison is labelled directional and ads are judged only on cost per trial against the kill line. Validate by the end of week 6."
+     },
+     {
+      "risk": "Baselines are unknown, so targets and volume maths rest on labelled placeholders (click-to-trial rate, integration rate, margin, the +10% North Star)",
+      "mitigation": "Replace every placeholder with real data by the end of week 2, then recompute volumes, run times and targets. Tests that can't reach volume within 6 weeks are reported as directional or redesigned. Validate by the end of week 2."
+     },
+     {
+      "risk": "No paid channel clears the kill line once real prices are known",
+      "mitigation": "Don't add channels. Run the trial-end offer fallback (annual billing prompt if it exists, a stats recap email) and put ad budget on hold. Validate by the end of week 6."
+     },
+     {
+      "risk": "Privacy copy drifts into legal promises ('fully GDPR compliant')",
+      "mitigation": "Copy is limited to the confirmed wording: no cookies, no personal data, no cookie banner or consent form needed. The owner or counsel reviews every page and ad before it goes live. Validate before each publish."
+     },
+     {
+      "risk": "Competitor and trademark claims are inaccurate or breach Google Ads policy",
+      "mitigation": "Every competitor statement is sourced and dated, and pages are re-checked quarterly. Ad copy mentioning 'Google Analytics' is checked against Google's trademark policy. Validate in week 1 for ads and before publishing each page."
+     },
+     {
+      "risk": "Available hours are lower than the assumed 6 per week",
+      "mitigation": "Cut in this order: ads first (saves about 1 h/week), then new pages from 4 to 2. Activation work and the scorecard are protected. Validate in week 1 once hours are confirmed."
+     },
+     {
+      "risk": "The 30-day trial means paid results lag, so the end-of-week-6 decisions rest on early indicators only",
+      "mitigation": "Make those calls on trial starts, cost per trial and 7-day integration. Confirm them against paid conversions from the earlier cohorts before day 90 and reverse any call the paid data contradicts. Validate by day 90."
+     }
+    ]
+   },
+   "costMicros": 1864941,
+   "ms": 673016,
+   "rounds": 3,
+   "history": [
+    {
+     "round": 0,
+     "average": 4.1,
+     "gatesPassed": false,
+     "lintErrors": 35
+    },
+    {
+     "round": 1,
+     "average": 4.1,
+     "gatesPassed": true,
+     "lintErrors": 9
+    },
+    {
+     "round": 2,
+     "average": 4.2,
+     "gatesPassed": true,
+     "lintErrors": 35
+    }
+   ]
+  },
+  "opus": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B names the real constraint. $500 a month against more than 21,000 subscribers can add only a handful of customers, so trial activation and high-intent switcher pages come first and ads are a capped test with a kill line. A defaults to ads as priority 1 without asking whether $500 can matter.",
+     "B's measurement fits the brand: no Google tag, UTMs read in Plausible, billing cohorts and a 'how did you hear about us' field. A links conversion tracking to the ad platform, which sits awkwardly with a no-cookies, independent brand. A top specialist would flag that.",
+     "B has an affordable-cost formula, a kill line, sample-size maths with labelled placeholders, a decision point at week 6, a fallback and a reasoned not-doing list. That is genuinely prioritised and actionable for this business.",
+     "B flags Google trademark policy, owner approval for running ads at all, and email consent. A misses these.",
+     "A is accurate, clean and easy for a non-expert, but generic. Much of it restates the insights, and its experiments copy the insights' stopping rules without checking whether the traffic exists.",
+     "B is long and dense, but Plausible is a sophisticated analytics team, so the depth is usable rather than padding."
+    ],
+    "truthProblemsA": [
+     "Puts trial terms in dependencies, which is fine. No invented facts, but 'Pause any ad group that has spent about $75 with no trial starts' is an arbitrary threshold presented without any basis."
+    ],
+    "truthProblemsB": [
+     "The ICE scores (e.g. 64 vs 24) are subjective numbers presented with false precision.",
+     "The 80% margin and 3-month payback are assumptions; they are labelled, but they drive the kill line.",
+     "'Creator reports estimate organic LinkedIn reach fell in 2025' is a vague, unsourced claim.",
+     "Seer Interactive and Pew are cited as external sources outside the provided facts. They are plausible and hedged, but not verified here.",
+     "'Team of about 10 with no history of paid ads' comes from the insights rather than the confirmed facts; B does label it as such."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "decisive",
+    "reasons": [
+     "A correctly frames the problem. $500 a month in ads barely moves a base of over 21,000 paying subscribers, so A puts activation and high-intent switcher pages ahead of paid media. B leads with ads, which is the weaker priority for this business.",
+     "A respects the brand's core promise. It puts no Google tag or Meta pixel on the site and measures through UTMs, Plausible's own goals and billing cohorts. B tells the owner to link conversion tracking to the ad platform. For a cookieless, privacy-first brand that is a contradiction that could embarrass the company.",
+     "A is honest about unknowns. Prices, margin, trial volume and conversion rates are labelled as placeholders, each with a week-1 data pull and a formula for the affordable acquisition cost and the ad kill line. B's thresholds are arbitrary: pause after $75 with no trials, and 1,000 visitors per arm, which a $500 budget likely can't deliver.",
+     "A's experiments are pre-registered with clear scale, kill and iterate thresholds, a sample-size check against the budget, and a not-doing list with reasons. That gives the owner a decision framework. B is generic and could fit almost any SaaS.",
+     "B is easier for a non-expert to read, and its claims stay within the confirmed facts. But it is thin, misprioritized, and includes odd details like the 'AI CEO' role label.",
+     "A's main weakness is its density and length, which may overwhelm a small owner. Its substance still clearly outweighs that."
+    ],
+    "truthProblemsA": [
+     "The claim that creator reports estimate organic LinkedIn reach fell in 2025 is vague and unsourced.",
+     "The 80% gross margin and 3-month payback are assumptions. They are labelled as such but carry a lot of weight in the maths.",
+     "The team size of about 10 and the absence of paid ads come from the insights, not the confirmed facts. A does flag this."
+    ],
+    "truthProblemsB": [
+     "It recommends linking conversion tracking to the ad platform without noting the conflict with the brand's no-cookies, no-personal-data positioning."
+    ]
+   }
+  },
+  "sonnet": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B ties every channel to the owner's real constraint. It computes an affordable CAC and a kill line before any spend, and it honestly says $500/month won't move a base of 21,000+ subscribers. A is generic and never sets a decision threshold tied to economics.",
+     "B spots that Google Ads Smart Bidding needs a Google tag, which clashes with the no-cookies brand. It prescribes manual CPC plus UTM tracking read in Plausible. This is highly specific to Plausible and something a top specialist would flag. A tells the owner to link tracking to the ad platform without noticing the brand conflict.",
+     "B has a stronger experiment design. It runs a 50/50 Google Ads experiment on privacy vs simplicity angles, with clicks-needed math, budget feasibility, decision thresholds and an honest 'directional' label. A's headline test is generic and would likely never reach 1,000 visitors per arm on $500.",
+     "B sets a diagnosis with falsifiers, a North Star, leading indicators, phases, a not-doing list and a week-one checklist. It is more prioritized and actionable. A is clean and readable but thinner.",
+     "B marks unknowns honestly, with [NEEDS FACT] tags and assumptions labelled (80% margin, 6 hours a week). It cites outside sources like Pew and Seer with caveats.",
+     "B is very long and dense, and a non-expert owner may find the ICE scores and jargon heavy. A is simpler and easier to read, which keeps the margin at clear rather than decisive."
+    ],
+    "truthProblemsA": [
+     "The $75 pause threshold per ad group is arbitrary and unsupported, though presented as a rule, not a fact.",
+     "Assumes ad platform conversion linking without noting the no-cookie brand conflict, which makes the tracking plan impractical rather than false."
+    ],
+    "truthProblemsB": [
+     "The 80% gross margin and 3-month payback are invented assumptions, but they are labelled as assumptions to be validated.",
+     "The external citations (Pew Jul 2025, Seer Interactive, Gmail 0.3% spam limit) are not in the confirmed facts, though they are flagged as outside sources.",
+     "The 6 hours a week and the claim of 'no history of paid ads' are assumptions or insight-level claims, labelled as such.",
+     "The ICE scores are subjective, though presented with their inputs."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A is far more specific to Plausible and its constraints: it names activation as a hypothesis with falsifiers, an affordable-CAC formula, a kill line, and a decision point at week 6.",
+     "A recognises that $500/month cannot move a 21,000-subscriber base and prioritises accordingly. It ranks channels with explicit scoring and a not-doing list, which gives a non-expert real prioritisation.",
+     "A fits the brand: no Google tag on the site, cookieless UTM measurement, and a signup survey. B's 'tracking linked to the ad platform' conflicts with the no-cookies, privacy-first positioning and ignores that tension.",
+     "A's experiments have worked sample-size maths, guardrails, and decision rules. B's are thin, mostly copied from the insights.",
+     "A handles uncertainty honestly by marking placeholders and [NEEDS FACT] items, and it avoids legal-compliance promises.",
+     "B is clean, readable and safe, and it puts the trial CTA first. But it is generic and shallow, with no diagnosis, no targets, no phases and no risks. Its $75 pause rule is arbitrary.",
+     "A is dense and long, and may overwhelm a non-expert owner. It also assumes 6 hours a week. Even so, it is much more actionable."
+    ],
+    "truthProblemsA": [
+     "Cites Pew Research and Seer Interactive studies and Gmail's 0.3% spam limit. These are external references, not confirmed facts, though they are labelled and attributed.",
+     "Assumes 80% margin, 3-month payback and 6 hours a week. All are labelled as assumptions.",
+     "Mentions a 30-day no-card trial and the Growth and Business plans. These come from the insights, not the confirmed facts, but are flagged as insights."
+    ],
+    "truthProblemsB": [
+     "Refers to a free trial in ads without confirming the terms, though it does flag this for checking.",
+     "Proposes a 'Do you need a cookie banner' article that edges toward legal territory, though it is caveated.",
+     "Ad-platform conversion linking contradicts the brand's cookieless stance, which is a strategic flaw rather than a factual one."
+    ]
+   }
+  }
+ },
+ {
+  "case": "plausible",
+  "task": "linkedin",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "No cookie banners, no consent forms",
+      "body": "Tired of cookie banners on your website? Plausible Analytics does not use cookies and does not collect personal data. That means you do not need cookie banners or GDPR consent forms for it. You still get clear numbers on how people find and use your site. Simple, honest analytics for busy owners. Learn more at plausible.io",
+      "hashtags": [
+       "#WebAnalytics",
+       "#PrivacyFirst",
+       "#SmallBusiness"
+      ],
+      "altText": "Simple graphic with a plain white background and the words No cookies. No personal data. No cookie banner. A small green checkmark sits beside each line.",
+      "imageIdea": "A clean text-only graphic with three short lines and a green checkmark beside each. No screenshots, no people, and no fake dashboard.",
+      "factIndexes": [
+       1
+      ],
+      "suggestedDay": 1
+     },
+     {
+      "channel": "linkedin",
+      "title": "A lighter option than Google Analytics",
+      "body": "Google Analytics can feel like too much for a small or mid-sized website. Plausible is a lighter option. Its script is 54 times smaller than Google Analytics, which helps keep your pages fast. For a blog, a shop, or a company site, speed matters to visitors. Is your analytics tool slowing your site down? See how Plausible compares at plausible.io",
+      "hashtags": [
+       "#WebsiteSpeed",
+       "#GoogleAnalytics",
+       "#SmallBusiness"
+      ],
+      "altText": "Diagram with two bars of very different lengths. The short bar is labeled Plausible script and the long bar is labeled Google Analytics script, with the text 54 times smaller.",
+      "imageIdea": "A simple bar comparison showing a short bar for the Plausible script and a long bar for Google Analytics, labeled 54 times smaller. Use a neutral color palette. No real company logos beyond the product name.",
+      "factIndexes": [
+       0
+      ],
+      "suggestedDay": 4
+     },
+     {
+      "channel": "linkedin",
+      "title": "Who runs the tool that handles your visitor data",
+      "body": "Where your analytics data lives and who controls it matters. Plausible is independently operated, self-funded and profitable. It is based in the EU and does not sell customer data. Plausible also serves over 21,000 paying subscribers and has tracked over 313 billion pageviews. If you want a simple tool from a company that is open about how it works, take a look at plausible.io",
+      "hashtags": [
+       "#DataPrivacy",
+       "#IndependentSoftware",
+       "#EUTech"
+      ],
+      "altText": "Plain graphic with a white background and four short text labels: Independent, Self-funded, Profitable, EU-based. Each label has a simple outline icon next to it.",
+      "imageIdea": "A four-tile icon grid with the words Independent, Self-funded, Profitable and EU-based. Use simple outline icons. Do not show a person, a customer quote, or a product screenshot.",
+      "factIndexes": [
+       2,
+       3
+      ],
+      "suggestedDay": 8
+     }
+    ]
+   },
+   "costMicros": 1351,
+   "ms": 10728
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "Analytics script size and site speed",
+      "body": "Our analytics script is 54 times smaller than Google Analytics. Your visitors never see either one, but their browsers download it on every visit.\n\nThat's the odd thing about analytics. It has no button, no image and no layout shift, so it rarely gets looked at the way a hero photo does. It still has to be fetched and run before some visitors have read your headline. A smaller script means less for the browser to do.\n\nYou can check this on your own site in a couple of minutes. Open your browser's developer tools, go to the Network tab, reload the page and sort by size. Find the analytics script and compare it with your images, fonts and other scripts. If it outweighs things your visitors actually look at, it's the first place to trim.\n\nWhat's the heaviest thing on your site that your visitors never see?",
+      "hashtags": [
+       "#WebPerformance"
+      ],
+      "altText": "Typographic card on a dark background. Text: 54 times smaller. Below it, two horizontal bars: a very short one labelled Plausible and a very long one labelled Google Analytics, drawn to the 54 to 1 ratio.",
+      "imageIdea": "A typographic card showing the 54x ratio as two bars, one thin sliver and one long.",
+      "factIndexes": [
+       0
+      ],
+      "suggestedDay": 2,
+      "format": "single_image",
+      "hook": "Our analytics script is 54 times smaller than Google Analytics. Your visitors never see either one, but their browsers download it.",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Message: our script is 54 times smaller than Google Analytics. Job: prove the claim at a glance. Type: typographic card with a two-bar ratio graphic. No screenshots, no invented file sizes, no speed scores. Placement: one portrait image for the LinkedIn feed (confirm current pixel specs on LinkedIn's help pages). Keep all text and bars well inside the edges because previews can crop. Hierarchy: 1) '54 times smaller' as the largest element, upper third, bold sans-serif, off-white. 2) Support line at about half that size: 'Plausible's script vs the Google Analytics script'. 3) Two horizontal bars, centred. The Plausible bar is a thin sliver. The Google Analytics bar is 54 times its length (if that is too long to fit, show it running off the right side with a short break mark and say so in a small note: 'Bar shortened to fit'). Label each bar directly in text so the meaning doesn't rely on colour. 4) Plausible wordmark, small, bottom-left. Brand kit (provisional, replace with the real kit): dark navy background, off-white text, one accent colour taken from the Plausible logo for the Plausible bar, and the logo's own font family or one clean sans-serif. Check that text and background meet WCAG AA contrast (4.5:1). Don'ts: no Google logo or trademark, no mocked-up dashboard, no performance percentage, no stock people. Add a source line only if the owner supplies a published source for the 54x figure; otherwise leave it off.",
+      "firstComment": "See what Plausible reports on the live demo, then start the 30-day free trial (no credit card required) on your own site: https://plausible.io"
+     },
+     {
+      "channel": "linkedin",
+      "title": "Which tool is the reason for your cookie banner",
+      "body": "Your site has a cookie banner. Do you know which tool on it is the reason?\n\nBanners tend to go up once and stay. Someone adds one when a new script arrives, and after that it's part of the page. Visitors click through it before they see anything you wrote, so it's worth checking it still has a job.\n\nHere's a quick audit. List every script on your site: analytics, chat widget, ad pixels, embedded video, fonts. Mark the ones that set cookies or collect personal data. That list tells you more about your banner than any banner setting does.\n\nAnalytics is one line on that list. Plausible doesn't use cookies or collect personal data, so it adds no cookie banner or GDPR consent form of its own. That's a description of what our product does, not legal advice. Other tools on your site may still need a banner, and your privacy adviser is the person to ask.\n\nWhich tool on your site is the one keeping your banner alive?",
+      "hashtags": [
+       "#CookieBanners",
+       "#DataPrivacy"
+      ],
+      "altText": "No image: text-only post.",
+      "imageIdea": "Text only by choice. A plain explanation reads better here than a graphic.",
+      "factIndexes": [
+       1
+      ],
+      "suggestedDay": 5,
+      "format": "text",
+      "hook": "Your site has a cookie banner. Do you know which tool on it is the reason?",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Deliberately text-only. A banner-themed graphic adds nothing and risks implying a legal guarantee. Do not mock up a cookie banner or a before-and-after unless the owner supplies a real screenshot of a real site, with permission.",
+      "firstComment": "Check what Plausible reports without cookies on the live demo, then start the 30-day free trial (no credit card required) to see it on your own site: https://plausible.io"
+     },
+     {
+      "channel": "linkedin",
+      "title": "Three questions for any analytics vendor",
+      "body": "Three questions to ask any vendor whose script runs on every page of your site: who pays you, who owns you, and do you sell the data?\n\nAn analytics script sees every visit to every page. So the vendor's business model matters as much as its feature list. A free tool has to be paid for somehow, and a company owned by investors answers to them first. The answers tell you whose interests the tool serves when they differ from yours.\n\nHere are ours. Over 21,000 paying subscribers fund Plausible, and they've had over 313 billion pageviews tracked through it. We're independently operated, self-funded and profitable, and we're based in the EU. We don't sell customer data.\n\nYou can ask these questions of any tool, ours included. Put them in writing, and notice which vendors answer plainly and which ones change the subject.\n\nWhat do you ask a vendor before its script goes on every page of your site?",
+      "hashtags": [
+       "#Bootstrapped"
+      ],
+      "altText": "No image: text-only post.",
+      "imageIdea": "Text only by choice. Optional: a real team photo if the owner supplies one.",
+      "factIndexes": [
+       2,
+       3
+      ],
+      "suggestedDay": 9,
+      "format": "text",
+      "hook": "Three questions to ask any vendor whose script runs on every page of your site: who pays you, who owns you, and do you sell the data?",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Text only by choice. If the owner wants an image, use a real phone photo of the team at work, taken in natural light with everyone's consent and no staged poses. Or use a typographic card reading 'Over 21,000 paying subscribers' in large type with the Plausible wordmark small in a corner. Do not add customer logos or quotes unless the owner confirms permission.",
+      "firstComment": "See the live demo of what Plausible reports, then start the 30-day free trial (no credit card required) if it fits your site: https://plausible.io"
+     }
+    ]
+   },
+   "costMicros": 468028,
+   "ms": 229369,
+   "rounds": 3,
+   "history": [
+    {
+     "round": 0,
+     "average": 3.11,
+     "gatesPassed": false,
+     "lintErrors": 0
+    },
+    {
+     "round": 1,
+     "average": 3.33,
+     "gatesPassed": false,
+     "lintErrors": 0
+    },
+    {
+     "round": 2,
+     "average": 3.67,
+     "gatesPassed": true,
+     "lintErrors": 0
+    }
+   ]
+  },
+  "opus": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "decisive",
+    "reasons": [
+     "B's posts are written natively for LinkedIn. Each opens with a strong hook ('Your site has a cookie banner. Do you know which tool on it is the reason?'). Each gives useful value first: a Network-tab check for script weight, an audit of which scripts need a banner, and three questions to ask any vendor. Each ends with a question that invites comments.",
+     "A reads like three short ad blurbs: a feature line followed by 'learn more at plausible.io'. Posts like that get little reach or engagement on LinkedIn, and they sound generic rather than distinctive.",
+     "B puts the call to action in the first comment, using the live demo and the 30-day no-card trial. That fits the 90-day paying-customer goal better than A's vague 'learn more' links.",
+     "B handles the privacy claim responsibly. It says plainly that the post describes what the product does, is not legal advice, and that other tools may still need a banner. That matches the brand's transparent voice and limits legal risk.",
+     "B's visual briefs are disciplined. They rule out invented file sizes, performance scores and logos, so the owner can use them directly.",
+     "Both rely mainly on confirmed facts, and neither invents numbers or customers."
+    ],
+    "truthProblemsA": [
+     "'Simple, honest analytics for busy owners' and 'a company that is open about how it works' are soft brand claims, not confirmed facts. They are minor."
+    ],
+    "truthProblemsB": [
+     "The 30-day free trial with no credit card, and the live demo, come from the site insights rather than the confirmed facts. They are probably accurate but should be checked before posting.",
+     "It reframes the 313 billion pageviews as having been tracked for the subscribers. The confirmed fact says only that the company has tracked over 313 billion pageviews. This is a slight stretch.",
+     "General claims, such as the script running before some visitors read the headline, and investor-owned companies answering to investors first, are opinion or generalisation. They are not tied to any source."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "Both stick to the confirmed facts: A uses 54x, no cookies, 21,000+ subscribers, 313B pageviews, and independent/EU/profitable. B uses the same facts with no fabrication.",
+     "A is built for LinkedIn. Each post opens with a scroll-stopping hook, gives readers something useful to do (a Network-tab script check, a cookie-banner script audit, three questions for any vendor) and ends with a real question that invites comments.",
+     "A keeps links out of the post body and puts the CTA in the first comment, which protects reach. B drops plausible.io into every body, which tends to cut LinkedIn distribution.",
+     "A matches the transparent, independent brand voice. It invites readers to ask the same questions of Plausible, and it hedges the no-banner claim responsibly ('not legal advice; other tools may still need a banner'). That lowers legal risk.",
+     "B reads like generic ad copy ('Tired of cookie banners?', 'Simple, honest analytics for busy owners'). It feature-dumps without insight, any privacy tool could post it, and it is unlikely to earn engagement or trust.",
+     "A's visual briefs are ready to hand to a designer and include sensible don'ts (no invented file sizes, no Google logo, contrast checks). B's image ideas are adequate but thin.",
+     "Both pick the same three themes, so the difference comes down to craft and usefulness, where A is clearly stronger."
+    ],
+    "truthProblemsA": [
+     "The first-comment CTAs mention a 30-day free trial with no credit card and a live demo. These come from the site research, not the confirmed facts, so the owner should verify them before posting.",
+     "'It still has to be fetched and run before some visitors have read your headline' is a general performance claim with no source, though it is mild and plausible."
+    ],
+    "truthProblemsB": []
+   }
+  },
+  "sonnet": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B writes in a native LinkedIn style: strong hooks, line breaks, and a closing question that invites comments. A reads like generic ad copy with a link in the body.",
+     "B teaches something actionable (a DevTools network check, a script audit, vendor questions) before it pitches. That earns attention and fits the transparent, honest brand voice.",
+     "B adds a legal-safety caveat on the cookie claim (not legal advice, other tools may still need a banner), which matches the insight guidance not to promise compliance outcomes.",
+     "B puts the trial CTA in a first comment, which is good LinkedIn practice. The 30-day no-card trial is in the insights, though not in the confirmed facts list.",
+     "B includes detailed visual briefs with accessibility and brand cautions. A's image ideas are fine but thin.",
+     "A is truthful and safe but bland. Its 'Tired of cookie banners?' and 'Learn more' lines are weak, and it puts a link in the body, which LinkedIn tends to suppress. It also uses three or so generic hashtags like #SmallBusiness."
+    ],
+    "truthProblemsA": [
+     "The 'busy owners' and 'small or mid-sized website' framing is mild and unsupported, but harmless.",
+     "'Open about how it works' is a soft claim not backed by a confirmed fact."
+    ],
+    "truthProblemsB": [
+     "The '30-day free trial, no credit card required' claim is in the insights and SWOT, not the confirmed facts, though it is plausibly sourced from the site.",
+     "'Over 21,000 paying subscribers fund Plausible' is a mild inference from the facts.",
+     "'Their browsers download it on every visit' and 'the first place to trim' are general claims, not confirmed facts, but they are reasonable and not invented figures."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A's posts are written for LinkedIn: they open with a strong hook, teach something useful (a DevTools check, a script audit, vendor questions) and end on a discussion question. B reads like a short ad with a flat opening and a plain link.",
+     "A adds a firstComment with the 30-day free trial, no credit card and the live demo. These come from the insights and are supported. This gives each post a clear call to action and keeps the link out of the body. B only says 'learn more at plausible.io'.",
+     "A handles the legal risk carefully. It says the product adds no banner of its own, says this is not legal advice, and notes that other tools may still need a banner. B says 'you do not need cookie banners or GDPR consent forms for it', which is closer to a compliance claim but is still tied to the confirmed fact.",
+     "A includes a detailed visualBrief with the design hierarchy, accessibility notes and a don't list, so the owner can brief a designer. B has only a brief imageIdea.",
+     "A gives more usable value to a non-expert owner through concrete steps and a clear point of view, and it reflects the transparent, independent brand voice. B is generic: 'Simple, honest analytics for busy owners'.",
+     "B is safe and accurate, but it is thin, repetitive and not differentiated. It uses three hashtags per post, including generic ones like #SmallBusiness."
+    ],
+    "truthProblemsA": [
+     "The claim that banners 'tend to go up once and stay' and that analytics 'has to be fetched and run before some visitors have read your headline' is general reasoning, not a confirmed fact, but it is not a fabricated number.",
+     "'Our analytics script' and 'we' voice implies the owner speaks as the company; this is fine but unverified for who posts.",
+     "The statement that subscribers 'fund' Plausible is an inference from 'self-funded' and paying subscribers; mild."
+    ],
+    "truthProblemsB": [
+     "'Is your analytics tool slowing your site down?' and 'speed matters to visitors' are general, unsupported assertions but minor.",
+     "'A company that is open about how it works' is a loose characterization not backed by a specific fact."
+    ]
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "task": "strategy",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "summary": "Goal: more paying customers in 90 days with a $600 monthly ad budget. The plan uses four channels that fit a free-first product. Search ads and search-friendly pages bring in people already looking for a form tool. Landing page tests turn visitors into sign-ups. Lifecycle emails nudge free users to a paid plan when they hit a paid feature. Nothing here is guaranteed. The first month is for setting up tracking and learning what works.",
+    "positioning": "Formkit is the form builder for when the form is part of how people see you. Describe a form and AI builds it. The free plan has unlimited forms, responses and members. Payments go straight to your own Stripe account and Formkit takes no cut. It also works inside Claude and ChatGPT. Keep the tone plain and practical, and be fair about competitors.",
+    "audiences": [
+     {
+      "name": "Freelancers and small studios",
+      "hypothesis": "They will move to a paid plan when they want to take payments through their own Stripe account and keep all the money. This is the clearest paid reason to upgrade.",
+      "evidence": "Confirmed: payments go to the user with no Formkit cut, and Pro is $6 per seat per month. The free plan lets them try it first at no cost."
+     },
+     {
+      "name": "People outgrowing Google Forms",
+      "hypothesis": "Searchers looking for a Google Forms alternative will sign up if a page gives clear, fair reasons to switch, such as their own link and drop-off by question. Some will upgrade later.",
+      "evidence": "Formkit's own compare table points to this gap. They can start free with unlimited forms and responses."
+     },
+     {
+      "name": "Agencies",
+      "hypothesis": "Small agencies that run forms for several clients will pay for Business seats because they need approvals and shared templates. Treat this as a slower, higher-value segment.",
+      "evidence": "Business is $19 per seat per month, and yearly billing gives two months free. Check the feature list on the pricing page before using it in copy."
+     },
+     {
+      "name": "People who already work in Claude or ChatGPT",
+      "hypothesis": "A small group that prefers to build forms by chatting will sign up quickly if they see this message first. It is cheap to reach with a dedicated page.",
+      "evidence": "Confirmed: Formkit works with Claude and ChatGPT so users can build and publish forms in chat."
+     }
+    ],
+    "channels": [
+     {
+      "key": "search_ads",
+      "name": "Search ads on high-intent searches",
+      "why": "The $600 budget is small, so spend it only on people actively searching. Aim at terms like Google Forms alternative, form builder with Stripe payments and AI form builder. Send each ad to a matching page, not the homepage.",
+      "priority": 1,
+      "deliverables": [
+       "Small set of ad groups: Google Forms alternative, form builder with payments, AI form builder, Claude/ChatGPT form builder",
+       "6-8 plain-language ads that mention the free plan and no cut on payments",
+       "Matching landing pages for each ad group",
+       "Weekly search-terms review to cut wasted spend and add negative keywords"
+      ],
+      "dependencies": [
+       "Sign-up and upgrade tracking working before any spend",
+       "Switcher page and Claude/ChatGPT page live",
+       "Ad account set up and paid directly by the owner"
+      ],
+      "measurement": "Cost per sign-up and cost per new paying customer, tracked by campaign through tagged links. Review weekly. Pause any ad group that has spent about $100 with no sign-ups.",
+      "suggestedMonthlyAdSpend": 600
+     },
+     {
+      "key": "seo_content",
+      "name": "Comparison and audience pages",
+      "why": "These pages give the ads a place to land and can bring free search traffic over the 90 days. The Google Forms comparison already exists and can be turned into a fair switcher page. Separate pages for freelancers and event organisers can lead with the no-cut payments message.",
+      "priority": 2,
+      "deliverables": [
+       "Google Forms switcher page with fair, dated claims",
+       "Freelancer page with a client intake template",
+       "Event organiser page with an RSVP template and the payments message",
+       "One page for the Claude and ChatGPT angle"
+      ],
+      "dependencies": [
+       "Owner confirms which claims about competitors are safe and current",
+       "Templates ready to link to from each page"
+      ],
+      "measurement": "Organic visits, sign-ups and upgrades from each page in analytics. Check search impressions after 6-8 weeks. Search traffic can take time, so treat early results as directional.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "conversion_optimization",
+      "name": "Landing page and sign-up testing",
+      "why": "With a small budget, every visitor counts. A clearer message for each audience can lift sign-ups without extra spend. The Claude and ChatGPT page is a quick test.",
+      "priority": 3,
+      "deliverables": [
+       "Claude/ChatGPT page vs general homepage test",
+       "Clear pricing and upgrade prompts on landing pages",
+       "Short sign-up flow that gets people to a published form fast"
+      ],
+      "dependencies": [
+       "Analytics events for visit, sign-up, first form published and upgrade",
+       "Enough traffic from ads and search to read results"
+      ],
+      "measurement": "Sign-ups per visitor for each version, then upgrades per sign-up. Pick a winner only after the stopping rule is met.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "email_lifecycle",
+      "name": "Free-to-paid nudge emails",
+      "why": "The free plan is generous, so most paying customers will start there. A short, helpful email when someone reaches a paid feature, such as payments, can prompt an upgrade.",
+      "priority": 4,
+      "deliverables": [
+       "Welcome email with one starter template",
+       "Nudge email for free users who try a paid feature",
+       "Short reminder about yearly billing with two months free"
+      ],
+      "dependencies": [
+       "Only email people who signed up for Formkit and agreed to product emails",
+       "Event tracking to spot when a user hits a paid feature",
+       "Easy unsubscribe in every email"
+      ],
+      "measurement": "Upgrades per 100 free users who got the email vs a group who did not. Also watch unsubscribe rate.",
+      "suggestedMonthlyAdSpend": 0
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Claude/ChatGPT landing page vs homepage",
+      "hypothesis": "Visitors who see a page about building forms inside Claude or ChatGPT will sign up at a higher rate than visitors who see the general homepage.",
+      "population": "New visitors from search ads and search traffic who ask about AI or chat-based form building, split 50/50 at random.",
+      "method": "ab_split",
+      "primaryMetric": "Sign-ups per visitor",
+      "guardrails": [
+       "Upgrades per sign-up should not drop",
+       "Bounce rate and form-publish rate should not get worse",
+       "Keep ad spend within $600 per month"
+      ],
+      "durationDays": 42,
+      "stoppingRule": "Run until each version has at least 500 visitors or four weeks, whichever comes later. Then choose the winner. If the difference is tiny, keep the simpler page."
+     },
+     {
+      "name": "Upgrade nudge email holdout",
+      "hypothesis": "Free users who get a helpful email after trying a paid feature, such as payments, upgrade more often than users who get no email.",
+      "population": "Free users who signed up with permission for product emails and have tried a paid feature. Hold back about 20% as a no-email group.",
+      "method": "holdout",
+      "primaryMetric": "Pro upgrades per 100 free users within 30 days",
+      "guardrails": [
+       "Unsubscribe rate stays low",
+       "No rise in cancellations or support complaints",
+       "Send only to people who agreed to emails"
+      ],
+      "durationDays": 45,
+      "stoppingRule": "Stop after 45 days or once about 200 users are in each group, whichever is later. Stop early if unsubscribes or complaints rise sharply. With few users the result is directional only."
+     }
+    ],
+    "constraints": [
+     "The site shows no customer names, reviews or user numbers, so do not claim any. Use features and honest comparisons instead.",
+     "The $600 monthly ad budget is small, so tests will read slowly and results are directional rather than proven.",
+     "Competitors such as Tally and Google Forms also have free plans, so free alone will not win. Lead with payments, own brand and Claude/ChatGPT.",
+     "Check competitor claims before publishing and date them.",
+     "Check data-handling terms before pushing HR use, as buyers may ask about them.",
+     "Only email people who signed up and agreed. Formkit does not provide a contact list.",
+     "Do not promise results or revenue in any ad or page."
+    ],
+    "measurementPlan": "Define a paying customer as someone who starts a paid plan. Track the path: visit, sign-up, first form published, upgrade. Tag every ad and campaign link so each sign-up and upgrade traces back to its source. Pull a weekly one-page report with spend, sign-ups, upgrades, cost per sign-up and cost per paying customer. Record the baseline in week one, since no current numbers are known. At day 45 move spend toward the best ad group and cut the worst. At day 90 compare against the baseline and decide what to keep.",
+    "firstActions": [
+     {
+      "title": "Set up tracking for sign-up, first form published and upgrade",
+      "why": "Without this, there is no way to know which channel brings paying customers or to judge the tests. It must be in place before any ad spend.",
+      "role": "Owner with web developer or analytics specialist"
+     },
+     {
+      "title": "Build the Google Forms switcher page and the Claude/ChatGPT page",
+      "why": "These two pages are the landing spots for the ads and the first test. The facts are confirmed and the comparison table already exists.",
+      "role": "Content and web specialist"
+     },
+     {
+      "title": "Launch a small search ad campaign with tagged links",
+      "why": "Starting with a few high-intent searches shows early what costs less and converts. Spend the $600 budget carefully and review it weekly.",
+      "role": "Ads specialist"
+     }
+    ]
+   },
+   "costMicros": 50502,
+   "ms": 32816
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": true,
+   "output": {
+    "summary": "Formkit sells Pro at $6 a seat a month and Business at $19 a seat, behind a free plan with unlimited forms, responses and members. At that price, no paid channel can be judged until we know how many free users go on to pay. So the plan grows paying customers from the inside out.\n\n- **Primary:** a product-led upgrade path. In-app prompts and triggered emails fire when a free user reaches for payments, their own domain, AI replies or quizzes, and yearly billing (two months free) is shown clearly at checkout.\n- **Secondary:** high-intent switcher and comparison pages plus AI-answer visibility, for people leaving Google Forms and people who work inside Claude or ChatGPT.\n- **Search ads:** one capped Google Search test in weeks 3–6, spending up to $600 in total. Every angle sends traffic to the same neutral page. At $6 a seat the affordable cost per free sign-up is very low, so ad scale is unlikely and this test is mainly a headline lab. The winning message feeds the pages and prompts. Ad budget not used in the test window stays unspent unless the pre-set scale rule is met.\n\nSign-up and upgrade questions collect customers' own words. From week 4, all copy must use the top tagged phrases, with their counts.\n\nOwner hours, developer time, current paying customers and margin are not yet known. Week 1 measures them, and on day 7 every target becomes an absolute number from that baseline.",
+    "positioning": "Formkit is the form builder for when the form is part of how people see you. Describe a form and AI builds it. Payments go straight to your own Stripe account, and Formkit takes no cut. It works inside Claude and ChatGPT on every plan, including free.\n\nThree messages run across every channel. The headline lab decides which one leads.\n1. **Outgrowing Google Forms:** your own link, drop-off by question, kept partial answers and version history. Keep these claims fair and dated, as on the existing compare table.\n2. **Get paid through your forms with no platform cut.**\n3. **Build forms from inside Claude or ChatGPT.**\n\n**Pro pitch:** your domain, no badge, payments and a personal AI reply to every response, for $6 a seat a month, or two months free on yearly billing.\n\nKeep the honest 'pick the tool that fits the job' tone. Add customer quotes or names only once they are collected with permission.\n\n**Words to use (starting list, from confirmed facts and brand voice):**\n- 'your own Stripe account'\n- 'no cut'\n- 'your own link' and 'your own domain'\n- 'describe it and AI builds it'\n- 'unlimited forms, responses and members'\n- 'inside Claude or ChatGPT'\n- 'drop-off by question'\n- 'cancel in one click'\n\n**Words to avoid:**\n- 'best', '#1' or 'leading'\n- 'trusted by' or any user or customer count, until real numbers exist\n- 'revolutionary', 'magic' or 'game-changing'\n- 'limited time', countdowns or any urgency wording\n- 'killer', or any jab at Typeform, Tally or Google Forms\n- security or compliance claims beyond what the site states, such as the listed DPA\n\nFrom week 4, the founder updates this list from the voice-of-customer sheet. Phrases customers use repeatedly move to the use list. Plan-writer wording that customers never use is dropped.",
+    "audiences": [
+     {
+      "name": "Freelancers and small studios who take payments or bookings through forms",
+      "hypothesis": "This is the group most likely to move from free to Pro. Their trigger moments are all Pro features: adding a Stripe payment field, setting up a custom domain, removing the badge. 'No cut on payments' speaks directly to their income.",
+      "evidence": "Confirmed: Stripe payments go directly to the user with no Formkit cut, and Pro costs $6 a seat a month. The site insights list own domain, payments and badge removal as Pro features, with high confidence. How many current paid accounts use payments is unknown and comes from the week-1 data pull."
+     },
+     {
+      "name": "People outgrowing Google Forms",
+      "hypothesis": "These searchers already know they need a form tool and are actively comparing. A fair switcher page catches them at high intent. Some will reach Pro features once they add branding.",
+      "evidence": "Formkit's own compare table points to the gaps: own link, drop-off by question, partial responses and version history (site insights, medium confidence). Search demand is checked in Keyword Planner in week 2. The sign-up question 'What were you using before?' measures what share of new users come from Google Forms."
+     },
+     {
+      "name": "People who already work inside Claude or ChatGPT",
+      "hypothesis": "A small but reachable group, and close to unique to Formkit. They find tools through AI assistants and the assistants' directories. They should bring cheap, differentiated sign-ups.",
+      "evidence": "Confirmed: Formkit works with Claude and ChatGPT to build and publish forms in chat, on every plan. The insights rate this group as small, with medium confidence. The 'How did you hear about Formkit?' answers and AI-referrer tracking will show its real size."
+     },
+     {
+      "name": "Small agencies running forms for several clients",
+      "hypothesis": "Agencies buy several seats and fit Business at $19 a seat, so one agency is worth several freelancers. They are a secondary target inside the comparison and use-case pages, not a separate channel.",
+      "evidence": "Business pricing of $19 a seat is confirmed. The insights note per-client workspaces upgraded separately, plus approvals, shared templates and an audit log on Business. Seats per paid account are unknown and come from the week-1 data pull."
+     }
+    ],
+    "channels": [
+     {
+      "key": "email_lifecycle",
+      "name": "Primary: product-led upgrade path (in-app prompts and triggered emails at Pro-feature moments)",
+      "why": "Paying customers come from free users. The free plan is generous enough that many never meet a reason to pay.\n\n- **Fits the ceiling:** this is the only engine with no media cost, so it sits under the affordable CAC ceiling by construction.\n- **Raises every other channel:** each sign-up is worth more once free-to-paid improves.\n- **Yearly billing helps:** pushing yearly billing raises the ceiling per seat, because it brings in ten paid months up front instead of three.\n\nModified ICE: Impact 5 × Confidence 3 × Ease 3, the highest of the candidates. Ease is lower because it needs developer time.\n\nGates: CAC fit yes. Time to signal is about three to four weeks after the prompt goes live.",
+      "priority": 1,
+      "deliverables": [
+       "**Product event tracking.** Owner: developer, weeks 1–2, about 4–6 hours. Founder agrees the event list in 0.5 hours. Events: sign-up, first form published, first response, Pro-feature attempt (by feature), free AI cap reached, upgrade (plan, seats, monthly or yearly) and cancellation.",
+       "**Customer-language capture.** Owner: developer for build (about 1–2 hours, week 1). Founder for weekly tagging (0.5 hours a week from week 2).\n- At sign-up, add 'What were you using before?' (Google Forms, Typeform, Tally, Jotform, email or paper, nothing, other) next to 'How did you hear about Formkit?'.\n- After upgrade, add an optional free-text question: 'What made you upgrade today?'\n- Tag answers in the voice-of-customer sheet, with a count per phrase.",
+       "**Holdout randomisation and prompt build.** Owner: developer, weeks 2–3, about 8–12 hours. When a free user tries a Pro feature, show what the feature does, the $6 price, the yearly two-months-free option and a one-click upgrade. Eligible accounts are split evenly at random: half see the prompt, half see today's experience.",
+       "**Copy for the payment-field prompt** (the first trigger). Owner: founder, week 1, inside the 1-hour mapping task on the checklist.",
+       "**Prompt copy for every other trigger, plus the next-day follow-up email.** Owner: founder, week 4, 1.5 hours for prompts and 1 hour for the email. The email goes to prompt-arm accounts that did not upgrade, as consented product email with an unsubscribe link. Both must use the top three tagged phrases from the voice-of-customer sheet, with their counts noted in the copy doc. The prompt goes live in week 4. Developer sets the email trigger in about 1–2 hours.",
+       "**Onboarding sequence of four emails** over the first two weeks after sign-up. Owner: founder writes in week 5 (3 hours). Developer sets it up in about 1 hour.\n1. Publish your first form from a template (client intake, event sign-up or job application).\n2. Drop-off by question and kept partial answers, both on the free plan.\n3. Take payments with no cut (Pro).\n4. Own domain, no badge and AI replies, with the yearly option.\n\nCopy uses tagged customer phrases. Every active user also gets the same neutral review request.",
+       "**Pricing page and checkout.** Owner: founder for copy (0.5 hours, week 2). Developer for build (about 1 hour). Show the yearly saving plainly, with no countdowns or fake urgency.",
+       "**From week 7, prompt rewrites and a win-back email.** Owner: founder, about 2.5 hours a week. Rewrite prompts and send a win-back email to free accounts that tried a Pro feature but never upgraded. Both use the top tagged upgrade reasons, with counts recorded. Also test how yearly billing is presented."
+      ],
+      "dependencies": [
+       "A developer with time free in weeks 1–4 for the estimates above (roughly two and a half working days in total), confirmed by day 3. If not available, fall back to email-only triggers from the existing email tool and read the results before/after.",
+       "The founder confirms which analytics and email tools Formkit uses, and the product-email consent wording at sign-up.",
+       "Week-1 baseline: free-to-paid rate and the number of Pro-feature attempts, used to check the holdout can reach its volume."
+      ],
+      "measurement": "**Weekly scorecard** from billing and product data:\n- upgrades to Pro or Business (count, plan, seats, monthly or yearly)\n- upgrade rate among accounts that tried a Pro feature, prompt arm vs holdout\n- yearly share of new paid accounts\n\nThe holdout gives a causal read on the prompt. The onboarding sequence is read before/after and is directional only.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "seo_content",
+      "name": "Secondary: high-intent switcher and comparison pages plus AI-answer visibility",
+      "why": "This channel has no media cost, so it fits a $6 price point. Informational blog SEO is losing clicks to AI summaries. Pew (Jul 2025), Seer Interactive (Jun 2024 to Sep 2025) and Ahrefs (Dec 2025) all report sharply fewer clicks on queries that show an AI summary, though Google disputes these findings. Seer also found that pages cited inside AI Overviews got more clicks than uncited ones.\n\nSo this channel targets pages people read when they are ready to choose, plus accurate descriptions of Formkit inside AI assistants.\n\nModified ICE: Impact 3 × Confidence 3 × Ease 4. Gates: CAC fit yes. Time to signal is about six to eight weeks, because pages need time to be indexed.",
+      "priority": 2,
+      "deliverables": [
+       "**Google Forms switcher page.** Owner: founder, week 3, 3 hours (outline 0.5 hours in week 2). Developer publishes in about 0.5 hours. A fair, dated comparison built from the existing compare table, with a one-step 'build it in Formkit' start.",
+       "**Review profiles on G2 and Capterra** with consistent product facts. Owner: founder, week 3, 0.5 hours. Every active user gets the same review request through the onboarding email, with no incentives and no filtering by satisfaction.",
+       "**Claude and ChatGPT directory listings.** Owner: founder, week 4, 0.5 hours. List Formkit in the app or connector directories where it is eligible, using the same facts everywhere.",
+       "**Use-case page: 'Build forms inside Claude or ChatGPT'**, with a starter prompt and a template. Owner: founder, week 6, 3 hours. The headline uses the tagged phrases with the highest counts.",
+       "**From week 7, one new page every two weeks.** Owner: founder, about 1.5 hours a week. Order: comparison pages against named rivals such as Tally and Typeform, in the same fair 'all good tools' tone, with every claim taken from the rival's public pages and dated. Then freelancer payments with no cut, agencies, and event sign-ups. Each page gets a starter template. Headlines come from the headline-lab winner and the voice-of-customer sheet.",
+       "**Monthly AI prompt check.** Owner: founder, 0.5 hours a month, first run in week 5. Ask ChatGPT, Claude, Perplexity and Gemini questions such as 'best form builder for freelancers that takes payments' and 'Google Forms alternative with custom domain'. Log whether and how Formkit is described, and re-check competitor claims at the same time."
+      ],
+      "dependencies": [
+       "The founder signs off every competitor claim as fair, dated and verifiable.",
+       "Search Console access.",
+       "UTMs and AI-referrer grouping are live before the first page publishes."
+      ],
+      "measurement": "- **Weekly:** sign-ups by landing page and source; AI-referred sessions and sign-ups as their own source (chatgpt.com, perplexity.ai, gemini.google.com, claude.ai); 'How did you hear' answers naming search or an assistant; new third-party reviews.\n- **Fortnightly:** Search Console impressions and clicks on target queries.\n- **Monthly:** the AI prompt-check log.\n\nEach page is read before/after, so results are directional only.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "search_ads",
+      "name": "Capped test: Google Search headline lab (up to $600 in total in weeks 3–6, then $0 unless the scale rule is met)",
+      "why": "At $6 a seat, the affordable cost per free sign-up is well under a dollar unless free-to-paid turns out unusually high (see the affordable CAC section). Paid search is unlikely to clear that ceiling, so ongoing ad spend is unlikely.\n\nThis test exists mainly as a headline lab. It is the fastest way to learn which message wins with people actively searching for a form tool, and the winner feeds the pages, prompts and homepage.\n\nModified ICE: Impact 2 × Confidence 3 × Ease 4. Gates: CAC fit unproven and likely no. Time to signal is two to four weeks, the fastest in the plan, which is why it survives as a test.\n\n**Pre-committed budget rule:**\n- Weeks 1–2: no spend.\n- Weeks 3–6: up to $600 in total.\n- After week 6, scale rule met: up to $600 a month on the winning angle.\n- After week 6, result in between: one more two-week round capped at half the monthly budget.\n- After week 6, kill result: $0.\n\nBudget not spent stays unspent. It does not move to another paid channel, because none passed the CAC check.",
+      "priority": 3,
+      "deliverables": [
+       "**Volume check in Keyword Planner** before launch. Owner: founder, week 2, 0.5 hours. Using the standard two-variant sample-size approximation from the experiment design, compute the clicks needed per angle to detect a large CTR difference. Inputs: [NEEDS FACT: expected CTR and CPC on the chosen keywords]. If the $600 cap can't buy enough clicks for three angles, drop to two (switcher vs no-cut payments). If even that falls short, run the test and label it directional.",
+       "**One campaign, built for a clean comparison.** Owner: founder, week 2, 1.5 hours.\n- Ad groups share the same exact- and phrase-match keywords, for example 'google forms alternative', 'form builder with payments' and 'online form builder'.\n- Each ad group holds one responsive search ad per angle, with headlines pinned to that angle.\n- Ad rotation is set to 'Do not optimize: rotate ads indefinitely'.\n- Broad match and AI Max stay off during the test.",
+       "**All angles land on the same neutral page:** the existing sign-up page or homepage, chosen in week 2. That page is not edited during the test, so differences in activation come from the ad message, not the page. Owner: founder, week 2, 0.5 hours.",
+       "**Negative keywords and search-term review.** Owner: founder. Build the negative list before launch: free downloads, template-only searches, jobs, and any competitor brand terms the founder chooses not to bid on. Then review search terms twice a week during the test, about a quarter hour each time.",
+       "**Conversion tracking.** Owner: developer, week 2, about 2–3 hours. Track sign-up as a conversion with Enhanced Conversions, and import Pro upgrades as offline conversions."
+      ],
+      "dependencies": [
+       "Neutral landing page chosen and frozen by the end of week 2",
+       "Conversion tracking verified with a test sign-up",
+       "Week-1 free-to-paid rate, used to set the cost-per-sign-up ceiling"
+      ],
+      "measurement": "- **Leading read:** CTR per angle on shared keywords.\n- **Secondary decision read:** activated sign-up rate per angle, meaning activated sign-ups divided by clicks. A sign-up counts as activated when the user publishes a form that gets at least one response within a week. This is a fair comparison because every angle lands on the same page.\n- **Cost read:** cost per activated sign-up against the ceiling in the affordable CAC section.\n\nUpgrades from ad sign-ups arrive through the offline import and are directional at this spend.",
+      "suggestedMonthlyAdSpend": 600
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Headline lab: rotated angles on shared Google Search keywords, single neutral landing page",
+      "hypothesis": "Formkit's three differentiators will pull searchers differently: the Google Forms gaps, no cut on payments, and building inside Claude or ChatGPT. The evidence for each is in the confirmed facts and on Formkit's own compare table. At least one angle will beat the others on CTR by a margin worth acting on, without bringing in lower-quality sign-ups. The winner becomes the lead headline on the homepage, pages and upgrade prompts.",
+      "population": "Searchers on the shared exact- and phrase-match keyword set, in the countries Formkit sells to (founder confirms in week 1). Each search is served one of the angle ads, rotated evenly within the same ad groups. Keywords, schedule, geography and bids are the same for every angle. All clicks land on the same neutral page, which is not changed during the test.",
+      "method": "ab_split",
+      "primaryMetric": "CTR per angle. Secondary decision read: activated sign-ups ÷ clicks per angle. Cost read: cost per activated sign-up.",
+      "guardrails": [
+       "Total test spend capped at $600",
+       "Cost per activated sign-up compared with the ceiling in the affordable CAC section; a miss blocks scaling",
+       "Impression balance: if one angle gets less than half the impressions of another despite even rotation, report the result as a selection, not a test",
+       "Junk or spam sign-ups stay a small minority of ad sign-ups (founder spot-check each week)"
+      ],
+      "durationDays": 28,
+      "stoppingRule": "**Volume:** clicks needed per angle are computed in week 2 with the standard two-variant approximation, using the Keyword Planner CTR estimate. Run three angles if the $600 cap covers that volume. Otherwise run two angles, or label the test directional.\n\n**Timing:** minimum two weeks, maximum four. Decide at the computed volume or at the end of week 6, whichever comes first. No early stop except a guardrail breach.\n\n**Scale:** the best angle's CTR is at least a quarter higher than each other angle, its activated-sign-up rate per click is no lower than theirs, and the cost ceiling holds. The angle becomes the site and prompt headline, and ads continue on it up to $600 a month.\n\n**Headline-only win:** CTR wins but the cost ceiling is missed. The angle still becomes the headline, and ads stop.\n\n**Kill:** CTR differences under a tenth. Stop ads, leave the budget unspent and move the hours to pages.\n\n**In between:** rewrite the weakest angle using the voice-of-customer phrases with the highest counts, and run one more two-week round capped at half the monthly budget.\n\nThese are business thresholds, not significance tests."
+     },
+     {
+      "name": "Pro-feature-moment upgrade prompt (holdout)",
+      "hypothesis": "Free users who try a Pro feature (payment field, custom domain, badge removal, AI reply, quiz, or hitting the free AI cap) will upgrade far more often with a clear in-app prompt and a follow-up email than with today's experience. Evidence: the insights show the most valuable features sit behind Pro, and free AI is capped. Target: roughly double the upgrade rate within two weeks of the first attempt.",
+      "population": "Every free account that triggers its first Pro-feature event after launch in week 4. Accounts are randomly assigned at account level and split evenly: half get the prompt and the follow-up email, half see the current experience.",
+      "method": "holdout",
+      "primaryMetric": "Share of accounts upgrading to a paid plan within two weeks of their first Pro-feature attempt",
+      "guardrails": [
+       "Unsubscribe rate on the follow-up email under 1%",
+       "Spam complaints well below Gmail's bulk-sender limit",
+       "Support tickets complaining about upsell prompts: founder reviews weekly and pauses on a clear pattern"
+      ],
+      "durationDays": 42,
+      "stoppingRule": "**Volume:** computed on day 7 with the standard two-variant approximation. Inputs: [NEEDS FACT: baseline upgrade rate within two weeks of a Pro-feature attempt] and the number of eligible accounts expected over six weeks. If the eligible accounts can't reach the required volume, roll the prompt out to everyone and read it before/after as directional.\n\n**Timing:** decide only at the computed volume or after six weeks.\n\n**Scale:** the prompt arm's upgrade rate is at least one and a half times the holdout's and the guardrails hold. Roll out to all accounts and add the next trigger.\n\n**Kill:** the prompt arm is less than a tenth above the holdout. Change what the prompt offers, for example lead with yearly billing or with a different feature.\n\n**In between:** rewrite the copy once using the headline-lab winner and the top tagged upgrade reasons, with their counts."
+     },
+     {
+      "name": "Switcher and use-case pages launch (before/after)",
+      "hypothesis": "Pages for people already choosing a tool will raise organic and AI-referred sign-ups: the Google Forms switcher, Claude or ChatGPT building, and the comparison pages. Those sign-ups will reach a Pro feature at least as often as the site average.",
+      "population": "Organic-search and AI-referred visitors in weeks five to eight after the switcher page launches, compared with the same sources in the four weeks before launch, with the same weekday mix",
+      "method": "pre_post_observational",
+      "primaryMetric": "Weekly sign-ups from organic search plus AI-referred sources",
+      "guardrails": [
+       "Site-wide sign-up rate does not fall after launch",
+       "Every competitor claim carries a 'checked on' date and is re-checked monthly"
+      ],
+      "durationDays": 56,
+      "stoppingRule": "Compare the four weeks before launch with weeks five to eight after launch, to allow time for indexing.\n\n**Continue:** organic plus AI-referred sign-ups up by a third or more, and new-page sign-ups reach a Pro feature at or above the site average. Keep building one page every two weeks.\n\n**Stop:** change under a tenth and Search Console impressions also flat. Stop new pages and move those hours to the upgrade path.\n\n**In between:** rewrite titles and intros using the headline-lab winner, then read again four weeks later.\n\nAlways directional: rankings, seasonality and AI-answer changes all confound a before/after read."
+     }
+    ],
+    "constraints": [
+     "Ad budget: up to $600 a month, paid directly to ad platforms (source: owner brief)",
+     "Price: Pro $6 a seat a month, Business $19 a seat a month; yearly billing gives two months free (source: confirmed facts)",
+     "Free plan: unlimited forms, responses and members, which limits the reasons to pay (source: confirmed facts)",
+     "Gross margin: [NEEDS FACT: gross margin after AI inference costs]. The AI runs on Gemini models (site insights), so heavy free-plan AI use could lower it (source: to be measured in week 1)",
+     "Owner hours for marketing: unknown. The plan is sized to 5 hours a week, and no week goes over. Founder confirms by day 3 (source: assumption)",
+     "Developer time: unknown. The plan needs roughly two and a half working days in weeks 1–4, then about 1 hour a week. Founder confirms by day 3 (source: plan estimate)",
+     "Current paying accounts, monthly sign-ups, free-to-paid rate, seats per account and yearly share: [NEEDS FACT: last 90 days of billing and product data] (source: to be measured in week 1)",
+     "Where current users come from: unknown. 'How did you hear about Formkit?' is added at sign-up in week 1 (source: to be measured)",
+     "Proof: no customer names, reviews or user numbers are visible on the site, so no social-proof claims until real ones exist (source: site insights)",
+     "Sales cycle: self-serve, minutes to days for Pro; Business may need team sign-off (source: assumption)",
+     "Capacity: software, so fulfilment is not a limit. Support load and AI cost from more free users are watch items (source: assumption)",
+     "Geography: countries served not yet confirmed; this affects ad targeting and privacy rules. Founder confirms in week 1 (source: to be confirmed)",
+     "Resource totals: founder 5 hours a week in every week. Developer about two and a half working days one-off. Ad spend $0 in weeks 1–2, up to $600 in total in weeks 3–6, then $0 unless the scale rule is met, and never above $600 a month (source: this plan)"
+    ],
+    "measurementPlan": "**Install all of this in the first two weeks:**\n1. **UTMs** on every link Formkit controls: ads, emails, directory listings, review profiles. UTMs survive Safari's stripping of click IDs.\n2. **Product events:** sign-up, first form published, first response, Pro-feature attempt (by feature), free AI cap reached, upgrade (plan, seats, billing period) and cancellation.\n3. **Sign-up questions:** 'How did you hear about Formkit?' (Google search, ChatGPT or Claude, other AI assistant, friend or colleague, saw a Formkit form, other) and 'What were you using before?'. After upgrade, an optional 'What made you upgrade today?'\n4. **AI referrers** (chatgpt.com, perplexity.ai, gemini.google.com, claude.ai) grouped as their own source.\n5. **Google Ads conversions:** sign-up tracked with Enhanced Conversions, and Pro upgrades imported as offline conversions, so automation learns from revenue rather than form fills.\n6. **Weekly scorecard sheet**, built from billing and product data, not platform attribution. It shows sign-ups by source, activation, Pro-feature attempts, upgrades by plan and billing period, holdout vs prompt upgrade rates, ad CTR, activated sign-ups per click and cost per activated sign-up by angle during the test, AI-referred sign-ups and new reviews. The founder reviews it every Monday in half an hour.\n7. **Voice-of-customer sheet:** answers tagged weekly by theme (previous tool, upgrade reason), with a count per phrase. Week-4 and week-7 copy must quote the top phrases and record their counts in the copy doc.\n8. **Monthly AI prompt-check log.**\n\n**Day-7 baseline lock:** the founder replaces every [NEEDS FACT] placeholder in the North Star and leading indicators with absolute numbers, in the form 'X a week, from Y'.\n\n**Mid-point review at the end of week 6:**\n- keep or swap the primary\n- continue or stop ads under the pre-committed budget rule\n- decide whether the pages earn more hours",
+    "firstActions": [
+     {
+      "title": "By day 3, confirm weekly marketing hours and developer availability for weeks 1–4",
+      "why": "The prompts, holdout and tracking all need developer time. If it isn't there, the plan switches to email-only triggers before work starts.",
+      "role": "Founder"
+     },
+     {
+      "title": "Export the last 90 days of billing and product data: new paying accounts per month, plan and seat mix, yearly share, free-to-paid rate, Pro-feature attempts and gross margin",
+      "why": "These numbers set the North Star, the leading-indicator targets, the ad cost ceiling and the holdout volume. They also turn every placeholder into an absolute number on day 7.",
+      "role": "Founder"
+     },
+     {
+      "title": "Add 'How did you hear about Formkit?' and 'What were you using before?' to sign-up, plus AI-referrer grouping and UTMs",
+      "why": "This credits channels without relying on platform attribution. It also starts the voice-of-customer counts that week-4 copy must use.",
+      "role": "Developer (in-house or contractor)"
+     },
+     {
+      "title": "List every place a free user hits a Pro feature, and draft the payment-field prompt copy",
+      "why": "These moments are the primary engine, at no media cost. Payments carry the strongest confirmed message: no cut.",
+      "role": "Founder"
+     },
+     {
+      "title": "In week 2, choose and freeze the neutral landing page and build the search campaign with negatives",
+      "why": "Sending every angle to the same unchanged page keeps the headline lab clean. The CTR and activation reads then measure the message, not the page.",
+      "role": "Founder"
+     }
+    ],
+    "diagnosis": "**Constraint:** free users are not becoming paying customers. A free plan that removes most reasons to pay makes this worse.\n\n**Evidence:**\n- The free plan includes unlimited forms, responses and members (confirmed).\n- The features that justify Pro (payments, own domain, badge removal, AI replies, quizzes) sit behind a $6 paywall that many free users may never reach (site insights).\n- At $6 a seat, a paid channel only works if free-to-paid is strong. The allowable cost per free sign-up is the affordable CAC times the free-to-paid rate, which is very small at plausible rates.\n- More traffic without a better upgrade path mostly adds free users, and adds AI cost with them.\n- The lack of reviews and customer names (site insights) also weakens trust at the upgrade moment. That is why review collection and customer-language capture sit inside the plan.\n\n**What would prove this wrong:** week-1 data shows a free-to-paid rate the founder judges healthy and a high upgrade rate among users who hit a Pro feature, while sign-ups are low or flat. Then the real constraint is demand capture: switcher pages and AI visibility become primary, and the upgrade path drops to hygiene.",
+    "affordableCac": "**Method:** subscription formula with a payback target under three months, the plan's default for SMB-priced SaaS.\n- Monthly billing: affordable CAC per seat = monthly price × gross margin × 3 months.\n- Yearly billing: price × 10 paid months (two months free) × gross margin, collected up front.\n\n**Per plan:**\n\n| Plan and billing | Affordable CAC per seat |\n|---|---|\n| Pro monthly | $6 × 3 × margin |\n| Pro yearly | $6 × 10 × margin |\n| Business monthly | $19 × 3 × margin |\n| Business yearly | $19 × 10 × margin |\n\n**Inputs still needed:**\n- [NEEDS FACT: gross margin after AI inference costs, from week-1 data]\n- [NEEDS FACT: seats per paying account and plan mix]\n\nUntil week-1 data shows a yearly or Business share, the working ceiling per new paying account is the Pro monthly figure. Every shift to yearly billing raises the ceiling for that seat by more than three times (ten paid months up front instead of three).\n\n**Channel check:** maximum cost per free sign-up = affordable CAC × free-to-paid rate [NEEDS FACT: free-to-paid rate]. Suppose every dollar of three months of Pro revenue counted as profit. Even then, a free-to-paid rate in the low single digits (assumption until week 1) puts this ceiling well under a dollar per free sign-up.\n\nPaid search will very likely miss that ceiling, so the search test runs as a headline lab and scales only if its pre-set rule is met. The upgrade path, switcher pages, AI visibility and directory listings carry no media cost and fit by construction.\n\nIf free-to-paid is still too low at the mid-point review, the fix is packaging (what sits behind Pro, how yearly is presented), not more channels.",
+    "notDoing": [
+     {
+      "channel": "Meta ads",
+      "why": "Impact 2 × Confidence 1 × Ease 2. CAC fit no: a free sign-up would need to cost cents, and social feeds carry little intent for a form builder. Practitioner reports on Meta's ad-matching system (announced Dec 2024) say it needs several genuinely different creative concepts, which the budget can't fund alongside the search test. That is practitioner opinion, not a measured rule. Revisit at the day-90 review."
+     },
+     {
+      "channel": "LinkedIn ads",
+      "why": "Impact 1 × Confidence 1 × Ease 1. CAC fit no. Practitioner guidance puts the useful minimum spend above Formkit's whole monthly budget. That is an assumption, not a published LinkedIn figure. A $6 seat can't carry those costs either way."
+     },
+     {
+      "channel": "Founder-led LinkedIn posting",
+      "why": "Impact 2 × Confidence 2 × Ease 2. Most buyers are self-serve freelancers at $6 a seat, and the founder's 5 hours are fully allocated. Revisit at day 90 as an agency-focused channel if Business uptake proves strong."
+     },
+     {
+      "channel": "Outbound sales or cold email",
+      "why": "Impact 2 × Confidence 2 × Ease 1. CAC fit no: self-serve seats at $6 and $19 can't pay for prospecting time. Revisit only for agencies if Business uptake proves strong."
+     },
+     {
+      "channel": "Informational blog SEO",
+      "why": "Impact 2 × Confidence 2 × Ease 2. CAC fit yes, but the signal takes months. Pew, Seer Interactive and Ahrefs (2025) all report sharply fewer clicks on AI-summary queries, though Google disputes this. Hours go to switcher, comparison and use-case pages instead."
+     },
+     {
+      "channel": "HR and hiring teams as a dedicated audience",
+      "why": "The fit is real (file uploads, approvals, audit log). But with no visible proof and open buyer questions about data handling (DPA listed, AI on Gemini), trust is the blocker. Revisit with a use-case page once reviews exist."
+     },
+     {
+      "channel": "Teachers and trainers as a dedicated audience",
+      "why": "Quizzes are on Pro, but whether individual teachers will pay is unproven, and school buying may add sign-off steps (assumption). Revisit from the 'What were you using before?' and upgrade answers."
+     },
+     {
+      "channel": "Event organisers as a separate push",
+      "why": "They are reached through the no-cut payments message and an event sign-up use-case page from week 7, so they need no channel of their own yet."
+     },
+     {
+      "channel": "Organic social posting (Instagram, TikTok, X)",
+      "why": "Impact 1 × Confidence 1 × Ease 2. It is not how people pick a form tool, and it would eat limited hours with no clear path to a paid upgrade."
+     },
+     {
+      "channel": "ChatGPT ads",
+      "why": "Impact 2 × Confidence 1 × Ease 2. CAC fit unknown, and the product is new with immature attribution. Organic directory listings and accurate AI answers come first. At most a small test after the day-90 review."
+     },
+     {
+      "channel": "Product Hunt or launch-site push",
+      "why": "Impact 3 × Confidence 2 × Ease 3. CAC fit yes, and the signal is fast. Deferred because without reviews, customer examples or a working upgrade path, a spike would mostly add free users we can't convert. Reconsider once the holdout shows the prompt works."
+     },
+     {
+      "channel": "Reddit and community participation",
+      "why": "Impact 2 × Confidence 3 × Ease 2. CAC fit yes, but the signal is slow. Deferred, not rejected: genuine answers in form-builder threads help AI visibility, but the hours aren't there before week 7. Add an hour a week then if the founder confirms spare time. Never astroturf."
+     }
+    ],
+    "northStar": {
+     "metric": "New paying accounts per month (Pro or Business, from free or direct)",
+     "baseline": "[NEEDS FACT: average new paying accounts per month over the last 90 days, from billing data]. The founder fills this in on day 7.",
+     "target": "An absolute number set on day 7, written as 'X a month by day 90, from Y'. Placeholder until then: baseline plus a quarter to baseline plus a half (assumption: the combined effect of the upgrade prompt and high-intent pages). Also: the yearly share of new paid accounts ends above its week-1 level."
+    },
+    "leadingIndicators": [
+     {
+      "metric": "Free-to-paid upgrades per week, split by plan and by monthly or yearly",
+      "weeklyTarget": "[NEEDS FACT: week-1 weekly upgrades], set as an absolute number on day 7. Placeholder: rising to baseline plus a quarter to plus a half by week 8 (assumption).",
+      "source": "Billing data, weekly scorecard"
+     },
+     {
+      "metric": "Upgrade rate among accounts that tried a Pro feature, prompt arm vs holdout",
+      "weeklyTarget": "Prompt arm at or above the scale threshold on the holdout card, read at the computed volume. Baseline [NEEDS FACT: current upgrade rate after a Pro-feature attempt], set on day 7.",
+      "source": "Product events plus billing"
+     },
+     {
+      "metric": "Activated sign-ups per week (published a form that got at least one response within a week of sign-up)",
+      "weeklyTarget": "[NEEDS FACT: week-1 weekly activated sign-ups], set as an absolute number on day 7. Placeholder: above baseline every week from week 4.",
+      "source": "Product events"
+     },
+     {
+      "metric": "Sign-ups from organic search, AI-referred sources and assistant directories",
+      "weeklyTarget": "[NEEDS FACT: four-week pre-launch weekly average], set on day 7. Placeholder: above that average from week 8, per the continue threshold on the pages experiment.",
+      "source": "Analytics with UTMs, plus 'How did you hear' answers"
+     },
+     {
+      "metric": "Ad CTR and activated sign-ups per click by angle, plus cost per activated sign-up (test window only)",
+      "weeklyTarget": "Cost per activated sign-up at or below the ceiling in the affordable CAC section, recalculated with the week-1 free-to-paid rate. CTR and activation are read against the headline-lab card at the computed volume.",
+      "source": "Google Ads spend and clicks; activated sign-ups from product events"
+     }
+    ],
+    "phases": [
+     {
+      "name": "Foundation",
+      "days": "Weeks 1–2",
+      "focus": "**Founder, 5 hours a week.**\n- **Week 1:** the checklist. Confirm hours and developer, pull the baseline, set up the scorecard and voice-of-customer sheets, map the Pro-feature moments, draft the payment-field prompt.\n- **Week 2:** scorecard 0.5h; voice-of-customer tagging 0.5h; Keyword Planner volume check, campaign build and negatives 2.5h; choose and freeze the neutral landing page and write the pricing-page yearly copy 0.5h (0.5h of that is the pricing copy, so trim elsewhere to stay at 5); agree the event list 0.5h; switcher page outline 0.5h.\n\n**Developer:** events; sign-up and upgrade questions; AI-referrer grouping and UTMs; Enhanced Conversions and offline upgrade import; then start building the prompt and holdout randomisation.\n\n**Day 7:** lock baselines and replace every placeholder target with an absolute number."
+     },
+     {
+      "name": "Test",
+      "days": "Weeks 3–6",
+      "focus": "**Founder, 5 hours a week.** Every week: scorecard 0.5h, search-term review 0.5h, voice-of-customer tagging 0.5h.\n- **Week 3:** switcher page 3h, review profiles 0.5h.\n- **Week 4:** remaining prompt copy 1.5h and follow-up email 1h, both using the top tagged phrases with counts; directory submissions 0.5h; holdout launch check 0.5h.\n- **Week 5:** onboarding emails 3h; first AI prompt check 0.5h.\n- **Week 6:** Claude/ChatGPT use-case page 3h; mid-point review 0.5h.\n\n**Developer:** finishes the prompt and holdout in week 3, then about 1 hour a week.\n\n**Headline lab:** runs on up to $600 in total. Decisions only at the pre-set volumes.\n\n**End of week 6:**\n- keep the upgrade path as primary, or swap to demand capture per the diagnosis falsifier\n- apply the pre-committed ad budget rule\n- if free-to-paid is still weak, propose a packaging change"
+     },
+     {
+      "name": "Commit and compound",
+      "days": "Week 7 to day 90",
+      "focus": "**Founder, 5 hours a week.**\n- **Scorecard and voice-of-customer tagging, 1h.**\n- **Primary, about 2.5h.** Roll the winning prompt out to every trigger. Write prompts and the win-back email from the top tagged upgrade reasons, with counts recorded. Test how yearly billing is presented.\n- **Secondary, about 1.5h.** One new comparison or use-case page every two weeks, using the winning message.\n- **Monthly claim re-check and AI prompt check,** taken from the primary hours in that week.\n\nAds run only if the scale rule was met; otherwise $0.\n\n**Compounding assets:**\n- a library of tested upgrade messages in customers' own words\n- a cluster of switcher and comparison pages, each with a starter template"
+     }
+    ],
+    "weekOneChecklist": [
+     "Confirm your real weekly marketing hours and whether a developer can cover the build work over the next four weeks. Note your target countries. (0.5 hours, by day 3)",
+     "Export the last 90 days of billing and product data: new paying accounts per month, plan and seat mix, yearly share, free-to-paid rate, Pro-feature attempts, and gross margin after AI costs. (1.5 hours)",
+     "Brief the developer to add 'How did you hear about Formkit?' and 'What were you using before?' to sign-up, an optional 'What made you upgrade today?' after upgrade, and AI referrers grouped as their own source. (1 hour of your time)",
+     "Create the weekly scorecard sheet and the voice-of-customer tagging sheet, fill in the week-1 baselines, and on day 7 turn every placeholder target into an absolute number. (1 hour)",
+     "List every place a free user hits a Pro feature (payments, domain, badge, AI reply, quiz, AI cap) and draft the payment-field prompt copy. (1 hour)"
+    ],
+    "risks": [
+     {
+      "risk": "No developer time is available in weeks 1–4, so the events, prompts and holdout stall.",
+      "mitigation": "Confirm by day 3. If no developer is available, use email-only triggers from the existing email tool, keyed on whatever events already exist. Read the results before/after as directional, and delay the holdout until a developer is booked. Validate by day 3."
+     },
+     {
+      "risk": "Free-to-paid is so low that even a doubled upgrade rate barely moves paying accounts.",
+      "mitigation": "At the mid-point review, compare actual upgrades with the North Star path. If they fall short, propose a packaging test (how yearly is shown, which feature leads the upgrade) rather than adding channels. Validate at the end of week 6."
+     },
+     {
+      "risk": "The founder has fewer than 5 hours a week, so pages and prompts slip.",
+      "mitigation": "Cut in this order: the search test first, then later comparison pages. Keep the upgrade prompts, the scorecard and the switcher page. Validate by day 3."
+     },
+     {
+      "risk": "Gross margin is lower than expected because of AI costs on free accounts, which shrinks affordable CAC.",
+      "mitigation": "Recalculate the CAC formula on day 7 with real cost data. The ad cost ceiling tightens with it, which makes it more likely the ads stop after the headline lab. Validate by day 7."
+     },
+     {
+      "risk": "Real CPCs are too high for the headline lab to reach its computed volume within the $600 cap.",
+      "mitigation": "The Keyword Planner check in week 2 decides, before any spend: three angles, two angles, or a test labelled directional. Stop rather than extend spend. Validate before launch in week 2."
+     },
+     {
+      "risk": "Comparison pages carry outdated or unfair claims about competitors.",
+      "mitigation": "Take each claim from the rival's public pages, give it a 'checked on' date, re-check monthly, and get founder approval before publishing. Keep the 'all good tools' tone. Ongoing from week 7."
+     },
+     {
+      "risk": "Review requests break G2 or Capterra rules or look manipulated.",
+      "mitigation": "Send the same request to every active user, with no incentives, no filtering by satisfaction and no staff-written reviews. Ongoing from week 3."
+     },
+     {
+      "risk": "Upgrade prompts annoy free users and push up unsubscribes or complaints.",
+      "mitigation": "Holdout guardrails: unsubscribes under 1%, and spam complaints well below Gmail's bulk-sender limit. The founder reviews support tickets weekly and pauses on a breach. Validate weekly from week 4."
+     }
+    ]
+   },
+   "costMicros": 2033506,
+   "ms": 741518,
+   "rounds": 3,
+   "history": [
+    {
+     "round": 0,
+     "average": 4,
+     "gatesPassed": false,
+     "lintErrors": 47
+    },
+    {
+     "round": 1,
+     "average": 4.2,
+     "gatesPassed": true,
+     "lintErrors": 34
+    },
+    {
+     "round": 2,
+     "average": 4,
+     "gatesPassed": true,
+     "lintErrors": 2
+    }
+   ]
+  },
+  "opus": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "slight",
+    "reasons": [
+     "B makes the key strategic call A misses. At $6 a seat with a generous free plan, the bottleneck is free-to-paid conversion, not traffic. B makes the product-led upgrade path primary and runs a holdout test on prompts shown at the moment a free user tries a Pro feature. That is the highest-leverage move for this business.",
+     "B treats the $600 ad budget honestly. Search runs as a capped headline test with pre-set rules for scaling, extending or stopping, and unspent budget is not forced into other channels. A puts the full $600 a month into search ads without checking whether a $6 seat can ever pay that back.",
+     "B is far more specific to Formkit. It names the Pro trigger features (payments, custom domain, badge, AI cap) and includes word use/avoid lists tied to brand voice. It also explains why HR, teachers and Meta/LinkedIn are excluded, and gives owners, hours and weeks for each task.",
+     "A is clean, honest, on-voice and easy for a non-expert to follow. It never overclaims and gives sensible first actions. But it is a generic SaaS playbook with weaker prioritisation.",
+     "B is too heavy for a small-business owner. It has jargon (modified ICE scores, CAC formulas), many unfilled placeholders, an assumed developer budget and a messy, truncated phases section. That narrows its lead."
+    ],
+    "truthProblemsA": [
+     "Says the Google Forms comparison 'already exists and can be turned into a switcher page' and lists features like drop-off by question. These come from the insights, not the confirmed facts. That is acceptable, but A does not flag it as needing verification as consistently as it does for agencies."
+    ],
+    "truthProblemsB": [
+     "Cites outside studies (Pew Jul 2025, Seer Interactive, Ahrefs Dec 2025) on AI-summary click loss. None of these are among the confirmed facts or provided sources, so they are unverified.",
+     "Cites 'practitioner reports' on Meta's ad system announced Dec 2024 and LinkedIn minimum-spend guidance. These are unverified outside claims, though hedged.",
+     "'Cancel in one click' and the Gemini model detail come from the insights, not the confirmed facts. Using them in copy lists needs checking.",
+     "Many [NEEDS FACT] placeholders are left in owner-facing text, and the phases section contains an internal contradiction about week-2 hours."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A correctly identifies the economics. At $6 a seat behind a very generous free plan, paid acquisition almost certainly cannot pay back. It makes the free-to-paid upgrade path the primary engine and caps the ad spend as a headline lab. B makes search ads priority 1 at a full $600 a month and puts lifecycle upgrade nudges last, which is backwards for this business.",
+     "A is unmistakably built for Formkit. It uses the specific Pro trigger moments (payment field, custom domain, badge, AI cap, quizzes), the yearly two-months-free lever and per-plan CAC math. It also sets explicit not-doing choices for HR, teachers, Meta and LinkedIn with reasons. B is sensible but generic and could fit most freemium SaaS tools.",
+     "A's experiments are properly designed. The ad angles share keywords and land on one frozen page for a clean comparison, the upgrade prompt runs as a randomised holdout, and every test has pre-committed scale, kill and in-between rules. B's experiments are thinner. Its Claude/ChatGPT test uses a vague population, and its 42-day duration conflicts with its own stopping rule.",
+     "A refuses to invent baselines. It uses clear placeholders and a day-7 baseline lock, and it bans social-proof claims until real proof exists.",
+     "A's weakness is usability. It is dense, jargon-heavy (ICE scores, Enhanced Conversions, offline imports) and arrives truncated. A non-expert owner will need help executing it. B is easier to read, but its ease comes from a weaker strategy.",
+     "Both stay honest on product facts. A adds some outside research claims that the brief does not support."
+    ],
+    "truthProblemsA": [
+     "Cites external studies (Pew Jul 2025, Seer Interactive, Ahrefs Dec 2025) on AI-summary click loss, none of which appear in the provided sources.",
+     "States that Meta announced an ad-matching system in Dec 2024 and attributes creative guidance to practitioners; this is not in the provided sources.",
+     "Asserts that the affordable cost per free sign-up is 'well under a dollar' from an assumed low single-digit free-to-paid rate. It is flagged as an assumption but used firmly to steer spend decisions."
+    ],
+    "truthProblemsB": [
+     "Says ads should mention the free plan and no cut on payments, which is fine, but implies ready-made templates for every page without confirming they exist.",
+     "Its 42-day experiment duration conflicts with its own stopping rule of 500 visitors or four weeks; this is an internal inconsistency rather than a false claim."
+    ]
+   }
+  },
+  "sonnet": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B diagnoses the real constraint: a generous free plan at $6 a seat means free users must convert, so it makes the product-led upgrade path primary. A treats ads as the lead engine without checking the economics.",
+     "B works out affordable CAC from the confirmed prices and shows that paid search will likely miss the ceiling. It caps ad spend as a test and writes a pre-committed scale or kill rule. That is far more honest and disciplined for a $600/month budget.",
+     "B is concrete and actionable: owner hours, developer estimates, week-by-week sequencing, holdout design, stopping rules, voice-of-customer capture and a 'not doing' list with reasons. A is sensible but generic.",
+     "B flags unknowns with [NEEDS FACT] placeholders and a week-1 baseline instead of guessing. It avoids unsupported proof claims and sets compliance and wording guardrails.",
+     "A is clean, readable and truthful, with a sound four-channel plan. But it puts all $600 a month into search ads without CAC reasoning, and it lacks a baseline, targets and prioritization depth."
+    ],
+    "truthProblemsA": [
+     "Spends the full $600/month on search ads with no check that CAC fits a $6 seat, which is a strategic overreach rather than a factual error.",
+     "Agency hypothesis implies approvals and shared templates are on Business, but the plan hedges this with 'check the feature list' instead of relying on the insights."
+    ],
+    "truthProblemsB": [
+     "Cites Pew, Seer Interactive and Ahrefs click-decline studies and Gmail bulk-sender limits that are not in the confirmed facts, though they are framed as cited and disputed.",
+     "Target of 'roughly double the upgrade rate' and placeholder uplifts of a quarter to a half are assumptions without evidence, though they are labelled as assumptions.",
+     "Contains some leftover internal inconsistency, such as the week 2 hours note that says to trim elsewhere to stay at 5, and is very long and dense for a non-expert owner."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A diagnoses the real constraint: at $6 a seat the free-to-paid rate decides whether any paid channel works. It builds the plan around a product-led upgrade path and holds the $600 as a capped headline test. B just spends the full $600 on search ads as priority 1 without checking CAC fit.",
+     "A flags unknowns honestly with [NEEDS FACT] placeholders and a week-1 baseline pull. It does not invent numbers. B is thin and generic by comparison.",
+     "A's experiments are rigorous: holdout randomisation, volume checks, pre-committed scale/kill rules, and guardrails. B's tests are plausible but less specific, and its 20% holdout and 500-visitor rule are borrowed without checking feasibility.",
+     "A is far more actionable: owner hours per task, developer estimates, a weekly cadence, and an explicit not-doing list with reasons. B gives a short list of deliverables and no time sizing.",
+     "A is tailored to Formkit's confirmed facts and weaknesses, such as no proof, Gemini data handling, and free AI caps. It sets words to use and avoid in line with the brand voice.",
+     "A's weaknesses are length and density, which could overwhelm a non-expert owner. Some invented-feeling thresholds are labelled as business thresholds, and the output appears truncated at the end. B is easier to read but lacks prioritization depth."
+    ],
+    "truthProblemsA": [
+     "Claims like 'Free AI cap' and plan features (own domain, badge removal, quizzes on Pro) come from the insights rather than the confirmed facts, though they are cited as site insights.",
+     "Cites Pew, Seer and Ahrefs on AI-summary click declines, which is outside the provided facts but is flagged as disputed.",
+     "Target of 'roughly double' the upgrade rate is an assumption, labelled as a target."
+    ],
+    "truthProblemsB": [
+     "Plans '6-8 plain-language ads mentioning no cut on payments' and Business features (approvals, shared templates) without confirmed facts, though it does say to check the pricing page.",
+     "Reuses the 500-visitor stopping rule from the insights without checking it against the available traffic."
+    ]
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "task": "linkedin",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "Free plan for client forms",
+      "body": "Freelancers and small studios often pay for tools before they earn anything from them.\n\nFormkit's free plan includes unlimited forms, responses and members. Use it to collect client intake details, quotes and booking requests without a monthly bill.\n\nWhen you need more, Pro is $6 per seat a month.\n\nWhat do you use today for client intake?",
+      "hashtags": [
+       "#Freelancing",
+       "#SmallBusiness",
+       "#FormBuilder"
+      ],
+      "altText": "Simple flat illustration of a desk with a laptop, a notepad and a small icon of a checklist. Soft blue and white colors. No people's faces and no real screenshots.",
+      "imageIdea": "A clean flat illustration of a tidy home desk with a laptop showing a blank checklist icon. No real people, no customer names, no product screenshot.",
+      "factIndexes": [
+       0,
+       1
+      ],
+      "suggestedDay": 3
+     },
+     {
+      "channel": "linkedin",
+      "title": "Money goes to you",
+      "body": "If your forms take payments, you should know where the money goes.\n\nFormkit connects to Stripe. Payments go straight to your own Stripe account, and Formkit takes no cut.\n\nPaid plans are Pro at $6 per seat a month and Business at $19 per seat a month. Pay yearly and you get two months free.\n\nDo you sell through forms today? Tell me in the comments what you use.",
+      "hashtags": [
+       "#EventPlanning",
+       "#Freelancing",
+       "#Payments"
+      ],
+      "altText": "Abstract graphic of a card with a coin moving straight into a bank-style icon, with no middle step. Green and white colors. No people and no real product screen.",
+      "imageIdea": "A simple icon-style graphic showing a coin moving directly into a bank icon, with a short arrow. No product screenshot, no customer or testimonial.",
+      "factIndexes": [
+       2,
+       1
+      ],
+      "suggestedDay": 8
+     },
+     {
+      "channel": "linkedin",
+      "title": "Build forms inside your AI chat",
+      "body": "Already spend your day in Claude or ChatGPT?\n\nWith Formkit, you can build and publish a form right inside the chat. You do not have to open a separate builder.\n\nIt is a quick way to make a sign-up form, a survey or an intake form when you are already working on something else.\n\nWould you use this? Let me know what form you would build first.",
+      "hashtags": [
+       "#AITools",
+       "#Productivity",
+       "#FormBuilder"
+      ],
+      "altText": "Illustration of a chat window with a speech bubble on one side and a simple form outline appearing on the other. Purple and grey colors. No real screenshots and no people's faces.",
+      "imageIdea": "A flat illustration of a chat bubble turning into a simple form outline. No real AI chat screenshot, no real user names.",
+      "factIndexes": [
+       3
+      ],
+      "suggestedDay": 14
+     }
+    ]
+   },
+   "costMicros": 1345,
+   "ms": 10827
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "What a form that takes payments should cost",
+      "body": "Pro costs $6 a seat a month. On payments, Formkit takes nothing: the money goes straight to your own Stripe account.\n\nIf you sell through a form, say a deposit for a booking or a paid place at an event, the number that matters isn't the seat price. It's what comes off each payment.\n\nHere is how it works. You connect your own Stripe account, your customer pays through the form, and the money lands with you. Stripe still charges its own processing fees, because that's its price for moving the money. Formkit adds no percentage on top.\n\nThat matters because a percentage grows with your sales and a seat price doesn't. Pay yearly and you get two months free, which by my arithmetic makes Pro $60 a seat for the year.\n\nBefore you pick a form tool for anything that takes money, find the line on its pricing page that says what it takes per payment. Then work out what that would be in your busiest month.\n\nWhat does your current form tool take from each payment, and did you check before you signed up?",
+      "hashtags": [],
+      "altText": "Text-only post with no image.",
+      "imageIdea": "Text only. Plain text posts that rely on a clear cost breakdown tend to read better without a graphic.",
+      "factIndexes": [
+       1,
+       2
+      ],
+      "suggestedDay": 2,
+      "format": "text",
+      "hook": "Pro costs $6 a seat a month. On payments, Formkit takes nothing: the money goes straight to your own Stripe account.",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Deliberate text-only post. If the owner wants an image later: a real screenshot of a Formkit payment form connected to a real Stripe test account, with no personal data, shown at portrait or square ratio with text kept away from the edges. Never a mocked-up dashboard or an invented payout figure.",
+      "firstComment": "Formkit's free plan has unlimited forms, responses and members with no card needed. Payments through your own Stripe account are on Pro: https://formkit.app"
+     },
+     {
+      "channel": "linkedin",
+      "title": "Build and publish a form from inside Claude or ChatGPT",
+      "body": "You can ask Claude or ChatGPT to build and publish a form for you, and never open a form builder.\n\nIf you already have an assistant open all day, that removes a step. Say you're a freelance designer about to take on a new client. You type something like this (an example request, not a recorded session): \"Build a client intake form with name, company, project type, budget range, deadline and a file upload for the brief. Publish it.\" The form is built and published in the chat.\n\nThis works on every Formkit plan, including the free one, which has unlimited forms, responses and members. One limit to know about: free AI covers 3 forms and 10 edits a month. Past that, Pro is $6 a seat a month.\n\nWhatever an assistant builds, open the published form and fill it in once yourself before you send the link. You'll catch a missing field or an odd question order in under a minute.\n\nDo you build forms inside an AI assistant already, or do you still open a builder first?",
+      "hashtags": [],
+      "altText": "Text-only post with no image.",
+      "imageIdea": "Optional: a real screenshot of an actual Claude or ChatGPT chat in which a Formkit form is being built and published.",
+      "factIndexes": [
+       0,
+       1,
+       3
+      ],
+      "suggestedDay": 9,
+      "format": "text",
+      "hook": "You can ask Claude or ChatGPT to build and publish a form for you, and never open a form builder.",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Text only by default. Optional single image: a real screenshot of a genuine chat where the assistant builds and publishes a Formkit form. Use a test form, blur any personal data, and show the chat on a plain background at portrait ratio (confirm current LinkedIn specs). Do not mock up a conversation. [NEEDS FACT: has anyone on the team recorded a real Claude or ChatGPT session building a form that can be shown?]",
+      "firstComment": "Setup for Claude and ChatGPT: [NEEDS FACT: what are the exact steps or the help page link for connecting Formkit to Claude and to ChatGPT?] Free plan, no card needed: https://formkit.app"
+     },
+     {
+      "channel": "linkedin",
+      "title": "Four signs your Google Form has outgrown Google Forms",
+      "body": "Google Forms is free and fine for plenty of forms. Here are four signs yours has outgrown it.\n\nOur comparison table lists the gaps: your own link, drop-off by question, kept partial answers and version history. Each one shows up in a different moment.\n\nThe link shows up when a client gets your form and sees Google's address, not yours. On Formkit, your own domain is on Pro at $6 a seat a month.\n\nDrop-off by question shows up when half your leads start the form and you can't tell which question they quit on. Kept partial answers matter for the same reason: someone who types their name and email and then leaves is still a person you can follow up with.\n\nVersion history shows up the day someone asks who changed the form and when.\n\nFormkit's free plan has unlimited forms, responses and members, and partial responses and drop-off by question are on every plan, free included.\n\nTakeaway: open the form you send most often and look for the question where people stop. If you can't see that, you've found the gap.\n\nWhich of those four would you have hit first?",
+      "hashtags": [
+       "GoogleForms"
+      ],
+      "altText": "Text-only post with no image.",
+      "imageIdea": "Text only, or a typographic card listing the four gaps in plain type.",
+      "factIndexes": [
+       0,
+       1
+      ],
+      "suggestedDay": 16,
+      "format": "text",
+      "hook": "Google Forms is free and fine for plenty of forms. Here are four signs yours has outgrown it.",
+      "slides": [],
+      "videoScript": "",
+      "visualBrief": "Deliberate text-only post. Optional typographic card, portrait, navy or dark background with off-white type (provisional until the brand kit is supplied): headline 'Four gaps in a free form tool' large, then the four items on separate lines at about half size, text kept inside the central area with logo small in a corner. Contrast at least 4.5:1. No competitor logos or screenshots.",
+      "firstComment": "[NEEDS FACT: on what date was the Formkit vs Google Forms comparison last checked, and does each of the four points still hold for Google Forms today? Confirm before posting.] Free plan, no card needed: https://formkit.app"
+     }
+    ]
+   },
+   "costMicros": 305503,
+   "ms": 148264,
+   "rounds": 2,
+   "history": [
+    {
+     "round": 0,
+     "average": 3,
+     "gatesPassed": true,
+     "lintErrors": 0
+    },
+    {
+     "round": 1,
+     "average": 3.33,
+     "gatesPassed": false,
+     "lintErrors": 1
+    }
+   ]
+  },
+  "opus": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B is far more specific and strategic. It builds each post around a real buying moment: what comes off each payment, building a form inside an assistant you already use, and outgrowing Google Forms. These match the strongest opportunities in the insights. A's posts read like short feature announcements.",
+     "B is native to LinkedIn. It opens with strong hooks, gives readers useful takeaways (check the per-payment line on a pricing page, test the form yourself, find the question where people drop off) and ends with sharp questions. A's posts are thin and generic, with weak 'would you use this?' calls to action.",
+     "B is unusually honest. It notes that Stripe still charges its own fees and labels the example prompt as illustrative. It also flags the free AI cap and marks unverified items as NEEDS FACT instead of guessing.",
+     "A is cleaner on strict sourcing and ready to post as written, but it is too bland to win paying customers on a $600/month plan.",
+     "B has some extra work for the owner: several first comments contain NEEDS FACT placeholders, and one hashtag is missing its '#'. These are minor and easy to fix."
+    ],
+    "truthProblemsA": [
+     "The posts stick to confirmed facts. The payments post does not say that Stripe payments need Pro, which could mislead free users slightly."
+    ],
+    "truthProblemsB": [
+     "B uses details from the insights that are not in the confirmed fact index: 'no card needed', the free AI cap of 3 forms and 10 edits, own domain on Pro, and partial responses and drop-off on every plan. They are supported by site research but not confirmed through the fact index.",
+     "'Half your leads start the form' is a hypothetical framed loosely enough to read as a claim."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A makes a real argument in each post. A per-payment percentage grows with sales and a seat price doesn't. Google Forms gaps are tied to concrete moments. The assistant post includes a sample prompt. This is far more persuasive than B's restated feature lines.",
+     "A's posts are clearly for Formkit's audiences: freelancers and event organisers who take deposits, assistant-native users, and people outgrowing Google Forms. Each ends with a practical takeaway the reader can act on.",
+     "A is honest. It notes that Stripe still charges its own fees, labels the example request as illustrative, states the free AI limits, and calls Google Forms fine for many forms. This matches the brand's fair-comparison voice.",
+     "A's craft suits LinkedIn: strong hooks, short paragraphs, specific closing questions, and no mocked-up visuals. B is short and generic. Its stock illustrations and hashtags add little, and it reads like a feature bulletin.",
+     "A's downside is its [NEEDS FACT] placeholders in two first comments. The owner must fill these before posting, so A is not fully ready to use. Still, these are honest gaps that make sense to flag, not errors.",
+     "B is accurate but thin. Its engagement questions are generic, and nothing in it would stop a scroll or set Formkit apart from Tally or Jotform."
+    ],
+    "truthProblemsA": [
+     "Several claims come from the insights rather than the confirmed fact index: Pro includes your own domain, free AI is capped at 3 forms and 10 edits a month, and partial responses and drop-off by question are on every plan. The insights support them, but they are not cited facts.",
+     "The 'our comparison table' claims depend on an unverified comparison date. A flags this itself.",
+     "'Stripe still charges its own processing fees' is general knowledge, not a confirmed fact, though it is almost certainly true."
+    ],
+    "truthProblemsB": []
+   }
+  },
+  "sonnet": {
+   "result": "v2",
+   "ab": {
+    "winner": "B",
+    "margin": "clear",
+    "reasons": [
+     "B is far more specific and strategic: it builds on the 'no cut on payments' angle, the Claude/ChatGPT angle and the Google Forms switcher angle, all named as top opportunities in the insights.",
+     "B gives each post a real argument and a practical takeaway (check what your tool takes per payment, test the form yourself, find the drop-off question). This suits the direct, practical brand voice and gives readers something useful.",
+     "B is honest about limits: Stripe still charges its own fees, free AI is capped at 3 forms and 10 edits, and the example prompt is labelled as an example. That builds trust for a brand with no social proof.",
+     "B flags missing facts with [NEEDS FACT] markers instead of inventing them, and its image briefs rule out mock-ups.",
+     "A is safe and truthful but generic. Its posts are short and thin, the hooks are weak, and the closing questions are interchangeable.",
+     "A's second post tags #EventPlanning without mentioning events, and its illustration-only imagery is bland. Its payments post never mentions Stripe's own fees, which is a minor omission."
+    ],
+    "truthProblemsA": [
+     "The payments post implies Formkit takes no cut but omits that Stripe still charges processing fees; it is not false, only incomplete.",
+     "The payments post lists Pro and Business pricing without saying that payments need Pro."
+    ],
+    "truthProblemsB": [
+     "The Google Forms post says own domain is on Pro. That comes from the insights, not the confirmed facts, though it is supported there.",
+     "The 'Pro $60 a seat for the year' arithmetic is inferred from 'two months free', and the post marks it as the author's own arithmetic. The claim rests on $6 x 10 months.",
+     "The Google Forms gap list is asserted as current without a checked date, but the post flags this for confirmation."
+    ]
+   },
+   "ba": {
+    "winner": "A",
+    "margin": "clear",
+    "reasons": [
+     "A is much more specific and useful: it gives concrete scenarios (deposit for a booking, a client intake prompt), a practical takeaway in each post, and the free-vs-Pro limits, so it reads as written for this audience and voice.",
+     "A is honest about limits. It notes Stripe still charges its own fees and that free AI is capped at 3 forms and 10 edits. It also flags unverified items with NEEDS FACT markers rather than inventing them, and labels the example prompt as illustrative.",
+     "A's Google Forms post targets a real gap named in the insights (own link, drop-off by question, partial answers, version history) and gives a self-diagnostic that fits a LinkedIn thought-leadership style. It also hedges the comparison claim until dated.",
+     "A's hooks are stronger and its structure suits LinkedIn, with a first comment carrying the link and a question close. Its visual briefs are realistic, with no mocked-up screenshots.",
+     "B is truthful and clean but generic and thin. The posts are short, with little differentiation or actionable value. Hashtags are heavy and the posts lack hooks. B skips the Google Forms switcher angle, which was a high-value opportunity.",
+     "B's 'Money goes to you' post tags #EventPlanning and implies a broader audience without supporting content. Its first post says 'without a monthly bill' while the pitch pivots to Pro, which is acceptable but weak."
+    ],
+    "truthProblemsA": [
+     "'$60 a seat for the year' is derived arithmetic (10 months x $6) and is flagged as the author's own calculation. It is correct but not a stated fact.",
+     "The Google Forms gaps and the claim that Google Forms lacks them are drawn from the comparison table. They are flagged for confirmation in the first comment but still appear in the body."
+    ],
+    "truthProblemsB": [
+     "The first post says 'pay for tools before they earn anything' as a generalization about freelancers. This is unsupported rhetoric, though it is minor and not a factual claim about Formkit."
+    ]
+   }
+  }
+ }
+]

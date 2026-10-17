@@ -42,43 +42,41 @@ import { Container, Section, SectionHeading } from "./layout";
 import { LivePreview } from "./LivePreview";
 import { getPlans, lowestPrice, planLimitLines, RECOMMENDED_PLAN } from "./plans";
 
-/** Landing hero: a big gradient panel with the promise and the live preview, Instantly-style. */
+/** Landing hero (Apollo-style): a large white panel in a soft frame, serif headline, live preview. */
 export function Hero() {
   return (
-    <section aria-labelledby="hero-heading" className="relative px-3 pt-3 sm:px-5 sm:pt-5">
-      <div className="bg-hero-gradient relative overflow-hidden rounded-[28px] px-4 pb-14 pt-12 text-white sm:rounded-[36px] sm:pb-20 sm:pt-20">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-24 top-10 size-[420px] rounded-full bg-white/10 blur-2xl" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 bottom-0 size-[360px] rounded-full bg-[#22c3ee]/25 blur-3xl" />
-        <Container className="relative flex flex-col items-center text-center">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-sm font-semibold backdrop-blur">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-[#ffd166]" />
+    <section aria-labelledby="hero-heading" className="bg-surface-3/60 px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-5">
+      <div className="rounded-2xl border border-line bg-surface px-4 pb-14 pt-14 sm:pb-20 sm:pt-20">
+        <Container className="flex flex-col items-center text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3.5 py-1.5 text-sm font-medium text-ink-2">
+            <span aria-hidden="true" className="size-2 rounded-full bg-lime ring-1 ring-ink/20" />
             Your AI growth team, ready in minutes
           </p>
-          <h1 id="hero-heading" className="mt-6 max-w-3xl text-[2.6rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 id="hero-heading" className="mt-6 max-w-3xl text-[2.75rem] leading-[1.02] text-ink sm:text-6xl lg:text-7xl">
             Tell us your goal. We&apos;ll help you grow.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white sm:text-xl">
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2 sm:text-xl">
             Ten AI specialists research your business, build the plan, create the work and measure what happens.{" "}
-            <strong className="font-bold text-white">You approve anything that goes live.</strong>
+            <strong className="font-medium text-ink">You approve anything that goes live.</strong>
           </p>
-          <div className="mt-10 w-full max-w-2xl text-left text-ink">
+          <div className="mt-10 w-full max-w-2xl text-left">
             <LivePreview />
           </div>
-          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] font-medium text-white">
+          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] text-ink-2">
             {[
               "Nothing posts, sends or spends without your OK",
               "Plans from " + formatUsd(lowestPrice()) + " a month",
               "No sign-up for the preview",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
-                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-[#ffd166]" />
+                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-deep-teal" />
                 {t}
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-[0.95rem] text-white">
+          <p className="mt-6 text-[0.95rem] text-ink-2">
             Want to look around first?{" "}
-            <Link href={CTA.demo.href} className="font-bold text-white underline underline-offset-4">
+            <Link href={CTA.demo.href} className="font-medium text-ink underline underline-offset-4">
               Try the demo
             </Link>{" "}
             — no account needed.
@@ -101,7 +99,7 @@ export function HowItWorks({ headingId = "how-heading", compact = false }: { hea
       />
       <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative rounded-3xl border border-line bg-surface p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <li key={s.title} className="relative rounded-xl border border-line bg-surface p-6 transition hover:border-line-strong">
             <span className="flex items-center justify-between">
               <IconTile icon={STEP_ICONS[i] ?? Sparkles} tone={STEP_TONES[i] ?? "brand"} size="lg" />
               <span aria-hidden="true" className="text-sm font-extrabold text-ink-3">
@@ -132,7 +130,7 @@ export function TeamGrid({ headingId = "team-heading" }: { headingId?: string })
       />
       <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {ROLES.map((r) => (
-          <li key={r.key} className="flex flex-col rounded-3xl border border-line bg-surface p-5 shadow-sm">
+          <li key={r.key} className="flex flex-col rounded-xl border border-line bg-surface p-5">
             <RoleAvatar role={ROLE_KEYS[r.key] ?? r.key} size="lg" />
             <h3 className="mt-4 font-bold leading-snug text-ink">{r.title}</h3>
             <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink-2">{r.body}</p>

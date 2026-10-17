@@ -17,6 +17,57 @@ importers:
       '@convex-dev/auth':
         specifier: ^0.0.96
         version: 0.0.96(@auth/core@0.41.3)(convex@1.47.0(react@19.3.0))(react@19.3.0)
+      '@fontsource/archivo-black':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/bebas-neue':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/caveat':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/dm-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/dm-serif-display':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/fraunces':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/lora':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/merriweather':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/montserrat':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/nunito':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/oswald':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/playfair-display':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/plus-jakarta-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/poppins':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/raleway':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/space-grotesk':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@google/genai':
         specifier: ^2.30.0
         version: 2.30.0
@@ -613,6 +664,57 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@fontsource/archivo-black@5.3.0':
+    resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
+
+  '@fontsource/bebas-neue@5.3.0':
+    resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
+
+  '@fontsource/caveat@5.3.0':
+    resolution: {integrity: sha512-eHTfzQxFSW9ABERRLNruHoNJmKed2J7pqTUc5lp4a4POMgXGKpxmWj3d9Hz10kmAg6iuTTLe6UagbA4bnsmfQw==}
+
+  '@fontsource/dm-sans@5.3.0':
+    resolution: {integrity: sha512-lYJtMXXO28q1z+yz+z8XKd0s4hXaa9QdkETzkyD760sidCv5heI86weYA0sx0Nc4pAMAQTUuyf4gO44cYKKS9g==}
+
+  '@fontsource/dm-serif-display@5.3.0':
+    resolution: {integrity: sha512-ecRclUcYeto9fB7ghkB36H4MtUoaUYFjjornWYYeLCMHzaWEDPk2kIWgZOq0mKBNRxclRSieKcFeLonlMYDTKg==}
+
+  '@fontsource/fraunces@5.3.0':
+    resolution: {integrity: sha512-LEHTOBiZufQzAvnAe2rZ8ZknbDS28Q9kzwb0L+gZJEmjLGr8hhZ/5NuHXwDuHBWhVXYoiGGXmrb0H6Ko/RrHTg==}
+
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
+
+  '@fontsource/lora@5.3.0':
+    resolution: {integrity: sha512-OK1g1z01rHVPqO5aw/FOIoDqc46KKYZdgL3NOLkxLWDk6QhDHhdr/h2BV1cke6gTvR1tzpDfdKyUkGsC+sQLeQ==}
+
+  '@fontsource/merriweather@5.3.0':
+    resolution: {integrity: sha512-9LpPsNTYzRALj468Uj1K9Usl5eXk991L/kKmcpdWbTF1na9NfMyAXMgUABlMReViU1MYBz9kJ8jEzEOtX9qGDg==}
+
+  '@fontsource/montserrat@5.3.0':
+    resolution: {integrity: sha512-iQPDtZOnmM5ih4JBGaMSXisRap0ixb9bAUw2hDtY7EjVfaqiiNlKtVuJl9XclxUwtwMMHNcWXfQR6zI9x05+Tg==}
+
+  '@fontsource/nunito@5.3.0':
+    resolution: {integrity: sha512-vw9TaTQJ/zpEpKrsODuPmOvaVjXgdda6B+xXA4YqjrdeJ62MLgVoDerdRXFQHyBnSCt2yQ2nHKCHPP/Pv7Xq4Q==}
+
+  '@fontsource/oswald@5.3.0':
+    resolution: {integrity: sha512-16r2aHActe0pH+9FLdk/74/YxXM7HpGak05kAzx3RvSToiJwGvyhv6GvckPz+YuZmvL1nxWbEop2jAXRcXYPRg==}
+
+  '@fontsource/playfair-display@5.3.0':
+    resolution: {integrity: sha512-uJSABalvdWc10fEPppQjQocamT21LEyRfzzWfRfqbkPz+sRv+kKpYDKyluBUskvJREkJTos9epj1WjQROGu99Q==}
+
+  '@fontsource/plus-jakarta-sans@5.3.0':
+    resolution: {integrity: sha512-9WRw3G74Ve4cyPApAZSXLPY5DiLOZXDn7Q7dIBjFBpA0Pj56ljDItEdy2UUajjJxRuTg2HkMLO5C3K2nAQORWg==}
+
+  '@fontsource/poppins@5.3.0':
+    resolution: {integrity: sha512-cms1nM7U6SN8epIV1WMVOV8VsA645aSm3wHfzIQnkk188U341ThbJGSl2Sv54V29gnDbT2arMPfLzvVIIVCceQ==}
+
+  '@fontsource/raleway@5.3.0':
+    resolution: {integrity: sha512-BTWr1I14Ji0DWpS/KCIq/CXcvxXWgMO73gynWpbYv7A5wlPhLevozgRmdPJvZmUf0fhH+Lju+F4nigJ6Ums24A==}
+
+  '@fontsource/space-grotesk@5.3.0':
+    resolution: {integrity: sha512-ksnGizDPXIDuvqcTYTSrmZ+evx9sDlS8rp7+42BQ7wU+spt3twEoXfbJz672C+5CLg6VeUQwRy5RXshWb67LcQ==}
 
   '@google/genai@2.30.0':
     resolution: {integrity: sha512-Gkv1ix8iZey/V3WF4lHaRS8C71P533jenDT/lA+fdPTCfXYfmCVHvo+0H5jTgzonqsmROQG7QpzLJkpoP/x7bg==}
@@ -4313,6 +4415,40 @@ snapshots:
       react-dom: 19.3.0(react@19.3.0)
 
   '@floating-ui/utils@0.2.12': {}
+
+  '@fontsource/archivo-black@5.3.0': {}
+
+  '@fontsource/bebas-neue@5.3.0': {}
+
+  '@fontsource/caveat@5.3.0': {}
+
+  '@fontsource/dm-sans@5.3.0': {}
+
+  '@fontsource/dm-serif-display@5.3.0': {}
+
+  '@fontsource/fraunces@5.3.0': {}
+
+  '@fontsource/inter@5.3.0': {}
+
+  '@fontsource/lora@5.3.0': {}
+
+  '@fontsource/merriweather@5.3.0': {}
+
+  '@fontsource/montserrat@5.3.0': {}
+
+  '@fontsource/nunito@5.3.0': {}
+
+  '@fontsource/oswald@5.3.0': {}
+
+  '@fontsource/playfair-display@5.3.0': {}
+
+  '@fontsource/plus-jakarta-sans@5.3.0': {}
+
+  '@fontsource/poppins@5.3.0': {}
+
+  '@fontsource/raleway@5.3.0': {}
+
+  '@fontsource/space-grotesk@5.3.0': {}
 
   '@google/genai@2.30.0':
     dependencies:

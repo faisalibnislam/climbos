@@ -188,15 +188,14 @@ Design:
   - Snapchat needs Public Profile/Story publishing through Snap Kit/Marketing API partner access; to confirm.
   - Each platform shows its honest capability state until its approval exists, and falls back to "export pack + reminder" when it can't post.
 
-## UI direction ("Bright", from 17 Oct 2026)
+## UI direction (Apollo-inspired, from 17 Oct 2026)
 
-Instantly-style: a friendly, organised, visual interface.
-- **Type and colour:** Plus Jakarta Sans; a vivid blue brand with blue-violet gradients.
-- **Icons:** colourful icon tiles for sections, channels and every AI teammate.
-- **Components:** stat cards; pill buttons and tabs.
-- **Layout:** a grouped sidebar; a gradient goal banner; a chat-style onboarding input with example chips; a gradient landing hero with the live preview.
-
-WCAG 2.2 AA is kept (the axe suite runs on every change). Remaining screens follow the same system: content detail and the post editor, results, connections, settings, and the new Leads/Outreach/Designs areas.
+The owner switched the direction from Instantly to **Apollo.io's design**:
+- **Canvas and panels:** a warm off-white canvas (#F7F5F2) with white panels in soft grey frames.
+- **Type:** serif headlines (Newsreader, open licence, standing in for Apollo's Season) with a clean grotesk body (Geist).
+- **Actions:** black buttons with 8px corners and an electric lime (#EBF212) accent CTA; lime marks the active navigation.
+- **Colour:** a deep teal (#1F4A4C) for feature panels and coral used sparingly; icon tiles stay muted.
+- **Tokens:** everything is driven by `src/app/globals.css`. WCAG 2.2 AA is kept and the axe suite runs on every change.
 
 ## Progress
 
@@ -207,7 +206,7 @@ WCAG 2.2 AA is kept (the axe suite runs on every change). Remaining screens foll
 | Agent runtime, Claude turn layer, lint, specs | Done |
 | Convex integration (`CLIMBOS_ENGINE=v2`) | Done, off by default |
 | Benchmark harness | Done; first runs under way |
-| Bright UI | Shell, Today, onboarding, landing, content list done |
+| UI (Apollo-inspired) | Tokens, shell, Today, onboarding, landing, content, connections, settings re-skinned; editor and new areas next |
 | Design system, Social autopilot, Lead data platform, Outreach, Reprice | Not started |
 
 ## Phases

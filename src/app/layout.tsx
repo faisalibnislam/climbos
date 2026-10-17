@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import "./globals.css";
 
-// One friendly geometric sans for everything (headings use heavier weights).
-const sans = Plus_Jakarta_Sans({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
+// Apollo-style pairing: a clean grotesk for UI text and an elegant serif for headlines.
+const sans = Geist({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
+const display = Newsreader({ variable: "--font-display-serif", subsets: ["latin"], display: "swap", weight: ["400", "500", "600"] });
 const mono = Geist_Mono({ variable: "--font-mono-ui", subsets: ["latin"], display: "swap" });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://climbos.app";
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f5f7fb",
+  themeColor: "#f7f5f2",
   width: "device-width",
   initialScale: 1,
 };
@@ -38,7 +39,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" className={`${sans.variable} ${mono.variable} h-full antialiased`}>
+      <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col">
           <a href="#main" className="skip-link">
             Skip to content

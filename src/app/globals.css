@@ -1,67 +1,73 @@
 @import "tailwindcss";
 
 /*
- * ClimbOS "Bright" design tokens: a friendly, visual interface (soft blue-grey
- * canvas, white cards, vivid blue brand, colourful icon tiles). Text/background
- * pairs meet WCAG 2.2 AA (4.5:1 body text, 3:1 large text and UI boundaries).
- * Status is never conveyed by colour alone.
+ * ClimbOS design tokens (Apollo-inspired): warm off-white canvas, white
+ * panels, black type and actions, an electric lime accent, a deep teal and a
+ * coral used sparingly. Serif headlines, grotesk body. Text/background pairs
+ * meet WCAG 2.2 AA. Status is never conveyed by colour alone.
  */
 :root {
-  --bg: #f5f7fb;
+  --bg: #f7f5f2;
   --surface: #ffffff;
-  --surface-2: #f1f4fa;
-  --surface-3: #e6eaf4;
-  --ink: #0e1225;
-  --ink-2: #3c445b;
-  --ink-3: #596179;
-  --line: #e4e8f1;
-  --line-strong: #cbd1df;
+  --surface-2: #f2f0ed;
+  --surface-3: #e5e3e1;
+  --ink: #141414;
+  --ink-2: #3d3a37;
+  --ink-3: #625e5a;
+  --line: #e5e3e1;
+  --line-strong: #ccc9c6;
 
-  /* Brand blue (primary actions, links, focus). 800 on white = 5.6:1. */
-  --brand-950: #19268f;
-  --brand-900: #2234b8;
-  --brand-800: #2f47e0;
-  --brand-700: #4058ef;
-  --brand-600: #5a72fa;
-  --brand-200: #c9d3ff;
-  --brand-100: #e5eaff;
-  --brand-50: #f2f5ff;
+  /* "Brand" = black ink actions (buttons, links, focus); lime is the accent. */
+  --brand-950: #000000;
+  --brand-900: #000000;
+  --brand-800: #141414;
+  --brand-700: #2b2a29;
+  --brand-600: #1f4a4c;
+  --brand-200: #e5e3e1;
+  --brand-100: #efefeb;
+  --brand-50: #f7f5f2;
 
-  --amber-800: #8a4b00;
-  --amber-500: #f59e0b;
-  --amber-100: #fff1d6;
-  --red-800: #b42318;
-  --red-500: #f04438;
-  --red-100: #fee4e2;
-  --blue-800: #175cd3;
-  --blue-500: #2e90fa;
-  --blue-100: #e0efff;
-  --violet-800: #5925dc;
-  --violet-500: #7a5af8;
-  --violet-100: #ece8ff;
-  --green-800: #067647;
-  --green-500: #12b76a;
-  --green-100: #dcfae6;
-  --teal-800: #0e7090;
-  --teal-500: #06aed4;
-  --teal-100: #d9f4fb;
-  --pink-800: #c11574;
-  --pink-500: #ee46bc;
-  --pink-100: #fde7f5;
-  --orange-800: #b93815;
-  --orange-500: #ef6820;
-  --orange-100: #fdeadb;
+  --lime: #ebf212;
+  --lime-soft: #f6fab0;
+  --deep-teal: #1f4a4c;
+  --coral: #e67e6c;
 
-  --gradient-hero: linear-gradient(135deg, #2f47e0 0%, #5139e3 55%, #7c3aed 100%);
-  --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f4efff 60%, #eafaff 100%);
+  --amber-800: #6e5400;
+  --amber-500: #c99a06;
+  --amber-100: #f6f0d8;
+  --red-800: #a12b1e;
+  --red-500: #d9503f;
+  --red-100: #f7e3e0;
+  --blue-800: #2c4a66;
+  --blue-500: #4f7aa3;
+  --blue-100: #e3ebf2;
+  --violet-800: #4e3a6b;
+  --violet-500: #7a62a3;
+  --violet-100: #ece7f1;
+  --green-800: #2f5d3a;
+  --green-500: #4c8a5b;
+  --green-100: #e5eee1;
+  --teal-800: #1f4a4c;
+  --teal-500: #3f7d7f;
+  --teal-100: #e1edec;
+  --pink-800: #8c3b2e;
+  --pink-500: #e67e6c;
+  --pink-100: #f8e6e1;
+  --orange-800: #8a4513;
+  --orange-500: #d27b3d;
+  --orange-100: #f7eadf;
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --shadow-sm: 0 1px 2px rgb(16 24 64 / 0.05);
-  --shadow: 0 1px 2px rgb(16 24 64 / 0.04), 0 6px 20px rgb(16 24 64 / 0.06);
-  --shadow-lg: 0 4px 8px rgb(16 24 64 / 0.04), 0 20px 48px rgb(16 24 64 / 0.12);
+  /* Hero/feature panels: deep teal, never a rainbow gradient. */
+  --gradient-hero: linear-gradient(140deg, #1f4a4c 0%, #183c3e 100%);
+  --gradient-soft: linear-gradient(140deg, #f7f5f2 0%, #efefeb 100%);
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgb(20 20 20 / 0.04);
+  --shadow: 0 1px 2px rgb(20 20 20 / 0.04), 0 4px 16px rgb(20 20 20 / 0.05);
+  --shadow-lg: 0 2px 6px rgb(20 20 20 / 0.05), 0 16px 40px rgb(20 20 20 / 0.08);
 }
 
 @theme inline {
@@ -106,9 +112,13 @@
   --color-orange-800: var(--orange-800);
   --color-orange-500: var(--orange-500);
   --color-orange-100: var(--orange-100);
+  --color-lime: var(--lime);
+  --color-lime-soft: var(--lime-soft);
+  --color-deep-teal: var(--deep-teal);
+  --color-coral: var(--coral);
 
   --font-sans: var(--font-sans-ui);
-  --font-display: var(--font-sans-ui);
+  --font-display: var(--font-display-serif);
   --font-mono: var(--font-mono-ui);
 
   --radius-sm: var(--radius-sm);
@@ -245,7 +255,7 @@ body {
 .prose-climb h2 {
   margin-top: 2.25rem;
   margin-bottom: 0.5rem;
-  font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
   font-size: 1.5rem;
   line-height: 1.3;
   font-weight: 600;
@@ -293,11 +303,15 @@ body {
   background: var(--gradient-soft);
 }
 
-@layer base {
-  h1,
-  h2,
-  h3 {
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
+/* Apollo-style serif headlines. Unlayered on purpose so page and section
+   headings stay consistent whatever weight utility a component uses. */
+h1,
+h2 {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }

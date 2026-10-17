@@ -136,7 +136,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
         <ol className="mx-auto flex max-w-6xl gap-2 px-4 pb-4" aria-label="Setup progress">
           {STEP_ORDER.map((s, i) => (
             <li key={s} className="flex flex-1 flex-col gap-1.5">
-              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-brand-800" : i === idx ? "bg-hero-gradient" : "bg-surface-3")} aria-hidden />
+              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-ink" : i === idx ? "bg-lime ring-1 ring-ink/20" : "bg-surface-3")} aria-hidden />
               <span className={cn("hidden text-xs font-semibold md:block", i <= idx ? "text-ink" : "text-ink-3")}>
                 {i < idx ? <Check className="mr-1 inline size-3.5 text-brand-800" aria-hidden /> : null}
                 {STEP_LABEL[s]}
@@ -150,23 +150,23 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
       </header>
       <main id="main" className="mx-auto grid max-w-6xl gap-8 px-4 pb-24 pt-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-sm font-bold text-brand-800">
+          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-ink-2">
             Step {idx + 1} of {STEP_ORDER.length} · {STEP_LABEL[step]}
           </p>
           <div className="mt-4">{children}</div>
         </div>
         {help.points.length ? (
-          <aside className="bg-soft-gradient hidden h-fit rounded-3xl border border-brand-100 p-6 lg:block" aria-label={help.title}>
+          <aside className="hidden h-fit rounded-xl border border-line bg-surface p-6 lg:block" aria-label={help.title}>
             <div className="flex">
               {help.roles.map((r, i) => (
-                <RoleAvatar key={r} role={r} size="md" className={cn("ring-4 ring-[#f4f2ff]", i > 0 && "-ml-2")} />
+                <RoleAvatar key={r} role={r} size="md" className={cn("ring-4 ring-surface", i > 0 && "-ml-2")} />
               ))}
             </div>
             <p className="mt-4 text-lg font-bold text-ink">{help.title}</p>
             <ul className="mt-3 space-y-3">
               {help.points.map((p) => (
                 <li key={p} className="flex gap-2.5 text-[0.95rem] text-ink-2">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-white">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-lime text-black">
                     <Check className="size-3" aria-hidden />
                   </span>
                   {p}
@@ -244,7 +244,7 @@ function BusinessStep({
 
   return (
     <Shell step="business">
-      <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">Let’s meet your business <span aria-hidden="true">👋</span></h1>
+      <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">Let’s meet your business</h1>
       <p className="mt-3 max-w-xl text-lg text-ink-2">
         Tell us about it in your own words. Your AI growth team reads your website, and you check everything before it’s used.
       </p>
@@ -262,8 +262,8 @@ function BusinessStep({
 
       {mode === "chat" ? (
         <div className="mt-6 space-y-4">
-          <div className="bg-hero-gradient rounded-3xl p-[2px] shadow-lg">
-            <div className="rounded-[22px] bg-surface p-4 sm:p-5">
+          <div className="rounded-xl border border-ink bg-surface shadow-sm">
+            <div className="rounded-xl p-4 sm:p-5">
               <label htmlFor="intro-chat" className="text-sm font-bold text-ink">
                 Tell us about your business and what you want
               </label>

@@ -71,7 +71,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
       {pause?.paused && <PausedBanner slug={slug} canResume={current?.role === "owner" || current?.role === "admin"} />}
       <div className="mx-auto flex w-full max-w-[1400px]">
         {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex" aria-label="Main">
+        <aside className="sticky top-0 hidden h-dvh w-[256px] shrink-0 flex-col border-r border-line bg-surface-2 px-4 py-5 lg:flex" aria-label="Main">
           <Link href={`/app/${slug}/today`} className="mb-5 px-2" aria-label="ClimbOS home">
             <Logo />
           </Link>
@@ -81,7 +81,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
               <div key={group || "home"} className="flex flex-col gap-0.5">
                 {group ? <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{group}</p> : null}
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} href={`/app/${slug}/${item.key}`} active={section === item.key} icon={<IconTile icon={item.icon} tone={item.tone} size="sm" />}>
+                  <NavLink key={item.key} href={`/app/${slug}/${item.key}`} active={section === item.key} icon={<IconTile icon={item.icon} tone={item.tone} size="sm" className="nav-tile" />}>
                     {item.label}
                   </NavLink>
                 ))}
@@ -89,7 +89,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1 pt-6">
-            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<IconTile icon={Settings} tone="neutral" size="sm" />}>
+            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<IconTile icon={Settings} tone="neutral" size="sm" className="nav-tile" />}>
               Settings
             </NavLink>
             <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />
@@ -149,8 +149,8 @@ function NavLink({ href, active, icon, children }: { href: string; active: boole
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex min-h-11 items-center gap-3 rounded-xl px-2 text-[15px] font-semibold transition-colors",
-        active ? "bg-brand-50 text-brand-900 before:absolute before:-left-4 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        "relative flex min-h-10 items-center gap-3 rounded-lg px-2 text-[15px] font-medium transition-colors [&_.nav-tile]:bg-transparent [&_.nav-tile]:text-current",
+        active ? "bg-lime-soft text-black [&_.nav-tile]:bg-lime" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
@@ -167,8 +167,8 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex min-h-14 w-full items-center justify-between gap-2.5 rounded-2xl border border-line bg-surface-2/60 px-2.5 text-left hover:border-line-strong hover:bg-surface-2">
-          <span aria-hidden="true" className="bg-hero-gradient inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white">
+        <button className="flex min-h-14 w-full items-center justify-between gap-2.5 rounded-xl border border-line bg-surface px-2.5 text-left hover:border-line-strong">
+          <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-lime text-sm font-semibold text-black">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">

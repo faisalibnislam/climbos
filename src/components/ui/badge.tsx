@@ -19,7 +19,7 @@ export const toneClasses: Record<Tone, string> = {
   red: "bg-red-100 text-red-800 border-[#fecdca]",
   blue: "bg-blue-100 text-blue-800 border-[#b2ddff]",
   violet: "bg-violet-100 text-violet-800 border-[#d9d6fe]",
-  brand: "bg-brand-100 text-brand-900 border-brand-200",
+  brand: "bg-lime-soft text-black border-[#e3eb6a]",
   teal: "bg-teal-100 text-teal-800 border-[#a5f0fc]",
   pink: "bg-pink-100 text-pink-800 border-[#fcceee]",
   orange: "bg-orange-100 text-orange-800 border-[#f9dbaf]",
