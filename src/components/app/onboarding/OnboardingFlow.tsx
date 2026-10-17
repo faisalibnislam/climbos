@@ -305,7 +305,7 @@ function WorkspaceOnboarding({ slug }: { slug: string }) {
       ? "done"
       : !research || ["cost_reserved", "preparing", "executing"].includes(research.status)
         ? "research"
-        : research.status === "failed" && state.facts.length === 0
+        : research.status === "failed" && state.facts.length === 0 && state.org.onboardingStep === "research"
           ? "research"
           : state.org.onboardingStep === "research" || state.org.onboardingStep === "facts" || state.org.onboardingStep === "business"
             ? "facts"
@@ -326,6 +326,7 @@ type State = NonNullable<ReturnType<typeof useQuery<typeof api.orgs.onboardingSt
 
 function ResearchStep({ slug, state }: { slug: string; state: State }) {
   const startResearch = useMutation(api.orgs.startResearch);
+  const skipResearch = useMutation(api.orgs.skipResearch);
   const [ownerText, setOwnerText] = useState("");
   const [busy, setBusy] = useState(false);
   const research = state.research;
@@ -354,35 +355,82 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
           </Card>
           {!state.canRunAi && state.accessMessage && <Callout tone="warning" className="mt-4">{state.accessMessage}</Callout>}
         </>
+      ) : research?.failureKind === "ai_unavailable" ? (
+        <>
+          <Callout tone="warning" className="mt-4" title="Our AI team is temporarily unavailable">
+            Nothing was lost, and you weren’t charged for work that didn’t happen. Try again in a moment, or add the key facts yourself now and refresh the research later.
+          </Callout>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await startResearch({ slug });
+                } catch (e) {
+                  toast({ tone: "danger", title: errorMessage(e) });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Try again
+            </Button>
+            <Button variant="secondary" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+              Add the facts myself
+            </Button>
+          </div>
+        </>
       ) : (
         <>
-          <Callout tone="warning" className="mt-4">{research?.userMessage ?? "We couldn't finish reading your website."}</Callout>
+          <Callout tone="warning" className="mt-4">{research?.userMessage ?? "We couldn’t finish reading your website."}</Callout>
           <Card className="mt-6">
             <CardContent className="space-y-4 p-6">
-              <Field label="Describe your business in a few sentences" hint="What you sell, who buys it, prices if you're happy to share, and what makes you different. We'll label these facts as supplied by you.">
+              <Field label="Describe your business in a few sentences" hint="What you sell, who buys it, prices if you’re happy to share, and what makes you different. We’ll label these facts as supplied by you.">
                 <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={6} autosize />
               </Field>
-              <Button
-                loading={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    await startResearch({ slug, ownerText });
-                  } catch (e) {
-                    toast({ tone: "danger", title: errorMessage(e) });
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Continue with my description
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  loading={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await startResearch({ slug, ownerText });
+                    } catch (e) {
+                      toast({ tone: "danger", title: errorMessage(e) });
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Continue with my description
+                </Button>
+                <Button variant="ghost" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+                  Skip — I’ll add facts myself
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </>
       )}
     </div>
   );
+}
+
+/** Sensible starting success events per business type (owner confirms before use). */
+function defaultEvents(type: string) {
+  const ev = (key: string, label: string, definition: string) => ({ key, label, definition, confirmed: true });
+  switch (type) {
+    case "saas":
+      return [ev("signup", "Sign-up", "A new account is created"), ev("activation", "First success", "A new account completes its first key action"), ev("paid_conversion", "Upgrade to paid", "An account starts a paid plan")];
+    case "ecommerce":
+    case "physical_products":
+      return [ev("add_to_cart", "Add to cart", "A visitor adds a product to the cart"), ev("purchase", "Purchase", "A paid order is placed"), ev("repeat_purchase", "Repeat purchase", "A customer places a second order")];
+    case "services":
+      return [ev("inquiry", "Qualified inquiry", "Someone asks about a service and fits your criteria"), ev("booking", "Booking", "A call or appointment is booked"), ev("closed", "Closed deal", "A client signs or pays")];
+    default:
+      return [ev("lead", "New lead", "Someone gets in touch or signs up"), ev("customer", "New customer", "Someone pays for the first time")];
+  }
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -404,6 +452,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [newFact, setNewFact] = useState("");
+  const [newCategory, setNewCategory] = useState<"product" | "audience" | "offer" | "pricing" | "brand" | "proof" | "other">("product");
   const [businessType, setBusinessType] = useState(state.business?.businessType ?? "other");
   const [currency, setCurrency] = useState(state.business?.currency ?? "USD");
   const [busy, setBusy] = useState(false);
@@ -411,10 +460,21 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
 
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
-      <p className="mt-3 text-lg text-ink-2">
-        {state.business?.summary ?? "Here's what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
-      </p>
+      {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
+        <>
+          <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
+          <p className="mt-3 text-lg text-ink-2">
+            Add three to five short facts: what you sell, who it’s for, and what makes you different. Your team only uses facts you’ve confirmed, so it never invents claims.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
+          <p className="mt-3 text-lg text-ink-2">
+            {state.business?.summary ?? "Here’s what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
+          </p>
+        </>
+      )}
       <ul className="mt-6 space-y-3">
         {state.facts.map((f) => (
           <li key={f.id}>
@@ -476,10 +536,25 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
       </ul>
       <Card className="mt-4">
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
-          <Field label="Add something we missed" className="flex-1">
+          <Field label={state.facts.length === 0 ? "Add a fact" : "Add something we missed"} className="flex-1">
             <Input value={newFact} onChange={(e) => setNewFact(e.target.value)} placeholder="e.g. We offer a 14-day free trial" />
           </Field>
-          <Button variant="secondary" onClick={async () => { if (!newFact.trim()) return; try { await addFact({ slug, category: "other", statement: newFact }); setNewFact(""); } catch (e) { toast({ tone: "danger", title: errorMessage(e) }); } }}>
+          <Field label="About" className="sm:w-44">
+            <Select
+              value={newCategory}
+              onValueChange={(v) => setNewCategory(v as typeof newCategory)}
+              options={[
+                { value: "product", label: "What we sell" },
+                { value: "audience", label: "Who it’s for" },
+                { value: "offer", label: "An offer" },
+                { value: "pricing", label: "Pricing" },
+                { value: "brand", label: "Our brand" },
+                { value: "proof", label: "Proof (verifiable)" },
+                { value: "other", label: "Something else" },
+              ]}
+            />
+          </Field>
+          <Button variant="secondary" onClick={async () => { if (!newFact.trim()) return; try { await addFact({ slug, category: newCategory, statement: newFact }); setNewFact(""); } catch (e) { toast({ tone: "danger", title: errorMessage(e) }); } }}>
             <Plus className="size-4" aria-hidden /> Add
           </Button>
         </CardContent>
@@ -522,7 +597,14 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                   </label>
                 </li>
               ))}
-              {events.length === 0 && <li className="text-sm text-ink-3">We’ll suggest these once research finishes. You can add them later in Settings.</li>}
+              {events.length === 0 && (
+                <li className="flex flex-wrap items-center gap-3 text-sm text-ink-2">
+                  No suggestions yet.
+                  <Button size="sm" variant="secondary" onClick={() => setEvents(defaultEvents(businessType))}>
+                    Use common ones for this type of business
+                  </Button>
+                </li>
+              )}
             </ul>
           </div>
         </CardContent>
@@ -699,7 +781,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
 
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{ready ? "Your growth plan is ready" : "Building your growth plan…"}</h1>
+      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       {!state.canRunAi && !ready && state.accessMessage && (
         <Callout tone="warning" className="mt-4" title="Your free starter allowance is used up">
@@ -725,8 +807,17 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       {run?.status === "failed" && !ready && (
         <Callout tone="danger" className="mt-6" title="The plan didn't finish">
           {run.userMessage ?? "Something went wrong."}
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-3">
             <Button onClick={() => generate({ slug }).catch((e) => setError(errorMessage(e)))}>Try again</Button>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await finish({ slug });
+                router.push(`/app/${slug}/today`);
+              }}
+            >
+              Go to Today for now
+            </Button>
           </div>
         </Callout>
       )}

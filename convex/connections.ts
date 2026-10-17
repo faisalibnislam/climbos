@@ -17,7 +17,7 @@ import { internalMutation, internalQuery, mutation, query } from "./_generated/s
 import { providerValidator } from "./schema";
 import { audit } from "./lib/audit";
 import { decryptSecret, encryptSecret, secretAad } from "./lib/crypto";
-import { appError, requireOrgAccess } from "./lib/tenancy";
+import { appError, isOperator, requireOrgAccess } from "./lib/tenancy";
 
 type OurProvider = Doc<"connections">["provider"];
 
@@ -119,6 +119,7 @@ export const list = query({
       .first();
     const env = envSnapshot();
     const now = Date.now();
+    const operator = await isOperator(ctx);
     return {
       canManage: ["owner", "admin"].includes(role),
       isDemo: org.kind === "demo",
@@ -204,8 +205,15 @@ export const list = query({
           capability: c.capability,
           label: c.label,
           state: c.state,
-          reason: c.reason,
-          fix: c.fix,
+          // Platform setup details (env var names, review steps) are for operators, not owners.
+          reason:
+            c.state === "setup_needed" && !operator && /administrator/i.test(c.fix)
+              ? "ClimbOS is still finishing this connection on our side. Nothing for you to do yet."
+              : c.reason,
+          fix:
+            c.state === "setup_needed" && !operator && /administrator/i.test(c.fix)
+              ? "Meanwhile your team prepares drafts and export packs, and you can import data from a file where available."
+              : c.fix,
         }));
         if (conn?.isFixture) {
           capabilities = capabilities.map((c) => ({

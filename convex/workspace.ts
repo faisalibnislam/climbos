@@ -69,6 +69,9 @@ export const today = query({
     if (strategy?.status === "needs_approval") {
       next.push({ title: "Review your growth plan", why: "Approve it so the team can start working on it.", href: `/app/${slug}/plan`, kind: "plan" });
     }
+    if (!strategy) {
+      next.push({ title: "Build your growth plan", why: "Your team turns your goal into a short, costed plan you approve.", href: `/app/${slug}/plan`, kind: "plan" });
+    }
     if (pendingApprovals.length > 0) {
       next.push({
         title: `Review ${pendingApprovals.length} draft${pendingApprovals.length === 1 ? "" : "s"}`,

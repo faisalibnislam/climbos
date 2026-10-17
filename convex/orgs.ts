@@ -282,6 +282,14 @@ export const onboardingState = query({
         ? {
             status: researchRun.status,
             userMessage: researchRun.userMessage ?? null,
+            // Why it failed, so the UI can offer the right way forward.
+            failureKind: researchRun.status !== "failed"
+              ? null
+              : /^(provider_unavailable|provider_error|timeout|rate_limited)/.test(researchRun.error ?? "")
+                ? ("ai_unavailable" as const)
+                : /^no_content/.test(researchRun.error ?? "")
+                  ? ("site_unreadable" as const)
+                  : ("other" as const),
             steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status })),
           }
         : null,
@@ -524,6 +532,20 @@ export const generatePlan = mutation({
     await ctx.db.patch(org._id, { onboardingStep: "plan" });
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
     return { runId };
+  },
+});
+
+/** Continue without automatic research (e.g. during an AI outage): the owner adds facts by hand. */
+export const skipResearch = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db
+      .query("businesses")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .first();
+    if (business) await ctx.db.patch(business._id, { researchStatus: "owner_supplied", updatedAt: Date.now() });
+    await ctx.db.patch(org._id, { onboardingStep: "facts" });
   },
 });
 

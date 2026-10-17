@@ -74,7 +74,9 @@ export function SignInForm() {
     setBusy("verify");
     try {
       await signIn("resend-otp", { email: email.trim(), code: digits });
-      router.push(next);
+      // Full navigation so every query re-subscribes under the new identity
+      // (e.g. switching from an anonymous demo session to a real account).
+      window.location.assign(next);
     } catch {
       setFormError("That code didn't work. It may be mistyped or expired — check it, or send a new code.");
       setBusy(null);
