@@ -65,8 +65,12 @@ export interface PlannedStep {
   imageAttempts?: number;
 }
 
-/** Worst-case µUSD estimate for a plan of steps, including one repair of the costliest model step. */
-export function estimateRun(steps: PlannedStep[], rateVersionId: string) {
+/**
+ * Worst-case µUSD estimate for a plan of steps. v1 single-call jobs also
+ * reserve one repair of the costliest model step; Engine v2 agents reserve
+ * each revision round separately when it starts, so they pass repair: false.
+ */
+export function estimateRun(steps: PlannedStep[], rateVersionId: string, opts: { repair?: boolean } = {}) {
   const rates = getRateVersion(rateVersionId);
   let ai = 0;
   let image = 0;
@@ -84,7 +88,7 @@ export function estimateRun(steps: PlannedStep[], rateVersionId: string) {
     if (s.scrapeCredits) research += usdToMicrosCeil(s.scrapeCredits * rates.services.scrapeCredit);
     if (s.imageAttempts) image += usdToMicrosCeil(s.imageAttempts * rates.services.imageAttempt);
   }
-  const repair = maxModelStep; // one repair attempt allowed by default
+  const repair = opts.repair === false ? 0 : maxModelStep;
   const costMicros = ai + repair + image + research;
   const topupCostMicros = stressedDeliveryCostMicros({
     aiMicros: ai + repair,
@@ -147,7 +151,8 @@ export async function createRunWithReservation(
   }
 
   const rateVersion = currentRateVersion();
-  const estimate = estimateRun(params.steps, rateVersion.id);
+  const v2 = process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture;
+  const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
   const period = access.period;
   const decision = decideReservation(ledgerOf(period), {
     costMicros: estimate.costMicros,
@@ -163,7 +168,7 @@ export async function createRunWithReservation(
   const runId = await ctx.db.insert("workflowRuns", {
     orgId: org._id,
     kind: params.kind,
-    ...(process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture ? { engine: "v2" as const } : {}),
+    ...(v2 ? { engine: "v2" as const } : {}),
     title: params.title,
     status: "cost_reserved",
     input: JSON.stringify(params.input),
@@ -174,7 +179,8 @@ export async function createRunWithReservation(
     entitlementVersionId: period.entitlementVersionId,
     routingVersionId: CURRENT_ROUTING.id,
     budget: {
-      modelSteps: Math.max(limits.workflowModelSteps, modelStepCount + 1),
+      // Engine v2 runs may add revision rounds (reserved as they happen).
+      modelSteps: process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture ? 24 : Math.max(limits.workflowModelSteps, modelStepCount + 1),
       researchTools: limits.workflowResearchTools,
       repairs: limits.workflowRepairAttempts,
     },

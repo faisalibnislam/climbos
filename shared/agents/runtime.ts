@@ -47,6 +47,12 @@ export interface AgentDeps {
   phase: <T>(key: PhaseKey, label: string, fn: () => Promise<{ value: T; record: PhaseRecord }>) => Promise<T>;
   /** Epoch ms after which no new phase may start (the host re-schedules and resumes). */
   deadline?: number;
+  /**
+   * Called before each extra revision round (round ≥ 1). Return false when
+   * the budget can't cover another round: the agent then keeps its best
+   * version instead of failing. Hosts reserve the round's cost here.
+   */
+  beforeRevision?: (round: number) => Promise<boolean>;
 }
 
 export interface PhaseKey {
@@ -247,6 +253,8 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (a.ship || round === reviews - 1) break;
     // Stop early if the last revision didn't improve on the best.
     if (round > 0 && best.round !== round) break;
+    checkDeadline(deps);
+    if (deps.beforeRevision && !(await deps.beforeRevision(round + 1))) break;
     current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint });
   }
 

@@ -43,6 +43,9 @@ import {
   strategySpec,
 } from "../shared/agents/specs";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
+import { fakeTurn } from "../shared/agents/fake";
+import { agentRevisionSteps } from "./lib/jobPlans";
+import { estimateRun } from "./engine";
 import { usdToMicrosCeil } from "../shared/economics/money";
 import type { RateVersion } from "../shared/economics/rates";
 
@@ -235,6 +238,10 @@ async function runModelTask<T>(
 
 /** Each action stops starting new agent phases after this long and resumes in a fresh action. */
 const ACTION_SOFT_LIMIT_MS = 6.5 * 60_000;
+function softLimitMs(): number {
+  const override = Number(process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS);
+  return Number.isFinite(override) && override > 0 ? override : ACTION_SOFT_LIMIT_MS;
+}
 
 const AGENT_FAILURES: Record<string, string> = {
   provider_unavailable: "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later.",
@@ -287,16 +294,26 @@ async function runAgentTask<T>(
   const rates = getRateVersion(job.run.rateVersionId);
   let currentStep: Id<"workflowSteps"> | null = null;
   const deps: AgentDeps = {
-    deadline: startedAt + ACTION_SOFT_LIMIT_MS,
+    deadline: startedAt + softLimitMs(),
+    beforeRevision: async (round) => {
+      // Idempotent per round: a compute step marks that this round's cost was reserved.
+      const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `Reserve revision ${round}`, spec.role);
+      if (mark.checkpoint !== undefined) return Boolean(mark.checkpoint);
+      const cost = estimateRun(agentRevisionSteps(spec), job.run.rateVersionId, { repair: false }).costMicros;
+      const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: job.run._id, costMicros: cost });
+      await ctx.runMutation(internal.engine.completeStep, { stepId: mark.stepId!, output: JSON.stringify(reserved.ok) });
+      return reserved.ok;
+    },
     turn: async (req) => {
       const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: "anthropic" });
       if (circuit === "open") {
         return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] };
       }
-      let r = await claudeTurn(req, rates);
+      const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : claudeTurn;
+      let r = await call(req, rates);
       if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
         await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
-        r = await claudeTurn(req, rates);
+        r = await call(req, rates);
       }
       if (currentStep && (r.usage.calls > 0 || r.costMicros > 0)) {
         await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(req.modelKey, r, rates) });

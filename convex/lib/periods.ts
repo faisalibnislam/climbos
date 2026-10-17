@@ -12,14 +12,18 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
 
-/** One-time allowance for a new, unpaid workspace: enough for research, a plan and a first content pack. */
+/**
+ * One-time allowance for a new, unpaid workspace: enough for the expert
+ * engine to research the business, build the plan and make a first content
+ * pack (Engine v2 reserves worst cases up front; typical spend is far lower).
+ */
 export const ONBOARDING_ALLOWANCE = {
-  walletMicros: 600_000,
+  walletMicros: 6_000_000,
   meters: {
     socialPosts: 6,
     imageAttempts: 2,
     deliveredImages: 1,
-    searchCalls: 3,
+    searchCalls: 14,
     scrapeCredits: 6,
     transactionalEmails: 10,
     byoMarketingSends: 0,

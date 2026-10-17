@@ -23,17 +23,30 @@ export function engineV2(): boolean {
   return process.env.CLIMBOS_ENGINE === "v2";
 }
 
-/** Worst-case steps for one agent: optional research, then (1 + maxRevisions) × (draft + critique). */
-export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: number }): PlannedStep[] {
+/**
+ * Steps reserved up front for one agent: optional research, the first draft
+ * and its review. Each further revision round is reserved just before it runs
+ * (see agentRevisionStep), so a small allowance isn't blocked by worst cases
+ * that rarely happen.
+ */
+export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: number }, rounds = 1): PlannedStep[] {
   const steps: PlannedStep[] = [];
   if (research) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.research, inputBudget: 80_000, outputBudget: spec.maxTokens.research, webSearches: research.maxSearches });
   }
-  for (let r = 0; r <= spec.maxRevisions; r++) {
+  for (let r = 0; r < rounds; r++) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft });
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic });
   }
   return steps;
+}
+
+/** The two steps (revised draft + review) one extra revision round needs. */
+export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
+  return [
+    { kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
+    { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic },
+  ];
 }
 
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }): JobPlan | null {

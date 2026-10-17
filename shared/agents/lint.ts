@@ -76,13 +76,14 @@ export function untracedNumbers(text: string, evidence: string): string[] {
   const normalize = (s: string) => s.replace(/[,\s]/g, "");
   const ev = normalize(evidence);
   const found: string[] = [];
-  for (const m of text.matchAll(/[$£€]?\d[\d,.]*\s?(%|k|m|x|×)?/gi)) {
+  // Units count only as whole tokens: "10k", "3x", "40%" — not the "m" of "1 month".
+  for (const m of text.matchAll(/[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi)) {
     const raw = m[0].trim();
     const digits = normalize(raw).replace(/[$£€%kmx×]/gi, "").replace(/\.$/, "");
     if (!digits) continue;
     const n = Number(digits);
     // Small bare counts ("3 tips", "Step 2") and years are not factual claims on their own.
-    const hasUnit = /[$£€%kmx×]/i.test(raw);
+    const hasUnit = /[$£€%×]|\d(k|m|x)$/i.test(raw);
     if (!hasUnit && Number.isFinite(n) && (n <= 12 || (n >= 1990 && n <= 2035))) continue;
     if (!ev.includes(digits)) found.push(raw);
   }

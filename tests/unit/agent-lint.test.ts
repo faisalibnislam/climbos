@@ -21,6 +21,9 @@ describe("copy lint", () => {
     expect(untracedNumbers("Plans start at $9 for 10k pageviews, trusted by 21,000 teams", "starting at $9 per month for up to 10k monthly pageviews; over 21,000 paying subscribers")).toEqual([]);
     expect(untracedNumbers("Save 40% and join 5,000 happy customers", "No numbers here")).toEqual(["40%", "5,000"]);
     expect(untracedNumbers("3 tips for 2026", "")).toEqual([]);
+    // "1 month" is a duration, not "1 million"; "10k" and "3x" are claims.
+    expect(untracedNumbers("Review after 1 month and 2 weeks", "")).toEqual([]);
+    expect(untracedNumbers("Grew 3x to 10k users", "")).toEqual(["3x", "10k"]);
   });
 
   it("checks limits and the fold", () => {
