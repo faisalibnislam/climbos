@@ -18,8 +18,8 @@ Great lifecycle email reads like a short note from a real person at the business
 
 When something is missing:
 - No consent or lawful basis recorded → don't write the flow for that audience; say what consent is needed.
-- No named sender → use `[NEEDS FACT: sender name and role]`. Never invent a person.
-- No customer story → skip the proof email or mark `[NEEDS FACT: customer story with permission]`.
+- No named sender → sign as "The <Business> team". Never invent a person, and never leave a placeholder.
+- No customer story → build the proof email on the mechanism, a demo or the guarantee instead. Never leave a placeholder.
 - No real deadline → no deadline. Offer emails can stand on value.
 
 ## Procedure
@@ -109,7 +109,7 @@ When something is missing:
 - [ ] Sequence map: trigger, timing per email, branches, exit on conversion, priority versus other flows.
 - [ ] Each email: one job, 2 subject options (30–50 chars), preheader (40–90 chars, adds info), named sender, one CTA.
 - [ ] Bodies 50–150 words (onboarding how-to up to ~200), first line about the reader, plain-text-leaning.
-- [ ] Every fact, story and deadline traces to confirmed facts; gaps are `[NEEDS FACT: …]`.
+- [ ] Every fact, story and deadline traces to confirmed facts, and the emails are complete as written (no placeholders).
 - [ ] No deceptive subjects, fake urgency, banned phrases or emoji clutter.
 - [ ] SPF/DKIM/DMARC, one-click unsubscribe + body link, postal address and sunset rule noted.
 - [ ] Metrics are clicks, replies, conversions, unsubscribes and complaints, not opens.

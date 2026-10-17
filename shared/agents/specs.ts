@@ -213,6 +213,8 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
     const path = `posts[${i}]`;
     issues.push(
       ...lintCopy({ body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      // Briefs and alt text are complete too: no owner questions hidden in them.
+      ...lintCopy({ title: p.title, hook: p.hook, visualBrief: p.visualBrief, altText: p.altText, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...maxLength(p.body, lim.body, `${path}.body`, "Post"),
       ...maxItems(p.hashtags, lim.hashtags, `${path}.hashtags`, "hashtags"),
       ...(lim.fold ? hookBeforeFold(p.body, lim.fold, `${path}.body`) : []),
@@ -248,7 +250,7 @@ function lintGeneric(out: unknown, input: AgentInput): LintIssue[] {
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
 function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
-  return lintCopy(out, { evidence: evidenceOf(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|sender|goal|successMetric/i.test(p) });
+  return lintCopy(out, { evidence: evidenceOf(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) });
 }
 
 /* ---------------- Rubrics ---------------- */

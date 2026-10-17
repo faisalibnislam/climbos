@@ -17,9 +17,9 @@ On Meta in 2025–2026 the creative is the targeting. Meta's Andromeda retrieval
 - **Tracking**: Pixel and Conversions API status, product catalogue for ecommerce.
 
 When something is missing:
-- No proof → write the concept without it and mark `[NEEDS FACT: number of orders or reviews]`.
+- No proof → build the concept on the product, mechanism or demonstration instead; never leave a placeholder.
 - No usable footage → write a brief the owner can shoot on a phone in under an hour, and say exactly what to film.
-- No budget → leave `[NEEDS FACT: monthly ad budget]` and don't size the test.
+- No budget → suggest the smallest useful test, clearly labelled for the owner to approve.
 - Never invent customers, quotes, UGC creators, reviews or "as seen in" logos.
 
 ## Procedure
@@ -115,7 +115,7 @@ Ads must not assert or imply that you know the viewer's personal attributes: rac
 - [ ] 3–5 concepts; any two differ on at least two of buyer, angle, format; first frames differ.
 - [ ] Each hook works alone and is complete within 125 characters.
 - [ ] Headlines 27 characters or fewer where possible, none over 40; CTA button matches the goal.
-- [ ] Every number, review and claim traces to confirmed facts; gaps are `[NEEDS FACT: …]`.
+- [ ] Every number, review and claim traces to confirmed facts; the ads are complete as written.
 - [ ] No personal-attribute phrasing, before/after, fake urgency or promised results.
 - [ ] Briefs give ratio, first 3 seconds, on-screen text, shot list, safe zones and what the owner films.
 - [ ] Destination named and its wording matches the ad's promise.

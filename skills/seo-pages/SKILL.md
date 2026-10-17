@@ -17,8 +17,8 @@ A great SEO page wins a high-intent query for a small business and is the source
 
 When something is missing:
 - No first-hand material → write the brief, not the page, and list exactly what to gather: photos, prices, a worked example, the owner's answers to 3–5 questions.
-- No sourced market data → state only the business's own numbers. Any market figure needs a cited source or `[NEEDS FACT: source for typical local price range]`.
-- No author → `[NEEDS FACT: author name, role and relevant experience]`. Never invent a byline.
+- No sourced market data → state only the business's own numbers. Any market figure needs a cited source, or leave it out.
+- No author → byline "The <Business> team". Never invent a person.
 
 ## Procedure
 
@@ -119,7 +119,7 @@ When something is missing:
 - [ ] Brief complete: reader, 5–10 fan-out questions, unique value, experience signals, outline, links, schema, title/meta/slug, CTA, update cadence.
 - [ ] Intro answers the query in 1–2 sentences; every H2 answered in its first sentence.
 - [ ] Information gain is present and early.
-- [ ] Every number and claim traces to confirmed facts or a cited source; gaps are `[NEEDS FACT: …]`.
+- [ ] Every number and claim traces to confirmed facts or a cited source; the page is complete as written.
 - [ ] Named author, "last reviewed" date, original photos specified.
 - [ ] Title ~50–60 chars, meta ~150–160 chars, short slug.
 - [ ] Internal links up, across, down and inbound listed with anchors; schema limited to visible content.

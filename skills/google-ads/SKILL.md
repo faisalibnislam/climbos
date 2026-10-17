@@ -17,8 +17,8 @@ A great Google Ads draft is one a senior PPC lead would launch without rewriting
 - **Research notes**: SERP and competitor ads (Ads Transparency Center), estimated CPCs if researched, search-term ideas.
 
 When something is missing:
-- No proof → write headlines without it and leave the slot as `[NEEDS FACT: Google review count and rating]`.
-- No budget → structure the account but leave the budget as `[NEEDS FACT: monthly ad budget]`. Never pick one.
+- No proof → write headlines on the offer, mechanism and outcome instead; never leave a placeholder.
+- No budget → structure the account and recommend the smallest useful test budget, clearly labelled as a suggestion for the owner to approve.
 - No CPC data → label any click estimate "assumption, to validate in week 1". Never present a guessed CPC as fact.
 - No matching landing page → say so, name the page the ad group needs, and hand off to the landing-pages skill.
 
@@ -131,7 +131,7 @@ When something is missing:
 - [ ] Every headline is 30 characters or fewer and every description 90 or fewer, counted exactly.
 - [ ] 15 headlines and 4 descriptions per ad group, each tagged with its slot, no near-duplicates.
 - [ ] Keyword theme in 3–4 headlines and matching the landing-page H1; offer and price identical to the page.
-- [ ] Every number and claim traces to confirmed facts; gaps are `[NEEDS FACT: …]`.
+- [ ] Every number and claim traces to confirmed facts; the ads are complete as written.
 - [ ] No emoji, no "!" in headlines, no caps, no phone numbers, no unsourced superlatives, no competitor trademarks.
 - [ ] Pins: none, or only legally required text with 2–3 options.
 - [ ] Negative list and cross-negatives included.

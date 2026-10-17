@@ -93,6 +93,23 @@ When something is missing:
 - **Never bait.** "Comment YES", "Tag someone who", "Like if you agree" are demoted by LinkedIn and Meta and read as cheap. A sincere question peers can answer from experience is fine.
 - Real deadlines only. If the brief has no deadline, there is no urgency.
 
+## Writing a set (several posts, ads or emails at once)
+
+A set fails if the pieces recycle the same facts for the same reader. Before you write, give every piece a different job:
+
+| Pick one per piece | Examples |
+|---|---|
+| A switch trigger | Just got a GDPR complaint; first heat wave; new hire starting |
+| An objection, answered | "Too expensive", "we already use X", "takes too long to set up" |
+| A use case or segment | Agencies managing client sites; first-time buyers; offices of 20+ |
+| A customer phrase (voice of customer) | Their exact words about the problem |
+| A myth or mistake | What most people get wrong, and the fix |
+| Proof or process | Behind the scenes, how it works, a confirmed result |
+
+- Each piece names its reader and angle in one line before you draft it (keep that to yourself; write only the piece).
+- Vary the format too (carousel vs single image vs reel; story vs list vs question).
+- Use facts as support for the angle, not as the angle itself. A post that only lists features is the weakest kind.
+
 ## Quality bar
 
 Expert copy has every one of these traits; mediocre copy is missing at least two.
@@ -120,6 +137,8 @@ Expert copy has every one of these traits; mediocre copy is missing at least two
 - Pitch the product before the reader feels the problem when the reader is cold.
 
 ## Checklist before answering
+
+- [ ] In a set, every piece has a different reader-angle and the facts serve the angle.
 
 - [ ] I can name the one reader, their moment, the one job and the awareness level.
 - [ ] The piece makes one idea, statable in under 12 words.

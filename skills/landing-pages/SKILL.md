@@ -17,8 +17,8 @@ A great landing page lets a stranger say what is offered, to whom, at what price
 
 When something is missing:
 - No traffic source → write the page for the most likely source, state that assumption at the top, and list the words the ad must use.
-- No testimonials → use the next proof type down the hierarchy (numbers, mechanism, guarantee, credentials) and leave `[NEEDS FACT: customer quote with name, role and permission]` where one belongs. Never write a sample quote.
-- No price → don't hide it with "contact us" by default; mark `[NEEDS FACT: starting price]` and say why it matters.
+- No testimonials → use the next proof type down the hierarchy (numbers, mechanism, guarantee, credentials). No placeholders, and never write a sample quote.
+- No price → don't invent one; use a clear next step ("see plans", "get a quote") and tell the owner in your notes why showing a starting price would convert better.
 - No guarantee → don't invent one; suggest one for the owner to consider, clearly labelled as a suggestion.
 
 ## Procedure
@@ -123,7 +123,7 @@ When asked for a brief (or before drafting a full page), include:
 - [ ] H1 carries the ad's words and promise; offer and price identical to the ad.
 - [ ] Hero has H1, subhead, outcome CTA, friction-removing micro-copy, proof chip and a real visual.
 - [ ] Section order matches the awareness table; length fits price and commitment.
-- [ ] Every claim and number traces to confirmed facts; gaps are `[NEEDS FACT: …]`.
+- [ ] Every claim and number traces to confirmed facts; the page is complete as written.
 - [ ] Top objections answered, each in a named section.
 - [ ] Form: minimum fields, visible labels, unticked separate marketing consent if used, privacy link, thank-you page written.
 - [ ] Grade 5–8 reading level, paragraphs of 3 lines or fewer, "you" outnumbers "we".

@@ -17,7 +17,7 @@ A great lead magnet solves one narrow, urgent pre-purchase problem for the exact
 
 When something is missing:
 - No proprietary data → don't fake a "benchmark report". Pick a tool, template, sample or audit built from confirmed facts instead.
-- No capacity figure for audits or samples → `[NEEDS FACT: how many per week the owner can deliver]`. Never promise a turnaround the owner hasn't confirmed.
+- No capacity figure for audits or samples → offer a limited number per week without a number ("a few each week") and never promise a turnaround the owner hasn't confirmed.
 - No VOC on pre-purchase fears → state the assumed problem and how to validate it (5 sales-call notes, FAQ log).
 
 ## Procedure
@@ -105,4 +105,4 @@ When something is missing:
 - [ ] Instant delivery and email 1 written; 4–6 email nurture outline with exit on purchase.
 - [ ] Promotion placements listed.
 - [ ] Measurement runs to lead → customer; any benchmark labelled directional.
-- [ ] Every number and claim traces to confirmed facts; gaps are `[NEEDS FACT: …]`.
+- [ ] Every number and claim traces to confirmed facts; the asset is complete as written.
