@@ -1,27 +1,36 @@
 /**
- * ClimbOS engine benchmark: v1 (single call, current prompts) vs v2 (agent
- * loop with skills) on real businesses, judged blind and pairwise in both
- * orders by two judge models.
+ * ClimbOS engine benchmark.
  *
- *   pnpm bench --cases plausible,fishwife --tasks strategy,linkedin --label pilot
+ * Arms:
+ *   v1   the original single-call engine (current prompts and schemas)
+ *   v0f  a frontier one-shot baseline: Opus 5.5, high effort, same brief and
+ *        output schema as v2, same web-search budget, but no skills, no
+ *        research phase and no review loop (how most AI tools use a model)
+ *   v2o  Engine v2 with Opus drafting   (Opus critic)
+ *   v2s  Engine v2 with Sonnet drafting (Opus critic)
+ *   v2s1 Engine v2, Sonnet drafting, at most 1 revision
  *
- * Reads ANTHROPIC_API_KEY / GEMINI_API_KEY from .env.local. Writes
- * bench/results/<date>-<label>.json and .md. Business facts are cached in
- * bench/cache so both engines always see identical inputs.
+ * Judging: blind pairwise comparisons in both orders (a win only counts when
+ * both orders agree) by up to three judge models, plus absolute 1–10 expert
+ * scores. Outputs are saved for human reading.
+ *
+ *   pnpm bench --cases plausible,fishwife --tasks strategy,linkedin \
+ *     --arms v1,v0f,v2s --compare v2s:v1,v2s:v0f --judges opus,sonnet --label run
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
-import { claudeTurn, type ClaudeTurnRequest } from "../shared/ai/claude";
-import { factsBlock, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
-import { adsSpec, emailSpec, insightsSpec, researchFor, socialSpec, strategySpec } from "../shared/agents/specs";
-import { runAgent, type AgentDeps } from "../shared/agents/runtime";
+import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
+import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
+import { adsSpec, conversionAuditSpec, emailSpec, insightsSpec, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
+import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
+import type { ModelKey } from "../shared/economics/rates";
 import { callModel } from "../convex/ai/providers";
 import { researchWebsite } from "../convex/ai/research";
 import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 
-// ---------- env ----------
+// ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const m = line.match(/^\s*(ANTHROPIC_API_KEY|GEMINI_API_KEY)\s*=\s*"?([^"#]*)"?/);
   if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
@@ -34,22 +43,40 @@ const arg = (name: string) => {
 const caseIds = (arg("cases") ?? CASES.map((c) => c.id).join(",")).split(",");
 const tasks = (arg("tasks") ?? TASKS_ALL.join(",")).split(",") as BenchTask[];
 const label = arg("label") ?? "run";
-const concurrency = Number(arg("concurrency") ?? 4);
-const arms = (arg("arms") ?? "v1,v2").split(",");
+const concurrency = Number(arg("concurrency") ?? 6);
+const arms = (arg("arms") ?? "v1,v0f,v2s").split(",");
+const compare = (arg("compare") ?? "v2s:v1,v2s:v0f").split(",").map((c) => c.split(":") as [string, string]);
+const judges = (arg("judges") ?? "opus,sonnet").split(",");
+const pointwise = arg("pointwise") !== "off";
 mkdirSync("bench/cache", { recursive: true });
+mkdirSync("bench/results", { recursive: true });
 
-async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+const JUDGE_MODELS: Record<string, ModelKey> = { opus: "claude-opus-5.5", sonnet: "claude-sonnet-5.5", fable: "claude-fable-5.1" };
+
+async function pool<T, R>(items: T[], n: number, fn: (t: T, i: number) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(n, items.length) }, async () => {
       while (next < items.length) {
         const i = next++;
-        out[i] = await fn(items[i]);
+        out[i] = await fn(items[i], i);
       }
     }),
   );
   return out;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Claude call with retries for transient errors (rate limits, overload, network). */
+async function turnWithRetry(req: ClaudeTurnRequest): Promise<ClaudeTurnResult> {
+  let r = await claudeTurn(req, rates);
+  for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
+    await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);
+    r = await claudeTurn(req, rates);
+  }
+  return r;
 }
 
 // ---------- shared inputs (cached) ----------
@@ -60,47 +87,52 @@ interface Prepared {
   insights: BusinessInsights;
 }
 
-async function prepare(c: BenchCase): Promise<Prepared> {
+async function prepare(c: BenchCase): Promise<Prepared | null> {
   const file = `bench/cache/${c.id}.json`;
   if (existsSync(file)) return { c, ...JSON.parse(readFileSync(file, "utf8")) };
-  console.log(`[prepare] ${c.id}: reading website`);
-  const res = await researchWebsite(c.website, 2);
-  const pagesText = res.pages
-    .filter((p) => p.status === "ok")
-    .map((p) => untrusted(p.url, `${p.text}\n${p.prices.join("\n")}`, 12_000))
-    .join("\n\n");
-  const pt = TASKS.business_profile;
-  const prof = await callModel(
-    {
-      modelKey: CURRENT_ROUTING.routes[pt.role].primary,
-      system: systemPrompt(pt.role),
-      user: `TASK: Build a concise, factual business profile from the website content below. Every fact must come from the content and cite the page URL it came from in sourceUrl. Mark anything uncertain as low confidence. Business name given by the owner: "${c.name}". Suggest 2-4 success events.\n\n${pagesText}`,
-      schema: pt.schema,
-      inputBudget: pt.inputBudget,
-      outputBudget: pt.outputBudget,
-    },
-    rates,
-  );
-  if (!prof.ok) throw new Error(`profile ${c.id}: ${prof.message}`);
-  const profile = prof.output as BusinessProfile;
-  // Shared insights (v1) so strategy and content are compared on identical inputs.
-  const it = TASKS.business_insights;
-  const ins = await callModel(
-    {
-      modelKey: CURRENT_ROUTING.routes[it.role].primary,
-      system: systemPrompt(it.role),
-      user: `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}\n\n${pagesText}`,
-      schema: it.schema,
-      inputBudget: it.inputBudget,
-      outputBudget: 6000,
-      webSearches: 2,
-    },
-    rates,
-  );
-  if (!ins.ok) throw new Error(`insights ${c.id}: ${ins.message}`);
-  const prepared = { profile, pagesText, insights: ins.output as BusinessInsights };
-  writeFileSync(file, JSON.stringify(prepared, null, 1));
-  return { c, ...prepared };
+  try {
+    console.log(`[prepare] ${c.id}: reading website`);
+    const res = await researchWebsite(c.website, 2);
+    const pagesText = res.pages
+      .filter((p) => p.status === "ok")
+      .map((p) => untrusted(p.url, `${p.text}\n${p.prices.join("\n")}`, 12_000))
+      .join("\n\n");
+    if (!pagesText.trim()) throw new Error("website unreadable");
+    const pt = TASKS.business_profile;
+    const prof = await callModel(
+      {
+        modelKey: CURRENT_ROUTING.routes[pt.role].primary,
+        system: systemPrompt(pt.role),
+        user: `TASK: Build a concise, factual business profile from the website content below. Every fact must come from the content and cite the page URL it came from in sourceUrl. Mark anything uncertain as low confidence. Business name given by the owner: "${c.name}". Suggest 2-4 success events.\n\n${pagesText}`,
+        schema: pt.schema,
+        inputBudget: pt.inputBudget,
+        outputBudget: pt.outputBudget,
+      },
+      rates,
+    );
+    if (!prof.ok) throw new Error(`profile: ${prof.message}`);
+    const profile = prof.output as BusinessProfile;
+    const it = TASKS.business_insights;
+    const ins = await callModel(
+      {
+        modelKey: CURRENT_ROUTING.routes[it.role].primary,
+        system: systemPrompt(it.role),
+        user: `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}\n\n${pagesText}`,
+        schema: it.schema,
+        inputBudget: it.inputBudget,
+        outputBudget: 6000,
+        webSearches: 2,
+      },
+      rates,
+    );
+    if (!ins.ok) throw new Error(`insights: ${ins.message}`);
+    const prepared = { profile, pagesText, insights: ins.output as BusinessInsights };
+    writeFileSync(file, JSON.stringify(prepared, null, 1));
+    return { c, ...prepared };
+  } catch (e) {
+    console.log(`[prepare] ${c.id} skipped: ${(e as Error).message}`);
+    return null;
+  }
 }
 
 function brief(p: Prepared, withInsights: boolean): string {
@@ -122,11 +154,20 @@ function brief(p: Prepared, withInsights: boolean): string {
 }
 
 // ---------- task definitions ----------
+type SpecFactory = (o: { models?: { draft?: ModelKey }; maxRevisions?: number }) => AgentSpec<unknown>;
 interface TaskDef {
   v1: { task: keyof typeof TASKS; prompt: (p: Prepared) => string; webSearches?: number };
-  v2: { spec: () => AgentSpec<unknown>; task: (p: Prepared) => string; research?: (p: Prepared) => AgentInput["research"] };
+  spec: SpecFactory;
+  task: (p: Prepared) => string;
+  research?: (p: Prepared) => AgentInput["research"];
+  /** Include the raw website text as untrusted context. */
+  pages?: boolean;
   judgeFocus: string;
 }
+
+const social = (channel: string): SpecFactory => (o) => socialSpec([channel], o) as unknown as AgentSpec<unknown>;
+const v1Social = (channel: string, n = 3) => (p: Prepared) =>
+  `TASK: Write ${n} social posts for ${channel} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${brief(p, true)}`;
 
 const DEFS: Record<BenchTask, TaskDef> = {
   insights: {
@@ -136,11 +177,10 @@ const DEFS: Record<BenchTask, TaskDef> = {
       prompt: (p) =>
         `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\n${brief(p, false)}\n\n${p.pagesText}`,
     },
-    v2: {
-      spec: insightsSpec as () => AgentSpec<unknown>,
-      task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and top opportunities.",
-      research: (p) => researchFor("business_insights", { website: p.c.website, businessName: p.c.name }),
-    },
+    spec: (o) => insightsSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.",
+    research: (p) => researchFor("business_insights", { website: p.c.website, businessName: p.c.name }),
+    pages: true,
     judgeFocus: "business intelligence (competitors, customers, positioning, opportunities) an owner could act on",
   },
   strategy: {
@@ -149,40 +189,47 @@ const DEFS: Record<BenchTask, TaskDef> = {
       prompt: (p) =>
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${brief(p, true)}`,
     },
-    v2: { spec: strategySpec as () => AgentSpec<unknown>, task: () => "Create the 90-day growth plan for the goal, within the stated budget." },
+    spec: (o) => strategySpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time.",
     judgeFocus: "a 90-day growth strategy",
   },
-  linkedin: {
-    v1: {
-      task: "social_posts",
-      prompt: (p) => `TASK: Write 3 social posts for linkedin that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${brief(p, true)}`,
-    },
-    v2: { spec: () => socialSpec(["linkedin"]) as unknown as AgentSpec<unknown>, task: () => "Write 3 LinkedIn posts (founder voice unless the brief suggests otherwise) that support the goal." },
-    judgeFocus: "LinkedIn posts",
-  },
-  instagram: {
-    v1: {
-      task: "social_posts",
-      prompt: (p) => `TASK: Write 3 social posts for instagram that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${brief(p, true)}`,
-    },
-    v2: { spec: () => socialSpec(["instagram"]) as unknown as AgentSpec<unknown>, task: () => "Write 3 Instagram posts (mix formats: at least one carousel) that support the goal." },
-    judgeFocus: "Instagram posts",
+  linkedin: { v1: { task: "social_posts", prompt: v1Social("linkedin") }, spec: social("linkedin"), task: () => "Write 3 LinkedIn posts (founder voice unless the brief suggests otherwise) that support the goal.", judgeFocus: "LinkedIn posts" },
+  instagram: { v1: { task: "social_posts", prompt: v1Social("instagram") }, spec: social("instagram"), task: () => "Write 3 Instagram posts that support the goal: mix formats, with at least one carousel (slide-by-slide).", judgeFocus: "Instagram posts" },
+  facebook: { v1: { task: "social_posts", prompt: v1Social("facebook") }, spec: social("facebook"), task: () => "Write 3 Facebook page posts that support the goal.", judgeFocus: "Facebook page posts" },
+  x: { v1: { task: "social_posts", prompt: v1Social("x") }, spec: social("x"), task: () => "Write 3 X posts that support the goal (one may be a short thread).", judgeFocus: "X (Twitter) posts" },
+  tiktok: {
+    v1: { task: "social_posts", prompt: v1Social("tiktok", 2) },
+    spec: social("tiktok"),
+    task: () => "Write 2 short-video scripts for TikTok/Reels that support the goal: hook in the first 2 seconds, timed beats, on-screen text, a phone-friendly shot list, caption and CTA.",
+    judgeFocus: "short-video scripts (TikTok/Reels)",
   },
   ads: {
-    v1: {
-      task: "ad_drafts",
-      prompt: (p) => `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${brief(p, true)}`,
-    },
-    v2: { spec: adsSpec as () => AgentSpec<unknown>, task: () => "Draft one Google search ad (responsive search ad) and Meta ads (distinct concepts) for the goal, within budget. Ads stay paused until the owner approves." },
+    v1: { task: "ad_drafts", prompt: (p) => `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${brief(p, true)}` },
+    spec: (o) => adsSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within budget. Ads stay paused until the owner approves.",
+    research: (p) => researchFor("ad_drafts", { website: p.c.website, businessName: p.c.name }),
     judgeFocus: "paid ads (Google search + Meta)",
   },
   email: {
-    v1: {
-      task: "email_sequence",
-      prompt: (p) => `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${brief(p, true)}`,
-    },
-    v2: { spec: emailSpec as () => AgentSpec<unknown>, task: () => "Write a short nurture email sequence (3 emails) for people who opted in, using {{first_name}} with a safe fallback." },
+    v1: { task: "email_sequence", prompt: (p) => `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${brief(p, true)}` },
+    spec: (o) => emailSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Write a short nurture email sequence (3 emails) for people who opted in, using {{first_name}} with a safe fallback.",
     judgeFocus: "a lifecycle email sequence",
+  },
+  seo: {
+    v1: { task: "seo_brief", webSearches: 2, prompt: (p) => `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft.\n\n${brief(p, true)}` },
+    spec: (o) => seoSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Plan and draft one genuinely helpful page targeting a real, high-intent search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft.",
+    research: (p) => researchFor("seo_brief", { website: p.c.website, businessName: p.c.name }),
+    judgeFocus: "an SEO page (brief + draft)",
+  },
+  audit: {
+    v1: { task: "conversion_audit", prompt: (p) => `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${brief(p, false)}\n\n${p.pagesText}` },
+    spec: (o) => conversionAuditSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => "Audit the money page(s) for conversion: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite the page URL for each finding and prioritise the fixes.",
+    research: (p) => researchFor("conversion_audit", { website: p.c.website, businessName: p.c.name }),
+    pages: true,
+    judgeFocus: "a conversion audit of the website",
   },
 };
 
@@ -203,15 +250,7 @@ async function runV1(p: Prepared, t: BenchTask): Promise<ArmResult> {
   const contract = TASKS[d.task];
   const t0 = Date.now();
   const res = await callModel(
-    {
-      modelKey: CURRENT_ROUTING.routes[contract.role].primary,
-      system: systemPrompt(contract.role),
-      user: d.prompt(p),
-      schema: contract.schema,
-      inputBudget: contract.inputBudget,
-      outputBudget: contract.outputBudget,
-      webSearches: d.webSearches,
-    },
+    { modelKey: CURRENT_ROUTING.routes[contract.role].primary, system: systemPrompt(contract.role), user: d.prompt(p), schema: contract.schema, inputBudget: contract.inputBudget, outputBudget: contract.outputBudget, webSearches: d.webSearches },
     rates,
   );
   return res.ok
@@ -219,36 +258,66 @@ async function runV1(p: Prepared, t: BenchTask): Promise<ArmResult> {
     : { arm: "v1", ok: false, error: res.message, costMicros: res.costMicros, ms: Date.now() - t0 };
 }
 
-async function runV2(p: Prepared, t: BenchTask): Promise<ArmResult> {
-  const d = DEFS[t].v2;
-  const spec = d.spec();
+function inputFor(p: Prepared, t: BenchTask): AgentInput {
+  const d = DEFS[t];
+  return {
+    task: d.task(p),
+    brief: brief(p, t !== "insights" && t !== "audit"),
+    untrustedContext: d.pages ? p.pagesText : undefined,
+    research: d.research?.(p),
+    facts: p.profile.facts.map((f) => f.statement),
+  };
+}
+
+/** Frontier one-shot: the strongest model, one call, same brief/schema/search budget, no skills or loop. */
+async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
+  const spec = DEFS[t].spec({});
+  const input = inputFor(p, t);
+  const t0 = Date.now();
+  const r = await turnWithRetry({
+    modelKey: "claude-opus-5.5",
+    system: [{ text: OPERATING_RULES }, { text: `${ROLE_CHARTERS[spec.role]} You are a world-class expert at this work.` }],
+    messages: [
+      {
+        role: "user",
+        content: `BUSINESS BRIEF:\n${input.brief}${input.untrustedContext ? `\n\nWEBSITE (untrusted data):\n${untrusted("website", input.untrustedContext, 30_000)}` : ""}\n\nYOUR TASK:\n${input.task}\n\nRespond only with JSON matching the schema.`,
+      },
+    ],
+    schema: spec.schema,
+    maxTokens: 32_000,
+    effort: "high",
+    webSearch: input.research ? { maxUses: input.research.maxSearches } : undefined,
+    webFetch: input.research?.maxFetches ? { maxUses: input.research.maxFetches } : undefined,
+  });
+  return r.ok ? { arm: "v0f", ok: true, output: r.output, costMicros: r.costMicros, ms: Date.now() - t0 } : { arm: "v0f", ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
+}
+
+async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
+  const draft: ModelKey = arm.startsWith("v2o") ? "claude-opus-5.5" : "claude-sonnet-5.5";
+  const maxRevisions = arm.endsWith("1") ? 1 : 2;
+  const spec = DEFS[t].spec({ models: { draft }, maxRevisions });
   let cost = 0;
   const deps: AgentDeps = {
-    turn: async (req: ClaudeTurnRequest) => {
-      let r = await claudeTurn(req, rates);
-      if (!r.ok && r.kind === "rate_limited") {
-        await new Promise((res) => setTimeout(res, r.ok ? 0 : (r.retryAfterMs ?? 15_000)));
-        r = await claudeTurn(req, rates);
-      }
+    turn: async (req) => {
+      const r = await turnWithRetry(req);
       cost += r.costMicros;
       return r;
     },
     phase: async (_key, _label, fn) => (await fn()).value,
   };
-  const input: AgentInput = {
-    task: d.task(p),
-    brief: brief(p, t !== "insights"),
-    untrustedContext: t === "insights" ? p.pagesText : undefined,
-    research: d.research?.(p),
-    facts: p.profile.facts.map((f) => f.statement),
-  };
   const t0 = Date.now();
   try {
-    const r = await runAgent(spec, input, deps);
-    return { arm: "v2", ok: true, output: r.output, costMicros: cost, ms: Date.now() - t0, rounds: r.rounds, history: r.history };
+    const r = await runAgent(spec, inputFor(p, t), deps);
+    return { arm, ok: true, output: r.output, costMicros: cost, ms: Date.now() - t0, rounds: r.rounds, history: r.history };
   } catch (e) {
-    return { arm: "v2", ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
+    return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
   }
+}
+
+function runArm(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
+  if (arm === "v1") return runV1(p, t);
+  if (arm === "v0f") return runFrontier(p, t);
+  return runV2(p, t, arm);
 }
 
 // ---------- judging ----------
@@ -269,84 +338,154 @@ Weigh, in order:
 3. Craft for the channel: would it perform on the platform as written (hooks, structure, limits, native style)?
 4. Usefulness to a non-expert owner: clear, honest, ready to use.
 
-Do not reward length for its own sake. Do not reward polish over truth. If both are equally good or equally weak, say tie.`;
+Do not reward length or extra fields for their own sake. Do not reward polish over truth. If both are equally good or equally weak, say tie.`;
 
-async function judgeOnce(model: "claude-opus-5.5" | "claude-sonnet-5.5", p: Prepared, t: BenchTask, a: unknown, b: unknown): Promise<Verdict | null> {
-  const r = await claudeTurn(
-    {
-      modelKey: model,
-      system: [{ text: JUDGE_SYSTEM, cache: true }],
-      messages: [
-        {
-          role: "user",
-          content: `THE OWNER'S BUSINESS:\n${brief(p, true)}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\n=== WORK A ===\n${JSON.stringify(a, null, 1).slice(0, 40_000)}\n\n=== WORK B ===\n${JSON.stringify(b, null, 1).slice(0, 40_000)}\n\nWhich is better?`,
-        },
-      ],
-      schema: VerdictSchema,
-      maxTokens: 6000,
-      effort: "medium",
-    },
-    rates,
-  );
+async function judgeOnce(judge: string, p: Prepared, t: BenchTask, a: unknown, b: unknown): Promise<Verdict | null> {
+  const r = await turnWithRetry({
+    modelKey: JUDGE_MODELS[judge],
+    system: [{ text: JUDGE_SYSTEM, cache: true }],
+    messages: [
+      {
+        role: "user",
+        content: `THE OWNER'S BUSINESS:\n${brief(p, true)}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\n=== WORK A ===\n${JSON.stringify(a, null, 1).slice(0, 40_000)}\n\n=== WORK B ===\n${JSON.stringify(b, null, 1).slice(0, 40_000)}\n\nWhich is better?`,
+      },
+    ],
+    schema: VerdictSchema,
+    maxTokens: 12_000,
+    effort: "medium",
+  });
   return r.ok ? (r.output as Verdict) : null;
 }
 
-/** Both orders; a win counts only if consistent, otherwise tie. Returns v2's result. */
-async function judge(model: "claude-opus-5.5" | "claude-sonnet-5.5", p: Prepared, t: BenchTask, v1: unknown, v2: unknown) {
-  const [ab, ba] = await Promise.all([judgeOnce(model, p, t, v1, v2), judgeOnce(model, p, t, v2, v1)]);
-  if (!ab || !ba) return { result: "error" as const, ab, ba };
-  const first = ab.winner === "B" ? "v2" : ab.winner === "A" ? "v1" : "tie";
-  const second = ba.winner === "A" ? "v2" : ba.winner === "B" ? "v1" : "tie";
-  const result = first === second ? first : "tie";
-  return { result, ab, ba };
+/** Both orders; a win counts only if both agree, otherwise a tie. Result is from x's point of view. */
+async function pairwise(judge: string, p: Prepared, t: BenchTask, x: unknown, y: unknown) {
+  const [xy, yx] = await Promise.all([judgeOnce(judge, p, t, x, y), judgeOnce(judge, p, t, y, x)]);
+  if (!xy || !yx) return { result: "error" as const, reasons: [] as string[] };
+  const first = xy.winner === "A" ? "win" : xy.winner === "B" ? "loss" : "tie";
+  const second = yx.winner === "B" ? "win" : yx.winner === "A" ? "loss" : "tie";
+  return { result: (first === second ? first : "tie") as "win" | "loss" | "tie", reasons: xy.reasons, truthX: xy.truthProblemsA, truthY: xy.truthProblemsB };
+}
+
+const ScoreSchema = z.object({
+  truth: z.number(),
+  specificity: z.number(),
+  strategy: z.number(),
+  craft: z.number(),
+  usefulness: z.number(),
+  overall: z.number(),
+  topIssue: z.string(),
+});
+type Score = z.infer<typeof ScoreSchema>;
+
+async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | null> {
+  const r = await turnWithRetry({
+    modelKey: "claude-opus-5.5",
+    system: [
+      {
+        text: `You are a strict senior marketing expert. Score one piece of work for a small business from 1 to 10 on each dimension, where 10 means the best work a top specialist anywhere would produce, 7 means solid professional work, 5 means usable after real edits and 3 or below means it should be redone.
+- truth: every claim traceable to confirmed facts or cited sources (invented numbers/customers/quotes score 1-3)
+- specificity: unmistakably for this business and audience
+- strategy: focused, prioritized, sound judgement for this goal and budget
+- craft: would perform on the channel as written
+- usefulness: ready for a non-expert owner to use
+- overall: your overall verdict
+- topIssue: the single biggest problem, in one sentence.`,
+        cache: true,
+      },
+    ],
+    messages: [{ role: "user", content: `THE OWNER'S BUSINESS:\n${brief(p, true)}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\nTHE WORK:\n${JSON.stringify(work, null, 1).slice(0, 40_000)}` }],
+    schema: ScoreSchema,
+    maxTokens: 8000,
+    effort: "medium",
+  });
+  return r.ok ? (r.output as Score) : null;
 }
 
 // ---------- main ----------
 async function main() {
   const cases = CASES.filter((c) => caseIds.includes(c.id));
-  const prepared = await pool(cases, 3, prepare);
+  const prepared = (await pool(cases, 4, prepare)).filter((p): p is Prepared => Boolean(p));
   const jobs = prepared.flatMap((p) => tasks.map((t) => ({ p, t })));
-  console.log(`Running ${jobs.length} case×task pairs (${arms.join(" vs ")}), concurrency ${concurrency}`);
-  const results = await pool(jobs, concurrency, async ({ p, t }) => {
-    const [v1, v2] = await Promise.all([arms.includes("v1") ? runV1(p, t) : null, arms.includes("v2") ? runV2(p, t) : null]);
-    let opus = null;
-    let sonnet = null;
-    if (v1?.ok && v2?.ok) {
-      [opus, sonnet] = await Promise.all([judge("claude-opus-5.5", p, t, v1.output, v2.output), judge("claude-sonnet-5.5", p, t, v1.output, v2.output)]);
-    }
-    console.log(`  ${p.c.id}/${t}: v1 ${v1?.ok ? "ok" : v1?.error} · v2 ${v2?.ok ? `ok (${v2.rounds} rounds, $${(v2.costMicros / 1e6).toFixed(3)}, ${Math.round(v2.ms / 1000)}s)` : v2?.error} · opus: ${opus?.result} · sonnet: ${sonnet?.result}`);
-    return { case: p.c.id, task: t, v1, v2, opus, sonnet };
-  });
-
+  console.log(`Running ${jobs.length} case×task pairs · arms ${arms.join(", ")} · compare ${compare.map((c) => c.join(">")).join(", ")} · judges ${judges.join(", ")} · concurrency ${concurrency}`);
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
   const base = `bench/results/${stamp}-${label}`;
-  writeFileSync(`${base}.json`, JSON.stringify(results, null, 1));
+  const results: Record<string, unknown>[] = [];
 
-  const count = (judgeKey: "opus" | "sonnet", r: string) => results.filter((x) => x[judgeKey]?.result === r).length;
-  const judged = results.filter((r) => r.opus && r.opus.result !== "error").length;
-  const lines = [
-    `# Benchmark: ${label} (${new Date().toISOString().slice(0, 10)})`,
-    "",
-    `Cases: ${caseIds.join(", ")} · Tasks: ${tasks.join(", ")} · Judged pairs: ${judged}`,
-    "",
-    "| Judge | v2 wins | ties | v1 wins |",
-    "|---|---|---|---|",
-    `| Opus 5.5 (both orders) | ${count("opus", "v2")} | ${count("opus", "tie")} | ${count("opus", "v1")} |`,
-    `| Sonnet 5.5 (both orders) | ${count("sonnet", "v2")} | ${count("sonnet", "tie")} | ${count("sonnet", "v1")} |`,
-    "",
-    "| Case | Task | Opus | Sonnet | v1 cost | v2 cost | v2 rounds | v2 time |",
-    "|---|---|---|---|---|---|---|---|",
-    ...results.map(
-      (r) =>
-        `| ${r.case} | ${r.task} | ${r.opus?.result ?? "—"} | ${r.sonnet?.result ?? "—"} | $${((r.v1?.costMicros ?? 0) / 1e6).toFixed(3)} | $${((r.v2?.costMicros ?? 0) / 1e6).toFixed(3)} | ${r.v2?.rounds ?? "—"} | ${r.v2 ? Math.round(r.v2.ms / 1000) + "s" : "—"} |`,
-    ),
-    "",
-    "## Judge reasons (Opus, v1 shown as A)",
-    ...results.flatMap((r) => [`### ${r.case} / ${r.task}: ${r.opus?.result ?? "not judged"}`, ...(r.opus?.ab?.reasons ?? []).map((x: string) => `- ${x}`), ...(r.v2?.ok ? [] : [`- v2 error: ${r.v2?.error}`])]),
-  ];
-  writeFileSync(`${base}.md`, lines.join("\n"));
-  console.log(`\nWrote ${base}.md`);
-  console.log(lines.slice(0, 9).join("\n"));
+  await pool(jobs, concurrency, async ({ p, t }) => {
+    const outs: Record<string, ArmResult> = {};
+    await Promise.all(arms.map(async (a) => (outs[a] = await runArm(p, t, a))));
+    const comparisons: Record<string, Record<string, unknown>> = {};
+    await Promise.all(
+      compare.map(async ([x, y]) => {
+        if (!outs[x]?.ok || !outs[y]?.ok) return;
+        comparisons[`${x}>${y}`] = {};
+        await Promise.all(judges.map(async (j) => (comparisons[`${x}>${y}`][j] = await pairwise(j, p, t, outs[x].output, outs[y].output))));
+      }),
+    );
+    const scores: Record<string, Score | null> = {};
+    if (pointwise) await Promise.all(arms.map(async (a) => (scores[a] = outs[a]?.ok ? await score(p, t, outs[a].output) : null)));
+    const row = { case: p.c.id, type: p.c.type, task: t, outs, comparisons, scores };
+    results.push(row);
+    writeFileSync(`${base}.json`, JSON.stringify(results, null, 1)); // incremental, safe to inspect mid-run
+    const cmp = Object.entries(comparisons)
+      .map(([k, v]) => `${k} ${Object.entries(v).map(([j, r]) => `${j}:${(r as { result: string }).result}`).join("/")}`)
+      .join(" · ");
+    const sc = Object.entries(scores)
+      .map(([a, s]) => `${a}=${s?.overall ?? "–"}`)
+      .join(" ");
+    console.log(`  ${p.c.id}/${t}: ${arms.map((a) => `${a} ${outs[a]?.ok ? `$${(outs[a].costMicros / 1e6).toFixed(2)} ${Math.round(outs[a].ms / 1000)}s` : `ERR ${outs[a]?.error?.slice(0, 60)}`}`).join(" | ")} · ${cmp} · ${sc}`);
+  });
+
+  writeFileSync(`${base}.json`, JSON.stringify(results, null, 1));
+  writeFileSync(`${base}.md`, summarize(results));
+  console.log(`\nWrote ${base}.md and .json`);
+  console.log(summarize(results).split("\n").slice(0, 40).join("\n"));
+}
+
+function mean(xs: number[]): number {
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN;
+}
+
+function summarize(rows: Record<string, unknown>[]): string {
+  type Row = { case: string; task: BenchTask; outs: Record<string, ArmResult>; comparisons: Record<string, Record<string, { result: string; reasons: string[] }>>; scores: Record<string, Score | null> };
+  const R = rows as unknown as Row[];
+  const lines: string[] = [`# Benchmark: ${label} (${new Date().toISOString().slice(0, 10)})`, "", `Cases: ${[...new Set(R.map((r) => r.case))].join(", ")} · Tasks: ${tasks.join(", ")} · Arms: ${arms.join(", ")}`, ""];
+  lines.push("## Pairwise (both orders; a win needs both orders to agree)", "", "| Comparison | Judge | Wins | Ties | Losses | Win rate (excl. ties) |", "|---|---|---|---|---|---|");
+  for (const [x, y] of compare) {
+    for (const j of judges) {
+      const res = R.map((r) => r.comparisons[`${x}>${y}`]?.[j]?.result).filter(Boolean) as string[];
+      const w = res.filter((s) => s === "win").length;
+      const l = res.filter((s) => s === "loss").length;
+      const tie = res.filter((s) => s === "tie").length;
+      lines.push(`| ${x} vs ${y} | ${j} | ${w} | ${tie} | ${l} | ${w + l ? Math.round((100 * w) / (w + l)) : "–"}% |`);
+    }
+  }
+  if (pointwise) {
+    lines.push("", "## Absolute expert scores (Opus judge, 1–10, mean)", "", `| Task | ${arms.join(" | ")} |`, `|---|${arms.map(() => "---").join("|")}|`);
+    for (const t of [...tasks, "ALL" as const]) {
+      const rs = t === "ALL" ? R : R.filter((r) => r.task === t);
+      lines.push(`| ${t} | ${arms.map((a) => mean(rs.map((r) => r.scores[a]?.overall).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
+    }
+    lines.push("", "| Dimension (all tasks) | " + arms.join(" | ") + " |", `|---|${arms.map(() => "---").join("|")}|`);
+    for (const dim of ["truth", "specificity", "strategy", "craft", "usefulness"] as const) {
+      lines.push(`| ${dim} | ${arms.map((a) => mean(R.map((r) => r.scores[a]?.[dim]).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
+    }
+  }
+  lines.push("", "## Cost and time per job (mean)", "", "| Task | " + arms.map((a) => `${a} $ / s`).join(" | ") + " |", `|---|${arms.map(() => "---").join("|")}|`);
+  for (const t of tasks) {
+    const rs = R.filter((r) => r.task === t);
+    lines.push(`| ${t} | ${arms.map((a) => `${mean(rs.map((r) => r.outs[a]?.costMicros ?? 0)).toFixed(0) === "NaN" ? "–" : (mean(rs.map((r) => (r.outs[a]?.costMicros ?? 0) / 1e6))).toFixed(3)} / ${Math.round(mean(rs.map((r) => (r.outs[a]?.ms ?? 0) / 1000)))}`).join(" | ")} |`);
+  }
+  const errors = R.flatMap((r) => Object.values(r.outs).filter((o) => !o.ok).map((o) => `${r.case}/${r.task} ${o.arm}: ${o.error}`));
+  if (errors.length) lines.push("", "## Errors", "", ...errors.map((e) => `- ${e}`));
+  lines.push("", "## Losses to read (first judge, reasons)", "");
+  for (const r of R) {
+    for (const [k, v] of Object.entries(r.comparisons)) {
+      const first = v[judges[0]];
+      if (first?.result === "loss") lines.push(`- **${r.case}/${r.task} ${k}**: ${first.reasons.slice(0, 3).join(" / ")}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 main().catch((e) => {

@@ -34,6 +34,7 @@ import { microsToDisplay, relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
 import { useNow } from "@/components/app/content/shared";
+import { ASK_KEY } from "@/components/app/CommandPalette";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -50,15 +51,15 @@ const SUGGESTIONS: { text: string; icon: LucideIcon; tone: Tone }[] = [
   { text: "Draft a small Google search ad test", icon: Target, tone: "red" },
 ];
 
-function StatCard({ icon, tone, label, value, hint }: { icon: LucideIcon; tone: Tone; label: string; value: string | number; hint: string }) {
+function StatCard({ icon: Icon, tone, label, value, hint }: { icon: LucideIcon; tone: Tone; label: string; value: string | number; hint: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
-      <IconTile icon={icon} tone={tone} size="lg" />
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink-2">{label}</p>
-        <p className="text-2xl font-extrabold tracking-tight text-ink">{value}</p>
-        <p className="text-xs leading-snug text-ink-3">{hint}</p>
+    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] font-medium text-ink-3">{label}</p>
+        <IconTile icon={Icon} tone={tone} size="xs" />
       </div>
+      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-ink">{value}</p>
+      <p className="mt-0.5 text-xs text-ink-3">{hint}</p>
     </div>
   );
 }
@@ -111,15 +112,12 @@ export default function TodayPage() {
     <div className="mx-auto max-w-6xl space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-ink-3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+          <p className="text-[13px] text-ink-3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+          <h1 className="mt-1 text-[28px] leading-9 text-ink">
             {greeting()}
             {firstName ? `, ${firstName}` : ""}
           </h1>
-          <p className="mt-1 text-ink-2">Here’s what your AI growth team is working on{data.org.name ? ` for ${data.org.name.replace(/ \(demo\)$/i, "")}` : ""}.</p>
-        </div>
-        <div className="hidden md:block">
-          <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
+          <p className="mt-1 text-[15px] text-ink-3">Here’s what your AI growth team is working on{data.org.name ? ` for ${data.org.name.replace(/ \(demo\)$/i, "")}` : ""}.</p>
         </div>
       </header>
 
@@ -146,37 +144,33 @@ export default function TodayPage() {
       )}
 
       {/* Goal */}
-      <section aria-label="Your goal" className="bg-hero-gradient relative overflow-hidden rounded-2xl p-6 text-white sm:p-8">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 right-24 size-48 rounded-full bg-white/10" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur">
-            <Target className="size-7" aria-hidden />
-          </span>
+      <section aria-label="Your goal" className="relative overflow-hidden rounded-xl border border-line bg-surface p-5 shadow-sm">
+        <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-brand-800" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <IconTile icon={Target} tone="brand" size="md" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold uppercase tracking-wider text-white/80">Your goal</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-3">Your goal</p>
             {data.goal ? (
               <>
-                <p className="mt-1 font-display text-2xl font-medium leading-snug sm:text-3xl">{data.goal.statement}</p>
-                <p className="mt-2 flex flex-wrap gap-2 text-sm">
-                  <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{data.goal.horizonDays} days</span>
-                  <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">
+                <p className="mt-0.5 text-lg font-semibold leading-snug text-ink">{data.goal.statement}</p>
+                <p className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge tone="neutral">{data.goal.horizonDays} days</Badge>
+                  <Badge tone="neutral">
                     {data.goal.monthlyAdBudget > 0
                       ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: data.goal.currency, maximumFractionDigits: 0 }).format(data.goal.monthlyAdBudget)}/month ads, paid to the platforms`
                       : "No paid ads"}
-                  </span>
+                  </Badge>
                 </p>
               </>
             ) : (
-              <p className="mt-1 text-xl font-bold">No goal yet. Tell your team what you’d like to achieve.</p>
+              <p className="mt-0.5 text-lg font-semibold text-ink">No goal yet. Tell your team what you’d like to achieve.</p>
             )}
           </div>
-          <Link
-            href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-sun px-5 font-medium text-ink transition hover:brightness-95"
-          >
-            {data.goal ? "See the plan" : "Set a goal"} <ArrowRight className="size-4" aria-hidden />
-          </Link>
+          <Button asChild variant="secondary" size="md">
+            <Link href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}>
+              {data.goal ? "See the plan" : "Set a goal"} <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </Button>
         </div>
       </section>
 
@@ -188,39 +182,35 @@ export default function TodayPage() {
         <StatCard icon={Users} tone="violet" label="Your AI team" value={10} hint="Specialists on your business" />
       </section>
 
-      {/* Next actions */}
-      <section aria-labelledby="next-heading">
-        <h2 id="next-heading" className="text-xl font-bold text-ink">Do these next</h2>
+      {/* Next actions: Apollo-style checklist card */}
+      <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
+          <div>
+            <h2 id="next-heading" className="flex items-center gap-2 text-xl text-ink">
+              Do these next {data.next.length ? <Badge tone="brand">{data.next.length} to do</Badge> : null}
+            </h2>
+            <p className="mt-0.5 text-[15px] text-ink-3">Your team lines these up. Nothing goes live until you approve it.</p>
+          </div>
+        </div>
         {data.next.length === 0 ? (
-          <EmptyState
-            className="mt-4"
-            icon={<CheckCircle2 aria-hidden />}
-            title="You're all caught up"
-            body="Nothing needs you right now. Ask your team for something below, or check Results."
-          />
+          <div className="p-5">
+            <EmptyState icon={<CheckCircle2 aria-hidden />} title="You're all caught up" body="Nothing needs you right now. Ask your team for something below, or check Results." />
+          </div>
         ) : (
-          <ol className="mt-4 grid gap-4 md:grid-cols-3">
+          <ol className="mt-3 divide-y divide-line border-t border-line">
             {data.next.map((n, i) => {
               const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
               return (
-                <li key={`${n.kind}-${i}`}>
-                  <Link
-                    href={n.href}
-                    className="group flex h-full flex-col rounded-2xl border border-line bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md"
-                  >
-                    <span className="flex items-center justify-between">
-                      <IconTile icon={v.icon} tone={v.tone} size="md" />
-                      <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold text-ink-2">
-                        Step {i + 1}
-                        <span className="sr-only"> of {data.next.length}</span>
-                      </span>
-                    </span>
-                    <span className="mt-4 text-lg font-bold leading-snug text-ink">{n.title}</span>
-                    <span className="mt-1 flex-1 text-sm text-ink-2">{n.why}</span>
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-brand-800">
-                      Open <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
-                    </span>
-                  </Link>
+                <li key={`${n.kind}-${i}`} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
+                  <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center rounded-md border border-line-strong" />
+                  <IconTile icon={v.icon} tone={v.tone} size="sm" />
+                  <p className="min-w-0 flex-1 text-[15px] leading-6 text-ink-3">
+                    <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
+                    <span className="font-semibold text-ink">{n.title}</span> {n.why}
+                  </p>
+                  <Button asChild size="md" variant={i === 0 ? "primary" : "secondary"}>
+                    <Link href={n.href}>Open</Link>
+                  </Button>
                 </li>
               );
             })}
@@ -251,6 +241,21 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
   const listRef = useRef<HTMLOListElement>(null);
   const thinking = data.chat.some((m) => m.status === "thinking");
   useEffect(() => {
+    // A question asked from the ⌘K palette arrives ready to send.
+    try {
+      const asked = sessionStorage.getItem(ASK_KEY);
+      if (asked) {
+        sessionStorage.removeItem(ASK_KEY);
+        queueMicrotask(() => {
+          setText(asked);
+          document.getElementById("chat-input")?.focus();
+        });
+      }
+    } catch {
+      // Storage unavailable.
+    }
+  }, []);
+  useEffect(() => {
     // Scroll only the conversation, never the page.
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
@@ -258,26 +263,25 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
 
   return (
     <section aria-labelledby="chat-heading" className="flex flex-col">
-      <div className="flex items-center gap-3">
-        <IconTile icon={Sparkles} tone="brand" size="md" solid />
-        <div>
-          <h2 id="chat-heading" className="text-xl font-bold text-ink">Ask your team</h2>
-          <p className="text-sm text-ink-2">Say what you want in your own words. You approve every action.</p>
-        </div>
+      <div>
+        <h2 id="chat-heading" className="flex items-center gap-2 text-xl text-ink">
+          <Sparkles className="size-5 text-brand-800" aria-hidden="true" /> Ask your team
+        </h2>
+        <p className="mt-0.5 text-[15px] text-ink-3">Say what you want in your own words. You approve every action.</p>
       </div>
       <Card className="mt-4 flex flex-1 flex-col">
         <CardContent className="flex flex-1 flex-col gap-4 p-4 sm:p-5">
           {data.chat.length === 0 ? (
-            <div className="bg-soft-gradient rounded-2xl p-4 text-sm text-ink-2">
-              <p className="font-semibold text-ink">Try one of these</p>
+            <div className="rounded-lg border border-line bg-surface-2 p-3.5 text-sm text-ink-2">
+              <p className="text-[13px] font-medium text-ink">Try one of these</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s.text}
                     onClick={() => setText(s.text)}
-                    className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2 text-left text-sm font-medium text-ink shadow-sm transition hover:border-brand-200 hover:shadow"
+                    className="flex min-h-10 items-center gap-2.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-left text-[13px] text-ink transition hover:border-line-strong"
                   >
-                    <IconTile icon={s.icon} tone={s.tone} size="sm" />
+                    <IconTile icon={s.icon} tone={s.tone} size="xs" />
                     {s.text}
                   </button>
                 ))}
@@ -451,9 +455,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   return (
     <section aria-labelledby="approvals-heading">
       <div className="flex items-center justify-between">
-        <h2 id="approvals-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
-          <IconTile icon={FileCheck2} tone="amber" size="sm" /> Waiting for you
-        </h2>
+        <h2 id="approvals-heading" className="text-xl text-ink">Waiting for you</h2>
         {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount} to review</Badge>}
       </div>
       <Card className="mt-4">
@@ -497,10 +499,8 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
 function TeamPanel({ working }: { working: Set<string> }) {
   return (
     <section aria-labelledby="team-heading">
-      <h2 id="team-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
-        <IconTile icon={Users} tone="violet" size="sm" /> Your AI team
-      </h2>
-      <p className="mt-1 text-sm text-ink-2">Ten specialists sharing one brain about your business.</p>
+      <h2 id="team-heading" className="text-xl text-ink">Your AI team</h2>
+      <p className="mt-0.5 text-[15px] text-ink-3">Ten specialists sharing one brain about your business.</p>
       <ul className="mt-4 grid grid-cols-2 gap-2">
         {Object.entries(ROLE_META).map(([key, r]) => {
           const active = working.has(key);
@@ -525,9 +525,7 @@ function TeamPanel({ working }: { working: Set<string> }) {
 function RecentWork({ data }: { data: Today }) {
   return (
     <section aria-labelledby="recent-heading">
-      <h2 id="recent-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
-        <IconTile icon={Clock3} tone="teal" size="sm" /> Latest work
-      </h2>
+      <h2 id="recent-heading" className="text-xl text-ink">Latest work</h2>
       {data.recent.length === 0 ? (
         <p className="mt-3 text-sm text-ink-2">No work yet. Ask for something above to get started.</p>
       ) : (

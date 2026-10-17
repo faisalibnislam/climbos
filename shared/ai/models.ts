@@ -23,6 +23,17 @@ export interface ModelSpec {
 }
 
 export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
+  "claude-fable-5.1": {
+    key: "claude-fable-5.1",
+    provider: "anthropic",
+    apiModelId: "claude-fable-5-1",
+    availability: "enabled",
+    contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    structuredOutput: "json_schema",
+    verifiedAt: "2026-10-17",
+    docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
+  },
   "claude-opus-5.5": {
     key: "claude-opus-5.5",
     provider: "anthropic",

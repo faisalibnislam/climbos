@@ -15,8 +15,12 @@ import {
   Plug,
   Settings,
   Sparkles,
+  Search,
+  Bell,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
+import { CommandPalette } from "./CommandPalette";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -25,8 +29,6 @@ import {
   Badge,
   Button,
   Callout,
-  IconTile,
-  type Tone,
   ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +43,13 @@ import {
 import { cn } from "@/lib/utils";
 import { errorMessage } from "./errors";
 
-const NAV: { key: string; label: string; icon: LucideIcon; tone: Tone; group: string }[] = [
-  { key: "today", label: "Today", icon: Home, tone: "brand", group: "" },
-  { key: "plan", label: "Growth plan", icon: Compass, tone: "violet", group: "Grow" },
-  { key: "content", label: "Content", icon: CalendarDays, tone: "pink", group: "Grow" },
-  { key: "results", label: "Results", icon: BarChart3, tone: "teal", group: "Measure" },
-  { key: "connections", label: "Connections", icon: Plug, tone: "orange", group: "Setup" },
+const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?: string }[] = [
+  { key: "today", label: "Today", icon: Home, group: "" },
+  { key: "plan", label: "Growth plan", icon: Compass, group: "Grow" },
+  { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
+  { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
+  { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
+  { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
 ];
 const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
 
@@ -67,50 +70,62 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
   return (
     <div className="min-h-dvh bg-bg">
       <Toaster />
+      <CommandPalette slug={slug} />
       {isDemo && <DemoBanner slug={slug} />}
       {pause?.paused && <PausedBanner slug={slug} canResume={current?.role === "owner" || current?.role === "admin"} />}
-      <div className="mx-auto flex w-full max-w-[1400px]">
+      <div className="flex w-full">
         {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-dvh w-[256px] shrink-0 flex-col border-r border-line bg-surface-2 px-4 py-5 lg:flex" aria-label="Main">
-          <Link href={`/app/${slug}/today`} className="mb-5 px-2" aria-label="ClimbOS home">
-            <Logo />
+        <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-2 pb-3 pt-3 lg:flex" aria-label="Main">
+          <Link href={`/app/${slug}/today`} className="mb-3 px-2" aria-label="ClimbOS home">
+            <Logo markClassName="size-6" className="[&>span:last-child]:text-base" />
           </Link>
           <WorkspaceSwitcher slug={slug} />
-          <nav className="mt-5 flex flex-col gap-4" aria-label="Primary">
+          <nav className="mt-3 flex flex-col gap-2" aria-label="Primary">
             {NAV_GROUPS.map((group) => (
-              <div key={group || "home"} className="flex flex-col gap-0.5">
-                {group ? <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{group}</p> : null}
+              <NavGroup key={group || "home"} label={group}>
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} href={`/app/${slug}/${item.key}`} active={section === item.key} icon={<IconTile icon={item.icon} tone={item.tone} size="sm" className="nav-tile" />}>
+                  <NavLink key={item.key} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />}>
                     {item.label}
                   </NavLink>
                 ))}
-              </div>
+              </NavGroup>
             ))}
           </nav>
-          <div className="mt-auto flex flex-col gap-1 pt-6">
-            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<IconTile icon={Settings} tone="neutral" size="sm" className="nav-tile" />}>
+          <div className="mt-auto flex flex-col gap-1 pt-4">
+            <Link href={`/app/${slug}/settings/billing`} className="mb-1 flex h-8 items-center justify-center rounded-lg bg-sun text-[13px] font-medium text-ink hover:brightness-95">
+              Plans and usage
+            </Link>
+            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
               Settings
             </NavLink>
             <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />
-            <AccountMenu />
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top bar */}
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur lg:hidden">
-            <Link href={`/app/${slug}/today`} aria-label="ClimbOS home">
-              <Logo />
+          {/* Top bar: ask or search (⌘K), pause, account */}
+          <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
+            <Link href={`/app/${slug}/today`} aria-label="ClimbOS home" className="lg:hidden">
+              <Logo markClassName="size-6" className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline [&>span:last-child]:text-base" />
             </Link>
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("climbos:command"))}
+              className="mx-auto flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-[13px] text-ink-3 hover:border-ink-3"
+            >
+              <Search className="size-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1 truncate">Ask your team or search…</span>
+              <kbd className="hidden rounded border border-line px-1.5 text-[11px] text-ink-3 sm:inline">⌘K</kbd>
+            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
-              <Link href={`/app/${slug}/settings/team`} className="rounded-lg p-2 text-ink-2 hover:bg-surface-2" aria-label="Settings">
-                <Settings className="size-5" aria-hidden />
+              <Link href={`/app/${slug}/settings/activity`} className="grid size-8 place-items-center rounded-lg text-ink-2 hover:bg-surface-2" aria-label="Activity">
+                <Bell className="size-4" aria-hidden />
               </Link>
+              <AccountMenu />
             </div>
           </header>
-          <main id="main" className="flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+          <main id="main" className="flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
             {children}
           </main>
         </div>
@@ -119,17 +134,14 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
       {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
         <ul className="grid grid-cols-5">
-          {NAV.map((item) => {
+          {NAV.filter((n) => !n.href).map((item) => {
             const active = section === item.key;
             return (
               <li key={item.key}>
                 <Link
                   href={`/app/${slug}/${item.key}`}
                   aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                    active ? "text-brand-800" : "text-ink-3 hover:text-ink",
-                  )}
+                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium", active ? "text-brand-800" : "text-ink-3 hover:text-ink")}
                 >
                   <item.icon className="size-5" aria-hidden />
                   {item.key === "plan" ? "Plan" : item.label}
@@ -143,14 +155,34 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
   );
 }
 
+/** Collapsible nav group, like Apollo's sidebar sections. */
+function NavGroup({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  if (!label) return <div className="flex flex-col gap-px">{children}</div>;
+  return (
+    <div className="flex flex-col gap-px">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex h-7 items-center justify-between rounded-lg px-2 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink"
+      >
+        {label}
+        <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} aria-hidden="true" />
+      </button>
+      {open ? children : null}
+    </div>
+  );
+}
+
 function NavLink({ href, active, icon, children }: { href: string; active: boolean; icon: ReactNode; children: ReactNode }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex min-h-10 items-center gap-3 rounded-lg px-2 text-[15px] font-medium transition-colors [&_.nav-tile]:bg-transparent [&_.nav-tile]:text-current",
-        active ? "bg-brand-50 text-brand-900 font-semibold [&_.nav-tile]:bg-brand-800 [&_.nav-tile]:text-white" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        "relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] transition-colors",
+        active ? "bg-[rgb(16_24_40/0.07)] font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
@@ -167,13 +199,12 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex min-h-14 w-full items-center justify-between gap-2.5 rounded-xl border border-line bg-surface px-2.5 text-left hover:border-line-strong">
-          <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-sm font-semibold text-white">
+        <button className="flex h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-surface-2">
+          <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-800 text-xs font-semibold text-white">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-semibold uppercase tracking-wide text-ink-3">Workspace</span>
-            <span className="block truncate text-sm font-bold text-ink">{current?.name ?? "…"}</span>
+            <span className="block truncate text-[13px] font-medium text-ink">{current?.name ?? "…"}</span>
           </span>
           <ChevronDown className="size-4 shrink-0 text-ink-3" aria-hidden />
         </button>
@@ -203,12 +234,12 @@ function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-[10px] px-3 text-left text-sm text-ink-2 hover:bg-surface-2">
-          <span className="truncate">{me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}</span>
-          <ChevronDown className="ml-auto size-4 text-ink-3" aria-hidden />
+        <button className="grid size-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold text-ink-2 hover:ring-2 hover:ring-line-strong" aria-label={`Account: ${me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}`}>
+          {(me.isAnonymous ? "G" : (me.name ?? me.email ?? "A")).slice(0, 2).toUpperCase()}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
+      <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuLabel className="truncate">{me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}</DropdownMenuLabel>
         {me.isOperator && <DropdownMenuItem onSelect={() => router.push("/ops")}>Operator console</DropdownMenuItem>}
         {me.isAnonymous && <DropdownMenuItem onSelect={() => router.push("/sign-in?switch=1&next=/onboarding")}>Create a free account</DropdownMenuItem>}
         <DropdownMenuItem
@@ -293,7 +324,7 @@ export function PauseAllButton({ slug, paused, variant }: { slug: string; paused
     return variant === "compact" ? (
       <Badge tone="amber" icon={<PauseCircle />}>Paused</Badge>
     ) : (
-      <div className="flex min-h-11 items-center gap-2 rounded-[10px] bg-amber-100 px-3 text-sm font-medium text-amber-800">
+      <div className="flex h-8 items-center gap-2 rounded-lg bg-amber-100 px-2 text-[13px] font-medium text-amber-800">
         <PlayCircle className="size-5" aria-hidden /> Activity paused
       </div>
     );
@@ -307,8 +338,8 @@ export function PauseAllButton({ slug, paused, variant }: { slug: string; paused
               <PauseCircle className="size-4" aria-hidden /> Pause
             </Button>
           ) : (
-            <Button variant="secondary" size={variant === "large" ? "lg" : "md"} className={cn(variant === "sidebar" && "justify-start")}>
-              <PauseCircle className="size-5" aria-hidden /> Pause all activity
+            <Button variant={variant === "sidebar" ? "ghost" : "secondary"} size={variant === "large" ? "lg" : variant === "sidebar" ? "sm" : "md"} className={cn(variant === "sidebar" && "h-8 w-full justify-start px-2 font-normal text-ink-2")}>
+              <PauseCircle className="size-4" aria-hidden /> Pause all activity
             </Button>
           )
         }

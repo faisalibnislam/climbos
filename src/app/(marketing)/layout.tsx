@@ -5,7 +5,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
+      <main id="main" tabIndex={-1} className="marketing flex-1 focus:outline-none">
         {children}
       </main>
       <SiteFooter />

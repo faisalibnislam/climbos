@@ -1,0 +1,906 @@
+[
+ {
+  "case": "plausible",
+  "type": "b2b_saas",
+  "task": "linkedin",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "linkedin",
+       "title": "How we make money (and why it matters to you)",
+       "body": "Every analytics tool makes money somehow. If you can't tell how, it's worth asking.\n\nHere's how Plausible makes money: site owners pay us a subscription. That's the whole model.\n\nWe're independent. We're self-funded. We're profitable. We're based in the EU. And we don't sell customer data.\n\nThat last point isn't a line in a policy we could quietly rewrite later. It's how the business works. Our revenue comes from over 21,000 paying subscribers, not from what their visitors do.\n\nWhy this should matter to you:\n→ When a tool is free, it's fair to ask what pays for it.\n→ When you pay, you're the customer. Our incentives line up with yours.\n→ There's no outside investor waiting for us to find a new revenue stream in your data.\n\nPlausible isn't free, and it isn't the right fit for every analytics use case. We'd rather say that up front.\n\nBut if you want clear website stats and a straight answer about where the data goes, it's worth a look.\n\nLink in the first comment.",
+       "hashtags": [
+        "#WebAnalytics",
+        "#Privacy",
+        "#Bootstrapped",
+        "#SaaS"
+       ],
+       "altText": "",
+       "imageIdea": "No image. Plain text post performs best for a founder opinion piece on LinkedIn.",
+       "factIndexes": [
+        2,
+        3
+       ],
+       "suggestedDay": 1,
+       "format": "text",
+       "hook": "Every analytics tool makes money somehow. If you can't tell how, it's worth asking.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Text-only post. No visual needed.",
+       "firstComment": "Here's what Plausible does and how it works: https://plausible.io [NEEDS FACT: confirm current free trial length and terms before adding a trial mention here]"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Is your cookie banner there because of your analytics?",
+       "body": "A lot of cookie banners exist because of one script: analytics.\n\nPlausible doesn't use cookies and doesn't collect personal data. So you don't need a cookie banner or a GDPR consent form for it.\n\nThat means your visitors land on your page, not on a pop-up. And you count every visit, not only the people who clicked \"accept\".\n\nOne honest caveat: analytics is rarely the only script on a site. Ad pixels, chat widgets and embeds can have their own rules. Check your whole stack, and ask your own counsel if you're unsure.\n\nI put the full picture in the slides. Swipe through.\n\nLink in the first comment.",
+       "hashtags": [
+        "#GDPR",
+        "#Privacy",
+        "#WebAnalytics",
+        "#CookieBanner"
+       ],
+       "altText": "Six-slide document titled 'Is your cookie banner there because of your analytics?' explaining that Plausible uses no cookies and collects no personal data, so it doesn't need a cookie banner or GDPR consent form, with a reminder to check other tools on the site.",
+       "imageIdea": "Clean six-slide document. Slide 1 shows a simple browser window with a cookie pop-up crossed out by a single line.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "document",
+       "hook": "A lot of cookie banners exist because of one script: analytics.",
+       "slides": [
+        {
+         "heading": "Is your cookie banner there because of your analytics?",
+         "body": "For many sites, the answer is yes. Here's what changes when it isn't."
+        },
+        {
+         "heading": "Why the banner shows up",
+         "body": "Many analytics tools set cookies and handle personal data. That's usually what puts a consent pop-up in front of your visitors."
+        },
+        {
+         "heading": "What Plausible does differently",
+         "body": "No cookies. No personal data collected. Built and run by an EU-based company."
+        },
+        {
+         "heading": "What that means for you",
+         "body": "No cookie banner or GDPR consent form needed for Plausible. Visitors see your page first, not a pop-up."
+        },
+        {
+         "heading": "Check the rest of your stack",
+         "body": "Ad pixels, chat widgets and embeds can have their own rules. Review every script on your site. This isn't legal advice."
+        },
+        {
+         "heading": "See it on your own site",
+         "body": "plausible.io [NEEDS FACT: confirm current free trial terms before adding a trial line]"
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Square PDF slides, lots of white space, one idea per slide. Large heading, short body text, high contrast for readability. Brand colours. Slide 1: browser outline with a cookie pop-up struck through. No stock photos, no people.",
+       "firstComment": "Learn how Plausible counts visits without cookies: https://plausible.io"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Your analytics script shouldn't slow the site it measures",
+       "body": "It's odd when the tool measuring your site speed makes your site slower.\n\nThat's one reason we kept Plausible's script small. It's 54 times smaller than Google Analytics.\n\nWhy that matters:\n→ Less code for every visitor to download.\n→ Helps keep your pages fast, especially on mobile.\n→ One less thing to fight when you're working on site speed.\n\nYou still get the numbers most site owners actually check: where visitors come from and what they read. On one page.\n\nIf you're a publisher, a store or a SaaS team watching page speed, it's worth seeing how much your current analytics adds.\n\nLink in the first comment.",
+       "hashtags": [
+        "#WebPerformance",
+        "#SiteSpeed",
+        "#WebAnalytics",
+        "#Privacy"
+       ],
+       "altText": "Simple bar chart comparing analytics script sizes. A long bar labelled Google Analytics next to a very short bar labelled Plausible, with the caption '54x smaller'.",
+       "imageIdea": "Two horizontal bars on a plain background: a long bar for Google Analytics, a tiny bar for Plausible, with '54x smaller' in large type.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 15,
+       "format": "single_image",
+       "hook": "It's odd when the tool measuring your site speed makes your site slower.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "1200x1200 image. White or light background. Two horizontal bars drawn to a 54:1 ratio, labelled 'Google Analytics' and 'Plausible'. Headline '54x smaller' in bold brand colour. No kilobyte figures, no logos of other companies, no extra claims.",
+       "firstComment": "See how Plausible works: https://plausible.io [NEEDS FACT: confirm whether to link the live demo and its current URL]"
+      }
+     ]
+    },
+    "costMicros": 97156,
+    "ms": 41608
+   },
+   "v2s": {
+    "arm": "v2s",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "linkedin",
+       "title": "Analytics script size",
+       "body": "Google Analytics' script is 54 times the size of the one we ship at Plausible.\n\nSay you've run a speed test on your pricing page and seen third-party scripts flagged. Analytics is usually one of them. The browser has to download it, parse it and run it, and your visitor waits through that along with everything else on the page.\n\n[NEEDS FACT: what are the actual file sizes of the two scripts, which tool did you measure them with, and on what date? The 54x should sit next to real numbers.]\n\nA smaller script leaves less to fetch, which helps keep the page fast. I won't put a load-time gain on it, because that depends on the rest of your page.\n\n[NEEDS FACT: what did you decide not to build to keep the script this small, and who asked for it?]\n\nHere's a ten-minute audit. Open your browser's network tab, sort by size and find your analytics script. Then ask whether the report it feeds is one you opened this month. If not, you're making every visitor download something you don't use.\n\nWhat would you give up in your analytics tool to make your key pages load faster, and what would you refuse to lose?",
+       "hashtags": [
+        "WebPerformance"
+       ],
+       "altText": "Text card with large type reading 54× and the support line: smaller than the Google Analytics script. A small Plausible wordmark sits in the bottom-left corner.",
+       "imageIdea": "Typographic card with the single number 54× and one support line.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Google Analytics' script is 54 times the size of the one we ship at Plausible.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: our script is 54 times smaller than Google Analytics. Job: prove the claim at a glance. Type: typographic card, because the only confirmed data is one ratio and a chart would invite invented detail. Placement: portrait image for the LinkedIn feed (about 4:5; confirm current pixel specs). Keep all elements away from the edges. Hierarchy: 1) '54×' in a heavy sans-serif, the largest element, upper third. 2) Support line at about half that size, exact words: 'smaller than the Google Analytics script'. 3) Small Plausible wordmark bottom-left, using the real logo file. Brand kit: none supplied, so provisional: near-black background, off-white text (contrast above 4.5:1), one accent colour taken from the logo. Don'ts: no bar chart with made-up file sizes, no Google logo, no stock people, no extra claims on the image. If real script sizes are confirmed later, put them in the caption, not on this card.",
+       "firstComment": "Plausible Analytics is for site owners who want clear numbers on one page: plausible.io"
+      },
+      {
+       "channel": "linkedin",
+       "title": "The cookie banner that stays",
+       "body": "You switched analytics tools and the cookie banner is still there.\n\nIf that's you, the banner may no longer be about analytics. Something else on the page could be setting cookies: an ad pixel, a chat widget, an embedded video.\n\n[NEEDS FACT: describe one real support question where a customer still had a banner after switching. What turned out to be setting the cookies? Anonymise the customer.]\n\nSo make a list. Write down every third-party script on your site, then open your browser's developer tools and check which ones set cookies. If analytics was the only one, you may have a reason to rethink the banner. If it wasn't, you now know which tool is the reason, and you can decide whether it's worth keeping.\n\nWhether you can drop the banner is a legal call for you and your adviser. I can only tell you what our product does: Plausible uses no cookies and collects no personal data, so it needs no cookie banner or GDPR consent form of its own.\n\nIf you switched analytics and kept the banner, what turned out to be the cause?",
+       "hashtags": [
+        "GDPR"
+       ],
+       "altText": "No image; text-only post.",
+       "imageIdea": "Text only, a deliberate choice.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 4,
+       "format": "text",
+       "hook": "You switched analytics tools and the cookie banner is still there.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Deliberately text only. The post teaches a short audit and reads best as plain text. If the owner wants an image, use a real phone screenshot of the cookie list in their own browser's developer tools, with no personal data visible. Do not mock up a banner or a compliance badge, and put no legal claim on any image.",
+       "firstComment": "Plausible Analytics, the cookie-free option mentioned in the post: plausible.io"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Who Plausible is not for",
+       "body": "Plausible isn't right for every analytics use case, and our About page says so.\n\nSay you've opened Google Analytics to find one number and couldn't. We built for that person: a site owner who wants clear numbers on one page, without training. If your team builds deep custom reports every week, a bigger tool may fit you better.\n\n[NEEDS FACT: describe a time you told a prospect or customer Plausible wasn't the right fit. What did they need, and roughly when was it?]\n\nI'd rather you hear that before you pay us. What I can show instead is how we're run: independent, self-funded, profitable, based in the EU, and we don't sell customer data. Over 21,000 paying subscribers fund the work, and we've tracked over 313 billion pageviews.\n\n[NEEDS FACT: what words did a customer use, verbatim, about leaving Google Analytics? Do you have permission to quote them?]\n\nBefore you pick or switch any tool, write down the questions you ask your numbers every week. If one page answers them, a long report menu is just more to maintain. If it doesn't, choose the tool that does, even if it isn't ours.\n\nI think most small sites outgrow custom reports less often than they fear. Where did you hit the wall with a simple analytics tool, if you did?",
+       "hashtags": [],
+       "altText": "No image; text-only post.",
+       "imageIdea": "Text only, a deliberate choice.",
+       "factIndexes": [
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "text",
+       "hook": "Plausible isn't right for every analytics use case, and our About page says so.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Deliberately text only: an honest-fit post is more credible without decoration. Optional second version: a typographic card reading '21,000+ paying subscribers' with the support line '313 billion pageviews tracked', both confirmed figures, in provisional brand colours with the real logo small in a corner. Add no customer logos or quotes until the owner confirms permission.",
+       "firstComment": "If one page answers your weekly questions, Plausible Analytics is at plausible.io."
+      }
+     ]
+    },
+    "costMicros": 528797,
+    "ms": 224454,
+    "rounds": 3,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.44,
+      "gatesPassed": true,
+      "lintErrors": 0
+     },
+     {
+      "round": 1,
+      "average": 3.67,
+      "gatesPassed": true,
+      "lintErrors": 0
+     },
+     {
+      "round": 2,
+      "average": 3.33,
+      "gatesPassed": true,
+      "lintErrors": 0
+     }
+    ]
+   },
+   "v2o": {
+    "arm": "v2o",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "linkedin",
+       "title": "No cookies in analytics means one less reason for a cookie banner",
+       "body": "A cookie banner on every page of your site, just so your analytics can count visits. That's a lot of friction for a page-view number.\n\nPlausible doesn't use cookies and doesn't collect personal data. Nothing personal is stored on the visitor's device and nothing personal is collected, so there's no GDPR consent form to show for analytics.\n\nThat changes two things for a site owner. Visitors land on your page instead of a pop-up. And people who would have clicked \"reject\" still get counted, because there's nothing for them to reject.\n\nOne honest limit. If your site also loads ad pixels, chat widgets or embedded videos that set cookies, those still need consent. Cookie-free analytics takes one item off the banner. Whether the banner goes away depends on everything else you load.\n\nSo before you change any tool, open your site in a private window and check which cookies are set before anyone clicks anything. Write down what each one is for. If analytics is the only reason your banner exists, that's the first thing to change.\n\nFor anyone who has removed their cookie banner: which script was the hardest one to give up?",
+       "hashtags": [
+        "#WebAnalytics",
+        "#DataPrivacy"
+       ],
+       "altText": "",
+       "imageIdea": "Text only. The argument and the private-window check carry the post; an image would add nothing true that the text doesn't.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 1,
+       "format": "text",
+       "hook": "A cookie banner on every page of your site, just so your analytics can count visits. That's a lot of friction for a page-view number.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Deliberate text-only post. Do not add a mocked-up website with or without a banner; a fake screenshot would undercut a post about transparency.",
+       "firstComment": "If analytics is the only thing behind your banner, you can look around Plausible's live demo dashboard before deciding anything: [link to live demo]. Trial: [link] [NEEDS FACT: confirm the free trial is still 30 days with no credit card required before naming those terms here.]"
+      },
+      {
+       "channel": "linkedin",
+       "title": "The analytics script is the one script every visitor loads",
+       "body": "Your analytics script loads on every page, for every visitor, on every connection. Plausible's is 54 times smaller than Google Analytics.\n\nThat matters because analytics is the one script you never skip. A large hero image only loads on the homepage. The tracking script runs everywhere, including on the phone of someone on a train with one bar of signal.\n\nWe kept ours small by keeping it to its job: counting visits without cookies and without collecting personal data. Less code to download means less for the browser to fetch and run before your page is done.\n\nYou can check what your current setup costs in a couple of minutes. Open your site in Chrome, open DevTools, go to the Network tab and reload the page. Filter by your analytics provider's domain and look at the transfer size of every request it makes, then compare that with the size of your logo.\n\nIf your analytics outweighs your logo, you've found a speed fix that needs no redesign and no new hosting.\n\nWhat's the heaviest script on your site that nobody on the team remembers adding?",
+       "hashtags": [
+        "#WebAnalytics",
+        "#WebPerformance"
+       ],
+       "altText": "A small dark square next to a much larger block of the same colour, 54 times its area. Text: 54 times smaller. Plausible's tracking script compared with Google Analytics.",
+       "imageIdea": "Typographic card with a simple area comparison: one small square beside a block 54 times larger, headline \"54 times smaller\".",
+       "factIndexes": [
+        0,
+        1
+       ],
+       "suggestedDay": 4,
+       "format": "single_image",
+       "hook": "Your analytics script loads on every page, for every visitor, on every connection. Plausible's is 54 times smaller than Google Analytics.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: our script is 54 times smaller than Google Analytics. Job: prove the post's one number at a glance. Type: typographic card with a proportional diagram of a confirmed ratio; no screenshots, no file sizes in kilobytes (not confirmed). Placement: one portrait 4:5 image for the LinkedIn feed (confirm current pixel specs, e.g. 1080 x 1350); keep all text well away from edges. Hierarchy: (1) \"54 times smaller\" as the dominant headline, upper third; (2) diagram centred: a small filled square labelled \"Plausible\" beside a large outlined block 54 times its area labelled \"Google Analytics\" (filled vs outlined so meaning doesn't rely on colour; labels set directly next to each shape); (3) small support line at the bottom: \"Tracking script size, Plausible vs Google Analytics\"; (4) Plausible logo small, bottom-left. Brand kit: none supplied, so provisional: dark background #1F2937 with white #FFFFFF text and one accent colour taken from the Plausible logo; one sans-serif family. Owner to replace with the real brand kit. Contrast: white on #1F2937 is well above WCAG AA 4.5:1. Don'ts: no Google logo or trademark artwork, no kilobyte figures, no speed-score or load-time claims, no stock photos.",
+       "firstComment": "Plausible's live demo, if you want to see what the dashboard shows from that small script: [link to live demo]"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Five questions to ask before installing any analytics tool",
+       "body": "Every analytics tool on your site answers to whoever pays for it. Before you install one, ask who that is and what the tool does with your visitors.\n\nOur answers: Plausible is self-funded, profitable and based in the EU, and it's paid for by over 21,000 subscribers. We don't use cookies, don't collect personal data and don't sell customer data.\n\nThe document has five questions to run against the tool you use now. Which one was hardest to get a straight answer to?",
+       "hashtags": [
+        "#WebAnalytics",
+        "#DataProtection"
+       ],
+       "altText": "Cover page of a document. Text: Who pays for your analytics? Five questions to ask before you add a tracking script.",
+       "imageIdea": "Text-led document post, one question per page, same layout on every page, summary page designed to be screenshotted.",
+       "factIndexes": [
+        1,
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "document",
+       "hook": "Every analytics tool on your site answers to whoever pays for it.",
+       "slides": [
+        {
+         "heading": "Who pays for your analytics?",
+         "body": "Five questions to ask before you add a tracking script."
+        },
+        {
+         "heading": "Your script sees every visitor",
+         "body": "So the company behind it matters as much as the dashboard."
+        },
+        {
+         "heading": "Question one: who pays for it?",
+         "body": "Plausible is paid for by over 21,000 subscribers and has tracked over 313 billion pageviews."
+        },
+        {
+         "heading": "Question two: does it set cookies?",
+         "body": "Cookies are what trigger a consent banner. Plausible uses none."
+        },
+        {
+         "heading": "Question three: does it collect personal data?",
+         "body": "If it does, ask what, and why. Plausible collects none."
+        },
+        {
+         "heading": "Question four: where is the company based?",
+         "body": "Know whose company your visitors' traffic is going to. Plausible is based in the EU."
+        },
+        {
+         "heading": "Question five: does it sell customer data?",
+         "body": "Plausible doesn't. It is independent, self-funded and profitable."
+        },
+        {
+         "heading": "The five questions",
+         "body": "Who pays? Cookies? Personal data? Where based? Sells data?"
+        },
+        {
+         "heading": "Run them on the tool you use now",
+         "body": "Our live demo is linked in the comments."
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Message: ask who pays for your analytics before you install it. Job: a teaching document people save and screenshot. Type: typographic pages only; no screenshots of any vendor, no logos except Plausible's. Template (same on every page): portrait 4:5 (confirm current LinkedIn document specs), headline top-left in large bold sans-serif, support line directly below at about half the headline size, generous margins, Plausible logo small bottom-left on every page. Provisional brand kit (owner to replace): background #FFFFFF, text #1F2937, one accent from the Plausible logo used only for the question label on pages 3 to 7. Page 1 must work alone in the feed: headline dominant, nothing else but the support line. Page 8 (summary): the five questions stacked as five short lines, high contrast, readable at arm's length. Contrast: #1F2937 on white is well above WCAG AA. Don'ts: no competitor logos, no implication about how any named competitor uses data, no compliance or legal guarantees, no numbers beyond 21,000 subscribers and 313 billion pageviews. Alt text per page: repeat the exact headline and support line.",
+       "firstComment": "Plausible's live demo, so you can see the dashboard before you answer the five questions about it: [link to live demo]"
+      }
+     ]
+    },
+    "costMicros": 650501,
+    "ms": 226292,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.56,
+      "gatesPassed": true,
+      "lintErrors": 0
+     },
+     {
+      "round": 1,
+      "average": 3.56,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v2s>v2o": {
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B's posts are ready to publish. Work A leaves [NEEDS FACT] placeholders inside the post bodies, so the owner must write or invent content before posting. That is a major usability failure for a non-expert.",
+      "B stays inside the confirmed facts and states the limit honestly: other cookie-setting scripts still need consent. It makes no legal promise.",
+      "B's document carousel suits LinkedIn, and its three posts (cookies, script size, trust questions) are varied and tied to the product's confirmed strengths. A's third post is an honest-fit post, which fits the brand voice, but it is cluttered with placeholders.",
+      "B's CTAs point to the live demo and trial, in line with the insights. Its hashtags are properly formatted.",
+      "A has good hooks and a nice honesty angle, but the invented-scenario framing ('Say you've run a speed test...') plus the placeholders makes it weaker as a deliverable."
+     ],
+     "truthX": [
+      "The posts ask the owner for facts that aren't confirmed, such as file sizes and customer anecdotes. This is honest, but it leaves the posts unfinished.",
+      "Claims such as 'every visitor downloads something you don't use' are generalizations."
+     ],
+     "truthY": [
+      "The claim 'people who would have clicked reject still get counted' is an inference, not a confirmed fact.",
+      "The line 'We kept ours small by keeping it to its job' describes motive and is not a confirmed fact.",
+      "The document says 'five questions' but the content is a thin teaser, and the body promises a document that the post text doesn't contain.",
+      "The 'area 54 times' diagram is an interpretation of a size ratio, since the confirmed fact is script size and not area."
+     ]
+    },
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B's three posts can be published almost as written. A's posts each contain one or two [NEEDS FACT] placeholders inside the body, so the owner has to source anecdotes, verbatim customer quotes and measured file sizes before any of them can go live. That is a real burden for a 90-day push for paying customers.",
+      "Both stay close to the confirmed facts: the 54x script size, no cookies or personal data, 21,000+ subscribers and 313 billion pageviews, and independent, self-funded, EU-based with no data selling. Both carefully avoid promising legal compliance, so on truth they are roughly even.",
+      "B gives the honest caveat about other cookie-setting scripts inside the post, so the post stands on its own. A defers the key example to a placeholder.",
+      "B's document post, five questions on who pays for your analytics, is a native LinkedIn format people save. It ties the independence and privacy facts into a reusable checklist. A's honest-fit post has a good angle but is weakened by its two placeholders.",
+      "B's first comments push the live demo, a clearer conversion path toward trials and paying customers. A's first comments are generic homepage links.",
+      "B's visual briefs are more specific and avoid invented detail. The proportional-area diagram is a faithful way to show a confirmed ratio."
+     ],
+     "truthX": [
+      "Minor: the general claim that visitors 'wait through' the analytics script is an unquantified performance assertion, though A explicitly declines to give a load-time number."
+     ],
+     "truthY": [
+      "'We kept ours small by keeping it to its job' is an unconfirmed explanation of the design rationale.",
+      "'If your analytics outweighs your logo, you've found a speed fix' implies a speed gain that is not quantified or supported by the facts.",
+      "'Cookies are what trigger a consent banner' slightly oversimplifies the legal picture."
+     ]
+    }
+   },
+   "v2s>v0f": {
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B is ready to publish. Its few placeholders sit in first comments and a final slide, so the post bodies read clean.",
+      "A fills the post bodies with [NEEDS FACT] placeholders that ask the owner for anecdotes, file sizes and customer quotes. That makes the posts unusable as written, and a non-expert owner would struggle to finish them.",
+      "A also uses 'Say you've...' hypothetical framing and an unsupported 'ten-minute audit' that adds little. The 'Google Analytics' script is 54 times the size' hook is awkward and the CTA is weak.",
+      "B has strong LinkedIn craft: a transparent business-model hook, a document carousel for the cookie-banner topic, and a clear contrast between free tools and paying customers. It fits the brand voice of transparent, independent and honest.",
+      "B uses the confirmed facts well (21,000 subscribers, independent, self-funded, no data sale, no cookies, 54x smaller) and adds sensible caveats: not legal advice, not right for everyone, check the rest of your stack.",
+      "A's honesty angle ('who Plausible is not for') is strategically good and its caveats are careful, but the placeholders undercut it."
+     ],
+     "truthX": [
+      "Placeholders ask for invented anecdotes (a support question, a prospect told it wasn't a fit, a customer quote) that don't exist in the confirmed facts, though they are flagged as needed.",
+      "The 'ten-minute audit' and 'we built for that person' framing are generic and add little beyond the facts, but they are not false."
+     ],
+     "truthY": [
+      "'Our incentives line up with yours' and 'no outside investor waiting for a new revenue stream' are mild inferences from self-funded status, and not strictly confirmed.",
+      "'You count every visit, not only the people who clicked accept' goes beyond the confirmed facts, though it is a reasonable inference.",
+      "The bar chart is drawn to a 54:1 ratio, which is consistent with the fact, but 'especially on mobile' is an unsupported addition."
+     ]
+    },
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B's three posts can be published as written. Its only placeholders sit in the first comments and slide 6, where they are easy to resolve. A puts five fill-in prompts inside its post bodies, so none of its posts can go out until the owner supplies anecdotes or quotes they may not have.",
+      "B uses LinkedIn formats well: a document carousel for the cookie-banner topic, a clear text opinion piece on the business model, and a simple visual for the 54x claim. Each post has a clean hook, scannable arrows and a 'link in first comment' prompt.",
+      "B's 'how we make money' post turns the confirmed independence and self-funding facts into a sharp, on-brand argument against free tools. That is strong positioning for a goal of winning paying customers.",
+      "A is more careful and more educational. Its audits and honest-fit framing suit the transparent voice well. But it depends on owner input, its calls to action are weak, and it often hedges where it should sell.",
+      "Both stay mostly within the confirmed facts and add appropriate legal caveats. B makes a few small inferences, while A mostly avoids them."
+     ],
+     "truthX": [
+      "Body copy contains five unfilled [NEEDS FACT] placeholders. They are honest, but if posted as-is the posts break, and the requested anecdotes may not exist."
+     ],
+     "truthY": [
+      "'You count every visit, not only the people who clicked accept' is an inference not stated in the confirmed facts.",
+      "'Especially on mobile' and the framing that Google Analytics 'measures site speed' go beyond the confirmed fact about script size.",
+      "'Many analytics tools set cookies and handle personal data' is a generic, unsourced claim about competitors."
+     ]
+    }
+   },
+   "v2o>v0f": {
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "Work A's posts are more specific and actionable: a private-window cookie audit, a DevTools Network-tab check, and a five-question framework. Each gives a LinkedIn reader something to do and builds trust, which suits the transparent brand voice.",
+      "A's honest caveat is stronger. It says analytics is only one item on the banner and that other cookie-setting scripts still need consent. B hedges similarly, but A's version is more concrete.",
+      "A's document post is well built: 9 slides, one question per slide, a summary page and a clear visual brief. It uses only confirmed facts and avoids legal promises.",
+      "A's hooks are sharper and its closing questions invite comments, which is better for LinkedIn engagement. B ends each post with 'Link in the first comment', a weak CTA.",
+      "A flags unconfirmed trial terms with NEEDS FACT markers. B does this too, but B's first comments are generic and link only to the homepage.",
+      "B is solid, with a good 'how we make money' angle, but it is more generic. Its claims are slightly stronger, such as 'it's how the business works' and 'our incentives line up with yours', and they go beyond the confirmed facts. 'Revenue comes from 21,000 subscribers, not visitors' is an inference."
+     ],
+     "truthX": [
+      "The document post's 'Question four: where is the company based?' implies traffic goes to an EU company, but hosting location is not stated in the confirmed facts. This is minor.",
+      "'People who would have clicked reject still get counted' is a logical inference, not a stated fact, and is lightly supported.",
+      "The document post says Plausible 'is paid for by over 21,000 subscribers', which slightly overreaches; the confirmed fact is that it serves them."
+     ],
+     "truthY": [
+      "'That's the whole model' and 'There's no outside investor waiting for us to find a new revenue stream' go beyond the confirmed facts, though 'self-funded' loosely supports the second.",
+      "'Revenue comes from over 21,000 paying subscribers' is an inference from the subscriber count.",
+      "'You still get the numbers most site owners actually check... on one page' is not in the confirmed facts.",
+      "'You count every visit, not only the people who clicked accept' is an unsupported claim."
+     ]
+    },
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A gives readers concrete, honest actions: the private-window cookie check and the DevTools Network-tab size check. That makes the posts useful and saveable, which suits LinkedIn and builds trust without overselling.",
+      "A's caveats are more precise. It separates 'one less item on the banner' from 'no banner', which fits the transparent voice and avoids implying a compliance outcome.",
+      "A closes each post with a specific question that invites comments. B ends every post with the same 'Link in the first comment', which reads formulaic.",
+      "A's visual briefs are disciplined and production-ready. It deliberately avoids fake screenshots and unconfirmed kilobyte figures, and it handles accessibility and contrast.",
+      "B is credible and on-brand. The 'how we make money' angle and the admission that Plausible isn't for every use case are strong. But its posts are more generic product pitches.",
+      "B leans on lightly unsupported phrasing such as 'especially on mobile' and the claim about the numbers most site owners check. It also uses four hashtags, including some loosely relevant ones.",
+      "A's document post body is thin, but its slide structure is a solid teaching format."
+     ],
+     "truthX": [
+      "The slide line 'Cookies are what trigger a consent banner' oversimplifies consent rules. The post body handles this more carefully elsewhere."
+     ],
+     "truthY": [
+      "'Helps keep your pages fast, especially on mobile' extends the confirmed speed fact into a mobile-specific benefit that isn't confirmed.",
+      "'You still get the numbers most site owners actually check... On one page' describes features that aren't in the confirmed facts.",
+      "'Isn't a line in a policy we could quietly rewrite later' is an unverifiable framing about how the business is structured."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v2s": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 7,
+    "usefulness": 5,
+    "overall": 6,
+    "topIssue": "The posts do not drive toward the 90-day paying-customer goal: none mention the 30-day no-card trial or live demo, and five unfilled NEEDS FACT placeholders mean the owner cannot publish any post without research and rewriting."
+   },
+   "v0f": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 6,
+    "overall": 6.8,
+    "topIssue": "Every post ends with a weak homepage link and unresolved [NEEDS FACT] placeholders in reader-facing first comments and the final slide, rather than a confirmed trial or demo call to action, which undercuts the 90-day paying-customer goal and means the posts can't go live as written."
+   },
+   "v2o": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 8,
+    "usefulness": 7,
+    "overall": 7,
+    "topIssue": "With a 90-day paying-customer goal, three educational posts push almost no one toward a trial: the trial link is buried in first comments behind an unresolved fact check, and the strongest buying-intent angle (GA4 switchers) is left unused."
+   }
+  }
+ },
+ {
+  "case": "plausible",
+  "type": "b2b_saas",
+  "task": "facebook",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Analytics without the cookie banner",
+       "body": "If your cookie banner exists mostly because of your analytics tool, there's a simpler option.\n\nPlausible doesn't use cookies and doesn't collect personal data. That means you don't need a cookie banner or GDPR consent form for your analytics.\n\nYou still get the numbers most site owners check: visitors, top pages, where traffic comes from. You see them on one page, without a training course.\n\nOne honest note: if other tools on your site set cookies, those may still need consent. Plausible just won't add to the list.\n\nTry it on your own site: [NEEDS FACT: confirm current trial terms, e.g. 30-day free trial, no credit card required]. Link in the comments.",
+       "hashtags": [
+        "#WebAnalytics",
+        "#Privacy",
+        "#GDPR"
+       ],
+       "altText": "A website homepage shown twice side by side. On the left, a large cookie consent banner covers the bottom third of the page. On the right, the same page with no banner and a small Plausible dashboard card showing visitor count and top pages.",
+       "imageIdea": "Before/after split of the same simple website: left with a big cookie banner, right clean with a small Plausible stats card overlaid.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "If your cookie banner exists mostly because of your analytics tool, there's a simpler option.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "1200x630 landscape. Two browser mockups of one identical, plain website. Left: cookie banner covering the lower third, labelled 'With cookie-based analytics'. Right: no banner, a small dashboard card in the corner, labelled 'With Plausible'. Plausible brand colours, lots of white space, no stock people. Keep text on image under 20 words.",
+       "firstComment": "See how it works and start a trial here: https://plausible.io"
+      },
+      {
+       "channel": "facebook",
+       "title": "Your analytics script shouldn't slow your site",
+       "body": "Quick question for anyone who cares about page speed: how much of your page weight is your analytics tool?\n\nPlausible's script is 54 times smaller than Google Analytics. Less code to load means your analytics isn't the thing dragging your site down.\n\nThat matters most if you run a blog, a store or a content site where every second of load time counts.\n\nSwapping it in is one line of code. Want to see what you'd get first? Take a look at the dashboard via the link in the comments.",
+       "hashtags": [
+        "#PageSpeed",
+        "#WebAnalytics",
+        "#WebPerformance"
+       ],
+       "altText": "Two horizontal bars on a plain background. A long bar labelled Google Analytics script and a tiny bar labelled Plausible script, with the caption '54x smaller'.",
+       "imageIdea": "Simple bar comparison: a long bar for Google Analytics script size and a tiny sliver for Plausible, with '54x smaller' in large type.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 3,
+       "format": "single_image",
+       "hook": "How much of your page weight is your analytics tool?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "1080x1080 square. Two horizontal bars on an off-white background. Top bar, long and grey: 'Google Analytics'. Bottom bar, a tiny sliver in Plausible brand colour: 'Plausible'. Large headline '54x smaller script'. No exact kilobyte numbers on the image unless the owner confirms them. Flat, clean, no gradients.",
+       "firstComment": "Explore the dashboard and start a trial: https://plausible.io [NEEDS FACT: confirm the live demo URL if you'd rather link to it, and confirm the 'one line of code' setup claim before publishing]"
+      },
+      {
+       "channel": "facebook",
+       "title": "Who pays for your analytics?",
+       "body": "\"Free\" analytics is usually paid for with something. Worth asking what.\n\nHere's how Plausible works:\n\n• Independent and self-funded. No investors pushing for growth at any cost.\n• Profitable, so the business runs on what customers pay.\n• Based in the EU.\n• We don't sell customer data.\n\nMore than 21,000 paying subscribers have chosen that model, and Plausible has tracked over 313 billion pageviews.\n\nIt isn't the right tool for every analytics need, and we'd rather say so up front. But if you want clear numbers from a company whose only customer is you, take a look. Link in the comments.",
+       "hashtags": [
+        "#Privacy",
+        "#WebAnalytics",
+        "#IndieBusiness"
+       ],
+       "altText": "Text graphic on a plain background reading: Independent. Self-funded. Profitable. EU-based. We don't sell your data. Below it: 21,000+ paying subscribers and 313 billion+ pageviews tracked.",
+       "imageIdea": "Clean typographic card listing the four trust points, with the subscriber and pageview figures in a footer strip.",
+       "factIndexes": [
+        2,
+        3
+       ],
+       "suggestedDay": 5,
+       "format": "single_image",
+       "hook": "\"Free\" analytics is usually paid for with something. Worth asking what.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "1080x1080 square. Bold sans-serif type stacked on a white background: 'Independent. Self-funded. Profitable. EU-based.' Then a line: 'We don't sell your data.' Footer strip in brand colour: '21,000+ paying subscribers · 313 billion+ pageviews tracked'. Small Plausible logo bottom right. No icons, no stock imagery.",
+       "firstComment": "Read more about how Plausible is run and try it on your site: https://plausible.io"
+      }
+     ]
+    },
+    "costMicros": 66441,
+    "ms": 24472
+   },
+   "v2s": {
+    "arm": "v2s",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "No cookie banner for analytics",
+       "body": "Analytics with no cookie banner.\nOur script uses no cookies or personal data, so no consent form. Try it free for 30 days: plausible.io",
+       "hashtags": [],
+       "altText": "Phone screenshot of a website open in a private tab with no cookie banner over the page. Text on the image: No cookies. No banner for analytics.",
+       "imageIdea": "Real phone screenshot of the owner's own site, freshly loaded in a private tab, showing no cookie banner. Short headline on top: No cookies. No banner for analytics.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Analytics with no cookie banner.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: our analytics adds no cookie banner. Type: real screen capture, because the claim is about what a visitor sees and a mocked-up page would be fake. Shot: on a phone, open a site that runs Plausible in a private tab, wait for it to load, and screenshot the full first screen. No personal data or other tabs visible. Placement: Facebook feed, portrait (confirm current pixel specs). Keep headline and subject clear of the edges. Hierarchy: 1) the page screenshot, the focal point; 2) headline on a solid navy panel above it, off-white text: 'No cookies. No banner for analytics.'; 3) Plausible wordmark, small, bottom corner. Colours are provisional: take two colours and the font from the Plausible logo and site. Contrast: off-white on navy is well above WCAG AA. Don'ts: no mock cookie banners, no legal or compliance badges, no stock people, no Google logos. Owner note: the 30-day free trial comes from the website text, not the confirmed fact list, so check the current terms on plausible.io before publishing.",
+       "firstComment": ""
+      },
+      {
+       "channel": "facebook",
+       "title": "54 times smaller than Google Analytics",
+       "body": "Our script is 54 times smaller than Google Analytics.\nLess for every visitor to download. Try it free for 30 days: plausible.io",
+       "hashtags": [],
+       "altText": "Screenshot of a browser network tab with the Plausible script row highlighted. Text on the image: 54x smaller than Google Analytics.",
+       "imageIdea": "Real screenshot of the browser network tab on a page running Plausible, with the script row highlighted. Headline: 54x smaller than Google Analytics.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 4,
+       "format": "single_image",
+       "hook": "Our script is 54 times smaller than Google Analytics.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: the Plausible script is light. Type: real screen capture of the browser developer tools network tab, loaded on a page that runs Plausible, with the Plausible script row highlighted in orange. Crop tight so only that row and the column headers show, text large enough to read on a phone. Do not place any file-size numbers of your own on the image. The only claim in text is the confirmed 54x. Placement: Facebook feed, square or portrait (confirm current pixel specs); text away from edges. Hierarchy: 1) the highlighted row, focal point; 2) headline on a solid dark panel, white text: '54x smaller than Google Analytics'; 3) Plausible wordmark, small, bottom corner. Colours: provisional, from the Plausible logo; strong contrast. Don'ts: no Google logo or trademark, no speed-score numbers, no stock photos, no stopwatch clip art. Owner note: check trial terms on plausible.io before publishing.",
+       "firstComment": ""
+      },
+      {
+       "channel": "facebook",
+       "title": "Paid for by customers, not by selling data",
+       "body": "Over 21,000 paying subscribers, and we don't sell customer data.\nWe're EU-based and self-funded. Try it free for 30 days: plausible.io",
+       "hashtags": [],
+       "altText": "Dark card with white text: Over 21,000 paying subscribers. Over 313 billion pageviews tracked. Independent. Self-funded. EU-based.",
+       "imageIdea": "Typographic card with the two confirmed numbers and a one-line support: Independent. Self-funded. EU-based.",
+       "factIndexes": [
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Over 21,000 paying subscribers, and we don't sell customer data.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: customers pay for Plausible, so it doesn't sell their data. Type: typographic card, because the proof is two confirmed numbers and no suitable photo exists yet. Exact on-image text: 'Over 21,000 paying subscribers' (largest, off-white on dark navy), 'Over 313 billion pageviews tracked' (about half the size), 'Independent. Self-funded. EU-based.' (small support line). Plausible wordmark, small, bottom corner. Placement: Facebook feed, portrait or square (confirm current pixel specs); keep all text clear of the edges. Colours are provisional, taken from the Plausible logo; off-white on navy is well above WCAG AA. Don'ts: no customer logos or quotes until the owner approves named customers, no awards, no star ratings, no stock people, no 'trusted by' claims beyond the confirmed numbers. Owner note: if the team wants a real photo of the people behind Plausible instead, shoot it on a phone in natural light with everyone's consent; no photo is assumed here. Check trial terms on plausible.io before publishing.",
+       "firstComment": ""
+      }
+     ]
+    },
+    "costMicros": 460248,
+    "ms": 187732,
+    "rounds": 3,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.11,
+      "gatesPassed": false,
+      "lintErrors": 0
+     },
+     {
+      "round": 1,
+      "average": 3.78,
+      "gatesPassed": true,
+      "lintErrors": 0
+     },
+     {
+      "round": 2,
+      "average": 3.56,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   },
+   "v2o": {
+    "arm": "v2o",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "GA4 your only cookie? Drop the banner",
+       "body": "If GA4 is your only cookie, swap to Plausible and you can drop the banner.\n\n30 days free, then [NEEDS FACT: price]: [NEEDS FACT: trial URL]",
+       "hashtags": [],
+       "altText": "Screenshot of the Plausible Analytics dashboard on one page: a line chart of visitors over time, with lists of top pages, traffic sources and countries below it. Text on a strip beneath: Analytics with no cookie banner.",
+       "imageIdea": "Real screenshot of the Plausible live demo dashboard: what the site owner sees once analytics no longer needs a cookie banner.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 2,
+       "format": "single_image",
+       "hook": "If GA4 is your only cookie, swap to Plausible and you can drop the banner.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: clear stats, no cookie banner needed. Job: show the product the reader gets instead of the banner. Type: real screenshot of the Plausible live demo dashboard, captured by the team. No mocked-up dashboards, edited numbers or invented sites. Placement: 4:5 portrait for the Facebook feed; confirm current pixel specs (for example 1080 x 1350). Crop to the visitor chart plus the top pages and sources panels so text reads on a phone; keep key parts away from the edges. Hierarchy: 1) the visitor line chart, 2) the top pages and sources lists, 3) a plain dark strip below with the label 'Analytics with no cookie banner.' in white, and the Plausible wordmark small, bottom-left. Brand colours provisional: confirm hex values with the owner; check text contrast is at least 4.5:1. Don'ts: no personal data, account emails or customer site names; no 'GDPR compliant' wording (state what the product does, not a legal outcome); no Google logo; no stock people.",
+       "firstComment": "Why the banner can go: Plausible sets no cookies and collects no personal data, so there's nothing to ask consent for. One caveat before you remove it: other tools on your site, like chat widgets, embedded videos or ad pixels, may set cookies of their own. To check, open your homepage in Chrome, right-click, choose Inspect, then Application, then Cookies. You'll see every cookie and the domain that set it. The trial needs no credit card."
+      },
+      {
+       "channel": "facebook",
+       "title": "A script 54 times smaller than Google Analytics",
+       "body": "Our script is 54 times smaller than Google Analytics, so phones have less to load.\n\nSee the dashboard it feeds: [NEEDS FACT: live demo URL]",
+       "hashtags": [
+        "#WebAnalytics"
+       ],
+       "altText": "Screen recording on a phone-sized frame. A test page loads in Chrome with the caption: Your analytics script loads on every page view. Browser developer tools show the Google Analytics script's download size, captioned: Google Analytics script. Then the Plausible script's smaller size, captioned: Plausible script. A plain card reads: 54 times smaller. The video ends scrolling through the Plausible dashboard with the caption: See the live demo, link in the post.",
+       "imageIdea": "Short vertical screen recording comparing the real download size of each analytics script in browser developer tools, ending on the live demo dashboard.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 5,
+       "format": "reel",
+       "hook": "Our script is 54 times smaller than Google Analytics, so phones have less to load.",
+       "slides": [],
+       "videoScript": "Shot one: a plain test page loading in Chrome.\nShot two: DevTools Network tab filtered to JS, the Google Analytics tag row highlighted with the size column visible.\nShot three: the same test page with only the Plausible script installed, its row highlighted with the size column visible.\nShot four: a plain card.\nShot five: slow scroll through the Plausible live demo dashboard.\nNo voiceover; burned-in captions carry it. Show only sizes you measured in the recording and check they match the 54 times figure before publishing. Adjust timings below to the final edit.\n\nCaption file (SRT):\n1\n00:00:00,000 --> 00:00:03,000\nYour analytics script loads on every page view.\n\n2\n00:00:03,000 --> 00:00:06,000\nGoogle Analytics script.\n\n3\n00:00:06,000 --> 00:00:09,000\nPlausible script.\n\n4\n00:00:09,000 --> 00:00:11,000\n54 times smaller.\n\n5\n00:00:11,000 --> 00:00:15,000\nSee the live demo, link in the post.",
+       "visualBrief": "Message: our script is 54 times smaller. Job: show the mechanism, not just state it. Type: real screen recording of browser developer tools on a test page, plus the real Plausible live demo; no mocked-up or edited size values. Placement: 9:16 vertical Reel; keep captions in the upper two-thirds, clear of the bottom ~20% and right edge. Hierarchy: 1) the highlighted size value in the Network tab, zoomed so it reads on a phone, 2) the burned-in caption, 3) Plausible wordmark small on the final shot only. Captions in white on a solid dark panel, contrast at least 4.5:1. Upload the SRT file as well as burning captions in. Don'ts: no Google logo beyond the real filename shown in the tool, no third-party sites in the recording, no music without rights, no personal data in the browser (log out, hide bookmarks and extensions).",
+       "firstComment": "Why size matters: every visitor's browser downloads your analytics script along with the page. A smaller file means less to fetch and run, which helps most on a phone with a weak signal. Check your own site: open it in Chrome, right-click, choose Inspect, open the Network tab, filter by JS and reload. The size column shows what each script costs your visitors."
+      },
+      {
+       "channel": "facebook",
+       "title": "Paid for by subscribers, based in the EU",
+       "body": "Over 21,000 subscribers pay for Plausible. We're EU-based and don't sell your data.\n\n30 days free, then [NEEDS FACT: price]: [NEEDS FACT: trial URL]",
+       "hashtags": [],
+       "altText": "Dark card with large white text: Over 21,000 paying subscribers. Smaller text below: EU-based, self-funded, profitable. We don't sell customer data. Plausible wordmark in the corner.",
+       "imageIdea": "Typographic card with the confirmed subscriber number and the EU and independence facts.",
+       "factIndexes": [
+        2,
+        3
+       ],
+       "suggestedDay": 9,
+       "format": "single_image",
+       "hook": "Over 21,000 subscribers pay for Plausible.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: paid by subscribers, EU-based, data not for sale. Job: build trust with a confirmed number. Type: typographic card (a real team photo would also work, but only if the owner supplies one with everyone's consent). Placement: 4:5 portrait for the Facebook feed; confirm current pixel specs; keep text away from the edges. Brand kit provisional: dark background in Plausible's own logo colour, white text, one bold sans-serif family; confirm hex values with the owner and check contrast is at least 4.5:1. Hierarchy: 1) 'Over 21,000' as the largest element, upper third. 2) 'paying subscribers' directly below at about half the size. 3) Support line, smaller: 'EU-based, self-funded, profitable. We don't sell customer data.' 4) Plausible wordmark small, bottom-left. Don'ts: don't round or restyle the number in a way that changes it, no customer logos (none confirmed), no Google logo or claims about what other tools do with data, no stock team photos, no flags or map pins.",
+       "firstComment": "How we're set up: Plausible is self-funded, profitable and independent, and the company is based in the EU. Subscriptions are how we pay the bills, and we don't sell customer data. The trial is 30 days with no credit card, so you can add the script and watch real visits come in before deciding."
+      }
+     ]
+    },
+    "costMicros": 739252,
+    "ms": 251705,
+    "rounds": 3,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.78,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.89,
+      "gatesPassed": false,
+      "lintErrors": 0
+     },
+     {
+      "round": 2,
+      "average": 4,
+      "gatesPassed": true,
+      "lintErrors": 1
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v2s>v2o": {
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A's posts are ready to publish: each has a real URL (plausible.io), a clear trial CTA and a focused single claim tied to a confirmed fact.",
+      "B leaves [NEEDS FACT: price], [NEEDS FACT: trial URL] and [NEEDS FACT: live demo URL] placeholders in the post body. The owner can't use these as written, and the missing link kills the conversion goal.",
+      "A's copy is short, native to Facebook and consistent with the simple, transparent brand voice. Its visual briefs are practical, and it flags that the trial terms need checking.",
+      "B has some good craft: the GA4 hook, the cookie-check first comments and the Reel concept. But the Reel is complex to produce, the altText describes a video while the format is labelled reel, and the comments add unconfirmed claims such as no credit card and the 'GA4 is your only cookie' framing.",
+      "B's first comments state 'no credit card' as fact, but that isn't among the confirmed facts, and it mentions 'profitable' only as fine detail. Overall, B adds more risk and less usability."
+     ],
+     "truthX": [
+      "The 30-day free trial isn't in the confirmed facts. A does flag it for the owner to verify, so the risk is low.",
+      "'Less for every visitor to download' is a mild inference from the 54x size claim."
+     ],
+     "truthY": [
+      "'No credit card' is stated in the first comments, but it isn't in the confirmed facts.",
+      "The 30-day trial is stated as fact in the post body and isn't confirmed.",
+      "The post body contains unresolved [NEEDS FACT] placeholders that would publish as broken text.",
+      "'Phones have less to load' and 'helps most on a phone with a weak signal' are inferences beyond the confirmed fact."
+     ]
+    },
+    "opus": {
+     "result": "tie",
+     "reasons": [
+      "B's hook, 'If GA4 is your only cookie, swap to Plausible and you can drop the banner,' targets the core switcher audience directly. A's 'Analytics with no cookie banner' is generic.",
+      "B's first comments add honest, useful substance. The cookie caveat about chat widgets and pixels fits the transparent brand voice and guards against overpromising. The DevTools how-to invites engagement.",
+      "B shows the product: a live demo dashboard and a reel demonstrating the script size difference. A's 'site with no banner' screenshot proves an absence, which is visually weak.",
+      "A is cleaner and ready to post: it uses the known plausible.io URL and flags that the trial terms need checking. B leaves [NEEDS FACT] placeholders in the body copy, including a trial URL that is already known. That is a real readiness flaw.",
+      "A's bodies are very thin for Facebook and add little context or reason to click beyond restating facts."
+     ],
+     "truthX": [
+      "The 30-day free trial is not in the confirmed facts. It is flagged in the owner notes but appears unqualified in every post body."
+     ],
+     "truthY": [
+      "The 30-day trial and 'no credit card' are stated in the first comments without being flagged as unconfirmed.",
+      "The reel depends on measured script sizes matching 54x. This is flagged, but it is risky if the real-world sizes differ.",
+      "[NEEDS FACT] placeholders are left in the publishable body text."
+     ]
+    }
+   },
+   "v2s>v0f": {
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B's posts are written as real Facebook posts: a hook, a short argument, an honest caveat, and a link in the first comment. A's posts are two-line ads that work as captions but give little reason to stop scrolling.",
+      "B shows more strategy. It targets people whose cookie banner exists because of their analytics tool, raises page-weight anxiety, and uses the 'who pays for free analytics' angle against Google Analytics. A repeats the same 'try it free for 30 days' CTA three times.",
+      "B's brand voice is closer to the stated one: transparent and honest. It admits Plausible isn't right for every need and notes that other tools may still need consent. That also avoids overpromising on compliance, which the insights warned against.",
+      "B flags unconfirmed items with [NEEDS FACT] placeholders instead of stating them. The trade-off is that the owner has to fill them in, and a literal placeholder in the body text is a bit clumsy.",
+      "A's visuals are specific and authentic: a real screenshot in a private tab and a real network-tab capture. But the briefs are overlong, and the private-tab screenshot proves little because it would show nothing on any site without a banner.",
+      "A is largely truthful and carefully restrained, but it states the 30-day free trial in the body even though it is not a confirmed fact. It only notes this in the owner note."
+     ],
+     "truthX": [
+      "The post body asserts a '30-day free trial', which is not in the confirmed facts. The owner note acknowledges this, but the claim is still in the copy.",
+      "'Less for every visitor to download' is a mild extrapolation from the script-size fact, but it is reasonable."
+     ],
+     "truthY": [
+      "'Swapping it in is one line of code' is unconfirmed. It is flagged with [NEEDS FACT] in the first comment, but it still appears in the body copy.",
+      "'You still get visitors, top pages, where traffic comes from... on one page, without a training course' rests on site insights, not confirmed facts, though it is plausible.",
+      "'No investors pushing for growth at any cost' is an embellishment of 'independent, self-funded'.",
+      "'A company whose only customer is you' is a rhetorical flourish that isn't strictly supported."
+     ]
+    },
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B reads like real Facebook page posts. Each has a conversational hook, a reason to care, and a clear next step. A's posts are two-line ad blurbs that all follow the same template, so the page would feel repetitive and thin.",
+      "B's honest caveat fits the transparent brand voice well and pre-empts a real objection: other tools on the site may still need consent. So does its line that Plausible isn't right for every need.",
+      "B's 'who pays for your analytics' angle turns the independent, self-funded facts into a sharper argument than A's flat statement.",
+      "A wins on truth discipline. Its claims stay inside the confirmed facts, and the trial is backed by the site and flagged for checking. Its real-screenshot visual briefs are more credible than B's mocked before/after banner.",
+      "B's unconfirmed claims, mainly 'one line of code' and the listed dashboard metrics, are modest and partly flagged. Its stronger strategy and channel craft give it the edge, but only narrowly.",
+      "B leaves a [NEEDS FACT] placeholder in the post body, so it isn't ready to paste. A is publish-ready once the trial terms are checked."
+     ],
+     "truthX": [
+      "The 30-day free trial is not in the confirmed facts. It comes from the site, and A flags it for the owner to check."
+     ],
+     "truthY": [
+      "The post body states 'Swapping it in is one line of code' as fact. It is unconfirmed and is flagged only in the first comment.",
+      "The specific dashboard metrics (visitors, top pages, traffic sources) are not in the confirmed facts.",
+      "'Every second of load time counts' implies a speed benefit beyond the confirmed claim that the script is 54 times smaller.",
+      "The before/after mockup with an invented cookie banner is illustrative rather than real.",
+      "'A company whose only customer is you' and 'No investors pushing for growth at any cost' are inferences beyond the stated facts."
+     ]
+    }
+   },
+   "v2o>v0f": {
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B's post bodies are complete, readable Facebook posts with a hook, a concrete benefit, an honest caveat and a CTA. They fit the brand voice (transparent, honest, simple) and are ready to use.",
+      "A's bodies are two-line stubs with [NEEDS FACT: price] and [NEEDS FACT: trial URL] placeholders in the main copy. The owner can't post them as written, and the price and URL aren't in the facts.",
+      "A's first post hook, 'If GA4 is your only cookie', is awkward, and the title 'GA4 your only cookie? Drop the banner' is confusing and overpromises. A also calls Plausible a 'swap' without context.",
+      "A's Reel concept (a live DevTools size comparison) is clever but heavy. It needs real production, and the owner is told to verify the 54x figure against the recording, which is a risk and a burden for a small team.",
+      "B explains the value for the audience: the no-banner benefit, the one-page numbers (supported by the insights) and the 'who pays for analytics' independence angle. It works the proof points (21,000 subscribers, 313 billion pageviews) into the copy.",
+      "B uses its own NEEDS FACT flags only where claims are unconfirmed (the trial terms and the one-line setup), and it states its caveats honestly. Its visuals are simple to produce, though its link-in-comments CTA is slightly weaker than a direct link."
+     ],
+     "truthX": [
+      "Body copy relies on [NEEDS FACT] placeholders for price and URL, so the CTA is unusable.",
+      "The first comment says 'The trial needs no credit card' and the bodies say '30 days free'. Neither is in the confirmed facts, though both appear in the insights.",
+      "'We're EU-based and don't sell your data' is fine, but the Reel alt text and brief imply measured sizes that haven't been verified."
+     ],
+     "truthY": [
+      "The 'one line of code' setup claim in post 2 is stated in the body, though it is flagged in the comment as needing confirmation.",
+      "'You see them on one page, without a training course' and 'visitors, top pages, where traffic comes from' come from the insights, not the confirmed facts.",
+      "'No investors pushing for growth at any cost' goes slightly beyond 'self-funded' and is an editorial inference.",
+      "'GDPR consent form' wording sits close to a compliance claim, but it mirrors the confirmed fact."
+     ]
+    },
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B's post bodies are complete and native to Facebook. Each opens with a question or provocation, explains the benefit plainly and points to the link in the comments. A's bodies are two-line stubs whose main text is mostly placeholders for price and URL, so they cannot be published without more writing.",
+      "B states the honest caveat in the post itself: other tools may still set cookies. That fits the transparent brand voice. A keeps the same caveat in the first comment, which fewer people read.",
+      "B's third post builds a stronger trust story around independence. It uses both proof numbers and the brand's 'not right for every use case' honesty, so it is clearly written for this brand.",
+      "A's production briefs are excellent and more careful: real screenshots, a reel with an SRT caption file, contrast checks and a DevTools self-check in the comments. Its reel is the most platform-savvy idea on either side. But the craft sits around copy that is too thin to drive trials.",
+      "Both stay mostly within the facts. B adds a 'one line of code' setup claim in the body and only flags it in the comment, which is a minor truth risk.",
+      "B's 1200x630 image size is a weaker choice for today's mobile feed than A's 4:5 portrait, and B's #GDPR hashtag edges toward implying legal compliance."
+     ],
+     "truthX": [
+      "'30 days free' and 'no credit card' come from site insights, not the confirmed facts. This is a minor issue."
+     ],
+     "truthY": [
+      "The post body says swapping in Plausible 'is one line of code', which is unconfirmed. It is flagged only in the first comment and remains in the publishable text.",
+      "'No investors pushing for growth at any cost' is an editorial inference from 'self-funded', not a confirmed statement.",
+      "The #GDPR hashtag could imply a compliance claim."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v2s": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 5,
+    "usefulness": 7,
+    "overall": 6,
+    "topIssue": "The posts are so short and fact-recitation-driven, each ending in the same identical trial CTA, that they read like ad copy rather than Facebook page posts and give followers little reason to stop, engage or share, with no audience pain (GA4 complexity, banner fatigue) or story to hook them."
+   },
+   "v2o": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 6,
+    "usefulness": 6,
+    "overall": 6,
+    "topIssue": "There are only three thin, one-line organic posts, with no plan for using the $500/month ad budget to boost or target them. The live copy also still contains [NEEDS FACT] placeholders for the price and URLs, so these posts are unlikely to drive paying customers within 90 days as delivered."
+   },
+   "v0f": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 6,
+    "overall": 7,
+    "topIssue": "Post 2 states the unconfirmed 'one line of code' setup claim as fact in the body, flagging it only in the first comment where the owner could easily miss it, while Post 1 ships with a raw placeholder in its call to action."
+   }
+  }
+ }
+]

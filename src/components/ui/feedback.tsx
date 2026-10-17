@@ -24,17 +24,17 @@ export function EmptyState({ icon, title, body, action, headingLevel: H = "h3", 
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center",
+        "flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-line-strong bg-surface px-6 py-10 text-center",
         className,
       )}
     >
       {icon ? (
-        <span aria-hidden="true" className="bg-soft-gradient grid size-16 place-items-center rounded-[20px] text-brand-800 ring-1 ring-brand-100 [&_svg]:size-7">
+        <span aria-hidden="true" className="grid size-11 place-items-center rounded-xl bg-surface-2 text-ink-2 ring-1 ring-line [&_svg]:size-5">
           {icon}
         </span>
       ) : null}
-      <H className="text-lg font-bold text-ink">{title}</H>
-      {body ? <p className="max-w-md leading-relaxed text-ink-2">{body}</p> : null}
+      <H className="text-base font-semibold text-ink">{title}</H>
+      {body ? <p className="max-w-md text-sm leading-relaxed text-ink-3">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
@@ -66,13 +66,13 @@ export function Callout({ tone = "info", title, live, action, className, childre
   const resolved = live ?? (tone === "danger" ? "alert" : "none");
   const role = resolved === "none" ? undefined : resolved;
   return (
-    <div role={role} className={cn("flex gap-3 rounded-2xl border p-4", cls, className)} {...props}>
-      <span aria-hidden="true" className="callout-icon grid size-8 shrink-0 place-items-center rounded-lg">
-        <Icon className="size-[18px]" />
+    <div role={role} className={cn("flex gap-2.5 rounded-lg border px-3.5 py-3", cls, className)} {...props}>
+      <span aria-hidden="true" className="callout-icon mt-px grid size-6 shrink-0 place-items-center rounded-md">
+        <Icon className="size-4" />
       </span>
-      <div className="min-w-0 flex-1 text-[0.95rem] leading-relaxed">
+      <div className="min-w-0 flex-1 text-sm leading-relaxed">
         <span className="sr-only">{label}: </span>
-        {title ? <p className="font-bold">{title}</p> : null}
+        {title ? <p className="font-semibold">{title}</p> : null}
         {children ? <div className={cn(title && "mt-0.5", "text-ink-2 [&_a]:font-medium [&_a]:text-current [&_a]:underline")}>{children}</div> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
@@ -96,9 +96,9 @@ export interface StatProps {
 /** Single number with label and provenance. */
 export function Stat({ label, value, sublabel, change, className }: StatProps) {
   return (
-    <div className={cn("flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4 shadow-sm", className)}>
-      <dt className="text-sm font-semibold text-ink-2">{label}</dt>
-      <dd className="text-3xl font-extrabold tabular-nums tracking-tight text-ink">{value}</dd>
+    <div className={cn("flex flex-col gap-1 rounded-xl border border-line bg-surface p-4 shadow-sm", className)}>
+      <dt className="text-[13px] font-medium text-ink-3">{label}</dt>
+      <dd className="text-2xl font-semibold tabular-nums tracking-tight text-ink">{value}</dd>
       {change ? <dd className="text-sm font-medium text-ink-2">{change}</dd> : null}
       {sublabel ? <dd className="text-[0.8125rem] text-ink-3">{sublabel}</dd> : null}
     </div>

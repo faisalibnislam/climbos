@@ -11,6 +11,7 @@
  */
 
 export type ModelKey =
+  | "claude-fable-5.1"
   | "claude-opus-5.5"
   | "claude-sonnet-5.5"
   | "claude-haiku-5.5"
@@ -90,8 +91,20 @@ const GEMINI_PRICING = "https://ai.google.dev/gemini-api/docs/pricing";
 const POLAR_FEES = "https://polar.sh/docs/merchant-of-record/fees";
 
 const RESEARCH_MODELS: Record<ModelKey, ModelRate> = {
-  // Added for Engine v2 (17 Oct 2026). No workbook row routes to Opus, so the
+  // Added for Engine v2 (17 Oct 2026). No workbook row routes to Opus or
+  // Fable (Fable is used only as an independent benchmark judge), so the
   // fixture's calculations are unchanged.
+  "claude-fable-5.1": {
+    key: "claude-fable-5.1",
+    displayName: "Claude Fable 5.1",
+    provider: "anthropic",
+    inputPerM: 10,
+    outputPerM: 50,
+    cacheReadPerM: 0.25,
+    cacheWritePerM: 12.5,
+    basis: "Standard; always thinks (thinking billed as output)",
+    source: CLAUDE_PRICING,
+  },
   "claude-opus-5.5": {
     key: "claude-opus-5.5",
     displayName: "Claude Opus 5.5",

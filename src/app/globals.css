@@ -8,15 +8,16 @@
  * Status is never conveyed by colour alone.
  */
 :root {
-  --bg: #f5f6f8;
+  --bg: #f9fafb;
   --surface: #ffffff;
   --surface-2: #f0f2f5;
   --surface-3: #e4e7ec;
   --ink: #101828;
   --ink-2: #344054;
   --ink-3: #5d6679;
-  --line: #e4e7ec;
-  --line-strong: #c9ced8;
+  /* Hairlines are translucent ink, like Apollo: cards 8%, controls 12%. */
+  --line: rgb(16 24 40 / 0.09);
+  --line-strong: rgb(16 24 40 / 0.16);
 
   /* Pine: primary actions, links, focus, feature panels. 800 on white = 7.9:1. */
   --brand-950: #052e22;
@@ -67,8 +68,8 @@
   --radius: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.06);
+  --shadow-sm: 0 4px 8px -2px rgb(16 24 40 / 0.04), 0 2px 8px -2px rgb(16 24 40 / 0.07);
+  --shadow: 0 4px 8px -2px rgb(16 24 40 / 0.05), 0 2px 8px -2px rgb(16 24 40 / 0.09);
   --shadow-lg: 0 2px 6px rgb(16 24 40 / 0.05), 0 16px 40px rgb(16 24 40 / 0.1);
 }
 
@@ -141,6 +142,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
   text-rendering: optimizeLegibility;
 }
 
@@ -305,15 +307,21 @@ body {
   background: var(--gradient-soft);
 }
 
-/* Apollo-style serif headlines. Unlayered on purpose so page and section
+/* Product UI headings: Inter, medium weight, tight tracking (Apollo-style
+   density). Marketing pages use serif headlines. Unlayered on purpose so
    headings stay consistent whatever weight utility a component uses. */
 h1,
 h2 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+h3 {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+.marketing h1,
+.marketing h2 {
   font-family: var(--font-display-serif), ui-serif, Georgia, serif;
   font-weight: 500;
   letter-spacing: -0.015em;
-}
-h3 {
-  font-weight: 600;
-  letter-spacing: -0.01em;
 }

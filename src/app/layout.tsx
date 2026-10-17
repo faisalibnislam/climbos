@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { Geist_Mono, Inter, Newsreader } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import "./globals.css";
 
-// Apollo-style pairing: a clean grotesk for UI text and an elegant serif for headlines.
-const sans = Geist({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
+// Inter for the product UI (dense, legible SaaS type); a serif for marketing headlines.
+const sans = Inter({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
 const display = Newsreader({ variable: "--font-display-serif", subsets: ["latin"], display: "swap", weight: ["400", "500", "600"] });
 const mono = Geist_Mono({ variable: "--font-mono-ui", subsets: ["latin"], display: "swap" });
 

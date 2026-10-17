@@ -43,7 +43,7 @@ export function useFieldControl(own: { id?: string; "aria-describedby"?: string;
 }
 
 export const controlClasses =
-  "w-full rounded-xl border border-line-strong bg-surface px-3.5 text-base text-ink shadow-sm " +
+  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink " +
   "placeholder:text-ink-3 transition-colors hover:border-[#aeb6c9] " +
   "focus-visible:border-brand-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 " +
   "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3 " +
@@ -57,7 +57,7 @@ export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
 /** Form label. Always pair visible labels with inputs (never rely on placeholder). */
 export function Label({ className, optional, children, ...props }: LabelProps) {
   return (
-    <label className={cn("text-[0.95rem] font-semibold text-ink", className)} {...props}>
+    <label className={cn("text-[13px] font-medium text-ink", className)} {...props}>
       {children}
       {optional ? <span className="ml-1.5 font-normal text-ink-3">(optional)</span> : null}
     </label>
@@ -94,7 +94,7 @@ export function Field({ label, hint, error, optional, required = false, id, clas
           {label}
         </Label>
         {hint ? (
-          <p id={hintId} className="text-sm leading-relaxed text-ink-3">
+          <p id={hintId} className="text-xs leading-relaxed text-ink-3">
             {hint}
           </p>
         ) : null}
@@ -116,7 +116,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   ref,
 ) {
   const wiring = useFieldControl({ id, required, "aria-describedby": describedBy });
-  return <input ref={ref} className={cn(controlClasses, "h-11", className)} {...wiring} {...props} />;
+  return <input ref={ref} className={cn(controlClasses, "h-9", className)} {...wiring} {...props} />;
 });
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
