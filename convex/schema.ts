@@ -667,6 +667,52 @@ export default defineSchema({
     active: v.boolean(),
   }).index("by_org_active", ["orgId", "active"]),
 
+  /* ---------------- Climb AI (side-panel agent) ---------------- */
+  climbMessages: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("step"), v.literal("action")),
+    text: v.string(),
+    /** Screen and pointed-at elements the owner sent with a message. */
+    screen: v.optional(v.object({ path: v.string(), title: v.string() })),
+    selection: v.optional(v.array(v.object({ type: v.string(), id: v.string(), label: v.string() }))),
+    /** A consequential action waiting for the owner's tap (role "action"). */
+    action: v.optional(
+      v.object({
+        tool: v.string(),
+        input: v.string(),
+        title: v.string(),
+        summary: v.string(),
+        status: v.union(v.literal("pending"), v.literal("done"), v.literal("canceled"), v.literal("failed")),
+        result: v.optional(v.string()),
+      }),
+    ),
+    /** Screen commands for the client to run (open a page, point at an element). */
+    ui: v.optional(v.array(v.object({ kind: v.union(v.literal("go_to"), v.literal("highlight")), value: v.string(), note: v.optional(v.string()) }))),
+    /** Links to things the agent made (drafts, jobs). */
+    links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+    status: v.union(v.literal("done"), v.literal("working"), v.literal("failed")),
+    runId: v.optional(v.id("workflowRuns")),
+    createdAt: v.number(),
+  }).index("by_org_user_created", ["orgId", "userId", "createdAt"]),
+
+  /** Personal agent tokens for the ClimbOS MCP server (only the hash is stored). */
+  agentTokens: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    name: v.string(),
+    tokenHash: v.string(),
+    /** First characters, to recognise the token in the list. */
+    prefix: v.string(),
+    scopes: v.array(v.union(v.literal("read"), v.literal("draft"), v.literal("request_approval"))),
+    lastUsedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_hash", ["tokenHash"])
+    .index("by_org", ["orgId"]),
+
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
   assets: defineTable({

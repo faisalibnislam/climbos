@@ -39,6 +39,7 @@ import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/components/app/content/shared";
+import { climbTarget } from "@/components/climb/context";
 
 const CHANNELS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest"] as const;
 const DIRECT = new Set(["instagram", "facebook"]);
@@ -427,7 +428,7 @@ function SlotCard({ slug, slot, tz }: { slug: string; slot: Slot; tz: string }) 
   const time = new Date(slot.slotAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
   const reasons = slot.routing?.reasons ?? [];
   return (
-    <article className="group flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-2 transition-colors hover:border-line-strong">
+    <article {...climbTarget("slot", slot.id, `${networkName(slot.channel)} post ${time}: ${slot.artifact?.title ?? slot.idea}`)} className="group flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-2 transition-colors hover:border-line-strong">
       <div className="flex items-center gap-1.5">
         <SocialIcon network={slot.channel} size="sm" labelled />
         <span className="text-xs tabular-nums text-ink-3">{time}</span>

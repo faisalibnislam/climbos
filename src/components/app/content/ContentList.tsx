@@ -9,6 +9,7 @@ import { Button, Card, EmptyState, Skeleton, buttonClasses } from "@/components/
 import { cn } from "@/lib/utils";
 import { formatDateTime, relativeTime } from "../money";
 import { ArtifactStatus, ChannelTag, RoleName, SectionBoundary, useNow } from "./shared";
+import { climbTarget } from "@/components/climb/context";
 
 export type ArtifactStatusValue =
   | "draft"
@@ -181,7 +182,7 @@ function ListBody({
 function ContentCard({ slug, item }: { slug: string; item: ListItem }) {
   const now = useNow();
   return (
-    <article className="relative flex h-full flex-col gap-3 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line-strong hover:bg-surface-2 focus-within:border-brand-700">
+    <article {...climbTarget("draft", item.id, `${item.channel} ${item.kind.replace("_", " ")}: ${item.title}`)} className="relative flex h-full flex-col gap-3 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line-strong hover:bg-surface-2 focus-within:border-brand-700">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ChannelTag channel={item.channel} />
         {item.scheduledFor && item.status === "scheduled" ? (

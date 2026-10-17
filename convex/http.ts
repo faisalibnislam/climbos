@@ -4,12 +4,16 @@ import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
+import { handle as mcpHandle } from "./mcp";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
 
 const MAX_BODY = 1_000_000;
+
+/** ClimbOS MCP server for external agents (also served at climbos.app/api/mcp via a rewrite). */
+for (const method of ["POST", "GET", "DELETE"] as const) http.route({ path: "/mcp", method, handler: mcpHandle });
 
 /**
  * Polar webhooks: verify the Standard Webhooks signature on the raw body,

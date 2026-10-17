@@ -12,6 +12,7 @@ import { microsToDisplay, relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
+import { climbTarget } from "@/components/climb/context";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -67,7 +68,7 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
   const cards = answer?.cards ?? [];
   const allDone = cards.length > 0 && cards.every((c) => ["done", "rejected"].includes(c.status) || c.kind === "note");
   return (
-    <article className="overflow-hidden rounded-xl border border-line bg-surface">
+    <article {...climbTarget("wish", ask.id, ask.text)} className="overflow-hidden rounded-xl border border-line bg-surface">
       <header className="flex items-start gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
         <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : allDone ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
           {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : allDone ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}

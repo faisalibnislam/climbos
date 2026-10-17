@@ -36,7 +36,7 @@ export function ChartFrame({ title, description, source, legend, table, headingL
   const [showTable, setShowTable] = useState(false);
   const tableId = useId();
   return (
-    <figure className={cn("flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:p-5", className)}>
+    <figure data-climb={typeof title === "string" ? JSON.stringify({ type: "chart", id: `chart:${title}`, label: `${title}${table.rows.length ? `: ${table.rows.slice(0, 12).map((r) => r.join(" ")).join("; ")}` : ""}`.slice(0, 400) }) : undefined} className={cn("flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:p-5", className)}>
       <figcaption className="flex flex-col gap-1">
         <H className="heading-card">{title}</H>
         {description ? <p className="text-ui text-ink-3">{description}</p> : null}

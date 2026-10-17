@@ -21,6 +21,7 @@ import {
   untrusted,
 } from "../shared/ai/tasks";
 import { internal } from "./_generated/api";
+import { claudeUsageRecords } from "./lib/usage";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type ActionCtx, internalAction } from "./_generated/server";
 import { fixtureOutput, type FixtureContext } from "./ai/fixtures";
@@ -255,28 +256,6 @@ const AGENT_FAILURES: Record<string, string> = {
   invalid_output: "The AI's answer didn't pass our quality checks. Nothing was saved.",
 };
 
-function claudeUsageRecords(modelKey: ModelKey, r: ClaudeTurnResult, rates: RateVersion) {
-  const searchMicros = usdToMicrosCeil(r.usage.webSearches * rates.services.searchCall);
-  const records = [
-    {
-      type: "model_call" as const,
-      provider: "anthropic",
-      model: MODEL_SPECS[modelKey].apiModelId,
-      inputTokens: r.usage.inputTokens,
-      outputTokens: r.usage.outputTokens,
-      reasoningTokens: r.usage.thinkingTokens,
-      cacheReadTokens: r.usage.cacheReadTokens,
-      cacheWriteTokens: r.usage.cacheWriteTokens,
-      quantity: Math.max(1, r.usage.calls),
-      costMicros: Math.max(0, r.costMicros - searchMicros),
-      estimated: false,
-    },
-  ];
-  if (r.usage.webSearches > 0) {
-    records.push({ ...records[0], type: "search_call" as never, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: r.usage.webSearches, costMicros: searchMicros });
-  }
-  return records;
-}
 
 /**
  * Run one Engine v2 agent inside a job. Every phase is a checkpointed,

@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/auth/signin/:path*", destination: `${convexSiteUrl}/api/auth/signin/:path*` },
       { source: "/api/auth/callback/:path*", destination: `${convexSiteUrl}/api/auth/callback/:path*` },
+      // ClimbOS MCP server (stateless JSON-RPC), served from the Convex deployment.
+      { source: "/api/mcp", destination: `${convexSiteUrl}/mcp` },
     ];
   },
   images: {

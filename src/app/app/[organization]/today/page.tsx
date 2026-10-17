@@ -34,6 +34,7 @@ import { ASK_KEY } from "@/components/app/CommandPalette";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { WishFeed } from "@/components/app/wish/WishFeed";
+import { climbTarget } from "@/components/climb/context";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -350,7 +351,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
             <ul>
               {data.approvals.map((a) => (
                 <li key={a.id}>
-                  <Link href={`/app/${slug}/content/${a.id}`} className="flex items-center gap-3 border-b border-line p-4 transition-colors last:border-b-0 hover:bg-surface-2">
+                  <Link {...climbTarget("draft", a.id, `${a.channel} draft waiting for approval: ${a.title}`)} href={`/app/${slug}/content/${a.id}`} className="flex items-center gap-3 border-b border-line p-4 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleAvatar role={a.createdByRole ?? "social_media_manager"} size="md" />
                     <span className="min-w-0 flex-1">
                       <Tooltip content={a.title}>

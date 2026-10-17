@@ -1,0 +1,370 @@
+import { z } from "zod";
+import type { FunctionReference } from "convex/server";
+import { api } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+
+/**
+ * Climb AI's tools: one registry for the in-app side panel and the MCP server.
+ * Every tool calls the same public ClimbOS function the UI uses, through a
+ * caller that carries the person's own identity, so permissions, approval
+ * binding, metering and audit are identical to clicking in the app.
+ *
+ * Risk tiers:
+ * - read:    looks things up. Runs straight away.
+ * - draft:   prepares work (drafts, plans, screenshots) that nothing publishes. Runs straight away.
+ * - confirm: publishes, schedules, approves, spends or changes settings. Always waits for a tap.
+ * - ui:      moves or highlights the owner's screen (in-app only).
+ */
+
+export type Risk = "read" | "draft" | "confirm" | "ui";
+
+export interface Caller {
+  query: <F extends FunctionReference<"query">>(fn: F, args: F["_args"]) => Promise<F["_returnType"]>;
+  mutation: <F extends FunctionReference<"mutation">>(fn: F, args: F["_args"]) => Promise<F["_returnType"]>;
+}
+
+export interface ClimbTool<I extends z.ZodType = z.ZodType> {
+  name: string;
+  title: string;
+  description: string;
+  risk: Risk;
+  input: I;
+  /** Plain-English summary of what will happen (shown on confirmation cards). */
+  summarize?: (input: z.infer<I>) => string;
+  /** Narration while it runs, e.g. "Looking at your drafts". */
+  doing: string;
+  run?: (c: Caller, slug: string, input: z.infer<I>) => Promise<unknown>;
+}
+
+const artifactId = z.string().describe("Draft id (from list_drafts or the screen selection)");
+const CHANNELS = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest", "youtube"] as const;
+
+function short(s: unknown, n = 280): string {
+  return typeof s === "string" ? (s.length > n ? `${s.slice(0, n)}…` : s) : "";
+}
+
+const tool = <I extends z.ZodType>(t: ClimbTool<I>) => t as unknown as ClimbTool;
+
+export const CLIMB_TOOLS: ClimbTool[] = [
+  /* ---------------- read ---------------- */
+  tool({
+    name: "get_overview",
+    title: "Workspace overview",
+    description: "Today's state: goal, plan status, drafts waiting for approval, what the team is working on, recent jobs and next steps.",
+    risk: "read",
+    doing: "Checking today's overview",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const t = await c.query(api.workspace.today, { slug });
+      return {
+        business: t.business,
+        goal: t.goal,
+        plan: t.strategy ? { status: t.strategy.status, version: t.strategy.version, summary: short(t.strategy.summary, 400) } : null,
+        waitingForApproval: t.approvals.map((a) => ({ id: a.id, title: a.title, channel: a.channel })),
+        approvalsCount: t.approvalsCount,
+        next: t.next,
+        recentJobs: t.recent.slice(0, 8).map((r) => ({ id: r.id, title: r.title, status: r.status })),
+        paused: Boolean(t.emergencyStop),
+      };
+    },
+  }),
+  tool({
+    name: "list_drafts",
+    title: "List drafts",
+    description: "Content items (posts, ads, emails, pages), newest first. Filter by status: in_review (waiting for approval), approved, scheduled, published, draft, failed.",
+    risk: "read",
+    doing: "Looking at your content",
+    input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().optional() }),
+    run: async (c, slug, i) => {
+      const page = await c.query(api.content.list, { slug, status: i.status, paginationOpts: { numItems: Math.min(i.limit ?? 12, 25), cursor: null } });
+      return (page.page as { id: string; title: string; channel: string; status: string; scheduledFor?: number | null; kind: string }[]).map((a) => ({ id: a.id, title: a.title, channel: a.channel, kind: a.kind, status: a.status, scheduledFor: a.scheduledFor ? new Date(a.scheduledFor).toISOString() : null }));
+    },
+  }),
+  tool({
+    name: "get_draft",
+    title: "Read a draft",
+    description: "Full text, image, status and approval state of one content item.",
+    risk: "read",
+    doing: "Reading the draft",
+    input: z.object({ artifactId }),
+    run: async (c, slug, i) => {
+      const d = await c.query(api.content.get, { slug, artifactId: i.artifactId as Id<"artifacts"> });
+      const v = d.current as { body: string; headline: string | null; callToAction: string | null; hashtags: string[]; imageLabel: string | null; unsupportedClaims: string[]; version: number } | null;
+      return { id: d.id, title: d.title, channel: d.channel, status: d.status, scheduledFor: d.scheduledFor ? new Date(d.scheduledFor).toISOString() : null, version: v?.version, headline: v?.headline, body: v?.body, callToAction: v?.callToAction, hashtags: v?.hashtags, image: v?.imageLabel, unsupportedClaims: v?.unsupportedClaims };
+    },
+  }),
+  tool({
+    name: "get_plan",
+    title: "Growth plan",
+    description: "The current growth plan: summary, diagnosis, North Star, growth plays with forecasts and tests, channels, experiments, this week's checklist.",
+    risk: "read",
+    doing: "Reading your growth plan",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const p = await c.query(api.workspace.plan, { slug });
+      const s = p.strategy;
+      if (!s) return { plan: null, goal: p.goal };
+      const x = s.expert as { diagnosis?: string; northStar?: unknown; plays?: { name: string; kind: string; oneLiner: string; forecast?: { p10: number; p50: number; p90: number; unit: string } }[]; weekOneChecklist?: string[] } | null;
+      return {
+        goal: p.goal,
+        status: s.status,
+        summary: short(s.summary, 600),
+        diagnosis: x?.diagnosis,
+        northStar: x?.northStar,
+        plays: x?.plays?.map((pl) => ({ name: pl.name, kind: pl.kind, oneLiner: pl.oneLiner, forecast: pl.forecast ? `${pl.forecast.p10}–${pl.forecast.p90} ${pl.forecast.unit} (likely ${pl.forecast.p50})` : null })),
+        weekOne: x?.weekOneChecklist,
+        channels: s.channels.map((ch) => ({ name: ch.name, priority: ch.priority, status: ch.status })),
+        experiments: p.experiments.map((e) => ({ name: e.name, status: e.status })),
+      };
+    },
+  }),
+  tool({
+    name: "get_results",
+    title: "Results",
+    description: "Business results over the last N days (traffic, leads, sales and what the team attributes to which channel), with data freshness.",
+    risk: "read",
+    doing: "Checking your results",
+    input: z.object({ days: z.number().optional() }),
+    run: async (c, slug, i) => c.query(api.analytics.overview, { slug, days: i.days ?? 30 }),
+  }),
+  tool({
+    name: "get_autopilot",
+    title: "Social autopilot",
+    description: "Autopilot settings, trust ladder per channel, and this and next week's planned posts with their status.",
+    risk: "read",
+    doing: "Checking autopilot",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const a = await c.query(api.autopilot.get, { slug });
+      return {
+        settings: a.settings,
+        trust: a.trust.filter((t) => t.streak > 0 || t.unlocked),
+        connected: a.connected,
+        weeks: a.weeks.map((w) => ({ weekOf: w.weekOf, theme: w.plan?.theme, slots: w.slots.map((s) => ({ id: s.id, channel: s.channel, when: new Date(s.slotAt).toISOString(), idea: short(s.idea, 140), status: s.status, draftId: s.artifact?.id ?? null })) })),
+      };
+    },
+  }),
+  tool({
+    name: "list_images",
+    title: "Image library",
+    description: "The workspace's real images: website screenshots, product photos, uploads and AI images (ids, labels, kind).",
+    risk: "read",
+    doing: "Looking at your images",
+    input: z.object({ kind: z.enum(["screenshot", "product_photo", "upload", "ai_image"]).optional() }),
+    run: async (c, slug, i) => {
+      const l = await c.query(api.assets.list, { slug, kind: i.kind });
+      return { website: l.website, images: l.assets.slice(0, 40).map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
+    },
+  }),
+  tool({
+    name: "get_job",
+    title: "Job result",
+    description: "What one job (run) produced: status, steps, drafts it created, output and cost.",
+    risk: "read",
+    doing: "Checking that job",
+    input: z.object({ runId: z.string() }),
+    run: async (c, slug, i) => {
+      const r = await c.query(api.workspace.runDetail, { slug, runId: i.runId as Id<"workflowRuns"> });
+      return { ...r, output: r.output ? short(JSON.stringify(r.output), 3000) : null };
+    },
+  }),
+
+  /* ---------------- draft (prepares work, nothing goes live) ---------------- */
+  tool({
+    name: "create_posts",
+    title: "Draft social posts",
+    description: "Write social posts for one channel. Use `brief` for the owner's specifics (topic, offer, dates, tone). Optionally build them around real images by id (from list_images). Nothing is published.",
+    risk: "draft",
+    doing: "Drafting posts",
+    input: z.object({ channel: z.enum(CHANNELS), quantity: z.number().min(1).max(6), brief: z.string(), imageIds: z.array(z.string()).optional() }),
+    run: async (c, slug, i) => {
+      if (i.imageIds?.length) return c.mutation(api.assets.makePosts, { slug, assetIds: i.imageIds as Id<"assets">[], channel: i.channel, brief: i.brief });
+      return c.mutation(api.content.generate, { slug, job: "content_social", channel: i.channel, quantity: i.quantity, images: 1, brief: i.brief });
+    },
+  }),
+  tool({
+    name: "create_content",
+    title: "Draft ads, emails or a web page",
+    description: "Draft ads (google_search_ad / meta_ad, created paused), an email sequence (email) or an SEO page (blog). Nothing is published or sent.",
+    risk: "draft",
+    doing: "Drafting",
+    input: z.object({ kind: z.enum(["ads", "email", "seo_page"]), brief: z.string() }),
+    run: async (c, slug, i) => c.mutation(api.content.generate, { slug, job: i.kind === "ads" ? "content_ads" : i.kind === "email" ? "content_email" : "content_seo", brief: i.brief }),
+  }),
+  tool({
+    name: "edit_draft",
+    title: "Edit a draft",
+    description: "Change a draft's text. This saves a new version; any earlier approval no longer applies, so the owner reviews the edit. Pass only the fields to change.",
+    risk: "draft",
+    doing: "Editing the draft",
+    input: z.object({ artifactId, title: z.string().optional(), headline: z.string().optional(), body: z.string().optional(), callToAction: z.string().optional(), hashtags: z.array(z.string()).optional() }),
+    run: async (c, slug, i) => {
+      const d = await c.query(api.content.get, { slug, artifactId: i.artifactId as Id<"artifacts"> });
+      const v = d.current as { body: string; headline: string | null; callToAction: string | null; destinationUrl: string | null; hashtags: string[]; altText: string | null } | null;
+      await c.mutation(api.content.edit, {
+        slug,
+        artifactId: i.artifactId as Id<"artifacts">,
+        title: i.title,
+        headline: i.headline ?? v?.headline ?? undefined,
+        body: i.body ?? v?.body ?? "",
+        callToAction: i.callToAction ?? v?.callToAction ?? undefined,
+        destinationUrl: v?.destinationUrl ?? undefined,
+        hashtags: i.hashtags ?? v?.hashtags ?? [],
+        altText: v?.altText ?? undefined,
+      });
+      return { saved: true, note: "Saved as a new version; it needs the owner's approval again." };
+    },
+  }),
+  tool({
+    name: "refresh_plan",
+    title: "Refresh the growth plan",
+    description: "Ask the strategist for a new version of the growth plan (it needs the owner's approval before anything changes).",
+    risk: "draft",
+    doing: "Asking the strategist for a new plan",
+    input: z.object({}),
+    run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
+  }),
+  tool({
+    name: "plan_week",
+    title: "Plan the week (autopilot)",
+    description: "Plan and draft the next week of social posts now (autopilot must be on).",
+    risk: "draft",
+    doing: "Planning the week",
+    input: z.object({}),
+    run: async (c, slug) => c.mutation(api.autopilot.planNow, { slug }),
+  }),
+  tool({
+    name: "capture_website",
+    title: "Capture website screenshots",
+    description: "Take real desktop, mobile and feature screenshots of the business's website (or a given public page) for posts.",
+    risk: "draft",
+    doing: "Capturing your website",
+    input: z.object({ url: z.string().optional() }),
+    run: async (c, slug, i) => c.mutation(api.assets.captureWebsite, { slug, url: i.url }),
+  }),
+  tool({
+    name: "collect_product_photos",
+    title: "Collect product photos",
+    description: "Collect real product photos, names and prices from the business's store.",
+    risk: "draft",
+    doing: "Collecting product photos",
+    input: z.object({}),
+    run: async (c, slug) => c.mutation(api.assets.collectProducts, { slug }),
+  }),
+
+  /* ---------------- confirm (never without the owner's tap) ---------------- */
+  tool({
+    name: "approve_draft",
+    title: "Approve a draft",
+    description: "Approve a draft's current version. For autopilot posts this schedules them for their planned time.",
+    risk: "confirm",
+    doing: "Approving",
+    input: z.object({ artifactId, note: z.string().optional() }),
+    summarize: () => "Approve this draft as it is now. Autopilot posts then go out at their planned time.",
+    run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "approve", note: i.note }),
+  }),
+  tool({
+    name: "send_back_draft",
+    title: "Send a draft back",
+    description: "Reject a draft's current version with a note for the team.",
+    risk: "confirm",
+    doing: "Sending it back",
+    input: z.object({ artifactId, note: z.string() }),
+    summarize: (i) => `Send this draft back with the note: "${i.note}"`,
+    run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "reject", note: i.note }),
+  }),
+  tool({
+    name: "schedule_draft",
+    title: "Schedule an approved draft",
+    description: "Schedule an approved draft to publish at a time (ISO 8601 with timezone).",
+    risk: "confirm",
+    doing: "Scheduling",
+    input: z.object({ artifactId, when: z.string() }),
+    summarize: (i) => `Schedule it for ${new Date(i.when).toUTCString()}.`,
+    run: async (c, slug, i) => c.mutation(api.content.schedule, { slug, artifactId: i.artifactId as Id<"artifacts">, when: Date.parse(i.when) }),
+  }),
+  tool({
+    name: "publish_now",
+    title: "Publish now",
+    description: "Publish an approved draft immediately to its connected account.",
+    risk: "confirm",
+    doing: "Publishing",
+    input: z.object({ artifactId }),
+    summarize: () => "Publish this approved post right now.",
+    run: async (c, slug, i) => c.mutation(api.content.publishNow, { slug, artifactId: i.artifactId as Id<"artifacts"> }),
+  }),
+  tool({
+    name: "skip_post",
+    title: "Skip a planned post",
+    description: "Skip an autopilot calendar slot so nothing posts in it.",
+    risk: "confirm",
+    doing: "Skipping the post",
+    input: z.object({ slotId: z.string() }),
+    summarize: () => "Skip this planned post. Nothing will go out in that slot.",
+    run: async (c, slug, i) => c.mutation(api.autopilot.skipSlot, { slug, slotId: i.slotId as Id<"calendarSlots"> }),
+  }),
+  tool({
+    name: "set_autopilot",
+    title: "Change autopilot",
+    description: "Turn autopilot on or off, or change its mode, channels and posts per week.",
+    risk: "confirm",
+    doing: "Updating autopilot",
+    input: z.object({ enabled: z.boolean(), mode: z.enum(["always_ask", "trust_ladder", "auto"]), channels: z.array(z.object({ channel: z.enum(CHANNELS), postsPerWeek: z.number().min(0).max(6) })) }),
+    summarize: (i) => (i.enabled ? `Autopilot on (${i.mode.replace("_", " ")}): ${i.channels.map((c) => `${c.channel} ${c.postsPerWeek}/week`).join(", ")}.` : "Turn autopilot off. Scheduled posts stay scheduled."),
+    run: async (c, slug, i) => {
+      const cur = await c.query(api.autopilot.get, { slug });
+      return c.mutation(api.autopilot.save, { slug, enabled: i.enabled, mode: i.mode, channels: i.channels, postingHours: cur.settings?.postingHours ?? [], alwaysAskTopics: cur.settings?.alwaysAskTopics ?? [], imagesPerWeek: cur.settings?.imagesPerWeek ?? 1 });
+    },
+  }),
+  tool({
+    name: "pause_everything",
+    title: "Pause everything",
+    description: "Emergency stop: pause all publishing, sending and AI work in this workspace.",
+    risk: "confirm",
+    doing: "Pausing everything",
+    input: z.object({ reason: z.string().optional() }),
+    summarize: () => "Pause all activity in this workspace until you resume it.",
+    run: async (c, slug, i) => c.mutation(api.workspace.pauseAll, { slug, reason: i.reason }),
+  }),
+
+  /* ---------------- ui (in-app only) ---------------- */
+  tool({
+    name: "go_to",
+    title: "Open a screen",
+    description: "Open a ClimbOS screen for the owner: today, plan, content, content/<draftId>, autopilot, images, results, connections, settings/billing, work/<runId>.",
+    risk: "ui",
+    doing: "Opening it for you",
+    input: z.object({ path: z.string() }),
+  }),
+  tool({
+    name: "highlight",
+    title: "Point at something",
+    description: "Highlight an element on the owner's current screen by its entity id (from the screen context) to show where something is.",
+    risk: "ui",
+    doing: "Pointing it out",
+    input: z.object({ entityId: z.string(), note: z.string().optional() }),
+  }),
+];
+
+export function toolByName(name: string) {
+  return CLIMB_TOOLS.find((t) => t.name === name);
+}
+
+/** Anthropic tool definitions (optionally without UI tools, e.g. for MCP). */
+export function anthropicTools(opts: { ui: boolean }) {
+  return CLIMB_TOOLS.filter((t) => opts.ui || t.risk !== "ui").map((t) => {
+    const schema = z.toJSONSchema(t.input) as Record<string, unknown>;
+    delete schema.$schema;
+    return {
+      name: t.name,
+      description: `${t.description}${t.risk === "confirm" ? " The owner must confirm before this happens; calling it shows them a confirmation." : ""}`,
+      input_schema: schema as { type: "object"; properties?: Record<string, unknown> },
+    };
+  });
+}
+
+/** Paths go_to may open (relative to /app/<slug>/). */
+export function safeAppPath(path: string): string | null {
+  const p = path.replace(/^\/+/, "").replace(/^app\/[^/]+\//, "");
+  return /^(today|plan|content(\/[a-z0-9]+)?|autopilot|images|results(\/[a-z0-9-]+)?|connections|settings\/(billing|team|activity|notifications)|work\/[a-z0-9]+)(\?[a-z=&_0-9-]*)?$/i.test(p) ? p : null;
+}

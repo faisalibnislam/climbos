@@ -41,6 +41,8 @@ export interface ClaudeTurnRequest {
   webFetch?: { maxUses: number; maxContentTokens?: number; allowedDomains?: string[]; blockedDomains?: string[] };
   /** pause_turn continuations allowed for long server-tool turns. */
   maxContinuations?: number;
+  /** Client-executed tools (agent loops): a tool_use stop returns the calls to the caller. */
+  customTools?: Anthropic.Tool[];
   timeoutMs?: number;
 }
 
@@ -76,6 +78,8 @@ export type ClaudeTurnResult =
       sources: Source[];
       actualModelId: string;
       stopReason: string;
+      /** Present when the model stopped to call custom tools. */
+      toolUses?: { id: string; name: string; input: unknown }[];
     }
   | {
       ok: false;
@@ -171,6 +175,7 @@ function buildTools(req: ClaudeTurnRequest): Anthropic.ToolUnion[] | undefined {
       ...(f.allowedDomains?.length ? { allowed_domains: f.allowedDomains } : f.blockedDomains?.length ? { blocked_domains: f.blockedDomains } : {}),
     } as Anthropic.ToolUnion);
   }
+  if (req.customTools?.length) tools.push(...req.customTools);
   return tools.length ? tools : undefined;
 }
 
@@ -232,6 +237,12 @@ export async function claudeTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
       const text = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("");
 
       if (res.stop_reason === "pause_turn") continue;
+      if (res.stop_reason === "tool_use" && req.customTools?.length) {
+        const toolUses = res.content
+          .filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")
+          .map((b) => ({ id: b.id, name: b.name, input: b.input }));
+        return { ok: true, output: text, text, appended, usage, costMicros: cost(), sources: [...sources.values()].slice(0, 60), actualModelId: res.model, stopReason: "tool_use", toolUses };
+      }
       if (res.stop_reason === "refusal") {
         return { ok: false, kind: "refused", message: "The model declined this request.", usage, costMicros: cost(), appended, text };
       }

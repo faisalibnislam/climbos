@@ -9,6 +9,7 @@ import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/c
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { PlanSection } from "./PlanSections";
+import { climbTarget } from "@/components/climb/context";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
@@ -149,7 +150,7 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
   const [open, setOpen] = useState(false);
   const total = score(play.scores);
   return (
-    <article className={cn("flex flex-col overflow-hidden rounded-xl border bg-surface", play.kind === "creative" ? "border-violet-500/40" : "border-line")}>
+    <article {...climbTarget("play", play.name, `${play.name} (${play.kind} play)`)} className={cn("flex flex-col overflow-hidden rounded-xl border bg-surface", play.kind === "creative" ? "border-violet-500/40" : "border-line")}>
       <header className="flex flex-col gap-2 border-b border-line p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip content={k.hint}>

@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as ads from "../ads.js";
+import type * as agentTokens from "../agentTokens.js";
 import type * as ai_fixtures from "../ai/fixtures.js";
 import type * as ai_providers from "../ai/providers.js";
 import type * as ai_research from "../ai/research.js";
@@ -19,6 +20,7 @@ import type * as auth from "../auth.js";
 import type * as autopilot from "../autopilot.js";
 import type * as billing from "../billing.js";
 import type * as circuits from "../circuits.js";
+import type * as climb from "../climb.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
@@ -34,6 +36,7 @@ import type * as lib_approvals from "../lib/approvals.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_autopilot from "../lib/autopilot.js";
 import type * as lib_cards from "../lib/cards.js";
+import type * as lib_climbTools from "../lib/climbTools.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_jobPlans from "../lib/jobPlans.js";
@@ -41,8 +44,10 @@ import type * as lib_media from "../lib/media.js";
 import type * as lib_periods from "../lib/periods.js";
 import type * as lib_r2 from "../lib/r2.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
+import type * as lib_usage from "../lib/usage.js";
 import type * as maintenance from "../maintenance.js";
 import type * as marketing from "../marketing.js";
+import type * as mcp from "../mcp.js";
 import type * as notifications from "../notifications.js";
 import type * as ops from "../ops.js";
 import type * as orgs from "../orgs.js";
@@ -62,6 +67,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   ads: typeof ads;
+  agentTokens: typeof agentTokens;
   "ai/fixtures": typeof ai_fixtures;
   "ai/providers": typeof ai_providers;
   "ai/research": typeof ai_research;
@@ -71,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   autopilot: typeof autopilot;
   billing: typeof billing;
   circuits: typeof circuits;
+  climb: typeof climb;
   connectionActions: typeof connectionActions;
   connections: typeof connections;
   content: typeof content;
@@ -86,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   "lib/audit": typeof lib_audit;
   "lib/autopilot": typeof lib_autopilot;
   "lib/cards": typeof lib_cards;
+  "lib/climbTools": typeof lib_climbTools;
   "lib/crypto": typeof lib_crypto;
   "lib/emailTemplates": typeof lib_emailTemplates;
   "lib/jobPlans": typeof lib_jobPlans;
@@ -93,8 +101,10 @@ declare const fullApi: ApiFromModules<{
   "lib/periods": typeof lib_periods;
   "lib/r2": typeof lib_r2;
   "lib/tenancy": typeof lib_tenancy;
+  "lib/usage": typeof lib_usage;
   maintenance: typeof maintenance;
   marketing: typeof marketing;
+  mcp: typeof mcp;
   notifications: typeof notifications;
   ops: typeof ops;
   orgs: typeof orgs;

@@ -27,6 +27,7 @@ import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/components/app/content/shared";
+import { climbTarget } from "@/components/climb/context";
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.assets.list>>>;
 type Asset = Data["assets"][number];
@@ -227,7 +228,7 @@ const VIEW_LABEL: Record<string, string> = { desktop: "Desktop", mobile: "Mobile
 function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; asset: Asset; picked: boolean; onPick: (on: boolean) => void; canEdit: boolean }) {
   const archive = useMutation(api.assets.archive);
   return (
-    <article className={cn("group relative overflow-hidden rounded-xl border bg-surface transition-colors", picked ? "border-brand-800 ring-2 ring-brand-100" : "border-line hover:border-line-strong")}>
+    <article {...climbTarget("image", asset.id, `${asset.kind === "screenshot" ? "Screenshot" : asset.kind === "product_photo" ? "Product photo" : "Image"}: ${asset.product?.name ?? asset.label}`)} className={cn("group relative overflow-hidden rounded-xl border bg-surface transition-colors", picked ? "border-brand-800 ring-2 ring-brand-100" : "border-line hover:border-line-strong")}>
       <button type="button" onClick={() => onPick(!picked)} aria-pressed={picked} aria-label={`${picked ? "Unselect" : "Select"} ${asset.label}`} className="block w-full text-left">
         <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">
           {asset.url ? (

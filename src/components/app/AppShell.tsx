@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
+import { ClimbProvider, useClimb } from "@/components/climb/context";
+import { ClimbPanel } from "@/components/climb/ClimbPanel";
+import { PointOverlay } from "@/components/climb/PointOverlay";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -66,6 +69,15 @@ const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
  * component only renders what the backend returns.
  */
 export function AppShell({ slug, children }: { slug: string; children: ReactNode }) {
+  return (
+    <ClimbProvider>
+      <Shell slug={slug}>{children}</Shell>
+    </ClimbProvider>
+  );
+}
+
+function Shell({ slug, children }: { slug: string; children: ReactNode }) {
+  const climb = useClimb();
   const me = useQuery(api.orgs.me);
   const pause = useQuery(api.workspace.pauseStatus, { slug });
   const pathname = usePathname();
@@ -77,6 +89,8 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
     <div className="min-h-dvh bg-bg">
       <Toaster />
       <CommandPalette slug={slug} />
+      <ClimbPanel slug={slug} />
+      <PointOverlay />
       {isDemo && <DemoBanner slug={slug} />}
       {pause?.paused && <PausedBanner slug={slug} canResume={current?.role === "owner" || current?.role === "admin"} />}
       <div className="flex w-full">
@@ -108,7 +122,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className={cn("flex min-w-0 flex-1 flex-col transition-[margin] duration-200", climb.open && "sm:mr-[400px]")}>
           {/* Top bar: make a wish or search (⌘K), team activity, pause, account */}
           <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
             <Link href={`/app/${slug}/today`} aria-label="ClimbOS home" className="lg:hidden">
@@ -125,6 +139,15 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
             </button>
             <div className="flex shrink-0 items-center gap-1.5">
               <TeamActivity slug={slug} />
+              <Button
+                size="sm"
+                variant={climb.open ? "primary" : "secondary"}
+                aria-pressed={climb.open}
+                onClick={() => climb.setOpen((o) => !o)}
+                className="gap-1.5"
+              >
+                <Sparkles aria-hidden /> <span className="hidden md:inline">Climb AI</span>
+              </Button>
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
               <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "w-8 px-0 text-ink-2" })} aria-label="Activity">
                 <Bell className="size-4" aria-hidden />
