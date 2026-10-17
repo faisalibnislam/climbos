@@ -1,6 +1,9 @@
 import { ConvexError } from "convex/values";
 
 export type AppErrorInfo = {
+  /** Extra machine-readable detail from the backend, e.g. "setup_needed" or the meter name. */
+  reason?: string;
+  meter?: string;
   code: "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "INVALID" | "LIMIT_REACHED" | "PAYMENT_REQUIRED" | "PAUSED" | "RATE_LIMITED" | "UNAVAILABLE" | "UNKNOWN";
   message: string;
 };
@@ -8,9 +11,9 @@ export type AppErrorInfo = {
 /** Turn any thrown error into a plain-language message with a stable code. */
 export function errorInfo(err: unknown): AppErrorInfo {
   if (err instanceof ConvexError) {
-    const data = err.data as { code?: AppErrorInfo["code"]; message?: string } | string;
+    const data = err.data as { code?: AppErrorInfo["code"]; message?: string; reason?: string; meter?: string } | string;
     if (typeof data === "string") return { code: "UNKNOWN", message: data };
-    return { code: data.code ?? "UNKNOWN", message: data.message ?? "Something went wrong." };
+    return { code: data.code ?? "UNKNOWN", message: data.message ?? "Something went wrong.", reason: data.reason, meter: data.meter || undefined };
   }
   const msg = err instanceof Error ? err.message : String(err);
   if (/Unauthenticated|Please sign in/i.test(msg)) return { code: "UNAUTHENTICATED", message: "Please sign in to continue." };

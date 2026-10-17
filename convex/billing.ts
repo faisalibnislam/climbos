@@ -114,7 +114,7 @@ export const overview = query({
             planKey: period.planKey ?? null,
             startsAt: period.startsAt,
             endsAt: period.endsAt,
-            walletFraction: period.walletCapMicros > 0 ? (period.walletSpentMicros + period.walletReservedMicros) / period.walletCapMicros : 1,
+            walletFraction: period.walletCapMicros > 0 ? (period.walletSpentMicros + period.walletReservedMicros) / period.walletCapMicros : null,
             topupFraction: period.topupCapMicros > 0 ? (period.topupSpentMicros + period.topupReservedMicros) / period.topupCapMicros : null,
             meters,
           }

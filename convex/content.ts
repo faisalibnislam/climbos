@@ -17,8 +17,13 @@ const DIRECT_PUBLISH: Partial<Record<Doc<"artifacts">["channel"], Doc<"connectio
   facebook: "facebook_pages",
 };
 
-async function versionView(ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> } }, v: Doc<"artifactVersions">) {
+async function versionView(
+  ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> }; db: { get: (id: Id<"users">) => Promise<Doc<"users"> | null> } },
+  v: Doc<"artifactVersions">,
+) {
+  const editor = v.editedByUser ? await ctx.db.get(v.editedByUser) : null;
   return {
+    editedByName: editor ? (editor.name ?? editor.email ?? "A teammate") : null,
     id: v._id,
     version: v.version,
     headline: v.headline ?? null,
@@ -137,8 +142,16 @@ export const get = query({
       createdByRole: a.createdByRole ?? null,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
-      current: versions[0] ? await versionView(ctx, versions[0]) : null,
-      versions: await Promise.all(versions.map((ver) => versionView(ctx, ver))),
+      current: versions[0] ? await versionView(ctx as never, versions[0]) : null,
+      versions: await Promise.all(versions.map((ver) => versionView(ctx as never, ver))),
+      campaignIds: (
+        await ctx.db
+          .query("campaigns")
+          .withIndex("by_org", (q) => q.eq("orgId", org._id))
+          .take(200)
+      )
+        .filter((c) => c.artifactId === a._id)
+        .map((c) => c._id),
       approvals: approvals.map((ap) => ({
         id: ap._id,
         status: ap.status,
@@ -475,5 +488,58 @@ export const runStatus = query({
       isFixture: run.isFixture,
       steps: steps.map((s) => ({ label: s.label, status: s.status, role: s.role ?? null, kind: s.kind })),
     };
+  },
+});
+
+/** Drafts created by a specific job (for "See the drafts" links after a run). */
+export const byRun = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const rows = await ctx.db
+      .query("artifacts")
+      .withIndex("by_run", (q) => q.eq("runId", runId))
+      .take(50);
+    return rows.filter((a) => a.orgId === org._id).map((a) => ({ id: a._id, title: a.title, channel: a.channel, status: a.status }));
+  },
+});
+
+/**
+ * The owner checked the platform after an "Outcome uncertain" result. Recorded
+ * as an owner confirmation (not a provider receipt) and never re-sends.
+ */
+export const resolveUncertain = mutation({
+  args: { slug: v.string(), artifactId: v.id("artifacts"), outcome: v.union(v.literal("posted"), v.literal("not_posted")) },
+  handler: async (ctx, { slug, artifactId, outcome }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
+    if (a.status !== "uncertain") throw appError("INVALID", "This item isn't marked uncertain.");
+    const now = Date.now();
+    const receipts = (
+      await ctx.db
+        .query("actionReceipts")
+        .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+        .order("desc")
+        .take(200)
+    ).filter((r) => r.artifactId === a._id && r.status === "uncertain");
+    for (const r of receipts) {
+      await ctx.db.patch(r._id, {
+        status: outcome === "posted" ? "verified" : "failed",
+        summary: outcome === "posted" ? "Confirmed by the owner after checking the platform." : "Owner checked the platform: it wasn't posted.",
+        verifiedAt: outcome === "posted" ? now : undefined,
+      });
+    }
+    // "Not posted" returns it to approved so it can be published again deliberately (new attempt, new receipt key only after an edit).
+    await ctx.db.patch(a._id, { status: outcome === "posted" ? "published" : "failed", updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.uncertain_resolved", subjectType: "artifact", subjectId: a._id, summary: `Owner marked "${a.title}" as ${outcome === "posted" ? "posted" : "not posted"}.` });
+  },
+});
+
+export const unarchive = mutation({
+  args: { slug: v.string(), artifactId: v.id("artifacts") },
+  handler: async (ctx, { slug, artifactId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
+    if (a.status === "archived") await ctx.db.patch(a._id, { status: "draft", updatedAt: Date.now() });
   },
 });

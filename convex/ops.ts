@@ -13,7 +13,7 @@ import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { ensureFleet } from "./circuits";
 import { audit } from "./lib/audit";
-import { requireOperator } from "./lib/tenancy";
+import { appError, requireOperator } from "./lib/tenancy";
 
 /**
  * Operator console. Separately authorized (OPS_EMAILS allowlist) and never
@@ -189,7 +189,7 @@ export const reconciliation = query({
   args: { month: v.string() },
   handler: async (ctx, { month }) => {
     await requireOperator(ctx);
-    if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("month must be YYYY-MM");
+    if (!/^\d{4}-\d{2}$/.test(month)) throw appError("INVALID", "Month must look like 2026-10.");
     const start = Date.parse(`${month}-01T00:00:00Z`);
     const end = new Date(start);
     end.setUTCMonth(end.getUTCMonth() + 1);
@@ -258,7 +258,7 @@ export const setPreviewBudget = mutation({
   args: { usd: v.number() },
   handler: async (ctx, { usd }) => {
     const op = await requireOperator(ctx);
-    if (!(usd >= 0 && usd <= 500)) throw new Error("Budget must be between $0 and $500 per day.");
+    if (!(usd >= 0 && usd <= 500)) throw appError("INVALID", "Budget must be between $0 and $500 per day.");
     const fleet = await ensureFleet(ctx);
     await ctx.db.patch(fleet._id, { previewDailyBudgetMicros: Math.round(usd * 1_000_000), updatedAt: Date.now() });
     await audit(ctx, { actorType: "operator", actorId: op._id, action: "preview.budget", summary: `Preview budget set to $${usd}/day.` });
@@ -271,7 +271,7 @@ export const resolveUncertain = mutation({
   handler: async (ctx, { runId, outcome, note }) => {
     const op = await requireOperator(ctx);
     const run = await ctx.db.get(runId);
-    if (!run || run.status !== "uncertain") throw new Error("Run is not uncertain.");
+    if (!run || run.status !== "uncertain") throw appError("INVALID", "That job isn't marked uncertain.");
     await ctx.db.patch(run._id, { status: outcome, updatedAt: Date.now(), userMessage: note.slice(0, 300) });
     if (run.reservationId) {
       const r = await ctx.db.get(run.reservationId);
@@ -297,7 +297,7 @@ export const retryWebhook = mutation({
   handler: async (ctx, { webhookId }) => {
     const op = await requireOperator(ctx);
     const e = await ctx.db.get(webhookId);
-    if (!e) throw new Error("Not found");
+    if (!e) throw appError("NOT_FOUND", "Webhook event not found.");
     await ctx.db.patch(e._id, { status: "received" });
     if (e.source === "polar") await ctx.scheduler.runAfter(0, internal.billing.processPolarEvent, { webhookId });
     await audit(ctx, { actorType: "operator", actorId: op._id, action: "webhook.retry", summary: `Retried ${e.source} ${e.type}.` });

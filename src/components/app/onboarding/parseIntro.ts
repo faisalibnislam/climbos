@@ -21,11 +21,12 @@ export function parseIntro(text: string): ParsedIntro {
   const t = text.trim();
   if (!t) return out;
 
-  const url = t.match(/\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,]*)?)/i);
-  if (url && !/@/.test(url[0])) out.website = url[1].replace(/[.,;:!?)]+$/, "");
+  // A domain or URL that isn't part of an email address.
+  const url = t.match(/(?<![@\w.-])((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,]*)?)/i);
+  if (url) out.website = url[1].replace(/[.,;:!?)]+$/, "");
 
   const name =
-    t.match(/\b(?:we(?:'| a)re|i run|my business is|my company is|our company is|this is)\s+([A-Z][\w&'.-]*(?:\s+[A-Z][\w&'.-]*){0,3})/) ??
+    t.match(/\b(?:[Ww]e(?:'| a)re|[Ii] run|[Ii] own|[Mm]y business is|[Mm]y company is|[Oo]ur company is|[Tt]his is)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,3})/) ??
     t.match(/^([A-Z][\w&'.-]*(?:\s+[A-Z][\w&'.-]*){0,2})\s*(?:\(|-|—|,)/);
   if (name) out.businessName = name[1].trim();
   else if (out.website) {

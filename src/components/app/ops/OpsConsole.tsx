@@ -1,0 +1,357 @@
+"use client";
+
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { CircleAlert, CircleCheck } from "lucide-react";
+import { useState } from "react";
+import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, toast } from "@/components/ui";
+import { formatNumber } from "@/lib/utils";
+import { formatDateTime, microsToDisplay, relativeTime } from "../money";
+import { LoadingBlock } from "../results/QueryBoundary";
+import { FleetControls } from "./FleetControls";
+import { EconomicsSection, ReconciliationSection } from "./OpsEconomics";
+import { opsError, OpsSection } from "./opsShared";
+import { ResolveUncertainDialog } from "./ResolveUncertainDialog";
+
+export type { Dashboard } from "./opsShared";
+
+const SECTIONS = [
+  ["health", "Health"],
+  ["jobs", "Jobs needing attention"],
+  ["webhooks", "Webhooks"],
+  ["costs", "Costs & margin"],
+  ["economics", "Economics calculator"],
+  ["reconciliation", "Reconciliation"],
+  ["controls", "Fleet controls"],
+  ["audit", "Operator audit log"],
+] as const;
+
+function OkBadge({ ok, okText, badText }: { ok: boolean; okText: string; badText: string }) {
+  return ok ? (
+    <Badge tone="green" icon={<CircleCheck />}>
+      {okText}
+    </Badge>
+  ) : (
+    <Badge tone="red" icon={<CircleAlert />}>
+      {badText}
+    </Badge>
+  );
+}
+
+const shortId = (id: string) => `…${id.slice(-6)}`;
+
+export function OpsConsole() {
+  const d = useQuery(api.ops.dashboard, {});
+  const audit = useQuery(api.ops.auditLog, {});
+  const resetCircuit = useMutation(api.ops.resetCircuit);
+  const retryWebhook = useMutation(api.ops.retryWebhook);
+  const [resolving, setResolving] = useState<{ id: string; title: string } | null>(null);
+
+  if (d === undefined) return <LoadingBlock label="Loading console…" lines={5} />;
+
+  const attention = d.jobs.failed.length + d.jobs.uncertain.length + d.jobs.stuck.length + d.jobs.unresolvedReservations.length;
+  const subsByStatus = d.customers.subscriptions.reduce<Record<string, number>>((acc, s) => {
+    acc[s.status] = (acc[s.status] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Operator console</h1>
+        <p className="text-ink-2">Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited.</p>
+        <nav aria-label="Console sections" className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+          {SECTIONS.map(([id, label]) => (
+            <a key={id} href={`#${id}`} className="inline-flex min-h-11 shrink-0 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">
+              {label}
+            </a>
+          ))}
+        </nav>
+      </header>
+
+      {d.fleet.emergencyStop ? (
+        <Callout tone="danger" title="Fleet stop is ON — no customer work is running">
+          {d.fleet.stopReason ?? "No reason recorded."}
+        </Callout>
+      ) : null}
+
+      <OpsSection id="health" title="Health">
+        <StatGroup>
+          <Stat label="Fleet" value={d.fleet.emergencyStop ? "Stopped" : "Running"} sublabel={d.fleet.emergencyStop ? "Emergency stop active" : "No emergency stop"} />
+          <Stat label="Open circuits" value={formatNumber(d.fleet.circuits.filter((c) => c.state !== "closed").length)} sublabel={`${d.fleet.circuits.length} tracked`} />
+          <Stat label="Customer workspaces" value={formatNumber(d.customers.workspaces)} sublabel="Most recent 100 counted" />
+          <Stat label="Needs attention" value={formatNumber(attention)} sublabel="Failed, uncertain, stuck, unresolved" />
+        </StatGroup>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+          <OkBadge ok={d.margin.ok} okText="Margin gate passing" badText={`Margin gate failing (${d.margin.failures.length})`} />
+          <span>Rates {d.margin.rateVersion} · Entitlements {d.margin.entitlementVersion} · Routing {d.margin.routingVersion}</span>
+        </div>
+        <p className="text-sm text-ink-2">
+          Subscriptions:{" "}
+          {Object.keys(subsByStatus).length === 0
+            ? "none"
+            : Object.entries(subsByStatus)
+                .map(([s, n]) => `${n} ${s.replace(/_/g, " ")}`)
+                .join(" · ")}
+        </p>
+        <h3 className="mt-2 font-semibold text-ink">Circuit breakers</h3>
+        <DataTable
+          caption="Provider circuit breakers"
+          hideCaption
+          rows={d.fleet.circuits}
+          rowKey={(c) => c.provider}
+          emptyText="No circuits tracked — all providers closed."
+          columns={[
+            { key: "provider", header: "Provider", rowHeader: true },
+            {
+              key: "state",
+              header: "State",
+              cell: (c) => <Badge tone={c.state === "closed" ? "green" : c.state === "open" ? "red" : "amber"}>{c.state.replace("_", "-")}</Badge>,
+            },
+            { key: "failures", header: "Failures", align: "right", cell: (c) => formatNumber(c.failures) },
+            { key: "opened", header: "Opened", cell: (c) => (c.openedAt ? relativeTime(c.openedAt) : "—") },
+            {
+              key: "action",
+              header: <span className="sr-only">Action</span>,
+              cell: (c) => (
+                <ConfirmDialog
+                  title={`Reset the ${c.provider} circuit?`}
+                  description="Calls to this provider resume immediately. If it is still failing, the breaker will open again after repeated errors."
+                  confirmLabel={`Reset ${c.provider}`}
+                  onConfirm={async () => {
+                    try {
+                      await resetCircuit({ provider: c.provider });
+                      toast({ tone: "success", title: `${c.provider} circuit reset` });
+                    } catch (err) {
+                      toast({ tone: "danger", title: "Reset failed", description: opsError(err) });
+                    }
+                  }}
+                  trigger={
+                    <Button size="sm" variant="secondary">
+                      Reset
+                    </Button>
+                  }
+                />
+              ),
+            },
+          ]}
+        />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-ink">Connections expiring within 7 days ({d.connections.expiring.length})</h3>
+            <DataTable
+              caption="Expiring connections"
+              hideCaption
+              rows={d.connections.expiring}
+              rowKey={(c) => c.id}
+              emptyText="None."
+              columns={[
+                { key: "provider", header: "Provider", rowHeader: true },
+                { key: "org", header: "Workspace", cell: (c) => <code className="text-xs">{shortId(c.orgId)}</code> },
+                { key: "exp", header: "Expires", cell: (c) => (c.expiresAt ? relativeTime(c.expiresAt) : "—") },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-ink">Pending privacy requests ({d.privacy.length})</h3>
+            <DataTable
+              caption="Pending privacy requests"
+              hideCaption
+              rows={d.privacy}
+              rowKey={(p) => p.id}
+              emptyText="None."
+              columns={[
+                { key: "kind", header: "Kind", rowHeader: true, cell: (p) => p.kind.replace(/_/g, " ") },
+                { key: "org", header: "Workspace", cell: (p) => <code className="text-xs">{shortId(p.orgId)}</code> },
+                { key: "age", header: "Requested", cell: (p) => relativeTime(p.createdAt) },
+              ]}
+            />
+          </div>
+        </div>
+      </OpsSection>
+
+      <OpsSection id="jobs" title="Jobs needing attention" count={attention}>
+        <h3 className="font-semibold text-ink">Uncertain outcomes ({d.jobs.uncertain.length})</h3>
+        <p className="-mt-2 text-sm text-ink-3">Check the provider manually before resolving. Uncertain runs are never retried automatically.</p>
+        <DataTable
+          caption="Uncertain runs"
+          hideCaption
+          rows={d.jobs.uncertain}
+          rowKey={(r) => r.id}
+          emptyText="None."
+          columns={[
+            { key: "title", header: "Run", rowHeader: true },
+            { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
+            { key: "updated", header: "Updated", cell: (r) => relativeTime(r.updatedAt) },
+            {
+              key: "action",
+              header: <span className="sr-only">Action</span>,
+              cell: (r) => (
+                <Button size="sm" variant="secondary" onClick={() => setResolving({ id: r.id, title: r.title })}>
+                  Resolve…
+                </Button>
+              ),
+            },
+          ]}
+        />
+        <h3 className="mt-2 font-semibold text-ink">Failed in the last 7 days ({d.jobs.failed.length})</h3>
+        <DataTable
+          caption="Failed runs"
+          hideCaption
+          rows={d.jobs.failed}
+          rowKey={(r) => r.id}
+          emptyText="None."
+          columns={[
+            { key: "title", header: "Run", rowHeader: true },
+            { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
+            { key: "error", header: "Error", cell: (r) => <span className="text-sm">{r.error ?? "—"}</span> },
+            { key: "updated", header: "When", cell: (r) => relativeTime(r.updatedAt) },
+          ]}
+        />
+        <h3 className="mt-2 font-semibold text-ink">Stuck for over 10 minutes ({d.jobs.stuck.length})</h3>
+        <DataTable
+          caption="Stuck runs"
+          hideCaption
+          rows={d.jobs.stuck}
+          rowKey={(r) => r.id}
+          emptyText="None."
+          columns={[
+            { key: "title", header: "Run", rowHeader: true },
+            { key: "status", header: "Status", cell: (r) => r.status.replace(/_/g, " ") },
+            { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
+            { key: "updated", header: "Last update", cell: (r) => relativeTime(r.updatedAt) },
+          ]}
+        />
+        <h3 className="mt-2 font-semibold text-ink">Unresolved cost reservations ({d.jobs.unresolvedReservations.length})</h3>
+        <DataTable
+          caption="Unresolved reservations"
+          hideCaption
+          rows={d.jobs.unresolvedReservations}
+          rowKey={(r) => r.id}
+          emptyText="None."
+          columns={[
+            { key: "id", header: "Reservation", rowHeader: true, cell: (r) => <code className="text-xs">{shortId(r.id)}</code> },
+            { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
+            { key: "wallet", header: "Wallet held", align: "right", cell: (r) => microsToDisplay(r.walletMicros) },
+            { key: "topup", header: "Top-up held", align: "right", cell: (r) => microsToDisplay(r.topupMicros) },
+            { key: "age", header: "Created", cell: (r) => relativeTime(r.createdAt) },
+          ]}
+        />
+      </OpsSection>
+
+      <OpsSection id="webhooks" title="Webhooks" count={d.webhooks.failed.length + d.webhooks.lagging.length}>
+        <h3 className="font-semibold text-ink">Failed ({d.webhooks.failed.length})</h3>
+        <DataTable
+          caption="Failed webhooks"
+          hideCaption
+          rows={d.webhooks.failed}
+          rowKey={(w) => w.id}
+          emptyText="None."
+          columns={[
+            { key: "type", header: "Event", rowHeader: true, cell: (w) => `${w.source} · ${w.type}` },
+            { key: "attempts", header: "Attempts", align: "right", cell: (w) => formatNumber(w.attempts) },
+            { key: "error", header: "Error", cell: (w) => <span className="text-sm">{w.error ?? "—"}</span> },
+            { key: "received", header: "Received", cell: (w) => relativeTime(w.receivedAt) },
+            {
+              key: "action",
+              header: <span className="sr-only">Action</span>,
+              cell: (w) => (
+                <ConfirmDialog
+                  title="Retry this webhook?"
+                  description={`The ${w.source} ${w.type} event will be processed again. Processing is idempotent, so a duplicate grant can't happen.`}
+                  confirmLabel="Retry webhook"
+                  onConfirm={async () => {
+                    try {
+                      await retryWebhook({ webhookId: w.id as Id<"webhookEvents"> });
+                      toast({ tone: "success", title: "Webhook queued for retry" });
+                    } catch (err) {
+                      toast({ tone: "danger", title: "Retry failed", description: opsError(err) });
+                    }
+                  }}
+                  trigger={
+                    <Button size="sm" variant="secondary">
+                      Retry
+                    </Button>
+                  }
+                />
+              ),
+            },
+          ]}
+        />
+        <h3 className="mt-2 font-semibold text-ink">Waiting over 5 minutes ({d.webhooks.lagging.length})</h3>
+        <DataTable
+          caption="Lagging webhooks"
+          hideCaption
+          rows={d.webhooks.lagging}
+          rowKey={(w) => w.id}
+          emptyText="None."
+          columns={[
+            { key: "type", header: "Event", rowHeader: true, cell: (w) => `${w.source} · ${w.type}` },
+            { key: "received", header: "Received", cell: (w) => `${relativeTime(w.receivedAt)} (${formatDateTime(w.receivedAt)})` },
+          ]}
+        />
+      </OpsSection>
+
+      <OpsSection id="costs" title="Costs & margin">
+        <StatGroup>
+          <Stat label="Provider spend, 24h" value={microsToDisplay(d.costs.spend24hMicros)} />
+          <Stat
+            label="Estimate vs actual, 7d"
+            value={`${microsToDisplay(d.costs.actual7dMicros)}`}
+            sublabel={`Estimated ${microsToDisplay(d.costs.estimate7dMicros)} for verified runs`}
+            change={`${formatNumber(d.costs.overEstimateRuns)} runs over estimate`}
+          />
+          <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToDisplay(d.costs.previewSpend24hMicros)}`} />
+          <Stat label="Preview daily budget" value={microsToDisplay(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
+        </StatGroup>
+        <DataTable
+          caption="Spend by provider, last 24 hours"
+          rows={[...d.costs.byProvider].sort((a, b) => b.costMicros - a.costMicros)}
+          rowKey={(p) => p.provider}
+          emptyText="No usage in the last 24 hours."
+          columns={[
+            { key: "provider", header: "Provider", rowHeader: true },
+            { key: "calls", header: "Events", align: "right", cell: (p) => formatNumber(p.calls) },
+            { key: "cost", header: "Cost", align: "right", cell: (p) => microsToDisplay(p.costMicros) },
+          ]}
+        />
+        {!d.margin.ok ? (
+          <Callout tone="danger" live="none" title="Margin gate failing">
+            <ul className="list-disc pl-5">
+              {d.margin.failures.map((f) => (
+                <li key={`${f.plan}-${f.profile}`}>
+                  {f.plan} / {f.profile}: margin {(f.grossMargin * 100).toFixed(1)}%, stress {(f.stressMargin * 100).toFixed(1)}%
+                </li>
+              ))}
+            </ul>
+          </Callout>
+        ) : null}
+      </OpsSection>
+
+      <EconomicsSection />
+      <ReconciliationSection />
+      <FleetControls fleet={d.fleet} />
+
+      <OpsSection id="audit" title="Operator audit log">
+        {audit === undefined ? (
+          <LoadingBlock label="Loading audit log…" lines={1} />
+        ) : (
+          <DataTable
+            caption="Most recent 100 operator actions"
+            rows={audit}
+            rowKey={(a) => a.id}
+            emptyText="No operator actions yet."
+            columns={[
+              { key: "when", header: "When", rowHeader: true, cell: (a) => <span title={formatDateTime(a.createdAt)}>{relativeTime(a.createdAt)}</span> },
+              { key: "action", header: "Action", cell: (a) => <code className="text-xs">{a.action}</code> },
+              { key: "summary", header: "Summary" },
+            ]}
+          />
+        )}
+      </OpsSection>
+
+      <ResolveUncertainDialog run={resolving} onClose={() => setResolving(null)} />
+    </div>
+  );
+}

@@ -110,7 +110,7 @@ export default function TodayPage() {
                 </p>
               </>
             ) : (
-              <p className="mt-1 text-lg text-ink">No goal yet. Tell your team what you'd like to achieve.</p>
+              <p className="mt-1 text-lg text-ink">No goal yet. Tell your team what you’d like to achieve.</p>
             )}
           </div>
           <Button asChild variant="secondary">
@@ -176,7 +176,9 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
   const listRef = useRef<HTMLOListElement>(null);
   const thinking = data.chat.some((m) => m.status === "thinking");
   useEffect(() => {
-    listRef.current?.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // Scroll only the conversation, never the page.
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
   }, [data.chat.length]);
 
   const suggestions = ["Get 3 Instagram posts ready for next week", "Write a welcome email sequence", "Why did sign-ups change?", "Draft a small Google search ad test"];
@@ -297,7 +299,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         <p className="font-semibold text-ink">{card.title}</p>
         {status === "running" && <Badge tone="blue" icon={<Clock3 />}>Working</Badge>}
         {status === "done" && <Badge tone="green" icon={<CheckCircle2 />}>Done</Badge>}
-        {status === "failed" && <Badge tone="red">Didn't finish</Badge>}
+        {status === "failed" && <Badge tone="red">Didn’t finish</Badge>}
         {status === "blocked" && <Badge tone="amber">Needs setup</Badge>}
       </div>
       <p className="mt-1 text-sm text-ink-2">{card.description}</p>
@@ -316,12 +318,12 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         {card.costEstimateMicros > 0 && (
           <div className="flex gap-2">
             <dt className="text-ink-3">Most it can use:</dt>
-            <dd className="text-ink">{microsToDisplay(card.costEstimateMicros)} of this month's AI capacity</dd>
+            <dd className="text-ink">{microsToDisplay(card.costEstimateMicros)} of this month’s AI capacity</dd>
           </div>
         )}
         {card.blockedReason && (
           <div className="flex gap-2">
-            <dt className="text-ink-3">Why it's waiting:</dt>
+            <dt className="text-ink-3">Why it’s waiting:</dt>
             <dd className="text-ink">{card.blockedReason}</dd>
           </div>
         )}

@@ -506,6 +506,7 @@ export default defineSchema({
   campaigns: defineTable({
     orgId: v.id("organizations"),
     strategyId: v.optional(v.id("strategies")),
+    artifactId: v.optional(v.id("artifacts")),
     channel: channelValidator,
     name: v.string(),
     status: v.union(
@@ -552,7 +553,8 @@ export default defineSchema({
   })
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_status", ["orgId", "status"])
-    .index("by_org_scheduled", ["orgId", "scheduledFor"]),
+    .index("by_org_scheduled", ["orgId", "scheduledFor"])
+    .index("by_run", ["runId"]),
 
   artifactVersions: defineTable({
     orgId: v.id("organizations"),

@@ -21,7 +21,7 @@ export default function InvitePage() {
       <Card className="w-full max-w-md">
         <CardContent className="space-y-5 p-8">
           <Logo />
-          <h1 className="font-display text-2xl">You're invited to a ClimbOS workspace</h1>
+          <h1 className="font-display text-2xl">You’re invited to a ClimbOS workspace</h1>
           {error && <Callout tone="danger">{error}</Callout>}
           {isLoading ? null : isAuthenticated ? (
             <Button

@@ -34,6 +34,7 @@ import type * as lib_jobPlans from "../lib/jobPlans.js";
 import type * as lib_periods from "../lib/periods.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as maintenance from "../maintenance.js";
+import type * as marketing from "../marketing.js";
 import type * as notifications from "../notifications.js";
 import type * as ops from "../ops.js";
 import type * as orgs from "../orgs.js";
@@ -76,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   "lib/periods": typeof lib_periods;
   "lib/tenancy": typeof lib_tenancy;
   maintenance: typeof maintenance;
+  marketing: typeof marketing;
   notifications: typeof notifications;
   ops: typeof ops;
   orgs: typeof orgs;

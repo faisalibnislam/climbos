@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClimbOS
 
-## Getting Started
+**Your AI growth team.** Tell ClimbOS your business goal. Ten coordinated AI specialists research your business, build a costed growth plan, create the work and measure what happens. You approve anything that goes live.
 
-First, run the development server:
+- Web: Next.js 16 (App Router) on Vercel · `climbos.app`
+- Backend: Convex (state, auth, durable jobs, crons, webhooks)
+- AI: Anthropic Claude + Google Gemini (direct, no gateway)
+- Billing: Polar (merchant of record) · Platform email: Resend · Research: built-in fetcher or Firecrawl
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+User → "Help Formkit get more paying customers in 90 days, $600/mo ads"
+     → research (sourced facts you confirm) → growth plan (you approve)
+     → drafts (posts, ads, emails, SEO pages) → approval → publish / export → results & forecasts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick start (local)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx convex dev --once          # links the Convex dev deployment and writes .env.local
+```
 
-## Learn More
+```bash
+pnpm auth:keys                 # generates sign-in keys in Convex (once per deployment)
+```
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm env:sync                  # copies server keys from .env.local into Convex
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev                       # http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Open **http://localhost:3000/demo** for a seeded Formkit workspace. It uses synthetic data and fixture adapters; nothing posts, emails or spends.
+- `pnpm setup:check` shows which keys and approvals are missing. Values are never printed.
+- `/ops` opens for emails listed in `OPS_EMAILS`.
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Next.js dev server (Convex functions are pushed by `npx convex dev`) |
+| `pnpm build` | Production build |
+| `pnpm test` | Unit (economics, forecasting, attribution, integrations, billing/policy) plus Convex integration tests |
+| `pnpm test:e2e` | Playwright end-to-end and accessibility tests (start the app first) |
+| `pnpm typecheck` / `pnpm lint` | TypeScript and ESLint |
+| `pnpm econ:export [--rates <id>] [--out file.csv]` | Economics CSV and the 30% stress-margin gate |
+| `pnpm setup:check [--prod]` | Configuration presence check |
+| `pnpm env:sync [--prod --file …]` | Push server env to Convex |
+| `pnpm auth:keys` | Generate Convex Auth keys |
+| `node scripts/polar-setup.mjs` | Create Polar sandbox products and write their ids |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentation
+
+- [Architecture](docs/Architecture.md): the system map, job engine and approval-bound execution
+- [Capabilities](docs/Capabilities.md): the 10 roles, capability areas A–H, the platform matrix and honest limits
+- [Pricing & economics](docs/PricingAndEconomics.md): plans, margins, formulas and enforcement
+- [Security & data](docs/SecurityAndData.md): tenancy, secrets, webhooks, SSRF, retention, deletion
+- [Forecasting](docs/Forecasting.md): attribution, backtests, intervals, scenarios
+- [Provider setup](docs/ProviderSetup.md): every key, webhook and approval needed
+- [Operations](docs/Operations.md): `/ops`, crons, incidents, backups, deploys
+- [Verification](docs/Verification.md): what was tested and how
+
+## Status
+
+The application, data model, job engine, economics, billing logic, approvals, demo and all screens are built and tested locally. Live provider behaviour requires the owner's credentials and, for ads and social publishing, provider approvals. See [Provider setup](docs/ProviderSetup.md) and the *Adapter verification* table in [Verification](docs/Verification.md). Nothing in this repository claims a provider approval that hasn't been granted.

@@ -304,11 +304,11 @@ export function PauseAllButton({ slug, paused, variant }: { slug: string; paused
         description={
           <span className="block space-y-2">
             <span className="block">This immediately:</span>
-            <span className="block">• cancels AI jobs that haven't started,</span>
+            <span className="block">• cancels AI jobs that haven’t started,</span>
             <span className="block">• unschedules posts waiting to go out,</span>
             <span className="block">• blocks any new posts, emails and ad changes,</span>
             <span className="block">• asks Google and Meta to pause active ad campaigns.</span>
-            <span className="block text-ink-3">Ad platforms can take a little while to stop delivery and may report some spend from before the pause. You'll see which pauses were confirmed.</span>
+            <span className="block text-ink-3">Ad platforms can take a little while to stop delivery and may report some spend from before the pause. You’ll see which pauses were confirmed.</span>
           </span>
         }
         confirmLabel="Pause all activity"

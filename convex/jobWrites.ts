@@ -563,7 +563,7 @@ export const saveChatResult = internalMutation({
       });
       cardIds.push(cardId);
     }
-    await ctx.db.patch(messageId, { status: "done", actionCardIds: cardIds });
+    await ctx.db.patch(messageId, { status: "done" });
     await ctx.db.insert("chatMessages", {
       orgId: run.orgId,
       author: "climbos",

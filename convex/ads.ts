@@ -38,11 +38,20 @@ export const list = query({
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
+    const conns = await ctx.db
+      .query("connections")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .take(50);
+    const connected = (p: string) => conns.some((c) => c.provider === p && c.status === "connected");
     return {
       monthlyEnvelopeMinor: policy?.maxMonthlyAdSpendMinor ?? 0,
       currency: policy?.currency ?? org.currency,
+      googleAdsConnected: connected("google_ads"),
+      metaAdsConnected: connected("meta_ads"),
       campaigns: rows.map((c) => ({
         id: c._id,
+        artifactId: c.artifactId ?? null,
+        accountConnected: Boolean(c.connectionId) || connected(c.channel === "google_search_ad" ? "google_ads" : "meta_ads"),
         name: c.name,
         channel: c.channel,
         status: c.status,
@@ -108,6 +117,7 @@ export const prepareCampaign = mutation({
     const now = Date.now();
     const campaignId = await ctx.db.insert("campaigns", {
       orgId: org._id,
+      artifactId: a._id,
       channel: a.channel,
       name: `ClimbOS · ${a.title.slice(0, 60)} · ${args.startDate}`,
       status: "needs_approval",

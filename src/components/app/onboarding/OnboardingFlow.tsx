@@ -70,7 +70,7 @@ export function OnboardingFlow() {
     return (
       <Shell step="business">
         <Callout tone="info" title="Create a free account to save your business">
-          You're browsing as a guest (demo). Sign in with your email to set up your own workspace.
+          You’re browsing as a guest (demo). Sign in with your email to set up your own workspace.
           <div className="mt-3">
             <Button asChild>
               <Link href="/sign-in?switch=1&next=/onboarding">Create a free account</Link>
@@ -83,6 +83,7 @@ export function OnboardingFlow() {
   if (!slug) {
     return (
       <BusinessStep
+        key={preview?.website ?? "blank"}
         prefillWebsite={preview?.website ?? ""}
         prefillGoal={preview?.goal ?? ""}
         previewToken={preview?.status === "done" ? previewToken : null}
@@ -143,7 +144,7 @@ function BusinessStep({
   previewToken: string | null;
   onCreated: (slug: string) => void;
 }) {
-  const [mode, setMode] = useState<"chat" | "form">("chat");
+  const [mode, setMode] = useState<"chat" | "form">(prefillWebsite ? "form" : "chat");
   const [chat, setChat] = useState("");
   const [name, setName] = useState("");
   const [website, setWebsite] = useState(prefillWebsite);
@@ -154,13 +155,6 @@ function BusinessStep({
   const create = useMutation(api.orgs.createWorkspace);
   const startResearch = useMutation(api.orgs.startResearch);
   const claim = useMutation(api.preview.claim);
-
-  useEffect(() => {
-    if (prefillWebsite) {
-      setWebsite(prefillWebsite);
-      setMode("form");
-    }
-  }, [prefillWebsite]);
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
@@ -199,9 +193,9 @@ function BusinessStep({
 
   return (
     <Shell step="business">
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Let's meet your business</h1>
+      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Let’s meet your business</h1>
       <p className="mt-3 max-w-xl text-lg text-ink-2">
-        Your AI growth team starts by reading your website. You'll check everything before it's used.
+        Your AI growth team starts by reading your website. You’ll check everything before it’s used.
       </p>
 
       <div className="mt-6 inline-flex rounded-[12px] border border-line bg-surface p-1" role="tablist" aria-label="How do you want to start?">
@@ -223,7 +217,7 @@ function BusinessStep({
             </Field>
             {chat.trim().length > 8 && (
               <div className="rounded-[12px] border border-line bg-surface-2 p-4 text-sm" aria-live="polite">
-                <p className="font-medium text-ink">Here's what we understood (you can change all of it later):</p>
+                <p className="font-medium text-ink">Here’s what we understood (you can change all of it later):</p>
                 <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                   <Understood label="Business" value={parsed.businessName} />
                   <Understood label="Website" value={parsed.website} />
@@ -320,7 +314,7 @@ function WorkspaceOnboarding({ slug }: { slug: string }) {
   return (
     <Shell step={step === "done" ? "plan" : step} slug={slug}>
       {step === "research" && <ResearchStep slug={slug} state={state} />}
-      {step === "facts" && <FactsStep slug={slug} state={state} />}
+      {step === "facts" && <FactsStep key={(state.business?.successEvents ?? []).map((e) => e.key).join(",")} slug={slug} state={state} />}
       {step === "goal" && <GoalStep slug={slug} state={state} />}
       {step === "preferences" && <PreferencesStep slug={slug} current={state.autonomy} />}
       {(step === "plan" || step === "done") && <PlanStep slug={slug} state={state} />}
@@ -352,7 +346,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
       </h1>
       {!failed ? (
         <>
-          <p className="mt-3 text-lg text-ink-2">This usually takes under a minute. You'll check everything before anything is used.</p>
+          <p className="mt-3 text-lg text-ink-2">This usually takes under a minute. You’ll check everything before anything is used.</p>
           <Card className="mt-6">
             <CardContent className="p-6" aria-live="polite">
               <StepList steps={steps} />
@@ -414,13 +408,12 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
   const [currency, setCurrency] = useState(state.business?.currency ?? "USD");
   const [busy, setBusy] = useState(false);
   const [events, setEvents] = useState(state.business?.successEvents ?? []);
-  useEffect(() => setEvents(state.business?.successEvents ?? []), [state.business?.successEvents]);
 
   return (
     <div>
       <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
       <p className="mt-3 text-lg text-ink-2">
-        {state.business?.summary ?? "Here's what we found."} Fix anything that's wrong. Only confirmed facts are used in your content.
+        {state.business?.summary ?? "Here's what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
       </p>
       <ul className="mt-6 space-y-3">
         {state.facts.map((f) => (
@@ -513,7 +506,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
           </Field>
           <div className="sm:col-span-2">
             <p className="text-sm font-medium text-ink">What counts as a valuable customer action?</p>
-            <p className="text-sm text-ink-3">We'll measure success with these. Untick anything that doesn't apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
+            <p className="text-sm text-ink-3">We’ll measure success with these. Untick anything that doesn’t apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
             <ul className="mt-3 space-y-2">
               {events.map((ev, i) => (
                 <li key={ev.key} className="flex items-start gap-3 rounded-[10px] border border-line p-3">
@@ -529,7 +522,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                   </label>
                 </li>
               ))}
-              {events.length === 0 && <li className="text-sm text-ink-3">We'll suggest these once research finishes. You can add them later in Settings.</li>}
+              {events.length === 0 && <li className="text-sm text-ink-3">We’ll suggest these once research finishes. You can add them later in Settings.</li>}
             </ul>
           </div>
         </CardContent>

@@ -6,7 +6,7 @@ import { createRunWithReservation, finishRunImpl } from "./engine";
 import { jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { chargeableAccess } from "./lib/access";
-import { planJob } from "./lib/jobPlans";
+import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -372,7 +372,8 @@ export const plan = query({
             createdAt: strategy.createdAt,
           }
         : null,
-      strategyRun: strategyRun ? { status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      planEstimateMicros: estimateJobMicros(planJob("strategy")),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status })),
       insights: business?.insights ?? null,
       sources: facts,
