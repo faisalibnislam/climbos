@@ -366,6 +366,7 @@ export const plan = query({
             measurementPlan: strategy.measurementPlan,
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
+            expert: strategy.expert ?? null,
           }
         : null,
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,

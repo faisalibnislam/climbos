@@ -39,6 +39,7 @@ import {
   retentionSpec,
   salesSpec,
   seoSpec,
+  playCatalogsFor,
   socialCalendarSpec,
   socialSpec,
   strategySpec,
@@ -530,8 +531,12 @@ export const buildStrategy = internalAction({
         ctx,
         job,
         0,
-        strategySpec(),
-        agentInput(job, `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`),
+        strategySpec({}, playCatalogsFor(job.business?.businessType)),
+        agentInput(
+          job,
+          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time. Build it around a portfolio of 2-4 growth plays following the growth-plays method: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
+        ),
         startedAt,
         {
           task: "growth_strategy",
@@ -556,13 +561,20 @@ export const createContent = internalAction({
     images: v.optional(v.number()),
     brief: v.optional(v.string()),
     cardId: v.optional(v.id("actionCards")),
+    /** Real images to build the posts around (site screenshots, product photos, uploads), in post order. */
+    assetIds: v.optional(v.array(v.id("assets"))),
   },
   handler: async (ctx, args) => {
     const startedAt = Date.now();
     const job = await loadContext(ctx, args.runId);
     if (!job) return;
     const factIds = job.facts.map((f) => f.id);
-    const brief = args.brief ? `\n\nOWNER REQUEST: ${untrusted("owner request", args.brief, 1500)}` : "";
+    const assets = args.assetIds?.length ? await ctx.runQuery(internal.assets.forJob, { orgId: job.org._id, assetIds: args.assetIds }) : [];
+    const imagesBrief = assets.length
+      ? `\n\nREAL IMAGES (use them; post N is built around image N, in order; write each post's imageIdea and alt text to describe how that real image is used, never inventing what it shows):\n${assets.map((a, i) => `${i + 1}. ${a.describe}`).join("\n")}`
+      : "";
+    const ownerBrief = `${args.brief ?? ""}${imagesBrief}`.trim();
+    const brief = ownerBrief ? `\n\nOWNER REQUEST: ${untrusted("owner request", ownerBrief, 3000)}` : "";
     await guarded(
       ctx,
       args.runId,
@@ -581,7 +593,7 @@ export const createContent = internalAction({
             socialSpec(channels),
             agentInput(
               job,
-              `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`,
+              `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${imagesBrief}${planContext(job)}`,
             ),
             startedAt,
             {
@@ -637,10 +649,19 @@ export const createContent = internalAction({
         }
 
         // Creative Director: images for the first N social posts (max 2 attempts each, metered).
-        const withImages: (typeof items[number] & { imageStorageId?: Id<"_storage">; imageR2Key?: string })[] = items.map((i) => ({ ...i }));
+        const withImages: (typeof items[number] & { imageStorageId?: Id<"_storage">; imageR2Key?: string; imageLabel?: string })[] = items.map((i) => ({ ...i }));
         let delivered = 0;
         let attempts = 0;
-        const imageCount = args.job === "content_social" ? Math.min(args.images ?? 0, 2, withImages.length) : 0;
+        // Real images first: post i gets real image i (screenshots, product photos, uploads).
+        if (assets.length) {
+          withImages.forEach((item, i) => {
+            const a = assets[i % assets.length];
+            item.imageStorageId = a.storageId;
+            item.imageR2Key = a.r2Key;
+            item.imageLabel = a.labelForPost;
+          });
+        }
+        const imageCount = args.job === "content_social" && !assets.length ? Math.min(args.images ?? 0, 2, withImages.length) : 0;
         for (let i = 0; i < imageCount; i++) {
           const item = withImages[i];
           const s = await begin(ctx, args.runId, 10 + i, "image", "Create image", "creative_director");

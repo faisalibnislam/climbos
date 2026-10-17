@@ -41,6 +41,41 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
 });
 export type InsightsV2 = z.infer<typeof InsightsV2Schema>;
 
+/** A growth play card (skills/growth-plays): creative, forecast with base rates, testable. */
+export const PlaySchema = z.object({
+  name: z.string(),
+  oneLiner: z.string(),
+  kind: z.enum(["bankable", "creative", "moonshot"]),
+  audience: z.object({ who: z.string(), where: z.string(), size: z.string() }),
+  trigger: z.string(),
+  hook: z.string(),
+  mechanic: z.string(),
+  assetUsed: z.string(),
+  /** Catalog play id the mechanic comes from, or "" if new. */
+  catalogId: z.string(),
+  forecast: z.object({
+    steps: z.array(z.object({ step: z.string(), volume: z.string(), low: z.string(), likely: z.string(), high: z.string(), source: z.string(), grade: z.enum(["A", "B", "C", "D"]) })),
+    unit: z.string(),
+    p10: z.number(),
+    p50: z.number(),
+    p90: z.number(),
+    horizonDays: z.number(),
+    confidence: z.enum(["high", "medium", "low"]),
+    biggestUnknown: z.string(),
+  }),
+  test: z.object({ size: z.string(), budget: z.string(), durationDays: z.number(), leadingMetric: z.string(), killIf: z.string(), scaleIf: z.string() }),
+  scores: z.object({ fit: z.number(), predictability: z.number(), leverage: z.number(), timeToSignal: z.number(), compounding: z.number(), cost: z.number(), risk: z.number(), distinctiveness: z.number() }),
+  firstActionToday: z.string(),
+  climbosCanDo: z.string(),
+});
+export type Play = z.infer<typeof PlaySchema>;
+
+/** Weighted play score (growth-plays rubric), 20–100. */
+export function playScore(s: Play["scores"]): number {
+  const c = (n: number) => Math.max(1, Math.min(5, n));
+  return Math.round(20 * (0.25 * c(s.fit) + 0.2 * c(s.predictability) + 0.15 * c(s.leverage) + 0.1 * c(s.timeToSignal) + 0.1 * c(s.compounding) + 0.1 * c(s.cost) + 0.1 * c(s.risk)));
+}
+
 export const StrategyV2Schema = StrategySchema.extend({
   diagnosis: z.string(),
   affordableCac: z.string(),
@@ -50,8 +85,42 @@ export const StrategyV2Schema = StrategySchema.extend({
   phases: z.array(z.object({ name: z.string(), days: z.string(), focus: z.string() })),
   weekOneChecklist: z.array(z.string()),
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
+  /** The portfolio: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
+  plays: z.array(PlaySchema),
 });
 export type StrategyV2 = z.infer<typeof StrategyV2Schema>;
+
+const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)\b/i;
+const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;
+
+/** Deterministic portfolio checks (growth-plays §3–4). */
+export function lintPlays(plays: Play[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
+  if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
+  const bankable = plays.filter((p) => p.kind === "bankable");
+  const creative = plays.filter((p) => p.kind === "creative");
+  const moonshots = plays.filter((p) => p.kind === "moonshot");
+  if (bankable.length !== 1) err(`${bankable.length} bankable plays; exactly one is needed.`);
+  if (bankable[0] && bankable[0].scores.predictability < 4) err("The bankable play needs predictability ≥ 4.");
+  if (!creative.some((p) => p.scores.distinctiveness >= 4 && p.scores.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
+  if (moonshots.length > 1) err("At most one moonshot.");
+  plays.forEach((p, i) => {
+    const path = `plays[${i}]`;
+    const f = p.forecast;
+    if (!(f.p10 <= f.p50 && f.p50 <= f.p90)) err("Forecast must satisfy P10 ≤ P50 ≤ P90.", `${path}.forecast`);
+    if (f.steps.length < 2) err("The forecast needs a funnel with at least 2 steps.", `${path}.forecast.steps`);
+    if (VANITY.test(f.unit)) err(`"${f.unit}" is a vanity unit; use booked jobs, customers, members or revenue.`, `${path}.forecast.unit`);
+    f.steps.forEach((s, j) => {
+      if (!s.source.trim() && s.grade !== "D") err("Every forecast step needs a source, or grade D (assumption).", `${path}.forecast.steps[${j}]`);
+    });
+    if (!p.test.killIf.trim() || !p.test.scaleIf.trim()) err("Every play needs kill and scale rules.", `${path}.test`);
+    if (!p.audience.where.trim() || !p.hook.trim()) err("Every play needs a named place and an exact hook.", path);
+    if (p.kind === "moonshot" && p.scores.predictability > 2) issues.push({ severity: "warn", rule: "portfolio", message: "A moonshot with predictability > 2 could be a creative play instead.", path });
+    if (GENERIC.test(`${p.name} ${p.oneLiner} ${p.mechanic}`)) issues.push({ severity: "warn", rule: "generic", message: "Generic phrasing; name the audience, hook and number in the same sentence.", path });
+  });
+  return issues;
+}
 
 const postFormat = z.enum(["text", "single_image", "carousel", "document", "reel", "thread", "story"]);
 export const SocialPostsV2Schema = z.object({
@@ -128,7 +197,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
     issues.push(
-      ...lintCopy({ body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), emojiPer150: lim.emojiPer150 }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      ...lintCopy({ body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...maxLength(p.body, lim.body, `${path}.body`, "Post"),
       ...maxItems(p.hashtags, lim.hashtags, `${path}.hashtags`, "hashtags"),
       ...(lim.fold ? hookBeforeFold(p.body, lim.fold, `${path}.body`) : []),
@@ -141,7 +210,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), skip: (p) => /keywords|finalUrl|negative/i.test(p) })];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) })];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -162,11 +231,51 @@ function lintGeneric(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: evidenceOf(input), skip: (p) => /url|sourceUrl|keywords|key$/i.test(p) });
 }
 
+/** Lint for things that get published or sent as written (emails, pages): no placeholders. */
+function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
+  return lintCopy(out, { evidence: evidenceOf(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|sender|goal|successMetric/i.test(p) });
+}
+
 /* ---------------- Rubrics ---------------- */
 
 /** A primary skill's rubric, with other skills' checklists available to the critic via criticSkills. */
 function rubricOf(id: string): Rubric {
   return skillRubric(id);
+}
+
+/** Combine rubrics (e.g. plan quality + creative plays); ids are already unique across skills. */
+function mergeRubrics(title: string, ...rs: Rubric[]): Rubric {
+  return {
+    id: rs.map((r) => r.id).join("+"),
+    title,
+    gates: rs.flatMap((r) => r.gates),
+    criteria: rs.flatMap((r) => r.criteria),
+    shipRule: { minEach: Math.max(...rs.map((r) => r.shipRule.minEach)), minAverage: Math.max(...rs.map((r) => r.shipRule.minAverage)) },
+  };
+}
+
+/** Which play catalogs a business type gets (keeps prompts focused). */
+export function playCatalogsFor(type: string | null | undefined): string[] {
+  switch (type) {
+    case "saas":
+    case "b2b_saas":
+    case "creator_saas":
+    case "b2b_service":
+    case "agency":
+      return ["plays-saas-b2b"];
+    case "ecommerce":
+    case "physical_products":
+    case "b2c_app":
+    case "creator":
+      return ["plays-ecommerce-consumer"];
+    case "services":
+    case "local_service":
+    case "local_food":
+    case "local_fitness":
+      return ["plays-local"];
+    default:
+      return ["plays-local", "plays-saas-b2b"];
+  }
 }
 
 /* ---------------- Specs ---------------- */
@@ -175,16 +284,29 @@ interface SpecOptions {
   models?: Partial<PhaseModels>;
   effort?: Partial<Record<"research" | "draft" | "critic", Effort>>;
   maxRevisions?: number;
+  shipOn?: "gates" | "rubric";
 }
 
-function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxRevisions"> & Partial<Pick<AgentSpec<T>, "maxTokens">>, o: SpecOptions, defaults: { draft: ModelKey }): AgentSpec<T> {
+/**
+ * Engine v2.2 (final, chosen by benchmark Phase A2):
+ * - "expert" jobs (insights, strategy, weekly plan): Opus drafts, an Opus
+ *   reviewer scores the full rubric, at most one revision.
+ * - "lean" jobs (publishable content, audits, plans for owners): Opus drafts
+ *   once with the skills; a fast Sonnet reviewer only checks hard gates and
+ *   lint, and one revision happens only when something actually fails.
+ */
+type Profile = "expert" | "lean";
+
+function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxRevisions" | "shipOn"> & Partial<Pick<AgentSpec<T>, "maxTokens">>, o: SpecOptions, profile: Profile): AgentSpec<T> {
+  const lean = profile === "lean";
   return {
     ...s,
-    models: { research: SONNET, draft: defaults.draft, critic: OPUS, ...o.models },
-    effort: { research: "medium", draft: "high", critic: "medium", ...o.effort },
+    models: { research: SONNET, draft: OPUS, critic: lean ? SONNET : OPUS, ...o.models },
+    effort: { research: "medium", draft: "high", critic: lean ? "low" : "medium", ...o.effort },
     // Thinking counts against max_tokens (Opus always thinks), so leave generous headroom.
-    maxTokens: s.maxTokens ?? { research: 24_000, draft: 32_000, critic: 16_000 },
-    maxRevisions: o.maxRevisions ?? 2,
+    maxTokens: s.maxTokens ?? { research: 24_000, draft: 32_000, critic: lean ? 8_000 : 16_000 },
+    maxRevisions: o.maxRevisions ?? 1,
+    shipOn: o.shipOn ?? (lean ? "gates" : "rubric"),
   };
 }
 
@@ -201,29 +323,30 @@ export function insightsSpec(o: SpecOptions = {}): AgentSpec<InsightsV2> {
       lint: lintGeneric,
     },
     o,
-    { draft: OPUS },
+    "expert",
   );
 }
 
-export function strategySpec(o: SpecOptions = {}): AgentSpec<StrategyV2> {
+export function strategySpec(o: SpecOptions = {}, catalogs: string[] = playCatalogsFor(null)): AgentSpec<StrategyV2> {
   return base(
     {
       id: "growth_strategy",
       role: "ceo",
       label: "Growth plan",
-      skills: ["growth-strategy", "experiment-design"],
+      skills: ["growth-strategy", "growth-plays", ...catalogs, "experiment-design"],
       schema: StrategyV2Schema,
-      rubric: rubricOf("growth-strategy"),
-      criticSkills: ["experiment-design", "positioning"],
+      rubric: mergeRubrics("Growth plan with creative, predictable plays", rubricOf("growth-strategy"), rubricOf("growth-plays")),
+      criticSkills: ["growth-plays", "experiment-design", "positioning"],
+      maxTokens: { research: 24_000, draft: 48_000, critic: 16_000 },
       lint: (out, input) => {
-        const issues = lintGeneric(out, input);
+        const issues = [...lintGeneric(out, input), ...lintPlays(out.plays)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         return issues;
       },
     },
     o,
-    { draft: OPUS },
+    "expert",
   );
 }
 
@@ -243,7 +366,7 @@ export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<S
       lint: lintSocial,
     },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -251,7 +374,7 @@ export function adsSpec(o: SpecOptions = {}): AgentSpec<AdDraftsV2> {
   return base(
     { id: "ad_drafts", role: "ads_manager", label: "Ad drafts", skills: ["copy-fundamentals", "google-ads", "meta-ads"], schema: AdDraftsV2Schema, rubric: rubricOf("google-ads"), criticSkills: ["meta-ads"], lint: lintAds },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -264,10 +387,10 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintGeneric(out, input), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
+      lint: (out, input) => [...lintPublishable(out, input), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
     },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -280,11 +403,11 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
       skills: ["seo-pages", "copy-fundamentals"],
       schema: SeoBriefV2Schema,
       rubric: rubricOf("seo-pages"),
-      lint: (out, input) => [...lintGeneric(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
+      lint: (out, input) => [...lintPublishable(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
     },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -292,7 +415,7 @@ export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<type
   return base(
     { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: lintGeneric },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -300,7 +423,7 @@ export function retentionSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Ret
   return base(
     { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintGeneric },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -308,7 +431,7 @@ export function salesSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SalesSe
   return base(
     { id: "sales_sequence", role: "cso", label: "Sales follow-up", skills: ["sales-follow-up", "copy-fundamentals"], schema: SalesSequenceSchema, rubric: rubricOf("sales-follow-up"), lint: lintGeneric },
     o,
-    { draft: SONNET },
+    "lean",
   );
 }
 
@@ -368,7 +491,7 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       maxTokens: { research: 16_000, draft: 24_000, critic: 16_000 },
     },
     o,
-    { draft: SONNET },
+    "expert",
   );
 }
 
@@ -376,6 +499,17 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
 export function researchFor(task: TaskType | "business_insights", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
   switch (task) {
+    case "growth_strategy":
+      return {
+        maxSearches: 7,
+        maxFetches: 4,
+        brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences:
+1. Communities, newsletters, podcasts, YouTube/TikTok creators, directories, marketplaces, review sites and app stores relevant to this business and its location (name, URL, rough size/audience if visible).
+2. Complementary businesses or platforms that could partner (who already serves the same customer before or after this business).
+3. Where competitors are present or absent (review sites, marketplaces, launches, local listings, comparison pages).
+4. Seasonal or event windows in the next 90 days that matter to these customers.
+Only report what you actually found, with URLs.`,
+      };
     case "business_insights":
       return {
         maxSearches: 8,

@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Badge, Callout, Card, CardContent, EmptyState, Skeleton, buttonClasses, type Tone } from "@/components/ui";
 import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
+import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
 import { RUN_FINISHED } from "@/components/app/content/RunProgress";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
@@ -165,6 +166,9 @@ function PlanScreen({ slug }: { slug: string }) {
             </Callout>
           ) : null}
           <ShortVersion strategy={s} />
+          {s.expert ? <NorthStar expert={s.expert as ExpertView} /> : null}
+          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} /> : null}
+          {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} />
           <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} />
           <Experiments experiments={plan.experiments} />

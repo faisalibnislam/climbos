@@ -14,6 +14,7 @@ import type * as ai_fixtures from "../ai/fixtures.js";
 import type * as ai_providers from "../ai/providers.js";
 import type * as ai_research from "../ai/research.js";
 import type * as analytics from "../analytics.js";
+import type * as assets from "../assets.js";
 import type * as auth from "../auth.js";
 import type * as autopilot from "../autopilot.js";
 import type * as billing from "../billing.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "ai/providers": typeof ai_providers;
   "ai/research": typeof ai_research;
   analytics: typeof analytics;
+  assets: typeof assets;
   auth: typeof auth;
   autopilot: typeof autopilot;
   billing: typeof billing;

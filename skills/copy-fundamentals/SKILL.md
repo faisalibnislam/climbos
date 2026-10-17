@@ -20,8 +20,8 @@ When something is missing:
 - If the piece still works without it, write around it. A post with no statistic can carry a mechanism or a scene instead.
 - First, use everything the brief already gives you: the business name, website URL, offers, prices and facts are known, so write them in directly.
 - Second, write around a missing detail if the piece still works without it (say "start a free trial" rather than inventing its length).
-- Only if the piece truly depends on a missing fact (a founder story, a customer result, an offer's terms), insert one visible `[NEEDS FACT: what exactly you need, phrased as a question the owner can answer]`. Example: `[NEEDS FACT: how many minutes does a standard clean take? Needed for the "before 10am" claim.]` At most one per piece; never for anything the brief already contains.
-- If a piece would need more than two markers to stand up, pick a different angle the confirmed facts can carry, and say why.
+- Publishable copy is never left with gaps: if the piece truly depends on a missing fact (a founder story, a customer result, an offer's terms), pick a different angle the confirmed facts can carry fully. A post the owner can publish today beats a stronger post they can't.
+- Never put `[NEEDS FACT]` or any placeholder in a post, ad, email, page or script. (Plans and audits may flag one missing fact for the owner.)
 - Never fill a gap with something plausible. A plausible invented number is the worst failure in this system.
 
 ## Procedure
@@ -100,7 +100,7 @@ Expert copy has every one of these traits; mediocre copy is missing at least two
 - **One idea**, statable in under 12 words, and every line serves it.
 - **Proof next to claim:** each claim has a number, quote, mechanism or guarantee within two sentences, and the strongest proof appears in the first third.
 - **Customer language:** at least one VoC phrase (or a close paraphrase of a real one) carries the problem or outcome, when the bank has one.
-- **Traceable:** every number, name and quote maps to a confirmed fact or a cited source; gaps are visible `[NEEDS FACT]` markers.
+- **Traceable:** every number, name and quote maps to a confirmed fact or a cited source; where proof is missing, the angle changes rather than the facts.
 - **Sounds like a person:** varied rhythm, no banned phrases, no framework seams, reads cleanly aloud.
 - **One concrete next step** with the outcome stated.
 - **Channel-native:** follows the channel playbook's limits and grammar, written fresh for that channel rather than pasted from another.
@@ -123,7 +123,7 @@ Expert copy has every one of these traits; mediocre copy is missing at least two
 
 - [ ] I can name the one reader, their moment, the one job and the awareness level.
 - [ ] The piece makes one idea, statable in under 12 words.
-- [ ] Every number, name, quote and offer term traces to a confirmed fact or cited source; anything else is a `[NEEDS FACT: …]` question.
+- [ ] Every number, name, quote and offer term traces to a confirmed fact or cited source, and the piece is complete as written (no placeholders).
 - [ ] Every claim has proof within two sentences; the strongest proof is early.
 - [ ] At least one customer phrase from the VoC bank shapes the problem or outcome (when the bank has one).
 - [ ] The swap test fails for the top competitor.

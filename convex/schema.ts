@@ -491,6 +491,8 @@ export default defineSchema({
         phases: v.array(v.object({ name: v.string(), days: v.string(), focus: v.string() })),
         weekOneChecklist: v.array(v.string()),
         risks: v.array(v.object({ risk: v.string(), mitigation: v.string() })),
+        /** Growth play cards (shared/agents/specs PlaySchema), validated by the agent schema. */
+        plays: v.optional(v.array(v.any())),
       }),
     ),
     reviewDate: v.string(),
@@ -664,6 +666,43 @@ export default defineSchema({
     createdAt: v.number(),
     active: v.boolean(),
   }).index("by_org_active", ["orgId", "active"]),
+
+  /* ---------------- Real visuals: the asset library ---------------- */
+  /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
+  assets: defineTable({
+    orgId: v.id("organizations"),
+    kind: v.union(v.literal("screenshot"), v.literal("product_photo"), v.literal("upload"), v.literal("logo"), v.literal("ai_image"), v.literal("edited")),
+    source: v.union(v.literal("website"), v.literal("store"), v.literal("upload"), v.literal("ai"), v.literal("edit")),
+    view: v.optional(v.union(v.literal("desktop"), v.literal("mobile"), v.literal("section"), v.literal("product"), v.literal("other"))),
+    storageId: v.optional(v.id("_storage")),
+    r2Key: v.optional(v.string()),
+    mime: v.string(),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    label: v.string(),
+    sourceUrl: v.optional(v.string()),
+    product: v.optional(v.object({ name: v.string(), price: v.optional(v.string()), url: v.optional(v.string()) })),
+    /** Edited from another asset (device frame, sample data, scene). */
+    parentAssetId: v.optional(v.id("assets")),
+    /** Shows made-up sample data (screens repopulated for privacy or clarity). */
+    illustrative: v.optional(v.boolean()),
+    createdBy: v.optional(v.id("users")),
+    archived: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_org_kind", ["orgId", "kind"]),
+
+  assetJobs: defineTable({
+    orgId: v.id("organizations"),
+    kind: v.union(v.literal("capture"), v.literal("products"), v.literal("edit")),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")),
+    target: v.optional(v.string()),
+    count: v.number(),
+    message: v.optional(v.string()),
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  }).index("by_org_created", ["orgId", "createdAt"]),
 
   /* ---------------- One-tap email actions ---------------- */
   /** Single-use links in emails (stop an automatic post, approve a draft). Only the hash is stored. */

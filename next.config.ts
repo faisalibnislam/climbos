@@ -23,6 +23,8 @@ const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The capture worker (/api/render/*) drives a real browser; keep it out of the bundle.
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
   async rewrites() {
     if (!convexSiteUrl) return [];
     return [

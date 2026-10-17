@@ -69,6 +69,8 @@ export interface CopyLintOptions {
   maxExclamations?: number;
   /** Max emoji per 150 characters (0 = no emoji). */
   emojiPer150?: number;
+  /** Publishable copy: a [NEEDS FACT] placeholder is an error, not a warning. */
+  publishable?: boolean;
 }
 
 /** Numbers in the output that don't appear anywhere in the evidence. */
@@ -119,9 +121,15 @@ export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue
     if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
     if (opts.evidence !== undefined) {
       const untraced = untracedNumbers(text, opts.evidence);
-      if (untraced.length) issues.push({ severity: "error", rule: "invented_fact", message: `Numbers not found in the facts or research: ${untraced.join(", ")}. Remove them or use [NEEDS FACT].`, path });
+      if (untraced.length) issues.push({ severity: "error", rule: "invented_fact", message: `Numbers not found in the facts or research: ${untraced.join(", ")}. Remove them or rephrase without the number.`, path });
     }
-    if (/\[NEEDS FACT/i.test(text)) issues.push({ severity: "warn", rule: "needs_fact", message: "Has a [NEEDS FACT] gap the owner must fill before publishing.", path });
+    if (/\[NEEDS FACT|\[(insert|placeholder|your |add )/i.test(text)) {
+      issues.push(
+        opts.publishable
+          ? { severity: "error", rule: "placeholder", message: "Publishable copy can't contain placeholders. Use an angle the confirmed facts fully support.", path }
+          : { severity: "warn", rule: "needs_fact", message: "Has a [NEEDS FACT] gap the owner must fill.", path },
+      );
+    }
   }
   if (exclamations > maxExcl) issues.push({ severity: "warn", rule: "exclamations", message: `${exclamations} exclamation marks; keep it to ${maxExcl}.` });
   return issues;

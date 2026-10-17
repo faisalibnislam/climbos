@@ -74,6 +74,19 @@ export async function fakeTurn(req: ClaudeTurnRequest, rates: RateVersion): Prom
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
+    // Growth plans: a portfolio that satisfies the deterministic play rules.
+    if (output && typeof output === "object" && Array.isArray((output as { plays?: unknown }).plays)) {
+      const tmpl = (output as { plays: Record<string, unknown>[] }).plays[0];
+      const play = (kind: string, predictability: number, distinctiveness: number) => ({
+        ...tmpl,
+        name: `${marker} ${kind} play`,
+        kind,
+        forecast: { ...(tmpl.forecast as object), steps: [{ step: "contacted", volume: "a hundred", low: "low", likely: "likely", high: "high", source: "example.com", grade: "C" }, { step: "booked", volume: "", low: "low", likely: "likely", high: "high", source: "example.com", grade: "C" }], unit: "booked jobs", p10: 1, p50: 2, p90: 4 },
+        test: { size: "a hundred contacts", budget: "small", durationDays: 21, leadingMetric: "replies", killIf: "no replies", scaleIf: "several replies" },
+        scores: { fit: 4, predictability, leverage: 3, timeToSignal: 3, compounding: 3, cost: 4, risk: 5, distinctiveness },
+      });
+      (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
+    }
   }
   const text = typeof output === "string" ? output : JSON.stringify(output);
   return {

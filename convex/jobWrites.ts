@@ -287,6 +287,7 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
+                plays: (x.plays ?? []).slice(0, 4),
               };
             })(),
           }
@@ -379,6 +380,7 @@ type ArtifactInput = {
   imagePrompt?: string;
   imageStorageId?: Id<"_storage">;
   imageR2Key?: string;
+  imageLabel?: string;
   factIndexes: number[];
   scheduledFor?: number;
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
@@ -431,7 +433,7 @@ export async function insertArtifact(
     imageStorageId: item.imageStorageId,
     imageR2Key: item.imageR2Key,
     imagePrompt: item.imagePrompt,
-    imageLabel: item.imageStorageId || item.imageR2Key ? "AI-generated illustration" : undefined,
+    imageLabel: item.imageStorageId || item.imageR2Key ? (item.imageLabel ?? "AI-generated illustration") : undefined,
     claimFactIds: valid.map((i) => params.factIds[i]),
     unsupportedClaims: unsupported,
     contentHash: ch,
@@ -455,6 +457,8 @@ const artifactInputValidator = v.object({
   imagePrompt: v.optional(v.string()),
   imageStorageId: v.optional(v.id("_storage")),
   imageR2Key: v.optional(v.string()),
+  /** How the image is labelled to the owner (real screenshot, product photo, AI illustration). */
+  imageLabel: v.optional(v.string()),
   factIndexes: v.array(v.number()),
   scheduledFor: v.optional(v.number()),
   role: v.string(),

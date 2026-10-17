@@ -1,0 +1,78 @@
+{
+  "id": "plays-saas-b2b",
+  "title": "Growth plays from the plays-saas-b2b catalog",
+  "gates": [
+    {
+      "id": "P1",
+      "text": "Evidence: every forecast number has a cited source and grade or is labelled 'assumption, grade D'; no invented statistics, customers or results."
+    },
+    {
+      "id": "P2",
+      "text": "Portfolio: at most 4 plays; exactly one bankable play (predictability ≥ 4); at least one creative play with distinctiveness ≥ 4 and predictability ≥ 3; at most one moonshot, capped at ≤ 10% of budget with a kill rule."
+    },
+    {
+      "id": "P3",
+      "text": "Compliance: no bought or gated reviews, review incentives on Google, undisclosed endorsements, SMS without consent, astroturfing or platform-violating tactics."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "Q1",
+      "name": "Specificity and fit",
+      "anchors": {
+        "1": "Channels without a named audience, place or hook ('post on Instagram', 'run ads').",
+        "3": "Audiences and hooks named for most plays, but some are generic or unverified.",
+        "5": "Every play names who and where (with size when known), the trigger, the exact hook and the asset only this business has."
+      }
+    },
+    {
+      "id": "Q2",
+      "name": "Distinctiveness (beyond the obvious)",
+      "anchors": {
+        "1": "The swap test passes: any competitor could run this plan unchanged; mostly social and email.",
+        "3": "One play is a transplant or non-obvious channel; the rest are standard.",
+        "5": "Several plays rely on non-obvious audiences, partnerships, platforms, timing or assets unique to this business, each with a proven mechanic behind it."
+      }
+    },
+    {
+      "id": "Q3",
+      "name": "Predictability of results",
+      "anchors": {
+        "1": "No forecast or single-point promises.",
+        "3": "Forecasts exist but skip funnel steps or lack sources and grades.",
+        "5": "Each play has a funnel with low, likely and high rates, sources and grades, a P10/P50/P90 outcome in business units, and a confidence level with its biggest unknown."
+      }
+    },
+    {
+      "id": "Q4",
+      "name": "Testability",
+      "anchors": {
+        "1": "No test design.",
+        "3": "Tests named but sizes, budgets or kill rules missing.",
+        "5": "Every play has a sample size from the base rate, a capped budget, a duration, a leading metric and explicit kill and scale rules."
+      }
+    },
+    {
+      "id": "Q5",
+      "name": "Economics and constraints",
+      "anchors": {
+        "1": "Ignores budget, owner hours or unit economics.",
+        "3": "Fits the budget but not checked against margin or capacity.",
+        "5": "Fits budget and hours; cost per acquired customer checked against 12-month gross profit; at least one compounding play."
+      }
+    },
+    {
+      "id": "Q6",
+      "name": "Actionability",
+      "anchors": {
+        "1": "Abstract advice.",
+        "3": "Clear steps but no first action.",
+        "5": "Each play ends with a first action under 30 minutes and what ClimbOS will do for the owner."
+      }
+    }
+  ],
+  "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+  }
+}

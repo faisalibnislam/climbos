@@ -64,8 +64,10 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
         searchCalls: r.maxSearches,
       });
     }
-    case "strategy":
-      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], agentSteps(any(strategySpec())), {});
+    case "strategy": {
+      const r = { maxSearches: searches("growth_strategy") };
+      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], agentSteps(any(strategySpec()), r), { searchCalls: r.maxSearches });
+    }
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));
       const images = Math.max(0, Math.min(params.images ?? 0, qty, 2));
