@@ -4,6 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { publishTarget, recordArtifactDecision } from "./approvals";
 import { audit } from "./audit";
+import { scheduleHeadsUp } from "../emailActions";
 
 /**
  * Autopilot glue between the calendar and the existing approval-bound
@@ -106,6 +107,9 @@ export async function routeSlotDraft(
   await audit(ctx, { orgId: org._id, actorType: "system", action: "autopilot.approved", subjectType: "artifact", subjectId: artifact._id, summary: `Autopilot approved "${artifact.title}" for ${label(artifact.channel)}: ${route.reasons[0]}` });
   const fresh = await ctx.db.get(slot._id);
   if (fresh) await scheduleSlot(ctx, fresh, artifact._id);
+  // Safety window: approvers get a "going out soon, stop it?" email two hours before.
+  const scheduled = await ctx.db.get(artifact._id);
+  if (scheduled?.status === "scheduled" && scheduled.scheduledFor) await scheduleHeadsUp(ctx, artifact._id, scheduled.scheduledFor);
 }
 
 /** Owner approved or sent back an artifact: feed the trust ladder and schedule autopilot slots. */

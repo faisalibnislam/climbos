@@ -108,6 +108,9 @@ async function patchRunStatus(ctx: MutationCtx, run: Doc<"workflowRuns">, to: Ru
  * Create a run with an atomic reservation. Throws LIMIT_REACHED / PAUSED /
  * PAYMENT_REQUIRED style errors with plain-language messages.
  */
+/** Job kinds that exist only as Engine v2 agents. */
+export const AGENT_ONLY_KINDS = new Set(["social_calendar"]);
+
 export async function createRunWithReservation(
   ctx: MutationCtx,
   params: {
@@ -151,7 +154,8 @@ export async function createRunWithReservation(
   }
 
   const rateVersion = currentRateVersion();
-  const v2 = process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture;
+  // Agent-only jobs (no single-call version) always run on Engine v2 outside demos.
+  const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
   const period = access.period;
   const decision = decideReservation(ledgerOf(period), {

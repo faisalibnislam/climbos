@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup, type T } from "./helpers";
 
 /**
@@ -144,5 +145,58 @@ describe("social autopilot", () => {
     expect(view.weeks[0].slots).toHaveLength(1);
     expect(view.weeks[0].plan?.theme).toBeTruthy();
     expect(view.trust.find((x) => x.channel === "facebook")?.threshold).toBe(5);
+  });
+
+  it("one-tap email links approve and stop posts, once each, and never act on open", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-email@example.com");
+    await w.client.mutation(api.autopilot.save, { slug: w.slug, enabled: true, mode: "always_ask", channels: [{ channel: "facebook", postsPerWeek: 1 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+    await run(t);
+    const [slot] = await slots(t, w.orgId);
+    const artifactId = slot.artifactId!;
+    const token = (c: string) => c.repeat(48);
+    const store = async (tok: string, kind: "approve_post" | "stop_post") =>
+      t.run(async (ctx) => {
+        await ctx.db.insert("actionTokens", { tokenHash: await sha256Hex(tok), orgId: w.orgId, userId: w.userId, kind, subjectId: artifactId, expiresAt: Date.now() + 3_600_000, createdAt: Date.now() });
+      });
+
+    await store(token("a"), "approve_post");
+    const before = await t.query(api.emailActions.preview, { token: token("a") });
+    expect(before).toMatchObject({ state: "ready", kind: "approve_post" });
+    expect((await slots(t, w.orgId))[0].status).toBe("needs_approval"); // opening changed nothing
+
+    const approved = await t.mutation(api.emailActions.consume, { token: token("a") });
+    expect(approved.ok).toBe(true);
+    expect((await slots(t, w.orgId))[0].status).toBe("scheduled");
+    expect((await t.mutation(api.emailActions.consume, { token: token("a") })).ok).toBe(false); // single use
+
+    await store(token("b"), "stop_post");
+    const stopped = await t.mutation(api.emailActions.consume, { token: token("b") });
+    expect(stopped.ok).toBe(true);
+    const after = await slots(t, w.orgId);
+    expect(after[0].status).toBe("needs_approval");
+    expect(after[0].routing?.reasons[0]).toMatch(/stopped it/);
+    const art = await t.run(async (ctx) => ctx.db.get(artifactId));
+    expect(art?.status).toBe("in_review");
+    await run(t);
+    expect(await t.run(async (ctx) => ctx.db.query("actionReceipts").collect())).toHaveLength(0); // nothing posted
+
+    expect(await t.query(api.emailActions.preview, { token: "not-a-token" })).toEqual({ state: "invalid" });
+  });
+
+  it("automatic posts get a heads-up email two hours before", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-headsup@example.com");
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      const now = Date.now();
+      await ctx.db.insert("artifacts", { orgId: w.orgId, businessId: business!._id, kind: "social_post", channel: "facebook", title: "Earlier", status: "published", currentVersion: 1, createdAt: now, updatedAt: now });
+    });
+    await w.client.mutation(api.autopilot.save, { slug: w.slug, enabled: true, mode: "auto", channels: [{ channel: "facebook", postsPerWeek: 1 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+    await run(t);
+    const tokens = await t.run(async (ctx) => ctx.db.query("actionTokens").collect());
+    expect(tokens.some((x) => x.kind === "stop_post")).toBe(true);
+    const log = await t.run(async (ctx) => ctx.db.query("emailLog").collect());
+    expect(log.some((l) => l.template === "autopilot_heads_up")).toBe(true);
   });
 });

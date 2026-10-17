@@ -149,7 +149,8 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
 }
 
 export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string } = {}, opts: { fixture?: boolean } = {}): JobPlan {
-  if (engineV2() && !opts.fixture) {
+  // The weekly planner exists only as an agent: real workspaces always get it.
+  if ((engineV2() || kind === "social_calendar") && !opts.fixture) {
     const v2 = v2Plan(kind, params);
     if (v2) return v2;
   }

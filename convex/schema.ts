@@ -665,6 +665,21 @@ export default defineSchema({
     active: v.boolean(),
   }).index("by_org_active", ["orgId", "active"]),
 
+  /* ---------------- One-tap email actions ---------------- */
+  /** Single-use links in emails (stop an automatic post, approve a draft). Only the hash is stored. */
+  actionTokens: defineTable({
+    tokenHash: v.string(),
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    kind: v.union(v.literal("stop_post"), v.literal("approve_post")),
+    subjectId: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_hash", ["tokenHash"])
+    .index("by_subject", ["subjectId"]),
+
   /* ---------------- Social autopilot ---------------- */
   autopilotSettings: defineTable({
     orgId: v.id("organizations"),

@@ -3,7 +3,7 @@
  * Inline styles only; every email has a text alternative.
  */
 
-const GREEN = "#14532d";
+const GREEN = "#0b5d46";
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -12,9 +12,9 @@ function escapeHtml(s: string): string {
 function layout(title: string, bodyHtml: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(
     title,
-  )}</title></head><body style="margin:0;background:#f7f5ef;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c1f1d">
+  )}</title></head><body style="margin:0;background:#eef0ee;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c1f1d">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border:1px solid #e6e2d8;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
+<table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border:1px solid #dfe3e0;border-radius:10px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
 <p style="margin:0 0 24px;font-weight:700;font-size:18px;color:${GREEN}">ClimbOS</p>
 ${bodyHtml}
 <p style="margin:32px 0 0;font-size:12px;color:#6b6f69">ClimbOS · climbos.app · You received this because of activity on your ClimbOS account.</p>
@@ -82,6 +82,54 @@ export function digestEmail(params: { orgName: string; lines: string[]; url: str
       `<h1 style="margin:0 0 12px;font-size:22px">Your ${escapeHtml(cadence)} summary</h1>
 <ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${lines.map((l) => `<li style="margin-bottom:6px">${escapeHtml(l)}</li>`).join("")}</ul>
 <p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">Open ClimbOS</a></p>`,
+    ),
+  };
+}
+
+function button(url: string, label: string, primary = true): string {
+  return primary
+    ? `<a href="${escapeHtml(url)}" style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;font-size:14px">${escapeHtml(label)}</a>`
+    : `<a href="${escapeHtml(url)}" style="display:inline-block;color:${GREEN};text-decoration:underline;padding:10px 4px;font-weight:600;font-size:14px">${escapeHtml(label)}</a>`;
+}
+
+/** Safety window: an automatic post is about to go out; one tap stops it. */
+export function headsUpEmail(params: { orgName: string; channel: string; when: string; title: string; preview: string; stopUrl: string; openUrl: string }) {
+  const p = params;
+  return {
+    subject: `Going out ${p.when} on ${p.channel}: "${p.title.slice(0, 60)}"`,
+    text: `${p.orgName}: autopilot will post this on ${p.channel} ${p.when}.\n\n${p.title}\n${p.preview}\n\nStop it: ${p.stopUrl}\nOpen in ClimbOS: ${p.openUrl}`,
+    html: layout(
+      "A post is about to go out",
+      `<p style="margin:0 0 6px;font-size:13px;color:#59615c">Autopilot · ${escapeHtml(p.channel)} · ${escapeHtml(p.when)}</p>
+<h1 style="margin:0 0 10px;font-size:20px">${escapeHtml(p.title)}</h1>
+<p style="margin:0 0 20px;color:#434b47;white-space:pre-line">${escapeHtml(p.preview)}</p>
+<p style="margin:0 0 8px">${button(p.stopUrl, "Stop this post")} ${button(p.openUrl, "Open in ClimbOS", false)}</p>
+<p style="margin:12px 0 0;color:#59615c;font-size:13px">Do nothing and it posts as planned. Stopping sends it back to your review list.</p>`,
+    ),
+  };
+}
+
+/** Daily nudge: drafts waiting for the owner, each with a one-tap approve link. */
+export function approvalsEmail(params: { orgName: string; items: { title: string; channel: string; preview: string; approveUrl: string; openUrl: string }[]; allUrl: string }) {
+  const p = params;
+  const n = p.items.length;
+  return {
+    subject: `${p.orgName}: ${n} post${n === 1 ? "" : "s"} waiting for your OK`,
+    text: `${p.items.map((i) => `${i.channel}: ${i.title}\nApprove: ${i.approveUrl}\nOpen: ${i.openUrl}`).join("\n\n")}\n\nAll drafts: ${p.allUrl}`,
+    html: layout(
+      "Waiting for your OK",
+      `<h1 style="margin:0 0 16px;font-size:20px">${n} post${n === 1 ? "" : "s"} waiting for your OK</h1>
+${p.items
+  .map(
+    (i) => `<div style="border:1px solid #dfe3e0;border-radius:8px;padding:14px;margin:0 0 12px">
+<p style="margin:0 0 4px;font-size:13px;color:#59615c">${escapeHtml(i.channel)}</p>
+<p style="margin:0 0 6px;font-weight:600">${escapeHtml(i.title)}</p>
+<p style="margin:0 0 12px;color:#434b47;font-size:14px">${escapeHtml(i.preview)}</p>
+${button(i.approveUrl, "Approve")} ${button(i.openUrl, "Review first", false)}
+</div>`,
+  )
+  .join("")}
+<p style="margin:8px 0 0">${button(p.allUrl, "See everything waiting", false)}</p>`,
     ),
   };
 }

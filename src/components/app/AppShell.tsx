@@ -14,6 +14,7 @@ import {
   PlayCircle,
   Plug,
   Settings,
+  Plane,
   Sparkles,
   Bell,
   Palette,
@@ -49,6 +50,7 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "today", label: "Today", icon: Home, group: "" },
   { key: "plan", label: "Growth plan", icon: Compass, group: "Grow" },
   { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
+  { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
   { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
   { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
   { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
@@ -137,7 +139,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
       {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
         <ul className="grid grid-cols-5">
-          {NAV.filter((n) => !n.href).map((item) => {
+          {NAV.filter((n) => !n.href && n.key !== "connections").map((item) => {
             const active = section === item.key;
             return (
               <li key={item.key}>
