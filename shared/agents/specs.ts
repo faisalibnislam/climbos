@@ -316,7 +316,7 @@ export function insightsSpec(o: SpecOptions = {}): AgentSpec<InsightsV2> {
       id: "business_insights",
       role: "cmo",
       label: "Business insights",
-      skills: ["voc-research", "competitor-teardown", "positioning"],
+      skills: ["owner-brevity", "voc-research", "competitor-teardown", "positioning"],
       schema: InsightsV2Schema,
       rubric: rubricOf("positioning"),
       criticSkills: ["competitor-teardown", "voc-research"],
@@ -333,7 +333,7 @@ export function strategySpec(o: SpecOptions = {}, catalogs: string[] = playCatal
       id: "growth_strategy",
       role: "ceo",
       label: "Growth plan",
-      skills: ["growth-strategy", "growth-plays", ...catalogs, "experiment-design"],
+      skills: ["owner-brevity", "growth-strategy", "growth-plays", ...catalogs, "experiment-design"],
       schema: StrategyV2Schema,
       rubric: mergeRubrics("Growth plan with creative, predictable plays", rubricOf("growth-strategy"), rubricOf("growth-plays")),
       criticSkills: ["growth-plays", "experiment-design", "positioning"],
@@ -413,7 +413,7 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
 
 export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof ConversionAuditV2Schema>> {
   return base(
-    { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: lintGeneric },
+    { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["owner-brevity", "conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: lintGeneric },
     o,
     "lean",
   );
@@ -421,7 +421,7 @@ export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<type
 
 export function retentionSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof RetentionPlanSchema>> {
   return base(
-    { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintGeneric },
+    { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["owner-brevity", "retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintGeneric },
     o,
     "lean",
   );
@@ -469,7 +469,7 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       id: "social_calendar",
       role: "social_media_manager",
       label: "Weekly content plan",
-      skills: ["social-calendar", "positioning", ...channelSkills.slice(0, 2)],
+      skills: ["owner-brevity", "social-calendar", "positioning", ...channelSkills.slice(0, 2)],
       schema: SocialCalendarSchema,
       rubric: rubricOf("social-calendar"),
       criticSkills: ["copy-fundamentals"],

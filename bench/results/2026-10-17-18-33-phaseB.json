@@ -1,0 +1,28 @@
+[
+ {
+  "case": "plausible",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of stric",
+    "costMicros": 0,
+    "ms": 58678
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": false,
+    "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of stric",
+    "costMicros": 172100,
+    "ms": 97990
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": null,
+   "v0f": null
+  }
+ }
+]

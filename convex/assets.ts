@@ -373,4 +373,35 @@ export const makePosts = mutation({
   },
 });
 
+/** Source image details for an edit job. */
+export const source = internalQuery({
+  args: { assetId: v.id("assets") },
+  handler: async (ctx, { assetId }) => {
+    return ctx.db.get(assetId);
+  },
+});
+
+/** Improve a real image: realistic sample data, a clean background, or a lifestyle scene. */
+export const editImage = mutation({
+  args: { slug: v.string(), assetId: v.id("assets"), treatment: v.union(v.literal("sample_data"), v.literal("clean_background"), v.literal("lifestyle_scene")), scene: v.optional(v.string()) },
+  handler: async (ctx, { slug, assetId, treatment, scene }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const a = assertSameOrg(await ctx.db.get(assetId), org._id, "image");
+    if (a.archived) throw appError("INVALID", "That image was removed.");
+    const runId = await createRunWithReservation(ctx, {
+      org,
+      kind: "image_edit",
+      title: treatment === "sample_data" ? "Add realistic sample data" : treatment === "clean_background" ? "Clean studio background" : "Lifestyle scene",
+      roles: ["creative_director"],
+      input: { assetId, treatment, scene },
+      steps: [{ kind: "image", role: "creative_director", imageAttempts: 1 }],
+      meters: { imageAttempts: 1, deliveredImages: 1 },
+      createdBy: user._id,
+      isFixture: org.kind === "demo",
+    });
+    await ctx.scheduler.runAfter(0, internal.assetEdits.run, { runId, assetId, treatment, scene: scene?.slice(0, 60), userId: user._id });
+    return { runId };
+  },
+});
+
 export type { AssetKind };

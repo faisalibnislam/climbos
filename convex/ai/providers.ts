@@ -279,3 +279,27 @@ export async function generateImage(prompt: string, rates: RateVersion): Promise
     return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0 };
   }
 }
+
+/** Edit an existing image (real screenshot or product photo) with Gemini, keeping what must stay exact. */
+export async function editImage(prompt: string, image: { bytes: Uint8Array; mimeType: string }, rates: RateVersion): Promise<ImageResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const route = IMAGE_ROUTES.standard;
+  if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Image editing isn't configured on this server.", costMicros: 0 };
+  const ai = new GoogleGenAI({ apiKey });
+  const attemptCost = usdToMicrosCeil(rates.services.imageAttempt);
+  try {
+    const res = await ai.models.generateContent({
+      model: route.apiModelId,
+      contents: [{ role: "user", parts: [{ inlineData: { mimeType: image.mimeType, data: Buffer.from(image.bytes).toString("base64") } }, { text: prompt }] }],
+      config: { responseModalities: ["IMAGE"], httpOptions: { timeout: 120_000 } },
+    });
+    const parts = res.candidates?.[0]?.content?.parts ?? [];
+    const img = parts.find((p) => p.inlineData?.data);
+    if (!img?.inlineData?.data) return { ok: false, kind: "refused", message: "The image service didn't return an edit for this image.", costMicros: attemptCost };
+    return { ok: true, bytes: Uint8Array.from(Buffer.from(img.inlineData.data, "base64")), mimeType: img.inlineData.mimeType ?? "image/png", costMicros: attemptCost, actualModelId: res.modelVersion ?? route.apiModelId };
+  } catch (e) {
+    const msg = (e as Error).message ?? "";
+    if (/429|RESOURCE_EXHAUSTED/.test(msg)) return { ok: false, kind: "rate_limited", message: "Image service is busy.", costMicros: 0 };
+    return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0 };
+  }
+}

@@ -3,7 +3,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Check, ImagePlus, Loader2, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Sparkles, Trash2, Upload } from "lucide-react";
+import { Check, ImagePlus, Loader2, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
+import { SCENES, TREATMENTS, type Treatment } from "../../../../../shared/visuals/treatments";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -16,7 +17,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Dialog,
+  DialogContent,
+  DialogFooter,
   EmptyState,
+  RadioCards,
   FilterChip,
   IconButton,
   SocialIcon,
@@ -225,9 +230,16 @@ function imageSize(file: File): Promise<{ width?: number; height?: number }> {
 
 const VIEW_LABEL: Record<string, string> = { desktop: "Desktop", mobile: "Mobile", section: "Feature", product: "Product", other: "Upload" };
 
+function improvable(a: Asset) {
+  return a.kind === "screenshot" || a.kind === "product_photo" || a.kind === "upload";
+}
+
 function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; asset: Asset; picked: boolean; onPick: (on: boolean) => void; canEdit: boolean }) {
   const archive = useMutation(api.assets.archive);
+  const [improving, setImproving] = useState(false);
   return (
+    <>
+    {improving ? <ImproveDialog slug={slug} asset={asset} onClose={() => setImproving(false)} /> : null}
     <article {...climbTarget("image", asset.id, `${asset.kind === "screenshot" ? "Screenshot" : asset.kind === "product_photo" ? "Product photo" : "Image"}: ${asset.product?.name ?? asset.label}`)} className={cn("group relative overflow-hidden rounded-xl border bg-surface transition-colors", picked ? "border-brand-800 ring-2 ring-brand-100" : "border-line hover:border-line-strong")}>
       <button type="button" onClick={() => onPick(!picked)} aria-pressed={picked} aria-label={`${picked ? "Unselect" : "Select"} ${asset.label}`} className="block w-full text-left">
         <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">
@@ -245,7 +257,7 @@ function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; ass
           <p className="truncate text-ui font-medium text-ink">{asset.product?.name ?? asset.label}</p>
           <p className="mt-0.5 flex flex-wrap items-center gap-1">
             <Badge tone={asset.kind === "ai_image" ? "violet" : asset.kind === "product_photo" ? "orange" : asset.kind === "screenshot" ? "blue" : "neutral"}>
-              {asset.kind === "ai_image" ? "AI" : (VIEW_LABEL[asset.view ?? "other"] ?? "Image")}
+              {asset.kind === "ai_image" ? "AI" : asset.kind === "edited" ? "Edited" : (VIEW_LABEL[asset.view ?? "other"] ?? "Image")}
             </Badge>
             {asset.product?.price ? <span className="text-xs text-ink-3">{asset.product.price}</span> : null}
             {asset.illustrative ? <Badge tone="neutral">Sample data</Badge> : null}
@@ -257,6 +269,11 @@ function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; ass
               <IconButton size="sm" variant="ghost" aria-label="Image options" icon={<MoreHorizontal />} tooltip={false} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {improvable(asset) ? (
+                <DropdownMenuItem icon={<Wand2 />} onSelect={() => setImproving(true)}>
+                  Improve this image…
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem asChild>
                 <Link href={`/studio/${slug}/new?asset=${asset.id}`}>Design a post with it</Link>
               </DropdownMenuItem>
@@ -275,6 +292,53 @@ function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; ass
         ) : null}
       </div>
     </article>
+    </>
+  );
+}
+
+function ImproveDialog({ slug, asset, onClose }: { slug: string; asset: Asset; onClose: () => void }) {
+  const edit = useMutation(api.assets.editImage);
+  const options = (Object.keys(TREATMENTS) as Treatment[]).filter((t) => TREATMENTS[t].for.includes(asset.kind as "screenshot" | "product_photo" | "upload"));
+  const [treatment, setTreatment] = useState<Treatment>(options[0]);
+  const [scene, setScene] = useState<string>(SCENES[0]);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent title="Improve this image" description="Your team edits a copy; the original stays in your library.">
+        <div className="flex flex-col gap-4">
+          <RadioCards aria-label="Treatment" value={treatment} onValueChange={(v) => setTreatment(v as Treatment)} options={options.map((t) => ({ value: t, title: TREATMENTS[t].label, description: TREATMENTS[t].description }))} />
+          {treatment === "lifestyle_scene" ? (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-ui font-medium text-ink">Where should it be?</legend>
+              <ChoiceChips aria-label="Scene" value={scene} onValueChange={setScene} options={SCENES.map((s) => ({ value: s, label: s.replace(/^(on|in) (a )?/, "").replace(/^./, (c) => c.toUpperCase()) }))} />
+            </fieldset>
+          ) : null}
+          {treatment === "sample_data" ? <p className="text-xs text-ink-3">The new image is labelled &ldquo;Sample data&rdquo; so it&apos;s never mistaken for real results.</p> : null}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await edit({ slug, assetId: asset.id as Id<"assets">, treatment, scene: treatment === "lifestyle_scene" ? scene : undefined });
+                toast({ tone: "success", title: "Working on it", description: "The new image appears in your library in about a minute." });
+                onClose();
+              } catch (e) {
+                toast({ tone: "danger", title: errorMessage(e) });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Wand2 aria-hidden /> Create
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

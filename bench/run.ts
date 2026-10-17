@@ -21,7 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
-import { adsSpec, conversionAuditSpec, emailSpec, insightsSpec, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
+import { adsSpec, conversionAuditSpec, emailSpec, insightsSpec, playCatalogsFor, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
 import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
@@ -154,7 +154,7 @@ function brief(p: Prepared, withInsights: boolean): string {
 }
 
 // ---------- task definitions ----------
-type SpecFactory = (o: { models?: { draft?: ModelKey }; maxRevisions?: number }) => AgentSpec<unknown>;
+type SpecFactory = (o: { models?: { draft?: ModelKey }; maxRevisions?: number }, p?: Prepared) => AgentSpec<unknown>;
 interface TaskDef {
   v1: { task: keyof typeof TASKS; prompt: (p: Prepared) => string; webSearches?: number };
   spec: SpecFactory;
@@ -189,9 +189,11 @@ const DEFS: Record<BenchTask, TaskDef> = {
       prompt: (p) =>
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${brief(p, true)}`,
     },
-    spec: (o) => strategySpec(o) as unknown as AgentSpec<unknown>,
-    task: () => "Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time.",
-    judgeFocus: "a 90-day growth strategy",
+    spec: (o, p) => strategySpec(o, playCatalogsFor(p?.c.type)) as unknown as AgentSpec<unknown>,
+    task: () =>
+      "Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around a portfolio of 2-4 growth plays: one bankable, one or two creative-but-proven (a proven mechanic on a non-obvious audience, asset or moment), at most one capped moonshot. Go beyond social posts and email when something else would move the goal more. Forecast each play with cited base rates and ranges, and give each a test with kill and scale rules and a first action for today.",
+    research: (p) => researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }),
+    judgeFocus: "a 90-day growth strategy built on concrete growth plays",
   },
   linkedin: { v1: { task: "social_posts", prompt: v1Social("linkedin") }, spec: social("linkedin"), task: () => "Write 3 LinkedIn posts (founder voice unless the brief suggests otherwise) that support the goal.", judgeFocus: "LinkedIn posts" },
   instagram: { v1: { task: "social_posts", prompt: v1Social("instagram") }, spec: social("instagram"), task: () => "Write 3 Instagram posts that support the goal: mix formats, with at least one carousel (slide-by-slide).", judgeFocus: "Instagram posts" },
@@ -271,7 +273,7 @@ function inputFor(p: Prepared, t: BenchTask): AgentInput {
 
 /** Frontier one-shot: the strongest model, one call, same brief/schema/search budget, no skills or loop. */
 async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
-  const spec = DEFS[t].spec({});
+  const spec = DEFS[t].spec({}, p);
   const input = inputFor(p, t);
   const t0 = Date.now();
   const r = await turnWithRetry({
@@ -295,7 +297,8 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
 async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   const draft: ModelKey = arm.startsWith("v2o") ? "claude-opus-5.5" : "claude-sonnet-5.5";
   const maxRevisions = arm.endsWith("1") ? 1 : 2;
-  const spec = DEFS[t].spec({ models: { draft }, maxRevisions });
+  // v22: the production configuration exactly as shipped (expert/lean profiles).
+  const spec = arm === "v22" ? DEFS[t].spec({}, p) : DEFS[t].spec({ models: { draft }, maxRevisions }, p);
   let cost = 0;
   const deps: AgentDeps = {
     turn: async (req) => {
@@ -337,6 +340,7 @@ Weigh, in order:
 2. Strategic quality and specificity: is it unmistakably for THIS business and audience, focused, prioritized and actionable?
 3. Craft for the channel: would it perform on the platform as written (hooks, structure, limits, native style)?
 4. Usefulness to a non-expert owner: clear, honest, ready to use.
+5. For plans and strategy: creative but predictable. Non-obvious plays built on proven mechanics, with honest evidence-based forecasts and tests, beat generic channel lists ("post on social", "run ads"). Unsupported optimism is not creativity.
 
 Do not reward length or extra fields for their own sake. Do not reward polish over truth. If both are equally good or equally weak, say tie.`;
 
@@ -372,6 +376,7 @@ const ScoreSchema = z.object({
   strategy: z.number(),
   craft: z.number(),
   usefulness: z.number(),
+  creativity: z.number(),
   overall: z.number(),
   topIssue: z.string(),
 });
@@ -388,6 +393,7 @@ async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | 
 - strategy: focused, prioritized, sound judgement for this goal and budget
 - craft: would perform on the channel as written
 - usefulness: ready for a non-expert owner to use
+- creativity: non-obvious ideas a competitor isn't using, still grounded in proven mechanics and evidence (generic best-practice lists score 3 or below)
 - overall: your overall verdict
 - topIssue: the single biggest problem, in one sentence.`,
         cache: true,
@@ -467,7 +473,7 @@ function summarize(rows: Record<string, unknown>[]): string {
       lines.push(`| ${t} | ${arms.map((a) => mean(rs.map((r) => r.scores[a]?.overall).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
     }
     lines.push("", "| Dimension (all tasks) | " + arms.join(" | ") + " |", `|---|${arms.map(() => "---").join("|")}|`);
-    for (const dim of ["truth", "specificity", "strategy", "craft", "usefulness"] as const) {
+    for (const dim of ["truth", "specificity", "strategy", "craft", "usefulness", "creativity"] as const) {
       lines.push(`| ${dim} | ${arms.map((a) => mean(R.map((r) => r.scores[a]?.[dim]).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
     }
   }

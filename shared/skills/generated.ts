@@ -1631,6 +1631,37 @@ export const SKILLS: Record<string, { name: string; description: string; playboo
   },
   "hash": "c6fc0f94b4c7"
  },
+ "owner-brevity": {
+  "name": "owner-brevity",
+  "description": "House style for anything an owner reads inside ClimbOS (plans, insights, audits, explanations, chat answers, notes, summaries). Use it for every owner-facing text field. Owners are busy and don't read long text, so lead with the answer, use bullets and short tables, and write long prose only when there's no other way.",
+  "playbook": "## Rule\n\nWrite as little as possible. Most people hate reading.\n\n## How\n\n- **Answer first:** the first line is the answer, decision or number.\n- **Bullets over paragraphs:** one idea per bullet, at most about 12 words.\n- **Tables** when comparing options, numbers or steps.\n- **Max lengths** unless the task demands more:\n  - Explanations and descriptions: 1–2 sentences.\n  - Lists: 3–5 items.\n  - Chat answers: 3 bullets or 60 words.\n- **Plain words:** no jargon, filler, hedging stacks or restating the question.\n- **Bold** only the key fact in a line.\n- **Long text only when necessary:** a legal or compliance explanation, a full draft the owner asked for, or a step-by-step the owner must follow.\n\n## Exceptions\n\nPublishable marketing copy (posts, emails, pages, scripts) follows its channel playbook's length. Brevity still applies: cut every word that doesn't earn its place.\n\n## Checklist\n\n- [ ] Can a busy owner get it in 5 seconds?\n- [ ] Is there any sentence you could delete without losing meaning? Delete it.\n- [ ] Would a bullet list or table be clearer than this paragraph?",
+  "rubric": {
+   "id": "owner-brevity",
+   "title": "Owner-facing brevity",
+   "gates": [
+    {
+     "id": "B1",
+     "text": "No filler, no restating the question, answer first."
+    }
+   ],
+   "criteria": [
+    {
+     "id": "BR1",
+     "name": "Brevity and structure",
+     "anchors": {
+      "1": "Long paragraphs, filler, buried answer.",
+      "3": "Mostly concise but some paragraphs could be bullets or deleted.",
+      "5": "Answer first; bullets or tables; nothing to cut."
+     }
+    }
+   ],
+   "shipRule": {
+    "minEach": 3,
+    "minAverage": 3
+   }
+  },
+  "hash": "81f34ca60383"
+ },
  "plays-ecommerce-consumer": {
   "name": "plays-ecommerce-consumer",
   "description": "Catalog of evidence-graded growth plays for ecommerce and DTC brands, consumer apps, creators and course businesses, and makers. Use it when planning growth for these businesses to pick non-obvious, predictable plays beyond social posts and email, such as opt-in creator seeding, TikTok Shop samples, review timing, referral rewards, newsletter recommendations, gift guides, wholesale via Faire and app featuring, with expected result ranges and sources.",

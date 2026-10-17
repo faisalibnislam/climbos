@@ -1,0 +1,25 @@
+{
+  "id": "owner-brevity",
+  "title": "Owner-facing brevity",
+  "gates": [
+    {
+      "id": "B1",
+      "text": "No filler, no restating the question, answer first."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "BR1",
+      "name": "Brevity and structure",
+      "anchors": {
+        "1": "Long paragraphs, filler, buried answer.",
+        "3": "Mostly concise but some paragraphs could be bullets or deleted.",
+        "5": "Answer first; bullets or tables; nothing to cut."
+      }
+    }
+  ],
+  "shipRule": {
+    "minEach": 3,
+    "minAverage": 3
+  }
+}
