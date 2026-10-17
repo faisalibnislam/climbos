@@ -169,7 +169,47 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     },
   }),
 
+  tool({
+    name: "get_prospects",
+    title: "Prospects and calls",
+    description: "Find-customers status: the ideal customer, prospects (id, company, why, stage, score), the booking page and upcoming calls.",
+    risk: "read",
+    doing: "Checking your prospects",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const o = await c.query(api.outbound.get, { slug });
+      return {
+        status: o.campaign?.status ?? "none",
+        icp: o.campaign?.icp?.summary ?? null,
+        prospects: o.prospects.slice(0, 40).map((p) => ({ id: p.id, company: p.company, why: short(p.why, 140), stage: p.stage, fit: p.fit, timing: p.timing })),
+        emails: o.campaign?.sequence.map((s) => ({ day: s.day, subject: s.subject })) ?? [],
+        bookingPage: o.page ? `/book/${o.page.slug}` : null,
+        upcomingCalls: o.bookings.map((b) => ({ name: b.name, company: b.company, when: new Date(b.startAt).toISOString() })),
+        pipeline: o.funnel,
+      };
+    },
+  }),
+
   /* ---------------- draft (prepares work, nothing goes live) ---------------- */
+  tool({
+    name: "find_customers",
+    title: "Find customers",
+    description: "Research companies that need this business (public web, with evidence) and write the cold emails. Nothing is sent.",
+    risk: "draft",
+    doing: "Finding customers",
+    input: z.object({ who: z.string().optional(), where: z.string().optional(), count: z.number().optional() }),
+    run: async (c, slug, i) => c.mutation(api.outbound.start, { slug, who: i.who, where: i.where, count: i.count }),
+  }),
+  tool({
+    name: "review_prospects",
+    title: "Approve or skip prospects",
+    description: "Mark prospects approved (ready to email) or skipped. Only changes the list; nothing is sent.",
+    risk: "draft",
+    doing: "Updating your prospect list",
+    input: z.object({ prospectIds: z.array(z.string()), stage: z.enum(["approved", "skipped"]) }),
+    run: async (c, slug, i) => c.mutation(api.outbound.setStage, { slug, prospectIds: i.prospectIds as Id<"prospects">[], stage: i.stage }),
+  }),
+
   tool({
     name: "create_posts",
     title: "Draft social posts",
@@ -331,7 +371,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "go_to",
     title: "Open a screen",
-    description: "Open a ClimbOS screen for the owner: today, plan, content, content/<draftId>, autopilot, images, results, connections, settings/billing, work/<runId>.",
+    description: "Open a ClimbOS screen for the owner: today, plan, content, content/<draftId>, autopilot, outbound (find customers), images, results, connections, settings/billing, work/<runId>.",
     risk: "ui",
     doing: "Opening it for you",
     input: z.object({ path: z.string() }),
