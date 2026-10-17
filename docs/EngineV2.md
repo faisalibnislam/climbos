@@ -225,7 +225,7 @@ Pairwise, v2.x engine vs Opus one-shot (`v0f`); a win needs both orders to agree
 
 | Round | Engine | Pairs | Opus judge | Sonnet judge | Fable judge | Notes |
 |---|---|---|---|---|---|---|
-| A2 | v2.1 | 36 | 61% | 55% | — | Tied absolute scores at 5× cost; losses from `[NEEDS FACT]` placeholders |
+| A2 | v2.1 | 55 | 23W 17T 15L (61%) | 22W 15T 18L (55%) | — | Tied absolute scores at 5× cost; losses from `[NEEDS FACT]` placeholders |
 | B | v2.2 | 11* | 6W 5T 0L | 9W 1T 1L | 4W 3T 3L | Absolute 7.20 vs 6.75; weakest: Instagram, ads |
 | C1 | v2.3 | 3* | 2W 0T 1L | 1W 2T 0L | 2W 0T 0L | Social only |
 
