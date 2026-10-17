@@ -35,16 +35,16 @@ export function StepList({ steps, className }: { steps: StepItem[]; className?: 
             {!last ? (
               <span
                 aria-hidden="true"
-                className={cn("absolute left-[11px] top-7 h-[calc(100%-1.75rem)] w-px", s.status === "done" ? "bg-green-600" : "bg-line-strong")}
+                className={cn("absolute left-[11px] top-7 h-[calc(100%-1.75rem)] w-px", s.status === "done" ? "bg-brand-600" : "bg-line-strong")}
               />
             ) : null}
             <span aria-hidden="true" className="relative mt-0.5 grid size-6 shrink-0 place-items-center">
               {s.status === "done" ? (
-                <CircleCheck className="size-6 fill-green-800 text-white" />
+                <CircleCheck className="size-6 fill-brand-800 text-white" />
               ) : s.status === "failed" ? (
                 <CircleX className="size-6 fill-red-800 text-white" />
               ) : s.status === "running" ? (
-                <span className="grid size-6 place-items-center rounded-full bg-green-100 text-green-800">
+                <span className="grid size-6 place-items-center rounded-full bg-brand-100 text-brand-800">
                   <Spinner className="text-[15px]" />
                 </span>
               ) : (
@@ -64,7 +64,7 @@ export function StepList({ steps, className }: { steps: StepItem[]; className?: 
               <span
                 className={cn(
                   "text-sm",
-                  s.status === "failed" ? "font-medium text-red-800" : s.status === "done" ? "text-green-800" : "text-ink-3",
+                  s.status === "failed" ? "font-medium text-red-800" : s.status === "done" ? "text-brand-800" : "text-ink-3",
                 )}
               >
                 {statusText[s.status]}

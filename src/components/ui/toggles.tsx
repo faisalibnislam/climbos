@@ -23,7 +23,7 @@ export function Checkbox({ label, description, id, className, ...props }: Checkb
         <RCheckbox.Root
           id={cid}
           aria-describedby={descId}
-          className="peer grid size-5 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-white transition-colors hover:border-green-700 data-[state=checked]:border-green-800 data-[state=checked]:bg-green-800 data-[state=indeterminate]:border-green-800 data-[state=indeterminate]:bg-green-800 disabled:opacity-50"
+          className="peer grid size-5 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-white transition-colors hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 data-[state=indeterminate]:border-brand-800 data-[state=indeterminate]:bg-brand-800 disabled:opacity-50"
           {...props}
         >
           <RCheckbox.Indicator className="inline-flex">
@@ -85,7 +85,7 @@ export function Switch({ label, description, id, className, showStateText = true
         <RSwitch.Root
           id={sid}
           aria-describedby={descId}
-          className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-line-strong bg-surface-3 transition-colors data-[state=checked]:border-green-800 data-[state=checked]:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-line-strong bg-surface-3 transition-colors data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
           {...props}
         >
           <RSwitch.Thumb className="block size-5 translate-x-[3px] rounded-full bg-white shadow-sm transition-transform data-[state=checked]:translate-x-[23px]" />

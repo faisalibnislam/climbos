@@ -3,16 +3,65 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowRight, CheckCircle2, Clock3, Send, ShieldCheck, Target } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  CircleHelp,
+  Clock3,
+  Compass,
+  FileCheck2,
+  Hourglass,
+  Lightbulb,
+  Mail,
+  Megaphone,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Users,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, Skeleton, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, Textarea, toast, type Tone } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorInfo, errorMessage } from "@/components/app/errors";
 import { microsToDisplay, relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
+import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
+import { useNow } from "@/components/app/content/shared";
+
+const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
+  plan: { icon: Compass, tone: "violet" },
+  approvals: { icon: FileCheck2, tone: "amber" },
+  uncertain: { icon: CircleHelp, tone: "orange" },
+  card: { icon: Lightbulb, tone: "brand" },
+  onboarding: { icon: Sparkles, tone: "pink" },
+};
+
+const SUGGESTIONS: { text: string; icon: LucideIcon; tone: Tone }[] = [
+  { text: "Get 3 Instagram posts ready for next week", icon: Megaphone, tone: "pink" },
+  { text: "Write a welcome email sequence", icon: Mail, tone: "blue" },
+  { text: "Why did sign-ups change?", icon: BarChart3, tone: "teal" },
+  { text: "Draft a small Google search ad test", icon: Target, tone: "red" },
+];
+
+function StatCard({ icon, tone, label, value, hint }: { icon: LucideIcon; tone: Tone; label: string; value: string | number; hint: string }) {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
+      <IconTile icon={icon} tone={tone} size="lg" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink-2">{label}</p>
+        <p className="text-2xl font-extrabold tracking-tight text-ink">{value}</p>
+        <p className="text-xs leading-snug text-ink-3">{hint}</p>
+      </div>
+    </div>
+  );
+}
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type CardView = Today["cards"][number];
@@ -36,6 +85,7 @@ function greeting(): string {
 export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
+  const now = useNow();
 
   if (data === undefined) {
     return (
@@ -54,15 +104,19 @@ export default function TodayPage() {
   const firstName = data.userName && !data.userName.includes("@") ? data.userName.split(" ")[0] : null;
   const workingRoles = new Set(data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).flatMap((r) => r.roles));
 
+  const running = data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).length;
+  const doneThisWeek = now ? data.recent.filter((r) => r.status === "verified" && r.createdAt > now - 7 * 86_400_000).length : 0;
+
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-ink-3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-          <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">
+          <p className="text-sm font-semibold text-ink-3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
             {greeting()}
-            {firstName ? `, ${firstName}` : ""}
+            {firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span>
           </h1>
+          <p className="mt-1 text-ink-2">Here’s what your AI growth team is working on{data.org.name ? ` for ${data.org.name.replace(/ \(demo\)$/i, "")}` : ""}.</p>
         </div>
         <div className="hidden md:block">
           <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
@@ -92,36 +146,51 @@ export default function TodayPage() {
       )}
 
       {/* Goal */}
-      <Card className="overflow-hidden">
-        <CardContent className="flex flex-col gap-4 bg-gradient-to-br from-green-50 to-surface p-5 sm:flex-row sm:items-center sm:p-6">
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-green-800 text-white">
-            <Target className="size-6" aria-hidden />
+      <section aria-label="Your goal" className="bg-hero-gradient relative overflow-hidden rounded-[24px] p-6 text-white shadow-lg sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 right-24 size-48 rounded-full bg-white/10" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur">
+            <Target className="size-7" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-green-800">Your goal</p>
+            <p className="text-sm font-bold uppercase tracking-wider text-white/80">Your goal</p>
             {data.goal ? (
               <>
-                <p className="mt-1 text-xl font-semibold leading-snug text-ink">{data.goal.statement}</p>
-                <p className="mt-1 text-sm text-ink-2">
-                  {data.goal.horizonDays} days ·{" "}
-                  {data.goal.monthlyAdBudget > 0
-                    ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: data.goal.currency, maximumFractionDigits: 0 }).format(data.goal.monthlyAdBudget)}/month ad budget, paid directly to ad platforms`
-                    : "No paid ads"}
+                <p className="mt-1 text-xl font-bold leading-snug sm:text-2xl">{data.goal.statement}</p>
+                <p className="mt-2 flex flex-wrap gap-2 text-sm">
+                  <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{data.goal.horizonDays} days</span>
+                  <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">
+                    {data.goal.monthlyAdBudget > 0
+                      ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: data.goal.currency, maximumFractionDigits: 0 }).format(data.goal.monthlyAdBudget)}/month ads, paid to the platforms`
+                      : "No paid ads"}
+                  </span>
                 </p>
               </>
             ) : (
-              <p className="mt-1 text-lg text-ink">No goal yet. Tell your team what you’d like to achieve.</p>
+              <p className="mt-1 text-xl font-bold">No goal yet. Tell your team what you’d like to achieve.</p>
             )}
           </div>
-          <Button asChild variant="secondary">
-            <Link href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}>{data.goal ? "See the plan" : "Set a goal"}</Link>
-          </Button>
-        </CardContent>
-      </Card>
+          <Link
+            href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 font-semibold text-brand-900 shadow-sm transition hover:bg-brand-50"
+          >
+            {data.goal ? "See the plan" : "Set a goal"} <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </div>
+      </section>
+
+      {/* At a glance */}
+      <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} hint="Nothing goes live without you" />
+        <StatCard icon={Zap} tone="blue" label="Working now" value={running} hint={running ? "Jobs in progress" : "Your team is ready"} />
+        <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} hint="Finished jobs" />
+        <StatCard icon={Users} tone="violet" label="Your AI team" value={10} hint="Specialists on your business" />
+      </section>
 
       {/* Next actions */}
       <section aria-labelledby="next-heading">
-        <h2 id="next-heading" className="font-display text-2xl text-ink">Do these next</h2>
+        <h2 id="next-heading" className="text-xl font-bold text-ink">Do these next</h2>
         {data.next.length === 0 ? (
           <EmptyState
             className="mt-4"
@@ -131,24 +200,30 @@ export default function TodayPage() {
           />
         ) : (
           <ol className="mt-4 grid gap-4 md:grid-cols-3">
-            {data.next.map((n, i) => (
-              <li key={`${n.kind}-${i}`}>
-                <Link
-                  href={n.href}
-                  className="group flex h-full flex-col rounded-[16px] border border-line bg-surface p-5 shadow-sm transition hover:border-green-700/40 hover:shadow-md"
-                >
-                  <span className="text-sm font-semibold text-green-800">
-                    {i + 1}
-                    <span className="sr-only"> of {data.next.length}</span>
-                  </span>
-                  <span className="mt-2 text-lg font-semibold leading-snug text-ink">{n.title}</span>
-                  <span className="mt-1 flex-1 text-sm text-ink-2">{n.why}</span>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-green-800">
-                    Open <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {data.next.map((n, i) => {
+              const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
+              return (
+                <li key={`${n.kind}-${i}`}>
+                  <Link
+                    href={n.href}
+                    className="group flex h-full flex-col rounded-2xl border border-line bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md"
+                  >
+                    <span className="flex items-center justify-between">
+                      <IconTile icon={v.icon} tone={v.tone} size="md" />
+                      <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold text-ink-2">
+                        Step {i + 1}
+                        <span className="sr-only"> of {data.next.length}</span>
+                      </span>
+                    </span>
+                    <span className="mt-4 text-lg font-bold leading-snug text-ink">{n.title}</span>
+                    <span className="mt-1 flex-1 text-sm text-ink-2">{n.why}</span>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-brand-800">
+                      Open <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ol>
         )}
       </section>
@@ -181,21 +256,29 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
     if (list) list.scrollTop = list.scrollHeight;
   }, [data.chat.length]);
 
-  const suggestions = ["Get 3 Instagram posts ready for next week", "Write a welcome email sequence", "Why did sign-ups change?", "Draft a small Google search ad test"];
-
   return (
     <section aria-labelledby="chat-heading" className="flex flex-col">
-      <h2 id="chat-heading" className="font-display text-2xl text-ink">What would you like to achieve?</h2>
-      <p className="mt-1 text-sm text-ink-2">Ask in your own words. Your team turns it into clear actions you approve — nothing runs on its own.</p>
+      <div className="flex items-center gap-3">
+        <IconTile icon={Sparkles} tone="brand" size="md" solid />
+        <div>
+          <h2 id="chat-heading" className="text-xl font-bold text-ink">Ask your team</h2>
+          <p className="text-sm text-ink-2">Say what you want in your own words. You approve every action.</p>
+        </div>
+      </div>
       <Card className="mt-4 flex flex-1 flex-col">
         <CardContent className="flex flex-1 flex-col gap-4 p-4 sm:p-5">
           {data.chat.length === 0 ? (
-            <div className="rounded-[12px] bg-surface-2 p-4 text-sm text-ink-2">
-              Try one of these:
-              <div className="mt-3 flex flex-wrap gap-2">
-                {suggestions.map((s) => (
-                  <button key={s} onClick={() => setText(s)} className="min-h-10 rounded-full border border-line bg-surface px-3 text-left text-sm text-ink hover:border-green-700/40">
-                    {s}
+            <div className="bg-soft-gradient rounded-2xl p-4 text-sm text-ink-2">
+              <p className="font-semibold text-ink">Try one of these</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s.text}
+                    onClick={() => setText(s.text)}
+                    className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2 text-left text-sm font-medium text-ink shadow-sm transition hover:border-brand-200 hover:shadow"
+                  >
+                    <IconTile icon={s.icon} tone={s.tone} size="sm" />
+                    {s.text}
                   </button>
                 ))}
               </div>
@@ -206,14 +289,14 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
                 <li key={m.id} className={cn("flex flex-col gap-2", m.author === "user" ? "items-end" : "items-start")}>
                   <div
                     className={cn(
-                      "max-w-[92%] rounded-[16px] px-4 py-3 text-[15px] leading-relaxed",
-                      m.author === "user" ? "bg-green-800 text-white" : "border border-line bg-surface-2 text-ink",
+                      "max-w-[92%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
+                      m.author === "user" ? "rounded-br-md bg-brand-800 text-white" : "rounded-bl-md border border-line bg-surface-2 text-ink",
                     )}
                   >
                     <span className="sr-only">{m.author === "user" ? "You said: " : "ClimbOS: "}</span>
                     {m.text}
                     {m.status === "thinking" && (
-                      <span className="mt-2 block text-sm text-green-100/90">
+                      <span className="mt-2 block text-sm text-brand-100/90">
                         <span className="animate-soft-pulse">Your team is thinking…</span>
                       </span>
                     )}
@@ -274,7 +357,7 @@ function ChatPanel({ slug, data }: { slug: string; data: Today }) {
       </Card>
       {data.cards.filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id))).length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">Suggested by your plan</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-ink-3">Suggested by your plan</h3>
           <div className="mt-3 grid gap-3">
             {data.cards
               .filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id)))
@@ -294,9 +377,12 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
   const [busy, setBusy] = useState(false);
   const status = card.status;
   return (
-    <div id={`card-${card.id}`} className="rounded-[14px] border border-line bg-surface p-4 shadow-sm">
+    <div id={`card-${card.id}`} className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="font-semibold text-ink">{card.title}</p>
+        <p className="flex items-center gap-2.5 font-bold text-ink">
+          <IconTile icon={Lightbulb} tone="brand" size="sm" />
+          {card.title}
+        </p>
         {status === "running" && <Badge tone="blue" icon={<Clock3 />}>Working</Badge>}
         {status === "done" && <Badge tone="green" icon={<CheckCircle2 />}>Done</Badge>}
         {status === "failed" && <Badge tone="red">Didn’t finish</Badge>}
@@ -305,9 +391,9 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
       <p className="mt-1 text-sm text-ink-2">{card.description}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {card.roles.map((r) => (
-          <Badge key={r} tone="neutral">
-            <span aria-hidden>{ROLE_META[r]?.emoji}</span> {ROLE_META[r]?.title ?? r}
-          </Badge>
+          <span key={r} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 py-0.5 pl-0.5 pr-2.5 text-[0.8125rem] font-semibold text-ink-2">
+            <RoleAvatar role={r} size="xs" /> {ROLE_META[r]?.title ?? r}
+          </span>
         ))}
       </div>
       <dl className="mt-3 grid gap-1 text-sm">
@@ -353,7 +439,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         </div>
       )}
       {status === "done" && (
-        <Link href={`/app/${slug}/content?status=in_review`} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-green-800">
+        <Link href={`/app/${slug}/content?status=in_review`} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-800">
           Review the drafts <ArrowRight className="size-4" aria-hidden />
         </Link>
       )}
@@ -365,16 +451,17 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   return (
     <section aria-labelledby="approvals-heading">
       <div className="flex items-center justify-between">
-        <h2 id="approvals-heading" className="font-display text-2xl text-ink">
-          Waiting for you
+        <h2 id="approvals-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
+          <IconTile icon={FileCheck2} tone="amber" size="sm" /> Waiting for you
         </h2>
         {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount} to review</Badge>}
       </div>
       <Card className="mt-4">
         <CardContent className="p-0">
           {data.strategy?.status === "needs_approval" && (
-            <Link href={`/app/${slug}/plan`} className="flex items-center justify-between gap-3 border-b border-line p-4 hover:bg-surface-2">
-              <span>
+            <Link href={`/app/${slug}/plan`} className="flex items-center gap-3 border-b border-line p-4 hover:bg-surface-2">
+              <RoleAvatar role="ceo" size="md" />
+              <span className="flex-1">
                 <span className="block font-medium text-ink">Growth plan v{data.strategy.version}</span>
                 <span className="block text-sm text-ink-3">{roleTitle("ceo")} · needs your approval</span>
               </span>
@@ -387,9 +474,10 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
             <ul>
               {data.approvals.map((a) => (
                 <li key={a.id}>
-                  <Link href={`/app/${slug}/content/${a.id}`} className="flex items-center justify-between gap-3 border-b border-line p-4 last:border-b-0 hover:bg-surface-2">
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">{a.title}</span>
+                  <Link href={`/app/${slug}/content/${a.id}`} className="flex items-center gap-3 border-b border-line p-4 last:border-b-0 hover:bg-surface-2">
+                    <RoleAvatar role={a.createdByRole ?? "social_media_manager"} size="md" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-ink">{a.title}</span>
                       <span className="block text-sm text-ink-3">
                         {CHANNEL_LABELS[a.channel] ?? a.channel} · {roleTitle(a.createdByRole)} · {relativeTime(a.updatedAt)}
                       </span>
@@ -409,17 +497,22 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
 function TeamPanel({ working }: { working: Set<string> }) {
   return (
     <section aria-labelledby="team-heading">
-      <h2 id="team-heading" className="font-display text-2xl text-ink">Your AI team</h2>
+      <h2 id="team-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
+        <IconTile icon={Users} tone="violet" size="sm" /> Your AI team
+      </h2>
       <p className="mt-1 text-sm text-ink-2">Ten specialists sharing one brain about your business.</p>
       <ul className="mt-4 grid grid-cols-2 gap-2">
         {Object.entries(ROLE_META).map(([key, r]) => {
           const active = working.has(key);
           return (
-            <li key={key} className={cn("flex items-center gap-2 rounded-[12px] border px-3 py-2.5 text-sm", active ? "border-green-700/30 bg-green-50" : "border-line bg-surface")}>
-              <span aria-hidden className="text-lg">{r.emoji}</span>
+            <li key={key} className={cn("flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-sm", active ? "border-brand-200 bg-brand-50" : "border-line bg-surface")}>
+              <RoleAvatar role={key} size="sm" />
               <span className="min-w-0">
-                <span className="block truncate font-medium text-ink">{r.title.replace("AI ", "")}</span>
-                <span className={cn("block text-xs", active ? "text-green-800" : "text-ink-3")}>{active ? "Working now" : "Ready"}</span>
+                <span className="block truncate font-semibold text-ink">{r.title.replace("AI ", "")}</span>
+                <span className={cn("flex items-center gap-1 text-xs", active ? "font-semibold text-brand-800" : "text-ink-3")}>
+                  <span aria-hidden="true" className={cn("size-1.5 rounded-full", active ? "animate-soft-pulse bg-brand-800" : "bg-green-500")} />
+                  {active ? "Working now" : "Ready"}
+                </span>
               </span>
             </li>
           );
@@ -432,7 +525,9 @@ function TeamPanel({ working }: { working: Set<string> }) {
 function RecentWork({ data }: { data: Today }) {
   return (
     <section aria-labelledby="recent-heading">
-      <h2 id="recent-heading" className="font-display text-2xl text-ink">Latest work</h2>
+      <h2 id="recent-heading" className="flex items-center gap-2.5 text-xl font-bold text-ink">
+        <IconTile icon={Clock3} tone="teal" size="sm" /> Latest work
+      </h2>
       {data.recent.length === 0 ? (
         <p className="mt-3 text-sm text-ink-2">No work yet. Ask for something above to get started.</p>
       ) : (
@@ -446,10 +541,11 @@ function RecentWork({ data }: { data: Today }) {
                 const s = RUN_STATUS[r.status] ?? { label: r.status, tone: "neutral" as const };
                 return (
                   <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 last:border-b-0">
+                    <RoleStack roles={r.roles} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium text-ink">{r.title}</span>
+                      <span className="block font-semibold text-ink">{r.title}</span>
                       <span className="block text-sm text-ink-3">
-                        {r.roles.map((x) => ROLE_META[x]?.emoji).join(" ")} {r.roles.map((x) => ROLE_META[x]?.short).join(", ")} · {relativeTime(r.createdAt)}
+                        {r.roles.map((x) => ROLE_META[x]?.short).join(", ")} · {relativeTime(r.createdAt)}
                         {r.isFixture ? " · demo" : ""}
                       </span>
                       {r.userMessage && r.status !== "verified" && <span className="mt-1 block text-sm text-ink-2">{r.userMessage}</span>}

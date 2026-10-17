@@ -38,7 +38,7 @@ export default function ContentDetailPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <Link
         href={`/app/${slug}/content`}
-        className="inline-flex min-h-11 items-center gap-2 self-start text-[0.95rem] font-medium text-green-800 underline-offset-4 hover:underline"
+        className="inline-flex min-h-11 items-center gap-2 self-start text-[0.95rem] font-medium text-brand-800 underline-offset-4 hover:underline"
       >
         <ArrowLeft aria-hidden="true" className="size-4" /> Back to content
       </Link>
@@ -109,7 +109,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {artifact.canEdit && artifact.status !== "archived" ? <MoreMenu slug={slug} artifact={artifact} /> : null}
           </div>
         </div>
-        <h1 className="break-words font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{artifact.title}</h1>
+        <h1 className="break-words font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{artifact.title}</h1>
         <ArtifactStatus status={artifact.status} showHelp />
         <p className="text-sm text-ink-3">
           Created by <RoleName role={artifact.createdByRole} className="text-ink-2" />

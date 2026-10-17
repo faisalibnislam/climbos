@@ -24,16 +24,16 @@ export function EmptyState({ icon, title, body, action, headingLevel: H = "h3", 
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-line-strong bg-surface px-6 py-10 text-center",
+        "flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center",
         className,
       )}
     >
       {icon ? (
-        <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-green-50 text-green-800 [&_svg]:size-6">
+        <span aria-hidden="true" className="bg-soft-gradient grid size-16 place-items-center rounded-[20px] text-brand-800 ring-1 ring-brand-100 [&_svg]:size-7">
           {icon}
         </span>
       ) : null}
-      <H className="text-lg font-semibold text-ink">{title}</H>
+      <H className="text-lg font-bold text-ink">{title}</H>
       {body ? <p className="max-w-md leading-relaxed text-ink-2">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
@@ -43,10 +43,10 @@ export function EmptyState({ icon, title, body, action, headingLevel: H = "h3", 
 export type CalloutTone = "info" | "success" | "warning" | "danger";
 
 const calloutStyles: Record<CalloutTone, { cls: string; Icon: LucideIcon; label: string }> = {
-  info: { cls: "border-[#c9daf1] bg-blue-100 text-blue-800", Icon: Info, label: "Note" },
-  success: { cls: "border-green-200 bg-green-50 text-green-800", Icon: CircleCheck, label: "Success" },
-  warning: { cls: "border-[#f1dca6] bg-amber-100 text-amber-800", Icon: TriangleAlert, label: "Warning" },
-  danger: { cls: "border-[#f3c9c3] bg-red-100 text-red-800", Icon: CircleAlert, label: "Problem" },
+  info: { cls: "border-brand-100 bg-brand-50 text-brand-900 [&_.callout-icon]:bg-brand-100 [&_.callout-icon]:text-brand-800", Icon: Info, label: "Note" },
+  success: { cls: "border-[#abefc6] bg-green-100/60 text-green-800 [&_.callout-icon]:bg-green-100 [&_.callout-icon]:text-green-800", Icon: CircleCheck, label: "Success" },
+  warning: { cls: "border-[#fedf89] bg-amber-100/60 text-amber-800 [&_.callout-icon]:bg-amber-100 [&_.callout-icon]:text-amber-800", Icon: TriangleAlert, label: "Warning" },
+  danger: { cls: "border-[#fecdca] bg-red-100/60 text-red-800 [&_.callout-icon]:bg-red-100 [&_.callout-icon]:text-red-800", Icon: CircleAlert, label: "Problem" },
 };
 
 export interface CalloutProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
@@ -66,11 +66,13 @@ export function Callout({ tone = "info", title, live, action, className, childre
   const resolved = live ?? (tone === "danger" ? "alert" : "none");
   const role = resolved === "none" ? undefined : resolved;
   return (
-    <div role={role} className={cn("flex gap-3 rounded-[12px] border p-4", cls, className)} {...props}>
-      <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+    <div role={role} className={cn("flex gap-3 rounded-2xl border p-4", cls, className)} {...props}>
+      <span aria-hidden="true" className="callout-icon grid size-8 shrink-0 place-items-center rounded-lg">
+        <Icon className="size-[18px]" />
+      </span>
       <div className="min-w-0 flex-1 text-[0.95rem] leading-relaxed">
         <span className="sr-only">{label}: </span>
-        {title ? <p className="font-semibold">{title}</p> : null}
+        {title ? <p className="font-bold">{title}</p> : null}
         {children ? <div className={cn(title && "mt-0.5", "text-ink-2 [&_a]:font-medium [&_a]:text-current [&_a]:underline")}>{children}</div> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
@@ -94,9 +96,9 @@ export interface StatProps {
 /** Single number with label and provenance. */
 export function Stat({ label, value, sublabel, change, className }: StatProps) {
   return (
-    <div className={cn("flex flex-col gap-1 rounded-[var(--radius)] border border-line bg-surface p-4", className)}>
-      <dt className="text-sm font-medium text-ink-2">{label}</dt>
-      <dd className="font-display text-3xl font-semibold tabular-nums tracking-tight text-ink">{value}</dd>
+    <div className={cn("flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4 shadow-sm", className)}>
+      <dt className="text-sm font-semibold text-ink-2">{label}</dt>
+      <dd className="text-3xl font-extrabold tabular-nums tracking-tight text-ink">{value}</dd>
       {change ? <dd className="text-sm font-medium text-ink-2">{change}</dd> : null}
       {sublabel ? <dd className="text-[0.8125rem] text-ink-3">{sublabel}</dd> : null}
     </div>

@@ -12,7 +12,7 @@ export function TabsList({ className, ...props }: ComponentProps<typeof RTabs.Li
   return (
     <RTabs.List
       className={cn(
-        "inline-flex max-w-full gap-1 overflow-x-auto rounded-[12px] border border-line bg-surface-2 p-1",
+        "inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 shadow-sm",
         className,
       )}
       {...props}
@@ -25,8 +25,8 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof RTabs
   return (
     <RTabs.Trigger
       className={cn(
-        "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-[9px] px-3.5 text-[0.95rem] font-medium text-ink-2 transition-colors",
-        "hover:text-ink data-[state=active]:bg-surface data-[state=active]:font-semibold data-[state=active]:text-ink data-[state=active]:shadow-sm",
+        "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-[0.95rem] font-semibold text-ink-2 transition-colors",
+        "hover:bg-surface-2 hover:text-ink data-[state=active]:bg-brand-800 data-[state=active]:text-white data-[state=active]:shadow-sm",
         className,
       )}
       {...props}

@@ -7,6 +7,7 @@ export { buttonClasses, type ButtonSize, type ButtonVariant } from "./button-sty
 export { Spinner, type SpinnerProps } from "./spinner";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, type CardTitleProps } from "./card";
 export { Badge, StatusPill, toneClasses, type BadgeProps, type StatusPillProps, type StatusKind, type Tone } from "./badge";
+export { IconTile } from "./icon-tile";
 export {
   Field,
   Label,

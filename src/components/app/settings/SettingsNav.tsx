@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionIcon } from "../SectionIcon";
 import { Activity, CreditCard, Gauge, ShieldCheck, SlidersHorizontal, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,7 +34,7 @@ export function SettingsNav({ slug }: { slug: string }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-2.5 rounded-[10px] px-3 text-[0.95rem] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
-                  active && "bg-green-50 font-semibold text-green-900 ring-1 ring-green-200",
+                  active && "bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-200",
                 )}
               >
                 <s.icon aria-hidden="true" className="size-4.5 shrink-0" />
@@ -51,10 +52,13 @@ export function SettingsNav({ slug }: { slug: string }) {
 export function SettingsHeader({ title, intro, actions }: { title: string; intro?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-sm text-ink-3">Settings</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{title}</h1>
-        {intro ? <p className="mt-2 max-w-2xl leading-relaxed text-ink-2">{intro}</p> : null}
+      <div className="flex min-w-0 items-start gap-4">
+        <SectionIcon section="settings" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink-3">Settings</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink">{title}</h1>
+          {intro ? <p className="mt-1 max-w-2xl leading-relaxed text-ink-2">{intro}</p> : null}
+        </div>
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </header>

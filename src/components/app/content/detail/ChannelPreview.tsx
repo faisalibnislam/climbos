@@ -44,7 +44,7 @@ function Hashtags({ tags }: { tags: string[] }) {
 function AccountRow({ name, sub }: { name: string; sub?: string }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2.5">
-      <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-green-100 text-sm font-semibold text-green-900">
+      <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-900">
         {name.replace(/^@/, "").slice(0, 1).toUpperCase() || "Y"}
       </span>
       <span className="min-w-0">
@@ -115,7 +115,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
         <div className="px-4 py-4">
           {body}
           {version.callToAction ? (
-            <span className="mt-4 inline-block rounded-[10px] bg-green-800 px-4 py-2 text-sm font-semibold text-white">{version.callToAction}</span>
+            <span className="mt-4 inline-block rounded-[10px] bg-brand-800 px-4 py-2 text-sm font-semibold text-white">{version.callToAction}</span>
           ) : null}
         </div>
       </Frame>
@@ -127,7 +127,7 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
     return (
       <Frame className="p-4">
         <p className="text-xs text-ink-3">{host}</p>
-        <p className="mt-1 break-words font-display text-xl font-semibold leading-snug text-ink">{version.headline || "Page title"}</p>
+        <p className="mt-1 break-words font-display tracking-tight text-xl font-extrabold leading-snug text-ink">{version.headline || "Page title"}</p>
         <div className="mt-3 max-h-96 overflow-y-auto">{body}</div>
       </Frame>
     );

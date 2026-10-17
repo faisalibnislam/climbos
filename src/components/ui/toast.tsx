@@ -49,7 +49,7 @@ const empty: ToastItem[] = [];
 const getServerSnapshot = () => empty;
 
 const toneIcon = { info: Info, success: CircleCheck, danger: CircleAlert };
-const toneCls = { info: "text-blue-800", success: "text-green-800", danger: "text-red-800" };
+const toneCls = { info: "text-blue-800", success: "text-brand-800", danger: "text-red-800" };
 
 /** Renders queued toasts in a polite live region (bottom of the screen). Mount once. */
 export function Toaster() {

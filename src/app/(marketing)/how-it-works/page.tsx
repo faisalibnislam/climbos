@@ -16,8 +16,8 @@ export default function HowItWorksPage() {
     <>
       <section aria-labelledby="hiw-heading" className="hero-glow">
         <Container className="pb-4 pt-14 sm:pt-20">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-green-700">How it works</p>
-          <h1 id="hiw-heading" className="mt-2 max-w-3xl font-display text-[2.4rem] font-semibold leading-[1.1] tracking-tight text-ink sm:text-6xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">How it works</p>
+          <h1 id="hiw-heading" className="mt-2 max-w-3xl font-display text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-6xl">
             A growth team that does the work — and checks with you first
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">{PRODUCT_LINE}</p>

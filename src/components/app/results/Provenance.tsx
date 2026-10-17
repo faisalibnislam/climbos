@@ -31,7 +31,7 @@ export function DemoBadge({ show }: { show: boolean }) {
 export function Definition({ summary = "What this counts", children, className }: { summary?: string; children: ReactNode; className?: string }) {
   return (
     <details className={cn("group text-sm text-ink-2", className)}>
-      <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-medium text-green-800 underline-offset-4 hover:underline">
+      <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-medium text-brand-800 underline-offset-4 hover:underline">
         {summary}
       </summary>
       <div className="mt-1 leading-relaxed">{children}</div>

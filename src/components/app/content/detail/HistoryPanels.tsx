@@ -163,7 +163,7 @@ export function ApprovalsList({ approvals, now }: { approvals: ArtifactView["app
 
 const RECEIPT: Record<string, { label: string; Icon: LucideIcon; cls: string }> = {
   fixture_verified: { label: "Demo: simulated acceptance", Icon: FlaskConical, cls: "text-violet-800" },
-  verified: { label: "Accepted by platform", Icon: CircleCheck, cls: "text-green-800" },
+  verified: { label: "Accepted by platform", Icon: CircleCheck, cls: "text-brand-800" },
   uncertain: { label: "Outcome uncertain — we won't repeat it until it's checked", Icon: CircleQuestionMark, cls: "text-amber-800" },
   exported: { label: "Exported for manual posting", Icon: FileText, cls: "text-violet-800" },
   failed: { label: "Not accepted — nothing was posted", Icon: CircleAlert, cls: "text-red-800" },

@@ -89,13 +89,13 @@ function GapsSection({ slug, gaps }: { slug: string; gaps: Overview["gaps"] }) {
         {gaps.map((g) => (
           <li key={g.metric} className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-dashed border-line-strong bg-surface p-4">
             <p className="flex items-start gap-2 font-medium text-ink">
-              <PlugZap aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-green-800" />
+              <PlugZap aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-800" />
               <span>{g.fix}</span>
             </p>
             <p className="text-sm leading-relaxed text-ink-2">{g.message}</p>
             <Link
               href={`/app/${slug}/connections`}
-              className="mt-auto inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-green-800 underline-offset-4 hover:underline"
+              className="mt-auto inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline"
             >
               Go to Connections
               <ArrowRight aria-hidden="true" className="size-4" />
@@ -126,7 +126,7 @@ function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetr
       </div>
       {metric.hasData ? (
         <>
-          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
+          <p className="font-display text-4xl font-extrabold tabular-nums tracking-tight text-ink">
             {formatMetric(metric.total, metric.unit, metric.currency)}
           </p>
           <p className="text-sm font-medium text-ink-2">{changeText(metric.total, metric.previousTotal, span)}</p>
@@ -138,7 +138,7 @@ function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetr
       ) : (
         <div className="flex flex-col gap-2">
           <p className="text-lg font-medium text-ink-2">No data yet</p>
-          <Link href={`/app/${slug}/connections`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-green-800 underline-offset-4 hover:underline">
+          <Link href={`/app/${slug}/connections`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline">
             {METRIC_NEEDS[metric.key] ?? "Connect a data source"}
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
@@ -228,17 +228,17 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
                 <li key={s.key} className="flex flex-col gap-1.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <span className="flex items-center gap-2 font-medium text-ink">
-                      <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-green-100 text-xs font-semibold text-green-900">
+                      <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-brand-100 text-xs font-semibold text-brand-900">
                         {i + 1}
                       </span>
                       {s.label}
                     </span>
-                    <span className="font-display text-2xl font-semibold tabular-nums text-ink">
+                    <span className="font-display tracking-tight text-2xl font-extrabold tabular-nums text-ink">
                       {s.hasData ? formatNumber(Math.round(s.total)) : "No data"}
                     </span>
                   </div>
                   <div aria-hidden="true" className="h-2.5 w-full overflow-hidden rounded-full bg-surface-3">
-                    <div className="h-full rounded-full bg-green-700" style={{ width: `${s.hasData ? Math.max(1, (s.total / maxVal) * 100) : 0}%` }} />
+                    <div className="h-full rounded-full bg-brand-700" style={{ width: `${s.hasData ? Math.max(1, (s.total / maxVal) * 100) : 0}%` }} />
                   </div>
                   <p className="text-sm text-ink-3">
                     {i > 0 ? (r ? <>Step rate {r.text} ({r.detail}) · </> : <>Step rate unavailable — needs data for both steps · </>) : null}

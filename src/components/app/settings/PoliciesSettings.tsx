@@ -156,7 +156,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
           />
           {allowedModes.length < MODES.length ? (
             <p className="text-sm text-ink-3">
-              Some modes need a higher plan. <Link className="font-medium text-green-800 underline" href={`/app/${slug}/settings/billing`}>See plans</Link>
+              Some modes need a higher plan. <Link className="font-medium text-brand-800 underline" href={`/app/${slug}/settings/billing`}>See plans</Link>
             </p>
           ) : null}
         </section>

@@ -261,7 +261,7 @@ function BillingBody({
           {data.plans.map((p) => {
             const isCurrent = sub?.access === "full" && sub.planKey === p.key;
             return (
-              <li key={p.key} className={cn("flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-surface p-5", isCurrent ? "border-green-800 ring-1 ring-green-800" : "border-line")}>
+              <li key={p.key} className={cn("flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-surface p-5", isCurrent ? "border-brand-800 ring-1 ring-brand-800" : "border-line")}>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-semibold text-ink">{p.name}</h3>
                   {isCurrent ? (
@@ -270,7 +270,7 @@ function BillingBody({
                     </Badge>
                   ) : null}
                 </div>
-                <p className="font-display text-3xl font-semibold text-ink">
+                <p className="font-display tracking-tight text-3xl font-extrabold text-ink">
                   {formatUsd(p.priceUsd)}
                   <span className="text-base font-normal text-ink-3"> / month</span>
                 </p>

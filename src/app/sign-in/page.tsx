@@ -32,7 +32,7 @@ export default function SignInPage() {
       <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-5 pb-16 pt-6 focus:outline-none sm:pt-14">
         <div className="w-full max-w-md">
           <div className="rounded-[22px] border border-line bg-surface p-6 shadow-lg sm:p-8">
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Sign in or create your account</h1>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Sign in or create your account</h1>
             <p className="mt-2 leading-relaxed text-ink-2">Use your work email. New here? The same steps create your account.</p>
             <div className="mt-6">
               <Suspense fallback={<FormFallback />}>

@@ -100,7 +100,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
               <CopyButton text={it.text} label={`Copy ${it.platformLabel} text`} />
               {it.altText ? <CopyButton text={it.altText} label="Copy image description" /> : null}
               {it.mediaUrls.map((u, i) => (
-                <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[0.95rem] font-medium text-green-800 underline underline-offset-4">
+                <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[0.95rem] font-medium text-brand-800 underline underline-offset-4">
                   Open image{it.mediaUrls.length > 1 ? ` ${i + 1}` : ""} (AI-generated illustration)
                 </a>
               ))}

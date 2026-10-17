@@ -16,6 +16,8 @@
     "setup:check": "tsx scripts/setup-check.ts",
     "env:sync": "node scripts/env-sync.mjs",
     "polar:setup": "node scripts/polar-setup.mjs",
+    "skills:build": "node scripts/skills-build.mjs",
+    "skills:publish": "node scripts/skills-publish.mjs",
     "auth:keys": "node scripts/generate-auth-keys.mjs"
   },
   "dependencies": {

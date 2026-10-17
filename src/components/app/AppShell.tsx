@@ -8,13 +8,14 @@ import {
   CalendarDays,
   ChevronDown,
   Compass,
-  LayoutDashboard,
+  Home,
   LogOut,
   PauseCircle,
   PlayCircle,
   Plug,
   Settings,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +25,8 @@ import {
   Badge,
   Button,
   Callout,
+  IconTile,
+  type Tone,
   ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
@@ -38,13 +41,14 @@ import {
 import { cn } from "@/lib/utils";
 import { errorMessage } from "./errors";
 
-const NAV = [
-  { key: "today", label: "Today", icon: LayoutDashboard },
-  { key: "plan", label: "Plan", icon: Compass },
-  { key: "content", label: "Content", icon: CalendarDays },
-  { key: "results", label: "Results", icon: BarChart3 },
-  { key: "connections", label: "Connections", icon: Plug },
-] as const;
+const NAV: { key: string; label: string; icon: LucideIcon; tone: Tone; group: string }[] = [
+  { key: "today", label: "Today", icon: Home, tone: "brand", group: "" },
+  { key: "plan", label: "Growth plan", icon: Compass, tone: "violet", group: "Grow" },
+  { key: "content", label: "Content", icon: CalendarDays, tone: "pink", group: "Grow" },
+  { key: "results", label: "Results", icon: BarChart3, tone: "teal", group: "Measure" },
+  { key: "connections", label: "Connections", icon: Plug, tone: "orange", group: "Setup" },
+];
+const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
 
 /**
  * Authenticated app frame: five primary destinations, Settings, a workspace
@@ -67,20 +71,25 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
       {pause?.paused && <PausedBanner slug={slug} canResume={current?.role === "owner" || current?.role === "admin"} />}
       <div className="mx-auto flex w-full max-w-[1400px]">
         {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface/60 px-4 py-5 lg:flex" aria-label="Main">
-          <Link href={`/app/${slug}/today`} className="mb-6 px-2" aria-label="ClimbOS home">
+        <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex" aria-label="Main">
+          <Link href={`/app/${slug}/today`} className="mb-5 px-2" aria-label="ClimbOS home">
             <Logo />
           </Link>
           <WorkspaceSwitcher slug={slug} />
-          <nav className="mt-6 flex flex-col gap-1" aria-label="Primary">
-            {NAV.map((item) => (
-              <NavLink key={item.key} href={`/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-5" aria-hidden />}>
-                {item.label}
-              </NavLink>
+          <nav className="mt-5 flex flex-col gap-4" aria-label="Primary">
+            {NAV_GROUPS.map((group) => (
+              <div key={group || "home"} className="flex flex-col gap-0.5">
+                {group ? <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{group}</p> : null}
+                {NAV.filter((n) => n.group === group).map((item) => (
+                  <NavLink key={item.key} href={`/app/${slug}/${item.key}`} active={section === item.key} icon={<IconTile icon={item.icon} tone={item.tone} size="sm" />}>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1 pt-6">
-            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-5" aria-hidden />}>
+            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<IconTile icon={Settings} tone="neutral" size="sm" />}>
               Settings
             </NavLink>
             <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />
@@ -119,11 +128,11 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                    active ? "text-green-800" : "text-ink-3 hover:text-ink",
+                    active ? "text-brand-800" : "text-ink-3 hover:text-ink",
                   )}
                 >
                   <item.icon className="size-5" aria-hidden />
-                  {item.label}
+                  {item.key === "plan" ? "Plan" : item.label}
                 </Link>
               </li>
             );
@@ -140,8 +149,8 @@ function NavLink({ href, active, icon, children }: { href: string; active: boole
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] font-medium transition-colors",
-        active ? "bg-green-100 text-green-900" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        "relative flex min-h-11 items-center gap-3 rounded-xl px-2 text-[15px] font-semibold transition-colors",
+        active ? "bg-brand-50 text-brand-900 before:absolute before:-left-4 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
@@ -158,10 +167,13 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex min-h-12 w-full items-center justify-between gap-2 rounded-[12px] border border-line bg-surface px-3 text-left hover:border-line-strong">
-          <span className="min-w-0">
-            <span className="block text-xs text-ink-3">Workspace</span>
-            <span className="block truncate text-sm font-semibold text-ink">{current?.name ?? "…"}</span>
+        <button className="flex min-h-14 w-full items-center justify-between gap-2.5 rounded-2xl border border-line bg-surface-2/60 px-2.5 text-left hover:border-line-strong hover:bg-surface-2">
+          <span aria-hidden="true" className="bg-hero-gradient inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white">
+            {(current?.name ?? "?").slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-ink-3">Workspace</span>
+            <span className="block truncate text-sm font-bold text-ink">{current?.name ?? "…"}</span>
           </span>
           <ChevronDown className="size-4 shrink-0 text-ink-3" aria-hidden />
         </button>
@@ -216,9 +228,9 @@ function DemoBanner({ slug }: { slug: string }) {
   const reset = useMutation(api.demo.resetDemo);
   const router = useRouter();
   return (
-    <div className="border-b border-violet-800/15 bg-violet-100 px-4 py-2 text-sm text-violet-800" role="note">
+    <div className="bg-hero-gradient px-4 py-2 text-sm text-white" role="note">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1">
-        <Badge tone="violet">Demo data</Badge>
+        <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[0.8125rem] font-bold">Demo data</span>
         <span>
           Formkit example with synthetic numbers. Nothing here posts, emails or spends real money.
         </span>

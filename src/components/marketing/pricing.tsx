@@ -12,11 +12,11 @@ function PlanCard({ plan }: { plan: PlanEntitlement }) {
     <li
       className={cn(
         "relative flex flex-col rounded-[var(--radius-lg)] border bg-surface p-6 shadow-sm",
-        recommended ? "border-green-800 ring-1 ring-green-800" : "border-line",
+        recommended ? "border-brand-800 ring-1 ring-brand-800" : "border-line",
       )}
     >
       {recommended ? (
-        <p className="absolute -top-3 left-6 rounded-full bg-green-800 px-3 py-0.5 text-xs font-semibold text-white">
+        <p className="absolute -top-3 left-6 rounded-full bg-brand-800 px-3 py-0.5 text-xs font-semibold text-white">
           Recommended for small teams
         </p>
       ) : null}
@@ -24,7 +24,7 @@ function PlanCard({ plan }: { plan: PlanEntitlement }) {
         {plan.name}
       </h3>
       <p className="mt-3">
-        <span className="font-display text-4xl font-semibold tracking-tight text-ink">{formatUsd(plan.priceUsd)}</span>
+        <span className="font-display text-4xl font-extrabold tracking-tight text-ink">{formatUsd(plan.priceUsd)}</span>
         <span className="text-ink-3"> / month</span>
       </p>
       <p className="mt-3 min-h-[3lh] text-[0.95rem] leading-relaxed text-ink-2">{plan.tagline}</p>
@@ -38,18 +38,18 @@ function PlanCard({ plan }: { plan: PlanEntitlement }) {
       <p className="mt-5 text-sm font-semibold text-ink">{autonomyLine(plan)}</p>
       <ul className="mt-3 flex flex-col gap-2 text-[0.95rem] text-ink-2">
         <li className="flex items-start gap-2">
-          <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-green-700" />
+          <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
           All 10 AI growth roles
         </li>
         {planLimitLines(plan).map((line) => (
           <li key={line} className="flex items-start gap-2">
-            <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-green-700" />
+            <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
             {line}
           </li>
         ))}
         {plan.highlights.map((h) => (
           <li key={h} className="flex items-start gap-2">
-            <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-green-700" />
+            <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
             {h}
           </li>
         ))}
@@ -93,7 +93,7 @@ export function PlanComparison({ headingId }: { headingId: string }) {
               <th key={p.key} scope="col" className="px-4 py-3 font-semibold text-ink">
                 {p.name}
                 {p.key === RECOMMENDED_PLAN ? (
-                  <span className="block text-xs font-medium text-green-800">Recommended for small teams</span>
+                  <span className="block text-xs font-medium text-brand-800">Recommended for small teams</span>
                 ) : null}
               </th>
             ))}

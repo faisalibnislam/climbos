@@ -354,7 +354,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink">{c.name}</span>
                     {c.url ? (
-                      <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 break-all text-sm text-green-800 underline underline-offset-4">
+                      <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 break-all text-sm text-brand-800 underline underline-offset-4">
                         Website <ExternalLink aria-hidden="true" className="size-3.5" />
                         <span className="sr-only">(opens in a new tab)</span>
                       </a>
@@ -362,7 +362,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                   </span>
                   <span className="text-[0.95rem] leading-relaxed text-ink-2">{c.note}</span>
                   {c.sourceUrl ? (
-                    <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-green-800 underline underline-offset-4">
+                    <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-brand-800 underline underline-offset-4">
                       Source <ExternalLink aria-hidden="true" className="size-3.5" />
                       <span className="sr-only">(opens in a new tab)</span>
                     </a>

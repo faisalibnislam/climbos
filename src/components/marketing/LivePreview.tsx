@@ -153,10 +153,10 @@ export function LivePreview() {
               key={g}
               className={cn(
                 "relative inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-[0.95rem] font-medium transition-colors",
-                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-green-600",
+                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-600",
                 goal === g
-                  ? "border-green-800 bg-green-800 text-white"
-                  : "border-line-strong bg-surface text-ink hover:border-green-700 hover:bg-green-50",
+                  ? "border-brand-800 bg-brand-800 text-white"
+                  : "border-line-strong bg-surface text-ink hover:border-brand-700 hover:bg-brand-50",
               )}
             >
               <input
@@ -258,12 +258,12 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
       </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-green-700">Live preview</p>
+          <p className="text-sm font-medium text-brand-700">Live preview</p>
           <h2
             id="preview-heading"
             ref={headingRef}
             tabIndex={-1}
-            className="mt-0.5 break-words font-display text-2xl font-semibold leading-tight text-ink focus:outline-none"
+            className="mt-0.5 break-words font-display tracking-tight text-2xl font-extrabold leading-tight text-ink focus:outline-none"
           >
             {data?.business?.name ?? website}
           </h2>
@@ -274,7 +274,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
         </Button>
       </div>
       <p className="mt-3 flex items-start gap-2 rounded-[10px] bg-surface-2 px-3 py-2 text-sm text-ink-2">
-        <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-green-700" />
+        <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
         <span>
           <strong className="font-semibold text-ink">Preview</strong> — based only on your public homepage. Nothing is published.
         </span>
@@ -366,7 +366,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
                             href={f.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer nofollow"
-                            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-green-800 underline underline-offset-2"
+                            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-800 underline underline-offset-2"
                           >
                             Source
                             <ExternalLink aria-hidden="true" className="size-3.5" />

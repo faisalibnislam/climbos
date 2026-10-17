@@ -197,7 +197,7 @@ export function SignInForm() {
 
       <p className="text-center text-[0.95rem] text-ink-2">
         Just looking?{" "}
-        <Link href="/demo" className="font-medium text-green-800 underline underline-offset-4">
+        <Link href="/demo" className="font-medium text-brand-800 underline underline-offset-4">
           Try the demo
         </Link>
       </p>

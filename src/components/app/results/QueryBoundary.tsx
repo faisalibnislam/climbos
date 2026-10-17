@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionIcon } from "../SectionIcon";
 import { Component, type ReactNode } from "react";
 import { CircleAlert, Clock, CreditCard, Lock, PlugZap, SearchX, WifiOff } from "lucide-react";
 import Link from "next/link";
@@ -106,13 +107,29 @@ export function LoadingBlock({ label, lines = 3, className }: { label: string; l
 }
 
 /** Page title block: one h1 per page, optional intro and right-side actions. */
-export function PageHeader({ title, intro, actions, eyebrow }: { title: ReactNode; intro?: ReactNode; actions?: ReactNode; eyebrow?: ReactNode }) {
+export function PageHeader({
+  title,
+  intro,
+  actions,
+  eyebrow,
+  section,
+}: {
+  title: ReactNode;
+  intro?: ReactNode;
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+  /** App section whose icon tile is shown next to the title. */
+  section?: string;
+}) {
   return (
     <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        {eyebrow ? <div className="mb-1 text-sm text-ink-3">{eyebrow}</div> : null}
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{title}</h1>
-        {intro ? <p className="mt-2 max-w-2xl leading-relaxed text-ink-2">{intro}</p> : null}
+      <div className="flex min-w-0 items-start gap-4">
+        {section ? <SectionIcon section={section} /> : null}
+        <div className="min-w-0">
+          {eyebrow ? <div className="mb-1 text-sm font-semibold text-ink-3">{eyebrow}</div> : null}
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink">{title}</h1>
+          {intro ? <p className="mt-1 max-w-2xl leading-relaxed text-ink-2">{intro}</p> : null}
+        </div>
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </header>

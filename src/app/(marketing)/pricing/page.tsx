@@ -56,8 +56,8 @@ export default function PricingPage() {
     <>
       <section aria-labelledby="pricing-heading" className="hero-glow">
         <Container className="pb-8 pt-14 text-center sm:pt-20">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-green-700">Pricing</p>
-          <h1 id="pricing-heading" className="mx-auto mt-2 max-w-3xl font-display text-[2.4rem] font-semibold leading-[1.1] tracking-tight text-ink sm:text-6xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">Pricing</p>
+          <h1 id="pricing-heading" className="mx-auto mt-2 max-w-3xl font-display text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-6xl">
             Your whole growth team, one monthly price
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">
@@ -66,7 +66,7 @@ export default function PricingPage() {
           <ul className="mx-auto mt-6 flex max-w-3xl flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] text-ink-2">
             {["Prices in USD", "Ad spend paid directly to Google or Meta", "Alerts at 70%, 90% and 100%"].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
-                <CircleCheck aria-hidden="true" className="size-4 text-green-700" />
+                <CircleCheck aria-hidden="true" className="size-4 text-brand-700" />
                 {t}
               </li>
             ))}
@@ -100,7 +100,7 @@ export default function PricingPage() {
         <SectionHeading id="extras-heading" title="Extra capacity, only when you ask" />
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-6">
-            <PackagePlus aria-hidden="true" className="size-6 text-green-700" />
+            <PackagePlus aria-hidden="true" className="size-6 text-brand-700" />
             <h3 className="mt-3 text-lg font-semibold text-ink">
               {topup.name} · {formatUsd(topup.priceUsd)}
             </h3>

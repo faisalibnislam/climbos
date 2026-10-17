@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionIcon } from "@/components/app/SectionIcon";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
@@ -17,11 +18,14 @@ export default function ContentPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Content</h1>
-          <p className="max-w-2xl leading-relaxed text-ink-2">
-            Everything your AI team has written. Nothing is posted, sent or spent until someone with approval rights approves it.
-          </p>
+        <div className="flex items-start gap-4">
+          <SectionIcon section="content" />
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl font-extrabold tracking-tight text-ink">Content</h1>
+            <p className="max-w-2xl leading-relaxed text-ink-2">
+              Everything your AI team has created. Nothing is posted, sent or spent until you approve it.
+            </p>
+          </div>
         </div>
         <CreateContentDialog slug={slug} />
       </header>

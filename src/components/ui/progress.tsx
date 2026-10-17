@@ -33,7 +33,7 @@ export function Progress({ value, max = 100, label, showLabel = false, className
         className="h-2 w-full overflow-hidden rounded-full bg-surface-3"
       >
         <div
-          className={cn("h-full rounded-full bg-green-700 transition-[width]", pct === undefined && "w-1/3 animate-soft-pulse")}
+          className={cn("h-full rounded-full bg-brand-700 transition-[width]", pct === undefined && "w-1/3 animate-soft-pulse")}
           style={pct !== undefined ? { width: `${pct}%` } : undefined}
         />
       </div>
@@ -63,7 +63,7 @@ export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], foot
   const ratio = max > 0 ? used / max : used > 0 ? 1 : 0;
   const pct = Math.round(ratio * 100);
   const level = ratio >= thresholds[2] ? 3 : ratio >= thresholds[1] ? 2 : ratio >= thresholds[0] ? 1 : 0;
-  const bar = ["bg-green-700", "bg-[#b7791f]", "bg-amber-800", "bg-red-800"][level];
+  const bar = ["bg-brand-700", "bg-[#b7791f]", "bg-amber-800", "bg-red-800"][level];
   const state = [
     null,
     { text: `${Math.round(thresholds[0] * 100)}% used — heads up`, Icon: TriangleAlert, cls: "text-amber-800" },
@@ -100,7 +100,7 @@ export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], foot
         </p>
       ) : (
         <p className="flex items-center gap-1.5 text-sm text-ink-3">
-          <CircleCheck aria-hidden="true" className="size-4 text-green-700" />
+          <CircleCheck aria-hidden="true" className="size-4 text-brand-700" />
           Plenty left
         </p>
       )}

@@ -99,7 +99,7 @@ function ExportSection({ slug }: { slug: string }) {
                 header: "Result",
                 cell: (r) =>
                   r.url ? (
-                    <a href={r.url} download className="inline-flex min-h-11 items-center gap-1.5 font-medium text-green-800 underline-offset-4 hover:underline">
+                    <a href={r.url} download className="inline-flex min-h-11 items-center gap-1.5 font-medium text-brand-800 underline-offset-4 hover:underline">
                       <Download aria-hidden="true" className="size-4" />
                       Download
                     </a>

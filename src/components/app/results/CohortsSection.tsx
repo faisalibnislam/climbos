@@ -18,9 +18,9 @@ function monthLabel(cohort: string): string {
 
 /** Light-to-strong green so the strongest months stand out; dark text keeps contrast at every step. */
 function cellTone(fraction: number): string {
-  if (fraction >= 0.75) return "bg-green-200";
-  if (fraction >= 0.5) return "bg-green-100";
-  if (fraction > 0) return "bg-green-50";
+  if (fraction >= 0.75) return "bg-brand-200";
+  if (fraction >= 0.5) return "bg-brand-100";
+  if (fraction > 0) return "bg-brand-50";
   return "bg-surface";
 }
 

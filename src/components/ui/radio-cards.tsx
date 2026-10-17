@@ -38,8 +38,8 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
           disabled={o.disabled}
           className={cn(
             "group relative flex min-h-16 w-full items-start gap-3 rounded-[14px] border border-line-strong bg-surface p-4 text-left shadow-sm transition-colors",
-            "hover:border-green-700 data-[state=checked]:border-green-800 data-[state=checked]:bg-green-50",
-            "data-[state=checked]:ring-1 data-[state=checked]:ring-green-800 disabled:cursor-not-allowed disabled:opacity-50",
+            "hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-50",
+            "data-[state=checked]:ring-1 data-[state=checked]:ring-brand-800 disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >
           {o.icon ? (
@@ -56,7 +56,7 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
             className="absolute right-3.5 top-3.5 grid size-5 place-items-center rounded-full border-[1.5px] border-line-strong group-data-[state=checked]:border-transparent"
           >
             <RadioGroup.Indicator className="inline-flex">
-              <CircleCheck className="size-5 fill-green-800 text-white" />
+              <CircleCheck className="size-5 fill-brand-800 text-white" />
             </RadioGroup.Indicator>
           </span>
         </RadioGroup.Item>

@@ -78,7 +78,7 @@ export function StrategyRunWatcher({
   if (!runId) return null;
   const finished = run ? RUN_FINISHED.has(run.status) : false;
   return (
-    <Card className="border-green-200">
+    <Card className="border-brand-200">
       <CardContent className="flex flex-col gap-4">
         <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-[0.95rem] text-ink-2">Your new plan is below. Review it and approve it when you&apos;re happy.</p>} />
         {finished && startedRunId ? (

@@ -11,6 +11,7 @@
  */
 
 export type ModelKey =
+  | "claude-opus-5.5"
   | "claude-sonnet-5.5"
   | "claude-haiku-5.5"
   | "gpt-6-luna"
@@ -89,6 +90,19 @@ const GEMINI_PRICING = "https://ai.google.dev/gemini-api/docs/pricing";
 const POLAR_FEES = "https://polar.sh/docs/merchant-of-record/fees";
 
 const RESEARCH_MODELS: Record<ModelKey, ModelRate> = {
+  // Added for Engine v2 (17 Oct 2026). No workbook row routes to Opus, so the
+  // fixture's calculations are unchanged.
+  "claude-opus-5.5": {
+    key: "claude-opus-5.5",
+    displayName: "Claude Opus 5.5",
+    provider: "anthropic",
+    inputPerM: 4,
+    outputPerM: 20,
+    cacheReadPerM: 0.2,
+    cacheWritePerM: 5,
+    basis: "Standard (1M context at standard rate); thinking billed as output",
+    source: CLAUDE_PRICING,
+  },
   "claude-sonnet-5.5": {
     key: "claude-sonnet-5.5",
     displayName: "Claude Sonnet 5.5",

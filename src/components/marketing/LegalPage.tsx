@@ -31,7 +31,7 @@ export function LegalPage({
             </p>
           </div>
         ) : null}
-        <h1 className="font-display text-[2.4rem] font-semibold leading-tight tracking-tight text-ink sm:text-5xl">{title}</h1>
+        <h1 className="font-display text-[2.4rem] font-extrabold leading-tight tracking-tight text-ink sm:text-5xl">{title}</h1>
         <p className="mt-3 text-sm text-ink-3">Last updated {updated}</p>
         {intro ? <p className="mt-6 text-lg leading-relaxed text-ink-2">{intro}</p> : null}
         <div className="prose-climb mt-6">{children}</div>

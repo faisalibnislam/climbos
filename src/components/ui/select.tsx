@@ -66,10 +66,10 @@ export function Select({
                 key={o.value}
                 value={o.value}
                 disabled={o.disabled}
-                className="relative flex min-h-11 cursor-pointer select-none items-center rounded-[8px] py-2 pl-9 pr-3 text-[0.95rem] text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-green-50 data-[highlighted]:text-green-900"
+                className="relative flex min-h-11 cursor-pointer select-none items-center rounded-[8px] py-2 pl-9 pr-3 text-[0.95rem] text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-brand-50 data-[highlighted]:text-brand-900"
               >
                 <RSelect.ItemIndicator className="absolute left-3 inline-flex">
-                  <Check aria-hidden="true" className="size-4 text-green-800" />
+                  <Check aria-hidden="true" className="size-4 text-brand-800" />
                 </RSelect.ItemIndicator>
                 <RSelect.ItemText>{o.label}</RSelect.ItemText>
               </RSelect.Item>

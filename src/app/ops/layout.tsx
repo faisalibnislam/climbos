@@ -19,7 +19,7 @@ export default function OpsLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="-ml-1 inline-flex min-h-11 items-center rounded-lg px-1" aria-label="ClimbOS home">
             <Logo />
           </Link>
-          <Link href="/app" className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-green-800 underline-offset-4 hover:underline">
+          <Link href="/app" className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-brand-800 underline-offset-4 hover:underline">
             Back to app
           </Link>
         </div>

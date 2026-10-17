@@ -26,13 +26,13 @@ export function Hero() {
     <section aria-labelledby="hero-heading" className="hero-glow relative overflow-hidden">
       <Container className="grid items-start gap-8 pb-16 pt-10 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-x-14 lg:gap-y-0 lg:pb-24 lg:pt-20">
         <div className="max-w-xl lg:col-start-1 lg:row-start-1">
-          <p className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm font-medium text-green-800">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-green-700" />
+          <p className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-brand-700" />
             Your AI growth team
           </p>
           <h1
             id="hero-heading"
-            className="mt-5 font-display text-[2.5rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-6xl"
+            className="mt-5 font-display text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-ink sm:text-6xl"
           >
             Tell us your goal. We&apos;ll help you grow.
           </h1>
@@ -52,14 +52,14 @@ export function Hero() {
               "Plans start at " + formatUsd(lowestPrice()) + " a month — no surprise charges",
             ].map((t) => (
               <li key={t} className="flex items-start gap-2.5">
-                <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-green-700" />
+                <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700" />
                 {t}
               </li>
             ))}
           </ul>
           <p className="mt-7 text-[0.95rem] text-ink-2">
             Want to look around first?{" "}
-            <Link href={CTA.demo.href} className="font-medium text-green-800 underline underline-offset-4">
+            <Link href={CTA.demo.href} className="font-medium text-brand-800 underline underline-offset-4">
               Try the demo
             </Link>{" "}
             — no account needed.
@@ -85,7 +85,7 @@ export function HowItWorks({ headingId = "how-heading", compact = false }: { hea
           <li key={s.title} className="relative rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-sm">
             <span
               aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full bg-green-800 font-display text-lg font-semibold text-white"
+              className="grid size-10 place-items-center rounded-full bg-brand-800 font-display tracking-tight text-lg font-extrabold text-white"
             >
               {i + 1}
             </span>
@@ -141,7 +141,7 @@ export function CapabilityGrid({ headingId = "capabilities-heading" }: { heading
         {CAPABILITIES.map((c) => (
           <li key={c.letter} className="flex flex-col rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-sm">
             <div className="flex items-baseline gap-3">
-              <span aria-hidden="true" className="font-display text-xl font-semibold text-green-700">
+              <span aria-hidden="true" className="font-display tracking-tight text-xl font-extrabold text-brand-700">
                 {c.letter}
               </span>
               <h3 className="text-xl font-semibold text-ink">{c.title}</h3>
@@ -150,7 +150,7 @@ export function CapabilityGrid({ headingId = "capabilities-heading" }: { heading
             <ul className="mt-4 grid gap-x-4 gap-y-1.5 text-[0.95rem] text-ink sm:grid-cols-2">
               {c.items.map((it) => (
                 <li key={it} className="flex items-start gap-2">
-                  <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full bg-green-600" />
+                  <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full bg-brand-600" />
                   {it}
                 </li>
               ))}
@@ -170,13 +170,13 @@ const trustIcons: LucideIcon[] = [ClipboardList, CirclePause, Wallet, Scale, Loc
 /** "Safe by design" trust section. */
 export function TrustSection({ headingId = "trust-heading" }: { headingId?: string }) {
   return (
-    <Section id="safe-by-design" labelledBy={headingId} className="bg-green-950 text-green-50">
+    <Section id="safe-by-design" labelledBy={headingId} className="bg-brand-950 text-brand-50">
       <div className="max-w-2xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-green-200">Safe by design</p>
-        <h2 id={headingId} className="mt-2 font-display text-[2rem] font-semibold leading-[1.15] tracking-tight text-white sm:text-[2.6rem]">
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-200">Safe by design</p>
+        <h2 id={headingId} className="mt-2 font-display text-[2rem] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[2.6rem]">
           You stay in charge. Always.
         </h2>
-        <p className="mt-4 text-lg leading-relaxed text-green-100">
+        <p className="mt-4 text-lg leading-relaxed text-brand-100">
           Growth tools shouldn&apos;t feel risky. These rules are built into how ClimbOS works — not settings you have to find.
         </p>
       </div>
@@ -185,9 +185,9 @@ export function TrustSection({ headingId = "trust-heading" }: { headingId?: stri
           const Icon = trustIcons[i] ?? ShieldCheck;
           return (
             <li key={t.title} className="rounded-[var(--radius-lg)] border border-white/10 bg-white/[0.04] p-6">
-              <Icon aria-hidden="true" className="size-6 text-green-200" />
+              <Icon aria-hidden="true" className="size-6 text-brand-200" />
               <h3 className="mt-4 text-lg font-semibold text-white">{t.title}</h3>
-              <p className="mt-2 leading-relaxed text-green-100">{t.body}</p>
+              <p className="mt-2 leading-relaxed text-brand-100">{t.body}</p>
             </li>
           );
         })}
@@ -246,13 +246,13 @@ export function PricingTeaser({ headingId = "pricing-teaser-heading" }: { headin
               key={p.key}
               className={cn(
                 "flex flex-col rounded-[var(--radius-lg)] border bg-surface p-5",
-                recommended ? "border-green-800 ring-1 ring-green-800" : "border-line",
+                recommended ? "border-brand-800 ring-1 ring-brand-800" : "border-line",
               )}
             >
               <h3 className="font-semibold text-ink">{p.name}</h3>
-              {recommended ? <p className="mt-1 text-xs font-semibold text-green-800">Recommended for small teams</p> : null}
+              {recommended ? <p className="mt-1 text-xs font-semibold text-brand-800">Recommended for small teams</p> : null}
               <p className="mt-2">
-                <span className="font-display text-3xl font-semibold text-ink">{formatUsd(p.priceUsd)}</span>
+                <span className="font-display tracking-tight text-3xl font-extrabold text-ink">{formatUsd(p.priceUsd)}</span>
                 <span className="text-sm text-ink-3"> / month</span>
               </p>
               <p className="mt-2 text-sm leading-relaxed text-ink-2">{p.tagline}</p>
@@ -308,17 +308,17 @@ export function FinalCta({ headingId = "final-cta-heading" }: { headingId?: stri
   return (
     <section aria-labelledby={headingId} className="pb-20 sm:pb-28">
       <Container>
-        <div className="rounded-[28px] bg-green-800 px-6 py-12 text-center sm:px-12 sm:py-16">
-          <h2 id={headingId} className="mx-auto max-w-2xl font-display text-[2rem] font-semibold leading-tight text-white sm:text-5xl">
+        <div className="rounded-[28px] bg-brand-800 px-6 py-12 text-center sm:px-12 sm:py-16">
+          <h2 id={headingId} className="mx-auto max-w-2xl font-display tracking-tight text-[2rem] font-extrabold leading-tight text-white sm:text-5xl">
             Ready to see what your growth team would do first?
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-green-100">
+          <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-brand-100">
             Start with your website. You&apos;ll see a plan before you&apos;re asked to approve anything.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href={CTA.start.href}
-              className={buttonClasses({ size: "lg", className: "bg-white text-green-900 hover:bg-green-50 active:bg-green-100" })}
+              className={buttonClasses({ size: "lg", className: "bg-white text-brand-900 hover:bg-brand-50 active:bg-brand-100" })}
             >
               {CTA.start.label}
               <ArrowRight aria-hidden="true" />

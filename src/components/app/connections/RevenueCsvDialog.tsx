@@ -102,7 +102,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
             <a
               href={TEMPLATE_HREF}
               download="climbos-revenue-template.csv"
-              className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-green-800 underline-offset-4 hover:underline"
+              className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-brand-800 underline-offset-4 hover:underline"
             >
               <Download aria-hidden="true" className="size-4" />
               Download a template (CSV)
@@ -126,7 +126,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
                 setError(null);
                 setResult(null);
               }}
-              className="block w-full rounded-[12px] border border-line-strong bg-surface p-2 text-sm text-ink file:mr-3 file:min-h-9 file:rounded-[10px] file:border-0 file:bg-green-50 file:px-3 file:font-medium file:text-green-900"
+              className="block w-full rounded-[12px] border border-line-strong bg-surface p-2 text-sm text-ink file:mr-3 file:min-h-9 file:rounded-[10px] file:border-0 file:bg-brand-50 file:px-3 file:font-medium file:text-brand-900"
             />
           </div>
 

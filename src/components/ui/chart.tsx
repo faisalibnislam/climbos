@@ -50,7 +50,7 @@ export function ChartFrame({ title, description, source, legend, table, headingL
           aria-expanded={showTable}
           aria-controls={tableId}
           onClick={() => setShowTable((v) => !v)}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 text-sm font-medium text-green-800 hover:underline"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 text-sm font-medium text-brand-800 hover:underline"
         >
           <Table2 aria-hidden="true" className="size-4" />
           {showTable ? "Hide table" : "View as table"}
@@ -145,14 +145,14 @@ export function ChartLegend({ items }: { items: { label: string; kind: "solid" |
       {items.map((it) => (
         <li key={it.label} className="flex items-center gap-2">
           <svg aria-hidden="true" width="22" height="10" viewBox="0 0 22 10">
-            {it.kind === "solid" ? <line x1="0" x2="22" y1="5" y2="5" stroke="var(--green-800)" strokeWidth="2.5" /> : null}
+            {it.kind === "solid" ? <line x1="0" x2="22" y1="5" y2="5" stroke="var(--brand-800)" strokeWidth="2.5" /> : null}
             {it.kind === "dashed" ? (
-              <line x1="0" x2="22" y1="5" y2="5" stroke="var(--green-700)" strokeWidth="2.5" strokeDasharray="4 3" />
+              <line x1="0" x2="22" y1="5" y2="5" stroke="var(--brand-700)" strokeWidth="2.5" strokeDasharray="4 3" />
             ) : null}
-            {it.kind === "band" ? <rect x="0" y="1" width="22" height="8" fill="var(--green-200)" opacity="0.7" /> : null}
-            {it.kind === "bar" ? <rect x="5" y="0" width="12" height="10" rx="2" fill="var(--green-800)" /> : null}
+            {it.kind === "band" ? <rect x="0" y="1" width="22" height="8" fill="var(--brand-200)" opacity="0.7" /> : null}
+            {it.kind === "bar" ? <rect x="5" y="0" width="12" height="10" rx="2" fill="var(--brand-800)" /> : null}
             {it.kind === "bar-projected" ? (
-              <rect x="5.5" y="0.5" width="11" height="9" rx="2" fill="var(--green-100)" stroke="var(--green-700)" strokeDasharray="2.5 2" />
+              <rect x="5.5" y="0.5" width="11" height="9" rx="2" fill="var(--brand-100)" stroke="var(--brand-700)" strokeDasharray="2.5 2" />
             ) : null}
           </svg>
           {it.label}
@@ -222,8 +222,8 @@ export function BarChart({ data, valueLabel, categoryLabel = "Period", format = 
                     y={100 - h}
                     width={bw}
                     height={h}
-                    fill={d.projected ? "var(--green-100)" : "var(--green-800)"}
-                    stroke={d.projected ? "var(--green-700)" : "none"}
+                    fill={d.projected ? "var(--brand-100)" : "var(--brand-800)"}
+                    stroke={d.projected ? "var(--brand-700)" : "none"}
                     strokeWidth={d.projected ? 1.5 : 0}
                     strokeDasharray={d.projected ? "4 3" : undefined}
                     vectorEffect="non-scaling-stroke"
@@ -313,7 +313,7 @@ export function LineChart({ points, valueLabel, categoryLabel = "Period", format
             {firstProjected > 0 ? (
               <span
                 aria-hidden="true"
-                className="absolute top-0 rounded bg-surface px-1 text-[11px] font-medium text-green-800"
+                className="absolute top-0 rounded bg-surface px-1 text-[11px] font-medium text-brand-800"
                 style={{ left: `calc(${xAt(firstProjected - 1)}% + 4px)` }}
               >
                 Projected →
@@ -338,15 +338,15 @@ export function LineChart({ points, valueLabel, categoryLabel = "Period", format
                   vectorEffect="non-scaling-stroke"
                 />
               ) : null}
-              {hasBand && band ? <polygon points={band} fill="var(--green-200)" opacity="0.55" /> : null}
+              {hasBand && band ? <polygon points={band} fill="var(--brand-200)" opacity="0.55" /> : null}
               {observed.length > 0 ? (
-                <path d={path(observed, 0)} fill="none" stroke="var(--green-800)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <path d={path(observed, 0)} fill="none" stroke="var(--brand-800)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
               ) : null}
               {projected.length > 0 ? (
                 <path
                   d={path(projected, projectedStart)}
                   fill="none"
-                  stroke="var(--green-700)"
+                  stroke="var(--brand-700)"
                   strokeWidth="2.5"
                   strokeDasharray="6 5"
                   strokeLinejoin="round"
@@ -360,7 +360,7 @@ export function LineChart({ points, valueLabel, categoryLabel = "Period", format
                 aria-hidden="true"
                 className={cn(
                   "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2",
-                  p.projected ? "border-green-700 bg-surface" : "border-green-800 bg-green-800",
+                  p.projected ? "border-brand-700 bg-surface" : "border-brand-800 bg-brand-800",
                 )}
                 style={{ left: `${xAt(i)}%`, top: `${yAt(p.y)}%` }}
               />

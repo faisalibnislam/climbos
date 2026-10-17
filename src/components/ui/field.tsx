@@ -43,9 +43,9 @@ export function useFieldControl(own: { id?: string; "aria-describedby"?: string;
 }
 
 export const controlClasses =
-  "w-full rounded-[12px] border border-line-strong bg-surface px-3.5 text-base text-ink shadow-sm " +
-  "placeholder:text-ink-3 transition-colors hover:border-[#b8b2a3] " +
-  "focus-visible:border-green-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-green-600 " +
+  "w-full rounded-xl border border-line-strong bg-surface px-3.5 text-base text-ink shadow-sm " +
+  "placeholder:text-ink-3 transition-colors hover:border-[#aeb6c9] " +
+  "focus-visible:border-brand-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 " +
   "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3 " +
   "aria-[invalid=true]:border-red-800";
 
@@ -57,7 +57,7 @@ export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
 /** Form label. Always pair visible labels with inputs (never rely on placeholder). */
 export function Label({ className, optional, children, ...props }: LabelProps) {
   return (
-    <label className={cn("text-[0.95rem] font-medium text-ink", className)} {...props}>
+    <label className={cn("text-[0.95rem] font-semibold text-ink", className)} {...props}>
       {children}
       {optional ? <span className="ml-1.5 font-normal text-ink-3">(optional)</span> : null}
     </label>

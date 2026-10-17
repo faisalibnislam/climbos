@@ -10,15 +10,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet";
+export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet" | "brand" | "teal" | "pink" | "orange";
 
 export const toneClasses: Record<Tone, string> = {
   neutral: "bg-surface-2 text-ink-2 border-line",
-  green: "bg-green-100 text-green-800 border-green-200",
-  amber: "bg-amber-100 text-amber-800 border-[#f1dca6]",
-  red: "bg-red-100 text-red-800 border-[#f3c9c3]",
-  blue: "bg-blue-100 text-blue-800 border-[#c9daf1]",
-  violet: "bg-violet-100 text-violet-800 border-[#d9cdf3]",
+  green: "bg-green-100 text-green-800 border-[#abefc6]",
+  amber: "bg-amber-100 text-amber-800 border-[#fedf89]",
+  red: "bg-red-100 text-red-800 border-[#fecdca]",
+  blue: "bg-blue-100 text-blue-800 border-[#b2ddff]",
+  violet: "bg-violet-100 text-violet-800 border-[#d9d6fe]",
+  brand: "bg-brand-100 text-brand-900 border-brand-200",
+  teal: "bg-teal-100 text-teal-800 border-[#a5f0fc]",
+  pink: "bg-pink-100 text-pink-800 border-[#fcceee]",
+  orange: "bg-orange-100 text-orange-800 border-[#f9dbaf]",
 };
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

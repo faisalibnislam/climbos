@@ -1,0 +1,150 @@
+import type { LintIssue } from "./types";
+
+/**
+ * Deterministic copy checks that run before the LLM critic (research:
+ * docs/research/channel-content.md Part B). They catch AI tells, invented
+ * numbers and platform-limit breaches cheaply and without judgment calls.
+ */
+
+// Hard-fail phrases. Matched case-insensitively on word boundaries.
+export const BANNED_PHRASES: readonly string[] = [
+  // Openers
+  "in today's fast-paced world", "in today's digital age", "in an ever-evolving landscape", "let's dive in", "let's dive into", "buckle up",
+  "are you ready to", "have you ever wondered", "picture this", "imagine a world", "here's the thing", "let that sink in",
+  "i'm thrilled to announce", "i'm excited to announce", "i'm humbled to announce", "thrilled to announce", "excited to announce",
+  // Hype
+  "revolutionary", "game-changer", "game-changing", "game changer", "cutting-edge", "cutting edge", "state-of-the-art", "next-level", "world-class",
+  "best-in-class", "seamless", "seamlessly", "innovative solution", "innovative solutions", "unleash", "unlock your potential", "supercharge",
+  "skyrocket", "synergy", "holistic",
+  // AI-signature vocabulary
+  "delve", "tapestry", "testament to", "navigate the complexities", "multifaceted", "a myriad of", "plethora", "embark on",
+  "in the world of", "bustling", "nestled",
+  // Empty structures
+  "look no further", "say goodbye to", "that's where", "the best part?", "the result?", "it's not about",
+  // Closers
+  "in conclusion", "at the end of the day", "don't miss out", "what are you waiting for", "the future is here", "join the revolution",
+  "stay tuned", "drop a comment below", "smash that like button", "tag someone who", "tag a friend who", "comment yes",
+  // Ad-policy risks
+  "click here",
+];
+
+// Softer AI tells: flagged as warnings so the critic weighs them in context.
+export const DISCOURAGED_WORDS: readonly string[] = [
+  "elevate", "empower", "transform", "transformative", "harness", "leverage", "robust", "curated", "elevated", "realm", "pivotal",
+  "paramount", "foster", "vibrant", "boasts", "intricate", "underscores", "journey", "landscape", "not just",
+];
+
+const SUPERLATIVES = /\b(best|#1|number one|leading|top-rated|fastest|cheapest|most trusted|no\.?\s?1)\b/i;
+const EMOJI = /\p{Extended_Pictographic}/gu;
+
+export interface StringField {
+  path: string;
+  text: string;
+}
+
+/** Walk every string in a JSON value with its path (e.g. "posts[1].body"). */
+export function stringFields(value: unknown, path = ""): StringField[] {
+  if (typeof value === "string") return [{ path, text: value }];
+  if (Array.isArray(value)) return value.flatMap((v, i) => stringFields(v, `${path}[${i}]`));
+  if (value && typeof value === "object") {
+    return Object.entries(value).flatMap(([k, v]) => stringFields(v, path ? `${path}.${k}` : k));
+  }
+  return [];
+}
+
+function escapeRe(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const bannedRes = BANNED_PHRASES.map((p) => ({ p, re: new RegExp(`(^|[^\\p{L}])${escapeRe(p)}(?=$|[^\\p{L}])`, "iu") }));
+const discouragedRes = DISCOURAGED_WORDS.map((p) => ({ p, re: new RegExp(`(^|[^\\p{L}])${escapeRe(p)}(?=$|[^\\p{L}])`, "iu") }));
+
+export interface CopyLintOptions {
+  /** Phrases the brand genuinely uses (owner's voice), exempt from the banned list. */
+  allow?: string[];
+  /** Field paths to skip (e.g. URLs, hashtags arrays checked separately, ids). */
+  skip?: (path: string) => boolean;
+  /** Text the numbers in the output must trace back to (facts, brief, research). */
+  evidence?: string;
+  maxExclamations?: number;
+  /** Max emoji per 150 characters (0 = no emoji). */
+  emojiPer150?: number;
+}
+
+/** Numbers in the output that don't appear anywhere in the evidence. */
+export function untracedNumbers(text: string, evidence: string): string[] {
+  const normalize = (s: string) => s.replace(/[,\s]/g, "");
+  const ev = normalize(evidence);
+  const found: string[] = [];
+  for (const m of text.matchAll(/[$£€]?\d[\d,.]*\s?(%|k|m|x|×)?/gi)) {
+    const raw = m[0].trim();
+    const digits = normalize(raw).replace(/[$£€%kmx×]/gi, "").replace(/\.$/, "");
+    if (!digits) continue;
+    const n = Number(digits);
+    // Small bare counts ("3 tips", "Step 2") and years are not factual claims on their own.
+    const hasUnit = /[$£€%kmx×]/i.test(raw);
+    if (!hasUnit && Number.isFinite(n) && (n <= 12 || (n >= 1990 && n <= 2035))) continue;
+    if (!ev.includes(digits)) found.push(raw);
+  }
+  return [...new Set(found)];
+}
+
+export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const allow = new Set((opts.allow ?? []).map((a) => a.toLowerCase()));
+  const maxExcl = opts.maxExclamations ?? 1;
+  let exclamations = 0;
+  for (const { path, text } of stringFields(output)) {
+    if (opts.skip?.(path) || /^https?:\/\//.test(text.trim())) continue;
+    for (const { p, re } of bannedRes) {
+      if (!allow.has(p) && re.test(text)) issues.push({ severity: "error", rule: "banned_phrase", message: `Uses the AI-cliché "${p}". Rewrite it with something specific.`, path });
+    }
+    for (const { p, re } of discouragedRes) {
+      if (!allow.has(p) && re.test(text)) issues.push({ severity: "warn", rule: "discouraged_word", message: `"${p}" reads like AI copy; prefer a concrete word.`, path });
+    }
+    exclamations += (text.match(/!/g) ?? []).length;
+    if (/!!|\?\?|\?!/.test(text)) issues.push({ severity: "error", rule: "punctuation", message: "Repeated punctuation.", path });
+    if (/\b[A-Z]{4,}\b/.test(text.replace(/\b(USA|UK|EU|SEO|CRM|SaaS|API|HTML|PDF|URL|FAQ|ROI|CEO|CTA|DIY|HVAC|NEEDS FACT|LLC|GDPR|B2B|B2C|DTC|SMS|USD|GBP|EUR)\b/g, ""))) {
+      issues.push({ severity: "warn", rule: "all_caps", message: "ALL-CAPS words read as shouting and can fail ad review.", path });
+    }
+    if (opts.emojiPer150 !== undefined) {
+      const emoji = (text.match(EMOJI) ?? []).length;
+      const allowed = opts.emojiPer150 === 0 ? 0 : Math.max(1, Math.floor((text.length / 150) * opts.emojiPer150));
+      if (emoji > allowed) issues.push({ severity: "error", rule: "emoji", message: `${emoji} emoji; at most ${allowed} here.`, path });
+    }
+    if (SUPERLATIVES.test(text) && !(opts.evidence && SUPERLATIVES.test(opts.evidence))) {
+      issues.push({ severity: "warn", rule: "superlative", message: "Superlative claim (best, #1, leading…) needs a cited source or should go.", path });
+    }
+    if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
+    if (opts.evidence !== undefined) {
+      const untraced = untracedNumbers(text, opts.evidence);
+      if (untraced.length) issues.push({ severity: "error", rule: "invented_fact", message: `Numbers not found in the facts or research: ${untraced.join(", ")}. Remove them or use [NEEDS FACT].`, path });
+    }
+    if (/\[NEEDS FACT/i.test(text)) issues.push({ severity: "warn", rule: "needs_fact", message: "Has a [NEEDS FACT] gap the owner must fill before publishing.", path });
+  }
+  if (exclamations > maxExcl) issues.push({ severity: "warn", rule: "exclamations", message: `${exclamations} exclamation marks; keep it to ${maxExcl}.` });
+  return issues;
+}
+
+export function maxLength(text: string | undefined, max: number, path: string, label = "Text"): LintIssue[] {
+  if (!text) return [];
+  const len = [...text].length;
+  return len > max ? [{ severity: "error", rule: "length", message: `${label} is ${len} characters; the limit is ${max}.`, path }] : [];
+}
+
+export function maxItems(items: unknown[] | undefined, max: number, path: string, label: string): LintIssue[] {
+  return items && items.length > max ? [{ severity: "error", rule: "count", message: `${items.length} ${label}; at most ${max}.`, path }] : [];
+}
+
+export function minItems(items: unknown[] | undefined, min: number, path: string, label: string): LintIssue[] {
+  return !items || items.length < min ? [{ severity: "error", rule: "count", message: `Needs at least ${min} ${label}.`, path }] : [];
+}
+
+/** Hook check: the text before the platform's "see more" fold must carry the hook. */
+export function hookBeforeFold(text: string | undefined, fold: number, path: string): LintIssue[] {
+  if (!text) return [];
+  const firstLine = text.split("\n").find((l) => l.trim()) ?? "";
+  return [...firstLine].length > fold
+    ? [{ severity: "warn", rule: "fold", message: `The opening line runs past the ~${fold}-character fold; put the hook first and keep it short.`, path }]
+    : [];
+}

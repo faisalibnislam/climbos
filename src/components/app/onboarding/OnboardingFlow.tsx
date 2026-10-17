@@ -111,7 +111,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
         <ol className="mx-auto flex max-w-3xl gap-1.5 px-4 pb-4" aria-label="Setup progress">
           {STEP_ORDER.map((s, i) => (
             <li key={s} className="flex-1">
-              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-green-700" : i === idx ? "bg-green-600" : "bg-surface-3")} aria-hidden />
+              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-brand-700" : i === idx ? "bg-brand-600" : "bg-surface-3")} aria-hidden />
               <span className="sr-only">
                 {STEP_LABEL[s]}: {i < idx ? "done" : i === idx ? "current step" : "not started"}
               </span>
@@ -120,7 +120,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
         </ol>
       </header>
       <main id="main" className="mx-auto max-w-3xl px-4 pb-24 pt-8">
-        <p className="text-sm font-medium text-green-800">
+        <p className="text-sm font-medium text-brand-800">
           Step {idx + 1} of {STEP_ORDER.length} · {STEP_LABEL[step]}
         </p>
         <div className="mt-2">{children}</div>
@@ -193,16 +193,16 @@ function BusinessStep({
 
   return (
     <Shell step="business">
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Let’s meet your business</h1>
+      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">Let’s meet your business</h1>
       <p className="mt-3 max-w-xl text-lg text-ink-2">
         Your AI growth team starts by reading your website. You’ll check everything before it’s used.
       </p>
 
       <div className="mt-6 inline-flex rounded-[12px] border border-line bg-surface p-1" role="tablist" aria-label="How do you want to start?">
-        <button role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "chat" ? "bg-green-800 text-white" : "text-ink-2")}>
+        <button role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "chat" ? "bg-brand-800 text-white" : "text-ink-2")}>
           <MessageSquareText className="size-4" aria-hidden /> Just tell us
         </button>
-        <button role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "form" ? "bg-green-800 text-white" : "text-ink-2")}>
+        <button role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "form" ? "bg-brand-800 text-white" : "text-ink-2")}>
           <ListChecks className="size-4" aria-hidden /> Step by step
         </button>
       </div>
@@ -265,7 +265,7 @@ function BusinessStep({
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} autosize />
               </Field>
             )}
-            <button type="button" className="text-sm font-medium text-green-800 underline underline-offset-2" onClick={() => setNoWebsite((v) => !v)}>
+            <button type="button" className="text-sm font-medium text-brand-800 underline underline-offset-2" onClick={() => setNoWebsite((v) => !v)}>
               {noWebsite ? "I have a website after all" : "No website, or it's private? Describe your business instead"}
             </button>
             <div>
@@ -277,7 +277,7 @@ function BusinessStep({
         </Card>
       )}
       <p className="mt-6 text-sm text-ink-3">
-        Want to look around first? <Link href="/demo" className="font-semibold text-green-800 underline underline-offset-2">Open the Formkit demo</Link>
+        Want to look around first? <Link href="/demo" className="font-semibold text-brand-800 underline underline-offset-2">Open the Formkit demo</Link>
       </p>
     </Shell>
   );
@@ -342,7 +342,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
   });
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">
+      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">
         {failed ? "We need a little help" : `Getting to know ${state.business?.name ?? "your business"}…`}
       </h1>
       {!failed ? (
@@ -462,14 +462,14 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
     <div>
       {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
         <>
-          <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
+          <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
           <p className="mt-3 text-lg text-ink-2">
             Add three to five short facts: what you sell, who it’s for, and what makes you different. Your team only uses facts you’ve confirmed, so it never invents claims.
           </p>
         </>
       ) : (
         <>
-          <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
+          <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">Is this right?</h1>
           <p className="mt-3 text-lg text-ink-2">
             {state.business?.summary ?? "Here’s what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
           </p>
@@ -560,7 +560,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         </CardContent>
       </Card>
 
-      <h2 className="mt-10 font-display text-2xl text-ink">A few details</h2>
+      <h2 className="mt-10 font-display tracking-tight font-extrabold text-2xl text-ink">A few details</h2>
       <Card className="mt-4">
         <CardContent className="grid gap-5 p-5 sm:grid-cols-2">
           <Field label="Type of business">
@@ -588,7 +588,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                   <input
                     id={`ev-${ev.key}`}
                     type="checkbox"
-                    className="mt-1 size-5 accent-green-800"
+                    className="mt-1 size-5 accent-brand-800"
                     checked={ev.confirmed}
                     onChange={(e) => setEvents(events.map((x, j) => (j === i ? { ...x, confirmed: e.target.checked } : x)))}
                   />
@@ -658,7 +658,7 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   };
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">What would you like to achieve?</h1>
+      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">What would you like to achieve?</h1>
       <p className="mt-3 text-lg text-ink-2">Pick one to start. You can change it anytime.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       <RadioCards
@@ -720,7 +720,7 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">How hands-on do you want to be?</h1>
+      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">How hands-on do you want to be?</h1>
       <p className="mt-3 text-lg text-ink-2">Whatever you choose, nothing goes live, gets sent or spends money without the safeguards below.</p>
       <RadioCards
         className="mt-6"
@@ -781,7 +781,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
 
   return (
     <div>
-      <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
+      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       {!state.canRunAi && !ready && state.accessMessage && (
         <Callout tone="warning" className="mt-4" title="Your free starter allowance is used up">

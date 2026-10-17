@@ -54,7 +54,7 @@ export function FilterChips({ value, onChange }: { value: string; onChange: (key
             onClick={() => onChange(f.key)}
             className={cn(
               "inline-flex min-h-11 items-center rounded-full border px-4 text-[0.95rem] font-medium transition-colors",
-              active ? "border-green-800 bg-green-800 text-white" : "border-line-strong bg-surface text-ink-2 hover:border-green-700 hover:text-ink",
+              active ? "border-brand-800 bg-brand-800 text-white" : "border-line-strong bg-surface text-ink-2 hover:border-brand-700 hover:text-ink",
             )}
           >
             {f.label}
@@ -179,7 +179,7 @@ function ListBody({
 function ContentCard({ slug, item }: { slug: string; item: ListItem }) {
   const now = useNow();
   return (
-    <article className="relative flex h-full flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-sm transition-colors focus-within:border-green-700 hover:border-line-strong">
+    <article className="relative flex h-full flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-sm transition-colors focus-within:border-brand-700 hover:border-line-strong">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ChannelTag channel={item.channel} />
         {item.scheduledFor && item.status === "scheduled" ? (

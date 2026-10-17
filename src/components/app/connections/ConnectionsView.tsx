@@ -15,6 +15,7 @@ export function ConnectionsView({ slug }: { slug: string }) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
       <PageHeader
+        section="connections"
         title="Connections"
         intro="Connect the tools you already use. Each connection lists exactly what ClimbOS can and can't do with it — and why — so there are no surprises."
       />

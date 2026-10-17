@@ -180,7 +180,7 @@ export function PlatformClaimsSection({ slug, data }: { slug: string; data: Over
       </div>
       {!claims ? (
         <p className="text-ink-2">
-          No ad platform data in this period. <Link className="font-medium text-green-800 underline" href={`/app/${slug}/connections`}>Connect Google Ads or Meta Ads</Link> to see what they report.
+          No ad platform data in this period. <Link className="font-medium text-brand-800 underline" href={`/app/${slug}/connections`}>Connect Google Ads or Meta Ads</Link> to see what they report.
         </p>
       ) : (
         <>

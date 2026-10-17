@@ -33,8 +33,8 @@ export default function OpsPage() {
 function OpsNotFound() {
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-green-700">Page not found</p>
-      <h1 className="mt-3 font-display text-4xl font-semibold leading-tight tracking-tight text-ink">This path doesn&apos;t lead anywhere — yet.</h1>
+      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-700">Page not found</p>
+      <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight tracking-tight text-ink">This path doesn&apos;t lead anywhere — yet.</h1>
       <p className="mt-4 text-lg leading-relaxed text-ink-2">The page may have moved, or the link might have a typo.</p>
       <div className="mt-8 flex justify-center">
         <Link href="/app" className={buttonClasses({ size: "lg" })}>

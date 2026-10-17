@@ -23,10 +23,10 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
       </header>
       <main id="main" tabIndex={-1} className="flex flex-1 items-center justify-center px-5 py-16 focus:outline-none">
         <div className="max-w-lg text-center" role="alert">
-          <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink">Something went wrong on our side</h1>
+          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-ink">Something went wrong on our side</h1>
           <p className="mt-4 text-lg leading-relaxed text-ink-2">
             Nothing was published or changed. Please try again — if it keeps happening, email{" "}
-            <a href="mailto:hello@climbos.app" className="font-medium text-green-800 underline underline-offset-2">
+            <a href="mailto:hello@climbos.app" className="font-medium text-brand-800 underline underline-offset-2">
               hello@climbos.app
             </a>
             {digest ? (

@@ -43,7 +43,7 @@ export function TeamSettings({ slug }: { slug: string }) {
               unit="seats"
               footnote={
                 <>
-                  Pending invitations count as seats. <Link className="font-medium text-green-800 underline" href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
+                  Pending invitations count as seats. <Link className="font-medium text-brand-800 underline" href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
                 </>
               }
             />

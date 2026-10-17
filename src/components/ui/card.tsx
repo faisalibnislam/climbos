@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** Surface container with a restrained border. Compose with CardHeader/CardContent/CardFooter. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-[var(--radius-lg)] border border-line bg-surface shadow-sm", className)} {...props} />
+    <div className={cn("rounded-2xl border border-line bg-surface shadow-sm", className)} {...props} />
   );
 }
 
@@ -20,7 +20,7 @@ export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
 
 /** Card heading. Choose `as` to fit the page's heading order. */
 export function CardTitle({ as: Tag = "h3", className, ...props }: CardTitleProps) {
-  return <Tag className={cn("text-lg font-semibold leading-snug tracking-tight text-ink", className)} {...props} />;
+  return <Tag className={cn("text-lg font-bold leading-snug tracking-tight text-ink", className)} {...props} />;
 }
 
 /** Secondary text under a card title. */

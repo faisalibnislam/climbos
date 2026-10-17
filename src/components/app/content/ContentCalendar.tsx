@@ -179,7 +179,7 @@ function CalendarGrid({
                 view === "month" ? "md:min-h-28" : "md:min-h-56",
                 list.length === 0 && !isToday && "hidden md:flex",
                 outside && "md:bg-surface-2",
-                isToday && "border-green-700 ring-2 ring-inset ring-green-700 md:border-0",
+                isToday && "border-brand-700 ring-2 ring-inset ring-brand-700 md:border-0",
               )}
               aria-current={isToday ? "date" : undefined}
             >
@@ -203,7 +203,7 @@ function CalendarGrid({
                       <li key={it.id}>
                         <Link
                           href={`/app/${slug}/content/${it.id}`}
-                          className="flex min-h-11 flex-col gap-1 rounded-[8px] border border-line bg-surface-2 p-2 text-sm hover:border-green-700"
+                          className="flex min-h-11 flex-col gap-1 rounded-[8px] border border-line bg-surface-2 p-2 text-sm hover:border-brand-700"
                         >
                           <span className="flex items-center gap-1.5 text-ink-3">
                             {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
