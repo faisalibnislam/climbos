@@ -43,4 +43,9 @@ Access requires a signed-in, non-anonymous user whose email is in `OPS_EMAILS`. 
 
 ## Deploys
 
-`git push` to `main` triggers Vercel, which runs `npx convex deploy --cmd 'pnpm build'` (needs `CONVEX_DEPLOY_KEY`). Before pushing, run `pnpm typecheck && pnpm test && pnpm lint && pnpm build`.
+| Piece | Where | How |
+|---|---|---|
+| Web (Next.js) | Vercel project `climbos` (`faisalibnislam`), domains `climbos.app` and `www.climbos.app` (308 to apex) | Every push to `main` deploys to production via the GitHub integration. `vercel.json` pins the framework, install and build commands. |
+| Backend (Convex) | Production deployment `kindly-quail-695` (dev: `vivid-zebra-520`) | `npx convex deploy -y` from a logged-in machine. To automate it in Vercel, create a production deploy key in the Convex dashboard, add it as `CONVEX_DEPLOY_KEY`, and set the build command to `npx convex deploy --cmd 'pnpm build'`. |
+
+Deploy the Convex functions **before** pushing web code that depends on new functions. Before either, run `pnpm typecheck && pnpm test && pnpm lint && pnpm build`.

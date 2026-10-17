@@ -4,7 +4,7 @@ Run `pnpm setup:check` (or `pnpm setup:check --prod`) at any time. It lists what
 
 ## 1. Convex
 
-- The project is `climbos` in team `faisal-islam`, with dev deployment `vivid-zebra-520`. `npx convex dev` writes `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL`.
+- The project is `climbos` in team `faisal-islam`. The dev deployment is `vivid-zebra-520`; the **production** deployment is `kindly-quail-695` (`https://kindly-quail-695.convex.cloud`, HTTP actions at `https://kindly-quail-695.convex.site`). `npx convex dev` writes `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL`.
 - Run `pnpm auth:keys` once per deployment (`node scripts/generate-auth-keys.mjs --prod` for production). It sets `JWT_PRIVATE_KEY` and `JWKS`.
 - Set `SITE_URL` (for example `https://climbos.app`), `OPS_EMAILS`, `CLIMBOS_SERVER_SECRET` (must equal the web app's value), `CLIMBOS_ENCRYPTION_KEY` (`openssl rand -base64 32`) and `CLIMBOS_ENCRYPTION_KEY_ID`.
 
@@ -66,4 +66,5 @@ Customers connect Stripe (a **restricted read-only** key) and their own Resend k
   - `NEXT_PUBLIC_SITE_URL=https://climbos.app`
   - `CLIMBOS_SERVER_SECRET`: same value as in Convex prod.
   - `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED`, and optionally `NEXT_PUBLIC_POSTHOG_*`.
-- **Build.** Build Command: `npx convex deploy --cmd 'pnpm build'`, with `CONVEX_DEPLOY_KEY` (production deploy key from the Convex dashboard) set in Vercel. This deploys Convex functions and the site together.
+- **Done on 17 Oct 2026:** the project is linked to GitHub, the framework is set to Next.js, production and preview variables are set, and `climbos.app` and `www.climbos.app` are attached. Production webhooks therefore point at `https://kindly-quail-695.convex.site/webhooks/polar` and `/webhooks/resend`.
+- **Optional:** build with `npx convex deploy --cmd 'pnpm build'` plus `CONVEX_DEPLOY_KEY` so that Convex and the site deploy together.
