@@ -10,6 +10,7 @@ import type {
   StrategyOutput,
 } from "../shared/ai/tasks";
 import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
+import type { InsightsV2, StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
@@ -179,6 +180,22 @@ export const saveInsights = internalMutation({
         },
         journey: i.journey.slice(0, 6),
         opportunities: i.opportunities.slice(0, 6),
+        ...("vocPhrases" in i
+          ? {
+              expert: (() => {
+                const x = i as unknown as InsightsV2;
+                const url = (u: string) => u || undefined;
+                return {
+                  alternatives: x.alternatives.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
+                  vocPhrases: x.vocPhrases.slice(0, 40).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
+                  objections: x.objections.slice(0, 12).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
+                  gaps: x.gaps.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
+                  positioningStatement: x.positioningStatement,
+                  confidenceNotes: x.confidenceNotes,
+                };
+              })(),
+            }
+          : {}),
         generatedAt: Date.now(),
         runId,
       },
@@ -256,6 +273,23 @@ export const saveStrategy = internalMutation({
         }),
       constraints: s.constraints.slice(0, 8),
       measurementPlan: s.measurementPlan,
+      ...("diagnosis" in s
+        ? {
+            expert: (() => {
+              const x = s as unknown as StrategyV2;
+              return {
+                diagnosis: x.diagnosis,
+                affordableCac: x.affordableCac,
+                notDoing: x.notDoing.slice(0, 10),
+                northStar: x.northStar,
+                leadingIndicators: x.leadingIndicators.slice(0, 6),
+                phases: x.phases.slice(0, 4),
+                weekOneChecklist: x.weekOneChecklist.slice(0, 7),
+                risks: x.risks.slice(0, 6),
+              };
+            })(),
+          }
+        : {}),
       reviewDate: new Date(now + 14 * DAY).toISOString().slice(0, 10),
       sourceFactIds: factIds.slice(0, 40),
       generationCostMicros: 0,

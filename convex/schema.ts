@@ -239,6 +239,17 @@ export default defineSchema({
         }),
         journey: v.array(v.object({ stage: v.string(), observation: v.string(), opportunity: v.string() })),
         opportunities: v.array(v.object({ title: v.string(), why: v.string(), effort: v.string() })),
+        /** Engine v2 expert research: alternatives, customer language, objections, gaps. */
+        expert: v.optional(
+          v.object({
+            alternatives: v.array(v.object({ name: v.string(), kind: v.string(), evidence: v.string(), sourceUrl: v.optional(v.string()) })),
+            vocPhrases: v.array(v.object({ phrase: v.string(), theme: v.string(), sourceUrl: v.optional(v.string()) })),
+            objections: v.array(v.object({ objection: v.string(), force: v.string(), counter: v.string(), sourceUrl: v.optional(v.string()) })),
+            gaps: v.array(v.object({ gap: v.string(), evidence: v.string(), risk: v.string(), sourceUrl: v.optional(v.string()) })),
+            positioningStatement: v.string(),
+            confidenceNotes: v.string(),
+          }),
+        ),
         generatedAt: v.number(),
         runId: v.optional(v.id("workflowRuns")),
       }),
@@ -469,6 +480,19 @@ export default defineSchema({
     ),
     constraints: v.array(v.string()),
     measurementPlan: v.string(),
+    /** Engine v2 expert plan detail. */
+    expert: v.optional(
+      v.object({
+        diagnosis: v.string(),
+        affordableCac: v.string(),
+        notDoing: v.array(v.object({ channel: v.string(), why: v.string() })),
+        northStar: v.object({ metric: v.string(), baseline: v.string(), target: v.string() }),
+        leadingIndicators: v.array(v.object({ metric: v.string(), weeklyTarget: v.string(), source: v.string() })),
+        phases: v.array(v.object({ name: v.string(), days: v.string(), focus: v.string() })),
+        weekOneChecklist: v.array(v.string()),
+        risks: v.array(v.object({ risk: v.string(), mitigation: v.string() })),
+      }),
+    ),
     reviewDate: v.string(),
     sourceFactIds: v.array(v.id("businessFacts")),
     generationCostMicros: v.number(),
@@ -693,6 +717,8 @@ export default defineSchema({
   workflowRuns: defineTable({
     orgId: v.id("organizations"),
     kind: v.string(),
+    /** "v2" = agent loop with skills (Engine v2); absent = single-call v1. Fixed at creation. */
+    engine: v.optional(v.literal("v2")),
     title: v.string(),
     status: runStatusValidator,
     input: v.string(),

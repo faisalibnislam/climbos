@@ -184,7 +184,7 @@ export const runCard = mutation({
     const job = jobForAction(card.kind, payload.channel ?? "") ?? (payload.job as never);
     if (!job) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
     const images = job === "content_social" ? 1 : 0;
-    const plan = planJob(job, { quantity: payload.quantity, images });
+    const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo" });
     const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: user._id, isFixture: org.kind === "demo" });
     await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
     if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {

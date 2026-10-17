@@ -185,7 +185,7 @@ export const startResearch = mutation({
       });
       void sourceId;
     }
-    const plan = planJob("onboarding_research", { pages: website ? 3 : 0 });
+    const plan = planJob("onboarding_research", { pages: website ? 3 : 0 }, { fixture: org.kind === "demo" });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
@@ -517,7 +517,7 @@ export const generatePlan = mutation({
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
     if (!goal) throw appError("INVALID", "Set a goal first.");
-    const plan = planJob("strategy");
+    const plan = planJob("strategy", {}, { fixture: org.kind === "demo" });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,

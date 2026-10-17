@@ -1,0 +1,485 @@
+[
+ {
+  "case": "plausible",
+  "task": "strategy",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "summary": "Goal: more paying customers in 90 days with $500 a month in ads. Plausible already has a clear story and a free trial. The plan puts the effort where people are already looking to leave Google Analytics. Three things: search content, a small search ad budget, and fixing the path from trial to paid. Nothing here is guaranteed. The plan is built so you can see within weeks what works and cut what doesn't.",
+    "positioning": "The simple, privacy-friendly alternative to Google Analytics. Clear numbers on one page, no cookies, no personal data, so no cookie banners or GDPR consent forms. Back it with the proof: a script 54 times smaller than Google Analytics, over 21,000 paying subscribers and over 313 billion pageviews tracked. Close with the trust story: independent, self-funded, profitable, EU-based, and it never sells customer data. Keep the voice honest and plain, and say what the product does rather than promising legal outcomes.",
+    "audiences": [
+     {
+      "name": "Site owners tired of Google Analytics",
+      "hypothesis": "People who find Google Analytics too complex will start a trial if they see the switch is simple and the numbers fit on one page.",
+      "evidence": "Insights rate this audience high confidence. The site says no training is needed and that Google Analytics is overkill for most site owners."
+     },
+     {
+      "name": "Privacy-minded teams in the EU",
+      "hypothesis": "Buyers who want to skip cookie banners will respond to the no-cookies, no-personal-data message and the EU base.",
+      "evidence": "Confirmed: no cookies, no personal data, no need for cookie banners or consent forms, and an EU-based, independent company. Insights rate this high confidence."
+     },
+     {
+      "name": "SaaS and ecommerce businesses",
+      "hypothesis": "Teams that want goals, funnels and revenue tracking without a heavy setup will respond to a headline aimed at their type of business.",
+      "evidence": "Both are named audiences on the site. Insights rate this medium confidence, so test it before spending heavily."
+     },
+     {
+      "name": "Agencies and consultants",
+      "hypothesis": "Agencies with several client sites may convert well on a dedicated page, and one win can mean several sites.",
+      "evidence": "The site names agencies and white-label analytics. Insights rate this medium confidence. Plan limits are not in the confirmed facts, so check them before making claims."
+     }
+    ],
+    "channels": [
+     {
+      "key": "seo_content",
+      "name": "Search content for people switching from Google Analytics",
+      "why": "Many people look for a Google Analytics alternative before they buy. Plausible already has comparison and migration pages. A few focused pages and helpful articles can reach those people at no ad cost. It builds slowly, so start now to see some effect inside 90 days.",
+      "priority": 1,
+      "deliverables": [
+       "Improve the 'Google Analytics alternative' and 'Migrate from GA4' pages with a clear trial button",
+       "3 to 5 helpful articles, such as 'How to switch from GA4 step by step' and 'Do I need a cookie banner for analytics?' (describe what Plausible does, with no legal promises)",
+       "One article on seeing visits from AI tools like ChatGPT, Perplexity and Claude, after the exact claim is checked",
+       "Simple internal links from articles to the trial page"
+      ],
+      "dependencies": [
+       "Owner confirms the trial terms and the AI-traffic claim before publishing",
+       "Trial start tracking is working",
+       "A writer who knows the product, or a review by someone on the team"
+      ],
+      "measurement": "Track organic visits to these pages, trial starts that come from them, and paid conversions from those trials. Check weekly in Plausible's own dashboard. Judge it on trial starts per page, not only on visits.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "search_ads",
+      "name": "Small Google search ad test on switch-intent searches",
+      "why": "Search ads reach people at the moment they look for a Google Analytics alternative. $500 a month is small, so this is a focused test, not a volume play. Use tight keywords and send the traffic to the best landing page.",
+      "priority": 2,
+      "deliverables": [
+       "One campaign with a few tight keyword groups, such as 'Google Analytics alternative', 'privacy-friendly analytics' and 'cookieless analytics'",
+       "2 to 3 ad versions built from confirmed facts only: no cookies, no personal data, lightweight script, independent and EU-based",
+       "A landing page that matches the ad and leads to the trial",
+       "Negative keyword list to avoid wasted clicks, reviewed weekly"
+      ],
+      "dependencies": [
+       "Trial start and paid conversion tracking set up before the first dollar is spent",
+       "Landing page ready (see conversion work)",
+       "Owner confirms the trial wording used in ads"
+      ],
+      "measurement": "Track cost per trial start and cost per paying customer, from the ad platform plus Plausible's goal tracking. Review weekly. After about 6 weeks, keep, change or stop the campaign based on cost per trial and how many trials turn into paid.",
+      "suggestedMonthlyAdSpend": 500
+     },
+     {
+      "key": "conversion_optimization",
+      "name": "Audience-specific landing pages and trial setup",
+      "why": "More traffic only helps if more visitors start a trial and then pay. Clear headlines for each group and an easy setup path are cheap to try. They make both the content and the ads work harder.",
+      "priority": 1,
+      "deliverables": [
+       "Landing page headlines for 2 groups, such as agencies and ecommerce or SaaS, next to the general headline",
+       "One main call to action: start the free trial, with the live demo as the second option",
+       "A short setup guide or checklist shown right after signup",
+       "Goals set up for trial started and first site or data connected"
+      ],
+      "dependencies": [
+       "Access to edit the landing pages",
+       "Goal tracking in place",
+       "Owner confirms current trial terms"
+      ],
+      "measurement": "Track Free Trial Started rate per landing page version, and the First Data Integration rate within 7 days of signup. Then track the share of trials that become paid.",
+      "suggestedMonthlyAdSpend": 0
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Audience headline test on the switcher landing page",
+      "hypothesis": "A headline aimed at one group, such as agencies or ecommerce, will get a higher share of visitors to start a trial than the general headline.",
+      "population": "New visitors to the GA4 switcher landing page, from search ads and organic search, split evenly between versions.",
+      "method": "ab_split",
+      "primaryMetric": "Free Trial Started rate (trial starts divided by visitors)",
+      "guardrails": [
+       "Page load speed does not get worse",
+       "Bounce rate does not rise sharply",
+       "Only claims from confirmed facts appear in any version",
+       "Trial-to-paid rate is watched so a version doesn't win on cheap, low-quality trials"
+      ],
+      "durationDays": 28,
+      "stoppingRule": "Stop when each version has had at least 1,000 visitors or after 4 weeks, whichever comes first. Keep the new headline only if it is clearly ahead. If the gap is small, keep the general headline and try a new idea."
+     },
+     {
+      "name": "Guided setup for new trial users",
+      "hypothesis": "A clear setup path after signup will raise the share of trial users who connect a site or import data within 7 days.",
+      "population": "New trial signups from all channels, split evenly between the current experience and the guided setup.",
+      "method": "ab_split",
+      "primaryMetric": "First Data Integration rate within 7 days of signup",
+      "guardrails": [
+       "Unsubscribe and complaint rates on any setup emails stay low",
+       "Support questions about setup do not rise",
+       "Emails go only to people who signed up for a trial"
+      ],
+      "durationDays": 42,
+      "stoppingRule": "Stop when each version has 200 trial signups or after 6 weeks, whichever comes first. Compare the results and keep the guided setup only if it is clearly ahead. If signups are too low to reach a clear result, treat it as a signal only and keep watching."
+     }
+    ],
+    "constraints": [
+     "Ad budget is $500 a month, paid directly to the ad platforms. Total suggested spend must stay at or below that.",
+     "The team is small, so the plan keeps to 3 channels and avoids new projects.",
+     "Plan features and prices are not in the confirmed facts. Check the current pricing, plan limits and trial terms before using them in any ad or page.",
+     "Named customers and quotes on the site are not confirmed. Until the owner confirms them, use only the subscriber and pageview figures as proof.",
+     "Do not promise legal compliance outcomes. Say what the product does: no cookies, no personal data, no consent forms needed.",
+     "Plausible is not right for every analytics need. Say so honestly, which fits the brand voice.",
+     "Competitors such as Matomo and Cloudflare Analytics use similar privacy messages, and Google Analytics is free. Results are not guaranteed.",
+     "Search content takes time, so results in 90 days may be modest. Ads should provide the early signal."
+    ],
+    "measurementPlan": "Before spending, set up four goals: trial started, first data connected, paid conversion, and demo viewed. Use Plausible's own dashboard for traffic and goals, and the ad platform for cost. Each week, look at four numbers: visitors to the switcher pages, trial starts, trial starts per source, and cost per trial from ads. Each month, add paying customers by source and the share of trials that become paid. Make decisions at about day 30 and day 60. Keep what lowers cost per paying customer, fix what leaks between trial and paid, and stop what doesn't produce trials. Report results plainly, including when a test does not win.",
+    "firstActions": [
+     {
+      "title": "Set up and check tracking for trial started, first data connected and paid conversion, tagged by source",
+      "why": "Without this, no channel or test can be judged. Ads should not start until it works.",
+      "role": "Analytics or web developer"
+     },
+     {
+      "title": "Confirm the facts we can use: current trial terms, plan limits, the AI-traffic claim, and which customer names and quotes may be shown",
+      "why": "Ads and pages can only say what is confirmed. This avoids wrong claims and unlocks stronger proof.",
+      "role": "Owner or product lead"
+     },
+     {
+      "title": "Build the audience-headline version of the GA4 switcher landing page, then launch the search ad campaign pointing at it",
+      "why": "This gives the ads a page that matches their message and starts the headline test in week one or two.",
+      "role": "Marketing lead with a web editor and an ads specialist"
+     }
+    ]
+   },
+   "costMicros": 49326,
+   "ms": 31596
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": false,
+   "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"output_config.format.schema: For 'integer' type, properties maximum, minimum are not supported\"},\"request_id\":\"req_011Cg87T5eLwge",
+   "costMicros": 336746,
+   "ms": 133620
+  },
+  "opus": null,
+  "sonnet": null
+ },
+ {
+  "case": "plausible",
+  "task": "linkedin",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "No cookie banner needed",
+      "body": "Cookie banners annoy visitors. They also add work for you.\n\nPlausible Analytics does not use cookies and does not collect personal data. That means no cookie banners and no GDPR consent forms to set up or maintain.\n\nYou still get clear numbers on how people use your site.\n\nIf you are tired of managing consent pop-ups, take a look at plausible.io.",
+      "hashtags": [
+       "PrivacyFirst",
+       "WebsiteAnalytics",
+       "SmallBusiness"
+      ],
+      "altText": "Simple illustration of a website page with no pop-up banner on screen, and a small padlock icon in the corner. Clean white background with dark blue and green accents.",
+      "imageIdea": "A clean, flat illustration of a laptop showing a blank web page with no pop-up banner, with a small padlock icon. No real customer, no product screenshot.",
+      "factIndexes": [
+       1
+      ],
+      "suggestedDay": 2
+     },
+     {
+      "channel": "linkedin",
+      "title": "A smaller script for a faster site",
+      "body": "Every extra script slows your site down.\n\nThe Plausible Analytics script is 54 times smaller than Google Analytics. A lighter script helps your pages keep loading quickly for visitors.\n\nIf you run a blog, a store or a small company site, speed matters. Simple stats matter too.\n\nWe are not saying it fits every use case. But if you want a light, simple option, it is worth a look at plausible.io.",
+      "hashtags": [
+       "WebPerformance",
+       "Analytics",
+       "WebsiteOwners"
+      ],
+      "altText": "Abstract graphic showing a large block labelled as a big script next to a much smaller block, with a simple speed gauge above them. Light background with teal and grey shapes.",
+      "imageIdea": "A simple comparison graphic: a large grey block next to a small teal block, with a speed gauge icon above. Abstract shapes only, no real data or screenshots.",
+      "factIndexes": [
+       0
+      ],
+      "suggestedDay": 9
+     },
+     {
+      "channel": "linkedin",
+      "title": "Independent and self-funded",
+      "body": "Who you buy your tools from matters.\n\nPlausible Analytics is independently run, self-funded and profitable. It is based in the EU. It does not sell customer data.\n\nWe believe in being open about how we work. That is why we keep things simple and honest.\n\nLearn more at plausible.io.",
+      "hashtags": [
+       "IndependentBusiness",
+       "EUTech",
+       "DataPrivacy"
+      ],
+      "altText": "Simple icon-style graphic showing a small building with a European flag-blue color scheme, next to a shield with a checkmark. White background with navy and gold accents.",
+      "imageIdea": "An abstract icon set: a shield with a checkmark and a simple building outline in navy and gold. No people, no customer logos, no product screenshot.",
+      "factIndexes": [
+       3
+      ],
+      "suggestedDay": 16
+     }
+    ]
+   },
+   "costMicros": 1115,
+   "ms": 10196
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": false,
+   "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"output_config.format.schema: For 'integer' type, properties maximum, minimum are not supported\"},\"request_id\":\"req_011Cg87LsvEEnj",
+   "costMicros": 110288,
+   "ms": 49331
+  },
+  "opus": null,
+  "sonnet": null
+ },
+ {
+  "case": "formkit",
+  "task": "strategy",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "summary": "Goal: more paying customers in 90 days with $600 a month in ads. Formkit already has a free plan and cheap paid plans, so the plan has three parts. Bring in people who are already looking for a form tool. Send them to pages that match what they want. Then nudge free users toward a paid plan when they need more. Most of the work is free. Ads get $500 a month. Nothing here is guaranteed, and we will check results every two weeks.",
+    "positioning": "Formkit is the practical form builder with a free plan that has unlimited forms, responses and members. Paid plans start at $6 per seat per month. You can take payments through your own Stripe account, and Formkit takes no cut. You can also build and publish forms from inside Claude or ChatGPT. The tone stays direct and plain: pick the tool that fits the job.",
+    "audiences": [
+     {
+      "name": "Freelancers and small studios",
+      "hypothesis": "Solo workers who take client payments through forms will care about keeping all their money. Formkit takes no cut of Stripe payments, and Pro is $6 per seat per month.",
+      "evidence": "The insight review rated this group high confidence. The no-cut payments claim and the Pro price are confirmed facts. We have no customer data or proof yet, so this is still a hypothesis."
+     },
+     {
+      "name": "People who work in Claude or ChatGPT",
+      "hypothesis": "Users who already work in an AI assistant will sign up if they can build and publish a form from chat. It is a small group, but easy to reach with a focused page.",
+      "evidence": "Working inside Claude and ChatGPT is a confirmed fact, and the insight review calls it a rare feature. We have not yet measured demand."
+     },
+     {
+      "name": "People outgrowing Google Forms",
+      "hypothesis": "People on a basic free tool who want more control may switch, and a fair comparison page may be enough to convince them.",
+      "evidence": "The insight review points to the gaps in Formkit's own comparison table. Competitors also have free plans, so a fair and dated comparison matters. Rated medium confidence."
+     },
+     {
+      "name": "Agencies",
+      "hypothesis": "Small agencies that run forms for several clients may take Business at $19 per seat per month, but only if the value is clear.",
+      "evidence": "The insight review rated this high confidence. The Business price is confirmed, but the exact features are not in the confirmed facts. Confirm them before writing copy for this group."
+     }
+    ],
+    "channels": [
+     {
+      "key": "conversion_optimization",
+      "name": "Landing pages and free-to-paid conversion",
+      "why": "Traffic is only useful if it turns into sign-ups and paid plans. Dedicated pages for the Claude and ChatGPT angle, the Google Forms switcher and the no-cut payments message are small jobs. They also give the ads somewhere better to send people than the homepage.",
+      "priority": 1,
+      "deliverables": [
+       "Claude and ChatGPT landing page with one clear sign-up button",
+       "Google Forms switcher page with fair, dated comparison claims",
+       "Freelancer page led by the no-cut Stripe payments message",
+       "Pricing section that shows the free plan, Pro at $6 and Business at $19 per seat per month, and the two months free on yearly billing"
+      ],
+      "dependencies": [
+       "Sign-up and upgrade tracking in place before launch",
+       "Owner confirms which paid features are listed on each page",
+       "Owner confirms which plan includes payments"
+      ],
+      "measurement": "Sign-ups per visitor and free-to-paid upgrades per sign-up, by landing page. Check every two weeks in analytics.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "search_ads",
+      "name": "Search ads for people ready to switch",
+      "why": "These people are already searching for a form tool, so they are the quickest route to sign-ups. $500 a month is small, so keep it to a few tight topics and send each to a matching page.",
+      "priority": 2,
+      "deliverables": [
+       "One campaign with 2-3 tight topics, such as Google Forms alternative, form builder with payments, and AI form builder",
+       "Ads that send each topic to its matching landing page",
+       "Weekly check to remove search terms that waste money"
+      ],
+      "dependencies": [
+       "Landing pages live",
+       "Conversion tracking working",
+       "Ad accounts set up and paid directly to the platform"
+      ],
+      "measurement": "Cost per sign-up and cost per paying customer, by topic. Check weekly. If a topic has spent about $100 with no sign-ups, pause it and move the money.",
+      "suggestedMonthlyAdSpend": 500
+     },
+     {
+      "key": "seo_content",
+      "name": "Search content: switcher and audience pages",
+      "why": "Pages that answer what people search for can keep bringing visitors without more ad spend. It takes time, so start now so that some of it pays off inside 90 days.",
+      "priority": 3,
+      "deliverables": [
+       "Google Forms alternative page, kept fair and dated",
+       "One page each for freelancers, agencies and event organisers, once the facts are confirmed",
+       "Starter templates such as client intake and RSVP forms, linked from each page"
+      ],
+      "dependencies": [
+       "Owner confirms feature claims for each audience",
+       "Owner or designer builds the starter templates"
+      ],
+      "measurement": "Organic visits, sign-ups and upgrades from each page. Check monthly in analytics and Search Console. Expect slow early movement.",
+      "suggestedMonthlyAdSpend": 0
+     },
+     {
+      "key": "email_lifecycle",
+      "name": "Emails to free users, about moving to a paid plan",
+      "why": "The free plan is the main way people will try Formkit. A few helpful emails at the right moments are the cheapest way to turn some of them into paying customers.",
+      "priority": 4,
+      "deliverables": [
+       "Welcome email that helps people publish their first form",
+       "Email about taking payments through their own Stripe account, with no Formkit cut",
+       "Short reminder that yearly billing gives two months free"
+      ],
+      "dependencies": [
+       "Only people who signed up and agreed to product emails get these messages",
+       "Email tool connected to sign-up data",
+       "Owner confirms which plan includes each feature mentioned"
+      ],
+      "measurement": "Free-to-paid upgrade rate, compared with a holdout group that gets no emails. Also track unsubscribes.",
+      "suggestedMonthlyAdSpend": 0
+     }
+    ],
+    "experiments": [
+     {
+      "name": "Claude and ChatGPT page versus homepage",
+      "hypothesis": "Visitors who see the Claude and ChatGPT page will sign up at a higher rate than visitors who see the general homepage.",
+      "population": "New visitors from search ads, split evenly between the two pages",
+      "method": "ab_split",
+      "primaryMetric": "Sign-ups per visitor",
+      "guardrails": [
+       "Keep the ad spend within $500 a month",
+       "Watch cost per sign-up so one version does not quietly waste budget",
+       "Use the same ad text for both versions"
+      ],
+      "durationDays": 42,
+      "stoppingRule": "Run until each version has at least 500 visitors and at least four weeks have passed, whichever is later. If that has not happened by week 6, call it inconclusive and keep the page that costs less per sign-up. Do not stop early because one version looks ahead."
+     },
+     {
+      "name": "Payments message email versus no email",
+      "hypothesis": "Free users who get an email about taking payments with no Formkit cut will upgrade to a paid plan more often than free users who get no email.",
+      "population": "Free users who agreed to product emails. Keep a random 20% aside as a holdout who get no email.",
+      "method": "holdout",
+      "primaryMetric": "Free-to-paid upgrade rate within 30 days of the email",
+      "guardrails": [
+       "Unsubscribe rate stays low",
+       "No spam complaints",
+       "Only email people who agreed to receive product emails",
+       "Do not promise results or imply the feature is on a plan before the owner confirms it"
+      ],
+      "durationDays": 30,
+      "stoppingRule": "Stop at 30 days, or sooner if unsubscribes or complaints become noticeable. If there are too few free users to show a clear difference, treat the result as inconclusive and extend the test rather than guessing."
+     }
+    ],
+    "constraints": [
+     "The only confirmed facts are the free tier, plan prices, no-cut Stripe payments and Claude/ChatGPT support. Other feature claims need the owner's confirmation before they go into ads or pages.",
+     "No customer names, reviews or numbers are available. Do not invent any. Asking early users for honest feedback is a good first step.",
+     "Ad budget is $600 a month, paid directly to the ad platforms. This plan uses $500 of it.",
+     "Competitors such as Tally and Google Forms also have free plans, so free alone will not win customers.",
+     "Email only goes to people who signed up and agreed to receive it.",
+     "No results are guaranteed. Small ad budgets give slow, noisy data, so decisions should be made on trends over several weeks.",
+     "Confirm data-handling terms before targeting HR teams."
+    ],
+    "measurementPlan": "Before anything launches, track four things: visit, sign-up, first published form and upgrade to a paid plan. Review every two weeks. The main numbers are sign-ups per visitor, free-to-paid upgrade rate, cost per sign-up and cost per paying customer. Compare ad topics and landing pages against each other, and use the holdout group for emails. At day 45, move budget to what is working. At day 90, review the results with the owner.",
+    "firstActions": [
+     {
+      "title": "Set up tracking for sign-ups, first published form and upgrades",
+      "why": "Without this, we cannot tell which page, ad or email brings in paying customers, and the tests cannot run.",
+      "role": "Analytics and tracking"
+     },
+     {
+      "title": "Build the Claude and ChatGPT landing page and the Google Forms switcher page",
+      "why": "These are small jobs that give the ads and the first test a clear page to send people to. Use only confirmed facts and keep the comparison claims fair and dated.",
+      "role": "Content and web"
+     },
+     {
+      "title": "Launch a small search campaign at $500 a month with 2-3 tight topics",
+      "why": "Search ads reach people already looking for a form tool, and they let the first test start sending real visitors within weeks.",
+      "role": "Paid ads"
+     }
+    ]
+   },
+   "costMicros": 53722,
+   "ms": 35423
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": false,
+   "error": "The answer was cut off at the length limit.",
+   "costMicros": 407996,
+   "ms": 175131
+  },
+  "opus": null,
+  "sonnet": null
+ },
+ {
+  "case": "formkit",
+  "task": "linkedin",
+  "v1": {
+   "arm": "v1",
+   "ok": true,
+   "output": {
+    "posts": [
+     {
+      "channel": "linkedin",
+      "title": "Start free, no card needed",
+      "body": "Need a form for client intake, bookings or sign-ups? Formkit's free plan includes unlimited forms, responses and members.\n\nYou can build and share a form today without paying anything.\n\nIf you are still using a basic tool and want more control over your forms, this is a simple place to start.\n\nTry it free at formkit.app",
+      "hashtags": [
+       "#FormBuilder",
+       "#SmallBusiness",
+       "#Freelancers"
+      ],
+      "altText": "Simple graphic with a white background and bold dark text that reads Unlimited forms, responses and members on the free plan. A small outline icon of a clipboard sits beside the text.",
+      "imageIdea": "Flat graphic with a clipboard icon and the words Free plan: unlimited forms, responses and members. No people, no product screenshot.",
+      "factIndexes": [
+       0
+      ],
+      "suggestedDay": 1
+     },
+     {
+      "channel": "linkedin",
+      "title": "Get paid through your own Stripe account",
+      "body": "If you take payments through a form, you should know where the money goes.\n\nFormkit connects to Stripe. Payments go straight to your own Stripe account. Formkit takes no cut.\n\nPaid plans start at Pro for $6 per seat per month, or Business for $19 per seat per month.\n\nFor freelancers and event organisers who sell through forms, that means more of each payment stays with you.\n\nSee the details at formkit.app",
+      "hashtags": [
+       "#Stripe",
+       "#Freelancing",
+       "#EventPlanning"
+      ],
+      "altText": "Diagram with three simple boxes in a row labelled Customer pays, Stripe and Your bank account, with arrows between them. A note below says Formkit takes no cut.",
+      "imageIdea": "Simple flow diagram in two colours showing a payment moving from a customer to a Stripe box to the owner's bank account. No real people, no real payment data.",
+      "factIndexes": [
+       1,
+       2
+      ],
+      "suggestedDay": 4
+     },
+     {
+      "channel": "linkedin",
+      "title": "Build forms from inside your AI assistant",
+      "body": "Already working in Claude or ChatGPT? You can describe a form to the assistant and have it built and published there.\n\nNo need to open a separate builder for every form.\n\nFormkit works with AI assistants like Claude and ChatGPT, so you can stay in the tool you already use.\n\nLearn more at formkit.app",
+      "hashtags": [
+       "#AItools",
+       "#Productivity",
+       "#ChatGPT"
+      ],
+      "altText": "Illustration of a chat window with a short message asking for a sign-up form, and a simple form card appearing below it. The image uses only soft blue and grey tones.",
+      "imageIdea": "Minimal illustration of a chat bubble with the words Make me a sign-up form, followed by a blank form card. Generic and illustrative, not a screenshot.",
+      "factIndexes": [
+       3
+      ],
+      "suggestedDay": 8
+     }
+    ]
+   },
+   "costMicros": 1252,
+   "ms": 10918
+  },
+  "v2": {
+   "arm": "v2",
+   "ok": false,
+   "error": "Claude error (400): 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"output_config.format.schema: For 'integer' type, properties maximum, minimum are not supported\"},\"request_id\":\"req_011Cg87MEnbadR",
+   "costMicros": 118163,
+   "ms": 54178
+  },
+  "opus": null,
+  "sonnet": null
+ }
+]

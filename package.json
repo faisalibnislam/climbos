@@ -17,6 +17,7 @@
     "env:sync": "node scripts/env-sync.mjs",
     "polar:setup": "node scripts/polar-setup.mjs",
     "skills:build": "node scripts/skills-build.mjs",
+    "bench": "TMPDIR=/private/tmp/claude-501 tsx bench/run.ts",
     "skills:publish": "node scripts/skills-publish.mjs",
     "auth:keys": "node scripts/generate-auth-keys.mjs"
   },

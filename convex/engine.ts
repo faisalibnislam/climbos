@@ -128,7 +128,9 @@ export async function createRunWithReservation(
   const limits = CURRENT_ENTITLEMENTS.limits;
   const modelStepCount = params.steps.filter((s) => s.kind === "model").length;
   const researchCount = params.steps.filter((s) => s.kind === "research").length;
-  if (modelStepCount > limits.workflowModelSteps || researchCount > limits.workflowResearchTools) {
+  // Engine v2 agents plan up to 7 model calls each (research, drafts, critiques); every call is still metered and reserved.
+  const maxModelSteps = Math.max(limits.workflowModelSteps, 24);
+  if (modelStepCount > maxModelSteps || researchCount > limits.workflowResearchTools) {
     throw appError("LIMIT_REACHED", "This job is bigger than a single run allows. Split it into smaller requests.");
   }
 
@@ -161,6 +163,7 @@ export async function createRunWithReservation(
   const runId = await ctx.db.insert("workflowRuns", {
     orgId: org._id,
     kind: params.kind,
+    ...(process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture ? { engine: "v2" as const } : {}),
     title: params.title,
     status: "cost_reserved",
     input: JSON.stringify(params.input),
@@ -171,7 +174,7 @@ export async function createRunWithReservation(
     entitlementVersionId: period.entitlementVersionId,
     routingVersionId: CURRENT_ROUTING.id,
     budget: {
-      modelSteps: limits.workflowModelSteps,
+      modelSteps: Math.max(limits.workflowModelSteps, modelStepCount + 1),
       researchTools: limits.workflowResearchTools,
       repairs: limits.workflowRepairAttempts,
     },

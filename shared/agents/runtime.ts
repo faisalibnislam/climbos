@@ -76,7 +76,8 @@ function rubricText(r: Rubric): string {
 
 export const CritiqueSchema = z.object({
   gates: z.array(z.object({ id: z.string(), pass: z.boolean(), note: z.string() })),
-  scores: z.array(z.object({ id: z.string(), score: z.number().int(), note: z.string(), fix: z.string() })),
+  // No .int(): zod adds min/max for integers, which structured outputs reject.
+  scores: z.array(z.object({ id: z.string(), score: z.number(), note: z.string(), fix: z.string() })),
   strengths: z.array(z.string()),
   fixes: z.array(z.string()),
 });
@@ -237,7 +238,8 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const history: AgentRunResult<T>["history"] = [];
   const reviews = spec.maxRevisions >= 0 ? spec.maxRevisions + 1 : 0;
   for (let round = 0; round < reviews; round++) {
-    const lint = spec.lint ? spec.lint(current, input) : [];
+    // Numbers may trace to this job's research as well as the brief and facts.
+    const lint = spec.lint ? spec.lint(current, { ...input, untrustedContext: [input.untrustedContext ?? "", research?.notes ?? ""].join("\n") }) : [];
     const c = await critique(round, current, lint);
     const a = assess(c, lint, spec.rubric);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: lint.filter((l) => l.severity === "error").length });

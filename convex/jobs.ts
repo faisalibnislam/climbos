@@ -28,6 +28,23 @@ import { callModel, generateImage, type ModelResult } from "./ai/providers";
 import { researchWebsite } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
+import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
+import { claudeTurn, type ClaudeTurnResult } from "../shared/ai/claude";
+import {
+  adsSpec,
+  conversionAuditSpec,
+  emailSpec,
+  insightsSpec,
+  researchFor,
+  retentionSpec,
+  salesSpec,
+  seoSpec,
+  socialSpec,
+  strategySpec,
+} from "../shared/agents/specs";
+import type { AgentInput, AgentSpec } from "../shared/agents/types";
+import { usdToMicrosCeil } from "../shared/economics/money";
+import type { RateVersion } from "../shared/economics/rates";
 
 class JobStop extends Error {
   constructor(
@@ -212,6 +229,122 @@ async function runModelTask<T>(
   return output as T;
 }
 
+/* ------------------------------------------------------------------ */
+/* Engine v2: expert agents (research → draft → critique → revise)      */
+/* ------------------------------------------------------------------ */
+
+/** Each action stops starting new agent phases after this long and resumes in a fresh action. */
+const ACTION_SOFT_LIMIT_MS = 6.5 * 60_000;
+
+const AGENT_FAILURES: Record<string, string> = {
+  provider_unavailable: "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later.",
+  spend_limit: "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later.",
+  refused: "The AI declined this request. Try rephrasing it.",
+  invalid_output: "The AI's answer didn't pass our quality checks. Nothing was saved.",
+};
+
+function claudeUsageRecords(modelKey: ModelKey, r: ClaudeTurnResult, rates: RateVersion) {
+  const searchMicros = usdToMicrosCeil(r.usage.webSearches * rates.services.searchCall);
+  const records = [
+    {
+      type: "model_call" as const,
+      provider: "anthropic",
+      model: MODEL_SPECS[modelKey].apiModelId,
+      inputTokens: r.usage.inputTokens,
+      outputTokens: r.usage.outputTokens,
+      reasoningTokens: r.usage.thinkingTokens,
+      cacheReadTokens: r.usage.cacheReadTokens,
+      cacheWriteTokens: r.usage.cacheWriteTokens,
+      quantity: Math.max(1, r.usage.calls),
+      costMicros: Math.max(0, r.costMicros - searchMicros),
+      estimated: false,
+    },
+  ];
+  if (r.usage.webSearches > 0) {
+    records.push({ ...records[0], type: "search_call" as never, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: r.usage.webSearches, costMicros: searchMicros });
+  }
+  return records;
+}
+
+/**
+ * Run one Engine v2 agent inside a job. Every phase is a checkpointed,
+ * metered workflow step; a resumed action skips finished phases. Demo
+ * workspaces keep using fixtures through the v1 path.
+ */
+async function runAgentTask<T>(
+  ctx: ActionCtx,
+  job: JobCtx,
+  baseIndex: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  spec: AgentSpec<any>,
+  input: AgentInput,
+  startedAt: number,
+  fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
+): Promise<T> {
+  if (job.run.isFixture || job.run.engine !== "v2") {
+    return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
+  }
+  const rates = getRateVersion(job.run.rateVersionId);
+  let currentStep: Id<"workflowSteps"> | null = null;
+  const deps: AgentDeps = {
+    deadline: startedAt + ACTION_SOFT_LIMIT_MS,
+    turn: async (req) => {
+      const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: "anthropic" });
+      if (circuit === "open") {
+        return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] };
+      }
+      let r = await claudeTurn(req, rates);
+      if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
+        await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
+        r = await claudeTurn(req, rates);
+      }
+      if (currentStep && (r.usage.calls > 0 || r.costMicros > 0)) {
+        await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(req.modelKey, r, rates) });
+      }
+      const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
+      if (healthy || ["provider_error", "timeout"].includes(r.ok ? "" : r.kind)) {
+        await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: healthy });
+      }
+      return r;
+    },
+    phase: async (key, label, fn) => {
+      const step = await begin(ctx, job.run._id, baseIndex + key.index, "model", label, spec.role);
+      if (step.checkpoint !== undefined) return step.checkpoint as never;
+      currentStep = step.stepId!;
+      try {
+        const { value } = await fn();
+        await ctx.runMutation(internal.engine.completeStep, { stepId: currentStep, output: JSON.stringify(value) });
+        return value;
+      } catch (e) {
+        await ctx.runMutation(internal.engine.failStep, { stepId: currentStep, error: (e as Error).message.slice(0, 400) });
+        throw e;
+      } finally {
+        currentStep = null;
+      }
+    },
+  };
+  try {
+    const result = await runAgent(spec, input, deps);
+    return result.output as T;
+  } catch (e) {
+    if (e instanceof AgentYield) throw e;
+    if (e instanceof AgentFailure) throw new JobStop(e.kind, AGENT_FAILURES[e.kind] ?? "The AI service had a problem. Nothing was saved; please try again.");
+    throw e;
+  }
+}
+
+/** The approved positioning and customer language, so content carries the plan. */
+function planContext(job: JobCtx): string {
+  const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
+  if (!insights) return "";
+  const pick = (k: string) => (insights[k] ? `${k}: ${JSON.stringify(insights[k]).slice(0, 3000)}` : "");
+  return `\n\nPOSITIONING AND CUSTOMER LANGUAGE (from research):\n${[pick("positioningStatement") || pick("positioning"), pick("vocPhrases"), pick("objections"), pick("audiences")].filter(Boolean).join("\n")}`;
+}
+
+function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ...extra };
+}
+
 function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureContext {
   return {
     businessName: job.business?.name ?? job.org.name,
@@ -252,10 +385,22 @@ async function finish(
   });
 }
 
-async function guarded(ctx: ActionCtx, runId: Id<"workflowRuns">, body: () => Promise<void>, onFail?: (msg: string) => Promise<void>) {
+async function guarded(
+  ctx: ActionCtx,
+  runId: Id<"workflowRuns">,
+  body: () => Promise<void>,
+  onFail?: (msg: string) => Promise<void>,
+  resume?: () => Promise<unknown>,
+) {
   try {
     await body();
   } catch (e) {
+    // Engine v2: an agent stopped before the action time limit. Completed phases
+    // are checkpoints, so a fresh action picks up where this one left off.
+    if (e instanceof AgentYield && resume) {
+      await resume();
+      return;
+    }
     const msg = e instanceof JobStop ? e.userMessage : "Something went wrong. Nothing was published; you can try again.";
     await finish(ctx, runId, "failed", { userMessage: msg, error: (e as Error).message?.slice(0, 300) });
     if (onFail) await onFail(msg);
@@ -269,6 +414,7 @@ async function guarded(ctx: ActionCtx, runId: Id<"workflowRuns">, body: () => Pr
 export const onboardingResearch = internalAction({
   args: { runId: v.id("workflowRuns"), ownerText: v.optional(v.string()) },
   handler: async (ctx, { runId, ownerText }) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, runId);
     if (!job?.business) return;
     const business = job.business;
@@ -323,41 +469,58 @@ export const onboardingResearch = internalAction({
         profile: JSON.stringify(profile),
       });
 
-      // Step 2: CMO builds business intelligence (audience, competitors, SWOT, journey).
-      const insights = await runModelTask<BusinessInsights>(
+      // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
+      const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}`;
+      const insights = await runAgentTask<BusinessInsights>(
         ctx,
         job,
         2,
-        "business_insights",
-        `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}`,
-        pagesText,
-        fixtureCtx(job),
+        insightsSpec(),
+        agentInput(
+          job,
+          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.\n\nPROFILE (extracted from the website):\n${JSON.stringify(profile).slice(0, 6000)}`,
+          {
+            untrustedContext: pagesText,
+            facts: profile.facts.map((f) => f.statement),
+            research: researchFor("business_insights", { website: business.website, businessName: business.name }),
+          },
+        ),
+        startedAt,
+        { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
       );
       await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
-    });
+    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.onboardingResearch, { runId, ownerText }));
   },
 });
 
 export const buildStrategy = internalAction({
   args: { runId: v.id("workflowRuns") },
   handler: async (ctx, { runId }) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, runId);
     if (!job) return;
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
-      const strategy = await runModelTask<StrategyOutput>(
+      const insightsBrief = insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)";
+      const strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
         0,
-        "growth_strategy",
+        strategySpec(),
+        agentInput(job, `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`),
+        startedAt,
+        {
+          task: "growth_strategy",
+          context: "",
+          ctx: fixtureCtx(job),
+          text:
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
-        "",
-        fixtureCtx(job),
+        },
       );
       await ctx.runMutation(internal.jobWrites.saveStrategy, { runId, strategy: JSON.stringify(strategy), factIds: job.facts.map((f) => f.id) });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
-    });
+    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId }));
   },
 });
 
@@ -372,6 +535,7 @@ export const createContent = internalAction({
     cardId: v.optional(v.id("actionCards")),
   },
   handler: async (ctx, args) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, args.runId);
     if (!job) return;
     const factIds = job.facts.map((f) => f.id);
@@ -385,26 +549,63 @@ export const createContent = internalAction({
         let posts = 0;
         if (args.job === "content_social") {
           const qty = Math.max(1, Math.min(args.quantity ?? 3, 6));
-          const out = await runModelTask<SocialPostsOutput>(
+          const channels = args.channel ? [args.channel] : ["instagram", "facebook", "linkedin"];
+          const out = await runAgentTask<SocialPostsOutput>(
             ctx,
             job,
             0,
-            "social_posts",
-            `TASK: Write ${qty} social posts${args.channel ? ` for ${args.channel}` : " across Instagram, Facebook and LinkedIn"} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
-            "",
-            fx,
+            socialSpec(channels),
+            agentInput(
+              job,
+              `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`,
+            ),
+            startedAt,
+            {
+              task: "social_posts",
+              context: "",
+              ctx: fx,
+              text: `TASK: Write ${qty} social posts${args.channel ? ` for ${args.channel}` : " across Instagram, Facebook and LinkedIn"} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
+            },
           );
           out.posts = out.posts.slice(0, qty);
           posts = out.posts.length;
           items = socialToArtifacts(out, Date.now());
         } else if (args.job === "content_ads") {
-          const out = await runModelTask<AdDraftsOutput>(ctx, job, 0, "ad_drafts", `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${businessBrief(job)}${brief}`, "", fx);
+          const out = await runAgentTask<AdDraftsOutput>(
+            ctx,
+            job,
+            0,
+            adsSpec(),
+            agentInput(job, `Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within the owner's budget. Ads are created paused and only go live after the owner approves them.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+              research: researchFor("ad_drafts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
+            }),
+            startedAt,
+            { task: "ad_drafts", context: "", ctx: fx, text: `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${businessBrief(job)}${brief}` },
+          );
           items = adsToArtifacts(out, job.business?.website);
         } else if (args.job === "content_email") {
-          const out = await runModelTask<EmailSequenceOutput>(ctx, job, 0, "email_sequence", `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}`, "", fx);
+          const out = await runAgentTask<EmailSequenceOutput>(
+            ctx,
+            job,
+            0,
+            emailSpec(),
+            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} with a safe fallback. One idea and one call to action per email.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`),
+            startedAt,
+            { task: "email_sequence", context: "", ctx: fx, text: `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}` },
+          );
           items = emailToArtifacts(out);
         } else {
-          const out = await runModelTask<SeoBriefOutput>(ctx, job, 0, "seo_brief", `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft.\n\n${businessBrief(job)}${brief}`, "", fx);
+          const out = await runAgentTask<SeoBriefOutput>(
+            ctx,
+            job,
+            0,
+            seoSpec(),
+            agentInput(job, `Plan and draft one genuinely helpful page targeting a real, high-intent search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+              research: researchFor("seo_brief", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
+            }),
+            startedAt,
+            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft.\n\n${businessBrief(job)}${brief}` },
+          );
           items = seoToArtifacts(out);
         }
 
@@ -465,6 +666,7 @@ export const createContent = internalAction({
       async () => {
         if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
       },
+      () => ctx.scheduler.runAfter(0, internal.jobs.createContent, args),
     );
   },
 });
@@ -521,6 +723,7 @@ export const explainResults = internalAction({
 export const conversionAudit = internalAction({
   args: { runId: v.id("workflowRuns"), cardId: v.optional(v.id("actionCards")) },
   handler: async (ctx, { runId, cardId }) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, runId);
     if (!job?.business) return;
     const website = job.business.website;
@@ -539,16 +742,28 @@ export const conversionAudit = internalAction({
         }
         await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(text) });
       }
-      const out = await runModelTask<unknown>(ctx, job, 1, "conversion_audit", `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${businessBrief(job)}`, text, fixtureCtx(job));
+      const out = await runAgentTask<unknown>(
+        ctx,
+        job,
+        1,
+        conversionAuditSpec(),
+        agentInput(job, "Audit the money page(s) for conversion: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite the page URL for each finding and prioritise the fixes.", {
+          untrustedContext: text,
+          research: researchFor("conversion_audit", { website, businessName: job.business?.name ?? job.org.name }),
+        }),
+        startedAt,
+        { task: "conversion_audit", context: text, ctx: fixtureCtx(job), text: `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${businessBrief(job)}` },
+      );
       await finish(ctx, runId, "verified", { output: out, meters: { scrapeCredits: text ? 2 : 0 } });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
-    });
+    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.conversionAudit, { runId, cardId }));
   },
 });
 
 export const simplePlanJob = internalAction({
   args: { runId: v.id("workflowRuns"), task: v.union(v.literal("retention_plan"), v.literal("sales_sequence")), cardId: v.optional(v.id("actionCards")) },
   handler: async (ctx, { runId, task, cardId }) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, runId);
     if (!job) return;
     await guarded(ctx, runId, async () => {
@@ -556,9 +771,17 @@ export const simplePlanJob = internalAction({
         task === "retention_plan"
           ? "TASK: Design customer segments and retention plays (trigger, message, channel) for people who already use the product and agreed to hear from the business."
           : "TASK: Define the ideal customer, qualification questions and a follow-up sequence for leads the business ALREADY has (inbound or CRM). Never imply access to a contact database.";
-      const out = await runModelTask<unknown>(ctx, job, 0, task, `${text}\n\n${businessBrief(job)}`, "", fixtureCtx(job));
+      const out = await runAgentTask<unknown>(
+        ctx,
+        job,
+        0,
+        task === "retention_plan" ? retentionSpec() : salesSpec(),
+        agentInput(job, `${text.replace(/^TASK: /, "")}${planContext(job)}`),
+        startedAt,
+        { task, context: "", ctx: fixtureCtx(job), text: `${text}\n\n${businessBrief(job)}` },
+      );
       await finish(ctx, runId, "verified", { output: out });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
-    });
+    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.simplePlanJob, { runId, task, cardId }));
   },
 });

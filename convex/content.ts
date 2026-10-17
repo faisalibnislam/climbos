@@ -433,7 +433,7 @@ export const generate = mutation({
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
-    const plan = planJob(args.job, { quantity: args.quantity, images: args.images });
+    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo" });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
@@ -463,10 +463,11 @@ export const estimate = query({
     job: v.union(v.literal("content_social"), v.literal("content_ads"), v.literal("content_email"), v.literal("content_seo")),
     quantity: v.optional(v.number()),
     images: v.optional(v.number()),
+    channel: v.optional(channelValidator),
   },
   handler: async (ctx, args) => {
-    await requireOrgAccess(ctx, { slug: args.slug }, "view");
-    const plan = planJob(args.job, { quantity: args.quantity, images: args.images });
+    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
+    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo" });
     return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan), meters: plan.meters };
   },
 });
