@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Check, ExternalLink, MessageSquareText, Pencil, Plus, ListChecks, Sparkles, X } from "lucide-react";
+import { ArrowUp, Check, ExternalLink, MessageSquareText, Pencil, Plus, ListChecks, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { errorInfo, errorMessage } from "../errors";
 import { ROLE_META } from "../roles";
+import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
 
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
@@ -39,6 +40,29 @@ const STEP_LABEL: Record<Step, string> = {
   preferences: "How you approve",
   plan: "Your plan",
   done: "Done",
+};
+
+/** What the team does at each step, shown beside the form so owners always know what happens next. */
+const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[] }> = {
+  business: {
+    title: "What happens next",
+    roles: ["data_analyst", "cmo", "ceo"],
+    points: ["We read a few public pages of your website", "You check every fact before it's used", "Your team drafts a short growth plan for your OK"],
+  },
+  research: {
+    title: "Your team is on it",
+    roles: ["data_analyst", "cmo"],
+    points: ["The Data Analyst pulls out the facts", "The CMO studies your customers and competitors", "Nothing is published or sent"],
+  },
+  facts: {
+    title: "Why facts matter",
+    roles: ["data_analyst"],
+    points: ["Only confirmed facts are used in your content", "Fix or remove anything that's off", "You can add what we missed"],
+  },
+  goal: { title: "Setting your goal", roles: ["ceo"], points: ["One clear goal keeps the plan focused", "Ad money goes straight to Google or Meta, never to us", "You can change it any time"] },
+  preferences: { title: "You stay in control", roles: ["coo"], points: ["Nothing goes live without your approval", "Pause everything with one click", "Budgets are hard limits"] },
+  plan: { title: "Building your plan", roles: ["ceo", "cmo"], points: ["Who to reach and what to say", "1–2 channels to focus on, with costs", "How we'll measure progress"] },
+  done: { title: "All set", roles: ["ceo"], points: [] },
 };
 
 const TIMEZONE = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
@@ -96,22 +120,27 @@ export function OnboardingFlow() {
 
 function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug?: string }) {
   const idx = Math.max(0, STEP_ORDER.indexOf(step));
+  const help = STEP_HELP[step];
   return (
     <div className="min-h-dvh bg-bg">
       <Toaster />
-      <header className="border-b border-line bg-surface/70">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Logo />
           {slug ? (
-            <Link href={`/app/${slug}/today`} className="text-sm font-medium text-ink-2 underline-offset-2 hover:underline">
+            <Link href={`/app/${slug}/today`} className="text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">
               Save and finish later
             </Link>
           ) : null}
         </div>
-        <ol className="mx-auto flex max-w-3xl gap-1.5 px-4 pb-4" aria-label="Setup progress">
+        <ol className="mx-auto flex max-w-6xl gap-2 px-4 pb-4" aria-label="Setup progress">
           {STEP_ORDER.map((s, i) => (
-            <li key={s} className="flex-1">
-              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-brand-700" : i === idx ? "bg-brand-600" : "bg-surface-3")} aria-hidden />
+            <li key={s} className="flex flex-1 flex-col gap-1.5">
+              <span className={cn("block h-1.5 rounded-full", i < idx ? "bg-brand-800" : i === idx ? "bg-hero-gradient" : "bg-surface-3")} aria-hidden />
+              <span className={cn("hidden text-xs font-semibold md:block", i <= idx ? "text-ink" : "text-ink-3")}>
+                {i < idx ? <Check className="mr-1 inline size-3.5 text-brand-800" aria-hidden /> : null}
+                {STEP_LABEL[s]}
+              </span>
               <span className="sr-only">
                 {STEP_LABEL[s]}: {i < idx ? "done" : i === idx ? "current step" : "not started"}
               </span>
@@ -119,11 +148,33 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
           ))}
         </ol>
       </header>
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-24 pt-8">
-        <p className="text-sm font-medium text-brand-800">
-          Step {idx + 1} of {STEP_ORDER.length} · {STEP_LABEL[step]}
-        </p>
-        <div className="mt-2">{children}</div>
+      <main id="main" className="mx-auto grid max-w-6xl gap-8 px-4 pb-24 pt-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-sm font-bold text-brand-800">
+            Step {idx + 1} of {STEP_ORDER.length} · {STEP_LABEL[step]}
+          </p>
+          <div className="mt-4">{children}</div>
+        </div>
+        {help.points.length ? (
+          <aside className="bg-soft-gradient hidden h-fit rounded-3xl border border-brand-100 p-6 lg:block" aria-label={help.title}>
+            <div className="flex">
+              {help.roles.map((r, i) => (
+                <RoleAvatar key={r} role={r} size="md" className={cn("ring-4 ring-[#f4f2ff]", i > 0 && "-ml-2")} />
+              ))}
+            </div>
+            <p className="mt-4 text-lg font-bold text-ink">{help.title}</p>
+            <ul className="mt-3 space-y-3">
+              {help.points.map((p) => (
+                <li key={p} className="flex gap-2.5 text-[0.95rem] text-ink-2">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-white">
+                    <Check className="size-3" aria-hidden />
+                  </span>
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
       </main>
     </div>
   );
@@ -193,16 +244,16 @@ function BusinessStep({
 
   return (
     <Shell step="business">
-      <h1 className="font-display tracking-tight font-extrabold text-3xl leading-tight text-ink sm:text-4xl">Let’s meet your business</h1>
+      <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">Let’s meet your business <span aria-hidden="true">👋</span></h1>
       <p className="mt-3 max-w-xl text-lg text-ink-2">
-        Your AI growth team starts by reading your website. You’ll check everything before it’s used.
+        Tell us about it in your own words. Your AI growth team reads your website, and you check everything before it’s used.
       </p>
 
-      <div className="mt-6 inline-flex rounded-[12px] border border-line bg-surface p-1" role="tablist" aria-label="How do you want to start?">
-        <button role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "chat" ? "bg-brand-800 text-white" : "text-ink-2")}>
+      <div className="mt-6 inline-flex rounded-full border border-line bg-surface p-1 shadow-sm" role="tablist" aria-label="How do you want to start?">
+        <button role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn("flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold", mode === "chat" ? "bg-brand-800 text-white" : "text-ink-2 hover:bg-surface-2")}>
           <MessageSquareText className="size-4" aria-hidden /> Just tell us
         </button>
-        <button role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn("flex min-h-10 items-center gap-2 rounded-[9px] px-3 text-sm font-medium", mode === "form" ? "bg-brand-800 text-white" : "text-ink-2")}>
+        <button role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn("flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold", mode === "form" ? "bg-brand-800 text-white" : "text-ink-2 hover:bg-surface-2")}>
           <ListChecks className="size-4" aria-hidden /> Step by step
         </button>
       </div>
@@ -210,14 +261,65 @@ function BusinessStep({
       {error && <Callout tone="danger" className="mt-6">{error}</Callout>}
 
       {mode === "chat" ? (
-        <Card className="mt-6">
-          <CardContent className="space-y-4 p-5 sm:p-6">
-            <Field label="Tell us about your business and what you want" hint='For example: "We are Formkit (formkit.app). Help us get more paying customers in the next 90 days. I can spend $600 a month on ads and review content on Fridays."'>
-              <Textarea value={chat} onChange={(e) => setChat(e.target.value)} rows={5} autosize placeholder="Type a few sentences…" />
-            </Field>
+        <div className="mt-6 space-y-4">
+          <div className="bg-hero-gradient rounded-3xl p-[2px] shadow-lg">
+            <div className="rounded-[22px] bg-surface p-4 sm:p-5">
+              <label htmlFor="intro-chat" className="text-sm font-bold text-ink">
+                Tell us about your business and what you want
+              </label>
+              <Textarea
+                id="intro-chat"
+                value={chat}
+                onChange={(e) => setChat(e.target.value)}
+                rows={4}
+                autosize
+                placeholder="e.g. We are Formkit (formkit.app). Help us get more paying customers in the next 90 days. I can spend $600 a month on ads."
+                className="mt-2 border-0 px-0 text-lg shadow-none focus-visible:outline-none"
+              />
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+                <span className="text-xs text-ink-3">Include your website if you have one.</span>
+                <Button
+                  size="md"
+                  loading={busy}
+                  loadingText="Setting up your team…"
+                  onClick={() =>
+                    submit({
+                      name: parsed.businessName ?? name,
+                      website: parsed.website,
+                      ownerText: parsed.website ? undefined : chat,
+                      parsed,
+                    })
+                  }
+                >
+                  Start <ArrowUp className="size-4" aria-hidden />
+                </Button>
+              </div>
+            </div>
+          </div>
+          {chat.trim().length === 0 && (
+            <div className="flex flex-wrap gap-2" aria-label="Examples">
+              {[
+                "I run a bakery in Bristol (bristolcrumb.co.uk). I want more office catering orders.",
+                "We're Formkit (formkit.app). Help us get more paying customers in 90 days.",
+                "I'm a wedding photographer in Austin. I want more bookings for next spring.",
+              ].map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => setChat(ex)}
+                  className="min-h-10 rounded-full border border-line bg-surface px-3.5 text-left text-sm font-medium text-ink-2 shadow-sm transition hover:border-brand-200 hover:text-ink"
+                >
+                  <Sparkles className="mr-1.5 inline size-3.5 text-brand-800" aria-hidden />
+                  {ex}
+                </button>
+              ))}
+            </div>
+          )}
             {chat.trim().length > 8 && (
-              <div className="rounded-[12px] border border-line bg-surface-2 p-4 text-sm" aria-live="polite">
-                <p className="font-medium text-ink">Here’s what we understood (you can change all of it later):</p>
+              <div className="rounded-2xl border border-line bg-surface p-4 text-sm shadow-sm" aria-live="polite">
+                <p className="flex items-center gap-2 font-bold text-ink">
+                  <Sparkles className="size-4 text-brand-800" aria-hidden /> Here’s what we understood <span className="font-normal text-ink-3">(you can change it later)</span>
+                </p>
                 <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                   <Understood label="Business" value={parsed.businessName} />
                   <Understood label="Website" value={parsed.website} />
@@ -233,23 +335,7 @@ function BusinessStep({
                 )}
               </div>
             )}
-            <Button
-              size="lg"
-              loading={busy}
-              loadingText="Setting up your team…"
-              onClick={() =>
-                submit({
-                  name: parsed.businessName ?? name,
-                  website: parsed.website,
-                  ownerText: parsed.website ? undefined : chat,
-                  parsed,
-                })
-              }
-            >
-              <Sparkles className="size-5" aria-hidden /> Start
-            </Button>
-          </CardContent>
-        </Card>
+        </div>
       ) : (
         <Card className="mt-6">
           <CardContent className="space-y-5 p-5 sm:p-6">

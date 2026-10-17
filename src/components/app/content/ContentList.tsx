@@ -179,21 +179,21 @@ function ListBody({
 function ContentCard({ slug, item }: { slug: string; item: ListItem }) {
   const now = useNow();
   return (
-    <article className="relative flex h-full flex-col gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-sm transition-colors focus-within:border-brand-700 hover:border-line-strong">
+    <article className="relative flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md focus-within:border-brand-700">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ChannelTag channel={item.channel} />
         {item.scheduledFor && item.status === "scheduled" ? (
           <span className="text-sm text-ink-3">For {now ? formatDateTime(item.scheduledFor) : "…"}</span>
         ) : null}
       </div>
-      <h3 className="text-lg font-semibold leading-snug text-ink">
-        <Link href={`/app/${slug}/content/${item.id}`} className="after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline-none">
+      <h3 className="text-lg font-bold leading-snug text-ink">
+        <Link href={`/app/${slug}/content/${item.id}`} className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none">
           {item.title}
         </Link>
       </h3>
       <ArtifactStatus status={item.status} showHelp />
       {item.preview ? <p className="line-clamp-3 text-[0.95rem] leading-relaxed text-ink-2">{item.preview}</p> : null}
-      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-sm text-ink-3">
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-3 text-sm text-ink-3">
         <span>
           Created by <RoleName role={item.createdByRole} className="text-ink-2" />
         </span>

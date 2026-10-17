@@ -11,61 +11,80 @@ import {
   Scale,
   ShieldCheck,
   Wallet,
+  MessageSquareText,
+  Search,
+  Compass,
+  PenTool,
+  CircleCheck,
+  BarChart3,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
+
+const ROLE_KEYS: Record<string, string> = {
+  creative: "creative_director",
+  social: "social_media_manager",
+  ads: "ads_manager",
+  seo: "seo_specialist",
+  data: "data_analyst",
+  success: "customer_success_manager",
+};
+
+const STEP_ICONS: LucideIcon[] = [MessageSquareText, Search, Compass, PenTool, CircleCheck, BarChart3];
+const STEP_TONES: Tone[] = ["brand", "violet", "pink", "orange", "green", "teal"];
 import { buttonClasses } from "@/components/ui/button-styles";
+import { IconTile } from "@/components/ui/icon-tile";
+import type { Tone } from "@/components/ui/badge";
+import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { cn, formatUsd } from "@/lib/utils";
 import { CAPABILITIES, CTA, ROLES, STEPS, TRUST, WONT_DO } from "./content";
 import { Container, Section, SectionHeading } from "./layout";
 import { LivePreview } from "./LivePreview";
 import { getPlans, lowestPrice, planLimitLines, RECOMMENDED_PLAN } from "./plans";
 
-/** Landing hero: promise on the left, live preview form on the right. */
+/** Landing hero: a big gradient panel with the promise and the live preview, Instantly-style. */
 export function Hero() {
   return (
-    <section aria-labelledby="hero-heading" className="hero-glow relative overflow-hidden">
-      <Container className="grid items-start gap-8 pb-16 pt-10 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-x-14 lg:gap-y-0 lg:pb-24 lg:pt-20">
-        <div className="max-w-xl lg:col-start-1 lg:row-start-1">
-          <p className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-brand-700" />
-            Your AI growth team
+    <section aria-labelledby="hero-heading" className="relative px-3 pt-3 sm:px-5 sm:pt-5">
+      <div className="bg-hero-gradient relative overflow-hidden rounded-[28px] px-4 pb-14 pt-12 text-white sm:rounded-[36px] sm:pb-20 sm:pt-20">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-24 top-10 size-[420px] rounded-full bg-white/10 blur-2xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 bottom-0 size-[360px] rounded-full bg-[#22c3ee]/25 blur-3xl" />
+        <Container className="relative flex flex-col items-center text-center">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-sm font-semibold backdrop-blur">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-[#ffd166]" />
+            Your AI growth team, ready in minutes
           </p>
-          <h1
-            id="hero-heading"
-            className="mt-5 font-display text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-ink sm:text-6xl"
-          >
+          <h1 id="hero-heading" className="mt-6 max-w-3xl text-[2.6rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             Tell us your goal. We&apos;ll help you grow.
           </h1>
-          <p className="mt-5 text-lg leading-relaxed text-ink-2 sm:text-xl">
-            ClimbOS researches your business, builds the plan, creates the work and measures what happens.{" "}
-            <strong className="font-semibold text-ink">You approve anything that goes live.</strong>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white sm:text-xl">
+            Ten AI specialists research your business, build the plan, create the work and measure what happens.{" "}
+            <strong className="font-bold text-white">You approve anything that goes live.</strong>
           </p>
-        </div>
-        <div className="w-full lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-2">
-          <LivePreview />
-        </div>
-        <div className="max-w-xl lg:col-start-1 lg:row-start-2">
-          <ul className="grid gap-2.5 text-[0.95rem] text-ink-2 lg:mt-7">
+          <div className="mt-10 w-full max-w-2xl text-left text-ink">
+            <LivePreview />
+          </div>
+          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.95rem] font-medium text-white">
             {[
-              "Ten AI specialists working from one shared understanding of your business",
               "Nothing posts, sends or spends without your OK",
-              "Plans start at " + formatUsd(lowestPrice()) + " a month — no surprise charges",
+              "Plans from " + formatUsd(lowestPrice()) + " a month",
+              "No sign-up for the preview",
             ].map((t) => (
-              <li key={t} className="flex items-start gap-2.5">
-                <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700" />
+              <li key={t} className="flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-[#ffd166]" />
                 {t}
               </li>
             ))}
           </ul>
-          <p className="mt-7 text-[0.95rem] text-ink-2">
+          <p className="mt-6 text-[0.95rem] text-white">
             Want to look around first?{" "}
-            <Link href={CTA.demo.href} className="font-medium text-brand-800 underline underline-offset-4">
+            <Link href={CTA.demo.href} className="font-bold text-white underline underline-offset-4">
               Try the demo
             </Link>{" "}
             — no account needed.
           </p>
-        </div>
-      </Container>
+        </Container>
+      </div>
     </section>
   );
 }
@@ -82,14 +101,14 @@ export function HowItWorks({ headingId = "how-heading", compact = false }: { hea
       />
       <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-sm">
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full bg-brand-800 font-display tracking-tight text-lg font-extrabold text-white"
-            >
-              {i + 1}
+          <li key={s.title} className="relative rounded-3xl border border-line bg-surface p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <span className="flex items-center justify-between">
+              <IconTile icon={STEP_ICONS[i] ?? Sparkles} tone={STEP_TONES[i] ?? "brand"} size="lg" />
+              <span aria-hidden="true" className="text-sm font-extrabold text-ink-3">
+                0{i + 1}
+              </span>
             </span>
-            <h3 className="mt-4 text-lg font-semibold leading-snug text-ink">
+            <h3 className="mt-5 text-lg font-bold leading-snug text-ink">
               <span className="sr-only">Step {i + 1}: </span>
               {s.title}
             </h3>
@@ -113,11 +132,9 @@ export function TeamGrid({ headingId = "team-heading" }: { headingId?: string })
       />
       <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {ROLES.map((r) => (
-          <li key={r.key} className="flex flex-col rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-            <span role="img" aria-label={r.emojiLabel} className="text-[1.75rem] leading-none">
-              {r.emoji}
-            </span>
-            <h3 className="mt-3 font-semibold leading-snug text-ink">{r.title}</h3>
+          <li key={r.key} className="flex flex-col rounded-3xl border border-line bg-surface p-5 shadow-sm">
+            <RoleAvatar role={ROLE_KEYS[r.key] ?? r.key} size="lg" />
+            <h3 className="mt-4 font-bold leading-snug text-ink">{r.title}</h3>
             <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink-2">{r.body}</p>
             {r.note ? <p className="mt-2 text-sm text-ink-3">{r.note}</p> : null}
           </li>

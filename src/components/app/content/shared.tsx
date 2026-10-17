@@ -29,7 +29,8 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Component, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
-import { Badge, Button, Callout } from "@/components/ui";
+import { Badge, Button, Callout, IconTile, type Tone } from "@/components/ui";
+import { RoleAvatar } from "../RoleAvatar";
 import { cn } from "@/lib/utils";
 import { ARTIFACT_STATUS, CHANNEL_LABELS, ROLE_META, roleTitle } from "../roles";
 import { errorInfo, type AppErrorInfo } from "../errors";
@@ -246,6 +247,22 @@ function SectionKey({ children }: { children: ReactNode }) {
 /* Channels, statuses, roles                                            */
 /* ------------------------------------------------------------------ */
 
+export const CHANNEL_TONES: Record<string, Tone> = {
+  instagram: "pink",
+  facebook: "blue",
+  linkedin: "brand",
+  x: "neutral",
+  tiktok: "violet",
+  pinterest: "red",
+  youtube: "red",
+  google_search_ad: "orange",
+  meta_ad: "blue",
+  linkedin_ad: "brand",
+  email: "teal",
+  website: "green",
+  blog: "violet",
+};
+
 export const CHANNEL_ICONS: Record<string, LucideIcon> = {
   instagram: Camera,
   facebook: ThumbsUp,
@@ -270,8 +287,8 @@ export function channelLabel(channel: string): string {
 export function ChannelTag({ channel, className }: { channel: string; className?: string }) {
   const Icon = CHANNEL_ICONS[channel] ?? Globe;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-sm font-medium text-ink-2", className)}>
-      <Icon aria-hidden="true" className="size-4 shrink-0 text-ink-3" />
+    <span className={cn("inline-flex items-center gap-2 text-sm font-semibold text-ink-2", className)}>
+      <IconTile icon={Icon} tone={CHANNEL_TONES[channel] ?? "neutral"} size="sm" />
       {channelLabel(channel)}
     </span>
   );
@@ -313,7 +330,7 @@ export function RoleName({ role, className }: { role: string | null | undefined;
   const meta = role ? ROLE_META[role] : undefined;
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
-      {meta ? <span aria-hidden="true">{meta.emoji}</span> : null}
+      {meta && role ? <RoleAvatar role={role} size="xs" /> : null}
       <span>{roleTitle(role)}</span>
     </span>
   );

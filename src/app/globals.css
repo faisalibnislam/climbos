@@ -52,7 +52,7 @@
   --orange-500: #ef6820;
   --orange-100: #fdeadb;
 
-  --gradient-hero: linear-gradient(135deg, #3d5afe 0%, #6f4cf6 55%, #9b5cf6 100%);
+  --gradient-hero: linear-gradient(135deg, #2f47e0 0%, #5139e3 55%, #7c3aed 100%);
   --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f4efff 60%, #eafaff 100%);
 
   --radius-sm: 8px;
