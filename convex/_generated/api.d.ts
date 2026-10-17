@@ -31,6 +31,7 @@ import type * as lib_access from "../lib/access.js";
 import type * as lib_approvals from "../lib/approvals.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_autopilot from "../lib/autopilot.js";
+import type * as lib_cards from "../lib/cards.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_jobPlans from "../lib/jobPlans.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   "lib/approvals": typeof lib_approvals;
   "lib/audit": typeof lib_audit;
   "lib/autopilot": typeof lib_autopilot;
+  "lib/cards": typeof lib_cards;
   "lib/crypto": typeof lib_crypto;
   "lib/emailTemplates": typeof lib_emailTemplates;
   "lib/jobPlans": typeof lib_jobPlans;

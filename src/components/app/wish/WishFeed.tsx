@@ -1,0 +1,230 @@
+"use client";
+
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { CircleCheck, CircleDashed, CircleX, Lightbulb, Loader2, Plug, Sparkles, Zap } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { Badge, Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
+import { errorMessage } from "@/components/app/errors";
+import { microsToDisplay, relativeTime } from "@/components/app/money";
+import { RoleAvatar } from "@/components/app/RoleAvatar";
+import { roleTitle } from "@/components/app/roles";
+import { cn } from "@/lib/utils";
+
+type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
+type ChatMessage = Today["chat"][number];
+type CardView = ChatMessage["cards"][number];
+
+interface Wish {
+  ask: ChatMessage;
+  answer: ChatMessage | null;
+}
+
+/** Pair each owner wish with the team's answer (newest first). */
+export function wishesFrom(chat: ChatMessage[]): Wish[] {
+  const out: Wish[] = [];
+  for (let i = 0; i < chat.length; i++) {
+    const m = chat[i];
+    if (m.author !== "user") continue;
+    const next = chat[i + 1];
+    out.push({ ask: m, answer: next && next.author === "climbos" ? next : null });
+  }
+  return out.reverse();
+}
+
+export function WishFeed({ slug, chat }: { slug: string; chat: ChatMessage[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const wishes = wishesFrom(chat);
+  if (wishes.length === 0) return null;
+  const shown = showAll ? wishes : wishes.slice(0, 3);
+  return (
+    <section aria-labelledby="wishes-heading" className="flex flex-col gap-3">
+      <h2 id="wishes-heading" className="heading-section">
+        Your wishes
+      </h2>
+      <ol className="flex flex-col gap-3" aria-live="polite" aria-relevant="additions text">
+        {shown.map((w) => (
+          <li key={w.ask.id}>
+            <WishCard slug={slug} wish={w} />
+          </li>
+        ))}
+      </ol>
+      {wishes.length > 3 ? (
+        <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? "Show fewer" : `Show ${wishes.length - 3} earlier`}
+        </Button>
+      ) : null}
+    </section>
+  );
+}
+
+function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
+  const { ask, answer } = wish;
+  const thinking = ask.status === "thinking" && !answer;
+  const failed = ask.status === "failed" && !answer?.cards.length;
+  const cards = answer?.cards ?? [];
+  const allDone = cards.length > 0 && cards.every((c) => ["done", "rejected"].includes(c.status) || c.kind === "note");
+  return (
+    <article className="overflow-hidden rounded-xl border border-line bg-surface">
+      <header className="flex items-start gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
+        <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : allDone ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
+          {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : allDone ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-ink">
+            <span className="sr-only">You wished: </span>“{ask.text}”
+          </p>
+          <p className="mt-0.5 text-xs text-ink-3">
+            {relativeTime(ask.createdAt)}
+            {thinking ? " · Your team is reading your wish…" : allDone ? " · All done" : cards.some((c) => c.status === "running") ? " · Working on it" : ""}
+          </p>
+        </div>
+      </header>
+      <div className="flex flex-col gap-3 px-4 py-3">
+        {thinking ? (
+          <div className="flex flex-col gap-2" aria-busy="true">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
+          </div>
+        ) : failed ? (
+          <p className="text-sm text-red-800">{answer?.text ?? "That didn't work. Try again in a moment."}</p>
+        ) : answer ? (
+          <>
+            {answer.understood ? (
+              <p className="flex items-start gap-2 text-ui text-ink-2">
+                <Sparkles aria-hidden className="mt-0.5 size-3.5 shrink-0 text-sun-strong" />
+                <span>
+                  <span className="font-medium text-ink">Understood: </span>
+                  {answer.understood.replace(/^You want:?\s*/i, "")}
+                </span>
+              </p>
+            ) : null}
+            {cards.length > 0 ? (
+              <ol className="flex flex-col divide-y divide-line rounded-lg border border-line">
+                {cards.map((c) => (
+                  <li key={c.id}>
+                    <StepRow slug={slug} card={c} />
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            <p className="whitespace-pre-line text-sm text-ink-2">{answer.text}</p>
+          </>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function resultHref(slug: string, card: CardView): string | null {
+  if (card.job === "strategy") return `/app/${slug}/plan`;
+  if (card.runId) return `/app/${slug}/work/${card.runId}`;
+  return null;
+}
+
+function StepRow({ slug, card }: { slug: string; card: CardView }) {
+  const run = useMutation(api.workspace.runCard);
+  const dismiss = useMutation(api.workspace.dismissCard);
+  const [busy, setBusy] = useState(false);
+  const role = card.roles[0] ?? "coo";
+  const network = card.channel ? networkOf(card.channel) : null;
+  const href = resultHref(slug, card);
+  return (
+    <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Tooltip content={roleTitle(role)}>
+          <span tabIndex={0} className="rounded-full">
+            <RoleAvatar role={role} size="xs" />
+          </span>
+        </Tooltip>
+        {network ? <SocialIcon network={network} size="sm" /> : card.kind === "note" ? <Lightbulb aria-hidden className="size-4 text-amber-800" /> : null}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-ui font-medium text-ink">{card.title}</p>
+          {card.status === "running" && card.runId ? <LiveStep slug={slug} runId={card.runId} /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" ? card.blockedReason : card.description}</p>}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
+        {card.status === "running" ? (
+          <Badge tone="blue" icon={<Loader2 className="animate-spin" />}>
+            Working
+          </Badge>
+        ) : card.status === "done" ? (
+          href ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href={href}>
+                <CircleCheck aria-hidden className="text-brand-800" /> See result
+              </Link>
+            </Button>
+          ) : (
+            <Badge tone="green" icon={<CircleCheck />}>
+              Done
+            </Badge>
+          )
+        ) : card.status === "failed" ? (
+          <Badge tone="red" icon={<CircleX />}>
+            Didn’t finish
+          </Badge>
+        ) : card.status === "rejected" ? (
+          <Badge tone="neutral">Skipped</Badge>
+        ) : card.kind === "set_up_autopilot" && card.status === "proposed" ? (
+          <Button asChild size="sm">
+            <Link href={`/app/${slug}/autopilot`}>Set up autopilot</Link>
+          </Button>
+        ) : card.kind === "connect_account" ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link href={`/app/${slug}/connections`}>
+              <Plug aria-hidden /> Connect
+            </Link>
+          </Button>
+        ) : card.status === "proposed" ? (
+          <>
+            {card.costEstimateMicros > 0 ? <span className="text-xs tabular-nums text-ink-3">up to {microsToDisplay(card.costEstimateMicros)}</span> : null}
+            <Button
+              size="sm"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await run({ slug, cardId: card.id as Id<"actionCards"> });
+                } catch (e) {
+                  toast({ tone: "danger", title: errorMessage(e) });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {card.kind === "note" ? "Got it" : card.externalEffect ? "Prepare it" : "Do it"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+              Not now
+            </Button>
+          </>
+        ) : card.status === "blocked" ? (
+          <Badge tone="amber" icon={<CircleDashed />}>
+            Needs setup
+          </Badge>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** The step the specialist is on right now, live. */
+function LiveStep({ slug, runId }: { slug: string; runId: string }) {
+  const status = useQuery(api.content.runStatus, { slug, runId: runId as Id<"workflowRuns"> });
+  const current = status?.steps.filter((s) => s.status === "running").pop();
+  const done = status?.steps.filter((s) => s.status === "succeeded").length ?? 0;
+  return (
+    <p className="flex items-center gap-1.5 truncate text-xs text-brand-800">
+      <span className="truncate">{current?.label ?? "Getting started"}</span>
+      {done > 0 ? <span className="text-ink-3">· {done} step{done === 1 ? "" : "s"} done</span> : null}
+    </p>
+  );
+}
+
+export function WishFeedSkeleton() {
+  return <Skeleton className="h-40 rounded-xl" />;
+}

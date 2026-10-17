@@ -157,7 +157,8 @@ async function runModelTask<T>(
   }
 
   const rates = getRateVersion(run.rateVersionId);
-  const route = CURRENT_ROUTING.routes[task.role];
+  const roleRoute = CURRENT_ROUTING.routes[task.role];
+  const route = task.primaryModel ? { ...roleRoute, primary: task.primaryModel } : roleRoute;
   const system = systemPrompt(task.role);
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
   const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "anthropic" ? 2 : 0);
@@ -751,11 +752,26 @@ export const planSocialWeek = internalAction({
   },
 });
 
+/**
+ * A wish: the owner says what they want; the COO turns it into concrete work.
+ * Safe internal work (drafts, plans, audits, analysis) starts by itself
+ * (saveChatResult); anything external still waits for the owner's approval.
+ */
 export const chatIntent = internalAction({
   args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), text: v.string() },
   handler: async (ctx, { runId, messageId, text }) => {
     const job = await loadContext(ctx, runId);
     if (!job) return;
+    const wc = await ctx.runQuery(internal.workspace.wishContext, { orgId: job.org._id });
+    const plan = job.strategy
+      ? [
+          `CURRENT GROWTH PLAN (${job.strategy.status}): ${job.strategy.summary.slice(0, 600)}`,
+          `Priorities: ${job.strategy.channels.map((c) => `${c.priority}. ${c.name} (${c.status})`).join("; ").slice(0, 600)}`,
+          job.strategy.expert ? `North Star: ${job.strategy.expert.northStar.metric} → ${job.strategy.expert.northStar.target}. Not doing: ${job.strategy.expert.notDoing.map((n) => n.channel).join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "No growth plan yet.";
     await guarded(
       ctx,
       runId,
@@ -765,8 +781,31 @@ export const chatIntent = internalAction({
           job,
           0,
           "chat_intent",
-          `TASK: The owner sent a message. Reply briefly and propose up to 3 concrete actions the team can prepare. Actions only prepare drafts or proposals; anything external needs approval later. Use channel values like instagram, facebook, linkedin, x, email, google_search_ad, meta_ad, blog. If the request needs data or access we don't have, propose a connect_account action.\n\n${businessBrief(job)}\n\nOWNER MESSAGE:`,
-          untrusted("owner chat message", text, 2000),
+          [
+            "TASK: You are the COO of this business's AI growth team. The owner just made a wish in plain words. Make it happen: turn it into the smallest set of concrete actions (1-4) that best achieves what they actually want, and write each action's `brief` so the specialist can do excellent work without asking anything.",
+            "",
+            "Rules:",
+            "- Act, don't interview. If something is unclear, choose the most sensible reading, say the assumption in one short clause in `reply`, and proceed. Ask a `followUp` only if the answer would change the work; otherwise followUp is \"\".",
+            "- `understood`: one sentence restating the wish in the owner's own terms (no jargon).",
+            "- `reply`: 1-3 short sentences, warm and specific: what the team is doing now, and when anything needs the owner. Never promise results or invent numbers.",
+            "- `brief`: carry the owner's exact specifics (products, dates, offers, tone, audience, deadlines) plus the angle and why. Mention which confirmed facts to use. Up to 120 words.",
+            "- Pick what really moves the owner's goal, not just what they literally said: e.g. \"more holiday orders\" may need posts AND a pre-order email AND an ad draft. Think beyond social and email when it fits (partnerships, creators, reviews, launches, local plays) and put those ideas in a note or plan refresh brief.",
+            "- Kinds: generate_content (channel: instagram, facebook, linkedin, x, tiktok, pinterest, youtube, email, google_search_ad, meta_ad, blog; quantity = number of posts, max 6), refresh_plan, research (conversion audit of their website), analyze_results, set_up_autopilot (when they want posting to run by itself; put channels and cadence in brief), connect_account (when the wish needs an account we don't have; channel = provider), note (advice or an idea the team can't execute yet), schedule_content/ad_change/email_send (only to prepare something external for approval).",
+            "- Anything that would publish, send or spend is prepared for approval, never done directly.",
+            "",
+            businessBrief(job),
+            planContext(job),
+            "",
+            plan,
+            `Autopilot: ${wc.autopilot}. Connected accounts: ${wc.connected.join(", ") || "none"}.`,
+            wc.recentWork.length ? `Recent work: ${wc.recentWork.join("; ")}` : "",
+            wc.conversation ? `RECENT CONVERSATION:\n${wc.conversation}` : "",
+            "",
+            "OWNER'S WISH:",
+          ]
+            .filter((l) => l !== undefined)
+            .join("\n"),
+          untrusted("owner wish", text, 2000),
           fixtureCtx(job, { request: text }),
         );
         await ctx.runMutation(internal.jobWrites.saveChatResult, { runId, messageId, result: JSON.stringify(out), isFixture: job.run.isFixture });

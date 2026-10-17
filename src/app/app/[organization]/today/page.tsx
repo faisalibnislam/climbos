@@ -5,7 +5,6 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
   ArrowRight,
-  BarChart3,
   CheckCircle2,
   CircleHelp,
   Clock3,
@@ -13,9 +12,6 @@ import {
   FileCheck2,
   Hourglass,
   Lightbulb,
-  Mail,
-  Megaphone,
-  Send,
   ShieldCheck,
   Sparkles,
   Target,
@@ -26,16 +22,18 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, SocialIcon, Textarea, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PauseAllButton } from "@/components/app/AppShell";
-import { errorInfo, errorMessage } from "@/components/app/errors";
+import { errorMessage } from "@/components/app/errors";
 import { microsToDisplay, relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
 import { useNow } from "@/components/app/content/shared";
 import { ASK_KEY } from "@/components/app/CommandPalette";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
+import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
+import { WishFeed } from "@/components/app/wish/WishFeed";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -45,12 +43,6 @@ const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   onboarding: { icon: Sparkles, tone: "pink" },
 };
 
-const SUGGESTIONS: { text: string; icon: LucideIcon; tone: Tone }[] = [
-  { text: "Get 3 Instagram posts ready for next week", icon: Megaphone, tone: "pink" },
-  { text: "Write a welcome email sequence", icon: Mail, tone: "blue" },
-  { text: "Why did sign-ups change?", icon: BarChart3, tone: "teal" },
-  { text: "Draft a small Google search ad test", icon: Target, tone: "red" },
-];
 
 function StatCard({ icon: Icon, tone, label, value, hint }: { icon: LucideIcon; tone: Tone; label: string; value: string | number; hint: string }) {
   return (
@@ -88,6 +80,19 @@ export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
   const now = useNow();
+  const composer = useRef<WishComposerHandle>(null);
+  useEffect(() => {
+    // A wish typed in the ⌘K palette before Today loaded arrives ready to send.
+    try {
+      const asked = sessionStorage.getItem(ASK_KEY);
+      if (asked && data) {
+        sessionStorage.removeItem(ASK_KEY);
+        composer.current?.fill(asked);
+      }
+    } catch {
+      // Storage unavailable.
+    }
+  }, [data]);
 
   if (data === undefined) {
     return (
@@ -106,6 +111,7 @@ export default function TodayPage() {
   const firstName = data.userName && !data.userName.includes("@") ? data.userName.split(" ")[0] : null;
   const workingRoles = new Set(data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).flatMap((r) => r.roles));
 
+  const suggested = data.cards.filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id)));
   const running = data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).length;
   const doneThisWeek = now ? data.recent.filter((r) => r.status === "verified" && r.createdAt > now - 7 * 86_400_000).length : 0;
 
@@ -145,35 +151,86 @@ export default function TodayPage() {
         </Callout>
       )}
 
-      {/* Goal */}
-      <section aria-label="Your goal" className="rounded-xl border border-line bg-surface p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <IconTile icon={Target} tone="brand" size="md" />
-          <div className="min-w-0 flex-1">
-            <p className="text-overline">Your goal</p>
-            {data.goal ? (
-              <>
-                <p className="heading-section mt-0.5">{data.goal.statement}</p>
-                <p className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge tone="neutral">{data.goal.horizonDays} days</Badge>
-                  <Badge tone="neutral">
-                    {data.goal.monthlyAdBudget > 0
-                      ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: data.goal.currency, maximumFractionDigits: 0 }).format(data.goal.monthlyAdBudget)}/month ads, paid to the platforms`
-                      : "No paid ads"}
-                  </Badge>
-                </p>
-              </>
+      <WishComposer
+        ref={composer}
+        slug={slug}
+        suggestions={wishSuggestions(data.business?.type)}
+        disabled={!data.canRunAi}
+        disabledReason={!data.canRunAi ? (data.accessMessage ?? null) : null}
+      />
+      <WishFeed slug={slug} chat={data.chat} />
+
+      <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {/* Next actions */}
+          <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
+            <div className="px-5 pt-5">
+              <h2 id="next-heading" className="heading-section flex items-center gap-2">
+                Do these next {data.next.length ? <Badge tone="brand">{data.next.length} to do</Badge> : null}
+              </h2>
+              <p className="mt-0.5 text-sm text-ink-3">Your team lines these up. Nothing goes live until you approve it.</p>
+            </div>
+            {data.next.length === 0 ? (
+              <div className="p-5">
+                <EmptyState icon={<CheckCircle2 aria-hidden />} title="You're all caught up" body="Nothing needs you right now. Make a wish above, or check Results." />
+              </div>
             ) : (
-              <p className="heading-section mt-0.5">No goal yet. Tell your team what you’d like to achieve.</p>
+              <ol className="mt-3 divide-y divide-line border-t border-line">
+                {data.next.map((n, i) => {
+                  const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
+                  return (
+                    <li key={`${n.kind}-${i}`}>
+                      <Link href={n.href} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
+                        <IconTile icon={v.icon} tone={v.tone} size="sm" />
+                        <p className="min-w-0 flex-1 text-sm text-ink-3">
+                          <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
+                          <span className="font-medium text-ink">{n.title}</span> {n.why}
+                        </p>
+                        <ArrowRight aria-hidden className="size-4 shrink-0 text-ink-3" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
             )}
-          </div>
-          <Button asChild variant="secondary" size="md">
-            <Link href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`}>
-              {data.goal ? "See the plan" : "Set a goal"} <ArrowRight aria-hidden />
-            </Link>
-          </Button>
+          </section>
+          {suggested.length > 0 && (
+            <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
+              <h2 id="suggested-heading" className="heading-section">Suggested by your plan</h2>
+              {suggested.map((c) => (
+                <ActionCard key={c.id} slug={slug} card={c} />
+              ))}
+            </section>
+          )}
         </div>
-      </section>
+        <div className="flex flex-col gap-6">
+          <ApprovalsPanel slug={slug} data={data} />
+          {/* Goal */}
+          <section aria-label="Your goal" className="rounded-xl border border-line bg-surface p-5">
+            <div className="flex items-start gap-3">
+              <IconTile icon={Target} tone="brand" size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="text-overline">Your goal</p>
+                <p className="heading-card mt-0.5">{data.goal ? data.goal.statement : "No goal yet. Tell your team what you'd like to achieve."}</p>
+                {data.goal ? (
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    <Badge tone="neutral">{data.goal.horizonDays} days</Badge>
+                    <Badge tone="neutral">
+                      {data.goal.monthlyAdBudget > 0
+                        ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: data.goal.currency, maximumFractionDigits: 0 }).format(data.goal.monthlyAdBudget)}/month ads`
+                        : "No paid ads"}
+                    </Badge>
+                  </p>
+                ) : null}
+                <Link href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`} className={buttonClasses({ variant: "link", className: "mt-3" })}>
+                  {data.goal ? "See the plan" : "Set a goal"} <ArrowRight aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </section>
+          <TeamPanel working={workingRoles} />
+        </div>
+      </div>
 
       {/* At a glance */}
       <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -183,198 +240,11 @@ export default function TodayPage() {
         <StatCard icon={Users} tone="violet" label="Your AI team" value={10} hint="Specialists on your business" />
       </section>
 
-      {/* Next actions: Apollo-style checklist card */}
-      <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
-          <div>
-            <h2 id="next-heading" className="heading-section flex items-center gap-2">
-              Do these next {data.next.length ? <Badge tone="brand">{data.next.length} to do</Badge> : null}
-            </h2>
-            <p className="mt-0.5 text-sm text-ink-3">Your team lines these up. Nothing goes live until you approve it.</p>
-          </div>
-        </div>
-        {data.next.length === 0 ? (
-          <div className="p-5">
-            <EmptyState icon={<CheckCircle2 aria-hidden />} title="You're all caught up" body="Nothing needs you right now. Ask your team for something below, or check Results." />
-          </div>
-        ) : (
-          <ol className="mt-3 divide-y divide-line border-t border-line">
-            {data.next.map((n, i) => {
-              const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
-              return (
-                <li key={`${n.kind}-${i}`} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-                  <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center rounded-md border border-line-strong" />
-                  <IconTile icon={v.icon} tone={v.tone} size="sm" />
-                  <p className="min-w-0 flex-1 text-sm text-ink-3">
-                    <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
-                    <span className="font-medium text-ink">{n.title}</span> {n.why}
-                  </p>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href={n.href}>Open</Link>
-                  </Button>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </section>
-
-      <div className="grid gap-8 lg:grid-cols-[1.45fr_1fr]">
-        <ChatPanel slug={slug} data={data} />
-        <div className="space-y-8">
-          <ApprovalsPanel slug={slug} data={data} />
-          <TeamPanel working={workingRoles} />
-        </div>
-      </div>
-
       <RecentWork data={data} />
       <div className="md:hidden">
         <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
       </div>
     </div>
-  );
-}
-
-function ChatPanel({ slug, data }: { slug: string; data: Today }) {
-  const send = useMutation(api.workspace.sendChat);
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const listRef = useRef<HTMLOListElement>(null);
-  const thinking = data.chat.some((m) => m.status === "thinking");
-  useEffect(() => {
-    // A question asked from the ⌘K palette arrives ready to send.
-    try {
-      const asked = sessionStorage.getItem(ASK_KEY);
-      if (asked) {
-        sessionStorage.removeItem(ASK_KEY);
-        queueMicrotask(() => {
-          setText(asked);
-          document.getElementById("chat-input")?.focus();
-        });
-      }
-    } catch {
-      // Storage unavailable.
-    }
-  }, []);
-  useEffect(() => {
-    // Scroll only the conversation, never the page.
-    const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
-  }, [data.chat.length]);
-
-  return (
-    <section aria-labelledby="chat-heading" className="flex flex-col">
-      <div>
-        <h2 id="chat-heading" className="heading-section flex items-center gap-2">
-          <Sparkles className="size-4 text-brand-800" aria-hidden="true" /> Ask your team
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-3">Say what you want in your own words. You approve every action.</p>
-      </div>
-      <Card className="mt-4 flex flex-1 flex-col">
-        <CardContent className="flex flex-1 flex-col gap-4 p-4 sm:p-5">
-          {data.chat.length === 0 ? (
-            <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm text-ink-2">
-              <p className="text-ui font-medium text-ink">Try one of these</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s) => (
-                  <Button
-                    key={s.text}
-                    variant="secondary"
-                    size="lg"
-                    onClick={() => setText(s.text)}
-                    className="h-auto min-h-10 justify-start gap-2.5 whitespace-normal px-2.5 py-1.5 text-left text-ui font-normal"
-                  >
-                    <IconTile icon={s.icon} tone={s.tone} size="xs" />
-                    {s.text}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <ol ref={listRef} className="flex max-h-[520px] flex-col gap-4 overflow-y-auto pr-1" aria-live="polite" aria-relevant="additions">
-              {data.chat.map((m) => (
-                <li key={m.id} className={cn("flex flex-col gap-2", m.author === "user" ? "items-end" : "items-start")}>
-                  <div
-                    className={cn(
-                      "max-w-[92%] rounded-xl px-3.5 py-2.5 text-sm",
-                      m.author === "user" ? "rounded-br-md bg-brand-800 text-white" : "rounded-bl-md border border-line bg-surface-2 text-ink",
-                    )}
-                  >
-                    <span className="sr-only">{m.author === "user" ? "You said: " : "ClimbOS: "}</span>
-                    {m.text}
-                    {m.status === "thinking" && (
-                      <span className="mt-1.5 block text-xs text-brand-100/90">
-                        <span className="animate-soft-pulse">Your team is thinking…</span>
-                      </span>
-                    )}
-                  </div>
-                  {m.cards.length > 0 && (
-                    <div className="grid w-full gap-3">
-                      {m.cards.map((c) => (
-                        <ActionCard key={c.id} slug={slug} card={c} />
-                      ))}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-          <form
-            className="mt-auto flex items-end gap-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!text.trim() || busy) return;
-              setBusy(true);
-              try {
-                await send({ slug, text });
-                setText("");
-              } catch (err) {
-                const info = errorInfo(err);
-                toast({ tone: "danger", title: info.message });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <label htmlFor="chat-input" className="sr-only">
-              Message your growth team
-            </label>
-            <Textarea
-              id="chat-input"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={1}
-              autosize
-              maxRows={6}
-              placeholder="e.g. Get posts ready for our launch next Tuesday"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button type="submit" loading={busy || thinking} aria-label="Send">
-              <Send className="size-4" aria-hidden />
-              <span className="hidden sm:inline">Send</span>
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      {data.cards.filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id))).length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-overline">Suggested by your plan</h3>
-          <div className="mt-3 grid gap-3">
-            {data.cards
-              .filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id)))
-              .map((c) => (
-                <ActionCard key={c.id} slug={slug} card={c} />
-              ))}
-          </div>
-        </div>
-      )}
-    </section>
   );
 }
 

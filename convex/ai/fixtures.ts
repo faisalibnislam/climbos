@@ -217,27 +217,32 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       const text = (ctx.request ?? "").toLowerCase();
       const actions: ChatIntentOutput["actions"] = [];
       if (/post|instagram|social|linkedin|facebook/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3 });
+        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "" });
       }
       if (/email|newsletter|welcome/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1 });
+        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "" });
       }
       if (/ad|google|meta|budget/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1 });
+        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1, brief: ctx.request ?? "" });
       }
       if (/seo|blog|search|page/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1 });
+        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1, brief: ctx.request ?? "" });
       }
       if (/plan|strategy|priorit/.test(text)) {
-        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1 });
+        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1, brief: ctx.request ?? "" });
       }
       if (/result|working|perform|number|forecast/.test(text)) {
-        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1 });
+        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1, brief: ctx.request ?? "" });
       }
       if (actions.length === 0) {
-        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3 });
+        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3, brief: ctx.request ?? "" });
       }
-      return { reply: `Here's what I'd do. Nothing runs until you say go — each card shows what it will create and roughly what it costs.`, actions: actions.slice(0, 3) };
+      return {
+        understood: ctx.request ? `You want: ${ctx.request.slice(0, 140)}` : "You want a quick start.",
+        reply: "On it. Your team is drafting this now; anything that would go live waits for your OK.",
+        actions: actions.slice(0, 3),
+        followUp: "",
+      };
     }
     case "metric_explanation":
       return {

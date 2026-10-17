@@ -785,6 +785,8 @@ export default defineSchema({
     author: v.union(v.literal("user"), v.literal("climbos")),
     userId: v.optional(v.id("users")),
     text: v.string(),
+    /** For replies to a wish: one sentence restating what the owner asked for. */
+    understood: v.optional(v.string()),
     roles: v.array(agentRoleValidator),
     actionCardIds: v.array(v.id("actionCards")),
     status: v.union(v.literal("done"), v.literal("thinking"), v.literal("failed")),
@@ -805,6 +807,7 @@ export default defineSchema({
       v.literal("ad_change"),
       v.literal("email_send"),
       v.literal("connect_account"),
+      v.literal("set_up_autopilot"),
       v.literal("note"),
     ),
     roles: v.array(agentRoleValidator),

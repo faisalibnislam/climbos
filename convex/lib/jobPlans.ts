@@ -136,7 +136,7 @@ export interface JobPlan {
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   const contract = TASKS[task];
-  const modelKey = CURRENT_ROUTING.routes[contract.role].primary;
+  const modelKey = contract.primaryModel ?? CURRENT_ROUTING.routes[contract.role].primary;
   const searches = MODEL_SPECS[modelKey].provider === "anthropic" ? webSearches : 0;
   return {
     kind: "model",

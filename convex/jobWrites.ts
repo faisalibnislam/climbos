@@ -15,6 +15,7 @@ import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
+import { AUTO_RUN_KINDS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
 import { estimateJobMicros, planJob, type JobKind } from "./lib/jobPlans";
 
 const DAY = 86_400_000;
@@ -570,41 +571,74 @@ export const saveChatResult = internalMutation({
   args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), result: v.string(), isFixture: v.boolean() },
   handler: async (ctx, { runId, messageId, result }) => {
     const run = await ensureRunOrg(ctx, runId);
+    const org = await ctx.db.get(run.orgId);
     const out = JSON.parse(result) as ChatIntentOutput;
     const now = Date.now();
     const cardIds: Id<"actionCards">[] = [];
     let priority = 1;
-    for (const a of out.actions.slice(0, 3)) {
+    // Say the word and things happen: safe internal work starts at once, within a per-wish budget.
+    let autoBudget = WISH_AUTO_BUDGET_MICROS;
+    const started: string[] = [];
+    const waiting: string[] = [];
+    for (const a of out.actions.slice(0, 4)) {
       const job = jobForAction(a.kind, a.channel);
-      const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0 }) : null;
+      const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
+      const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
+      const cost = plan ? estimateJobMicros(plan) : 0;
       const cardId = await ctx.db.insert("actionCards", {
         orgId: run.orgId,
         title: a.title.slice(0, 120),
         description: a.description.slice(0, 400),
         proposedEffect: external
           ? "Prepares the change for your approval. Nothing goes live until you approve the exact version."
-          : plan
-            ? `Creates drafts only (${plan.title.toLowerCase()}). Nothing is published.`
-            : "A note for your team. No cost.",
+          : isLink
+            ? a.kind === "set_up_autopilot"
+              ? "Opens autopilot with these settings filled in. Nothing changes until you save."
+              : "Opens the connection page."
+            : plan
+              ? `Creates drafts only (${plan.title.toLowerCase()}). Nothing is published.`
+              : "A note for your team. No cost.",
         kind: a.kind,
         roles: plan?.roles ?? ["coo"],
-        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity }),
-        costEstimateMicros: plan ? estimateJobMicros(plan) : 0,
+        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "" }),
+        costEstimateMicros: cost,
         externalEffect: external,
-        status: job || a.kind === "note" ? "proposed" : "blocked",
-        blockedReason: job || a.kind === "note" ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
+        status: job || a.kind === "note" || isLink ? "proposed" : "blocked",
+        blockedReason: job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
         priority: priority++,
         createdAt: now,
         updatedAt: now,
       });
       cardIds.push(cardId);
+      const card = await ctx.db.get(cardId);
+      if (org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
+        try {
+          await startCardRun(ctx, { org, card, userId: run.createdBy, auto: true });
+          autoBudget -= cost;
+          started.push(a.title);
+          continue;
+        } catch (e) {
+          const message = (e as { data?: { message?: string } }).data?.message;
+          if (message) await ctx.db.patch(cardId, { blockedReason: message });
+        }
+      }
+      if (job || isLink) waiting.push(a.title);
     }
     await ctx.db.patch(messageId, { status: "done" });
+    const status =
+      started.length && waiting.length
+        ? `\n\nStarted: ${started.join("; ")}. Waiting for your go: ${waiting.join("; ")}.`
+        : started.length
+          ? ""
+          : waiting.length
+            ? "\n\nTap Do it on a card to start it."
+            : "";
     await ctx.db.insert("chatMessages", {
       orgId: run.orgId,
       author: "climbos",
-      text: out.reply.slice(0, 1200),
+      text: `${out.reply}${status}${out.followUp ? `\n\n${out.followUp}` : ""}`.slice(0, 1600),
+      understood: out.understood?.slice(0, 300) || undefined,
       roles: ["coo"],
       actionCardIds: cardIds,
       status: "done",
@@ -613,16 +647,7 @@ export const saveChatResult = internalMutation({
   },
 });
 
-export function jobForAction(kind: string, channel: string): JobKind | null {
-  if (kind === "refresh_plan") return "strategy";
-  if (kind === "research") return "conversion_audit";
-  if (kind === "analyze_results") return "explain_results";
-  if (kind !== "generate_content") return null;
-  if (channel === "email") return "content_email";
-  if (channel === "google_search_ad" || channel === "meta_ad" || channel === "ads") return "content_ads";
-  if (channel === "blog" || channel === "website" || channel === "seo") return "content_seo";
-  return "content_social";
-}
+export { jobForAction } from "./lib/cards";
 
 export const markChatFailed = internalMutation({
   args: { messageId: v.id("chatMessages"), message: v.string() },

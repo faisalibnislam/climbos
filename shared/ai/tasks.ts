@@ -153,7 +153,14 @@ export const SeoBriefSchema = z.object({
 });
 export type SeoBriefOutput = z.infer<typeof SeoBriefSchema>;
 
+/**
+ * A "wish": the owner says what they want in plain words; the COO turns it
+ * into concrete work. `brief` carries the owner's specifics into each job.
+ */
 export const ChatIntentSchema = z.object({
+  /** One sentence restating the wish in the owner's terms. */
+  understood: z.string(),
+  /** Short, warm, specific reply: what the team is doing now, assumptions made. */
   reply: z.string(),
   actions: z.array(
     z.object({
@@ -166,14 +173,19 @@ export const ChatIntentSchema = z.object({
         "ad_change",
         "email_send",
         "connect_account",
+        "set_up_autopilot",
         "note",
       ]),
       title: z.string(),
       description: z.string(),
       channel: z.string(),
       quantity: z.number(),
+      /** Detailed instructions for the specialist: the owner's words, facts to use, angle, deadline. */
+      brief: z.string(),
     }),
   ),
+  /** At most one question, only if the answer would change the work; otherwise "". */
+  followUp: z.string(),
 });
 export type ChatIntentOutput = z.infer<typeof ChatIntentSchema>;
 
@@ -227,6 +239,8 @@ export interface TaskContract {
   inputBudget: number;
   outputBudget: number;
   allowWebSearch: boolean;
+  /** Overrides the role's primary model when a task needs more judgement than its role's default. */
+  primaryModel?: import("../economics/rates").ModelKey;
 }
 
 export const TASKS: Record<TaskType, TaskContract> = {
@@ -238,7 +252,7 @@ export const TASKS: Record<TaskType, TaskContract> = {
   ad_drafts: { type: "ad_drafts", role: "ads_manager", label: "Ad drafts", schema: AdDraftsSchema, inputBudget: 6_000, outputBudget: 1_500, allowWebSearch: false },
   email_sequence: { type: "email_sequence", role: "customer_success_manager", label: "Email sequence", schema: EmailSequenceSchema, inputBudget: 5_000, outputBudget: 3_500, allowWebSearch: false },
   seo_brief: { type: "seo_brief", role: "seo_specialist", label: "SEO page", schema: SeoBriefSchema, inputBudget: 10_000, outputBudget: 6_000, allowWebSearch: true },
-  chat_intent: { type: "chat_intent", role: "coo", label: "Understand request", schema: ChatIntentSchema, inputBudget: 3_000, outputBudget: 700, allowWebSearch: false },
+  chat_intent: { type: "chat_intent", role: "coo", label: "Understand your wish", schema: ChatIntentSchema, inputBudget: 9_000, outputBudget: 1_800, allowWebSearch: false, primaryModel: "claude-sonnet-5.5" },
   metric_explanation: { type: "metric_explanation", role: "data_analyst", label: "Explain results", schema: MetricExplanationSchema, inputBudget: 8_000, outputBudget: 1_200, allowWebSearch: false },
   conversion_audit: { type: "conversion_audit", role: "cso", label: "Conversion audit", schema: ConversionAuditSchema, inputBudget: 10_000, outputBudget: 2_000, allowWebSearch: false },
   retention_plan: { type: "retention_plan", role: "customer_success_manager", label: "Retention plan", schema: RetentionPlanSchema, inputBudget: 5_000, outputBudget: 1_500, allowWebSearch: false },

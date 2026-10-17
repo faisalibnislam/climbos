@@ -15,12 +15,12 @@ import {
   Plug,
   Settings,
   Sparkles,
-  Search,
   Bell,
   Palette,
   type LucideIcon,
 } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
+import { TeamActivity } from "./TeamActivity";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -105,7 +105,7 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Top bar: ask or search (⌘K), pause, account */}
+          {/* Top bar: make a wish or search (⌘K), team activity, pause, account */}
           <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
             <Link href={`/app/${slug}/today`} aria-label="ClimbOS home" className="lg:hidden">
               <Logo markClassName="size-6" className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline [&>span:last-child]:text-base" />
@@ -115,11 +115,12 @@ export function AppShell({ slug, children }: { slug: string; children: ReactNode
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
               className="mx-auto flex h-8 w-full max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
-              <Search className="size-4 shrink-0" aria-hidden="true" />
-              <span className="flex-1 truncate">Ask your team or search…</span>
+              <Sparkles className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
+              <span className="flex-1 truncate">Tell your team what you want…</span>
               <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1.5">
+              <TeamActivity slug={slug} />
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
               <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "w-8 px-0 text-ink-2" })} aria-label="Activity">
                 <Bell className="size-4" aria-hidden />

@@ -1,9 +1,13 @@
 "use client";
 
 import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, type LucideIcon } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui";
+import { errorInfo } from "@/components/app/errors";
 
 interface Command {
   id: string;
@@ -13,15 +17,16 @@ interface Command {
   run: () => void;
 }
 
-/** Key the Today chat reads to prefill a question asked from the palette (kept out of the URL). */
+/** Key Today reads to prefill a wish typed in the palette when it couldn't be sent (kept out of the URL). */
 export const ASK_KEY = "climbos:ask";
 
 /**
- * ⌘K palette: ask the AI team anything (it opens Today with the question
- * ready to send) or jump to any part of the workspace.
+ * ⌘K palette: make a wish from anywhere (it's sent at once and Today shows
+ * the team working on it) or jump to any part of the workspace.
  */
 export function CommandPalette({ slug }: { slug: string }) {
   const router = useRouter();
+  const sendWish = useMutation(api.workspace.sendChat);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
@@ -69,16 +74,21 @@ export function CommandPalette({ slug }: { slug: string }) {
     if (!term) return matches;
     const ask: Command = {
       id: "ask",
-      label: `Ask your team: “${q.trim()}”`,
-      hint: "Opens Today with your question ready to send",
+      label: `Make it happen: “${q.trim()}”`,
+      hint: "Your team starts right away",
       icon: Sparkles,
       run: () => {
-        try {
-          sessionStorage.setItem(ASK_KEY, q.trim());
-        } catch {
-          // Storage unavailable: Today still opens.
-        }
+        const wish = q.trim();
         go(`/app/${slug}/today`)();
+        sendWish({ slug, text: wish }).catch((err) => {
+          // Couldn't send (e.g. on hold): keep the words ready on Today.
+          try {
+            sessionStorage.setItem(ASK_KEY, wish);
+          } catch {
+            // Storage unavailable.
+          }
+          toast({ tone: "danger", title: errorInfo(err).message });
+        });
       },
     };
     return [ask, ...matches];
@@ -88,8 +98,8 @@ export function CommandPalette({ slug }: { slug: string }) {
   if (!open) return null;
   const clamp = Math.min(active, Math.max(0, commands.length - 1));
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[rgb(26_29_27/0.42)] px-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
-      <div role="dialog" aria-modal="true" aria-label="Ask or search" className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-surface shadow-lg" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/40 px-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
+      <div role="dialog" aria-modal="true" aria-label="Make a wish or search" className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-surface shadow-lg" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search className="size-4 text-ink-3" aria-hidden="true" />
           <input
@@ -111,8 +121,8 @@ export function CommandPalette({ slug }: { slug: string }) {
                 commands[clamp]?.run();
               }
             }}
-            placeholder="Ask your team anything, or jump to…"
-            aria-label="Ask or search"
+            placeholder="Tell your team what you want, or jump to…"
+            aria-label="Make a wish or search"
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-list"

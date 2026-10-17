@@ -5,6 +5,7 @@ import { internalAction, internalQuery, mutation, query } from "./_generated/ser
 import { createRunWithReservation, finishRunImpl } from "./engine";
 import { jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
+import { startCardRun } from "./lib/cards";
 import { chargeableAccess } from "./lib/access";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { currentPeriod } from "./lib/periods";
@@ -97,7 +98,7 @@ export const today = query({
       userName: user.name ?? user.email ?? null,
       emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at, reason: org.emergencyStop.reason ?? null } : null,
       goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, createdAt: goal.createdAt } : null,
-      business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null } : null,
+      business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null, type: business.businessType ?? null } : null,
       next: next.slice(0, 3),
       approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
       approvalsCount: pendingApprovals.length,
@@ -109,7 +110,7 @@ export const today = query({
       recent: runs.map((r) => ({ id: r._id, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
       chat: messages
         .reverse()
-        .map((m) => ({ id: m._id, author: m.author, text: m.text, status: m.status, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
+        .map((m) => ({ id: m._id, author: m.author, text: m.text, understood: m.understood ?? null, status: m.status, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
       usage: period
         ? {
             source: period.source,
@@ -125,7 +126,16 @@ export const today = query({
 });
 
 function cardView(c: Doc<"actionCards">) {
+  const payload = (() => {
+    try {
+      return JSON.parse(c.payload) as { job?: string | null; channel?: string };
+    } catch {
+      return {};
+    }
+  })();
   return {
+    job: payload.job ?? null,
+    channel: payload.channel ?? "",
     id: c._id,
     title: c.title,
     description: c.description,
@@ -180,25 +190,8 @@ export const runCard = mutation({
       await ctx.db.patch(card._id, { status: "done", updatedAt: Date.now() });
       return { runId: null };
     }
-    const payload = JSON.parse(card.payload) as { job?: string; channel?: string; quantity?: number };
-    const job = jobForAction(card.kind, payload.channel ?? "") ?? (payload.job as never);
-    if (!job) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
-    const images = job === "content_social" ? 1 : 0;
-    const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo" });
-    const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: user._id, isFixture: org.kind === "demo" });
-    await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
-    if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {
-      await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job, channel: payload.channel, quantity: payload.quantity, images, cardId: card._id });
-    } else if (job === "strategy") {
-      await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
-    } else if (job === "conversion_audit") {
-      await ctx.scheduler.runAfter(0, internal.jobs.conversionAudit, { runId, cardId: card._id });
-    } else if (job === "explain_results") {
-      await ctx.scheduler.runAfter(0, internal.workspace.startExplain, { runId, cardId: card._id });
-    } else if (job === "retention_plan" || job === "sales_sequence") {
-      await ctx.scheduler.runAfter(0, internal.jobs.simplePlanJob, { runId, task: job, cardId: card._id });
-    }
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "card.approved", subjectType: "actionCard", subjectId: card._id, summary: `Started: ${card.title}` });
+    const runId = await startCardRun(ctx, { org, card, userId: user._id, auto: false });
+    if (!runId) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
     return { runId };
   },
 });
@@ -426,5 +419,118 @@ export const runs = query({
       .order("desc")
       .take(50);
     return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
+  },
+});
+
+/** What the COO needs to turn a wish into the right work: plan, autopilot, accounts, recent activity. */
+export const wishContext = internalQuery({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => {
+    const autopilot = await ctx.db
+      .query("autopilotSettings")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .first();
+    const connections = await ctx.db
+      .query("connections")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect();
+    const recentRuns = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", orgId))
+      .order("desc")
+      .take(8);
+    const history = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_org_created", (q) => q.eq("orgId", orgId))
+      .order("desc")
+      .take(6);
+    return {
+      autopilot: autopilot?.enabled ? `on (${autopilot.mode.replace("_", " ")}): ${autopilot.channels.map((c) => `${c.channel} ${c.postsPerWeek}/week`).join(", ")}` : "off",
+      connected: connections.filter((c) => c.status === "connected").map((c) => c.provider),
+      recentWork: recentRuns.map((r) => `${r.title} (${r.status})`),
+      conversation: history
+        .reverse()
+        .map((m) => `${m.author === "user" ? "Owner" : "ClimbOS"}: ${m.text.slice(0, 300)}`)
+        .join("\n"),
+    };
+  },
+});
+
+const ACTIVE_RUN = new Set(["cost_reserved", "preparing", "executing"]);
+
+/** Live "team at work" feed for the top bar: what's running now and what just finished. */
+export const activeWork = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const runs = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(25);
+    const now = Date.now();
+    const active = runs.filter((r) => ACTIVE_RUN.has(r.status));
+    const views = await Promise.all(
+      active.slice(0, 8).map(async (r) => {
+        const steps = await ctx.db
+          .query("workflowSteps")
+          .withIndex("by_run", (q) => q.eq("runId", r._id))
+          .take(40);
+        const current = [...steps].reverse().find((s) => s.status === "running");
+        return { id: r._id, title: r.title, roles: r.roles, kind: r.kind, startedAt: r.createdAt, step: current?.label ?? "Getting started", done: steps.filter((s) => s.status === "succeeded").length };
+      }),
+    );
+    const justFinished = runs
+      .filter((r) => r.status === "verified" && r.updatedAt > now - 15 * 60_000)
+      .slice(0, 5)
+      .map((r) => ({ id: r._id, title: r.title, kind: r.kind, finishedAt: r.updatedAt }));
+    return { active: views, justFinished };
+  },
+});
+
+/** Everything one job produced, for the work receipt page that wish results link to. */
+export const runDetail = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    const steps = await ctx.db
+      .query("workflowSteps")
+      .withIndex("by_run", (q) => q.eq("runId", run._id))
+      .take(60);
+    const artifacts = await ctx.db
+      .query("artifacts")
+      .withIndex("by_run", (q) => q.eq("runId", run._id))
+      .take(20);
+    let input: Record<string, unknown> = {};
+    let output: unknown = null;
+    try {
+      input = JSON.parse(run.input) as Record<string, unknown>;
+    } catch {
+      // Older runs stored plain text.
+    }
+    try {
+      output = run.output ? JSON.parse(run.output) : null;
+    } catch {
+      output = run.output ?? null;
+    }
+    return {
+      id: run._id,
+      title: run.title,
+      kind: run.kind,
+      status: run.status,
+      roles: run.roles,
+      brief: typeof input.brief === "string" ? input.brief : null,
+      createdAt: run.createdAt,
+      updatedAt: run.updatedAt,
+      estimateMicros: run.estimateMicros,
+      actualMicros: run.actualMicros,
+      userMessage: run.userMessage ?? null,
+      isFixture: run.isFixture,
+      engine: run.engine ?? null,
+      output,
+      steps: steps.map((s) => ({ label: s.label, status: s.status, role: s.role ?? null, kind: s.kind })),
+      artifacts: artifacts.map((a) => ({ id: a._id, title: a.title, channel: a.channel, status: a.status, kind: a.kind })),
+    };
   },
 });
