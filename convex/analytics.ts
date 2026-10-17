@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { attribute, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
+import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
 import type { Id } from "./_generated/dataModel";
@@ -278,6 +278,34 @@ export const overview = query({
         : null,
       forecasts: forecasts.map((f) => ({ id: f._id, metricKey: f.metricKey, status: f.status, horizonDays: f.horizonDays, createdAt: f.createdAt, isFixture: f.isFixture })),
       gaps,
+    };
+  },
+});
+
+/**
+ * Monthly customer cohorts from billing data (observed, never modelled).
+ * Bounded read: the last 12 months, at most 10,000 events.
+ */
+export const cohorts = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const now = Date.now();
+    const start = new Date(now);
+    start.setUTCDate(1);
+    start.setUTCHours(0, 0, 0, 0);
+    start.setUTCMonth(start.getUTCMonth() - 11);
+    const rows = await ctx.db
+      .query("revenueEvents")
+      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", start.getTime()))
+      .take(10_000);
+    const result = computeCohorts(rows, { currency: org.currency, nowMs: now, maxMonths: 6 });
+    return {
+      currency: org.currency,
+      truncated: rows.length >= 10_000,
+      isFixture: rows.some((r) => r.isFixture),
+      hasCustomerIds: rows.some((r) => Boolean(r.customerRef)),
+      rows: result.slice(-6),
     };
   },
 });

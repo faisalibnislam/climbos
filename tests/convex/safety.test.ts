@@ -190,6 +190,13 @@ describe("demo workspace", () => {
     const overview = await d.client.query(api.analytics.overview, { slug: d.slug, days: 30 });
     expect(overview.attribution.lastTouch?.reconciled).toBe(true);
     expect(overview.metrics.find((m) => m.key === "revenue")?.isFixture).toBe(true);
+    const cohorts = await d.client.query(api.analytics.cohorts, { slug: d.slug });
+    expect(cohorts.isFixture).toBe(true);
+    expect(cohorts.rows.length).toBeGreaterThan(3);
+    const older = cohorts.rows[0];
+    expect(older.retention[0]).toBe(1);
+    expect(older.retention[1]).toBeLessThan(1);
+    expect(cohorts.rows.at(-1)!.retention[1]).toBeNull();
     // Demo workspaces cannot connect real accounts or buy plans.
     await expect(d.client.mutation(api.connections.startOAuth, { slug: d.slug, provider: "instagram" })).rejects.toThrow(/Demo workspaces/);
   });

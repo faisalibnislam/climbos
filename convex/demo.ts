@@ -296,6 +296,10 @@ export const seedMetrics = internalMutation({
     const touches: Omit<Doc<"touches">, "_id" | "_creationTime">[] = [];
     const channels = ["organic search", "instagram", "email", "google ads", "referral"];
     let customer = 0;
+    // Monthly renewals with churn, so retention cohorts look like a real subscription business.
+    const churnRng = createRng(31);
+    const todayStartMs = Date.parse(`${today}T00:00:00Z`);
+    const renewalsByDate = new Map<string, number>();
     for (const p of visits) {
       const signups = rng.binomial(Math.round(p.value), 0.05);
       const paid = rng.binomial(signups, 0.08);
@@ -307,6 +311,16 @@ export const seedMetrics = internalMutation({
         const refunded = rng.uniform() < 0.03 ? 2500 : 0;
         revenueEvents.push({ orgId, source: "stripe", sourceEventId: `demo_ch_${customer}`, occurredAt: dayStart + k * 600_000, customerRef: ref, orderRef: `demo_in_${customer}`, currency: "USD", amountMinor: 2500, refundedMinor: refunded, kind: "subscription_payment", isFixture: true, ingestedAt: Date.now() });
         revenue += 2500 - refunded;
+        if (!refunded) {
+          for (let m = 1; ; m++) {
+            if (churnRng.uniform() < (m === 1 ? 0.18 : 0.08)) break;
+            const at = dayStart + m * 30 * DAY;
+            if (at >= todayStartMs) break;
+            const date = new Date(at).toISOString().slice(0, 10);
+            revenueEvents.push({ orgId, source: "stripe", sourceEventId: `demo_ch_${customer}_r${m}`, occurredAt: at + k * 600_000, customerRef: ref, orderRef: `demo_in_${customer}_r${m}`, currency: "USD", amountMinor: 2500, refundedMinor: 0, kind: "subscription_payment", isFixture: true, ingestedAt: Date.now() });
+            renewalsByDate.set(date, (renewalsByDate.get(date) ?? 0) + 2500);
+          }
+        }
         if (rng.uniform() < 0.72) {
           const ch = channels[Math.floor(rng.uniform() * channels.length)];
           touches.push({ orgId, customerRef: ref, occurredAt: dayStart - Math.floor(rng.uniform() * 5) * DAY - 3_600_000, channel: ch, utmSource: ch.split(" ")[0], utmMedium: ch === "google ads" ? "cpc" : ch === "email" ? "email" : "organic", isFixture: true });
@@ -314,6 +328,7 @@ export const seedMetrics = internalMutation({
       }
       rows.push({ metricKey: "visits", date: p.date, value: p.value }, { metricKey: "signups", date: p.date, value: signups }, { metricKey: "paid_conversions", date: p.date, value: paid }, { metricKey: "revenue", date: p.date, value: revenue });
     }
+    for (const r of rows) if (r.metricKey === "revenue") r.value += renewalsByDate.get(r.date) ?? 0;
     await upsertDailyImpl(ctx, orgId, "demo synthetic", "observed", rows, true);
     for (const e of revenueEvents) await ctx.db.insert("revenueEvents", e);
     for (const t of touches) await ctx.db.insert("touches", t);

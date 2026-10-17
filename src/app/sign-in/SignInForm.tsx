@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { ArrowLeft, Mail } from "lucide-react";
@@ -18,7 +18,6 @@ type Step = "email" | "code";
 /** Email one-time-code sign-in (8 digits, 15-minute expiry) with optional Google. */
 export function SignInForm() {
   const { signIn } = useAuthActions();
-  const router = useRouter();
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"), "/app");
 

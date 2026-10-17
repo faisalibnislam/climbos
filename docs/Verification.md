@@ -9,9 +9,9 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
 | TypeScript, web + shared | `npx tsc --noEmit -p tsconfig.json` | Clean |
 | TypeScript, Convex | `npx tsc --noEmit -p convex/tsconfig.json` (also `convex deploy --typecheck enable`) | Clean |
 | Lint | `pnpm lint` | 0 errors |
-| Unit + Convex integration tests | `pnpm test` | **234 passed** (13 files) |
+| Unit + Convex integration tests | `pnpm test` | **238 passed** (15 files) |
 | Production build | `pnpm build` | Passes; 32 routes |
-| End-to-end + accessibility | `pnpm test:e2e` against the dev deployment | **15 passed**: 6 public-site, 9 demo-flow |
+| End-to-end + accessibility | `pnpm test:e2e` against the dev deployment | **16 passed** (public site + demo flow) |
 | Economics gate | `pnpm econ:export` | PASS: every plan ≥ 30% at heavy use and under combined stress |
 
 ## What the tests prove (mapped to the acceptance list)
@@ -54,11 +54,12 @@ Last run: **17 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 
    - Calibrated intervals reach the expected held-out coverage, and widths never shrink as the horizon grows.
    - The funnel examples reproduce exactly.
    - Attribution reconciles to the cent with an unattributed bucket, refunds and separate currencies. Platform claims can't be summed.
+   - Cohorts (`tests/unit/cohorts.test.ts`) group customers by first paid month, ignore refunds and other currencies, and never report an unfinished month as churn.
 8. **Formkit demo end-to-end** (`e2e/demo-flow.spec.ts`; Convex demo test):
    - **Today:** goal, next actions, chat → costed action card → job → drafts.
    - **Content:** approve an Instagram draft → publish → "Demo: simulated acceptance" receipt.
    - **Plan:** approved plan with channels, experiments and SWOT.
-   - **Results:** unattributed revenue, platform-reported claims, forecast detail with backtests.
+   - **Results:** unattributed revenue, monthly customer cohorts (complete months only), platform-reported claims, forecast detail with backtests.
    - **Connections:** per-capability states and the no-contact-database statement.
    - **Settings:** Billing usage meters and Policies.
    - **Pause all** then resume. Mobile layout at Pixel 7 size. Keyboard skip link.

@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS } from "../shared/economics";
 import { ROLE_DESCRIPTIONS, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";

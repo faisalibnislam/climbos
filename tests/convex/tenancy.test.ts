@@ -27,6 +27,7 @@ describe("tenant isolation", () => {
     await expect(bob.client.query(api.content.get, { slug: aliceSlug, artifactId })).rejects.toThrow(/couldn't find/);
     await expect(bob.client.query(api.connections.list, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
     await expect(bob.client.query(api.analytics.overview, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
+    await expect(bob.client.query(api.analytics.cohorts, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
     await expect(bob.client.query(api.billing.overview, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
 
     // Mutations and exports are refused.

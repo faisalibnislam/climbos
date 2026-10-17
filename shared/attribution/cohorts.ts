@@ -1,0 +1,91 @@
+/**
+ * Monthly customer cohorts from billing events. A customer's cohort is the
+ * month of their first positive payment; retention for month offset k is the
+ * share of that cohort with at least one positive payment in month k.
+ * Later months are only reported once they are complete: months that haven't
+ * finished yet are `null` (not zero), so a young cohort never looks like it
+ * churned. Month 0 is always shown (it is 100% by definition).
+ */
+
+export interface CohortPayment {
+  customerRef?: string;
+  occurredAt: number;
+  amountMinor: number;
+  refundedMinor: number;
+  kind: "order" | "subscription_payment" | "refund";
+  currency: string;
+}
+
+export interface CohortRow {
+  cohort: string; // YYYY-MM (UTC)
+  size: number;
+  /** Customers paying in month k (index 0 = first month). null = month not complete yet. */
+  activeCustomers: (number | null)[];
+  /** activeCustomers[k] / size. */
+  retention: (number | null)[];
+  /** Net revenue from the cohort in month k, minor units. */
+  revenueMinor: (number | null)[];
+}
+
+function monthKey(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 7);
+}
+
+function monthIndex(key: string): number {
+  const [y, m] = key.split("-").map(Number);
+  return y * 12 + (m - 1);
+}
+
+export function computeCohorts(
+  payments: readonly CohortPayment[],
+  options: { currency: string; nowMs: number; maxMonths?: number },
+): CohortRow[] {
+  const maxMonths = options.maxMonths ?? 12;
+  const nowIndex = monthIndex(monthKey(options.nowMs));
+  const firstMonth = new Map<string, number>();
+  const valid = payments
+    .filter((p) => p.customerRef && p.kind !== "refund" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0)
+    .sort((a, b) => a.occurredAt - b.occurredAt);
+  for (const p of valid) {
+    const idx = monthIndex(monthKey(p.occurredAt));
+    if (!firstMonth.has(p.customerRef!)) firstMonth.set(p.customerRef!, idx);
+  }
+  const cohorts = new Map<number, { members: Set<string>; active: Map<number, Set<string>>; revenue: Map<number, number> }>();
+  for (const [customer, idx] of firstMonth) {
+    const c = cohorts.get(idx) ?? { members: new Set(), active: new Map(), revenue: new Map() };
+    c.members.add(customer);
+    cohorts.set(idx, c);
+  }
+  for (const p of valid) {
+    const start = firstMonth.get(p.customerRef!)!;
+    const k = monthIndex(monthKey(p.occurredAt)) - start;
+    if (k < 0 || k >= maxMonths) continue;
+    const c = cohorts.get(start)!;
+    const set = c.active.get(k) ?? new Set<string>();
+    set.add(p.customerRef!);
+    c.active.set(k, set);
+    c.revenue.set(k, (c.revenue.get(k) ?? 0) + p.amountMinor - p.refundedMinor);
+  }
+  return [...cohorts.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([idx, c]) => {
+      const activeCustomers: (number | null)[] = [];
+      const retention: (number | null)[] = [];
+      const revenueMinor: (number | null)[] = [];
+      for (let k = 0; k < maxMonths; k++) {
+        if (k > 0 && idx + k >= nowIndex) {
+          activeCustomers.push(null);
+          retention.push(null);
+          revenueMinor.push(null);
+          continue;
+        }
+        const n = c.active.get(k)?.size ?? 0;
+        activeCustomers.push(n);
+        retention.push(n / c.members.size);
+        revenueMinor.push(c.revenue.get(k) ?? 0);
+      }
+      const y = Math.floor(idx / 12);
+      const m = (idx % 12) + 1;
+      return { cohort: `${y}-${String(m).padStart(2, "0")}`, size: c.members.size, activeCustomers, retention, revenueMinor };
+    });
+}

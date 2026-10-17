@@ -10,6 +10,7 @@ import { Button, Callout, LineChart } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { minorToDisplay } from "../money";
 import { AttributionSection, PlatformClaimsSection } from "./AttributionSection";
+import { CohortsSection } from "./CohortsSection";
 import { ForecastsSection } from "./ForecastsSection";
 import { changeText, formatMetric, formatPercent, freshnessText, longDate, shortDate, sourceLabel } from "./format";
 import { DemoBadge, Definition, ValueKind } from "./Provenance";
@@ -68,6 +69,7 @@ export function ResultsView({ slug }: { slug: string }) {
           <OutcomeSection slug={slug} data={data} />
           <FunnelSection slug={slug} data={data} />
           <AttributionSection slug={slug} data={data} />
+          <CohortsSection slug={slug} />
           <PlatformClaimsSection slug={slug} data={data} />
           <ForecastsSection slug={slug} data={data} />
           <ScenarioCalculator currency={data.currency} />
