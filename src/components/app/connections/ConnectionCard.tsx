@@ -3,10 +3,51 @@
 import { useAction, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import {
+  ArrowRight,
+  AtSign,
+  BarChart3,
+  Briefcase,
+  Camera,
+  Contact,
+  CreditCard,
+  FileSpreadsheet,
+  Globe,
+  Mail,
+  Megaphone,
+  Music2,
+  Pin,
+  RefreshCw,
+  Search,
+  SquarePlay,
+  ThumbsUp,
+  UserSearch,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Callout, ConfirmDialog, StatusPill, toast } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, IconTile, StatusPill, toast, type Tone } from "@/components/ui";
+
+/** Each provider's icon and colour, so connections are easy to scan. */
+const PROVIDER_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
+  website: { icon: Globe, tone: "green" },
+  ga4: { icon: BarChart3, tone: "orange" },
+  search_console: { icon: Search, tone: "blue" },
+  google_ads: { icon: Megaphone, tone: "amber" },
+  meta_ads: { icon: Megaphone, tone: "blue" },
+  facebook_pages: { icon: ThumbsUp, tone: "blue" },
+  instagram: { icon: Camera, tone: "pink" },
+  email_resend: { icon: Mail, tone: "teal" },
+  stripe_revenue: { icon: CreditCard, tone: "violet" },
+  csv_revenue: { icon: FileSpreadsheet, tone: "green" },
+  linkedin: { icon: Briefcase, tone: "brand" },
+  x: { icon: AtSign, tone: "neutral" },
+  tiktok: { icon: Music2, tone: "violet" },
+  pinterest: { icon: Pin, tone: "red" },
+  youtube: { icon: SquarePlay, tone: "red" },
+  crm_csv: { icon: Contact, tone: "teal" },
+  enrichment: { icon: UserSearch, tone: "brand" },
+};
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { ApiKeyDialog } from "./ApiKeyDialog";
@@ -73,13 +114,16 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
   const headingId = `conn-${item.provider}`;
 
   return (
-    <article aria-labelledby={headingId} className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
+    <article aria-labelledby={headingId} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h3 id={headingId} className="text-lg font-semibold text-ink">
-            {item.name}
-          </h3>
-          <p className="mt-0.5 leading-relaxed text-ink-2">{item.description}</p>
+        <div className="flex min-w-0 items-start gap-3.5">
+          <IconTile icon={(PROVIDER_VISUAL[item.provider] ?? PROVIDER_VISUAL.website).icon} tone={(PROVIDER_VISUAL[item.provider] ?? PROVIDER_VISUAL.website).tone} size="lg" />
+          <div className="min-w-0">
+            <h3 id={headingId} className="text-lg font-bold text-ink">
+              {item.name}
+            </h3>
+            <p className="mt-0.5 leading-relaxed text-ink-2">{item.description}</p>
+          </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {status ? (

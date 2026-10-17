@@ -43,6 +43,7 @@ export function ResultsView({ slug }: { slug: string }) {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
       <div>
         <PageHeader
+          section="results"
           title="Results"
           intro="What happened in your business, where it came from, and what might come next. Every number says where it came from and how fresh it is."
           actions={<Segmented label="Time period" options={[...PERIODS]} value={days} onChange={(v) => setDays(v)} />}

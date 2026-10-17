@@ -5,16 +5,17 @@ import { Activity, CreditCard, Gauge, ShieldCheck, SlidersHorizontal, UserRound,
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { IconTile } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_SECTIONS = [
-  { key: "team", label: "Team", icon: Users },
-  { key: "billing", label: "Billing", icon: CreditCard },
-  { key: "policies", label: "Policies", icon: SlidersHorizontal },
-  { key: "activity", label: "Activity", icon: Activity },
-  { key: "usage", label: "Usage", icon: Gauge },
-  { key: "privacy", label: "Privacy", icon: ShieldCheck },
-  { key: "profile", label: "Profile", icon: UserRound },
+  { key: "team", label: "Team", icon: Users, tone: "brand" },
+  { key: "billing", label: "Billing", icon: CreditCard, tone: "violet" },
+  { key: "policies", label: "Policies", icon: SlidersHorizontal, tone: "orange" },
+  { key: "activity", label: "Activity", icon: Activity, tone: "teal" },
+  { key: "usage", label: "Usage", icon: Gauge, tone: "pink" },
+  { key: "privacy", label: "Privacy", icon: ShieldCheck, tone: "green" },
+  { key: "profile", label: "Profile", icon: UserRound, tone: "blue" },
 ] as const;
 
 /** Settings sub-navigation: a scrollable row on mobile, a vertical list on desktop. */
@@ -33,11 +34,11 @@ export function SettingsNav({ slug }: { slug: string }) {
                 href={`/app/${slug}/settings/${s.key}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-2.5 rounded-[10px] px-3 text-[0.95rem] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
-                  active && "bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-200",
+                  "flex min-h-11 items-center gap-2.5 rounded-xl px-2 text-[0.95rem] font-semibold text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
+                  active && "bg-brand-50 text-brand-900 ring-1 ring-brand-200",
                 )}
               >
-                <s.icon aria-hidden="true" className="size-4.5 shrink-0" />
+                <IconTile icon={s.icon} tone={s.tone} size="sm" />
                 {s.label}
               </Link>
             </li>

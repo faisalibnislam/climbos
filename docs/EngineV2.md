@@ -115,6 +115,101 @@ Initial set:
   - domain age gate of 14 days.
 - **Dedicated domains:** one tenant per customer, owned by the customer. Domain purchase and DNS (SPF, DKIM, DMARC, MX, tracking CNAME) are automated where the registrar API allows; mailbox creation is guided. The default is 2 domains × 3 mailboxes, with the cost passed through.
 
+## Content design system (image and video posts)
+
+Owner decisions (17 Oct 2026):
+- **Video types:** all four (motion-graphic templates, AI-generated clips, edited customer footage, AI voiceover/avatar).
+- **Editor:** chosen by research.
+- **Rendering:** a separate render worker is approved.
+- **Vendors:** Google plus specialist image and video models and a background-removal API are allowed.
+
+Research: `docs/research/design-video.md`.
+
+- **Designs are documents, not flat images.** Each post is a layered scene (background, photos, text, logo, shapes) on the workspace's brand kit, in an open JSON format. AI writes **typed edit operations** that code validates and applies; it never writes raw editor JSON. New designs come from ~15 layout templates per format. Claude picks and fills them, a rule checker and a vision critic score 3 variants, and the best is shown.
+- **Editor:** Polotno SDK (React 19, open JSON, server rendering). Fallback: react-konva. *Blocked on* Polotno's quote and written confirmation that the "competing editor" licence clause doesn't apply to ClimbOS.
+- **Point-and-comment edits:**
+  - A click maps to the layer underneath.
+  - Layer changes (text, colour, size, layout) are edit operations.
+  - Pixel changes mask the object (SAM), edit a crop with the image model and paste back through our own mask, so pixels outside the region stay identical.
+- **Images:** `gemini-nano-banana-2.1` (the current `gemini-3.1-flash-image` premium route is deprecated); Recraft/Ideogram for text-heavy or vector work. Never bake headline text into AI images; text is a layer.
+- **Video:** Remotion templates with an in-app player and simple editor, rendered on a worker (Vercel Sandbox first, then Remotion Lambda).
+  - Voiceover: Gemini TTS; captions from speech-to-text aligned to the script.
+  - Music: licensed (Lyria or Epidemic partner API).
+  - AI b-roll: Gemini Omni Flash, sold as top-up credits because of cost. *Blocked on* the Remotion licence: free for ≤3 people, otherwise $100/month minimum.
+- **Uploads:** customer photos, videos, logos and finished designs go to R2 with presigned uploads, vision-tagged and reusable by AI, with rights metadata.
+- **Publishing specs:** one master export per format; Instagram API JPEG-only and ≤10 carousel items; TikTok direct posting needs an app audit.
+
+## Social media autopilot (core product)
+
+Owner decisions (17 Oct 2026):
+- **What it does:** autopilot plans and creates each week's posts (copy, designs, videos), publishes within rules, manages the community and learns from results.
+- **Approval modes:** every workspace chooses one:
+  - **Always ask:** every post needs one tap.
+  - **Trust ladder:** starts at always-ask. After about 10 approvals with few edits it offers to auto-publish routine posts; new themes, claims, offers and anything flagged still ask.
+  - **Fully automatic:** anything that passes every gate publishes, and the owner reviews afterwards.
+- **Platforms:** Instagram and Facebook, LinkedIn, TikTok, X, YouTube (Shorts) and Pinterest. Snapchat was added by the owner.
+
+Design:
+- **Weekly loop (cron per workspace):**
+  1. Read the plan, last week's results and the content library.
+  2. The Social Media Manager agent drafts the week's calendar (themes, formats, best times per platform).
+  3. Content and design agents create the posts.
+  4. Quality gates run: lint, the critic, the claims check and the brand kit.
+  5. Each post routes by approval mode.
+  6. Approved posts are scheduled through the existing approval-bound publish pipeline (idempotent receipts, reconcile-before-retry).
+- **Gates that always ask, whatever the mode:**
+  - first post on a channel;
+  - new offers, discounts or prices;
+  - health, finance or legal claims;
+  - anything with [NEEDS FACT];
+  - a critic score below the bar;
+  - mentions of real people or customers;
+  - paid boosts;
+  - after any complaint spike.
+- **Community management:**
+  - Ingest comments and DMs through platform webhooks or polling where the API allows.
+  - Classify each one: question, praise, complaint, lead, spam, abuse or crisis.
+  - Draft replies with the reply-handling and brand-voice skills.
+  - Auto-send only low-risk replies (thanks, FAQ answers) in automatic modes.
+  - Hide spam (where the API allows); flag complaints and leads to the owner.
+  - Never argue; never handle refunds or legal matters.
+- **Learn and adapt:**
+  - Pull per-post metrics (reach, saves, shares, comments, clicks, follows).
+  - Score posts against the workspace's own baseline.
+  - Shift the format, topic and time mix with a bandit-style allocation: 70% proven, 30% exploration.
+  - Explain the changes in plain words on Results.
+- **Platform realities:**
+  - Meta app review covers Instagram and Facebook publishing and comments.
+  - LinkedIn needs Community Management API approval for pages, and personal profiles are limited.
+  - TikTok direct posting needs an audit; until then posts are uploaded as private drafts.
+  - X posting is paid API (≥ ~$200/mo, owner decision when enabled).
+  - YouTube Data API is free (quota).
+  - Pinterest API is free with app review.
+  - Snapchat needs Public Profile/Story publishing through Snap Kit/Marketing API partner access; to confirm.
+  - Each platform shows its honest capability state until its approval exists, and falls back to "export pack + reminder" when it can't post.
+
+## UI direction ("Bright", from 17 Oct 2026)
+
+Instantly-style: a friendly, organised, visual interface.
+- **Type and colour:** Plus Jakarta Sans; a vivid blue brand with blue-violet gradients.
+- **Icons:** colourful icon tiles for sections, channels and every AI teammate.
+- **Components:** stat cards; pill buttons and tabs.
+- **Layout:** a grouped sidebar; a gradient goal banner; a chat-style onboarding input with example chips; a gradient landing hero with the live preview.
+
+WCAG 2.2 AA is kept (the axe suite runs on every change). Remaining screens follow the same system: content detail and the post editor, results, connections, settings, and the new Leads/Outreach/Designs areas.
+
+## Progress
+
+| Area | Status |
+|---|---|
+| Research (strategy, content, lead gen, platform, design/video) | Done |
+| Skills (24 playbooks + rubrics) | Done |
+| Agent runtime, Claude turn layer, lint, specs | Done |
+| Convex integration (`CLIMBOS_ENGINE=v2`) | Done, off by default |
+| Benchmark harness | Done; first runs under way |
+| Bright UI | Shell, Today, onboarding, landing, content list done |
+| Design system, Social autopilot, Lead data platform, Outreach, Reprice | Not started |
+
 ## Phases
 
 1. **Foundation:** provider upgrade (Opus 5.5, effort/thinking, prompt caching, 2026 web tools, pause_turn), agent runtime, skills build/publish, benchmark harness and baseline.
