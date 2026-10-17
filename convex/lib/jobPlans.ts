@@ -9,6 +9,7 @@ import {
   adsSpec,
   conversionAuditSpec,
   emailSpec,
+  growthPlaysSpec,
   insightsSpec,
   researchFor,
   retentionSpec,
@@ -66,7 +67,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     }
     case "strategy": {
       const r = { maxSearches: searches("growth_strategy") };
-      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], agentSteps(any(strategySpec()), r), { searchCalls: r.maxSearches });
+      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
     }
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));

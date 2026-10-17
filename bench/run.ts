@@ -21,7 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
-import { adsSpec, conversionAuditSpec, emailSpec, insightsSpec, playCatalogsFor, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
+import { adsSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, playCatalogsFor, PlaysOutputSchema, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
 import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
@@ -189,7 +189,7 @@ const DEFS: Record<BenchTask, TaskDef> = {
       prompt: (p) =>
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${brief(p, true)}`,
     },
-    spec: (o, p) => strategySpec(o, playCatalogsFor(p?.c.type)) as unknown as AgentSpec<unknown>,
+    spec: (o) => strategySpec(o) as unknown as AgentSpec<unknown>,
     task: () =>
       "Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around a portfolio of 2-4 growth plays: one bankable, one or two creative-but-proven (a proven mechanic on a non-obvious audience, asset or moment), at most one capped moonshot. Go beyond social posts and email when something else would move the goal more. Forecast each play with cited base rates and ranges, and give each a test with kill and scale rules and a first action for today.",
     research: (p) => researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }),
@@ -294,7 +294,57 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
   return r.ok ? { arm: "v0f", ok: true, output: r.output, costMicros: r.costMicros, ms: Date.now() - t0 } : { arm: "v0f", ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
 
+const PLAYS_TASK =
+  "Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.";
+const planTask = (plays: unknown) =>
+  `Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}`;
+
+/** Strategy is two stages in production (plays agent, then plan agent); both arms get the same two stages. */
+async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
+  let cost = 0;
+  const deps: AgentDeps = {
+    turn: async (req) => {
+      const r = await turnWithRetry(req);
+      cost += r.costMicros;
+      return r;
+    },
+    phase: async (_key, _label, fn) => (await fn()).value,
+  };
+  const t0 = Date.now();
+  try {
+    const base = inputFor(p, "strategy");
+    const plays = await runAgent(growthPlaysSpec({}, playCatalogsFor(p.c.type)), { ...base, task: PLAYS_TASK, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const plan = await runAgent(strategySpec({}), { ...base, task: planTask(plays.output) }, deps);
+    return { arm, ok: true, output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote }, costMicros: cost, ms: Date.now() - t0 };
+  } catch (e) {
+    return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
+  }
+}
+
+async function runStrategyFrontier(p: Prepared): Promise<ArmResult> {
+  const t0 = Date.now();
+  const base = inputFor(p, "strategy");
+  const call = (task: string, schema: z.ZodType, research?: { maxSearches: number; maxFetches?: number }) =>
+    turnWithRetry({
+      modelKey: "claude-opus-5.5",
+      system: [{ text: OPERATING_RULES }, { text: `${ROLE_CHARTERS.ceo} You are a world-class expert at this work.` }],
+      messages: [{ role: "user", content: `BUSINESS BRIEF:\n${base.brief}\n\nYOUR TASK:\n${task}\n\nRespond only with JSON matching the schema.` }],
+      schema,
+      maxTokens: 32_000,
+      effort: "high",
+      webSearch: research ? { maxUses: research.maxSearches } : undefined,
+      webFetch: research?.maxFetches ? { maxUses: research.maxFetches } : undefined,
+    });
+  const a = await call(PLAYS_TASK, PlaysOutputSchema, researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }));
+  if (!a.ok) return { arm: "v0f", ok: false, error: a.message, costMicros: a.costMicros, ms: Date.now() - t0 };
+  const b = await call(planTask(a.output), strategySpec({}).schema as z.ZodType);
+  if (!b.ok) return { arm: "v0f", ok: false, error: b.message, costMicros: a.costMicros + b.costMicros, ms: Date.now() - t0 };
+  const plays = a.output as { plays: unknown; portfolioNote: string };
+  return { arm: "v0f", ok: true, output: { ...(b.output as object), plays: plays.plays, portfolioNote: plays.portfolioNote }, costMicros: a.costMicros + b.costMicros, ms: Date.now() - t0 };
+}
+
 async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
+  if (t === "strategy") return runStrategyV2(p, arm);
   const draft: ModelKey = arm.startsWith("v2o") ? "claude-opus-5.5" : "claude-sonnet-5.5";
   const maxRevisions = arm.endsWith("1") ? 1 : 2;
   // v22: the production configuration exactly as shipped (expert/lean profiles).
@@ -319,7 +369,7 @@ async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult>
 
 function runArm(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   if (arm === "v1") return runV1(p, t);
-  if (arm === "v0f") return runFrontier(p, t);
+  if (arm === "v0f") return t === "strategy" ? runStrategyFrontier(p) : runFrontier(p, t);
   return runV2(p, t, arm);
 }
 

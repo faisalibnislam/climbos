@@ -81,9 +81,16 @@ export async function fakeTurn(req: ClaudeTurnRequest, rates: RateVersion): Prom
         ...tmpl,
         name: `${marker} ${kind} play`,
         kind,
-        forecast: { ...(tmpl.forecast as object), steps: [{ step: "contacted", volume: "a hundred", low: "low", likely: "likely", high: "high", source: "example.com", grade: "C" }, { step: "booked", volume: "", low: "low", likely: "likely", high: "high", source: "example.com", grade: "C" }], unit: "booked jobs", p10: 1, p50: 2, p90: 4 },
-        test: { size: "a hundred contacts", budget: "small", durationDays: 21, leadingMetric: "replies", killIf: "no replies", scaleIf: "several replies" },
-        scores: { fit: 4, predictability, leverage: 3, timeToSignal: 3, compounding: 3, cost: 4, risk: 5, distinctiveness },
+        funnel: ["a hundred contacted → replies: low to high [example.com, C]", "replies → booked: about a third [example.com, C]"],
+        unit: "booked jobs",
+        p10: 1,
+        p50: 2,
+        p90: 4,
+        confidence: "medium",
+        test: "a hundred contacts · small budget · three weeks",
+        killIf: "no replies",
+        scaleIf: "several replies",
+        scores: [4, predictability, 3, 3, 3, 4, 5, distinctiveness],
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
     }

@@ -40,10 +40,12 @@ import {
   retentionSpec,
   salesSpec,
   seoSpec,
+  growthPlaysSpec,
   playCatalogsFor,
   socialCalendarSpec,
   socialSpec,
   strategySpec,
+  type PlaysOutput,
   type SocialCalendar,
 } from "../shared/agents/specs";
 import { fixtureCalendar } from "../shared/autopilot/fixture";
@@ -278,11 +280,14 @@ async function runAgentTask<T>(
   }
   const rates = getRateVersion(job.run.rateVersionId);
   let currentStep: Id<"workflowSteps"> | null = null;
+  // Shared across every agent in this action: yield only after real progress.
+  const tracker = ((job as unknown as { __progress?: { did: boolean } }).__progress ??= { did: false });
   const deps: AgentDeps = {
     deadline: startedAt + softLimitMs(),
+    progressed: () => tracker.did,
     beforeRevision: async (round) => {
       // Idempotent per round: a compute step marks that this round's cost was reserved.
-      const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `Reserve revision ${round}`, spec.role);
+      const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `${spec.label}: reserve revision ${round}`, spec.role);
       if (mark.checkpoint !== undefined) return Boolean(mark.checkpoint);
       const cost = estimateRun(agentRevisionSteps(spec), job.run.rateVersionId, { repair: false }).costMicros;
       const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: job.run._id, costMicros: cost });
@@ -313,6 +318,7 @@ async function runAgentTask<T>(
       const step = await begin(ctx, job.run._id, baseIndex + key.index, "model", label, spec.role);
       if (step.checkpoint !== undefined) return step.checkpoint as never;
       currentStep = step.stepId!;
+      tracker.did = true;
       try {
         const { value } = await fn();
         await ctx.runMutation(internal.engine.completeStep, { stepId: currentStep, output: JSON.stringify(value) });
@@ -506,15 +512,32 @@ export const buildStrategy = internalAction({
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
       const insightsBrief = insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)";
+      // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
+      const v2 = !job.run.isFixture && job.run.engine === "v2";
+      const plays = v2
+        ? await runAgentTask<PlaysOutput>(
+            ctx,
+            job,
+            0,
+            growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
+            agentInput(
+              job,
+              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+              { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
+            ),
+            startedAt,
+            { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },
+          )
+        : null;
+      // 2. The 90-day plan, built around those plays.
       const strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
-        0,
-        strategySpec({}, playCatalogsFor(job.business?.businessType)),
+        100,
+        strategySpec(),
         agentInput(
           job,
-          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time. Build it around a portfolio of 2-4 growth plays following the growth-plays method: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
+          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
         ),
         startedAt,
         {
@@ -525,7 +548,7 @@ export const buildStrategy = internalAction({
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
         },
       );
-      await ctx.runMutation(internal.jobWrites.saveStrategy, { runId, strategy: JSON.stringify(strategy), factIds: job.facts.map((f) => f.id) });
+      await ctx.runMutation(internal.jobWrites.saveStrategy, { runId, strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays } : strategy), factIds: job.facts.map((f) => f.id) });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
     }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId }));
   },

@@ -47,6 +47,8 @@ export interface AgentDeps {
   phase: <T>(key: PhaseKey, label: string, fn: () => Promise<{ value: T; record: PhaseRecord }>) => Promise<T>;
   /** Epoch ms after which no new phase may start (the host re-schedules and resumes). */
   deadline?: number;
+  /** True once this action has run at least one new (non-checkpointed) phase. */
+  progressed?: () => boolean;
   /**
    * Called before each extra revision round (round ≥ 1). Return false when
    * the budget can't cover another round: the agent then keeps its best
@@ -162,8 +164,9 @@ function failure(result: ClaudeTurnResult): never {
   throw new AgentFailure(result.kind, result.message);
 }
 
+/** Yield before the action time limit, but only after this action made real progress (never loop on checkpoints). */
 function checkDeadline(deps: AgentDeps) {
-  if (deps.deadline && Date.now() > deps.deadline) throw new AgentYield();
+  if (deps.deadline && Date.now() > deps.deadline && (deps.progressed?.() ?? true)) throw new AgentYield();
 }
 
 export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: AgentDeps): Promise<AgentRunResult<T>> {

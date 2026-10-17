@@ -79,7 +79,7 @@ describe("Engine v2 wiring", () => {
     const d = await runData(t, run._id);
     expect(d.run?.status).toBe("verified");
     const labels = d.steps.map((s) => s.label);
-    expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft", "Growth plan: review 1", "Reserve revision 1", "Growth plan: revision 1", "Growth plan: review 2"]));
+    expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft", "Growth plan: review 1", "Growth plan: reserve revision 1", "Growth plan: revision 1", "Growth plan: review 2"]));
     expect(d.run!.estimateMicros).toBeGreaterThan(0);
     const strategy = await t.run(async (ctx) => ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first());
     expect(strategy?.expert?.diagnosis).toContain("fake-v2"); // the passing revision was kept
@@ -116,7 +116,8 @@ describe("Engine v2 wiring", () => {
     const counts = new Map<string, number>();
     for (const s of d.steps) counts.set(s.label, (counts.get(s.label) ?? 0) + 1);
     expect([...counts.values()].every((n) => n === 1)).toBe(true);
-    expect(d.steps.filter((s) => s.label.startsWith("Reserve revision")).length).toBe(1);
+    // Plays agent + plan agent each reserved their one revision round, once.
+    expect(d.steps.filter((s) => /reserve revision/i.test(s.label)).length).toBe(2);
   });
 
   it("runs content jobs through the agent and saves drafts for approval", async () => {

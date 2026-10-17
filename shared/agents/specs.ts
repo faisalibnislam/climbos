@@ -46,34 +46,43 @@ export const PlaySchema = z.object({
   name: z.string(),
   oneLiner: z.string(),
   kind: z.enum(["bankable", "creative", "moonshot"]),
-  audience: z.object({ who: z.string(), where: z.string(), size: z.string() }),
+  /** Who and where, with size when known, e.g. "HR managers in Austin · SHRM Austin chapter (1,200 members)". */
+  audience: z.string(),
   trigger: z.string(),
   hook: z.string(),
   mechanic: z.string(),
   assetUsed: z.string(),
-  /** Catalog play id the mechanic comes from, or "" if new. */
-  catalogId: z.string(),
-  forecast: z.object({
-    steps: z.array(z.object({ step: z.string(), volume: z.string(), low: z.string(), likely: z.string(), high: z.string(), source: z.string(), grade: z.enum(["A", "B", "C", "D"]) })),
-    unit: z.string(),
-    p10: z.number(),
-    p50: z.number(),
-    p90: z.number(),
-    horizonDays: z.number(),
-    confidence: z.enum(["high", "medium", "low"]),
-    biggestUnknown: z.string(),
-  }),
-  test: z.object({ size: z.string(), budget: z.string(), durationDays: z.number(), leadingMetric: z.string(), killIf: z.string(), scaleIf: z.string() }),
-  scores: z.object({ fit: z.number(), predictability: z.number(), leverage: z.number(), timeToSignal: z.number(), compounding: z.number(), cost: z.number(), risk: z.number(), distinctiveness: z.number() }),
+  /** One step per line: "500 postcards → calls: 1–4.5%, plan 2% [source.com, C]". */
+  funnel: z.array(z.string()),
+  unit: z.string(),
+  p10: z.number(),
+  p50: z.number(),
+  p90: z.number(),
+  horizonDays: z.number(),
+  confidence: z.enum(["high", "medium", "low"]),
+  biggestUnknown: z.string(),
+  /** Size, budget and duration, e.g. "500 cards · $260 · 21 days". */
+  test: z.string(),
+  killIf: z.string(),
+  scaleIf: z.string(),
+  /** 1-5 each: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness. */
+  scores: z.array(z.number()),
   firstActionToday: z.string(),
   climbosCanDo: z.string(),
 });
 export type Play = z.infer<typeof PlaySchema>;
 
+export const SCORE_KEYS = ["fit", "predictability", "leverage", "timeToSignal", "compounding", "cost", "risk", "distinctiveness"] as const;
+export type PlayScores = Record<(typeof SCORE_KEYS)[number], number>;
+
+export function playScores(p: Pick<Play, "scores">): PlayScores {
+  return Object.fromEntries(SCORE_KEYS.map((k, i) => [k, Math.max(1, Math.min(5, Math.round(p.scores[i] ?? 1)))])) as PlayScores;
+}
+
 /** Weighted play score (growth-plays rubric), 20–100. */
-export function playScore(s: Play["scores"]): number {
-  const c = (n: number) => Math.max(1, Math.min(5, n));
-  return Math.round(20 * (0.25 * c(s.fit) + 0.2 * c(s.predictability) + 0.15 * c(s.leverage) + 0.1 * c(s.timeToSignal) + 0.1 * c(s.compounding) + 0.1 * c(s.cost) + 0.1 * c(s.risk)));
+export function playScore(p: Pick<Play, "scores">): number {
+  const s = playScores(p);
+  return Math.round(20 * (0.25 * s.fit + 0.2 * s.predictability + 0.15 * s.leverage + 0.1 * s.timeToSignal + 0.1 * s.compounding + 0.1 * s.cost + 0.1 * s.risk));
 }
 
 export const StrategyV2Schema = StrategySchema.extend({
@@ -85,10 +94,17 @@ export const StrategyV2Schema = StrategySchema.extend({
   phases: z.array(z.object({ name: z.string(), days: z.string(), focus: z.string() })),
   weekOneChecklist: z.array(z.string()),
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
-  /** The portfolio: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
+});
+/** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[] };
+
+/** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
+export const PlaysOutputSchema = z.object({
+  /** One or two sentences: why this portfolio, for this business, now. */
+  portfolioNote: z.string(),
   plays: z.array(PlaySchema),
 });
-export type StrategyV2 = z.infer<typeof StrategyV2Schema>;
+export type PlaysOutput = z.infer<typeof PlaysOutputSchema>;
 
 const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)\b/i;
 const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;
@@ -98,25 +114,24 @@ export function lintPlays(plays: Play[]): LintIssue[] {
   const issues: LintIssue[] = [];
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
   if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
-  const bankable = plays.filter((p) => p.kind === "bankable");
-  const creative = plays.filter((p) => p.kind === "creative");
-  const moonshots = plays.filter((p) => p.kind === "moonshot");
+  const scored = plays.map((p) => ({ p, s: playScores(p) }));
+  const bankable = scored.filter((x) => x.p.kind === "bankable");
   if (bankable.length !== 1) err(`${bankable.length} bankable plays; exactly one is needed.`);
-  if (bankable[0] && bankable[0].scores.predictability < 4) err("The bankable play needs predictability ≥ 4.");
-  if (!creative.some((p) => p.scores.distinctiveness >= 4 && p.scores.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
-  if (moonshots.length > 1) err("At most one moonshot.");
-  plays.forEach((p, i) => {
+  if (bankable[0] && bankable[0].s.predictability < 4) err("The bankable play needs predictability ≥ 4.");
+  if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
+  if (plays.filter((p) => p.kind === "moonshot").length > 1) err("At most one moonshot.");
+  scored.forEach(({ p, s }, i) => {
     const path = `plays[${i}]`;
-    const f = p.forecast;
-    if (!(f.p10 <= f.p50 && f.p50 <= f.p90)) err("Forecast must satisfy P10 ≤ P50 ≤ P90.", `${path}.forecast`);
-    if (f.steps.length < 2) err("The forecast needs a funnel with at least 2 steps.", `${path}.forecast.steps`);
-    if (VANITY.test(f.unit)) err(`"${f.unit}" is a vanity unit; use booked jobs, customers, members or revenue.`, `${path}.forecast.unit`);
-    f.steps.forEach((s, j) => {
-      if (!s.source.trim() && s.grade !== "D") err("Every forecast step needs a source, or grade D (assumption).", `${path}.forecast.steps[${j}]`);
+    if (p.scores.length !== 8) err("scores needs 8 numbers in order: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness.", `${path}.scores`);
+    if (!(p.p10 <= p.p50 && p.p50 <= p.p90)) err("Forecast must satisfy P10 ≤ P50 ≤ P90.", path);
+    if (p.funnel.length < 2) err("The forecast needs a funnel with at least 2 steps.", `${path}.funnel`);
+    if (VANITY.test(p.unit)) err(`"${p.unit}" is a vanity unit; use booked jobs, customers, members or revenue.`, `${path}.unit`);
+    p.funnel.forEach((line, j) => {
+      if (!/\[[^\]]+\]/.test(line) && !/assumption|grade d/i.test(line)) err("Every funnel step needs a [source, grade] or 'assumption, grade D'.", `${path}.funnel[${j}]`);
     });
-    if (!p.test.killIf.trim() || !p.test.scaleIf.trim()) err("Every play needs kill and scale rules.", `${path}.test`);
-    if (!p.audience.where.trim() || !p.hook.trim()) err("Every play needs a named place and an exact hook.", path);
-    if (p.kind === "moonshot" && p.scores.predictability > 2) issues.push({ severity: "warn", rule: "portfolio", message: "A moonshot with predictability > 2 could be a creative play instead.", path });
+    if (!p.killIf.trim() || !p.scaleIf.trim()) err("Every play needs kill and scale rules.", path);
+    if (!p.audience.trim() || !p.hook.trim()) err("Every play needs a named audience and place, and an exact hook.", path);
+    if (p.kind === "moonshot" && s.predictability > 2) issues.push({ severity: "warn", rule: "portfolio", message: "A moonshot with predictability > 2 could be a creative play instead.", path });
     if (GENERIC.test(`${p.name} ${p.oneLiner} ${p.mechanic}`)) issues.push({ severity: "warn", rule: "generic", message: "Generic phrasing; name the audience, hook and number in the same sentence.", path });
   });
   return issues;
@@ -243,17 +258,6 @@ function rubricOf(id: string): Rubric {
   return skillRubric(id);
 }
 
-/** Combine rubrics (e.g. plan quality + creative plays); ids are already unique across skills. */
-function mergeRubrics(title: string, ...rs: Rubric[]): Rubric {
-  return {
-    id: rs.map((r) => r.id).join("+"),
-    title,
-    gates: rs.flatMap((r) => r.gates),
-    criteria: rs.flatMap((r) => r.criteria),
-    shipRule: { minEach: Math.max(...rs.map((r) => r.shipRule.minEach)), minAverage: Math.max(...rs.map((r) => r.shipRule.minAverage)) },
-  };
-}
-
 /** Which play catalogs a business type gets (keeps prompts focused). */
 export function playCatalogsFor(type: string | null | undefined): string[] {
   switch (type) {
@@ -327,19 +331,37 @@ export function insightsSpec(o: SpecOptions = {}): AgentSpec<InsightsV2> {
   );
 }
 
-export function strategySpec(o: SpecOptions = {}, catalogs: string[] = playCatalogsFor(null)): AgentSpec<StrategyV2> {
+/** Growth plays: the creative, predictable portfolio the plan is built around. */
+export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCatalogsFor(null)): AgentSpec<PlaysOutput> {
+  return base(
+    {
+      id: "growth_plays",
+      role: "cmo",
+      label: "Growth plays",
+      skills: ["owner-brevity", "growth-plays", ...catalogs],
+      schema: PlaysOutputSchema,
+      rubric: rubricOf("growth-plays"),
+      criticSkills: ["positioning", "experiment-design"],
+      maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
+      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays)],
+    },
+    o,
+    "expert",
+  );
+}
+
+export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof StrategyV2Schema>> {
   return base(
     {
       id: "growth_strategy",
       role: "ceo",
       label: "Growth plan",
-      skills: ["owner-brevity", "growth-strategy", "growth-plays", ...catalogs, "experiment-design"],
+      skills: ["owner-brevity", "growth-strategy", "experiment-design"],
       schema: StrategyV2Schema,
-      rubric: mergeRubrics("Growth plan with creative, predictable plays", rubricOf("growth-strategy"), rubricOf("growth-plays")),
-      criticSkills: ["growth-plays", "experiment-design", "positioning"],
-      maxTokens: { research: 24_000, draft: 48_000, critic: 16_000 },
+      rubric: rubricOf("growth-strategy"),
+      criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintGeneric(out, input), ...lintPlays(out.plays)];
+        const issues = lintGeneric(out, input);
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         return issues;

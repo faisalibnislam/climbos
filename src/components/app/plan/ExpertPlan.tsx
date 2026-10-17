@@ -16,23 +16,24 @@ export interface PlayView {
   name: string;
   oneLiner: string;
   kind: "bankable" | "creative" | "moonshot";
-  audience: { who: string; where: string; size: string };
+  audience: string;
   trigger: string;
   hook: string;
   mechanic: string;
   assetUsed: string;
-  forecast: {
-    steps: { step: string; volume: string; low: string; likely: string; high: string; source: string; grade: "A" | "B" | "C" | "D" }[];
-    unit: string;
-    p10: number;
-    p50: number;
-    p90: number;
-    horizonDays: number;
-    confidence: "high" | "medium" | "low";
-    biggestUnknown: string;
-  };
-  test: { size: string; budget: string; durationDays: number; leadingMetric: string; killIf: string; scaleIf: string };
-  scores: { fit: number; predictability: number; leverage: number; timeToSignal: number; compounding: number; cost: number; risk: number; distinctiveness: number };
+  funnel: string[];
+  unit: string;
+  p10: number;
+  p50: number;
+  p90: number;
+  horizonDays: number;
+  confidence: "high" | "medium" | "low";
+  biggestUnknown: string;
+  test: string;
+  killIf: string;
+  scaleIf: string;
+  /** fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness */
+  scores: number[];
   firstActionToday: string;
   climbosCanDo: string;
 }
@@ -63,10 +64,11 @@ const GRADE: Record<string, string> = {
 };
 
 /** Score out of 100 from the growth-plays weights. */
-function score(s: PlayView["scores"]) {
-  const c = (n: number) => Math.max(1, Math.min(5, n));
-  return Math.round(20 * (0.25 * c(s.fit) + 0.2 * c(s.predictability) + 0.15 * c(s.leverage) + 0.1 * c(s.timeToSignal) + 0.1 * c(s.compounding) + 0.1 * c(s.cost) + 0.1 * c(s.risk)));
+function score(sc: number[]) {
+  const c = (i: number) => Math.max(1, Math.min(5, sc[i] ?? 1));
+  return Math.round(20 * (0.25 * c(0) + 0.2 * c(1) + 0.15 * c(2) + 0.1 * c(3) + 0.1 * c(4) + 0.1 * c(5) + 0.1 * c(6)));
 }
+const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
 
 export function NorthStar({ expert }: { expert: ExpertView }) {
   return (
@@ -117,7 +119,7 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
 }
 
 /** P10–P90 range bar with the most-likely marker. */
-function ForecastBar({ f }: { f: PlayView["forecast"] }) {
+function ForecastBar({ f }: { f: PlayView }) {
   const max = Math.max(f.p90, 1) * 1.15;
   const pos = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
   return (
@@ -164,9 +166,9 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
             <span tabIndex={0} className="ml-auto flex items-center gap-2 rounded-md text-xs text-ink-3">
               Score <span className="font-semibold tabular-nums text-ink">{total}</span>
               <span aria-hidden>·</span>
-              <span className="flex items-center gap-0.5" aria-label={`Distinctiveness ${play.scores.distinctiveness} of 5`}>
+              <span className="flex items-center gap-0.5" aria-label={`Distinctiveness ${distinct(play.scores)} of 5`}>
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <span key={i} aria-hidden className={cn("size-1.5 rounded-full", i <= play.scores.distinctiveness ? "bg-violet-500" : "bg-surface-3")} />
+                  <span key={i} aria-hidden className={cn("size-1.5 rounded-full", i <= distinct(play.scores) ? "bg-violet-500" : "bg-surface-3")} />
                 ))}
               </span>
             </span>
@@ -179,11 +181,7 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
         <dl className="grid gap-2 text-ui">
           <div className="flex gap-2">
             <dt className="w-16 shrink-0 text-ink-3">Who</dt>
-            <dd className="text-ink">
-              {play.audience.who}
-              {play.audience.where ? <span className="text-ink-3"> · {play.audience.where}</span> : null}
-              {play.audience.size ? <span className="text-ink-3"> · {play.audience.size}</span> : null}
-            </dd>
+            <dd className="text-ink">{play.audience}</dd>
           </div>
           <div className="flex gap-2">
             <dt className="w-16 shrink-0 text-ink-3">Hook</dt>
@@ -201,34 +199,32 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
           ) : null}
         </dl>
 
-        <ForecastBar f={play.forecast} />
+        <ForecastBar f={play} />
 
         {open ? (
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-overline">How we estimate it</p>
               <ol className="mt-2 flex flex-col gap-1.5">
-                {play.forecast.steps.map((st, i) => (
-                  <li key={i} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-surface-2/70 px-2.5 py-1.5 text-ui">
-                    <span className="text-ink">
-                      {st.volume ? <span className="font-medium tabular-nums">{st.volume} </span> : null}
-                      {st.step}
-                      <span className="block text-xs text-ink-3">
-                        {st.low}–{st.high}, plan on {st.likely}
-                        {st.source ? ` · ${st.source}` : ""}
-                      </span>
-                    </span>
-                    <Tooltip content={GRADE[st.grade]}>
-                      <span tabIndex={0} className="grid size-6 place-items-center rounded-md border border-line text-xs font-semibold text-ink-2">
-                        {st.grade}
-                      </span>
-                    </Tooltip>
-                  </li>
-                ))}
+                {play.funnel.map((line, i) => {
+                  const grade = line.match(/\[[^\]]*,\s*([ABCD])\]/)?.[1] ?? (/assumption|grade d/i.test(line) ? "D" : null);
+                  return (
+                    <li key={i} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-surface-2/70 px-2.5 py-1.5 text-ui text-ink">
+                      <span>{line.replace(/\s*\[[^\]]*\]\s*$/, "")}<span className="block text-xs text-ink-3">{line.match(/\[([^\]]*)\]/)?.[1] ?? ""}</span></span>
+                      {grade ? (
+                        <Tooltip content={GRADE[grade]}>
+                          <span tabIndex={0} className="grid size-6 place-items-center rounded-md border border-line text-xs font-semibold text-ink-2">
+                            {grade}
+                          </span>
+                        </Tooltip>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ol>
-              {play.forecast.biggestUnknown ? (
+              {play.biggestUnknown ? (
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-3">
-                  <Info aria-hidden className="mt-px size-3.5 shrink-0" /> Biggest unknown: {play.forecast.biggestUnknown}
+                  <Info aria-hidden className="mt-px size-3.5 shrink-0" /> Biggest unknown: {play.biggestUnknown}
                 </p>
               ) : null}
             </div>
@@ -237,20 +233,17 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
                 <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
                   <FlaskConical aria-hidden className="size-3.5" /> The test
                 </p>
-                <p className="mt-1 text-ui text-ink">
-                  {play.test.size} · {play.test.budget} · {play.test.durationDays} days
-                </p>
-                <p className="text-xs text-ink-3">Watch: {play.test.leadingMetric}</p>
+                <p className="mt-1 text-ui text-ink">{play.test}</p>
               </div>
               <div className="rounded-lg border border-line p-2.5">
                 <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
                   <Crosshair aria-hidden className="size-3.5" /> Decide
                 </p>
                 <p className="mt-1 flex items-start gap-1 text-ui text-ink">
-                  <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-red-800" /> {play.test.killIf}
+                  <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-red-800" /> {play.killIf}
                 </p>
                 <p className="flex items-start gap-1 text-ui text-ink">
-                  <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-brand-800" /> {play.test.scaleIf}
+                  <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-brand-800" /> {play.scaleIf}
                 </p>
               </div>
             </div>
@@ -275,7 +268,7 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await send({ slug, text: `Start the "${play.name}" play: ${play.oneLiner} Audience: ${play.audience.who} (${play.audience.where}). Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}` });
+                  await send({ slug, text: `Start the "${play.name}" play: ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}` });
                   router.push(`/app/${slug}/today`);
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
