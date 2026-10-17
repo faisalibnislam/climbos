@@ -353,6 +353,7 @@ export default defineSchema({
   })
     .index("by_org", ["orgId"])
     .index("by_org_provider", ["orgId", "provider"])
+    .index("by_provider_status", ["provider", "status"])
     .index("by_expires", ["expiresAt"]),
 
   connectionSecrets: defineTable({

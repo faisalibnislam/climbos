@@ -28,6 +28,9 @@
       ],
       "@shared/*": [
         "./shared/*"
+      ],
+      "@convex/*": [
+        "./convex/*"
       ]
     }
   },

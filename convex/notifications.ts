@@ -50,8 +50,8 @@ export const checkUsageAlerts = internalMutation({
 });
 
 export const recipientsFor = internalQuery({
-  args: { orgId: v.id("organizations"), purpose: v.union(v.literal("usage"), v.literal("digest")) },
-  handler: async (ctx, { orgId, purpose }) => {
+  args: { orgId: v.id("organizations"), purpose: v.union(v.literal("usage"), v.literal("digest")), cadence: v.optional(v.string()) },
+  handler: async (ctx, { orgId, purpose, cadence }) => {
     const org = await ctx.db.get(orgId);
     if (!org) return { orgName: "", slug: "", emails: [] as string[] };
     const members = await ctx.db
@@ -68,7 +68,11 @@ export const recipientsFor = internalQuery({
         .withIndex("by_user", (q) => q.eq("userId", m.userId!))
         .unique();
       if (purpose === "usage" && prefs && !prefs.usageAlerts) continue;
-      if (purpose === "digest" && (!prefs || prefs.digest === "off")) continue;
+      if (purpose === "digest") {
+        const pref = prefs?.digest ?? "weekly";
+        if (pref === "off") continue;
+        if (pref === "weekly" && cadence !== "weekly") continue;
+      }
       emails.push(user.email);
     }
     return { orgName: org.name, slug: org.slug, emails };
@@ -100,7 +104,7 @@ export const sendInvitation = internalAction({
 export const sendDigest = internalAction({
   args: { orgId: v.id("organizations"), cadence: v.string(), lines: v.array(v.string()) },
   handler: async (ctx, args) => {
-    const { orgName, slug, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId: args.orgId, purpose: "digest" });
+    const { orgName, slug, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId: args.orgId, purpose: "digest", cadence: args.cadence });
     if (emails.length === 0 || args.lines.length === 0) return;
     const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${slug}/today`;
     const mail = digestEmail({ orgName, lines: args.lines, url, cadence: args.cadence });

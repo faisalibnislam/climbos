@@ -1,0 +1,426 @@
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
+import { internalAction, internalQuery, mutation, query } from "./_generated/server";
+import { createRunWithReservation, finishRunImpl } from "./engine";
+import { jobForAction } from "./jobWrites";
+import { audit } from "./lib/audit";
+import { chargeableAccess } from "./lib/access";
+import { planJob } from "./lib/jobPlans";
+import { currentPeriod } from "./lib/periods";
+import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+
+/** Everything the Today screen needs, in one bounded query. */
+export const today = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const goal = await ctx.db
+      .query("goals")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
+      .first();
+    const business = await ctx.db
+      .query("businesses")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .first();
+    const pendingApprovals = await ctx.db
+      .query("artifacts")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review"))
+      .order("desc")
+      .take(20);
+    const strategy = await ctx.db
+      .query("strategies")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .first();
+    const cards = await ctx.db
+      .query("actionCards")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "proposed"))
+      .take(20);
+    const running = await ctx.db
+      .query("actionCards")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "running"))
+      .take(10);
+    const runs = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(8);
+    const messages = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(30);
+    const cardIds = new Set(messages.flatMap((m) => m.actionCardIds));
+    const chatCards: Doc<"actionCards">[] = [];
+    for (const id of [...cardIds].slice(0, 40)) {
+      const c = await ctx.db.get(id);
+      if (c) chatCards.push(c);
+    }
+    const period = await currentPeriod(ctx, org._id);
+    const access = await chargeableAccess(ctx, org);
+    const uncertain = await ctx.db
+      .query("artifacts")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "uncertain"))
+      .take(5);
+
+    // Three prioritized next actions: approvals first, then plan approval, then proposed cards.
+    const next: { title: string; why: string; href: string; kind: string }[] = [];
+    if (strategy?.status === "needs_approval") {
+      next.push({ title: "Review your growth plan", why: "Approve it so the team can start working on it.", href: `/app/${slug}/plan`, kind: "plan" });
+    }
+    if (pendingApprovals.length > 0) {
+      next.push({
+        title: `Review ${pendingApprovals.length} draft${pendingApprovals.length === 1 ? "" : "s"}`,
+        why: "Nothing goes live until you approve it.",
+        href: `/app/${slug}/content?status=in_review`,
+        kind: "approvals",
+      });
+    }
+    if (uncertain.length > 0) {
+      next.push({ title: "Check an uncertain post", why: "We couldn't confirm whether it was posted, so we won't repeat it until it's checked.", href: `/app/${slug}/content/${uncertain[0]._id}`, kind: "uncertain" });
+    }
+    for (const c of cards.sort((a, b) => a.priority - b.priority)) {
+      if (next.length >= 3) break;
+      next.push({ title: c.title, why: c.description, href: `/app/${slug}/today#card-${c._id}`, kind: "card" });
+    }
+    if (next.length < 3 && business && !business.insights) {
+      next.push({ title: "Finish understanding your business", why: "Better facts lead to better plans.", href: `/onboarding?workspace=${slug}`, kind: "onboarding" });
+    }
+
+    return {
+      org: { slug: org.slug, name: org.name, kind: org.kind, onboardingStep: org.onboardingStep, currency: org.currency, timezone: org.timezone },
+      role,
+      userName: user.name ?? user.email ?? null,
+      emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at, reason: org.emergencyStop.reason ?? null } : null,
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, createdAt: goal.createdAt } : null,
+      business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null } : null,
+      next: next.slice(0, 3),
+      approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
+      approvalsCount: pendingApprovals.length,
+      strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version, summary: strategy.summary } : null,
+      cards: [...cards, ...running]
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 6)
+        .map(cardView),
+      recent: runs.map((r) => ({ id: r._id, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
+      chat: messages
+        .reverse()
+        .map((m) => ({ id: m._id, author: m.author, text: m.text, status: m.status, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
+      usage: period
+        ? {
+            source: period.source,
+            walletFraction: period.walletCapMicros > 0 ? (period.walletSpentMicros + period.walletReservedMicros) / period.walletCapMicros : 1,
+            endsAt: period.endsAt,
+          }
+        : null,
+      canRunAi: access.allowed,
+      accessCode: access.allowed ? null : access.code,
+      accessMessage: access.allowed ? null : access.message,
+    };
+  },
+});
+
+function cardView(c: Doc<"actionCards">) {
+  return {
+    id: c._id,
+    title: c.title,
+    description: c.description,
+    proposedEffect: c.proposedEffect,
+    kind: c.kind,
+    roles: c.roles,
+    costEstimateMicros: c.costEstimateMicros,
+    externalEffect: c.externalEffect,
+    status: c.status,
+    blockedReason: c.blockedReason ?? null,
+    runId: c.runId ?? null,
+  };
+}
+
+/** Chat never acts directly: it creates a COO run that proposes action cards. */
+export const sendChat = mutation({
+  args: { slug: v.string(), text: v.string() },
+  handler: async (ctx, { slug, text }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const clean = text.trim().slice(0, 2000);
+    if (!clean) throw appError("INVALID", "Type a message first.");
+    const now = Date.now();
+    const recent = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id).gt("createdAt", now - 60_000))
+      .take(20);
+    if (recent.filter((m) => m.author === "user").length >= 6) {
+      throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give the team a moment to catch up.");
+    }
+    const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId: user._id, text: clean, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
+    const plan = planJob("chat_intent");
+    let runId;
+    try {
+      runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId }, steps: plan.steps, meters: plan.meters, createdBy: user._id, isFixture: org.kind === "demo" });
+    } catch (e) {
+      await ctx.db.patch(messageId, { status: "failed" });
+      throw e;
+    }
+    await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
+    return { messageId };
+  },
+});
+
+/** Approving a card starts exactly the job it described, with the estimate it showed. */
+export const runCard = mutation({
+  args: { slug: v.string(), cardId: v.id("actionCards") },
+  handler: async (ctx, { slug, cardId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const card = assertSameOrg(await ctx.db.get(cardId), org._id, "action");
+    if (card.status !== "proposed") throw appError("INVALID", "This action has already been handled.");
+    if (card.kind === "note") {
+      await ctx.db.patch(card._id, { status: "done", updatedAt: Date.now() });
+      return { runId: null };
+    }
+    const payload = JSON.parse(card.payload) as { job?: string; channel?: string; quantity?: number };
+    const job = jobForAction(card.kind, payload.channel ?? "") ?? (payload.job as never);
+    if (!job) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
+    const images = job === "content_social" ? 1 : 0;
+    const plan = planJob(job, { quantity: payload.quantity, images });
+    const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: user._id, isFixture: org.kind === "demo" });
+    await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
+    if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {
+      await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job, channel: payload.channel, quantity: payload.quantity, images, cardId: card._id });
+    } else if (job === "strategy") {
+      await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
+    } else if (job === "conversion_audit") {
+      await ctx.scheduler.runAfter(0, internal.jobs.conversionAudit, { runId, cardId: card._id });
+    } else if (job === "explain_results") {
+      await ctx.scheduler.runAfter(0, internal.workspace.startExplain, { runId, cardId: card._id });
+    } else if (job === "retention_plan" || job === "sales_sequence") {
+      await ctx.scheduler.runAfter(0, internal.jobs.simplePlanJob, { runId, task: job, cardId: card._id });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "card.approved", subjectType: "actionCard", subjectId: card._id, summary: `Started: ${card.title}` });
+    return { runId };
+  },
+});
+
+export const dismissCard = mutation({
+  args: { slug: v.string(), cardId: v.id("actionCards") },
+  handler: async (ctx, { slug, cardId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const card = assertSameOrg(await ctx.db.get(cardId), org._id, "action");
+    if (card.status === "proposed" || card.status === "blocked") await ctx.db.patch(card._id, { status: "rejected", updatedAt: Date.now() });
+  },
+});
+
+export const resultsSnapshot = internalQuery({
+  args: { runId: v.id("workflowRuns") },
+  handler: async (ctx, { runId }) => {
+    const run = await ctx.db.get(runId);
+    if (!run) return "{}";
+    const rows = await ctx.db
+      .query("metricDaily")
+      .withIndex("by_org_date", (q) => q.eq("orgId", run.orgId).gte("date", new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10)))
+      .take(2000);
+    const totals: Record<string, { last30: number; prev30: number; source: string }> = {};
+    const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+    for (const r of rows) {
+      if (r.kind !== "observed" || r.channel) continue;
+      const t = (totals[r.metricKey] ??= { last30: 0, prev30: 0, source: r.source });
+      if (r.date >= cutoff) t.last30 += r.value;
+      else t.prev30 += r.value;
+    }
+    return JSON.stringify({ totals, note: "Observed values from connected sources. Revenue in minor currency units." });
+  },
+});
+
+export const startExplain = internalAction({
+  args: { runId: v.id("workflowRuns"), cardId: v.optional(v.id("actionCards")) },
+  handler: async (ctx, { runId, cardId }) => {
+    const metricsJson = await ctx.runQuery(internal.workspace.resultsSnapshot, { runId });
+    await ctx.runAction(internal.jobs.explainResults, { runId, metricsJson, cardId });
+  },
+});
+
+/**
+ * Pause all activity: cancel queued jobs, block new writes, unschedule posts
+ * and attempt provider-side pauses for active ads. Reports what was verified.
+ */
+export const pauseAll = mutation({
+  args: { slug: v.string(), reason: v.optional(v.string()) },
+  handler: async (ctx, { slug, reason }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "pause");
+    const now = Date.now();
+    await ctx.db.patch(org._id, { emergencyStop: { active: true, at: now, by: user._id, reason: reason?.slice(0, 300) } });
+    let canceledRuns = 0;
+    for (const status of ["proposed", "cost_reserved", "needs_approval", "approved", "scheduled"] as const) {
+      const runs = await ctx.db
+        .query("workflowRuns")
+        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status))
+        .take(100);
+      for (const r of runs) {
+        await finishRunImpl(ctx, { runId: r._id, status: "canceled", error: "Paused by owner", userMessage: "Canceled because all activity was paused." });
+        canceledRuns++;
+      }
+    }
+    const scheduled = await ctx.db
+      .query("artifacts")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "scheduled"))
+      .take(300);
+    for (const a of scheduled) await ctx.db.patch(a._id, { status: "approved", scheduledFor: undefined, updatedAt: now });
+    const activeCampaigns = (
+      await ctx.db
+        .query("campaigns")
+        .withIndex("by_org", (q) => q.eq("orgId", org._id))
+        .take(200)
+    ).filter((c) => c.status === "active");
+    for (const c of activeCampaigns) {
+      await ctx.scheduler.runAfter(0, internal.ads.pauseCampaignForStop, { campaignId: c._id });
+    }
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "workspace.paused",
+      summary: `Paused all activity: ${canceledRuns} job(s) canceled, ${scheduled.length} post(s) unscheduled, ${activeCampaigns.length} ad campaign pause(s) requested.`,
+    });
+    return { canceledRuns, unscheduled: scheduled.length, campaignsPausing: activeCampaigns.length };
+  },
+});
+
+export const resumeAll = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "resume");
+    await ctx.db.patch(org._id, { emergencyStop: undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.resumed", summary: "Resumed activity. Nothing restarts automatically; reschedule posts you still want." });
+  },
+});
+
+export const pauseStatus = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const campaigns = (
+      await ctx.db
+        .query("campaigns")
+        .withIndex("by_org", (q) => q.eq("orgId", org._id))
+        .take(200)
+    ).filter((c) => c.externalId);
+    return {
+      paused: Boolean(org.emergencyStop?.active),
+      at: org.emergencyStop?.at ?? null,
+      campaigns: campaigns.map((c) => ({ id: c._id, name: c.name, channel: c.channel, status: c.status })),
+    };
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* Plan                                                                 */
+/* ------------------------------------------------------------------ */
+
+export const plan = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const strategy = await ctx.db
+      .query("strategies")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .first();
+    const business = await ctx.db
+      .query("businesses")
+      .withIndex("by_org", (q) => q.eq("orgId", org._id))
+      .first();
+    const goal = await ctx.db
+      .query("goals")
+      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
+      .first();
+    const experiments = strategy
+      ? (
+          await ctx.db
+            .query("experiments")
+            .withIndex("by_org", (q) => q.eq("orgId", org._id))
+            .order("desc")
+            .take(20)
+        ).filter((e) => e.strategyId === strategy._id)
+      : [];
+    const facts = [];
+    for (const id of (strategy?.sourceFactIds ?? []).slice(0, 30)) {
+      const f = await ctx.db.get(id);
+      if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
+    }
+    const runs = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(10);
+    const strategyRun = runs.find((r) => r.kind === "strategy");
+    return {
+      role,
+      canApprove: ["owner", "admin", "reviewer"].includes(role),
+      canEdit: ["owner", "admin", "editor"].includes(role),
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency } : null,
+      strategy: strategy
+        ? {
+            id: strategy._id,
+            version: strategy.version,
+            status: strategy.status,
+            summary: strategy.summary,
+            positioning: strategy.positioning,
+            audiences: strategy.audiences,
+            channels: strategy.channels,
+            constraints: strategy.constraints,
+            measurementPlan: strategy.measurementPlan,
+            reviewDate: strategy.reviewDate,
+            createdAt: strategy.createdAt,
+          }
+        : null,
+      strategyRun: strategyRun ? { status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status })),
+      insights: business?.insights ?? null,
+      sources: facts,
+      currency: org.currency,
+    };
+  },
+});
+
+export const decidePlan = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), decision: v.union(v.literal("approve"), v.literal("reject")), note: v.optional(v.string()) },
+  handler: async (ctx, { slug, strategyId, decision, note }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
+    const now = Date.now();
+    if (decision === "approve") {
+      const prior = await ctx.db
+        .query("strategies")
+        .withIndex("by_org", (q) => q.eq("orgId", org._id))
+        .take(20);
+      for (const p of prior) if (p._id !== s._id && p.status === "approved") await ctx.db.patch(p._id, { status: "superseded" });
+      await ctx.db.patch(s._id, { status: "approved", channels: s.channels.map((c) => (c.status === "proposed" ? { ...c, status: "active" as const } : c)) });
+    } else {
+      await ctx.db.patch(s._id, { status: "draft" });
+    }
+    if (s.approvalId) await ctx.db.patch(s.approvalId, { status: decision === "approve" ? "approved" : "rejected", decidedBy: user._id, decidedAt: now, decisionNote: note?.slice(0, 500) });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `plan.${decision}d`, subjectType: "strategy", subjectId: s._id, summary: `${decision === "approve" ? "Approved" : "Sent back"} growth plan v${s.version}.` });
+  },
+});
+
+export const setChannelStatus = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), key: v.string(), status: v.union(v.literal("active"), v.literal("parked")) },
+  handler: async (ctx, { slug, strategyId, key, status }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    await ctx.db.patch(s._id, { channels: s.channels.map((c) => (c.key === key ? { ...c, status } : c)) });
+  },
+});
+
+export const runs = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const rows = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(50);
+    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
+  },
+});
