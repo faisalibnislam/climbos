@@ -595,7 +595,9 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "reviewRequests", index: "by_org_created" },
   { table: "competitorWatches", index: "by_org" },
   { table: "competitorChanges", index: "by_org_at" },
-  // Media and drafts (designs are assets).
+  // Media, designs and drafts.
+  { table: "designs", index: "by_org_updated" },
+  { table: "playResults", index: "by_org" },
   { table: "assets", index: "by_org_created" },
   { table: "reels", index: "by_org_created" },
   { table: "assetJobs", index: "by_org_created" },

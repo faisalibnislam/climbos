@@ -1,6 +1,7 @@
 import { approvalHash } from "../../shared/policy";
 import type { Doc, Id } from "../_generated/dataModel";
-import type { MutationCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { appError } from "./tenancy";
 import { activePolicyVersion } from "../jobWrites";
 
 /** Channels ClimbOS publishes to directly, and the connection provider each needs. */
@@ -121,4 +122,15 @@ export function approvalProblem(
     return connection ? "Approved before this account was connected. Approve it again to publish it." : "The connected account changed. Approve it again.";
   }
   return null;
+}
+
+/** The workspace's autonomy mode (Settings → Policies); "review" when none is set. */
+export async function autonomyMode(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">): Promise<"copilot" | "review" | "bounded_autopilot"> {
+  const p = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", orgId).eq("active", true)).first();
+  return (p?.mode as "copilot" | "review" | "bounded_autopilot" | undefined) ?? "review";
+}
+
+/** Copilot mode promises the owner posts, sends and launches everything themselves. */
+export async function refuseInCopilot(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">, what: string): Promise<void> {
+  if ((await autonomyMode(ctx, orgId)) === "copilot") throw appError("INVALID", `Copilot mode is on, so ClimbOS doesn't ${what} for you. Use the export, or switch to Review in Settings → Policies.`);
 }

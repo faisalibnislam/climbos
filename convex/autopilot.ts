@@ -18,7 +18,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
-import { invalidateApprovals } from "./lib/approvals";
+import { autonomyMode, invalidateApprovals } from "./lib/approvals";
 import { audit } from "./lib/audit";
 import { applyTrustEvent, autopilotLive, onPublishOutcome, routeSlotDraft, settingsFor, trustFor } from "./lib/autopilot";
 import { planJob } from "./lib/jobPlans";
@@ -143,6 +143,7 @@ export const save = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
     if (args.aiMode === "expert" && !(await expertUnlocked(ctx, org))) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
     if (args.enabled) await requirePaid(ctx, org, "autopilot");
+    if (args.enabled && args.mode !== "always_ask" && (await autonomyMode(ctx, org._id)) !== "bounded_autopilot") throw appError("INVALID", "Posting without asking needs Bounded Autopilot. Choose it in Settings → Policies, or keep “Always ask”.");
     const channels = args.channels
       .filter((c) => (AUTOPILOT_CHANNELS as readonly string[]).includes(c.channel))
       .map((c) => ({ channel: c.channel, postsPerWeek: Math.min(MAX_PER_CHANNEL, clampCadence(c.postsPerWeek)) }))
@@ -287,6 +288,12 @@ function runInput(run: Doc<"workflowRuns">): Record<string, unknown> {
   }
 }
 
+async function socialParked(ctx: MutationCtx, orgId: Id<"organizations">): Promise<boolean> {
+  const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(10);
+  const approved = plans.find((p) => p.status === "approved");
+  return Boolean(approved?.channels.some((c) => c.key === "social_organic" && c.status === "parked"));
+}
+
 async function startPlanning(
   ctx: MutationCtx,
   org: Doc<"organizations">,
@@ -295,6 +302,12 @@ async function startPlanning(
   opts: { force?: boolean; weekOf?: string; preview?: boolean } = {},
 ) {
   if (!settings || (!settings.enabled && !opts.preview)) return null;
+  // A parked social channel in the approved plan means no new social posts.
+  if (!opts.preview && (await socialParked(ctx, org._id))) {
+    if (!settings.pausedReason) await ctx.db.patch(settings._id, { pausedReason: "Social posting is parked in your growth plan. Turn it on in Plan to keep planning.", updatedAt: Date.now() });
+    return null;
+  }
+  if (settings.pausedReason?.startsWith("Social posting is parked")) await ctx.db.patch(settings._id, { pausedReason: undefined, updatedAt: Date.now() });
   const now = Date.now();
   const today = localDate(now, org.timezone);
   // Monday–Wednesday: plan the rest of this week; later: plan next week.

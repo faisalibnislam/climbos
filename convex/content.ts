@@ -13,7 +13,7 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
-import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, SCHEDULE_GRACE_MS } from "./lib/approvals";
+import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, refuseInCopilot, autonomyMode, SCHEDULE_GRACE_MS } from "./lib/approvals";
 import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
@@ -188,6 +188,8 @@ export const get = query({
       })),
       receipts: receipts.map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt })),
       facts,
+      /** Copilot mode: the owner posts it themselves from the export pack. */
+      copilot: (await autonomyMode(ctx, org._id)) === "copilot",
       publishTarget: target
         ? {
             provider: target,
@@ -337,6 +339,7 @@ export const schedule = mutation({
   handler: async (ctx, { slug, artifactId, when }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     await requirePaid(ctx, org, "publishing");
+    await refuseInCopilot(ctx, org._id, "post");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this before scheduling it.");
     if (when < Date.now() + 60_000) throw appError("INVALID", "Pick a time at least a minute from now.");
@@ -365,6 +368,7 @@ export const publishNow = mutation({
   handler: async (ctx, { slug, artifactId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     await requirePaid(ctx, org, "publishing");
+    await refuseInCopilot(ctx, org._id, "post");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this first.");
     if (org.emergencyStop?.active) throw appError("PAUSED", "All activity is paused. Resume activity first.");

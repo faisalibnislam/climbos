@@ -77,6 +77,8 @@ export const signup = mutation({
   handler: async (ctx, { slug, email }) => {
     const p = await ctx.db.query("bioPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
     if (!p?.live || !p.collectEmails) throw appError("NOT_FOUND", "This page isn't available.");
+    const pOrg = await ctx.db.get(p.orgId);
+    if (!pOrg || pOrg.deletedAt || pOrg.suspendedAt) throw appError("NOT_FOUND", "This page isn't available.");
     const e = email.trim().toLowerCase().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw appError("INVALID", "Please add a valid email.");
     const now = Date.now();

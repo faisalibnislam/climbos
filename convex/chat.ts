@@ -124,6 +124,8 @@ export const send = mutation({
     if (!/^[0-9a-f]{16,128}$/.test(a.ipHash)) throw appError("INVALID", "Please reload the page.");
     const w = await ctx.db.query("chatWidgets").withIndex("by_key", (q) => q.eq("key", a.key)).first();
     if (!w || !w.enabled) throw appError("NOT_FOUND", "Chat is offline.");
+    const wOrg = await ctx.db.get(w.orgId);
+    if (!wOrg || wOrg.deletedAt || wOrg.suspendedAt) throw appError("NOT_FOUND", "Chat is offline.");
     if (!/^[a-z0-9-]{8,64}$/i.test(a.visitorId)) throw appError("INVALID", "Please reload the page.");
     const text = a.text.trim().slice(0, 1500);
     if (!text) return;

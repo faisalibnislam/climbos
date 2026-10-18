@@ -148,7 +148,8 @@ function UnscheduleButton({ slug, artifact }: { slug: string; artifact: Artifact
 export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: ArtifactView; now: number | null }) {
   const ch = channelLabel(artifact.channel);
   const target = artifact.publishTarget;
-  const direct = Boolean(target?.connected);
+  // Copilot mode: never publishes directly; the owner uses the export pack.
+  const direct = Boolean(target?.connected) && !artifact.copilot;
   const valid = hasValidApproval(artifact, now);
   const s = artifact.status;
 
@@ -187,7 +188,13 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
         <p className="text-sm text-violet-800">Demo workspace: publishing is simulated. Receipts say “Demo: simulated acceptance”.</p>
       ) : null}
 
-      {target && !direct ? (
+      {artifact.copilot ? (
+        <Callout tone="info" title="Copilot mode: you post it">
+          <p>
+            Copy it from the export pack below and post it yourself. To let ClimbOS post approved items, choose Review in <Link href={`/app/${slug}/settings/policies`}>Settings → Policies</Link>.
+          </p>
+        </Callout>
+      ) : target && !direct ? (
         <Callout tone="info" title={`${ch} isn't connected — use the export pack`}>
           <p>
             Connect {ch} to let ClimbOS publish for you, or copy the text below and post it yourself.{" "}

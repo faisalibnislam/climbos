@@ -101,6 +101,7 @@ export const publishContext = internalQuery({
       version: ver,
       approval,
       policyVersion: policy?.version ?? 1,
+      copilot: policy?.mode === "copilot",
       provider: provider ?? null,
       connection: conn,
       emergencyStop: Boolean(org.emergencyStop?.active || org.suspendedAt || org.deletedAt) || (await fleetStopped(ctx)),
@@ -265,6 +266,11 @@ export const publishArtifact = internalAction({
     });
     if (!check.ok) {
       await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: check.message, backTo: check.reason === "emergency_stop" ? "approved" : "in_review" });
+      return;
+    }
+    // Copilot mode: the owner posts it themselves (export pack), even if it was scheduled before switching.
+    if (c.copilot) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "Copilot mode is on: post it yourself from the export pack, or switch to Review in Settings → Policies.", backTo: "approved" });
       return;
     }
 

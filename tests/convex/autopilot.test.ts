@@ -16,6 +16,8 @@ async function workspace(t: T, email: string) {
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Wire Co" });
   await makePaid(t, orgId);
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
+  // Auto-posting needs Bounded Autopilot (Settings → Policies).
+  await owner.client.mutation(api.orgs.setAutonomy, { slug, mode: "bounded_autopilot" });
   const oid = orgId as Id<"organizations">;
   await t.run(async (ctx) => {
     const now = Date.now();

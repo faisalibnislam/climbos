@@ -13,6 +13,7 @@ import { audit } from "./lib/audit";
 import { serverSecret } from "./lib/crypto";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { refuseInCopilot } from "./lib/approvals";
 
 /**
  * Sending outbound emails from the owner's own mailbox (owner decision: the
@@ -124,6 +125,7 @@ export const start = mutation({
   args: { slug: v.string(), campaignId: v.id("outboundCampaigns"), senderName: v.string(), company: v.string(), address: v.string(), bookingUrl: v.optional(v.string()) },
   handler: async (ctx, a) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "approve");
+    await refuseInCopilot(ctx, org._id, "send email");
     await requirePaid(ctx, org, "sending");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sequence.length) throw appError("INVALID", "This campaign has no emails yet.");
@@ -148,6 +150,7 @@ export const addApproved = mutation({
   args: { slug: v.string(), campaignId: v.id("outboundCampaigns") },
   handler: async (ctx, a) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "approve");
+    await refuseInCopilot(ctx, org._id, "send email");
     await requirePaid(ctx, org, "sending");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sending) throw appError("INVALID", "Start sending first.");

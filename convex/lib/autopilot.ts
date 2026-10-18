@@ -3,7 +3,7 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { featureAllowed } from "./access";
-import { extendApprovalUntil, publishTarget, recordArtifactDecision, SCHEDULE_GRACE_MS } from "./approvals";
+import { autonomyMode, extendApprovalUntil, publishTarget, recordArtifactDecision, SCHEDULE_GRACE_MS } from "./approvals";
 import { audit } from "./audit";
 import { scheduleHeadsUp } from "../emailActions";
 
@@ -115,6 +115,11 @@ export async function routeSlotDraft(
   if (route.decision === "auto" && artifact.channel === "instagram" && !version.imageStorageId && !version.imageR2Key) {
     route.decision = "ask";
     route.reasons = ["Instagram posts need an image. Add one in the post editor, then approve."];
+  }
+  // Auto-posting is Bounded Autopilot only; Review and Copilot always ask.
+  if (route.decision === "auto" && (await autonomyMode(ctx, org._id)) !== "bounded_autopilot") {
+    route.decision = "ask";
+    route.reasons = ["Your approval mode asks before anything goes out. Choose Bounded Autopilot in Settings → Policies to let trusted posts go automatically."];
   }
   if (route.decision === "auto" && !(await autopilotLive(ctx, org, settings))) {
     route.decision = "ask";

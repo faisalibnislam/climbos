@@ -235,6 +235,8 @@ export const submit = mutation({
   handler: async (ctx, a) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", a.slug)).first();
     if (!p || p.status !== "live") throw appError("NOT_FOUND", "This page isn't available.");
+    const pOrg = await ctx.db.get(p.orgId);
+    if (!pOrg || pOrg.deletedAt || pOrg.suspendedAt) throw appError("NOT_FOUND", "This page isn't available.");
     const name = a.name.trim().slice(0, 80);
     const email = a.email.trim().toLowerCase().slice(0, 200);
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw appError("INVALID", "Please add your name and a valid email.");

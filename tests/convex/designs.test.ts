@@ -61,3 +61,18 @@ describe("design studio", () => {
     expect(art.v).toMatchObject({ imageStorageId: storageId, imageLabel: "Made in Design studio", body: "Spring is here. 20% off all plans this week." });
   });
 });
+
+describe("approval modes", () => {
+  it("Copilot mode never posts for the owner", async () => {
+    const { refuseInCopilot } = await import("../../convex/lib/approvals");
+    const t = setup();
+    const owner = await asNewUser(t, "copilot@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Copilot Co" });
+    await t.run(async (ctx) => {
+      const p = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", orgId as Id<"organizations">).eq("active", true)).first();
+      if (p) await ctx.db.patch(p._id, { mode: "copilot" });
+      else await ctx.db.insert("autonomyPolicies", { orgId: orgId as Id<"organizations">, mode: "copilot", active: true, version: 1 } as never);
+      await expect(refuseInCopilot(ctx, orgId as Id<"organizations">, "post")).rejects.toThrow(/Copilot mode is on/);
+    });
+  });
+});

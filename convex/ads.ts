@@ -16,6 +16,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { refuseInCopilot } from "./lib/approvals";
 
 /**
  * Ads: campaigns are always created PAUSED, activated only by an approval bound
@@ -154,6 +155,7 @@ export const decide = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const c = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
     if (action !== "reject") await requirePaid(ctx, org, "ads_publish");
+    if (action !== "reject") await refuseInCopilot(ctx, org._id, "launch ads");
     if (org.emergencyStop?.active && action !== "reject") throw appError("PAUSED", "All activity is paused. Resume activity first.");
     if (action === "reject") {
       await ctx.db.patch(c._id, { status: c.externalId ? "paused" : "draft", updatedAt: Date.now() });
