@@ -1,12 +1,13 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalQuery, mutation, query } from "./_generated/server";
-import { createRunWithReservation, finishRunImpl, reopenFailedRun } from "./engine";
-import { jobForAction } from "./jobWrites";
+import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
+import { activePolicyVersion, jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
-import { can } from "../shared/policy";
-import { startCardRun } from "./lib/cards";
+import { approvalHash, can } from "../shared/policy";
+import { holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
+import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { creditBalance } from "./lib/credits";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
@@ -42,6 +43,7 @@ export const today = query({
     const cards = await ctx.db
       .query("actionCards")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "proposed"))
+      .order("desc")
       .take(20);
     const running = await ctx.db
       .query("actionCards")
@@ -57,6 +59,22 @@ export const today = query({
     )
       .filter((r) => r.kind !== "climb_chat" && r.kind !== "chat_intent")
       .slice(0, 6);
+    // Real counts for the glance cards (not just the six recent runs shown).
+    const isJob = (r: Doc<"workflowRuns">) => r.kind !== "climb_chat" && r.kind !== "chat_intent";
+    let workingNow = 0;
+    for (const status of ACTIVE_RUN_STATUSES) {
+      const rows = await ctx.db
+        .query("workflowRuns")
+        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status as Doc<"workflowRuns">["status"]))
+        .take(50);
+      workingNow += rows.filter(isJob).length;
+    }
+    const doneThisWeek = (
+      await ctx.db
+        .query("workflowRuns")
+        .withIndex("by_org_created", (q) => q.eq("orgId", org._id).gte("createdAt", Date.now() - 7 * 86_400_000))
+        .take(1000)
+    ).filter((r) => r.status === "verified" && isJob(r)).length;
     const messages = await ctx.db
       .query("chatMessages")
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
@@ -99,7 +117,7 @@ export const today = query({
       next.push({ title: c.title, why: c.description, href: `/app/${slug}/today#card-${c._id}`, kind: "card" });
     }
     if (next.length < 3 && business && !business.insights) {
-      next.push({ title: "Finish understanding your business", why: "Better facts lead to better plans.", href: `/onboarding?workspace=${slug}`, kind: "onboarding" });
+      next.push({ title: "Finish understanding your business", why: "Better facts lead to better plans.", href: org.onboardingStep === "done" ? `/app/${slug}/settings/business` : `/onboarding?workspace=${slug}`, kind: "onboarding" });
     }
 
     return {
@@ -117,6 +135,7 @@ export const today = query({
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)
         .map(cardView),
+      counts: { workingNow, doneThisWeek },
       recent: runs.map((r) => ({ id: r._id, kind: r.kind, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
       chat: messages
         .reverse()
@@ -323,14 +342,20 @@ export const pauseStatus = query({
 /* ------------------------------------------------------------------ */
 
 export const plan = query({
-  args: { slug: v.string() },
-  handler: async (ctx, { slug }) => {
+  args: { slug: v.string(), strategyId: v.optional(v.id("strategies")) },
+  handler: async (ctx, { slug, strategyId }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
-    const strategy = await ctx.db
+    const versions = await ctx.db
       .query("strategies")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
-      .first();
+      .take(10);
+    const latest = versions[0] ?? null;
+    const approved = versions.find((s) => s.status === "approved") ?? null;
+    // The approved plan guides the team, so it shows first; a newer version waiting or sent back gets a banner.
+    const strategy = (strategyId ? versions.find((s) => s._id === strategyId) : null) ?? approved ?? latest;
+    const newer = approved && latest && latest._id !== approved._id && (latest.status === "needs_approval" || latest.status === "draft") ? latest : null;
+    const other = strategy && newer ? (strategy._id === newer._id ? approved : newer) : null;
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -353,12 +378,7 @@ export const plan = query({
       const f = await ctx.db.get(id);
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
     }
-    const runs = await ctx.db
-      .query("workflowRuns")
-      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(10);
-    const strategyRun = runs.find((r) => r.kind === "strategy");
+    const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
     return {
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
@@ -386,7 +406,11 @@ export const plan = query({
       unitEconomics: business?.unitEconomics ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
-      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
+      /** When the newest version was written (a failed refresh after it is shown). */
+      latestVersionAt: latest?.createdAt ?? null,
+      /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
+      otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
       planEstimateMicros: estimateJobMicros(planJob("strategy")),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status })),
       insights: business?.insights ?? null,
@@ -434,17 +458,33 @@ export const setUnitEconomics = mutation({
 
 export const decidePlan = mutation({
   args: { slug: v.string(), strategyId: v.id("strategies"), decision: v.union(v.literal("approve"), v.literal("reject")), note: v.optional(v.string()) },
-  handler: async (ctx, { slug, strategyId, decision, note }) => {
-    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+  handler: async (ctx, { slug, strategyId, decision, note }): Promise<PlanWorkResult | null> => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "approve");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
     const now = Date.now();
+    // The decision follows the current approval rules: who may approve, and a binding that hasn't expired.
+    const policy = await ctx.db
+      .query("autonomyPolicies")
+      .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
+      .first();
+    if (policy && !policy.approvalRoles.includes(role)) throw appError("FORBIDDEN", "Your approval rules don't let your role approve plans.");
+    if (s.approvalId) await refreshPlanApproval(ctx, s, user._id);
+    let work: PlanWorkResult | null = null;
     if (decision === "approve") {
       const prior = await ctx.db
         .query("strategies")
         .withIndex("by_org", (q) => q.eq("orgId", org._id))
         .take(20);
-      for (const p of prior) if (p._id !== s._id && p.status === "approved") await ctx.db.patch(p._id, { status: "superseded" });
+      for (const p of prior) {
+        if (p._id === s._id || p.status !== "approved") continue;
+        await ctx.db.patch(p._id, { status: "superseded" });
+        // Work the old plan was still waiting to start no longer applies.
+        for (const c of p.channels) {
+          const card = c.cardId ? await ctx.db.get(c.cardId) : null;
+          if (card && (card.status === "proposed" || card.status === "blocked")) await ctx.db.patch(card._id, { status: "rejected", updatedAt: now });
+        }
+      }
       await ctx.db.patch(s._id, { status: "approved", channels: s.channels.map((c) => (c.status === "proposed" ? { ...c, status: "active" as const } : c)) });
     } else {
       await ctx.db.patch(s._id, { status: "draft" });
@@ -463,15 +503,68 @@ export const decidePlan = mutation({
       });
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `plan.${decision}d`, subjectType: "strategy", subjectId: s._id, summary: `${decision === "approve" ? "Approved" : "Sent back"} growth plan v${s.version}.` });
+    if (decision === "approve") {
+      // Approving starts the work the plan describes: first drafts for each active channel, within credits.
+      work = await startPlanWork(ctx, { org, strategyId: s._id, userId: user._id });
+      await afterPlanWork(ctx, org._id, s._id, user._id, work, 0);
+    }
+    return work;
   },
 });
 
+/** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */
+async function refreshPlanApproval(ctx: MutationCtx, s: Doc<"strategies">, userId: Id<"users">) {
+  const a = s.approvalId ? await ctx.db.get(s.approvalId) : null;
+  if (!a) return;
+  const hash = `strategy:${s._id}:v${s.version}`;
+  if (a.orgId !== s.orgId || a.subjectId !== s._id || a.contentHash !== hash) throw appError("INVALID", "This approval doesn't match the plan. Refresh the plan.");
+  const now = Date.now();
+  const policyVersion = await activePolicyVersion(ctx, s.orgId);
+  if (a.status === "pending" && a.expiresAt > now && a.policyVersion === policyVersion) return;
+  const expiresAt = now + 14 * 86_400_000;
+  const binding = { orgId: s.orgId, subjectType: "strategy", subjectId: s._id, actionKind: "approve_plan", contentHash: hash, scope: {}, policyVersion, expiresAt };
+  await ctx.db.patch(a._id, { status: "pending", policyVersion, expiresAt, approvalHash: await approvalHash(binding), invalidatedReason: undefined });
+  await audit(ctx, { orgId: s.orgId, actorType: "user", actorId: userId, action: "approval.refreshed", subjectType: "strategy", subjectId: s._id, summary: `Plan v${s.version} approval re-checked against the current approval rules.` });
+}
+
+/** Tell owners what's waiting, and try again later when only a busy team held work back. */
+async function afterPlanWork(ctx: MutationCtx, orgId: Id<"organizations">, strategyId: Id<"strategies">, userId: Id<"users">, work: PlanWorkResult, attempt: number): Promise<void> {
+  if (work.busy && attempt < 3) {
+    await ctx.scheduler.runAfter(10 * 60_000, internal.workspace.resumePlanWork, { strategyId, userId, attempt: attempt + 1 });
+  } else if (work.waiting.length) {
+    const credits = work.waiting.some((w) => w.reason.startsWith("Not enough credits"));
+    await notifyOwners(ctx, orgId, `Plan approved. ${work.waiting.length} channel${work.waiting.length === 1 ? "" : "s"} waiting${credits ? " for credits" : ""}: tap Do it on Today when ready.`, "today");
+  }
+}
+
+/** Start plan work that waited for a busy team. */
+export const resumePlanWork = internalMutation({
+  args: { strategyId: v.id("strategies"), userId: v.id("users"), attempt: v.number() },
+  handler: async (ctx, { strategyId, userId, attempt }): Promise<void> => {
+    const s = await ctx.db.get(strategyId);
+    const org = s ? await ctx.db.get(s.orgId) : null;
+    if (!s || !org || s.status !== "approved" || org.emergencyStop?.active) return;
+    const work = await startPlanWork(ctx, { org, strategyId, userId });
+    await afterPlanWork(ctx, org._id, strategyId, userId, work, attempt);
+  },
+});
+
+/** Turn a plan channel on or park it. On the approved plan, turning it on starts its work; parking holds it. */
 export const setChannelStatus = mutation({
   args: { slug: v.string(), strategyId: v.id("strategies"), key: v.string(), status: v.union(v.literal("active"), v.literal("parked")) },
-  handler: async (ctx, { slug, strategyId, key, status }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+  handler: async (ctx, { slug, strategyId, key, status }): Promise<PlanWorkResult | null> => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    if (!s.channels.some((c) => c.key === key)) throw appError("NOT_FOUND", "That channel isn't in this plan.");
     await ctx.db.patch(s._id, { channels: s.channels.map((c) => (c.key === key ? { ...c, status } : c)) });
+    if (s.status !== "approved") return null;
+    if (status === "parked") {
+      await holdPlanChannel(ctx, s, key);
+      return null;
+    }
+    const work = await startPlanWork(ctx, { org, strategyId: s._id, userId: user._id, onlyKeys: [key] });
+    await afterPlanWork(ctx, org._id, s._id, user._id, work, 0);
+    return work;
   },
 });
 

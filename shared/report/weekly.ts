@@ -90,3 +90,31 @@ export function weekStartUtc(ms: number): number {
   const day = (d.getUTCDay() + 6) % 7;
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
 }
+
+/** How far a timezone's wall clock is ahead of UTC at `ms`. */
+function offsetMs(ms: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }).formatToParts(new Date(ms));
+  const n = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  return Date.UTC(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"), n("second")) - Math.floor(ms / 1000) * 1000;
+}
+
+/** Monday 00:00 in `timeZone` of the week containing `ms` (UTC when the zone is unknown). */
+export function weekStartIn(ms: number, timeZone?: string): number {
+  if (!timeZone || timeZone === "UTC") return weekStartUtc(ms);
+  try {
+    const off = offsetMs(ms, timeZone);
+    const wall = weekStartUtc(ms + off); // local Monday midnight, written as if it were UTC
+    const first = wall - off;
+    const off2 = offsetMs(first, timeZone); // the offset can differ on Monday (daylight saving)
+    return off2 === off ? first : wall - off2;
+  } catch {
+    return weekStartUtc(ms);
+  }
+}
+
+/** The local week `weeksAgo` weeks back: its start, its end, and the week before it. */
+export function localWeek(now: number, timeZone: string | undefined, weeksAgo: number): { start: number; end: number; prevStart: number } {
+  let start = weekStartIn(now, timeZone);
+  for (let i = 0; i < weeksAgo; i++) start = weekStartIn(start - 86_400_000, timeZone);
+  return { start, end: weekStartIn(start + 8 * 86_400_000, timeZone), prevStart: weekStartIn(start - 86_400_000, timeZone) };
+}

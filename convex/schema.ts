@@ -813,8 +813,12 @@ export default defineSchema({
     url: v.string(),
     tag: v.optional(v.string()),
     deliveredAt: v.optional(v.number()),
+    /** Devices that already pulled this message (each device gets it once). */
+    deliveredTo: v.optional(v.array(v.id("pushSubscriptions"))),
     createdAt: v.number(),
-  }).index("by_user_created", ["userId", "createdAt"]),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_created", ["createdAt"]),
 
   /** A/B tests ClimbOS runs end to end: landing page headlines and outreach subject lines. */
   abTests: defineTable({
@@ -1125,6 +1129,8 @@ export default defineSchema({
         dependencies: v.array(v.string()),
         measurement: v.string(),
         capabilityNote: v.optional(v.string()),
+        /** The action card that runs this channel's work once the plan is approved. */
+        cardId: v.optional(v.id("actionCards")),
       }),
     ),
     constraints: v.array(v.string()),
@@ -1608,6 +1614,8 @@ export default defineSchema({
     status: v.union(v.literal("done"), v.literal("thinking"), v.literal("failed")),
     /** The job that is understanding this wish (for live progress). */
     runId: v.optional(v.id("workflowRuns")),
+    /** For the team's answer: the wish it answers. */
+    replyTo: v.optional(v.id("chatMessages")),
     createdAt: v.number(),
   }).index("by_org_created", ["orgId", "createdAt"]),
 
@@ -1687,8 +1695,11 @@ export default defineSchema({
     retries: v.optional(v.number()),
     /** Cost and meters already reconciled by an earlier finish (a retried run settles only the rest). */
     settled: v.optional(v.object({ micros: v.number(), searchCalls: v.number(), imageAttempts: v.number(), scrapeCredits: v.number() })),
+    /** When owners were told this run failed (one notice per run). */
+    failNoticeAt: v.optional(v.number()),
   })
     .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_org_kind_created", ["orgId", "kind", "createdAt"])
     .index("by_org_status", ["orgId", "status"])
     .index("by_status_updated", ["status", "updatedAt"]),
 

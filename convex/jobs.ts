@@ -670,7 +670,9 @@ export const onboardingResearch = internalAction({
             records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
-        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(pages) });
+        // An unreadable site isn't a checkpoint: a retry reads it again.
+        if (business.website && !ownerText && !pages.some((p) => p.status === "ok")) await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId!, error: "no readable pages" });
+        else await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(pages) });
       }
       pagesText = pages
         .filter((p) => p.status === "ok")

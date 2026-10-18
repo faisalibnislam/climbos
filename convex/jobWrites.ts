@@ -19,8 +19,9 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
-import { AUTO_RUN_KINDS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
-import { estimateJobMicros, planJob, type JobKind } from "./lib/jobPlans";
+import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
+import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { notifyOwners } from "./lib/notify";
 
 const DAY = 86_400_000;
 
@@ -53,11 +54,13 @@ export const jobContext = internalQuery({
           .withIndex("by_business", (q) => q.eq("businessId", business._id))
           .first()
       : null;
-    const strategy = await ctx.db
+    // The approved plan guides the work; a newer version waiting for approval doesn't yet.
+    const recentPlans = await ctx.db
       .query("strategies")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
-      .first();
+      .take(10);
+    const strategy = recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
     return {
       run,
       org,
@@ -208,6 +211,8 @@ export const saveInsights = internalMutation({
       },
       updatedAt: Date.now(),
     });
+    const org = await ctx.db.get(run.orgId);
+    if (org) await notifyOwners(ctx, org._id, `Research on ${business.name} is done. Check what we learned.`, org.onboardingStep !== "done" ? `/onboarding?workspace=${org.slug}` : "settings/business");
   },
 });
 
@@ -233,16 +238,7 @@ export const saveStrategy = internalMutation({
     for (const p of prior) if (p.status === "draft" || p.status === "needs_approval") await ctx.db.patch(p._id, { status: "superseded" });
     const version = (prior[0]?.version ?? 0) + 1;
     const now = Date.now();
-    const contentPlans: Record<string, JobKind> = {
-      seo_content: "content_seo",
-      social_organic: "content_social",
-      search_ads: "content_ads",
-      meta_ads: "content_ads",
-      email_lifecycle: "content_email",
-      sales_outreach: "sales_sequence",
-      conversion_optimization: "conversion_audit",
-      retention: "retention_plan",
-    };
+    const contentPlans = CHANNEL_JOBS;
     const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[] }) : null;
     if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
     const strategyId = await ctx.db.insert("strategies", {
@@ -367,6 +363,7 @@ export const saveStrategy = internalMutation({
       });
     }
     await audit(ctx, { orgId: run.orgId, actorType: "agent", actorId: "ceo", action: "strategy.created", subjectType: "strategy", subjectId: strategyId, summary: `Growth plan v${version} drafted and waiting for approval.` });
+    await notifyOwners(ctx, run.orgId, `Growth plan v${version} is ready for your approval.`, "plan");
     // First win: right after the very first plan, draft 3 posts and a welcome email so the owner has work to approve today.
     const createdBy = run.createdBy;
     if (version === 1 && createdBy) await ctx.scheduler.runAfter(0, internal.content.startFirstWin, { orgId: run.orgId, userId: createdBy });
@@ -520,6 +517,7 @@ export const saveArtifacts = internalMutation({
       );
     }
     await audit(ctx, { orgId: run.orgId, actorType: "agent", action: "content.drafted", subjectType: "run", subjectId: runId, summary: `${ids.length} draft${ids.length === 1 ? "" : "s"} ready for review.` });
+    if (ids.length) await notifyOwners(ctx, run.orgId, `${ids.length} new draft${ids.length === 1 ? "" : "s"} ready: ${run.title}.`, ids.length === 1 ? `content/${ids[0]}` : "content?status=in_review");
     return ids;
   },
 });
@@ -681,6 +679,7 @@ export const saveChatResult = internalMutation({
       roles: ["coo"],
       actionCardIds: cardIds,
       status: "done",
+      replyTo: messageId,
       createdAt: now + 1,
     });
   },
@@ -701,6 +700,7 @@ export const markChatFailed = internalMutation({
       roles: ["coo"],
       actionCardIds: [],
       status: "failed",
+      replyTo: messageId,
       createdAt: Date.now(),
     });
   },

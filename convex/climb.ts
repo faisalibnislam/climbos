@@ -7,10 +7,10 @@ import { fakeTurn } from "../shared/agents/fake";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, internalQuery, mutation, query, type ActionCtx } from "./_generated/server";
-import { createRunWithReservation, type PlannedStep } from "./engine";
+import { createRunWithReservation, estimateRun, type PlannedStep } from "./engine";
 import { claudeUsageRecords } from "./lib/usage";
 import { audit } from "./lib/audit";
-import { climbToolDefs, safeAppPath, toolByName, type Caller } from "./lib/climbTools";
+import { climbToolDefs, localTime, safeAppPath, toolByName, type Caller } from "./lib/climbTools";
 import type { MessageParam, ToolDef, ToolResultBlock } from "../shared/ai/types";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -24,6 +24,8 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 /** Climb AI chat always runs on Luna (owner routes, 18 Oct 2026); heavy work it starts follows the Basic/Expert choice. */
 const MODEL: ModelKey = CALL_ROUTES.climb;
 const MAX_TURNS = 8;
+/** One model turn of the side-panel agent (what each turn reserves). */
+const TURN: PlannedStep = { kind: "model", role: "coo", modelKey: MODEL, inputBudget: 14_000, outputBudget: 2_500 };
 
 /** A short, plain line about what a tool returned, shown under the step in the panel. */
 export function summarizeToolResult(out: unknown): string {
@@ -48,6 +50,7 @@ const RULES = `You are Climb AI, the assistant inside ClimbOS, an AI growth team
 How you work:
 - As short as possible: answer first, then at most 3 short bullets (or a tiny table). About 60 words unless they ask for detail. Owners hate reading. Plain words, no jargon, no filler, never restate the question.
 - Use the owner's screen context and anything they pointed at ("this", "here").
+- Dates and times: use NOW and the owner's timezone from the screen block. When a tool takes a time, pass ISO 8601 with the offset (e.g. 2026-10-20T09:00:00+01:00).
 - Use tools to get real data before answering questions about their business, content, plan or results. Never guess or invent numbers, drafts or results.
 - Just do safe work (reading, drafting, planning, capturing screenshots). For anything that publishes, schedules, approves, spends money or changes settings, call the matching tool: it shows the owner a confirmation card. Never say it's done until a tool result says so.
 - When you made something, say what and where to find it. Use go_to to open the right screen when that helps, and highlight to point at an element by its entity id.
@@ -99,8 +102,10 @@ export const send = mutation({
       .withIndex("by_org_user_created", (q) => q.eq("orgId", org._id).eq("userId", user._id).gt("createdAt", Date.now() - 60_000))
       .take(30);
     if (recent.filter((m) => m.role === "user").length >= 8) throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give Climb AI a moment.");
-    const steps: PlannedStep[] = Array.from({ length: MAX_TURNS }, () => ({ kind: "model", role: "coo", modelKey: MODEL, inputBudget: 14_000, outputBudget: 2_500 }));
-    const runId = await createRunWithReservation(ctx, { org, kind: "climb_chat", title: "Climb AI", roles: ["coo"], input: { text: clean.slice(0, 500) }, steps, meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
+    // Reserve one turn now; each further turn tops up as it happens (most answers take one or two).
+    const runId = await createRunWithReservation(ctx, { org, kind: "climb_chat", title: "Climb AI", roles: ["coo"], input: { text: clean.slice(0, 500) }, steps: [TURN], meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
+    const run = (await ctx.db.get(runId))!;
+    await ctx.db.patch(runId, { budget: { ...run.budget, modelSteps: Math.max(run.budget.modelSteps, MAX_TURNS + 1) } });
     const messageId = await ctx.db.insert("climbMessages", {
       orgId: org._id,
       userId: user._id,
@@ -146,6 +151,7 @@ export const context = internalQuery({
     const m = await ctx.db.get(messageId);
     const run = await ctx.db.get(runId);
     if (!m || !run || run.orgId !== m.orgId) return null;
+    const org = await ctx.db.get(m.orgId);
     const history = await ctx.db
       .query("climbMessages")
       .withIndex("by_org_user_created", (q) => q.eq("orgId", m.orgId).eq("userId", m.userId).lt("createdAt", m.createdAt))
@@ -154,6 +160,7 @@ export const context = internalQuery({
     return {
       message: m,
       run,
+      timeZone: org?.timezone || "UTC",
       history: history
         .reverse()
         .filter((h) => h.role === "user" || h.role === "assistant" || (h.role === "action" && h.action))
@@ -228,6 +235,7 @@ export const respond = action({
     const onScreen = (entities ?? []).slice(0, 40).map((e) => `- ${e.type} "${e.label.slice(0, 100)}" (id ${e.id})`).join("\n");
     const pointed = (m.selection ?? []).map((e) => `- ${e.type} "${e.label}" (id ${e.id})`).join("\n");
     const screenBlock = [
+      `NOW: ${localTime(Date.now(), c.timeZone)} (${new Date().toISOString()}). Owner's timezone: ${c.timeZone}.`,
       `SCREEN: ${m.screen?.title ?? "ClimbOS"} (${m.screen?.path ?? ""})`,
       screenSummary ? `<untrusted_content source="screen">\n${screenSummary.slice(0, 3000)}\n</untrusted_content>` : "",
       onScreen ? `ON SCREEN:\n${onScreen}` : "",
@@ -254,7 +262,16 @@ export const respond = action({
     let finalText = "";
     let failed: string | null = null;
 
+    const turnMicros = estimateRun([TURN], run.rateVersionId).costMicros;
     for (let i = 0; i < MAX_TURNS; i++) {
+      // The first turn was reserved with the message; each further turn reserves its own cost first.
+      if (i > 0) {
+        const more = await ctx.runMutation(internal.engine.reserveAdditional, { runId, costMicros: turnMicros });
+        if (!more.ok) {
+          failed = "Not enough credits to keep going. Top up, then ask again.";
+          break;
+        }
+      }
       const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: i, kind: "model", label: i === 0 ? "Climb AI: understand" : `Climb AI: step ${i + 1}`, role: "coo" });
       if (!step.proceed && step.reason !== "checkpoint") {
         failed = step.reason === "paused" ? "Activity is paused, so Climb AI stopped." : "Climb AI reached its limit for this message.";
@@ -308,7 +325,7 @@ export const respond = action({
             text: tool.title,
             status: "done",
             runId,
-            action: { tool: tool.name, input: JSON.stringify(input), title: tool.title, summary: tool.summarize?.(input as never) ?? tool.description, status: "pending" },
+            action: { tool: tool.name, input: JSON.stringify(input), title: tool.title, summary: tool.summarize?.(input as never, { timeZone: c.timeZone }) ?? tool.description, status: "pending" },
           });
           results.push({ type: "tool_result", tool_use_id: tu.id, content: "A confirmation card is now shown to the owner. It has NOT happened yet; tell them to confirm it if they want it." });
           continue;
