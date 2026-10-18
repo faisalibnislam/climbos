@@ -33,3 +33,15 @@ describe("job progress", () => {
     expect(progressOf([], planned, T, true).percent).toBe(100);
   });
 });
+
+describe("findings", () => {
+  it("summarises research, reviews and plans in plain text", async () => {
+    const { findingsFor } = await import("../../shared/progress");
+    expect(findingsFor("Growth plays: research", { notes: "## Notes\n- **Plausible** already has a [free trial](https://x.com) for 30 days, no card", sources: [{ url: "https://www.g2.com/a" }, { url: "https://reddit.com/b" }] })).toEqual([
+      "Read 2 sources: g2.com, reddit.com",
+      "Plausible already has a free trial for 30 days, no card",
+    ]);
+    expect(findingsFor("Growth plan: review 1", { gates: [], fixes: ["Tie the ad test to one CAC rule"], strengths: [] })[0]).toMatch(/1 fix: Tie the ad test/);
+    expect(findingsFor("Growth plays: draft", { plays: [{ name: "Comparison pages" }, { name: "Integration listing" }] })).toEqual(["2 growth plays: Comparison pages · Integration listing"]);
+  });
+});

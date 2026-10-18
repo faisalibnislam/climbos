@@ -107,6 +107,13 @@ function groupSteps(run: RunStatusView): Group[] {
     }
     g.phases.push({ ...x, name: x.label.includes(": ") ? phaseName(x.label) : AGENT_WHO[x.label] ?? x.label });
   }
+  // Real order: when each agent started; agents not started yet follow the plan.
+  const startOf = (g: Group) => Math.min(...g.phases.map((p) => p.startedAt ?? Number.POSITIVE_INFINITY));
+  const planIndex = (g: Group) => {
+    const i = run.planned.findIndex((l) => l.startsWith(`${g.key}:`) || l === g.key);
+    return i < 0 ? Number.POSITIVE_INFINITY : i;
+  };
+  groups.sort((a, b) => startOf(a) - startOf(b) || planIndex(a) - planIndex(b));
   for (const g of groups) {
     const st = g.phases.map((p) => p.status);
     g.status = st.includes("failed") ? "failed" : st.includes("running") ? "running" : st.every((v) => v === "done") ? "done" : st.some((v) => v === "done") ? "running" : "pending";

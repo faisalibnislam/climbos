@@ -142,7 +142,11 @@ const host = (u: string) => {
     return "";
   }
 };
-const clip = (s: string, n = 140) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+/** Plain text: no markdown emphasis, links or extra spaces; clipped to n characters. */
+const clip = (raw: string, n = 140) => {
+  const s = raw.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim();
+  return s.length > n ? `${s.slice(0, n - 1)}…` : s;
+};
 
 /** One or two short lines describing a finished step's result, for the owner to follow along. */
 export function findingsFor(label: string, output: unknown): string[] {
