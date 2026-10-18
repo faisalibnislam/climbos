@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { syncDealFromProspect } from "./crm";
+import { emitEvent } from "./webhooks";
 import { recordAb, runningTest } from "./abtests";
 import { variantFor } from "../shared/abtest";
 import { sha256Hex } from "../shared/policy";
@@ -215,6 +216,7 @@ export const applyInbox = internalMutation({
         await ctx.db.insert("communityMessages", { orgId: c.orgId, channel: "email", kind: "email", externalId, prospectId: p._id, campaignId, fromEmail: r.from.toLowerCase(), subject: r.subject, messageRef: r.messageId, authorName: p.company, text: r.text, receivedAt: r.at ?? now, status: r.optOut ? "dismissed" : "new", createdAt: now, updatedAt: now });
       }
       if (!r.optOut) await syncDealFromProspect(ctx, p, "talking", "outbound", r.text ? `Replied: “${r.text.slice(0, 160)}”` : "Replied to your email.");
+      if (!r.optOut && r.text && !(p.stage === "replied" || p.stage === "booked" || p.stage === "won")) await emitEvent(ctx, c.orgId, "reply.received", { company: p.company, email: r.from, subject: r.subject ?? null, text: r.text.slice(0, 1000) });
       if (!r.optOut && p.stage !== "replied" && p.stage !== "booked" && p.stage !== "won") {
         const test = await runningTest(ctx, campaignId);
         if (test) await recordAb(ctx, test, variantFor(p._id), "wins");

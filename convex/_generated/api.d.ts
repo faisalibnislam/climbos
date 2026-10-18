@@ -94,6 +94,7 @@ import type * as settings from "../settings.js";
 import type * as status from "../status.js";
 import type * as team from "../team.js";
 import type * as translate from "../translate.js";
+import type * as webhooks from "../webhooks.js";
 import type * as workspace from "../workspace.js";
 
 import type {
@@ -189,6 +190,7 @@ declare const fullApi: ApiFromModules<{
   status: typeof status;
   team: typeof team;
   translate: typeof translate;
+  webhooks: typeof webhooks;
   workspace: typeof workspace;
 }>;
 

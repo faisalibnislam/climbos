@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
+import { Activity, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Webhook } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -17,6 +17,7 @@ export const SETTINGS_SECTIONS = [
   { key: "activity", label: "Activity", icon: Activity, tone: "teal" },
   { key: "usage", label: "Usage", icon: Gauge, tone: "pink" },
   { key: "agents", label: "Agents & MCP", icon: Bot, tone: "violet" },
+  { key: "webhooks", label: "Webhooks", icon: Webhook, tone: "teal" },
   { key: "privacy", label: "Privacy", icon: ShieldCheck, tone: "green" },
   { key: "profile", label: "Profile", icon: UserRound, tone: "blue" },
 ] as const;

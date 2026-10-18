@@ -10,6 +10,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query, type 
 import { createRunWithReservation } from "./engine";
 import { featureAllowed } from "./lib/access";
 import { notifyOwners } from "./lib/notify";
+import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -101,6 +102,7 @@ async function upsertInbox(ctx: MutationCtx, t: Doc<"chatThreads">, text: string
   const id = await ctx.db.insert("communityMessages", { orgId: t.orgId, channel: "website_chat", kind: "chat", externalId: `chat:${t._id}`, authorName: name, fromEmail: t.email, text: text.slice(0, 2000), receivedAt: now, status: "new", createdAt: now, updatedAt: now });
   await ctx.db.patch(t._id, { inboxMessageId: id });
   await notifyOwners(ctx, t.orgId, `New website chat: “${text.slice(0, 120)}”`, "inbox");
+  await emitEvent(ctx, t.orgId, "chat.started", { message: text.slice(0, 500), page: t.page ?? null, email: t.email ?? null });
   return id;
 }
 
@@ -130,6 +132,7 @@ export const send = mutation({
       const currency = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())?.currency ?? "USD";
       const dealId = await ctx.db.insert("deals", { orgId: w.orgId, name: email, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From website chat: “${text.slice(0, 200)}”`, at: now }], createdAt: now, updatedAt: now });
       await ctx.db.patch(t._id, { dealId });
+      await emitEvent(ctx, w.orgId, "lead.created", { name: email, email, source: "website_chat" });
       t = (await ctx.db.get(t._id))!;
     }
     await ctx.db.patch(t._id, { lastAt: now });

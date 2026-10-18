@@ -764,6 +764,35 @@ export default defineSchema({
     .index("by_target", ["targetId", "status"])
     .index("by_org", ["orgId", "startedAt"]),
 
+  /** Outgoing webhooks (Zapier, Make or your own server): signed events, retried with backoff. */
+  webhookEndpoints: defineTable({
+    orgId: v.id("organizations"),
+    url: v.string(),
+    events: v.array(v.string()),
+    secretCiphertext: v.string(),
+    secretIv: v.string(),
+    secretKeyId: v.string(),
+    active: v.boolean(),
+    failures: v.number(),
+    lastStatus: v.optional(v.number()),
+    lastAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_org", ["orgId"]),
+
+  webhookDeliveries: defineTable({
+    orgId: v.id("organizations"),
+    endpointId: v.id("webhookEndpoints"),
+    event: v.string(),
+    payload: v.string(),
+    status: v.union(v.literal("pending"), v.literal("delivered"), v.literal("failed")),
+    attempts: v.number(),
+    nextAt: v.number(),
+    responseCode: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_status_next", ["status", "nextAt"])
+    .index("by_endpoint", ["endpointId", "createdAt"]),
+
   /** Link in bio: one page per workspace at /bio/SLUG; each link is a tracked link. */
   bioPages: defineTable({
     orgId: v.id("organizations"),

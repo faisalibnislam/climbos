@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { featureAllowed } from "./lib/access";
 import { notifyOwners } from "./lib/notify";
+import { emitEvent } from "./webhooks";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 import { createLink } from "./links";
 
@@ -85,5 +86,6 @@ export const signup = mutation({
     await ctx.db.insert("deals", { orgId: p.orgId, name: e, email: e, stage: "lead", source: "inbox", currency, notes: [{ text: "Signed up on your link-in-bio page.", at: now }], createdAt: now, updatedAt: now });
     await ctx.db.insert("communityMessages", { orgId: p.orgId, channel: "link_in_bio", kind: "form", externalId: `bio:${p._id}:${now}`, authorName: e, fromEmail: e, subject: "Link in bio sign-up", text: "Signed up on your link-in-bio page.", receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await notifyOwners(ctx, p.orgId, `New sign-up from your link in bio: ${e}`, "pipeline");
+    await emitEvent(ctx, p.orgId, "lead.created", { name: e, email: e, source: "link_in_bio" });
   },
 });

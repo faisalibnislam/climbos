@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { dealFromBooking, syncDealFromProspect } from "./crm";
 import { notifyOwners } from "./lib/notify";
+import { emitEvent } from "./webhooks";
 import { manageToken } from "./bookings";
 import { requirePaid } from "./lib/access";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
@@ -347,6 +348,7 @@ export const book = mutation({
     await audit(ctx, { orgId: page.orgId, actorType: "system", action: "booking.created", subjectType: "booking", subjectId: id, summary: `${name}${a.company ? ` (${a.company.trim().slice(0, 60)})` : ""} booked a call` });
     await ctx.scheduler.runAfter(0, internal.outbound.notifyBooking, { bookingId: id });
     await notifyOwners(ctx, page.orgId, `${name} booked a call for ${when}.`, "inbox");
+    await emitEvent(ctx, page.orgId, "booking.created", { name, email, company: a.company?.trim() || null, startAt: new Date(a.startAt).toISOString(), minutes: page.durationMin, note: a.note?.trim() || null });
     return { bookingId: id, startAt: a.startAt, endAt: a.startAt + page.durationMin * 60_000 };
   },
 });

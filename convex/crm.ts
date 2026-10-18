@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
+import { emitEvent } from "./webhooks";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -67,6 +68,7 @@ export const create = mutation({
     const now = Date.now();
     const id = await ctx.db.insert("deals", { orgId: org._id, name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor: a.value !== undefined ? Math.max(0, Math.round(a.value * 100)) : undefined, currency: await currencyOf(ctx, org._id), notes: [], createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.created", subjectType: "deal", subjectId: id, summary: `Added ${name} to the pipeline.` });
+    await emitEvent(ctx, org._id, "lead.created", { name, company: a.company ?? null, email: email ?? null, source: "manual" });
     return id;
   },
 });
@@ -99,7 +101,10 @@ export const update = mutation({
     if (a.note?.trim()) patch.notes = [...d!.notes, { text: a.note.trim().slice(0, 2000), at: now, userId: user._id }].slice(-200);
     if (a.stage && a.stage !== d!.stage) {
       patch.stage = a.stage;
-      if (a.stage === "won") patch.wonAt = now;
+      if (a.stage === "won") {
+        patch.wonAt = now;
+        await emitEvent(ctx, org._id, "deal.won", { name: d!.name, company: d!.company ?? null, email: d!.email ?? null, value: (patch.valueMinor ?? d!.valueMinor ?? 0) / 100, currency: d!.currency });
+      }
       if (d!.prospectId && (a.stage === "won" || a.stage === "lost")) await ctx.db.patch(d!.prospectId, { stage: a.stage, updatedAt: now });
     }
     await ctx.db.patch(a.id, patch);

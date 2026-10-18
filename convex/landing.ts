@@ -11,6 +11,7 @@ import { recordAb, runningTest } from "./abtests";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed, isPaid } from "./lib/access";
 import { notifyOwners } from "./lib/notify";
+import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -211,6 +212,7 @@ export const submit = mutation({
     await ctx.db.insert("communityMessages", { orgId: p.orgId, channel: "landing_page", kind: "form", externalId: `form:${p._id}:${now}`, authorName: name, fromEmail: email, subject: p.title, text: message || `Asked to be contacted via “${p.title}”.`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await ctx.db.patch(p._id, { leads: p.leads + 1 });
     await notifyOwners(ctx, p.orgId, `New lead from “${p.title}”: ${name}`, "inbox");
+    await emitEvent(ctx, p.orgId, "lead.created", { name, email, message: message || null, source: "landing_page", page: p.title });
     const test = a.variant ? await runningTest(ctx, p._id) : null;
     if (test && a.variant) await recordAb(ctx, test, a.variant, "wins");
   },

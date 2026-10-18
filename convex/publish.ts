@@ -18,6 +18,7 @@ import { checkApprovalForExecution } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { emitEvent } from "./webhooks";
 import { audit } from "./lib/audit";
 import { onPublishOutcome } from "./lib/autopilot";
 import { fleetStopped } from "./lib/access";
@@ -149,6 +150,7 @@ export const finishReceipt = internalMutation({
     const status = args.status === "verified" || args.status === "fixture_verified" ? "published" : args.status === "uncertain" ? "uncertain" : "failed";
     await ctx.db.patch(a._id, { status, updatedAt: now });
     if (status === "published" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
+    if (status === "published") await emitEvent(ctx, a.orgId, "post.published", { title: a.title, channel: a.channel, externalId: args.externalId ?? null });
     await onPublishOutcome(ctx, a._id, status);
     await audit(ctx, { orgId: a.orgId, actorType: "system", action: `publish.${args.status}`, subjectType: "artifact", subjectId: a._id, summary: `${a.title}: ${args.summary}` });
   },
