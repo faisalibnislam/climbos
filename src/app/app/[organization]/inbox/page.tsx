@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "lucide-react";
+import { CalendarCheck, Check, FileText, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
@@ -17,7 +17,7 @@ const BOXES = [
   { value: "open" as const, label: "Open" },
   { value: "done" as const, label: "Done" },
 ];
-const ICONS = { email: Mail, booking: CalendarCheck, chat: MessageCircle, review: Star } as Record<string, typeof Mail>;
+const ICONS = { email: Mail, booking: CalendarCheck, chat: MessageCircle, review: Star, form: FileText } as Record<string, typeof Mail>;
 
 /** Unified inbox: replies, bookings and chats in one place, with drafted answers. */
 export default function InboxPage() {

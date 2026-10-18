@@ -694,6 +694,25 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Landing pages: written by Climb AI from the business facts, hosted at /p/SLUG. */
+  landingPages: defineTable({
+    orgId: v.id("organizations"),
+    slug: v.string(),
+    title: v.string(),
+    brief: v.string(),
+    status: v.union(v.literal("drafting"), v.literal("draft"), v.literal("live"), v.literal("failed")),
+    /** JSON of LandingContent (shared/landing). */
+    content: v.optional(v.string()),
+    color: v.string(),
+    runId: v.optional(v.id("workflowRuns")),
+    views: v.number(),
+    leads: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_org", ["orgId", "createdAt"]),
+
   /** Website chat widget (one per workspace) and its conversations. */
   chatWidgets: defineTable({
     orgId: v.id("organizations"),
@@ -1291,7 +1310,7 @@ export default defineSchema({
   communityMessages: defineTable({
     orgId: v.id("organizations"),
     channel: v.string(),
-    kind: v.union(v.literal("comment"), v.literal("dm"), v.literal("mention"), v.literal("review"), v.literal("email"), v.literal("booking"), v.literal("chat")),
+    kind: v.union(v.literal("comment"), v.literal("dm"), v.literal("mention"), v.literal("review"), v.literal("email"), v.literal("booking"), v.literal("chat"), v.literal("form")),
     externalId: v.string(),
     /** Unified inbox: who wrote (email replies), the thread, and the run drafting our answer. */
     prospectId: v.optional(v.id("prospects")),

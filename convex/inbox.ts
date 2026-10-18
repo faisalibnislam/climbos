@@ -38,7 +38,7 @@ function view(m: Doc<"communityMessages">) {
     finalReply: m.finalReply ?? null,
     draftRunId: m.draftRunId ?? null,
     prospectId: m.prospectId ?? null,
-    canReply: (m.kind === "email" || (m.kind === "review" && m.channel === "feedback")) && Boolean(m.fromEmail),
+    canReply: (m.kind === "email" || m.kind === "form" || (m.kind === "review" && m.channel === "feedback")) && Boolean(m.fromEmail),
   };
 }
 
@@ -172,7 +172,7 @@ export const prepareReply = internalQuery({
   args: { slug: v.string(), id: v.id("communityMessages") },
   handler: async (ctx, { slug, id }) => {
     const { org, user, m } = await own(ctx, slug, id, "edit");
-    if (!(m.kind === "email" || (m.kind === "review" && m.channel === "feedback")) || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
+    if (!(m.kind === "email" || m.kind === "form" || (m.kind === "review" && m.channel === "feedback")) || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
     if (org.kind === "demo") throw appError("INVALID", "Demo workspaces can't send email.");
     await requirePaid(ctx, org, "sending");
     const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_mailbox")).first();
