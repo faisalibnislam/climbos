@@ -745,7 +745,7 @@ export const buildStrategy = internalAction({
       if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked);
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });

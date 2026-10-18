@@ -13,6 +13,7 @@ import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
+import type { Economics } from "../../../../../shared/agents/economics";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
 import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunProgress";
@@ -185,7 +186,7 @@ function PlanScreen({ slug }: { slug: string }) {
           ) : null}
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} /> : null}
-          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} /> : null}
+          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} />
           <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} />

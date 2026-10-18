@@ -107,7 +107,7 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[] };
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"] };
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({

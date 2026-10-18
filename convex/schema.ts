@@ -1102,6 +1102,8 @@ export default defineSchema({
         risks: v.array(v.object({ risk: v.string(), mitigation: v.string() })),
         /** Growth play cards (shared/agents/specs PlaySchema), validated by the agent schema. */
         plays: v.optional(v.array(v.any())),
+        /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
+        economics: v.optional(v.any()),
       }),
     ),
     /** Acquisition Intelligence: the profile used and the agent's evidence-backed adjustments (scores are recomputed on read). */

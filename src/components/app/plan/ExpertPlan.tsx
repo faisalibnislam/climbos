@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
+import { playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { PlanSection } from "./PlanSections";
 import { climbTarget } from "@/components/climb/context";
 
@@ -36,6 +37,7 @@ export interface PlayView {
   scores: number[];
   firstActionToday: string;
   climbosCanDo: string;
+  model?: PlayModel;
 }
 
 export interface ExpertView {
@@ -155,7 +157,19 @@ function ForecastBar({ f }: { f: PlayView }) {
   );
 }
 
-function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
+/** The play's maths, computed in code from its own numbers. */
+function PlayEconomics({ play, economics }: { play: PlayView; economics: Economics }) {
+  const m = playMaths({ ...play, model: play.model! }, economics);
+  const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
+  return (
+    <p className={cn("text-xs", m.profitable ? "text-ink-3" : "text-red-800")}>
+      Cost per customer <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {usd(m.valueUsd)} a year
+      {m.paybackMonths !== null ? ` · pays back in ${Math.max(0.1, Math.round(m.paybackMonths * 10) / 10)} months` : ""}
+    </p>
+  );
+}
+
+function PlayCard({ play, slug, economics }: { play: PlayView; slug: string; economics?: Economics }) {
   const k = KIND[play.kind] ?? KIND.creative;
   const send = useMutation(api.workspace.sendChat);
   const router = useRouter();
@@ -211,6 +225,7 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
         </dl>
 
         <ForecastBar f={play} />
+        {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
 
         {open ? (
           <div className="flex flex-col gap-4">
@@ -300,7 +315,7 @@ function PlayCard({ play, slug }: { play: PlayView; slug: string }) {
   );
 }
 
-export function GrowthPlays({ plays, slug }: { plays: PlayView[]; slug: string }) {
+export function GrowthPlays({ plays, slug, economics }: { plays: PlayView[]; slug: string; economics?: Economics }) {
   if (!plays.length) return null;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
@@ -308,7 +323,7 @@ export function GrowthPlays({ plays, slug }: { plays: PlayView[]; slug: string }
     <PlanSection id="plays" title="Growth plays" intro="One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Every forecast comes from cited base rates and gets tested before anything scales.">
       <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
-          <PlayCard key={p.name} play={p} slug={slug} />
+          <PlayCard key={p.name} play={p} slug={slug} economics={economics} />
         ))}
       </div>
     </PlanSection>

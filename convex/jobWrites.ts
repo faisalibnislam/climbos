@@ -294,6 +294,7 @@ export const saveStrategy = internalMutation({
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
                 plays: (x.plays ?? []).slice(0, 4),
+                economics: x.economics,
               };
             })(),
           }
