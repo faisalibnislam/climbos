@@ -13,6 +13,7 @@ import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { redactFeedback } from "../shared/lab/redact";
 import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
 
 /** Everything the Today screen needs, in one bounded query. */
@@ -403,6 +404,7 @@ export const setUnitEconomics = mutation({
     grossMargin: v.optional(v.number()),
     monthlyChurn: v.optional(v.number()),
     ownerHourUsd: v.optional(v.number()),
+    ownerHoursPerWeek: v.optional(v.number()),
   },
   handler: async (ctx, { slug, ...vals }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
@@ -415,12 +417,14 @@ export const setUnitEconomics = mutation({
     check(vals.grossMargin, 0.01, 1, "Margin");
     check(vals.monthlyChurn, 0.001, 0.95, "Monthly churn");
     check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
+    check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
     const prev = business.unitEconomics;
     const next = {
       revenuePerCustomerMonthUsd: vals.revenuePerCustomerMonthUsd ?? prev?.revenuePerCustomerMonthUsd,
       grossMargin: vals.grossMargin ?? prev?.grossMargin,
       monthlyChurn: vals.monthlyChurn ?? prev?.monthlyChurn,
       ownerHourUsd: vals.ownerHourUsd ?? prev?.ownerHourUsd,
+      ownerHoursPerWeek: vals.ownerHoursPerWeek ?? prev?.ownerHoursPerWeek,
       updatedAt: Date.now(),
     };
     await ctx.db.patch(business._id, { unitEconomics: next });
@@ -446,6 +450,18 @@ export const decidePlan = mutation({
       await ctx.db.patch(s._id, { status: "draft" });
     }
     if (s.approvalId) await ctx.db.patch(s.approvalId, { status: decision === "approve" ? "approved" : "rejected", decidedBy: user._id, decidedAt: now, decisionNote: note?.slice(0, 500) });
+    // Outcome signal for the engine (spec §28): the owner's verdict, with any note scrubbed of business details.
+    if (s.runId) {
+      const business = await ctx.db.get(s.businessId);
+      const snap = (s.expert as { snapshot?: { engine?: string; aiMode?: string } } | undefined)?.snapshot;
+      await ctx.db.insert("engineQuality", {
+        runId: s.runId,
+        agentId: "owner_decision",
+        mode: snap?.aiMode ?? "basic",
+        data: JSON.stringify({ decision, engine: snap?.engine ?? "unknown", note: note?.trim() ? redactFeedback(note, [org.name, business?.name, business?.website]) : undefined }),
+        createdAt: now,
+      });
+    }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `plan.${decision}d`, subjectType: "strategy", subjectId: s._id, summary: `${decision === "approve" ? "Approved" : "Sent back"} growth plan v${s.version}.` });
   },
 });

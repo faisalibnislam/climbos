@@ -36,7 +36,27 @@ export function EngineLab() {
           <Progress value={Math.min(100, (d.spentMicros / d.capMicros) * 100)} label="Lab budget used" />
         </CardContent>
       </Card>
-      {d.health.length ? (
+      {d.cost.modes.length ? (
+        <Card>
+          <CardContent className="flex flex-col gap-1.5 text-sm">
+            <p className="font-medium text-ink">Plan cost, last 14 days</p>
+            {d.cost.modes.map((m) => (
+              <p key={m.mode} className="flex justify-between tabular-nums text-ink-2">
+                <span>
+                  <span className="capitalize">{m.mode}</span> · {m.plans} plans
+                </span>
+                <span>
+                  avg {usd(m.meanMicros)} · p95 {usd(m.p95Micros)}
+                </span>
+              </p>
+            ))}
+            <p className={d.cost.overReservation || d.cost.stoppedAtCap ? "text-red-800" : "text-ink-3"}>
+              {d.cost.overReservation} over reservation · {d.cost.stoppedAtCap} stopped at the 1.5× cap
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+      {d.health.agents.length ? (
         <section className="flex flex-col gap-3">
           <h2 className="heading-section">Engine health, last 14 days</h2>
           <Card>
@@ -53,7 +73,7 @@ export function EngineLab() {
                   </tr>
                 </thead>
                 <tbody className="tabular-nums text-ink-2">
-                  {d.health.map((h) => (
+                  {d.health.agents.map((h) => (
                     <tr key={`${h.agent}-${h.mode}`} className="border-t border-line">
                       <td className="py-1.5 pr-3 text-ink">
                         {AGENT[h.agent] ?? h.agent} <span className="text-xs text-ink-3">{h.mode}</span>
@@ -72,6 +92,23 @@ export function EngineLab() {
             </CardContent>
           </Card>
         </section>
+      ) : null}
+      {d.health.decisions.approved + d.health.decisions.sentBack > 0 ? (
+        <Card>
+          <CardContent className="flex flex-col gap-1.5 text-sm">
+            <p className="flex justify-between">
+              <span className="font-medium text-ink">Owner verdicts, last 14 days</span>
+              <span className="tabular-nums text-ink-2">
+                {d.health.decisions.approved} approved · {d.health.decisions.sentBack} sent back
+              </span>
+            </p>
+            {d.health.decisions.notes.map((n, i) => (
+              <p key={i} className="text-ink-3">
+                “{n}”
+              </p>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
       <section className="flex flex-col gap-3">
         <h2 className="heading-section">Proposals</h2>

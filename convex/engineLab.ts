@@ -76,7 +76,21 @@ async function qualityTrend(ctx: QueryCtx) {
 async function engineHealth(ctx: QueryCtx) {
   const rows = await ctx.db.query("engineQuality").withIndex("by_created", (q) => q.gte("createdAt", Date.now() - 14 * DAY)).order("desc").take(300);
   const by = new Map<string, { n: number; draft: number; final: number; invented: number; dropped: number; shipped: number; research: number }>();
+  const decisions = { approved: 0, sentBack: 0, notes: [] as string[] };
   for (const r of rows) {
+    if (r.agentId === "owner_decision") {
+      try {
+        const d = JSON.parse(r.data) as { decision: string; note?: string };
+        if (d.decision === "approve") decisions.approved++;
+        else {
+          decisions.sentBack++;
+          if (d.note && decisions.notes.length < 5) decisions.notes.push(d.note);
+        }
+      } catch {
+        // skip
+      }
+      continue;
+    }
     let q: { draftLint?: Record<string, number>; finalLint?: Record<string, number>; numbersDropped?: string[]; shipped?: boolean | null; contextChars?: { research?: number } };
     try {
       q = JSON.parse(r.data);
@@ -96,7 +110,32 @@ async function engineHealth(ctx: QueryCtx) {
     by.set(k, a);
   }
   const r1 = (x: number) => Math.round(x * 10) / 10;
-  return [...by.entries()].map(([k, a]) => ({ agent: k.split("|")[0], mode: k.split("|")[1], runs: a.n, draftErrors: r1(a.draft / a.n), finalErrors: r1(a.final / a.n), inventedFinal: r1(a.invented / a.n), numbersDropped: r1(a.dropped / a.n), shipRate: Math.round((a.shipped / a.n) * 100), researchChars: Math.round(a.research / a.n) }));
+  return {
+    agents: [...by.entries()].map(([k, a]) => ({ agent: k.split("|")[0], mode: k.split("|")[1], runs: a.n, draftErrors: r1(a.draft / a.n), finalErrors: r1(a.final / a.n), inventedFinal: r1(a.invented / a.n), numbersDropped: r1(a.dropped / a.n), shipRate: Math.round((a.shipped / a.n) * 100), researchChars: Math.round(a.research / a.n) })),
+    decisions,
+  };
+}
+
+/** Plan runs in the last 14 days: cost per plan by mode, and how often a run outgrew its reservation. */
+async function planCost(ctx: QueryCtx) {
+  const since = Date.now() - 14 * DAY;
+  const runs: Doc<"workflowRuns">[] = [];
+  for (const status of ["verified", "failed"] as const) runs.push(...(await ctx.db.query("workflowRuns").withIndex("by_status_updated", (q) => q.eq("status", status).gte("updatedAt", since)).take(400)));
+  const by = new Map<string, number[]>();
+  let over = 0;
+  let capped = 0;
+  for (const r of runs.filter((x) => x.kind === "strategy" && !x.isFixture)) {
+    const k = r.aiMode ?? "basic";
+    by.set(k, [...(by.get(k) ?? []), r.actualMicros]);
+    if (r.actualMicros > r.estimateMicros) over++;
+    if (r.status === "failed" && /more AI work than planned/.test(r.userMessage ?? "")) capped++;
+  }
+  const q = (xs: number[], p: number) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] ?? 0;
+  return {
+    modes: [...by.entries()].map(([mode, xs]) => ({ mode, plans: xs.length, meanMicros: Math.round(xs.reduce((s, x) => s + x, 0) / xs.length), p95Micros: q(xs, 0.95) })),
+    overReservation: over,
+    stoppedAtCap: capped,
+  };
 }
 
 export const overview = query({
@@ -112,6 +151,7 @@ export const overview = query({
       proposals: proposals.map((p) => ({ id: p._id, agentId: p.agentId, rules: p.rules, rationale: p.rationale, status: p.status, test: p.test ?? null, createdAt: p.createdAt })),
       trend: await qualityTrend(ctx),
       health: await engineHealth(ctx),
+      cost: await planCost(ctx),
     };
   },
 });

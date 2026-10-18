@@ -365,6 +365,7 @@ export default defineSchema({
         grossMargin: v.optional(v.number()),
         monthlyChurn: v.optional(v.number()),
         ownerHourUsd: v.optional(v.number()),
+        ownerHoursPerWeek: v.optional(v.number()),
         updatedAt: v.number(),
       }),
     ),

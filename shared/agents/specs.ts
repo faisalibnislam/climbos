@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { lintEconomics, withForecasts, type Economics } from "./economics";
+import type { PlanConstraints } from "./types";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -265,12 +266,44 @@ export function lintCitations(plays: { funnel: string[] }[], evidence: string): 
   const issues: LintIssue[] = [];
   plays.forEach((p, i) =>
     p.funnel.forEach((line, j) => {
-      const src = line.match(/\[([^\]]+?),\s*[ABCD]\]\s*$/)?.[1]?.trim().toLowerCase();
-      const domain = src?.match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0]?.replace(/^www\./, "");
-      if (domain && !ev.includes(domain))
-        issues.push({ severity: "error", rule: "citation", message: `"${domain}" isn't in your research notes or the brief. Cite a source you actually read, or mark the rate "assumption, grade D".`, path: `plays[${i}].funnel[${j}]` });
+      // "[source.com, C]" anywhere in the line, and any bare URL.
+      const cited = [...line.matchAll(/\[([^\]]+?),\s*[ABCD]\]/g)].map((m) => m[1]).concat(line.match(/https?:\/\/[^\s,);\]]+/g) ?? []);
+      const domains = [...new Set(cited.map((c) => c.toLowerCase().replace(/https?:\/\/(www\.)?/, "").match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0]?.replace(/^www\./, "")).filter((d): d is string => Boolean(d)))];
+      const missing = domains.filter((d) => !ev.includes(d));
+      if (missing.length)
+        issues.push({ severity: "error", rule: "citation", message: `${missing.map((d) => `"${d}"`).join(", ")} isn't in your research notes or the brief. Cite a source you actually read, or mark the rate "assumption, grade D".`, path: `plays[${i}].funnel[${j}]` });
     }),
   );
+  return issues;
+}
+
+/** Spec §13: the portfolio must fit the owner's cash and time. */
+export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
+  if (!c) return [];
+  const issues: LintIssue[] = [];
+  const spend = plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
+  const hours = plays.reduce((s, p) => s + Math.max(0, p.model?.ownerHoursPerWeek ?? 0), 0);
+  if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001)
+    issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend $${Math.round(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend $${Math.round(spend)}/month; the budget is $${Math.round(c.monthlyAdBudgetUsd)}. Cut or drop a play.`, path: "plays" });
+  if (c.ownerHoursPerWeek !== undefined && hours > c.ownerHoursPerWeek + 0.01)
+    issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.`, path: "plays" });
+  else if (c.ownerHoursPerWeek === undefined && hours > 10)
+    issues.push({ severity: "warn", rule: "capacity", message: `The plays need ${Math.round(hours)} owner hours a week; most owners have under 10. Move work to ClimbOS where you can.`, path: "plays" });
+  return issues;
+}
+
+/** The plan's paid channels must fit the budget, and its North Star must be the plays' computed total. */
+export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdSpend: number }[]; northStar?: { target: string } }, c: PlanConstraints | undefined): LintIssue[] {
+  if (!c) return [];
+  const issues: LintIssue[] = [];
+  const spend = out.channels.reduce((s, ch) => s + Math.max(0, ch.suggestedMonthlyAdSpend || 0), 0);
+  if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001) issues.push({ severity: "error", rule: "budget", message: `Channels suggest $${Math.round(spend)}/month in ads; the budget is $${Math.round(c.monthlyAdBudgetUsd)}.`, path: "channels" });
+  if (c.lockedCustomers !== undefined && c.lockedCustomers > 0 && out.northStar?.target) {
+    const nums = [...out.northStar.target.replace(/,/g, "").matchAll(/(?<![A-Za-z\d.-])\d+(?:\.\d+)?/g)].map((m) => Number(m[0])).filter((n) => n > 0 && n !== 90 && n !== 30 && n !== 60);
+    const want = c.lockedCustomers;
+    if (nums.length && !nums.some((n) => Math.abs(n - want) <= Math.max(1, want * 0.15)))
+      issues.push({ severity: "error", rule: "consistency", message: `The North Star target doesn't match the plays: they add up to ≈${Math.round(want)} customers by day 90. Use that number.`, path: "northStar.target" });
+  }
   return issues;
 }
 
@@ -450,7 +483,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -468,7 +501,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS)];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

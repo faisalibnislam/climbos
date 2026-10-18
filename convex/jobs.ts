@@ -39,7 +39,7 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
-import { applyOwnerEconomics, lockedNumbers, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
@@ -72,7 +72,7 @@ import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
-import type { AgentInput, AgentSpec } from "../shared/agents/types";
+import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
 import { estimateRun } from "./engine";
@@ -441,7 +441,16 @@ function planContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ...extra };
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), constraints: constraintsOf(job), ...extra };
+}
+
+/** The owner's cash and time limits, checked in code against every plan. */
+function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanConstraints {
+  return {
+    ...(job.goal ? { monthlyAdBudgetUsd: job.goal.monthlyAdBudgetMinor / 100 } : {}),
+    ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
+    ...extra,
+  };
 }
 
 function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureContext {
@@ -497,6 +506,7 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined): string {
     u.grossMargin ? `contribution margin ${Math.round(u.grossMargin * 100)}%` : "",
     u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
     u.ownerHourUsd ? `owner's time $${u.ownerHourUsd}/hour` : "",
+    u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
   ].filter(Boolean);
   return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
 }
@@ -803,6 +813,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief }),
+          plays ? { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) } : {},
         ),
         startedAt,
         {
@@ -815,7 +826,7 @@ export const buildStrategy = internalAction({
         planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
-      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief })));
+      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) }));
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length) } : strategy),

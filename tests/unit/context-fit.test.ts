@@ -77,3 +77,12 @@ describe("funnel citations", () => {
     expect(issues[0].path).toBe("plays[0].funnel[0]");
   });
 });
+
+describe("funnel citations mid-line", () => {
+  it("checks citations and URLs anywhere in the line", async () => {
+    const { lintCitations } = await import("../../shared/agents/specs");
+    const line = "1,400 visits → signup 10/20/30% [eesel.ai, C] → paid 5% (assumption, D; https://www.example.org/x, B)";
+    expect(lintCitations([{ funnel: [line] }], "https://eesel.ai/blog https://example.org/x")).toEqual([]);
+    expect(lintCitations([{ funnel: [line] }], "https://eesel.ai/blog")[0].message).toContain("example.org");
+  });
+});

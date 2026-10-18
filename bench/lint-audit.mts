@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { growthPlaysSpec, strategySpec } from "../shared/agents/specs";
 import { factsBlock } from "../shared/ai/tasks";
 import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
-import { lockedNumbers } from "../shared/agents/economics";
+import { lockedNumbers, portfolioP50 } from "../shared/agents/economics";
 
 const samples = process.argv.includes("--samples");
 const cache = JSON.parse(readFileSync("bench/cache/formkit.json", "utf8"));
@@ -30,8 +30,15 @@ for (const f of readdirSync("bench/results").filter((x) => x.endsWith(".json")).
       } catch {
         // older outputs have no play models
       }
-      const playsIn = { task: `${CLIMBOS_ENGINES}\n\n${insights}`, brief, facts, untrustedContext: "" };
-      const planIn = { task: `${locked}\n\n${JSON.stringify(plays)}\n\n${CLIMBOS_ENGINES}\n\n${insights}`, brief, facts, untrustedContext: "" };
+      const constraints = { monthlyAdBudgetUsd: 600 };
+      let lockedCustomers: number | undefined;
+      try {
+        lockedCustomers = portfolioP50(plays as never) || undefined;
+      } catch {
+        // older outputs
+      }
+      const playsIn = { task: `${CLIMBOS_ENGINES}\n\n${insights}`, brief, facts, untrustedContext: "", constraints };
+      const planIn = { task: `${locked}\n\n${JSON.stringify(plays)}\n\n${CLIMBOS_ENGINES}\n\n${insights}`, brief, facts, untrustedContext: "", constraints: { ...constraints, lockedCustomers } };
       const playsIssues: Issue[] = growthPlaysSpec().lint!(plays as never, playsIn);
       const planIssues: Issue[] = strategySpec().lint!(out as never, planIn);
       console.log(f.slice(17, 40), arm, "plays", JSON.stringify(count(playsIssues)), "| plan", JSON.stringify(count(planIssues)));

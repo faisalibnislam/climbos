@@ -12,6 +12,7 @@ import type { OwnerQuestion } from "../../../../shared/agents/economics";
 const UNIT: Record<OwnerQuestion["unit"], { suffix: string; toInput: (v: number) => string; fromInput: (s: string) => number }> = {
   usd_month: { suffix: "$ / month", toInput: (v) => String(Math.round(v * 100) / 100), fromInput: Number },
   usd_hour: { suffix: "$ / hour", toInput: (v) => String(Math.round(v)), fromInput: Number },
+  hours_week: { suffix: "hours / week", toInput: (v) => String(Math.round(v * 10) / 10), fromInput: Number },
   share: { suffix: "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100 },
   share_month: { suffix: "% / month", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100 },
 };

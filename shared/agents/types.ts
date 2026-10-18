@@ -77,6 +77,17 @@ export interface AgentInput {
   research?: ResearchSpec;
   /** Facts the critic must check claims against (statements). */
   facts: string[];
+  /** Hard limits the output is checked against in code (spec §13). */
+  constraints?: PlanConstraints;
+}
+
+export interface PlanConstraints {
+  /** Cash the owner will pay ad platforms each month. */
+  monthlyAdBudgetUsd?: number;
+  /** Hours a week the owner can give growth work (when they said). */
+  ownerHoursPerWeek?: number;
+  /** The plays' computed P50 customers total, which the plan's North Star must match. */
+  lockedCustomers?: number;
 }
 
 export interface CritiqueResult {

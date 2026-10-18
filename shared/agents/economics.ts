@@ -46,6 +46,8 @@ export interface OwnerEconomics {
   grossMargin?: number;
   monthlyChurn?: number;
   ownerHourUsd?: number;
+  /** Hours a week the owner can give growth work (a constraint, not a price). */
+  ownerHoursPerWeek?: number;
 }
 export interface PlayLike {
   name: string;
@@ -210,6 +212,11 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
   return issues;
 }
 
+/** Portfolio customers (P50, after overlap): the number the plan's North Star must use. */
+export function portfolioP50(out: { economics: Economics; plays: PlayLike[] }): number {
+  return portfolioCustomers(out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(p, out.economics).range.p50), PLAY_OVERLAP) ?? 0;
+}
+
 /** The numbers the plan must use, computed here so it can't contradict them. */
 export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }): string {
   const rows = out.plays.map((p) => ({ p, m: playMaths(p, out.economics) }));
@@ -252,13 +259,13 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
   return out;
 }
 
-export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd";
+export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd" | "ownerHoursPerWeek";
 export interface OwnerQuestion {
   key: QuestionKey;
   question: string;
   /** The value the plan assumed, for the input's placeholder. */
   assumed: number;
-  unit: "usd_month" | "share" | "share_month" | "usd_hour";
+  unit: "usd_month" | "share" | "share_month" | "usd_hour" | "hours_week";
   /** Why it matters: which plays' verdicts flip across a plausible range. */
   why: string;
 }
@@ -268,6 +275,7 @@ const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> 
   grossMargin: { q: "What share of that do you keep after delivery costs?", unit: "share" },
   monthlyChurn: { q: "What share of customers leave each month?", unit: "share_month" },
   ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
+  ownerHoursPerWeek: { q: "How many hours a week can you give growth work?", unit: "hours_week" },
 };
 
 /**
@@ -302,7 +310,13 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
     }
     return { c, flips, paybackSwing };
   });
-  return scored
+  // Feasibility: plays that need real owner time are only a plan if the owner has that time.
+  const hours = plays.reduce((t, p) => t + Math.max(0, p.model.ownerHoursPerWeek), 0);
+  const capacity: OwnerQuestion[] =
+    owner?.ownerHoursPerWeek === undefined && hours > 3 ? [{ key: "ownerHoursPerWeek", question: QUESTION.ownerHoursPerWeek.q, assumed: Math.round(hours * 10) / 10, unit: "hours_week", why: `The plays need about ${Math.round(hours)} hours a week from you.` }] : [];
+  return [
+    ...capacity,
+    ...scored
     .filter((x) => x.flips > 0 || x.paybackSwing >= 0.5)
     .sort((a, b) => b.flips - a.flips || b.paybackSwing - a.paybackSwing)
     .slice(0, max)
@@ -312,5 +326,6 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
       assumed: Math.round(c.value * 1000) / 1000,
       unit: QUESTION[c.key].unit,
       why: flips > 0 ? `Decides whether ${flips === 1 ? "a play pays back" : `${flips} plays pay back`}.` : "Changes how fast your main play pays back.",
-    }));
+    })),
+  ].slice(0, max);
 }

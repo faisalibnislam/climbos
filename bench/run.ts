@@ -28,7 +28,7 @@ import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
 import { fitJson } from "../shared/agents/context";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { reconcile } from "../shared/agents/consistency";
-import { lockedNumbers, withForecasts } from "../shared/agents/economics";
+import { lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, type PlaysOutput, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
@@ -307,6 +307,7 @@ function inputFor(p: Prepared, t: BenchTask): AgentInput {
     untrustedContext: d.pages ? p.pagesText : undefined,
     research: d.research?.(p),
     facts: p.profile.facts.map((f) => f.statement),
+    constraints: { monthlyAdBudgetUsd: p.c.monthlyAdBudget },
   };
 }
 
@@ -368,7 +369,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
     const plays = { output: withForecasts(playsRun.output as PlaysOutput) };
     const locked = lockedNumbers(plays.output);
-    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }) };
+    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output) } };
     const planRun = await runAgent(withMode(strategySpec({})), planInput, deps);
     const sspec = strategySpec({});
     const plan = { output: (await reconcile({ turn: deps.turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, planInput) ?? [], caps: capsHint(PLAN_CAPS) })).plan };

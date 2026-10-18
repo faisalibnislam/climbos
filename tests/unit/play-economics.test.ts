@@ -84,3 +84,16 @@ describe("owner numbers and decision questions", () => {
     expect(decisionQuestions({ economics: { ...econ, monthlyChurn: 0.02 }, plays: [cheap] })).toEqual([]);
   });
 });
+
+describe("plan fits budget, time and the computed total", () => {
+  it("flags overspend, too many owner hours and a North Star that ignores the plays", async () => {
+    const { lintFeasibility, lintPlanFit } = await import("../../shared/agents/specs");
+    const plays = [{ name: "a", kind: "bankable", model: { monthlySpendUsd: 400, ownerHoursPerWeek: 4 } }, { name: "b", kind: "creative", model: { monthlySpendUsd: 300, ownerHoursPerWeek: 3 } }];
+    expect(lintFeasibility(plays, { monthlyAdBudgetUsd: 600, ownerHoursPerWeek: 5 }).map((i) => i.rule)).toEqual(["budget", "capacity"]);
+    expect(lintFeasibility(plays, { monthlyAdBudgetUsd: 700, ownerHoursPerWeek: 7 })).toEqual([]);
+    const plan = (target: string) => ({ channels: [{ name: "Search", suggestedMonthlyAdSpend: 200 }], northStar: { target } });
+    expect(lintPlanFit(plan("40 paying customers by day 90"), { monthlyAdBudgetUsd: 600, lockedCustomers: 17 })[0].rule).toBe("consistency");
+    expect(lintPlanFit(plan("≈17 paying customers by day 90 (v2 estimate)"), { monthlyAdBudgetUsd: 600, lockedCustomers: 17 })).toEqual([]);
+    expect(lintPlanFit(plan("17 customers"), { monthlyAdBudgetUsd: 100, lockedCustomers: 17 })[0].rule).toBe("budget");
+  });
+});
