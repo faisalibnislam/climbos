@@ -694,6 +694,43 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Website chat widget (one per workspace) and its conversations. */
+  chatWidgets: defineTable({
+    orgId: v.id("organizations"),
+    key: v.string(),
+    enabled: v.boolean(),
+    greeting: v.string(),
+    color: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_org", ["orgId"]),
+
+  chatThreads: defineTable({
+    orgId: v.id("organizations"),
+    widgetId: v.id("chatWidgets"),
+    visitorId: v.string(),
+    email: v.optional(v.string()),
+    page: v.optional(v.string()),
+    /** The owner replied: Climb AI stops answering this conversation. */
+    humanTookOver: v.boolean(),
+    aiAnswers: v.number(),
+    inboxMessageId: v.optional(v.id("communityMessages")),
+    dealId: v.optional(v.id("deals")),
+    lastAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_widget_visitor", ["widgetId", "visitorId"])
+    .index("by_org_last", ["orgId", "lastAt"]),
+
+  widgetMessages: defineTable({
+    orgId: v.id("organizations"),
+    threadId: v.id("chatThreads"),
+    role: v.union(v.literal("visitor"), v.literal("ai"), v.literal("owner")),
+    text: v.string(),
+    at: v.number(),
+  }).index("by_thread", ["threadId", "at"]),
+
   /** Competitor watch: pages we check weekly, and what changed. */
   competitorWatches: defineTable({
     orgId: v.id("organizations"),

@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -56,6 +56,7 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "links", label: "Links", icon: Link2, group: "Measure" },
   { key: "competitors", label: "Competitors", icon: Eye, group: "Measure" },
   { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
+  { key: "chat", label: "Website chat", icon: MessageCircle, group: "Setup" },
 ];
 const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
 /** Bottom-bar destinations on phones; everything else lives under More. */

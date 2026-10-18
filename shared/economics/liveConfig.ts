@@ -6,7 +6,7 @@ import { CREDIT_PACKAGES, CREDIT_TOPUPS, FREE_CREDITS, FREE_LIMITS, type Package
  * top-ups and new accounts. Prices themselves live in Polar.
  */
 
-export type FeatureKey = "expert" | "autopilot" | "publishing" | "sending" | "ads_publish" | "booking_page" | "mcp" | "full_history" | "no_badge";
+export type FeatureKey = "expert" | "autopilot" | "publishing" | "sending" | "ads_publish" | "booking_page" | "mcp" | "full_history" | "no_badge" | "chat_ai";
 
 export const FEATURES: Record<FeatureKey, string> = {
   expert: "Climb AI Expert",
@@ -18,6 +18,7 @@ export const FEATURES: Record<FeatureKey, string> = {
   mcp: "Agents & MCP access",
   full_history: "Results history beyond 30 days",
   no_badge: "No “Made with ClimbOS” badge",
+  chat_ai: "AI answers in your website chat",
 };
 
 export interface LiveConfig {
@@ -42,7 +43,7 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   workspaces: { free: FREE_LIMITS.freeWorkspacesPerOwner, starter: CREDIT_PACKAGES.starter.workspaces, pro: CREDIT_PACKAGES.pro.workspaces },
   freeHistoryDays: FREE_LIMITS.historyDays,
   referralCredits: 200,
-  features: { expert: "paid", autopilot: "paid", publishing: "paid", sending: "paid", ads_publish: "paid", booking_page: "paid", mcp: "paid", full_history: "paid", no_badge: "paid" },
+  features: { expert: "paid", autopilot: "paid", publishing: "paid", sending: "paid", ads_publish: "paid", booking_page: "paid", mcp: "paid", full_history: "paid", no_badge: "paid", chat_ai: "paid" },
 };
 
 /** Saved overrides on top of the defaults (unknown keys ignored, numbers clamped to sane ranges). */

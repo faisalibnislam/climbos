@@ -49,7 +49,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "*.convex.cloud" }],
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    // The website chat panel (/widget/*) is framed on owners' sites; everything else is DENY.
+    return [
+      { source: "/:path((?!widget/).*)", headers: securityHeaders },
+      { source: "/widget/:path*", headers: securityHeaders.filter((h) => h.key !== "X-Frame-Options") },
+    ];
   },
   turbopack: {
     rules: {

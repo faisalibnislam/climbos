@@ -16,7 +16,7 @@ import { NextResponse } from "next/server";
 const isProtected = createRouteMatcher(["/app(.*)", "/onboarding(.*)", "/ops(.*)", "/studio(.*)"]);
 const isSignIn = createRouteMatcher(["/sign-in"]);
 
-function contentSecurityPolicy(nonce: string): string {
+function contentSecurityPolicy(nonce: string, embeddable = false): string {
   const isDev = process.env.NODE_ENV === "development";
   const convex = [process.env.NEXT_PUBLIC_CONVEX_URL, process.env.NEXT_PUBLIC_CONVEX_SITE_URL]
     .filter(Boolean)
@@ -36,7 +36,8 @@ function contentSecurityPolicy(nonce: string): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    // The website chat panel is embedded on owners' sites; everything else can't be framed.
+    embeddable ? "frame-ancestors *" : "frame-ancestors 'none'",
     ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
@@ -54,7 +55,7 @@ export const proxy = convexAuthNextjsMiddleware(
     if (request.nextUrl.pathname.startsWith("/api/")) return;
 
     const nonce = btoa(crypto.randomUUID());
-    const csp = contentSecurityPolicy(nonce);
+    const csp = contentSecurityPolicy(nonce, request.nextUrl.pathname.startsWith("/widget/"));
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-nonce", nonce);
     requestHeaders.set("Content-Security-Policy", csp);

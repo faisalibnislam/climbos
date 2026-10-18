@@ -63,7 +63,7 @@ export default function InboxPage() {
               );
             })}
           </ul>
-          {current ? <Detail key={current.id} slug={slug} m={current} /> : null}
+          {current ? current.kind === "chat" ? <ChatDetail key={current.id} slug={slug} m={current} /> : <Detail key={current.id} slug={slug} m={current} /> : null}
         </div>
       )}
     </div>
@@ -158,6 +158,68 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A website chat: the whole conversation, and the owner's reply goes straight back to the visitor. */
+function ChatDetail({ slug, m }: { slug: string; m: Item }) {
+  const thread = useQuery(api.chat.thread, { slug, inboxId: m.id });
+  const reply = useMutation(api.chat.ownerReply);
+  const draft = useMutation(api.inbox.draftReply);
+  const setStatus = useMutation(api.inbox.setStatus);
+  const [text, setText] = useState("");
+  const [seenDraft, setSeenDraft] = useState(m.suggestedReply);
+  if (m.suggestedReply !== seenDraft) {
+    setSeenDraft(m.suggestedReply);
+    if (m.suggestedReply && !text.trim()) setText(m.suggestedReply);
+  }
+  const [busy, setBusy] = useState<string | null>(null);
+  async function run(key: string, fn: () => Promise<unknown>) {
+    setBusy(key);
+    try {
+      await fn();
+    } catch (e) {
+      toast({ tone: "danger", title: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="heading-card">{thread?.email ?? "Website visitor"}</p>
+            {thread?.page ? <p className="truncate text-xs text-ink-3">On {thread.page.replace(/^https?:\/\//, "")}</p> : null}
+          </div>
+          <Badge tone={thread?.humanTookOver ? "green" : thread?.aiOn ? "blue" : "orange"}>{thread?.humanTookOver ? "You're answering" : thread?.aiOn ? "Climb AI answering" : "Waiting for you"}</Badge>
+        </div>
+        <div className="flex max-h-96 flex-col gap-1.5 overflow-y-auto rounded-lg bg-surface-2 p-3">
+          {(thread?.messages ?? []).map((x) => (
+            <p key={x.id} className={cn("max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-1.5 text-sm", x.role === "visitor" ? "bg-surface text-ink" : x.role === "owner" ? "ml-auto bg-brand-700 text-white" : "ml-auto bg-brand-50 text-ink")}>
+              {x.role === "ai" ? <span className="mb-0.5 block text-2xs font-medium text-ink-3">Climb AI</span> : null}
+              {x.text}
+            </p>
+          ))}
+        </div>
+        {thread ? (
+          <>
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} autosize aria-label="Your reply" placeholder="Reply in the chat. Climb AI steps back once you answer." />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" loading={busy === "draft"} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
+                <Sparkles aria-hidden /> Draft with AI
+              </Button>
+              <Button loading={busy === "send"} disabled={!text.trim()} onClick={() => run("send", async () => { await reply({ slug, threadId: thread.threadId, text }); setText(""); })}>
+                <Send aria-hidden /> Send in chat
+              </Button>
+              <Button variant="ghost" onClick={() => run("done", () => setStatus({ slug, id: m.id, status: "dismissed" }))}>
+                <Check aria-hidden /> Done
+              </Button>
+            </div>
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );
