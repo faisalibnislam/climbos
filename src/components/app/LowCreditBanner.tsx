@@ -4,19 +4,19 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /** Thin banner when credits run low: top up (packages) or upgrade (free). Dismissed for the session. */
 export function LowCreditBanner({ slug }: { slug: string }) {
   const c = useQuery(api.workspace.credits, { slug });
-  const [hidden, setHidden] = useState(true);
-  useEffect(() => {
+  // Credits load on the client only, so reading storage here can't mismatch the server render.
+  const [hidden, setHidden] = useState(() => {
     try {
-      setHidden(sessionStorage.getItem("climbos:lowcredit") === "1");
+      return typeof window !== "undefined" && sessionStorage.getItem("climbos:lowcredit") === "1";
     } catch {
-      setHidden(false);
+      return false;
     }
-  }, []);
+  });
   if (!c || c.isDemo || hidden) return null;
   const threshold = Math.max(20, Math.round(c.monthly.total * 0.1));
   if (c.available >= threshold) return null;
