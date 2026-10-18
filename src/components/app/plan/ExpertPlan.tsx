@@ -70,9 +70,11 @@ function score(sc: number[]) {
 }
 const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
 
+const isShort = (s: string) => s.length <= 24;
+
 export function NorthStar({ expert }: { expert: ExpertView }) {
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <Card>
         <CardContent className="flex flex-col gap-2">
           <p className="text-overline">Diagnosis</p>
@@ -91,23 +93,32 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
             <Target aria-hidden className="size-3.5" /> North Star
           </p>
           <p className="heading-card">{expert.northStar.metric}</p>
-          <div className="flex items-end gap-3">
-            <div>
-              <p className="text-xs text-ink-3">Now</p>
-              <p className="text-sm font-medium text-ink-2">{expert.northStar.baseline}</p>
+          {/* Values range from "20 customers" to full sentences: short ones get the big number, long ones wrap as text. */}
+          <dl className="grid min-w-0 gap-2">
+            <div className="min-w-0">
+              <dt className="text-xs text-ink-3">Now</dt>
+              <dd className="break-words text-sm text-ink-2">{expert.northStar.baseline}</dd>
             </div>
-            <span aria-hidden className="mb-1.5 h-px flex-1 bg-line-strong" />
-            <div className="text-right">
-              <p className="text-xs text-ink-3">Target</p>
-              <p className="metric text-xl leading-6">{expert.northStar.target}</p>
+            <div className="min-w-0">
+              <dt className="text-xs text-ink-3">Target</dt>
+              <dd className={cn("break-words", isShort(expert.northStar.target) ? "metric text-xl leading-6" : "text-sm font-medium text-ink")}>{expert.northStar.target}</dd>
             </div>
-          </div>
+          </dl>
           {expert.leadingIndicators.length ? (
-            <ul className="mt-1 flex flex-col gap-1 border-t border-line pt-2">
+            <ul className="mt-1 flex min-w-0 flex-col gap-2 border-t border-line pt-2">
               {expert.leadingIndicators.map((l) => (
-                <li key={l.metric} className="flex justify-between gap-3 text-ui">
-                  <span className="text-ink-2">{l.metric}</span>
-                  <span className="shrink-0 font-medium tabular-nums text-ink">{l.weeklyTarget}/wk</span>
+                <li key={l.metric} className="min-w-0 text-ui">
+                  {isShort(l.weeklyTarget) ? (
+                    <span className="flex justify-between gap-3">
+                      <span className="min-w-0 break-words text-ink-2">{l.metric}</span>
+                      <span className="shrink-0 font-medium tabular-nums text-ink">{/week|wk/i.test(l.weeklyTarget) ? l.weeklyTarget : `${l.weeklyTarget}/wk`}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span className="block break-words font-medium text-ink">{l.metric}</span>
+                      <span className="block break-words text-ink-3">{l.weeklyTarget}</span>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
