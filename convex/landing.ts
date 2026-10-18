@@ -70,7 +70,8 @@ export const writeContext = internalQuery({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first();
     const facts = business ? (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(120)).filter((f) => f.reviewState !== "rejected") : [];
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
-    return { page: p, run, business: { name: business?.name ?? "", summary: business?.summary ?? "" }, facts: facts.map((f) => `- [${f.category}] ${f.statement}`).join("\n").slice(0, 7000), voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
+    const org = await ctx.db.get(p.orgId);
+    return { language: org?.contentLanguage ?? "English", page: p, run, business: { name: business?.name ?? "", summary: business?.summary ?? "" }, facts: facts.map((f) => `- [${f.category}] ${f.statement}`).join("\n").slice(0, 7000), voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
   },
 });
 
@@ -101,7 +102,7 @@ export const write = internalAction({
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Activity is paused." });
       return;
     }
-    const content = [`BUSINESS: ${c.business.name}`, c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
+    const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
     const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
     if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });

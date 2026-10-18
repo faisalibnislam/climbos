@@ -55,7 +55,8 @@ export const context = internalQuery({
     if (!run) return null;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", run.orgId)).first();
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
-    return { run, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
+    const org = await ctx.db.get(run.orgId);
+    return { language: org?.contentLanguage ?? "English", run, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
   },
 });
 

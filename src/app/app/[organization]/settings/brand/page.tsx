@@ -8,7 +8,8 @@ import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
-import { Button, Card, CardContent, ColorPicker, Field, Input, Progress, Textarea, toast } from "@/components/ui";
+import { Button, Card, CardContent, ColorPicker, Field, Input, Progress, Select, Textarea, toast } from "@/components/ui";
+import { CONTENT_LANGUAGES } from "../../../../../../shared/languages";
 
 /** Brand kit: voice, tone, colours, never-say list, and rules learned from your edits. */
 export default function BrandSettingsPage() {
@@ -19,6 +20,22 @@ export default function BrandSettingsPage() {
 }
 
 type Brand = NonNullable<ReturnType<typeof useQuery<typeof api.brand.get>>>;
+
+/** The language every post, email, ad and page is written in. Saved right away. */
+function LanguageField({ slug }: { slug: string }) {
+  const lang = useQuery(api.translate.language, { slug });
+  const set = useMutation(api.translate.setLanguage);
+  if (lang === undefined) return null;
+  return (
+    <Field label="Content language" hint="Posts, emails, ads and pages are written in this language. Chat and inbox replies match the customer's language.">
+      <Select
+        options={CONTENT_LANGUAGES.map((l) => ({ value: l, label: l }))}
+        value={lang}
+        onValueChange={(v) => set({ slug, language: v }).then(() => toast({ tone: "success", title: `Writing in ${v}` }), (e) => toast({ tone: "danger", title: errorMessage(e) }))}
+      />
+    </Field>
+  );
+}
 
 function BrandForm({ slug, data }: { slug: string; data: Brand }) {
   const save = useMutation(api.brand.update);
@@ -51,6 +68,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
           <Field label="Tone words" hint="Up to 8, separated by commas.">
             <Input value={tone} onChange={(e) => setTone(e.target.value)} placeholder="warm, direct, confident" />
           </Field>
+          <LanguageField slug={slug} />
           <Field label="Never say or do" hint="One per line.">
             <Textarea value={doNots} onChange={(e) => setDoNots(e.target.value)} rows={3} autosize />
           </Field>

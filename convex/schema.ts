@@ -305,6 +305,8 @@ export default defineSchema({
     suspendedAt: v.optional(v.number()),
     /** Tracked links in drafts (default on). */
     linkTracking: v.optional(v.boolean()),
+    /** Language for customer-facing content (default English). */
+    contentLanguage: v.optional(v.string()),
     /** "First win": drafts started automatically after the first plan (3 posts + 1 email). */
     firstWinRunIds: v.optional(v.array(v.id("workflowRuns"))),
     /** Team rules: jobs above this many credits need an owner or admin to start them. */

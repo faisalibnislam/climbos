@@ -90,6 +90,7 @@ import type * as repurposeActions from "../repurposeActions.js";
 import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
 import type * as team from "../team.js";
+import type * as translate from "../translate.js";
 import type * as workspace from "../workspace.js";
 
 import type {
@@ -181,6 +182,7 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   settings: typeof settings;
   team: typeof team;
+  translate: typeof translate;
   workspace: typeof workspace;
 }>;
 
