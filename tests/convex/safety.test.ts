@@ -17,22 +17,27 @@ async function artifactsByStatus(t: T, orgId: Id<"organizations">, status: strin
 }
 
 describe("cost reservations under concurrency", () => {
-  it("parallel jobs can never exceed the meter cap or the wallet", async () => {
+  it("parallel jobs can never overspend the account's credits", async () => {
     const t = setup();
     const owner = await asNewUser(t, "owner@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Race Co" });
     await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More customers", horizonDays: 90, monthlyAdBudget: 0 });
-    // Onboarding allowance: 6 social posts. Fire 10 jobs of 2 posts each concurrently.
+    // Credits for exactly 3 jobs, then fire 10 concurrently.
+    const est = await owner.client.query(api.content.estimate, { slug, job: "content_social", quantity: 2, images: 0 });
+    await t.run(async (ctx) => {
+      const p = await ctx.db.query("usagePeriods").withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "onboarding")).unique();
+      await ctx.db.patch(p!._id, { walletCapMicros: est.maxCostMicros * 3 });
+    });
     const results = await Promise.allSettled(
       Array.from({ length: 10 }, () => owner.client.mutation(api.content.generate, { slug, job: "content_social", quantity: 2, images: 0 })),
     );
     const ok = results.filter((r) => r.status === "fulfilled").length;
     const rejected = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
-    expect(ok).toBe(3); // 3 × 2 posts = 6 = cap
-    expect(rejected.every((r) => /limit|busy|capacity/i.test(String(r.reason)))).toBe(true);
+    expect(ok).toBe(3);
+    expect(rejected.every((r) => /credits|busy/i.test(String(r.reason)))).toBe(true);
     const period = await t.run(async (ctx) => ctx.db.query("usagePeriods").withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "onboarding")).unique());
     expect(checkInvariants(ledgerOf(period!))).toEqual([]);
-    expect(period!.meterReserved.socialPosts).toBe(6);
+    expect(period!.walletReservedMicros).toBe(est.maxCostMicros * 3);
   });
 
   it("failed jobs release meters, keep real costs, and can't retry for free", async () => {

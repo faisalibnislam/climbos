@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleCheck, PackagePlus } from "lucide-react";
+import { CircleCheck, Coins } from "lucide-react";
 import { Container, PageHero, Section, SectionHeading } from "@/components/marketing/layout";
-import { PlanCards, PlanComparison } from "@/components/marketing/pricing";
-import { getTopup, lowestPrice } from "@/components/marketing/plans";
+import { CreditExamples, PlanCards, PlanComparison } from "@/components/marketing/pricing";
+import { getTopups, lowestPaidPrice } from "@/components/marketing/plans";
 import { Faq, FinalCta } from "@/components/marketing/sections";
 import { CTA } from "@/components/marketing/content";
 import { buttonClasses } from "@/components/ui/button-styles";
@@ -11,44 +11,44 @@ import { formatUsd } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: `Simple monthly plans from ${formatUsd(lowestPrice())}. Every plan includes all ten AI growth roles, clear monthly limits and no automatic charges.`,
+  description: `Free to start. Packages from ${formatUsd(lowestPaidPrice())} a month. Pay for the work in credits, shown before every job.`,
   alternates: { canonical: "/pricing" },
 };
 
 export default function PricingPage() {
-  const topup = getTopup();
+  const topups = getTopups();
   const faq = [
     {
-      q: "What do the monthly limits mean?",
-      a: "They're the most ClimbOS will do for you in a month on that plan — for example, the number of social posts or images it creates. They reset every month. You're never charged for going over, because work simply pauses at the limit.",
+      q: "What is a credit?",
+      a: "Credits pay for the work your AI team does: research, writing, images and web searches. 1 credit is about 1¢ of AI work. Every job shows the most it can use before it starts, then charges only what it actually used.",
     },
     {
-      q: "What happens when I reach a limit?",
-      a: `You'll get alerts at 70%, 90% and 100%. At 100%, new work of that kind waits until next month. If you'd like more sooner, you can buy an ${topup.name.toLowerCase()} (${formatUsd(topup.priceUsd)}) — only when you click buy.`,
+      q: "What do I get for free?",
+      a: "50 credits once: enough to research your business, build a growth plan on Climb AI Basic and draft your first posts. Free accounts have one workspace and one person; you copy drafts and post them yourself.",
+    },
+    {
+      q: "What happens when I run out?",
+      a: "New work waits until your credits reset at your next renewal. If you want more sooner, buy a top-up — only when you click buy. Nothing is ever charged automatically.",
+    },
+    {
+      q: "Do unused credits roll over?",
+      a: "Monthly credits reset at each renewal. Top-up credits last 12 months and are used after your monthly credits.",
+    },
+    {
+      q: "What's Climb AI Expert?",
+      a: "On packages, your growth plan, business insights, ads and weekly autopilot plan are written by a stronger model for deeper analysis. Everything else uses Climb AI Basic. You can pick either each time.",
     },
     {
       q: "Is ad spend included?",
       a: "No. Ad spend is paid directly to Google or Meta from your own ad account, within the budget you approve. ClimbOS never marks it up or handles that money.",
     },
     {
-      q: "Who sends my marketing emails?",
-      a: "Your own email provider. ClimbOS writes and schedules the emails; your provider sends them and bills you directly. Emails only go to people who agreed to hear from you.",
-    },
-    {
-      q: "What does “You publish; ClimbOS drafts” mean on Basic?",
-      a: "On Basic, ClimbOS prepares your plan and ready-to-post drafts, and you post them yourself. From Starter up, ClimbOS can publish to your connected accounts after you approve each item.",
+      q: "Can my team or my clients share an account?",
+      a: "Yes. Credits and people are per account and shared across all your workspaces, so an agency can run several client workspaces on one bill and cap each workspace's monthly credits.",
     },
     {
       q: "Do prices include tax?",
       a: "Prices are in US dollars and don't include sales tax or VAT. Where it applies, tax is added at checkout.",
-    },
-    {
-      q: "How do I choose or change a plan?",
-      a: "Sign up first and explore your workspace. You choose a plan in Settings → Billing inside the app, and you can change it there later.",
-    },
-    {
-      q: "Do you offer SSO, an SLA or agency services?",
-      a: "Yes, by separate agreement. Get in touch at hello@climbos.app and tell us what you need.",
     },
   ];
 
@@ -60,11 +60,11 @@ export default function PricingPage() {
             id="pricing-heading"
             align="center"
             eyebrow="Pricing"
-            title="Your whole growth team, one monthly price"
-            lead="Every plan includes all ten AI roles. Limits are monthly maximums — nothing is charged automatically."
+            title="Your whole growth team. Free to start."
+            lead="Pay for the work in credits. Every job shows its credits before it starts and only charges what it used."
           >
             <ul className="mx-auto mt-6 flex max-w-3xl flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink-2">
-              {["Prices in USD", "Ad spend paid directly to Google or Meta", "Alerts at 70%, 90% and 100%"].map((t) => (
+              {["50 free credits", "No automatic charges", "Ad spend paid directly to Google or Meta"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <CircleCheck aria-hidden="true" className="size-4 shrink-0 text-brand-700" />
                   {t}
@@ -82,8 +82,8 @@ export default function PricingPage() {
           </h2>
           <PlanCards />
           <p className="mt-6 text-center text-xs text-ink-3">
-            Prices exclude applicable sales tax or VAT, which may be added at checkout. You choose a plan inside the app after
-            signing up.
+            Prices exclude applicable sales tax or VAT, which may be added at checkout. Start free; choose a package inside the app
+            whenever you need more.
           </p>
         </div>
       </section>
@@ -91,22 +91,31 @@ export default function PricingPage() {
       <Section labelledBy="compare-heading" className="bg-surface">
         <SectionHeading
           id="compare-heading"
-          title="Compare plans"
-          intro="All numbers are monthly maximums. You're never billed for going over — work simply pauses at the limit."
+          title="Compare"
+          intro="Credits pay for the work; packages unlock autopilot, publishing, sending and your team."
         />
         <PlanComparison headingId="compare-heading" />
       </Section>
 
+      <Section labelledBy="costs-heading">
+        <SectionHeading id="costs-heading" title="What things cost" intro="The most each action can use. Jobs charge only what they actually use, usually much less." />
+        <CreditExamples headingId="costs-heading" />
+      </Section>
+
       <Section labelledBy="extras-heading">
-        <SectionHeading id="extras-heading" title="Extra capacity, only when you ask" />
+        <SectionHeading id="extras-heading" title="Top-ups, only when you ask" />
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-line bg-surface p-5">
-            <PackagePlus aria-hidden="true" className="size-5 text-brand-700" />
-            <h3 className="mt-4 heading-section">
-              {topup.name} · {formatUsd(topup.priceUsd)}
-            </h3>
-            <p className="mt-1.5 text-sm text-ink-2">{topup.description}</p>
-            <p className="mt-2 text-xs text-ink-3">Bought from Settings → Billing, one click at a time.</p>
+            <Coins aria-hidden="true" className="size-5 text-brand-700" />
+            <h3 className="mt-4 heading-section">Extra credits for packages</h3>
+            <ul className="mt-3 flex flex-col gap-1.5 text-sm text-ink-2">
+              {topups.map((t) => (
+                <li key={t.key}>
+                  <strong className="font-semibold text-ink">{t.credits.toLocaleString("en-US")} credits</strong> · {formatUsd(t.priceUsd)}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-ink-3">One-time, from Settings → Billing. They last 12 months.</p>
           </div>
           <div className="rounded-xl border border-line bg-surface p-5">
             <h3 className="heading-section">Paid directly to other providers</h3>
@@ -118,9 +127,6 @@ export default function PricingPage() {
               <li>
                 <strong className="font-semibold text-ink">Your email provider&apos;s bill</strong> — for marketing emails sent
                 through your own account.
-              </li>
-              <li>
-                <strong className="font-semibold text-ink">Video production</strong> — quoted separately per job.
               </li>
               <li>
                 <strong className="font-semibold text-ink">SSO, SLA and agency services</strong> — by separate agreement.

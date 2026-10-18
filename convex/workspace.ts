@@ -7,7 +7,8 @@ import { jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { can } from "../shared/policy";
 import { startCardRun } from "./lib/cards";
-import { chargeableAccess } from "./lib/access";
+import { chargeableAccess, isPaid } from "./lib/access";
+import { creditBalance } from "./lib/credits";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
@@ -65,7 +66,7 @@ export const today = query({
       const c = await ctx.db.get(id);
       if (c) chatCards.push(c);
     }
-    const period = await currentPeriod(ctx, org._id);
+    const period = await currentPeriod(ctx, org);
     const access = await chargeableAccess(ctx, org);
     const uncertain = await ctx.db
       .query("artifacts")
@@ -605,5 +606,16 @@ export const setAiMode = mutation({
     if (mode === "expert" && !(await aiModeView(ctx, org)).expertUnlocked) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
     await ctx.db.patch(org._id, { aiMode: mode });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "settings.ai_mode", subjectType: "organization", subjectId: org._id, summary: `Default Climb AI mode set to ${mode === "expert" ? "Expert" : "Basic"}.` });
+  },
+});
+
+/** Sidebar credit meter: the account's credits left this month and in top-ups (never dollars). */
+export const credits = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const period = await currentPeriod(ctx, org);
+    const [balance, paid] = await Promise.all([creditBalance(ctx, org, period), isPaid(ctx, org)]);
+    return { ...balance, paid, isDemo: org.kind === "demo" };
   },
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -146,11 +147,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             ))}
           </nav>
           <div className={cn("mt-auto flex flex-col gap-1 pt-4", rail && "items-center")}>
-            {rail ? null : (
-              <Link href={`/app/${slug}/settings/billing`} className={buttonClasses({ variant: "accent", size: "sm", className: "mb-1 w-full" })}>
-                Plans and usage
-              </Link>
-            )}
+            <CreditMeter slug={slug} rail={rail} />
             <NavLink compact={rail} href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
               Settings
             </NavLink>

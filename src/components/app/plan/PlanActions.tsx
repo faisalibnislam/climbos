@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button, Card, CardContent, ConfirmDialog, Field, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
-import { microsToDisplay } from "../money";
+import { microsToCreditsLabel } from "../money";
 import { AiModePicker, useAiMode } from "../AiModePicker";
 
 /** "Build my plan" / "Refresh plan": confirm with the capacity note, then start the strategy job. */
@@ -31,7 +31,7 @@ export function GeneratePlanButton({
   const ai = useAiMode(slug);
   const build = mode === "build";
   const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
-  const cost = `Uses up to ${microsToDisplay(max)} of this month's AI capacity; anything unused is returned.`;
+  const cost = `Uses up to ${microsToCreditsLabel(max)}; anything unused is returned.`;
   return (
     <div className="flex flex-col gap-2">
       <ConfirmDialog
@@ -60,7 +60,7 @@ export function GeneratePlanButton({
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
       </ConfirmDialog>
-      <p className="text-xs text-ink-3">Up to {microsToDisplay(max)} of AI capacity</p>
+      <p className="text-xs text-ink-3">Up to {microsToCreditsLabel(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );

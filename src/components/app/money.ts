@@ -1,5 +1,14 @@
+import { formatCredits, microsToCredits } from "../../../shared/economics/credits";
+
 /** Display helpers. Money from the backend is integer µUSD (costs) or minor units (revenue). */
-export function microsToDisplay(micros: number): string {
+
+/** Owner-facing cost: credits (1 credit = 1¢ of cost), never dollars. */
+export function microsToCreditsLabel(micros: number): string {
+  return formatCredits(microsToCredits(micros));
+}
+
+/** Staff-only (ops console): provider cost in dollars. */
+export function microsToUsd(micros: number): string {
   const usd = micros / 1_000_000;
   if (usd === 0) return "$0";
   if (usd < 0.01) return "under $0.01";

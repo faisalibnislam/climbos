@@ -1,0 +1,330 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run the freelancer comparison-page test and one feature-triggered Pro email; keep paid-media spend at $0 until customer economics are proven.",
+     "positioning": "Formkit is a free-to-start form builder for forms that represent your brand. Lead with practical client intake for freelancers: link the Google Forms comparison to a relevant template, and show Pro only when a needed feature makes the upgrade useful.",
+     "audiences": [
+      {
+       "name": "Freelancers comparing form builders",
+       "hypothesis": "A focused Google Forms alternative page linked to a client-intake template will generate more relevant free signups than a generic product message.",
+       "evidence": "Freelancers are in the brief’s audience. The research notes identify existing comparison content and a client-onboarding template: https://formkit.app/ and https://formkit.app/templates."
+      },
+      {
+       "name": "Free users who try to use a Pro feature",
+       "hypothesis": "A timely, feature-specific email can turn demonstrated Pro intent into an attributable paid upgrade.",
+       "evidence": "The brief identifies Pro pricing and Stripe payment support; the eligible user count and feature-attempt tracking are unconfirmed."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "primary",
+       "why": "High-intent comparison content fits a product with a free plan and clear differences from basic form tools."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Alternative pages can capture active evaluation, but unsupported competitor claims would undermine trust."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Potentially scalable, but marketplace availability and listing eligibility are unconfirmed."
+      },
+      {
+       "name": "AI tool directories",
+       "score": 81,
+       "status": "later",
+       "why": "Good fit; add once the first channels show results."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 80,
+       "status": "later",
+       "why": "Lifecycle messages can connect free-plan use to relevant paid features, but the existing user base and tracking are unknown."
+      },
+      {
+       "name": "Google organic search",
+       "score": 78,
+       "status": "later",
+       "why": "Organic search can compound, but needs time; prioritize specific high-intent pages over broad content."
+      },
+      {
+       "name": "Templates",
+       "score": 77,
+       "status": "later",
+       "why": "Use-case templates can make the product concrete and help new users reach a published form sooner."
+      },
+      {
+       "name": "Free trial",
+       "score": 77,
+       "status": "later",
+       "why": "A separate free-trial motion is redundant while Formkit already offers a free tier."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Freelancer comparison-page test",
+       "hypothesis": "A freelancer-specific comparison page linked to a client-intake template will turn qualified visits into free signups.",
+       "population": "Freelancers reaching the new page through existing site links, search, or other unpaid referrals.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Free signups per qualified page visit; also record published forms and paid accounts.",
+       "guardrails": [
+        "Keep competitor comparisons dated, fair, and fact-checked.",
+        "Confirm the template link and signup attribution work before launch.",
+        "Do not expand to another audience without the stated scale conditions."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Target 500 qualified visits by day 90; at the supplied 2% planning assumption, that is about 10 free signups, not a forecast. At 500 visits, below 1% signup means stop or rewrite; 1% to below 2% means revise once. Expand only if signup rate is at least 2%, at least one paid account is attributable, and measured 12-month gross profit supports full campaign cost. If traffic is below 500 at day 90, label results directional and do not infer failure."
+      },
+      {
+       "name": "Feature-triggered Pro email",
+       "hypothesis": "A relevant email sent after a user tries to add a Pro feature can produce attributable paid upgrades.",
+       "population": "Free users who try to add payments or another Pro feature and can lawfully receive the message.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid upgrades attributable to delivered emails within 90 days; clicks are the leading indicator.",
+       "guardrails": [
+        "Do not email users without a lawful basis; retain unsubscribe handling.",
+        "Pause if consent or delivery problems appear.",
+        "Do not treat a smaller-than-500 cohort as evidence of failure."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Aim for 500 eligible sends only if that many users exist; otherwise send to the eligible cohort and label results directional. At 500 sends, zero clicks stops this email approach. At day 90, no attributable paid account also stops it. Scale only after an attributable upgrade and evidence that 12-month gross profit supports the full campaign cost, including owner time."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month available; planned platform spend: $0.",
+      "Owner time: assume a ceiling of 3 hours/week; confirm in week one. Planned work averages below that.",
+      "Known Pro price: $6 per seat/month. Paid-seat gross margin is not supplied.",
+      "[NEEDS FACT: What is gross margin per paid seat after variable costs, including AI costs?]",
+      "Current paid-customer baseline, customer sources, eligible email cohort, site traffic, and free-to-paid rate are not supplied; measure before judging results.",
+      "Assets: Formkit site, existing comparison content, and template library, per the supplied research."
+     ],
+     "measurementPlan": "In week one, record the last 90 days of paid-account sources and establish current page, signup, and upgrade baselines. Add UTMs, feature-attempt and signup events, and a billing-confirmed paid-upgrade event; use server-side billing events where the stack allows. Add a “how did you hear about us?” question, then review a weekly scorecard that separates page visits, free signups, published forms, email clicks, and paid accounts.",
+     "firstActions": [
+      {
+       "title": "Check whether analytics identifies Pro-feature attempts and eligible email users.",
+       "why": "The email test cannot run safely or be measured without this cohort.",
+       "role": "Owner and product analytics"
+      },
+      {
+       "title": "Export the last 90 days of customer sources and paid upgrades.",
+       "why": "Set the baseline and protect any source already working.",
+       "role": "Owner"
+      },
+      {
+       "title": "Record current comparison-page visits, signups, and paid upgrades.",
+       "why": "Create a before-period for a directional page readout.",
+       "role": "Owner and analytics"
+      },
+      {
+       "title": "Verify comparison claims and select the client-intake template link.",
+       "why": "Keep the new page specific, useful, and accurate.",
+       "role": "ClimbOS drafts; owner approves"
+      },
+      {
+       "title": "Draft the single feature-triggered email; send only to an eligible cohort.",
+       "why": "Test the chosen lifecycle play without buying traffic.",
+       "role": "ClimbOS drafts; owner approves"
+      }
+     ],
+     "diagnosis": "The constraint is unverified unit economics: price is known, but gross margin, free-to-paid conversion, and customer-source data are not. That makes paid CAC unsafe to set; this diagnosis is wrong if existing cohort data already shows reliable paid conversion and payback below three months.",
+     "affordableCac": "Assumption: 60% gross margin per Pro seat, to validate in week one. At a three-month ceiling: $6 × 60% × 3 = $10.80 per paid seat; the account ceiling is $10.80 multiplied by paid seats. Keep total acquisition cost, including owner time, below the validated limit; do not buy ads until actual margin and conversion data support it.",
+     "notDoing": [
+      {
+       "channel": "Paid search and paid social",
+       "why": "No confirmed gross margin or paid-conversion rate supports a paid CAC; preserve the $600/month budget."
+      },
+      {
+       "channel": "Broad informational blog SEO",
+       "why": "The 90-day goal is better served by the selected high-intent comparison page."
+      },
+      {
+       "channel": "Partnerships, marketplace listings, and other audience pages",
+       "why": "Eligibility and audience response are unverified; revisit after these two tests."
+      }
+     ],
+     "northStar": {
+      "metric": "Paid accounts attributable to the comparison page and feature-triggered email, alongside total paid accounts.",
+      "baseline": "No test-attributed paid accounts yet; total current and prior-90-day paid-account counts are not supplied.",
+      "target": "At least one attributable paid account by day 90, and total paid accounts above the prior 90-day baseline. This is a test threshold, not a forecast."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Qualified comparison-page visits",
+       "weeklyTarget": "About 39/week to reach the supplied 500-visit test target in 90 days; this is arithmetic pacing, not a traffic forecast.",
+       "source": "Site analytics; target from the selected play."
+      },
+      {
+       "metric": "Free signup rate from qualified page visits",
+       "weeklyTarget": "Report weekly; at 500 visits, below 1% triggers stop or rewrite, while 2% is the supplied planning case.",
+       "source": "Site analytics; thresholds from the selected play."
+      },
+      {
+       "metric": "Eligible feature-triggered users and email clicks",
+       "weeklyTarget": "Establish cohort size in week one; send once to the available lawful cohort, up to the 500-send test target.",
+       "source": "Product analytics and email platform."
+      },
+      {
+       "metric": "Attributable paid upgrades",
+       "weeklyTarget": "Record every week by source and cohort; aim for at least one combined by day 90.",
+       "source": "Billing events and analytics; threshold from the selected plays."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Audit sources and baselines, verify tracking and email eligibility, fact-check the comparison, link the template, and prepare the owner-approved email."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Run the page and eligible email tests without ad spend. Review weekly; at day 45 assess traffic pace, tracking, clicks, and early upgrades. Revise execution, not the chosen plays."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "Keep the comparison page accurate and improve its distribution through existing site links. Track email upgrades through day 90; expand only if the stated economic gates are met."
+      }
+     ],
+     "weekOneChecklist": [
+      "Check feature-attempt analytics and the lawful email cohort.",
+      "Export last 90 days of customer sources and paid upgrades.",
+      "Record current comparison-page traffic and signup baseline.",
+      "Fact-check the page and choose the client-intake template link.",
+      "Draft the triggered email for owner review; do not send to an unverified cohort."
+     ],
+     "risks": [
+      {
+       "risk": "The eligible feature-intent cohort may be too small for the 500-send target.",
+       "mitigation": "Send only to eligible users; report smaller-cohort results as directional and do not infer failure."
+      },
+      {
+       "risk": "The comparison page may not reach 500 qualified visits within 90 days.",
+       "mitigation": "Track weekly pace, link it from relevant existing pages, and avoid treating low traffic as a signup-conversion failure."
+      },
+      {
+       "risk": "Seat margin or retention may not support campaign costs.",
+       "mitigation": "Validate gross margin and existing retention before scaling; keep paid-media spend at zero."
+      },
+      {
+       "risk": "Attribution may miss upgrades or over-credit a page or email.",
+       "mitigation": "Use UTMs, billing-confirmed events, a source question, and a weekly source-level scorecard."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Feature-triggered Pro email",
+       "oneLiner": "Show free users the relevant Pro feature when their form needs it.",
+       "kind": "bankable",
+       "audience": "Existing Formkit free users who try to add payments or another Pro feature; run only if this cohort can be identified and lawfully emailed.",
+       "trigger": "A free user reaches for a Pro feature, such as payments through their own Stripe account.",
+       "hook": "Need payments on your form? Pro is $6 per seat per month, and payments go to your Stripe account. Formkit takes no cut.",
+       "mechanic": "Send one behavior-triggered email and track delivered messages, clicks, and paid upgrades. MailerLite reports a 2.09% average email campaign click rate [mailerlite.com, grade A]; treat this as a directional benchmark, not a Formkit lifecycle result.",
+       "assetUsed": "Formkit’s free tier, Stripe payment support with no Formkit cut, and $6-per-seat Pro plan.",
+       "funnel": [
+        "Emails sent: 500 test target, sized to yield about 10 clicks at the 2.09% benchmark; no eligible cohort size is confirmed.",
+        "Email sent → click: 1.5% low / 2.09% likely / 3% high; likely rate from MailerLite [mailerlite.com, grade A]; low and high are planning assumptions, grade D.",
+        "Click → paid account: 0.5% low / 1% likely / 3% high; assumption, grade D. No Formkit click-to-paid rate was supplied."
+       ],
+       "unit": "Paid accounts from 500 eligible-user emails",
+       "p10": 0.04,
+       "p50": 0.1,
+       "p90": 0.45,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether enough eligible free users exist and what share of email clicks become paid accounts.",
+       "test": "If at least 500 eligible users exist, send one email and track upgrades for 90 days. Platform spend: $0. Allow two owner hours, valued at $50/hour as an assumption ($100). If the cohort is smaller, test only the available cohort and treat results as directional.",
+       "killIf": "Stop this email approach if 500 sends produce zero clicks, or if the 90-day cohort produces no attributable paid account. Do not infer failure from a smaller cohort.",
+       "scaleIf": "Scale only after an attributable paid account and a calculated 12-month gross profit per account that exceeds the full campaign cost, including owner time. The $6 seat price alone is not enough to establish payback.",
+       "scores": [
+        5,
+        4,
+        4,
+        4,
+        3,
+        5,
+        5,
+        3
+       ],
+       "firstActionToday": "Check whether product analytics can identify free users who tried to use payments or another Pro feature.",
+       "climbosCanDo": "Draft the email, define the cohort and tracking events, and report clicks and paid upgrades."
+      },
+      {
+       "name": "Freelancer Google Forms switcher page",
+       "oneLiner": "Link Formkit’s existing comparison content to a freelancer client-intake template.",
+       "kind": "creative",
+       "audience": "Freelancers comparing form builders, reached through Formkit’s comparison page and search traffic.",
+       "trigger": "A freelancer’s basic form no longer fits their client intake or branding needs.",
+       "hook": "Build a client intake form that fits your workflow. Start free; upgrade when you need Pro features.",
+       "mechanic": "Use a fair, dated alternative page and link a relevant starter template. The supplied SaaS B2B play research reports a 1–5% planning range for alternative-page signups, based on vendor reports [eesel.ai; tripledart.com, grade C]. The same research gives 50–2,000 visits per niche page per month as a practitioner estimate, grade D; it is not a Formkit traffic forecast.",
+       "assetUsed": "Formkit’s existing comparison page and template library, identified in the research notes: https://formkit.app/ and https://formkit.app/templates.",
+       "funnel": [
+        "Qualified page visits: 500 test target, chosen to produce about 10 free signups at the 2% likely planning rate; achieving this traffic in 90 days is unverified.",
+        "Qualified visit → free signup: 1% low / 2% likely / 5% high; planning range from the SaaS B2B play research [eesel.ai; tripledart.com, grade C]. The 2% likely rate is an assumption within that range.",
+        "Free signup → paid account: 0.5% low / 1% likely / 3% high; assumption, grade D. No Formkit free-to-paid rate was supplied."
+       ],
+       "unit": "Paid accounts from 500 qualified page visits",
+       "p10": 0.03,
+       "p50": 0.1,
+       "p90": 0.75,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the page can attract 500 qualified visits during the test and how many signups become paid accounts.",
+       "test": "Update one page and link one relevant template. Target 500 qualified visits within 90 days; allow up to five owner hours, valued at $50/hour as an assumption ($250). No ad spend. Track visits, free signups, and paid accounts separately.",
+       "killIf": "At 500 qualified visits, stop or rewrite the page if free signups are below 1%, the low end of the cited planning range. Check paid outcomes through day 90 before judging conversion.",
+       "scaleIf": "Expand to another audience only if free signups reach at least the 2% planning rate, at least one paid account is attributable to the page, and measured 12-month gross profit supports the owner-time cost.",
+       "scores": [
+        5,
+        3,
+        5,
+        2,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Open Formkit’s existing comparison page and select the freelancer intake template to link.",
+       "climbosCanDo": "Review the comparison page for factual accuracy, draft the template link and CTA, and set up source-level conversion tracking."
+      }
+     ],
+     "portfolioNote": "Run one bankable lifecycle-email test and one creative comparison-page test. Neither has proven paid conversion; keep paid-media spend at $0 until actual customer economics support acquisition cost."
+    },
+    "costMicros": 160619,
+    "ms": 961140
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": false,
+    "error": "OpenAI took too long to respond.",
+    "costMicros": 235692,
+    "ms": 1597029
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "expert": null,
+   "basic": {
+    "truth": 5,
+    "specificity": 6,
+    "strategy": 3,
+    "craft": 5,
+    "usefulness": 4,
+    "creativity": 2,
+    "overall": 4,
+    "topIssue": "The two plays project only 0.2 paid accounts combined and provide no credible traffic-generation plan, making this a cautious measurement exercise rather than a strategy to grow paying customers within 90 days."
+   }
+  }
+ }
+]

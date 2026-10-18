@@ -151,17 +151,21 @@ export function reconcileReservation(
     meterUsed[key] += actual.meters[key] ?? 0;
   }
   const usedTopup = reservation.topupMicros > 0;
+  // A reservation split across both wallets (extra rounds reserved later) charges the plan wallet up to its
+  // share, then the top-up; one held only in the top-up charges the top-up its own (stressed) cost.
+  const walletCharge = !usedTopup ? actual.costMicros : Math.min(actual.costMicros, reservation.walletMicros);
+  const topupCharge = !usedTopup ? 0 : reservation.walletMicros > 0 ? actual.costMicros - walletCharge : actual.topupCostMicros;
   const next: LedgerState = {
     ...state,
     meterReserved,
     meterUsed,
     walletReservedMicros: Math.max(0, state.walletReservedMicros - reservation.walletMicros),
     topupReservedMicros: Math.max(0, state.topupReservedMicros - reservation.topupMicros),
-    walletSpentMicros: state.walletSpentMicros + (usedTopup ? 0 : actual.costMicros),
-    topupSpentMicros: state.topupSpentMicros + (usedTopup ? actual.topupCostMicros : 0),
+    walletSpentMicros: state.walletSpentMicros + walletCharge,
+    topupSpentMicros: state.topupSpentMicros + topupCharge,
   };
   const overageMicros = usedTopup
-    ? Math.max(0, actual.topupCostMicros - reservation.topupMicros)
+    ? Math.max(0, topupCharge - reservation.topupMicros)
     : Math.max(0, actual.costMicros - reservation.walletMicros);
   return { next, overageMicros };
 }

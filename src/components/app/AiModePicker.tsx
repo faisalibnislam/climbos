@@ -6,7 +6,7 @@ import { Lock } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { RadioCards, Skeleton } from "@/components/ui";
-import { microsToDisplay } from "./money";
+import { microsToCreditsLabel } from "./money";
 
 export type AiMode = "basic" | "expert";
 type ModeKind = "onboarding_research" | "strategy" | "content_ads" | "social_calendar";
@@ -58,7 +58,7 @@ export function AiModeChoice({
   label?: string;
   upgradeHref?: string;
 }) {
-  const cost = (m: AiMode) => (costs ? ` Up to ${microsToDisplay(costs[m])}.` : "");
+  const cost = (m: AiMode) => (costs ? ` Up to ${microsToCreditsLabel(costs[m])}.` : "");
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-sm font-medium text-ink">{label}</legend>

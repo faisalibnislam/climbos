@@ -22,7 +22,7 @@ import {
   SocialIcon,
   Textarea,
 } from "@/components/ui";
-import { microsToDisplay } from "../money";
+import { microsToCreditsLabel } from "../money";
 import { ErrorCallout, RoleName, SectionBoundary, artifactStatusMeta, channelLabel, describeMeters, useWorkspaceMember } from "./shared";
 import { RunProgress } from "./RunProgress";
 
@@ -277,13 +277,12 @@ function EstimatePanel({ slug, job, quantity, images, aiMode }: { slug: string; 
       ) : (
         <div className="mt-2 flex flex-col gap-3 text-sm text-ink-2">
           <p>
-            <span className="font-semibold text-ink">{est.title}.</span> Uses up to <span className="font-semibold text-ink">{microsToDisplay(est.maxCostMicros)}</span> of
-            your monthly AI capacity. Unused capacity is returned when the job finishes.
+            <span className="font-semibold text-ink">{est.title}.</span> Uses up to <span className="font-semibold text-ink">{microsToCreditsLabel(est.maxCostMicros)}</span>. Unused credits return when the job finishes.
           </p>
           <div>
             <p className="font-medium text-ink">Counts against</p>
             <ul className="mt-1 list-disc pl-5">
-              <li>Your monthly AI capacity</li>
+              <li>Your credits</li>
               {describeMeters(est.meters).map((m) => (
                 <li key={m}>{m}</li>
               ))}

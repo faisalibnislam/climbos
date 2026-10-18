@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, buttonClasses, toast } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
-import { formatDateTime, microsToDisplay, relativeTime } from "../money";
+import { formatDateTime, microsToUsd, relativeTime } from "../money";
 import { LoadingBlock, PageHeader } from "../results/QueryBoundary";
 import { FleetControls } from "./FleetControls";
 import { EconomicsSection, ReconciliationSection } from "./OpsEconomics";
@@ -236,8 +236,8 @@ export function OpsConsole() {
           columns={[
             { key: "id", header: "Reservation", rowHeader: true, cell: (r) => <code className="text-xs">{shortId(r.id)}</code> },
             { key: "org", header: "Workspace", cell: (r) => <code className="text-xs">{shortId(r.orgId)}</code> },
-            { key: "wallet", header: "Wallet held", align: "right", cell: (r) => microsToDisplay(r.walletMicros) },
-            { key: "topup", header: "Top-up held", align: "right", cell: (r) => microsToDisplay(r.topupMicros) },
+            { key: "wallet", header: "Wallet held", align: "right", cell: (r) => microsToUsd(r.walletMicros) },
+            { key: "topup", header: "Top-up held", align: "right", cell: (r) => microsToUsd(r.topupMicros) },
             { key: "age", header: "Created", cell: (r) => relativeTime(r.createdAt) },
           ]}
         />
@@ -298,15 +298,15 @@ export function OpsConsole() {
 
       <OpsSection id="costs" title="Costs & margin">
         <StatGroup>
-          <Stat label="Provider spend, 24h" value={microsToDisplay(d.costs.spend24hMicros)} />
+          <Stat label="Provider spend, 24h" value={microsToUsd(d.costs.spend24hMicros)} />
           <Stat
             label="Estimate vs actual, 7d"
-            value={`${microsToDisplay(d.costs.actual7dMicros)}`}
-            sublabel={`Estimated ${microsToDisplay(d.costs.estimate7dMicros)} for verified runs`}
+            value={`${microsToUsd(d.costs.actual7dMicros)}`}
+            sublabel={`Estimated ${microsToUsd(d.costs.estimate7dMicros)} for verified runs`}
             change={`${formatNumber(d.costs.overEstimateRuns)} runs over estimate`}
           />
-          <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToDisplay(d.costs.previewSpend24hMicros)}`} />
-          <Stat label="Preview daily budget" value={microsToDisplay(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
+          <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToUsd(d.costs.previewSpend24hMicros)}`} />
+          <Stat label="Preview daily budget" value={microsToUsd(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
         </StatGroup>
         <DataTable
           caption="Spend by provider, last 24 hours"
@@ -316,7 +316,7 @@ export function OpsConsole() {
           columns={[
             { key: "provider", header: "Provider", rowHeader: true },
             { key: "calls", header: "Events", align: "right", cell: (p) => formatNumber(p.calls) },
-            { key: "cost", header: "Cost", align: "right", cell: (p) => microsToDisplay(p.costMicros) },
+            { key: "cost", header: "Cost", align: "right", cell: (p) => microsToUsd(p.costMicros) },
           ]}
         />
         {!d.margin.ok ? (

@@ -9,9 +9,10 @@ const DAY = 86_400_000;
 async function paidWorkspace(t: T) {
   const owner = await asNewUser(t, "owner@example.com");
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Paid Co" });
-  // Authenticated checkout created the customer mapping (server-side binding).
-  await t.mutation(internal.billing.recordCheckout, { orgId, userId: owner.userId, polarCheckoutId: "chk_1", productKey: "growth" });
-  return { owner, slug, orgId };
+  const accountId = (await t.run(async (ctx) => (await ctx.db.get(orgId as Id<"organizations">))!.accountId))!;
+  // Authenticated checkout created the customer mapping (server-side binding, per account).
+  await t.mutation(internal.billing.recordCheckout, { orgId, accountId, userId: owner.userId, polarCheckoutId: "chk_1", productKey: "starter" });
+  return { owner, slug, orgId, accountId };
 }
 
 function subPayload(orgId: string, overrides: Record<string, unknown> = {}) {
@@ -25,7 +26,7 @@ function subPayload(orgId: string, overrides: Record<string, unknown> = {}) {
     ended_at: null,
     created_at: new Date(start).toISOString(),
     modified_at: new Date(start + 1000).toISOString(),
-    product_id: "prod_growth",
+    product_id: "prod_starter",
     customer_id: "cus_1",
     customer: { id: "cus_1", external_id: orgId },
     ...overrides,
@@ -38,7 +39,7 @@ function orderPayload(orgId: string, overrides: Record<string, unknown> = {}) {
     status: "paid",
     paid: true,
     billing_reason: "subscription_create",
-    product_id: "prod_growth",
+    product_id: "prod_starter",
     subscription_id: "sub_1",
     customer_id: "cus_1",
     customer: { id: "cus_1", external_id: orgId },
@@ -67,7 +68,7 @@ function subSnapshot(orgId: string, overrides: Partial<{ status: string; cancelA
     currentPeriodEnd: Date.now() + 20 * DAY,
     cancelAtPeriodEnd: false,
     modifiedAt: start + 1000,
-    productId: "prod_growth",
+    productId: "prod_starter",
     customerId: "cus_1",
     externalCustomerId: orgId,
     ...overrides,
@@ -95,8 +96,9 @@ describe("Polar billing lifecycle", () => {
     await deliver(t, "evt_order_paid_replay", "order.paid", orderPayload(orgId), snap);
     const subPeriods = (await periods(t, orgId)).filter((p) => p.source === "subscription");
     expect(subPeriods).toHaveLength(1);
-    expect(subPeriods[0].walletCapMicros).toBe(58_000_000);
-    expect(subPeriods[0].meterCaps.socialPosts).toBe(120);
+    // Starter: 1,100 credits for the month; task counts aren't capped (credits are).
+    expect(subPeriods[0].walletCapMicros).toBe(11_000_000);
+    expect(subPeriods[0].accountId).toBeTruthy();
     const access = await t.run(async (ctx) => {
       const { chargeableAccess } = await import("../../convex/lib/access");
       return chargeableAccess(ctx, (await ctx.db.get(orgId))!);
@@ -142,9 +144,8 @@ describe("Polar billing lifecycle", () => {
     await deliver(t, "c1", "subscription.canceled", subPayload(orgId, { status: "canceled", cancel_at_period_end: true, current_period_end: new Date(Date.now() + 10 * DAY).toISOString(), modified_at: new Date(Date.now()).toISOString() }));
     await expect(owner.client.mutation(api.workspace.sendChat, { slug, text: "still allowed" })).resolves.toBeTruthy();
     await deliver(t, "r1", "subscription.revoked", subPayload(orgId, { status: "canceled", cancel_at_period_end: false, modified_at: new Date(Date.now() + 5).toISOString() }));
-    await expect(owner.client.mutation(api.workspace.sendChat, { slug, text: "not allowed" })).rejects.toThrow(/plan has ended/);
-    // Revocation never re-opens the free onboarding allowance.
-    await expect(owner.client.mutation(api.workspace.sendChat, { slug, text: "still not" })).rejects.toThrow(/plan has ended/);
+    // Back on the free tier: paid-only features lock again (free credits still work).
+    expect(await owner.client.query(api.workspace.aiMode, { slug })).toMatchObject({ expertUnlocked: false, mode: "basic" });
   });
 
   it("upgrades raise caps once; top-ups grant once and refunds revoke unused capacity", async () => {
@@ -155,16 +156,17 @@ describe("Polar billing lifecycle", () => {
     await deliver(t, "up", "order.paid", orderPayload(orgId, { id: "ord_up", billing_reason: "subscription_update", product_id: "prod_pro" }), upgraded);
     let p = (await periods(t, orgId)).filter((x) => x.source === "subscription");
     expect(p).toHaveLength(1);
-    expect(p[0].walletCapMicros).toBe(145_000_000);
-    expect(p[0].meterCaps.socialPosts).toBe(300);
+    expect(p[0].walletCapMicros).toBe(30_000_000);
 
-    await deliver(t, "tu", "order.paid", orderPayload(orgId, { id: "ord_topup", billing_reason: "purchase", product_id: "prod_boost", subscription_id: null }));
-    await deliver(t, "tu2", "order.paid", orderPayload(orgId, { id: "ord_topup", billing_reason: "purchase", product_id: "prod_boost", subscription_id: null }));
-    p = (await periods(t, orgId)).filter((x) => x.source === "subscription");
-    expect(p[0].topupCapMicros).toBe(10_000_000);
-    await deliver(t, "rf", "order.refunded", orderPayload(orgId, { id: "ord_topup", status: "refunded", billing_reason: "purchase", product_id: "prod_boost", subscription_id: null, refunded_amount: 2900 }));
-    p = (await periods(t, orgId)).filter((x) => x.source === "subscription");
-    expect(p[0].topupCapMicros).toBe(0);
+    // A $25 top-up adds 1,800 credits to the account for 12 months, once.
+    await deliver(t, "tu", "order.paid", orderPayload(orgId, { id: "ord_topup", billing_reason: "purchase", product_id: "prod_c25", subscription_id: null }));
+    await deliver(t, "tu2", "order.paid", orderPayload(orgId, { id: "ord_topup", billing_reason: "purchase", product_id: "prod_c25", subscription_id: null }));
+    const lots = async () => t.run(async (ctx) => ctx.db.query("creditPurchases").collect());
+    expect(await lots()).toHaveLength(1);
+    expect((await lots())[0]).toMatchObject({ remainingMicros: 18_000_000, status: "active" });
+    expect((await lots())[0].expiresAt! - Date.now()).toBeGreaterThan(360 * DAY);
+    await deliver(t, "rf", "order.refunded", orderPayload(orgId, { id: "ord_topup", status: "refunded", billing_reason: "purchase", product_id: "prod_c25", subscription_id: null, refunded_amount: 2500 }));
+    expect((await lots())[0]).toMatchObject({ remainingMicros: 0, status: "revoked" });
   });
 
   it("refuses to bind purchases to a workspace that never started an authenticated checkout", async () => {

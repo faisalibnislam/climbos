@@ -1,5 +1,7 @@
 import {
+  creditsToMicros,
   CURRENT_ENTITLEMENTS,
+  FREE_CREDITS,
   getEntitlementVersion,
   type LedgerState,
   type Meters,
@@ -12,26 +14,30 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
 
+const UNCAPPED = 1_000_000_000;
+
 /**
- * One-time allowance for a new, unpaid workspace: enough for the expert
- * engine to research the business, build the plan and make a first content
- * pack (Engine v2 reserves worst cases up front; typical spend is far lower).
+ * Free credits: 50 once per account (credits limit spend; task counts are
+ * recorded, not capped). They don't expire.
  */
 export const ONBOARDING_ALLOWANCE = {
-  walletMicros: 6_000_000,
+  walletMicros: creditsToMicros(FREE_CREDITS),
   meters: {
-    socialPosts: 6,
-    imageAttempts: 2,
-    deliveredImages: 1,
-    searchCalls: 14,
-    scrapeCredits: 6,
-    transactionalEmails: 10,
+    socialPosts: UNCAPPED,
+    imageAttempts: UNCAPPED,
+    deliveredImages: UNCAPPED,
+    searchCalls: UNCAPPED,
+    scrapeCredits: UNCAPPED,
+    transactionalEmails: UNCAPPED,
     byoMarketingSends: 0,
-    analyticsEvents: 1000,
+    analyticsEvents: UNCAPPED,
     supportMinutes: 0,
   } satisfies Meters,
-  days: 30,
+  days: 365 * 100,
 };
+
+/** Where a workspace's credits live: its account (shared), or the workspace itself (demo). */
+export type BillingScope = Pick<Doc<"organizations">, "_id" | "accountId">;
 
 export function planCaps(plan: PlanEntitlement): Meters {
   return {
@@ -76,12 +82,18 @@ export function ledgerPatch(next: LedgerState) {
   };
 }
 
-/** The usage period in force now (bounded index read; never scans history). */
-export async function currentPeriod(ctx: Ctx, orgId: Id<"organizations">, now = Date.now()) {
-  const candidates = await ctx.db
-    .query("usagePeriods")
-    .withIndex("by_org_ends", (q) => q.eq("orgId", orgId).gt("endsAt", now))
-    .take(10);
+/** The usage period in force now for the workspace's account (bounded index read; never scans history). */
+export async function currentPeriod(ctx: Ctx, scope: BillingScope, now = Date.now()) {
+  const accountId = scope.accountId;
+  const candidates = accountId
+    ? await ctx.db
+        .query("usagePeriods")
+        .withIndex("by_account_ends", (q) => q.eq("accountId", accountId).gt("endsAt", now))
+        .take(10)
+    : await ctx.db
+        .query("usagePeriods")
+        .withIndex("by_org_ends", (q) => q.eq("orgId", scope._id).gt("endsAt", now))
+        .take(10);
   // Prefer a paid subscription period over onboarding/demo when both overlap.
   const active = candidates.filter((p) => p.startsAt <= now);
   return (
@@ -92,15 +104,18 @@ export async function currentPeriod(ctx: Ctx, orgId: Id<"organizations">, now = 
   );
 }
 
-export async function createOnboardingPeriod(ctx: MutationCtx, orgId: Id<"organizations">) {
+/** The account's free credits (once per account; a second workspace shares them). */
+export async function createOnboardingPeriod(ctx: MutationCtx, orgId: Id<"organizations">, accountId: Id<"accounts">) {
   const existing = await ctx.db
     .query("usagePeriods")
-    .withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "onboarding"))
-    .unique();
+    .withIndex("by_account_period", (q) => q.eq("accountId", accountId).eq("periodKey", "onboarding"))
+    .first();
   if (existing) return existing._id;
   const now = Date.now();
+  await ctx.db.patch(accountId, { freeCreditsGrantedAt: now });
   return ctx.db.insert("usagePeriods", {
     orgId,
+    accountId,
     periodKey: "onboarding",
     source: "onboarding",
     entitlementVersionId: CURRENT_ENTITLEMENTS.id,
@@ -122,13 +137,13 @@ export async function createOnboardingPeriod(ctx: MutationCtx, orgId: Id<"organi
 }
 
 export async function createDemoPeriod(ctx: MutationCtx, orgId: Id<"organizations">) {
-  const plan = CURRENT_ENTITLEMENTS.plans.growth;
+  const plan = CURRENT_ENTITLEMENTS.plans.pro;
   const now = Date.now();
   return ctx.db.insert("usagePeriods", {
     orgId,
     periodKey: "demo",
     source: "demo",
-    planKey: "growth",
+    planKey: "pro",
     entitlementVersionId: CURRENT_ENTITLEMENTS.id,
     startsAt: now - 86_400_000,
     endsAt: now + 30 * 86_400_000,
@@ -156,6 +171,7 @@ export async function grantSubscriptionPeriod(
   ctx: MutationCtx,
   params: {
     orgId: Id<"organizations">;
+    accountId?: Id<"accounts">;
     planKey: PlanKey;
     entitlementVersionId: string;
     periodStart: number;
@@ -168,10 +184,16 @@ export async function grantSubscriptionPeriod(
   const plan = ent.plans[params.planKey];
   const periodKey = `sub:${params.polarSubscriptionId}:${params.periodStart}`;
   const now = Date.now();
-  const existing = await ctx.db
-    .query("usagePeriods")
-    .withIndex("by_org_period", (q) => q.eq("orgId", params.orgId).eq("periodKey", periodKey))
-    .unique();
+  const accountId = params.accountId;
+  const existing = accountId
+    ? await ctx.db
+        .query("usagePeriods")
+        .withIndex("by_account_period", (q) => q.eq("accountId", accountId).eq("periodKey", periodKey))
+        .first()
+    : await ctx.db
+        .query("usagePeriods")
+        .withIndex("by_org_period", (q) => q.eq("orgId", params.orgId).eq("periodKey", periodKey))
+        .unique();
   const caps = planCaps(plan);
   if (existing) {
     const raised = { ...existing.meterCaps };
@@ -187,6 +209,7 @@ export async function grantSubscriptionPeriod(
   }
   const periodId = await ctx.db.insert("usagePeriods", {
     orgId: params.orgId,
+    ...(accountId ? { accountId } : {}),
     periodKey,
     source: "subscription",
     planKey: params.planKey,

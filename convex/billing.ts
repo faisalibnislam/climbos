@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { CURRENT_ENTITLEMENTS, METER_LABELS, type MeterKey, PLAN_KEYS } from "../shared/economics";
+import { CREDIT_TOPUPS, creditsToMicros, CURRENT_ENTITLEMENTS, salePlanKeys, TOPUP_VALID_DAYS, type TopupKey } from "../shared/economics";
 import type { PlanKey } from "../shared/economics/assumptions";
 import { grantForOrder, mapPolarSubscriptionStatus, shouldApplySnapshot, subscriptionAccess } from "../shared/billing";
 import { internal } from "./_generated/api";
@@ -8,6 +8,7 @@ import { action, internalAction, internalMutation, internalQuery, query, type Mu
 import { audit } from "./lib/audit";
 import { chargeableAccess, latestSubscription } from "./lib/access";
 import { currentPeriod, grantSubscriptionPeriod } from "./lib/periods";
+import { creditBalance } from "./lib/credits";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -17,15 +18,20 @@ import { appError, requireOrgAccess } from "./lib/tenancy";
  * its webhook id and processed idempotently (grants keyed by Polar order id).
  */
 
-type ProductKey = PlanKey | "boost_29";
+type ProductKey = PlanKey | "boost_29" | TopupKey;
 const PRODUCT_ENV: Record<ProductKey, string> = {
-  basic: "POLAR_PRODUCT_BASIC",
   starter: "POLAR_PRODUCT_STARTER",
-  growth: "POLAR_PRODUCT_GROWTH",
   pro: "POLAR_PRODUCT_PRO",
+  credits_10: "POLAR_PRODUCT_CREDITS_10",
+  credits_25: "POLAR_PRODUCT_CREDITS_25",
+  credits_50: "POLAR_PRODUCT_CREDITS_50",
+  // Retired products (kept so old orders and subscriptions still resolve).
+  basic: "POLAR_PRODUCT_BASIC",
+  growth: "POLAR_PRODUCT_GROWTH",
   business: "POLAR_PRODUCT_BUSINESS",
   boost_29: "POLAR_PRODUCT_BOOST_29",
 };
+const isTopupKey = (k: string): k is TopupKey => k.startsWith("credits_");
 
 export function productKeyForId(productId: string): ProductKey | null {
   for (const [key, env] of Object.entries(PRODUCT_ENV) as [ProductKey, string][]) {
@@ -61,66 +67,43 @@ async function polarFetch<T>(path: string, init: RequestInit = {}): Promise<{ ok
 export const overview = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
-    const sub = await latestSubscription(ctx, org._id);
-    const period = await currentPeriod(ctx, org._id);
+    const { org, role, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const sub = await latestSubscription(ctx, org);
+    const period = await currentPeriod(ctx, org);
     const access = await chargeableAccess(ctx, org);
-    const orders = await ctx.db
-      .query("orders")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(12);
-    const topups = await ctx.db
-      .query("creditPurchases")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(12);
-    const meters = period
-      ? (Object.keys(METER_LABELS) as MeterKey[])
-          .filter((k) => period.meterCaps[k] > 0)
-          .map((k) => ({ key: k, label: METER_LABELS[k], used: period.meterUsed[k], reserved: period.meterReserved[k], cap: period.meterCaps[k] }))
+    const orders = org.accountId
+      ? await ctx.db
+          .query("orders")
+          .withIndex("by_account", (q) => q.eq("accountId", org.accountId))
+          .order("desc")
+          .take(12)
       : [];
+    const paid = Boolean(sub && subscriptionAccess(sub, Date.now()) === "full");
+    const account = org.accountId ? await ctx.db.get(org.accountId) : null;
     return {
       canManage: ["owner", "admin"].includes(role),
       isDemo: org.kind === "demo",
       billingConfigured: polarConfigured(),
       environment: process.env.POLAR_SERVER === "production" ? "production" : "sandbox",
-      plans: PLAN_KEYS.map((k) => {
+      packages: salePlanKeys().map((k) => {
         const p = CURRENT_ENTITLEMENTS.plans[k];
-        return {
-          key: k,
-          name: p.name,
-          priceUsd: p.priceUsd,
-          tagline: p.tagline,
-          highlights: p.highlights,
-          available: Boolean(process.env[PRODUCT_ENV[k]]),
-          caps: { socialPosts: p.socialPosts, deliveredImages: p.deliveredImages, imageAttempts: p.imageAttempts, scrapeCredits: p.scrapeCredits, searchCalls: p.searchCalls, seats: p.seats, brands: p.brands, connections: p.connections, supportMinutes: p.supportMinutes },
-        };
+        return { key: k, name: p.name, priceUsd: p.priceUsd, credits: p.credits ?? 0, tagline: p.tagline, seats: p.seats, available: Boolean(process.env[PRODUCT_ENV[k]]) };
       }),
-      topupProducts: CURRENT_ENTITLEMENTS.topups.map((t) => ({ key: t.key, name: t.name, priceUsd: t.priceUsd, description: t.description, available: Boolean(process.env[PRODUCT_ENV[t.key as ProductKey]]) })),
+      topups: CREDIT_TOPUPS.map((t) => ({ key: t.key, priceUsd: t.priceUsd, credits: t.credits, available: Boolean(process.env[PRODUCT_ENV[t.key]]) && paid })),
+      paid,
       subscription: sub
         ? {
             planKey: sub.planKey,
+            name: CURRENT_ENTITLEMENTS.plans[sub.planKey].name,
             status: sub.status,
             access: subscriptionAccess(sub, Date.now()),
             cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
             currentPeriodEnd: sub.currentPeriodEnd,
-            entitlementVersionId: sub.entitlementVersionId,
           }
         : null,
-      period: period
-        ? {
-            source: period.source,
-            planKey: period.planKey ?? null,
-            startsAt: period.startsAt,
-            endsAt: period.endsAt,
-            walletFraction: period.walletCapMicros > 0 ? (period.walletSpentMicros + period.walletReservedMicros) / period.walletCapMicros : null,
-            topupFraction: period.topupCapMicros > 0 ? (period.topupSpentMicros + period.topupReservedMicros) / period.topupCapMicros : null,
-            meters,
-          }
-        : null,
+      balance: await creditBalance(ctx, org, period),
+      isAccountOwner: Boolean(account && account.ownerUserId === user._id),
       orders: orders.map((o) => ({ id: o._id, productKey: o.productKey, status: o.status, amountMinor: o.amountMinor, currency: o.currency, createdAt: o.createdAt, billingReason: o.billingReason })),
-      topups: topups.map((t) => ({ id: t._id, status: t.status, createdAt: t.createdAt })),
       canRunAi: access.allowed,
       accessMessage: access.allowed ? null : access.message,
     };
@@ -132,45 +115,47 @@ export const overview = query({
 /* ------------------------------------------------------------------ */
 
 export const recordCheckout = internalMutation({
-  args: { orgId: v.id("organizations"), userId: v.id("users"), polarCheckoutId: v.string(), productKey: v.string() },
+  args: { orgId: v.id("organizations"), accountId: v.id("accounts"), userId: v.id("users"), polarCheckoutId: v.string(), productKey: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.insert("checkoutSessions", { ...args, status: "open", createdAt: Date.now() });
+    await ctx.db.insert("checkoutSessions", { orgId: args.orgId, userId: args.userId, polarCheckoutId: args.polarCheckoutId, productKey: args.productKey, status: "open", createdAt: Date.now() });
     const existing = await ctx.db
       .query("polarCustomers")
-      .withIndex("by_org", (q) => q.eq("orgId", args.orgId))
+      .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
       .first();
-    if (!existing) await ctx.db.insert("polarCustomers", { orgId: args.orgId, createdAt: Date.now() });
+    if (!existing) await ctx.db.insert("polarCustomers", { orgId: args.orgId, accountId: args.accountId, createdAt: Date.now() });
     await audit(ctx, { orgId: args.orgId, actorType: "user", actorId: args.userId, action: "billing.checkout_started", summary: `Checkout started for ${args.productKey}.` });
   },
 });
 
 export const createCheckout = action({
-  args: { slug: v.string(), productKey: v.union(v.literal("basic"), v.literal("starter"), v.literal("growth"), v.literal("pro"), v.literal("business"), v.literal("boost_29")) },
+  args: { slug: v.string(), productKey: v.union(v.literal("starter"), v.literal("pro"), v.literal("credits_10"), v.literal("credits_25"), v.literal("credits_50")) },
   handler: async (ctx, { slug, productKey }): Promise<{ url: string }> => {
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_billing" });
     if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
-    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't buy plans. Create your own workspace first.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't buy packages. Create your own workspace first.");
+    const accountId = await ctx.runQuery(internal.billing.accountOf, { orgId: access.orgId });
+    if (!accountId) throw appError("INVALID", "This workspace has no billing account yet.");
     const productId = process.env[PRODUCT_ENV[productKey]];
     if (!productId || !polarConfigured()) throw appError("UNAVAILABLE", "Billing isn't set up yet. Please try again soon.");
-    if (productKey === "boost_29") {
+    if (isTopupKey(productKey)) {
       const state = await ctx.runQuery(internal.billing.subscriptionState, { orgId: access.orgId });
-      if (state !== "full") throw appError("INVALID", "Extra capacity packs are for active plans. Choose a plan first.");
+      if (state !== "full") throw appError("INVALID", "Top-ups add to a monthly package. Choose a package first.");
     }
     const site = process.env.SITE_URL ?? "http://localhost:3000";
     const res = await polarFetch<{ id: string; url: string }>("/v1/checkouts/", {
       method: "POST",
       body: JSON.stringify({
         products: [productId],
-        // Binds the purchase to this workspace server-side (never trusted from the browser).
-        external_customer_id: access.orgId,
+        // Binds the purchase to this account server-side (never trusted from the browser).
+        external_customer_id: accountId,
         customer_email: access.email ?? undefined,
-        metadata: { orgId: access.orgId, productKey, requestedBy: access.userId },
+        metadata: { accountId, orgId: access.orgId, productKey, requestedBy: access.userId },
         success_url: `${site}/app/${slug}/settings/billing?checkout=returned&checkout_id={CHECKOUT_ID}`,
         return_url: `${site}/app/${slug}/settings/billing`,
       }),
     });
     if (!res.ok) throw appError("UNAVAILABLE", "We couldn't open checkout right now. Please try again in a minute.");
-    await ctx.runMutation(internal.billing.recordCheckout, { orgId: access.orgId, userId: access.userId, polarCheckoutId: res.data.id, productKey });
+    await ctx.runMutation(internal.billing.recordCheckout, { orgId: access.orgId, accountId, userId: access.userId, polarCheckoutId: res.data.id, productKey });
     return { url: res.data.url };
   },
 });
@@ -180,9 +165,10 @@ export const customerPortal = action({
   handler: async (ctx, { slug }): Promise<{ url: string }> => {
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_billing" });
     if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    const accountId = await ctx.runQuery(internal.billing.accountOf, { orgId: access.orgId });
     const res = await polarFetch<{ customer_portal_url: string }>("/v1/customer-sessions/", {
       method: "POST",
-      body: JSON.stringify({ external_customer_id: access.orgId, return_url: `${process.env.SITE_URL ?? "http://localhost:3000"}/app/${slug}/settings/billing` }),
+      body: JSON.stringify({ external_customer_id: accountId ?? access.orgId, return_url: `${process.env.SITE_URL ?? "http://localhost:3000"}/app/${slug}/settings/billing` }),
     });
     if (!res.ok) throw appError("UNAVAILABLE", "We couldn't open the billing portal. If you haven't subscribed yet, choose a plan first.");
     return { url: res.data.customer_portal_url };
@@ -192,9 +178,15 @@ export const customerPortal = action({
 export const subscriptionState = internalQuery({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }) => {
-    const sub = await latestSubscription(ctx, orgId);
+    const org = await ctx.db.get(orgId);
+    const sub = org ? await latestSubscription(ctx, org) : null;
     return sub ? subscriptionAccess(sub, Date.now()) : "none";
   },
+});
+
+export const accountOf = internalQuery({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => (await ctx.db.get(orgId))?.accountId ?? null,
 });
 
 /* ------------------------------------------------------------------ */
@@ -291,29 +283,47 @@ function toSub(s: PolarSubscription) {
   };
 }
 
-/** Resolve and authorize the workspace a Polar customer belongs to. */
-async function resolveOrg(ctx: MutationCtx, externalId: string | undefined, polarCustomerId: string): Promise<Id<"organizations"> | null> {
+/**
+ * Resolve and authorize the account (and a workspace of it) a Polar customer
+ * belongs to. New checkouts bind the account id; older ones bound a workspace id.
+ */
+async function resolveBilling(ctx: MutationCtx, externalId: string | undefined, polarCustomerId: string): Promise<{ orgId: Id<"organizations">; accountId?: Id<"accounts"> } | null> {
   if (!externalId) return null;
-  const orgId = ctx.db.normalizeId("organizations", externalId);
+  let accountId = ctx.db.normalizeId("accounts", externalId) ?? undefined;
+  let orgId: Id<"organizations"> | null = null;
+  if (accountId) {
+    const orgs = (await ctx.db.query("organizations").withIndex("by_account", (q) => q.eq("accountId", accountId)).take(50)).filter((o) => !o.deletedAt && o.kind !== "demo");
+    orgId = orgs[0]?._id ?? null;
+  } else {
+    orgId = ctx.db.normalizeId("organizations", externalId);
+    const org = orgId ? await ctx.db.get(orgId) : null;
+    if (!org || org.kind === "demo") return null;
+    accountId = org.accountId;
+  }
   if (!orgId) return null;
-  const org = await ctx.db.get(orgId);
-  if (!org || org.kind === "demo") return null;
-  const mapping = await ctx.db
-    .query("polarCustomers")
-    .withIndex("by_org", (q) => q.eq("orgId", orgId))
-    .first();
-  // A purchase binds only to a workspace that started a checkout from an authenticated session.
+  const mapping = accountId
+    ? await ctx.db
+        .query("polarCustomers")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .first()
+    : await ctx.db
+        .query("polarCustomers")
+        .withIndex("by_org", (q) => q.eq("orgId", orgId))
+        .first();
+  // A purchase binds only to an account that started a checkout from an authenticated session.
   if (!mapping) return null;
   if (mapping.polarCustomerId && mapping.polarCustomerId !== polarCustomerId) return null;
   if (!mapping.polarCustomerId) await ctx.db.patch(mapping._id, { polarCustomerId });
-  return orgId;
+  return { orgId, accountId };
 }
 
 async function applySubscription(ctx: MutationCtx, eventType: string, s: { id: string; status: string; currentPeriodStart: number; currentPeriodEnd: number; cancelAtPeriodEnd: boolean; endedAt?: number; modifiedAt: number; productId: string; customerId: string; externalCustomerId?: string }) {
-  const orgId = await resolveOrg(ctx, s.externalCustomerId, s.customerId);
-  if (!orgId) return { applied: false, reason: "unbound customer" };
-  const planKey = productKeyForId(s.productId);
-  if (!planKey || planKey === "boost_29") return { applied: false, reason: "unknown product" };
+  const scope = await resolveBilling(ctx, s.externalCustomerId, s.customerId);
+  if (!scope) return { applied: false, reason: "unbound customer" };
+  const { orgId, accountId } = scope;
+  const productKey = productKeyForId(s.productId);
+  if (!productKey || productKey === "boost_29" || isTopupKey(productKey)) return { applied: false, reason: "unknown product" };
+  const planKey: PlanKey = productKey;
   const existing = await ctx.db
     .query("subscriptions")
     .withIndex("by_polar", (q) => q.eq("polarSubscriptionId", s.id))
@@ -324,6 +334,7 @@ async function applySubscription(ctx: MutationCtx, eventType: string, s: { id: s
   const status = mapPolarSubscriptionStatus(eventType, s.status);
   const doc = {
     orgId,
+    ...(accountId ? { accountId } : {}),
     polarSubscriptionId: s.id,
     polarCustomerId: s.customerId,
     productId: s.productId,
@@ -342,11 +353,11 @@ async function applySubscription(ctx: MutationCtx, eventType: string, s: { id: s
   else await ctx.db.insert("subscriptions", doc);
   if (status === "revoked" || (status === "canceled" && !s.cancelAtPeriodEnd)) {
     // Revocation: stop the current period now (reading and export stay available).
-    const period = await currentPeriod(ctx, orgId);
+    const period = await currentPeriod(ctx, { _id: orgId, accountId });
     if (period?.source === "subscription") await ctx.db.patch(period._id, { endsAt: Date.now(), updatedAt: Date.now() });
   }
   await audit(ctx, { orgId, actorType: "system", action: `billing.${eventType}`, summary: `Subscription ${planKey} is now ${status}${s.cancelAtPeriodEnd ? " (ends at period end)" : ""}.` });
-  return { applied: true, orgId };
+  return { applied: true, orgId, accountId };
 }
 
 /** Process one stored event. Deterministic and idempotent; grants keyed by order id. */
@@ -373,8 +384,9 @@ export const applyPolarEvent = internalMutation({
 
     if (type.startsWith("order.")) {
       const o = payload.data as unknown as PolarOrder;
-      const orgId = await resolveOrg(ctx, o.customer?.external_id ?? undefined, o.customer_id);
-      if (!orgId) return finish("ignored", "unbound customer");
+      const scope = await resolveBilling(ctx, o.customer?.external_id ?? undefined, o.customer_id);
+      if (!scope) return finish("ignored", "unbound customer");
+      const { orgId, accountId } = scope;
       const productId = o.product_id ?? o.product?.id ?? "";
       const productKey = productKeyForId(productId);
       if (!productKey) return finish("ignored", "unknown product");
@@ -386,6 +398,7 @@ export const applyPolarEvent = internalMutation({
       if (!order) {
         const id = await ctx.db.insert("orders", {
           orgId,
+          ...(accountId ? { accountId } : {}),
           polarOrderId: o.id,
           polarSubscriptionId: o.subscription_id ?? undefined,
           productId,
@@ -407,13 +420,14 @@ export const applyPolarEvent = internalMutation({
 
       // Refunds: revoke unused top-up capacity; subscription access follows subscription state.
       if (type === "order.refunded" || orderStatus === "refunded") {
-        if (productKey === "boost_29") {
+        if (productKey === "boost_29" || isTopupKey(productKey)) {
           const credit = await ctx.db
             .query("creditPurchases")
             .withIndex("by_order", (q) => q.eq("polarOrderId", o.id))
             .first();
           if (credit && credit.status === "active") {
-            await ctx.db.patch(credit._id, { status: "revoked" });
+            // Unused top-up credits are removed; what was already spent stays spent.
+            await ctx.db.patch(credit._id, { status: "revoked", remainingMicros: 0 });
             const period = credit.periodId ? await ctx.db.get(credit.periodId) : null;
             if (period) {
               const remaining = Math.max(0, period.topupCapMicros - credit.deliveryCostMicros);
@@ -430,18 +444,18 @@ export const applyPolarEvent = internalMutation({
         orderStatus,
         paid: Boolean(o.paid) || orderStatus === "paid",
         billingReason: o.billing_reason,
-        productKind: productKey === "boost_29" ? "topup" : "plan",
+        productKind: productKey === "boost_29" || isTopupKey(productKey) ? "topup" : "plan",
       });
       if (grant === "none" || order.grantedAt) return finish(order.grantedAt ? "processed" : "ignored", order.grantedAt ? undefined : "no grant for this event");
 
       if (grant === "topup") {
-        const period = await currentPeriod(ctx, orgId);
-        if (!period || period.source !== "subscription") return finish("ignored", "no active paid period for top-up");
-        const pack = CURRENT_ENTITLEMENTS.topups.find((t) => t.key === "boost_29")!;
-        await ctx.db.insert("creditPurchases", { orgId, polarOrderId: o.id, topupKey: pack.key, deliveryCostMicros: pack.deliveryCostMicros, periodId: period._id, status: "active", createdAt: now });
-        await ctx.db.patch(period._id, { topupCapMicros: period.topupCapMicros + pack.deliveryCostMicros, updatedAt: now });
+        const pack = CREDIT_TOPUPS.find((t) => t.key === productKey);
+        if (!pack || !accountId) return finish("ignored", "unknown top-up or no account");
+        // Top-up credits belong to the account and last 12 months (paid for, so granted even if the package lapsed).
+        const micros = creditsToMicros(pack.credits);
+        await ctx.db.insert("creditPurchases", { orgId, accountId, polarOrderId: o.id, topupKey: pack.key, deliveryCostMicros: micros, creditsMicros: micros, remainingMicros: micros, expiresAt: now + TOPUP_VALID_DAYS * 86_400_000, status: "active", createdAt: now });
         await ctx.db.patch(order._id, { grantedAt: now });
-        await audit(ctx, { orgId, actorType: "system", action: "billing.topup_granted", summary: "Extra capacity pack added for this period." });
+        await audit(ctx, { orgId, actorType: "system", action: "billing.topup_granted", summary: `${pack.credits.toLocaleString("en-US")} credits added (valid 12 months).` });
         return finish("processed");
       }
 
@@ -454,9 +468,11 @@ export const applyPolarEvent = internalMutation({
             .first()
         : null;
       if (!sub) return finish("ignored", "subscription state unavailable; will reconcile");
-      const planKey = productKey as PlanKey;
+      if (isTopupKey(productKey) || productKey === "boost_29") return finish("ignored", "not a package");
+      const planKey: PlanKey = productKey;
       await grantSubscriptionPeriod(ctx, {
         orgId,
+        accountId,
         planKey,
         entitlementVersionId: sub.entitlementVersionId,
         periodStart: sub.currentPeriodStart,
@@ -465,7 +481,7 @@ export const applyPolarEvent = internalMutation({
         polarSubscriptionId: sub.polarSubscriptionId,
       });
       await ctx.db.patch(order._id, { grantedAt: now, periodStart: sub.currentPeriodStart, periodEnd: sub.currentPeriodEnd });
-      await audit(ctx, { orgId, actorType: "system", action: "billing.period_granted", summary: `${CURRENT_ENTITLEMENTS.plans[planKey].name} allowance granted for the current period.` });
+      await audit(ctx, { orgId, actorType: "system", action: "billing.period_granted", summary: `${CURRENT_ENTITLEMENTS.plans[planKey].name}: ${(CURRENT_ENTITLEMENTS.plans[planKey].credits ?? 0).toLocaleString("en-US")} credits for this month.` });
       return finish("processed");
     }
 

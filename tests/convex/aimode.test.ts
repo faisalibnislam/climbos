@@ -15,8 +15,9 @@ async function workspace(t: T, email: string) {
 async function makePaid(t: T, orgId: Id<"organizations">) {
   await t.run(async (ctx) => {
     const now = Date.now();
-    await ctx.db.insert("subscriptions", { orgId, polarSubscriptionId: `sub_${orgId}`, productId: "p", planKey: "growth", status: "active", cancelAtPeriodEnd: false, currentPeriodStart: now - 86_400_000, currentPeriodEnd: now + 29 * 86_400_000, entitlementVersionId: "e", rateVersionId: "r", sourceModifiedAt: now, updatedAt: now });
-    for (const p of await ctx.db.query("usagePeriods").collect()) if (p.orgId === orgId) await ctx.db.patch(p._id, { source: "subscription", walletCapMicros: 20_000_000 });
+    const accountId = (await ctx.db.get(orgId))!.accountId;
+    await ctx.db.insert("subscriptions", { orgId, accountId, polarSubscriptionId: `sub_${orgId}`, productId: "p", planKey: "starter", status: "active", cancelAtPeriodEnd: false, currentPeriodStart: now - 86_400_000, currentPeriodEnd: now + 29 * 86_400_000, entitlementVersionId: "e", rateVersionId: "r", sourceModifiedAt: now, updatedAt: now });
+    for (const p of await ctx.db.query("usagePeriods").collect()) if (p.accountId === accountId) await ctx.db.patch(p._id, { source: "subscription", walletCapMicros: 20_000_000 });
   });
 }
 

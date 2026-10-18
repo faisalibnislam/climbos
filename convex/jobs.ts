@@ -4,7 +4,7 @@ import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
-import { estimateTokens, MODEL_SPECS, runtimeModel, worstCaseStepMicros } from "../shared/ai/models";
+import { estimateTokens, MODEL_SPECS, runtimeModel } from "../shared/ai/models";
 import {
   type AdDraftsOutput,
   type BusinessInsights,
@@ -313,8 +313,30 @@ async function runAgentTask<T>(
         if (circuit === "open") {
           return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as TurnResult;
         }
-        const q = { ...req, modelKey };
+        // Long OpenAI turns (Sol drafts, big outputs) run in background mode: if this action's time runs out,
+        // the job yields and the next action keeps polling the same answer (no rerun, no double charge).
+        const stepId = currentStep;
+        const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);
+        const ref = background && stepId ? await ctx.runQuery(internal.engine.stepProviderRef, { stepId }) : null;
+        const q = {
+          ...req,
+          modelKey,
+          ...(background
+            ? {
+                background: {
+                  resumeResponseId: ref ?? undefined,
+                  pollUntil: startedAt + 8.5 * 60_000,
+                  onStarted: async (id: string) => {
+                    if (stepId) await ctx.runMutation(internal.engine.setStepProviderRef, { stepId, ref: id });
+                  },
+                },
+              }
+            : {}),
+        };
         let r = await call(q, rates);
+        if (!r.ok && r.kind === "pending") throw new AgentYield();
+        // A failed background answer can't be resumed: the next attempt starts fresh.
+        if (!r.ok && ref && stepId) await ctx.runMutation(internal.engine.setStepProviderRef, { stepId, ref: undefined });
         if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
           await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
           r = await call(q, rates);
@@ -341,7 +363,8 @@ async function runAgentTask<T>(
         await ctx.runMutation(internal.engine.completeStep, { stepId: currentStep, output: JSON.stringify(value) });
         return value;
       } catch (e) {
-        await ctx.runMutation(internal.engine.failStep, { stepId: currentStep, error: (e as Error).message.slice(0, 400) });
+        // Yielding mid-turn keeps the step running; the next action resumes it.
+        if (!(e instanceof AgentYield)) await ctx.runMutation(internal.engine.failStep, { stepId: currentStep, error: (e as Error).message.slice(0, 400) });
         throw e;
       } finally {
         currentStep = null;

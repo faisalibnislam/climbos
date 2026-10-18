@@ -1,4 +1,7 @@
 import { v } from "convex/values";
+import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
+import { activePackage } from "./lib/access";
+import { CREDIT_PACKAGES, FREE_LIMITS } from "../shared/economics";
 import { resolveAiMode } from "./lib/aiMode";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -92,12 +95,15 @@ export const createWorkspace = mutation({
     if (user.isAnonymous) throw appError("FORBIDDEN", "Create a free account to save your own workspace.");
     const name = args.businessName.trim().slice(0, 80);
     if (!name) throw appError("INVALID", "Please enter your business name.");
-    const existing = await ctx.db
-      .query("memberships")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .take(30);
-    const owned = existing.filter((m) => m.role === "owner" && m.status === "active");
-    if (owned.length >= 10) throw appError("LIMIT_REACHED", "You can own up to 10 workspaces. Contact support for more.");
+    const name0 = args.businessName.trim().slice(0, 80);
+    // Workspaces share the owner's account: free accounts have one, packages allow more.
+    const accountId = await ensureAccountForOwner(ctx, user, name0 || "My account");
+    const owned = await accountWorkspaces(ctx, accountId);
+    const sub = await activePackage(ctx, { _id: owned[0]?._id ?? (accountId as unknown as Id<"organizations">), accountId });
+    const allowed = sub ? (CREDIT_PACKAGES[sub.planKey === "pro" || sub.planKey === "growth" || sub.planKey === "business" ? "pro" : "starter"].workspaces) : FREE_LIMITS.freeWorkspacesPerOwner;
+    if (owned.length >= allowed) {
+      throw appError(sub ? "LIMIT_REACHED" : "PAYMENT_REQUIRED", sub ? `Your package includes ${allowed} workspaces. Upgrade to add more.` : "Free accounts have one workspace. Choose a package to add more.");
+    }
     const now = Date.now();
     const timezone = (args.timezone ?? "UTC").slice(0, 64);
     const currency = (args.currency ?? "USD").toUpperCase().slice(0, 3);
@@ -110,6 +116,7 @@ export const createWorkspace = mutation({
       timezone,
       currency,
       onboardingStep: "research",
+      accountId,
       createdAt: now,
     });
     await ctx.db.insert("memberships", { orgId, userId: user._id, role: "owner", status: "active", createdAt: now });
@@ -145,7 +152,7 @@ export const createWorkspace = mutation({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
     if (!prefs) await ctx.db.insert("userPreferences", { userId: user._id, digest: "weekly", usageAlerts: true });
-    await createOnboardingPeriod(ctx, orgId);
+    await createOnboardingPeriod(ctx, orgId, accountId);
     await audit(ctx, { orgId, actorType: "user", actorId: user._id, action: "workspace.created", summary: `Workspace "${name}" created.` });
     return { slug, orgId };
   },

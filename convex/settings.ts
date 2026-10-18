@@ -20,7 +20,7 @@ export const team = query({
       .query("memberships")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .take(100);
-    const sub = await latestSubscription(ctx, org._id);
+    const sub = await latestSubscription(ctx, org);
     const planKey = sub?.planKey ?? "basic";
     const seatLimit = CURRENT_ENTITLEMENTS.plans[planKey].seats;
     const rows = [];
@@ -60,7 +60,7 @@ export const invite = mutation({
       .query("memberships")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .take(100);
-    const sub = await latestSubscription(ctx, org._id);
+    const sub = await latestSubscription(ctx, org);
     const seatLimit = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"].seats;
     const active = members.filter((m) => m.status !== "removed");
     if (active.length >= seatLimit) throw appError("LIMIT_REACHED", `Your plan includes ${seatLimit} seat${seatLimit === 1 ? "" : "s"}. Upgrade to add more people.`);
@@ -163,7 +163,7 @@ export const policies = query({
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
-    const sub = await latestSubscription(ctx, org._id);
+    const sub = await latestSubscription(ctx, org);
     const plan = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"];
     return {
       canManage: ["owner", "admin"].includes(role),
@@ -201,7 +201,7 @@ export const updatePolicy = mutation({
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
     if (!p) throw appError("NOT_FOUND", "Policy not found.");
-    const sub = await latestSubscription(ctx, org._id);
+    const sub = await latestSubscription(ctx, org);
     const plan = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"];
     if (org.kind !== "demo" && !plan.autonomyModes.includes(args.mode)) {
       throw appError("PAYMENT_REQUIRED", `${plan.name} doesn't include this approval mode. Upgrade to use it.`);

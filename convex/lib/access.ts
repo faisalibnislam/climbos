@@ -1,7 +1,7 @@
 import { subscriptionAccess } from "../../shared/billing";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { currentPeriod } from "./periods";
+import { currentPeriod, type BillingScope } from "./periods";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -21,14 +21,33 @@ export async function fleetStopped(ctx: Ctx): Promise<boolean> {
   return Boolean(fleet?.emergencyStop);
 }
 
-export async function latestSubscription(ctx: Ctx, orgId: Id<"organizations">) {
-  const subs = await ctx.db
-    .query("subscriptions")
-    .withIndex("by_org", (q) => q.eq("orgId", orgId))
-    .order("desc")
-    .take(5);
+export async function latestSubscription(ctx: Ctx, scope: BillingScope) {
+  const accountId = scope.accountId;
+  const subs = accountId
+    ? await ctx.db
+        .query("subscriptions")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .order("desc")
+        .take(5)
+    : await ctx.db
+        .query("subscriptions")
+        .withIndex("by_org", (q) => q.eq("orgId", scope._id))
+        .order("desc")
+        .take(5);
   // Prefer a subscription that currently grants access.
   return subs.sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null;
+}
+
+/** The account has an active paid package (Expert, autopilot, publishing, sending, seats, MCP). */
+export async function isPaid(ctx: Ctx, scope: BillingScope, now = Date.now()): Promise<boolean> {
+  const sub = await latestSubscription(ctx, scope);
+  return Boolean(sub && subscriptionAccess(sub, now) === "full");
+}
+
+/** The package the account is on, or null for free. */
+export async function activePackage(ctx: Ctx, scope: BillingScope, now = Date.now()) {
+  const sub = await latestSubscription(ctx, scope);
+  return sub && subscriptionAccess(sub, now) === "full" ? sub : null;
 }
 
 /**
@@ -42,13 +61,14 @@ export async function chargeableAccess(ctx: Ctx, org: Doc<"organizations">, now 
   if (org.emergencyStop?.active) {
     return { allowed: false, code: "PAUSED", message: "All activity is paused. Resume activity to start new work." };
   }
-  const period = await currentPeriod(ctx, org._id, now);
+  if (org.suspendedAt) return { allowed: false, code: "PAUSED", message: "This workspace is suspended. Contact support." };
+  const period = await currentPeriod(ctx, org, now);
   if (org.kind === "demo") {
     return period
       ? { allowed: true, period, mode: "demo" }
       : { allowed: false, code: "PLAN_ENDED", message: "This demo workspace has expired. Start a new demo anytime." };
   }
-  const sub = await latestSubscription(ctx, org._id);
+  const sub = await latestSubscription(ctx, org);
   if (sub) {
     const level = subscriptionAccess(sub, now);
     if (level === "grace_read_only") {
@@ -69,13 +89,12 @@ export async function chargeableAccess(ctx: Ctx, org: Doc<"organizations">, now 
     if (level === "pending") {
       return { allowed: false, code: "CONFIRMING_PAYMENT", message: "Your subscription is being set up." };
     }
-    // Ended: never fall back to the onboarding allowance.
-    return { allowed: false, code: "PLAN_ENDED", message: "Your plan has ended. Choose a plan to start new work; your data is still here." };
+    // Ended: back to the free tier (any free or top-up credits left still work).
   }
   if (period?.source === "onboarding") return { allowed: true, period, mode: "onboarding" };
   return {
     allowed: false,
     code: "PAYMENT_REQUIRED",
-    message: "You've used your free starter allowance. Choose a plan to keep your growth team working.",
+    message: "You're out of credits. Choose a package to keep your growth team working.",
   };
 }

@@ -9,7 +9,7 @@ import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepSta
 import { errorMessage } from "../errors";
 import { cn } from "@/lib/utils";
 import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
-import { microsToDisplay } from "../money";
+import { microsToCreditsLabel } from "../money";
 import { roleTitle } from "../roles";
 
 export type RunStatusView = FunctionReturnType<typeof api.content.runStatus>;
@@ -236,8 +236,8 @@ export function RunProgress({
       )}
       <p className="text-sm text-ink-3">
         {finished
-          ? `Used ${microsToDisplay(run.actualMicros)} of up to ${microsToDisplay(run.estimateMicros)} reserved from your AI capacity.`
-          : `Up to ${microsToDisplay(run.estimateMicros)} of AI capacity is reserved for this. Anything unused is returned. You can leave this page; the team keeps working.`}
+          ? `Used ${microsToCreditsLabel(run.actualMicros)} of up to ${microsToCreditsLabel(run.estimateMicros)} reserved. The rest was returned.`
+          : `Up to ${microsToCreditsLabel(run.estimateMicros)} reserved for this; anything unused is returned. You can leave this page; the team keeps working.`}
       </p>
       {run.status === "verified" || run.status === "needs_approval" ? done : null}
       {run.status === "failed" || run.status === "canceled" || run.status === "uncertain" ? (

@@ -1,84 +1,61 @@
-import { CURRENT_ENTITLEMENTS, PLAN_KEYS, type PlanEntitlement, type PlanKey } from "@shared/economics";
-import { formatNumber, formatUsd, plural } from "@/lib/utils";
-import { AUTONOMY_LABELS } from "./content";
+import { CREDIT_PACKAGES, CREDIT_TOPUPS, FREE_CREDITS, type PackageKey } from "@shared/economics";
+import { formatNumber, formatUsd } from "@/lib/utils";
 
-/** Plans in display order, straight from the versioned entitlement registry (never hardcoded). */
-export function getPlans(): PlanEntitlement[] {
-  return PLAN_KEYS.map((k) => CURRENT_ENTITLEMENTS.plans[k]);
+/** Credit tiers in display order (Free, then the monthly packages), from the credits registry. */
+export interface Tier {
+  key: "free" | PackageKey;
+  name: string;
+  priceUsd: number;
+  credits: number;
+  creditsNote: string;
+  tagline: string;
+  people: number;
+  workspaces: number;
 }
 
-export function getTopup() {
-  return CURRENT_ENTITLEMENTS.topups[0];
-}
-
-export const RECOMMENDED_PLAN: PlanKey = "growth";
-
-export function planHref(key: PlanKey): string {
-  return `/sign-in?next=/onboarding%3Fplan%3D${key}`;
-}
-
-export function lowestPrice(): number {
-  return Math.min(...getPlans().map((p) => p.priceUsd));
-}
-
-export function priceLabel(plan: PlanEntitlement): string {
-  return formatUsd(plan.priceUsd);
-}
-
-/** "1 brand · 1 seat · 3 connected accounts" */
-export function teamLine(p: PlanEntitlement): string {
-  return [plural(p.brands, "brand"), plural(p.seats, "seat"), plural(p.connections, "connected account")].join(" · ");
-}
-
-export function imagesLine(p: PlanEntitlement): string {
-  return `Up to ${plural(p.deliveredImages, "image")} (${formatNumber(p.imageAttempts)} attempts)`;
-}
-
-export function adsLine(p: PlanEntitlement): string {
-  if (p.adsWorkflows <= 0) return "Ad plans and drafts (you launch them)";
-  return `${plural(p.adsWorkflows, "connected ads workflow")}`;
-}
-
-export function autonomyLine(p: PlanEntitlement): string {
-  const best = p.autonomyModes.includes("bounded_autopilot")
-    ? "bounded_autopilot"
-    : p.autonomyModes.includes("review")
-      ? "review"
-      : "copilot";
-  return AUTONOMY_LABELS[best].title;
-}
-
-/** Key monthly limits in plain words, for plan cards. */
-export function planLimitLines(p: PlanEntitlement): string[] {
+export function getTiers(): Tier[] {
   return [
-    teamLine(p),
-    `${plural(p.socialPosts, "social post")} a month`,
-    imagesLine(p),
-    `${plural(p.scrapeCredits, "website page")} read`,
-    `${plural(p.searchCalls, "web search", "web searches")}`,
+    { key: "free", name: "Free", priceUsd: 0, credits: FREE_CREDITS, creditsNote: "once", tagline: "Meet your team: research, a growth plan and first drafts.", people: 1, workspaces: 1 },
+    ...(Object.values(CREDIT_PACKAGES).map((p) => ({ key: p.key, name: p.name, priceUsd: p.priceUsd, credits: p.credits, creditsNote: "every month", tagline: p.tagline, people: p.seats, workspaces: p.workspaces })) as Tier[]),
   ];
+}
+
+export const RECOMMENDED_TIER: Tier["key"] = "starter";
+
+export function getTopups() {
+  return CREDIT_TOPUPS;
+}
+
+export function tierHref(key: Tier["key"]): string {
+  return key === "free" ? "/sign-in?next=/onboarding" : `/sign-in?next=/onboarding%3Fplan%3D${key}`;
+}
+
+export function lowestPaidPrice(): number {
+  return Math.min(...Object.values(CREDIT_PACKAGES).map((p) => p.priceUsd));
 }
 
 export interface ComparisonRow {
   label: string;
   hint?: string;
-  value: (p: PlanEntitlement) => string;
+  value: (t: Tier) => string;
 }
 
-/** Rows for the accessible plan comparison table. */
+const paid = (t: Tier) => t.key !== "free";
+
+/** What each tier includes (credits pay for the work itself). */
 export const COMPARISON_ROWS: ComparisonRow[] = [
-  { label: "Monthly price", value: (p) => `${formatUsd(p.priceUsd)} a month` },
+  { label: "Price", value: (t) => (t.priceUsd ? `${formatUsd(t.priceUsd)} a month` : "Free") },
+  { label: "Credits", hint: "1 credit ≈ 1¢ of AI work, shown before every job", value: (t) => `${formatNumber(t.credits)} ${t.creditsNote}` },
   { label: "AI growth roles", value: () => "All 10" },
-  { label: "Brands", value: (p) => formatNumber(p.brands) },
-  { label: "Seats (people on your team)", value: (p) => formatNumber(p.seats) },
-  { label: "Connected accounts", hint: "Social, ads, analytics, email and CRM connections", value: (p) => formatNumber(p.connections) },
-  { label: "How work goes live", value: (p) => autonomyLine(p) },
-  { label: "Social posts a month", value: (p) => formatNumber(p.socialPosts) },
-  { label: "Images a month", hint: "Attempts include retries and alternatives", value: (p) => `Up to ${formatNumber(p.deliveredImages)} (${formatNumber(p.imageAttempts)} attempts)` },
-  { label: "Website pages read a month", hint: "Your site and competitors' sites", value: (p) => formatNumber(p.scrapeCredits) },
-  { label: "Web searches a month", value: (p) => formatNumber(p.searchCalls) },
-  { label: "Marketing emails a month", hint: "Sent through your own email provider", value: (p) => formatNumber(p.byoMarketingSends) },
-  { label: "Emails from ClimbOS a month", hint: "Approval requests, alerts and reports", value: (p) => formatNumber(p.transactionalEmails) },
-  { label: "Ads", value: (p) => adsLine(p) },
-  { label: "Support time a month", value: (p) => `${formatNumber(p.supportMinutes)} minutes` },
+  { label: "Climb AI", value: (t) => (paid(t) ? "Basic + Expert" : "Basic") },
+  { label: "Autopilot", value: (t) => (paid(t) ? "Weekly plan, drafts and posting" : "Preview one week") },
+  { label: "Publishing", value: (t) => (paid(t) ? "Direct to your accounts, scheduled" : "Copy and post yourself") },
+  { label: "Find customers", value: (t) => (paid(t) ? "Prospects, emails sent, booking page" : "Prospect list and drafts") },
+  { label: "Ads", value: (t) => (paid(t) ? "Published to your ad accounts" : "Drafts") },
+  { label: "People", value: (t) => formatNumber(t.people) },
+  { label: "Workspaces", value: (t) => formatNumber(t.workspaces) },
+  { label: "Agents & MCP access", value: (t) => (paid(t) ? "Yes" : "—") },
+  { label: "Results history", value: (t) => (paid(t) ? "Full" : "30 days") },
+  { label: "\"Made with ClimbOS\" badge", value: (t) => (paid(t) ? "Removed" : "On exports and booking page") },
+  { label: "Top-ups", value: (t) => (paid(t) ? "From $10, last 12 months" : "—") },
 ];

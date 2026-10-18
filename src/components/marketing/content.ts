@@ -305,8 +305,8 @@ export const LANDING_FAQ = [
     a: "It's yours. You can export or delete it any time. Connections to your accounts are encrypted, and we never sell your data.",
   },
   {
-    q: "What if I reach my monthly limit?",
-    a: "You'll get alerts at 70%, 90% and 100%. At the limit, new work pauses until next month — unless you choose to buy an extra capacity pack. Nothing is charged automatically.",
+    q: "What if I run out of credits?",
+    a: "You'll get alerts at 70%, 90% and 100%. When credits run out, new work waits until they reset — unless you choose to buy a top-up. Nothing is charged automatically.",
   },
 ] as const;
 

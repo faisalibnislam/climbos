@@ -322,7 +322,8 @@ export const auditLog = query({
 /** Add AI capacity to a workspace's current period (support credits, testing). Audited. */
 async function grant(ctx: MutationCtx, orgId: Id<"organizations">, usd: number, reason: string, actorId?: string, meters: Record<string, number> = {}) {
   if (!(usd >= 0 && usd <= 500)) throw appError("INVALID", "Grant between $0 and $500 at a time.");
-  const period = await currentPeriod(ctx, orgId);
+  const org = await ctx.db.get(orgId);
+  const period = org ? await currentPeriod(ctx, org) : null;
   if (!period) throw appError("INVALID", "This workspace has no active usage period.");
   const micros = Math.round(usd * 1_000_000);
   // Optional meter top-ups (e.g. web searches), each capped to keep grants deliberate.

@@ -7,7 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { ExternalLink } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Badge, Callout, Card, CardContent, DataTable, Skeleton, Switch, buttonClasses, toast, type Tone } from "@/components/ui";
-import { microsToDisplay, minorToDisplay, relativeTime } from "../money";
+import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
@@ -174,7 +174,7 @@ export function Channels({ slug, strategy, canEdit, currency }: { slug: string; 
                   <div>
                     <h4 className="mb-1 text-ui font-semibold text-ink">Expected monthly cost</h4>
                     <p className="text-sm text-ink-2">
-                      Up to {microsToDisplay(c.monthlyCostMicros)} of AI capacity a month.
+                      Up to {microsToCreditsLabel(c.monthlyCostMicros)} a month.
                       {c.adSpendMinor > 0 ? ` Plus about ${minorToDisplay(c.adSpendMinor, currency)} a month in ad spend, paid directly to the ad platform.` : " No ad spend."}
                     </p>
                   </div>
@@ -516,7 +516,7 @@ export function RecentWork({ slug }: { slug: string }) {
                     ))}
                   </span>
                   <span>
-                    {finished ? `Used ${microsToDisplay(r.actualMicros)} of up to ${microsToDisplay(r.estimateMicros)}` : `Up to ${microsToDisplay(r.estimateMicros)} reserved`}
+                    {finished ? `Used ${microsToCreditsLabel(r.actualMicros)} of up to ${microsToCreditsLabel(r.estimateMicros)}` : `Up to ${microsToCreditsLabel(r.estimateMicros)} reserved`}
                   </span>
                   {now ? <span>{relativeTime(r.createdAt, now)}</span> : null}
                 </span>

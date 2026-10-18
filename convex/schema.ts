@@ -147,6 +147,20 @@ export default defineSchema({
   ...authTables,
 
   /* ---------------- Tenancy ---------------- */
+  /**
+   * Billing account: one owner, one package and one credit balance shared by
+   * all of its workspaces (agencies get one bill). Seats are per account.
+   */
+  accounts: defineTable({
+    ownerUserId: v.id("users"),
+    name: v.string(),
+    /** The one-time free credits were granted (once per account). */
+    freeCreditsGrantedAt: v.optional(v.number()),
+    suspendedAt: v.optional(v.number()),
+    suspendedReason: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_owner", ["ownerUserId"]),
+
   organizations: defineTable({
     name: v.string(),
     slug: v.string(),
@@ -169,10 +183,17 @@ export default defineSchema({
       v.object({ active: v.boolean(), at: v.number(), by: v.id("users"), reason: v.optional(v.string()) }),
     ),
     deletedAt: v.optional(v.number()),
+    /** Billing account (shared credits). Absent only on demo workspaces. */
+    accountId: v.optional(v.id("accounts")),
+    /** Optional monthly credit cap for this workspace, drawn from the account's shared balance. */
+    monthlyCreditCap: v.optional(v.number()),
+    /** Set by ClimbOS staff: no new work until lifted. */
+    suspendedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])
-    .index("by_kind_created", ["kind", "createdAt"]),
+    .index("by_kind_created", ["kind", "createdAt"])
+    .index("by_account", ["accountId"]),
 
   memberships: defineTable({
     orgId: v.id("organizations"),
@@ -1115,6 +1136,8 @@ export default defineSchema({
     leaseUntil: v.optional(v.number()),
     provider: v.optional(v.string()),
     model: v.optional(v.string()),
+    /** Provider background response id for a long turn (resumed by the next action instead of rerun). */
+    providerRef: v.optional(v.string()),
     costMicros: v.number(),
     /** Checkpointed step output (JSON) so a resumed run skips completed steps. */
     output: v.optional(v.string()),
@@ -1151,6 +1174,7 @@ export default defineSchema({
   /* ---------------- Usage and cost ledger ---------------- */
   usagePeriods: defineTable({
     orgId: v.id("organizations"),
+    accountId: v.optional(v.id("accounts")),
     periodKey: v.string(),
     source: v.union(v.literal("subscription"), v.literal("onboarding"), v.literal("demo")),
     planKey: v.optional(planKeyValidator),
@@ -1172,7 +1196,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org_period", ["orgId", "periodKey"])
-    .index("by_org_ends", ["orgId", "endsAt"]),
+    .index("by_org_ends", ["orgId", "endsAt"])
+    .index("by_account_period", ["accountId", "periodKey"])
+    .index("by_account_ends", ["accountId", "endsAt"]),
 
   usageReservations: defineTable({
     orgId: v.id("organizations"),
@@ -1247,11 +1273,13 @@ export default defineSchema({
   /* ---------------- Billing (Polar) ---------------- */
   polarCustomers: defineTable({
     orgId: v.id("organizations"),
+    accountId: v.optional(v.id("accounts")),
     polarCustomerId: v.optional(v.string()),
     email: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_org", ["orgId"])
+    .index("by_account", ["accountId"])
     .index("by_polar", ["polarCustomerId"]),
 
   checkoutSessions: defineTable({
@@ -1267,6 +1295,7 @@ export default defineSchema({
 
   subscriptions: defineTable({
     orgId: v.id("organizations"),
+    accountId: v.optional(v.id("accounts")),
     polarSubscriptionId: v.string(),
     polarCustomerId: v.optional(v.string()),
     productId: v.string(),
@@ -1290,10 +1319,12 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org", ["orgId"])
+    .index("by_account", ["accountId"])
     .index("by_polar", ["polarSubscriptionId"]),
 
   orders: defineTable({
     orgId: v.id("organizations"),
+    accountId: v.optional(v.id("accounts")),
     polarOrderId: v.string(),
     polarSubscriptionId: v.optional(v.string()),
     productId: v.string(),
@@ -1315,20 +1346,43 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_account", ["accountId"])
     .index("by_polar", ["polarOrderId"])
     .index("by_org", ["orgId"]),
 
   creditPurchases: defineTable({
     orgId: v.id("organizations"),
+    accountId: v.optional(v.id("accounts")),
     polarOrderId: v.string(),
     topupKey: v.string(),
     deliveryCostMicros: v.number(),
     periodId: v.optional(v.id("usagePeriods")),
     status: v.union(v.literal("active"), v.literal("revoked"), v.literal("expired")),
+    /** Credit top-ups: granted credits (µUSD), what's left, and when they expire (12 months). */
+    creditsMicros: v.optional(v.number()),
+    remainingMicros: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_order", ["polarOrderId"])
-    .index("by_org", ["orgId"]),
+    .index("by_org", ["orgId"])
+    .index("by_account", ["accountId"]),
+
+  /** Per-workspace top-up reservations (top-up credits outlive monthly periods). */
+  creditAccounts: defineTable({
+    accountId: v.id("accounts"),
+    topupReservedMicros: v.number(),
+    updatedAt: v.number(),
+  }).index("by_account", ["accountId"]),
+
+  /** Per-workspace credit use per period (for optional workspace caps and reporting). */
+  workspaceUsage: defineTable({
+    orgId: v.id("organizations"),
+    periodId: v.id("usagePeriods"),
+    reservedMicros: v.number(),
+    spentMicros: v.number(),
+    updatedAt: v.number(),
+  }).index("by_org_period", ["orgId", "periodId"]),
 
   webhookEvents: defineTable({
     source: v.union(v.literal("polar"), v.literal("resend"), v.literal("meta"), v.literal("google")),

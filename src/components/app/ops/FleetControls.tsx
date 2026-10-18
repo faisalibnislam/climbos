@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { Badge, Button, ConfirmDialog, Field, Input, toast } from "@/components/ui";
-import { microsToDisplay } from "../money";
+import { microsToUsd } from "../money";
 import { opsError, OpsSection, type Dashboard } from "./opsShared";
 
 /** Global emergency stop and the anonymous-preview budget. Each change is confirmed and audited. */
@@ -88,7 +88,7 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
 
       <div className="flex flex-col gap-3 rounded-xl border border-line p-4">
         <h3 className="heading-card">Preview budget</h3>
-        <p className="text-ui text-ink-2">Daily spend cap for anonymous website previews. Currently {microsToDisplay(fleet.previewDailyBudgetMicros)} per day.</p>
+        <p className="text-ui text-ink-2">Daily spend cap for anonymous website previews. Currently {microsToUsd(fleet.previewDailyBudgetMicros)} per day.</p>
         <form
           className="grid gap-3 sm:grid-cols-[14rem_auto] sm:items-end"
           onSubmit={(e) => {

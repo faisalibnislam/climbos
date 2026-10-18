@@ -69,6 +69,13 @@ export interface TurnRequest {
   /** Client-executed tools (agent loops): a tool call returns the calls to the caller. */
   customTools?: ToolDef[];
   timeoutMs?: number;
+  /**
+   * Long turns run in the provider's background mode and are polled, so a turn
+   * can outlive one server action: `onStarted` saves the response id, a later
+   * action passes it back as `resumeResponseId`, and polling stops at
+   * `pollUntil` (epoch ms) with kind "pending" so the job can yield.
+   */
+  background?: { onStarted?: (responseId: string) => Promise<void>; resumeResponseId?: string; pollUntil?: number };
 }
 
 export interface TurnUsage {
@@ -88,7 +95,7 @@ export interface Source {
   pageAge?: string;
 }
 
-export type TurnFailureKind = "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit";
+export type TurnFailureKind = "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit" | "pending";
 
 export type TurnResult =
   | {

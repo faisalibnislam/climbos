@@ -78,16 +78,6 @@ export function parseJsonText(text: string): unknown {
   }
 }
 
-function retryAfterMs(headers: Headers | Record<string, string> | undefined): number | undefined {
-  if (!headers) return undefined;
-  const get = (k: string) => (headers instanceof Headers ? headers.get(k) : (headers as Record<string, string>)[k]);
-  const ra = get("retry-after");
-  if (!ra) return undefined;
-  const secs = Number(ra);
-  if (Number.isFinite(secs)) return Math.min(secs * 1000, 120_000);
-  const date = Date.parse(ra);
-  return Number.isFinite(date) ? Math.max(0, Math.min(date - Date.now(), 120_000)) : undefined;
-}
 
 export function providerConfigured(provider: "openai" | "google"): boolean {
   return provider === "openai" ? Boolean(process.env.OPENAI_API_KEY) : Boolean(process.env.GEMINI_API_KEY);

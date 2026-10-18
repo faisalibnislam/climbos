@@ -16,6 +16,9 @@ export function setup() {
   process.env.POLAR_PRODUCT_PRO = "prod_pro";
   process.env.POLAR_PRODUCT_BUSINESS = "prod_business";
   process.env.POLAR_PRODUCT_BOOST_29 = "prod_boost";
+  process.env.POLAR_PRODUCT_CREDITS_10 = "prod_c10";
+  process.env.POLAR_PRODUCT_CREDITS_25 = "prod_c25";
+  process.env.POLAR_PRODUCT_CREDITS_50 = "prod_c50";
   delete process.env.POLAR_ACCESS_TOKEN;
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.GEMINI_API_KEY;

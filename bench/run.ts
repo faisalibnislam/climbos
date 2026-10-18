@@ -76,7 +76,9 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T, i: number) => Promis
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Model call with retries for transient errors (rate limits, overload, network). */
-async function turnWithRetry(req: TurnRequest): Promise<TurnResult> {
+async function turnWithRetry(input: TurnRequest): Promise<TurnResult> {
+  // Long Sol/large turns run in background mode, as in production.
+  const req = input.modelKey === "gpt-6.1-sol" || input.maxTokens >= 24_000 ? { ...input, background: { pollUntil: Date.now() + 20 * 60_000 } } : input;
   let r = await modelTurn(req, rates);
   if (process.env.BENCH_DEBUG) console.log(`[turn] ${req.modelKey} max=${req.maxTokens} search=${req.webSearch?.maxUses ?? 0} schema=${Boolean(req.schema)} → ${r.ok ? "ok" : r.kind} out=${r.usage.outputTokens} reasoning=${r.usage.thinkingTokens} searches=${r.usage.webSearches}`);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {

@@ -47,11 +47,12 @@ export default function TermsPage() {
         apply. Some platforms review ads or posts before they run; their decisions are outside our control.
       </p>
 
-      <h2>Plans, limits and payment</h2>
+      <h2>Credits, packages and payment</h2>
       <ul>
-        <li>Plans are billed monthly in US dollars. Applicable sales tax or VAT may be added at checkout.</li>
-        <li>Each plan has monthly limits. When you reach a limit, that kind of work pauses — we don&apos;t charge for overages.</li>
-        <li>Extra capacity packs are charged only when you choose to buy one.</li>
+        <li>ClimbOS is free to use; the work your AI team does is paid for with credits. Each job shows the most it can use before it starts and charges only what it used.</li>
+        <li>New accounts get 50 free credits once. Packages are billed monthly in US dollars; applicable sales tax or VAT may be added at checkout.</li>
+        <li>Package credits reset at each renewal and don&apos;t carry over. Top-ups are one-time purchases for active packages; their credits last 12 months.</li>
+        <li>When credits run out, new work pauses. We never charge for overages or buy credits for you automatically.</li>
         <li>
           Ad spend is paid directly by you to the ad platform, and your email provider bills you directly. These costs are not part
           of your ClimbOS plan, and we don&apos;t mark them up.

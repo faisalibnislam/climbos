@@ -4,9 +4,7 @@ import {
   CURRENT_ENTITLEMENTS,
   CURRENT_ROUTING,
   currentRateVersion,
-  decideReservation,
   getRateVersion,
-  reconcileReservation,
   stressedDeliveryCostMicros,
   usdToMicrosCeil,
 } from "../shared/economics";
@@ -19,7 +17,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "./_generated/
 import { agentRoleValidator } from "./schema";
 import { chargeableAccess, fleetStopped } from "./lib/access";
 import { audit } from "./lib/audit";
-import { ledgerOf, ledgerPatch } from "./lib/periods";
+import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits";
 import { appError } from "./lib/tenancy";
 
 /**
@@ -161,15 +159,7 @@ export async function createRunWithReservation(
   const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
   const period = access.period;
-  const decision = decideReservation(ledgerOf(period), {
-    costMicros: estimate.costMicros,
-    topupCostMicros: estimate.topupCostMicros,
-    meters: params.meters,
-  });
-  if (!decision.ok) {
-    throw appError("LIMIT_REACHED", decision.message, { reason: decision.reason, meter: decision.meter ?? "" });
-  }
-  await ctx.db.patch(period._id, ledgerPatch(decision.next));
+  const decision = await reserveCredits(ctx, { org, period, costMicros: estimate.costMicros, meters: params.meters });
 
   const now = Date.now();
   const runId = await ctx.db.insert("workflowRuns", {
@@ -375,14 +365,10 @@ export const reserveAdditional = internalMutation({
     const reservation = await ctx.db.get(run.reservationId);
     const period = reservation ? await ctx.db.get(reservation.periodId) : null;
     if (!reservation || !period || reservation.status !== "held") return { ok: false as const, message: "Reservation is not active." };
-    const usingTopup = reservation.topupMicros > 0;
-    const decision = decideReservation(ledgerOf(period), {
-      costMicros: usingTopup ? Number.MAX_SAFE_INTEGER : costMicros,
-      topupCostMicros: usingTopup ? stressedDeliveryCostMicros({ aiMicros: costMicros, imageMicros: 0, researchMicros: 0, modelSteps: 1 }) : 0,
-      meters: {},
-    });
+    const org = await ctx.db.get(run.orgId);
+    if (!org) return { ok: false as const, message: "Workspace not found." };
+    const decision = await tryReserveCredits(ctx, { org, period, costMicros, meters: {} });
     if (!decision.ok) return { ok: false as const, message: decision.message };
-    await ctx.db.patch(period._id, ledgerPatch(decision.next));
     await ctx.db.patch(reservation._id, {
       walletMicros: reservation.walletMicros + decision.walletMicros,
       topupMicros: reservation.topupMicros + decision.topupMicros,
@@ -457,15 +443,13 @@ export async function finishRunImpl(
     derived.searchCalls = Math.max(0, totals.searchCalls - settled.searchCalls);
     derived.imageAttempts = Math.max(0, totals.imageAttempts - settled.imageAttempts);
     derived.scrapeCredits = Math.max(0, totals.scrapeCredits - settled.scrapeCredits);
-    const actualTopup = reservation.topupMicros > 0
-      ? stressedDeliveryCostMicros({ aiMicros: actualCost, imageMicros: 0, researchMicros: 0, modelSteps: fresh.used.modelSteps })
-      : 0;
-    const { next, overageMicros } = reconcileReservation(
-      ledgerOf(period),
-      { walletMicros: reservation.walletMicros, topupMicros: reservation.topupMicros, meters: reservation.meters },
-      { costMicros: actualCost, topupCostMicros: Math.min(actualTopup, reservation.topupMicros || actualTopup), meters: derived },
-    );
-    await ctx.db.patch(period._id, ledgerPatch(next));
+    const { overageMicros } = await settleCredits(ctx, {
+      orgId: run.orgId,
+      period,
+      reservation: { walletMicros: reservation.walletMicros, topupMicros: reservation.topupMicros, meters: reservation.meters },
+      actualMicros: actualCost,
+      meters: derived,
+    });
     await ctx.db.patch(reservation._id, { status: "reconciled", actualMicros: actualCost, reconciledAt: Date.now() });
     await ctx.db.patch(run._id, { settled: totals });
     if (overageMicros > 0) {
@@ -535,13 +519,7 @@ export async function reopenFailedRun(ctx: MutationCtx, run: Doc<"workflowRuns">
     if (left > 0) meters[k as keyof PartialMeters] = left;
   }
   const period = access.period;
-  const decision = decideReservation(ledgerOf(period), {
-    costMicros: remaining,
-    topupCostMicros: stressedDeliveryCostMicros({ aiMicros: remaining, imageMicros: 0, researchMicros: 0, modelSteps: 4 }),
-    meters,
-  });
-  if (!decision.ok) throw appError("LIMIT_REACHED", decision.message, { reason: decision.reason, meter: decision.meter ?? "" });
-  await ctx.db.patch(period._id, ledgerPatch(decision.next));
+  const decision = await reserveCredits(ctx, { org, period, costMicros: remaining, meters });
   const now = Date.now();
   const reservationId = await ctx.db.insert("usageReservations", {
     orgId: org._id,
@@ -621,6 +599,19 @@ export const recoverStuckRuns = internalMutation({
       }
     }
     return recovered;
+  },
+});
+
+/** Background response id for a long model turn (so a resumed action polls it instead of paying again). */
+export const stepProviderRef = internalQuery({
+  args: { stepId: v.id("workflowSteps") },
+  handler: async (ctx, { stepId }) => (await ctx.db.get(stepId))?.providerRef ?? null,
+});
+
+export const setStepProviderRef = internalMutation({
+  args: { stepId: v.id("workflowSteps"), ref: v.optional(v.string()) },
+  handler: async (ctx, { stepId, ref }) => {
+    await ctx.db.patch(stepId, { providerRef: ref, leaseUntil: Date.now() + 10 * 60_000 });
   },
 });
 

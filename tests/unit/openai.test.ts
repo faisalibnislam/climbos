@@ -88,6 +88,35 @@ describe("OpenAI adapter", () => {
     expect(!n.ok && n.kind).toBe("provider_unavailable");
   });
 
+  it("background mode: saves the response id, polls to completion, and yields as pending at the deadline", async () => {
+    process.env.OPENAI_API_KEY = "test";
+    let polls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          expect(JSON.parse(init.body as string)).toMatchObject({ background: true, store: true });
+          return new Response(JSON.stringify({ id: "resp_1", status: "queued" }), { status: 200 });
+        }
+        expect(url).toContain("/v1/responses/resp_1");
+        polls++;
+        return new Response(JSON.stringify(polls < 2 ? { id: "resp_1", status: "in_progress" } : { id: "resp_1", status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "notes" }] }], usage: { input_tokens: 10, output_tokens: 5 } }), { status: 200 });
+      }),
+    );
+    const saved: string[] = [];
+    const r = await openaiTurn({ modelKey: "gpt-6.1-sol", system: [], messages: [{ role: "user", content: "q" }], maxTokens: 100, background: { onStarted: async (id) => void saved.push(id) } }, rates);
+    expect(saved).toEqual(["resp_1"]);
+    expect(r.ok && r.text).toBe("notes");
+    // Resuming an unfinished response past the deadline returns pending without creating a new one.
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.method).not.toBe("POST");
+      return new Response(JSON.stringify({ id: "resp_2", status: "in_progress" }), { status: 200 });
+    }));
+    const p = await openaiTurn({ modelKey: "gpt-6.1-sol", system: [], messages: [{ role: "user", content: "q" }], maxTokens: 100, background: { resumeResponseId: "resp_2", pollUntil: Date.now() } }, rates);
+    expect(!p.ok && p.kind).toBe("pending");
+    delete process.env.OPENAI_API_KEY;
+  });
+
   it("routes: Basic is all Luna; Expert has Sol draft only the expert agents", () => {
     const luna = { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna", revise: "gpt-6-luna" };
     for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id)).toEqual(luna);

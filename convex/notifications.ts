@@ -125,7 +125,8 @@ export const logEmail = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.insert("emailLog", { ...args, createdAt: Date.now() });
     if (args.orgId && args.status === "sent") {
-      const period = await currentPeriod(ctx, args.orgId);
+      const org = await ctx.db.get(args.orgId);
+      const period = org ? await currentPeriod(ctx, org) : null;
       if (period) {
         await ctx.db.patch(period._id, {
           meterUsed: { ...period.meterUsed, transactionalEmails: period.meterUsed.transactionalEmails + 1 },

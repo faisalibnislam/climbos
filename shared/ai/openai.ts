@@ -122,6 +122,17 @@ export function usageOf(body: ResponseBody): TurnUsage {
   };
 }
 
+function httpFailure(res: Response, json: ResponseBody): TurnResult {
+  const usage0 = { ...ZERO_USAGE };
+  const msg = json.error?.message ?? `HTTP ${res.status}`;
+  const ra = Number(res.headers.get("retry-after"));
+  if (res.status === 429 && /quota|billing|credit/i.test(msg)) return { ok: false, kind: "spend_limit", message: "The OpenAI account is out of credit.", usage: usage0, costMicros: 0, appended: [] };
+  if (res.status === 429 || res.status >= 500) return { ok: false, kind: "rate_limited", message: "OpenAI is busy right now.", retryAfterMs: Number.isFinite(ra) ? ra * 1000 : undefined, usage: usage0, costMicros: 0, appended: [] };
+  if (res.status === 401 || res.status === 403) return { ok: false, kind: "provider_unavailable", message: "OpenAI rejected the server credentials.", usage: usage0, costMicros: 0, appended: [] };
+  if (res.status === 404) return { ok: false, kind: "provider_error", message: "OpenAI no longer has that answer.", usage: usage0, costMicros: 0, appended: [] };
+  return { ok: false, kind: "provider_error", message: `OpenAI error (${res.status}): ${msg.slice(0, 200)}`, usage: usage0, costMicros: 0, appended: [] };
+}
+
 /** Run one OpenAI Responses turn and validate the final answer. */
 export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<TurnResult> {
   const usage0 = { ...ZERO_USAGE };
@@ -152,30 +163,55 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
     ...(req.schema ? { text: { format: { type: "json_schema", name: "answer", schema: strictSchema(jsonSchemaFor(req.schema)), strict: true } } } : {}),
   };
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 240_000);
+  const headers = { authorization: `Bearer ${apiKey}`, "content-type": "application/json" };
   let res: Response;
-  try {
-    res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-  } catch (e) {
+  let json: ResponseBody;
+  if (req.background) {
+    // Background mode: create (or resume) the response, then poll until it finishes or the caller must yield.
+    const bg = req.background;
+    const pollUntil = bg.pollUntil ?? Date.now() + (req.timeoutMs ?? 600_000);
+    let id = bg.resumeResponseId;
+    if (!id) {
+      try {
+        res = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers, body: JSON.stringify({ ...body, background: true, store: true }) });
+      } catch {
+        return { ok: false, kind: "provider_error", message: "OpenAI could not be reached.", usage: usage0, costMicros: 0, appended: [] };
+      }
+      json = (await res.json().catch(() => ({}))) as ResponseBody;
+      if (!res.ok) return httpFailure(res, json);
+      id = json.id;
+      if (!id) return { ok: false, kind: "provider_error", message: "OpenAI didn't return a response id.", usage: usage0, costMicros: 0, appended: [] };
+      await bg.onStarted?.(id);
+    }
+    for (;;) {
+      try {
+        res = await fetch(`https://api.openai.com/v1/responses/${encodeURIComponent(id)}`, { headers });
+        json = (await res.json().catch(() => ({}))) as ResponseBody;
+      } catch {
+        json = { status: "in_progress" };
+        res = new Response(null, { status: 200 });
+      }
+      if (!res.ok) return httpFailure(res, json);
+      if (!["queued", "in_progress"].includes(json.status ?? "")) break;
+      if (Date.now() + 3_000 > pollUntil) return { ok: false, kind: "pending", message: "Still working; continuing in a fresh step.", usage: usage0, costMicros: 0, appended: [] };
+      await new Promise((r) => setTimeout(r, 2_500));
+    }
+    if (json.status === "failed" || json.status === "cancelled") {
+      return { ok: false, kind: "provider_error", message: `OpenAI ${json.status === "failed" ? "failed" : "cancelled"} this answer${json.error?.message ? `: ${json.error.message.slice(0, 160)}` : ""}.`, usage: usageOf(json), costMicros: turnCostMicros(req.modelKey, usageOf(json), rates), appended: [] };
+    }
+  } else {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 240_000);
+    try {
+      res = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
+    } catch (e) {
+      clearTimeout(timer);
+      const aborted = (e as Error).name === "AbortError";
+      return { ok: false, kind: aborted ? "timeout" : "provider_error", message: aborted ? "OpenAI took too long to respond." : "OpenAI could not be reached.", usage: usage0, costMicros: 0, appended: [] };
+    }
     clearTimeout(timer);
-    const aborted = (e as Error).name === "AbortError";
-    return { ok: false, kind: aborted ? "timeout" : "provider_error", message: aborted ? "OpenAI took too long to respond." : "OpenAI could not be reached.", usage: usage0, costMicros: 0, appended: [] };
-  }
-  clearTimeout(timer);
-  const json = (await res.json().catch(() => ({}))) as ResponseBody;
-  if (!res.ok) {
-    const msg = json.error?.message ?? `HTTP ${res.status}`;
-    const ra = Number(res.headers.get("retry-after"));
-    if (res.status === 429 && /quota|billing|credit/i.test(msg)) return { ok: false, kind: "spend_limit", message: "The OpenAI account is out of credit.", usage: usage0, costMicros: 0, appended: [] };
-    if (res.status === 429 || res.status >= 500) return { ok: false, kind: "rate_limited", message: "OpenAI is busy right now.", retryAfterMs: Number.isFinite(ra) ? ra * 1000 : undefined, usage: usage0, costMicros: 0, appended: [] };
-    if (res.status === 401 || res.status === 403) return { ok: false, kind: "provider_unavailable", message: "OpenAI rejected the server credentials.", usage: usage0, costMicros: 0, appended: [] };
-    return { ok: false, kind: "provider_error", message: `OpenAI error (${res.status}): ${msg.slice(0, 200)}`, usage: usage0, costMicros: 0, appended: [] };
+    json = (await res.json().catch(() => ({}))) as ResponseBody;
+    if (!res.ok) return httpFailure(res, json);
   }
 
   const usage = usageOf(json);

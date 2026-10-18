@@ -7,6 +7,13 @@ import {
   computeProfile,
   COST_LINE_KEYS,
   CURRENT_ENTITLEMENTS,
+  ENTITLEMENTS_2026_10_17,
+  CREDIT_PACKAGES,
+  CREDIT_TOPUPS,
+  creditMargin,
+  microsToCredits,
+  microsToCreditsFloor,
+  salePlanKeys,
   DEFAULT_ASSUMPTIONS,
   economicsCsv,
   EconomicsInputError,
@@ -226,7 +233,7 @@ describe("entitlements", () => {
   it("published caps equal the calculator heavy profile", () => {
     for (const plan of PLAN_KEYS) {
       const caps = computePlanCaps(plan);
-      const ent = CURRENT_ENTITLEMENTS.plans[plan];
+      const ent = ENTITLEMENTS_2026_10_17.plans[plan];
       expect(ent.deliveredImages).toBe(caps.deliveredImages);
       expect(ent.imageAttempts).toBe(caps.imageAttempts);
       expect(ent.socialPosts).toBe(caps.socialPosts);
@@ -243,7 +250,7 @@ describe("entitlements", () => {
   });
 
   it("AI wallets round down to $2 / $20 / $58 / $145 / $349", () => {
-    expect(PLAN_KEYS.map((p) => CURRENT_ENTITLEMENTS.plans[p].aiWalletMicros / 1_000_000)).toEqual([2, 20, 58, 145, 349]);
+    expect(PLAN_KEYS.map((p) => ENTITLEMENTS_2026_10_17.plans[p].aiWalletMicros / 1_000_000)).toEqual([2, 20, 58, 145, 349]);
   });
 
   it("Basic ($19) passes the stress gate with price-weighted fixed allocation", () => {
@@ -266,7 +273,7 @@ describe("entitlements", () => {
 
 describe("top-ups", () => {
   it("$29 pack authorizes at most $10 and keeps ~54% stressed margin", () => {
-    const pack = CURRENT_ENTITLEMENTS.topups[0];
+    const pack = ENTITLEMENTS_2026_10_17.topups[0];
     expect(pack.priceUsd).toBe(29);
     expect(pack.deliveryCostMicros).toBe(10_000_000);
     const e = topupEconomics(29, 10);
@@ -291,5 +298,26 @@ describe("CSV export", () => {
     expect(lines[0]).toContain("gross_margin");
     expect(lines[1].startsWith("basic,low,19,")).toBe(true);
     expect(lines[4].startsWith("starter,low,169,")).toBe(true);
+  });
+});
+
+describe("credits (18 Oct 2026)", () => {
+  it("packages and top-ups match the owner's numbers and margins", () => {
+    expect(CREDIT_PACKAGES.starter).toMatchObject({ priceUsd: 15, credits: 1_100 });
+    expect(CREDIT_PACKAGES.pro).toMatchObject({ priceUsd: 39, credits: 3_000 });
+    expect(CREDIT_TOPUPS.map((t) => [t.priceUsd, t.credits])).toEqual([[10, 700], [25, 1_800], [50, 4_000]]);
+    // Packages keep ≥10% and the small top-ups ≥12% after fees and the 5% hosting allowance (worst case: all international cards).
+    for (const p of Object.values(CREDIT_PACKAGES)) expect(creditMargin(p.priceUsd, p.credits)).toBeGreaterThanOrEqual(0.1);
+    for (const t of CREDIT_TOPUPS.filter((t) => t.key !== "credits_50")) expect(creditMargin(t.priceUsd, t.credits)).toBeGreaterThanOrEqual(0.12);
+    // The $50 top-up is a deliberate owner choice below target, but still profitable.
+    expect(creditMargin(50, 4_000)).toBeGreaterThan(0.05);
+    expect(CURRENT_ENTITLEMENTS.plans.starter.aiWalletMicros).toBe(11_000_000);
+    expect(salePlanKeys()).toEqual(["starter", "pro"]);
+  });
+  it("credit display rounds cost up and balances down", () => {
+    expect(microsToCredits(1)).toBe(1);
+    expect(microsToCredits(10_000)).toBe(1);
+    expect(microsToCredits(10_001)).toBe(2);
+    expect(microsToCreditsFloor(19_999)).toBe(1);
   });
 });

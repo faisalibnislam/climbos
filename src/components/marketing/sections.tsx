@@ -29,7 +29,7 @@ import { cn, formatUsd } from "@/lib/utils";
 import { CAPABILITIES, CTA, ROLES, STEPS, TRUST, WONT_DO } from "./content";
 import { Container, Section, SectionHeading } from "./layout";
 import { LivePreview } from "./LivePreview";
-import { getPlans, lowestPrice, planLimitLines, RECOMMENDED_PLAN } from "./plans";
+import { getTiers, lowestPaidPrice, RECOMMENDED_TIER } from "./plans";
 import { RecommendedBadge } from "./pricing";
 
 const ROLE_KEYS: Record<string, string> = {
@@ -76,7 +76,7 @@ export function Hero() {
           <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink-2">
             {[
               "Nothing posts, sends or spends without your OK",
-              "Plans from " + formatUsd(lowestPrice()) + " a month",
+              "Free to start · packages from " + formatUsd(lowestPaidPrice()) + " a month",
               "No sign-up for the preview",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
@@ -259,36 +259,32 @@ export function WontDo({ headingId = "wont-heading" }: { headingId?: string }) {
   );
 }
 
-/** Compact plan overview linking to /pricing. Numbers come from the entitlement registry. */
+/** Compact pricing overview linking to /pricing. Numbers come from the credits registry. */
 export function PricingTeaser({ headingId = "pricing-teaser-heading" }: { headingId?: string }) {
-  const plans = getPlans();
+  const tiers = getTiers();
   return (
     <Section id="pricing" labelledBy={headingId} className="bg-surface">
       <SectionHeading
         id={headingId}
         eyebrow="Pricing"
-        title={`Plans from ${formatUsd(lowestPrice())} a month`}
-        intro="Every plan includes all ten AI roles. Limits are monthly maximums, and nothing is ever charged automatically."
+        title="Free to start. Pay for the work, in credits."
+        intro="Every action shows its credits before it starts and only charges what it used. Nothing is charged automatically."
       />
-      <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {plans.map((p) => {
-          const recommended = p.key === RECOMMENDED_PLAN;
+      <ul className="mt-10 grid gap-3 sm:grid-cols-3">
+        {tiers.map((t) => {
+          const recommended = t.key === RECOMMENDED_TIER;
           return (
-            <li
-              key={p.key}
-              className={cn(
-                "relative flex flex-col rounded-xl border bg-surface p-5",
-                recommended ? "border-brand-800 ring-1 ring-brand-800" : "border-line",
-              )}
-            >
+            <li key={t.key} className={cn("relative flex flex-col rounded-xl border bg-surface p-5", recommended ? "border-brand-800 ring-1 ring-brand-800" : "border-line")}>
               {recommended ? <RecommendedBadge /> : null}
-              <h3 className="heading-section">{p.name}</h3>
+              <h3 className="heading-section">{t.name}</h3>
               <p className="mt-2 flex items-baseline gap-1">
-                <span className="metric">{formatUsd(p.priceUsd)}</span>
-                <span className="text-sm text-ink-3"> / month</span>
+                <span className="metric">{t.priceUsd ? formatUsd(t.priceUsd) : "$0"}</span>
+                <span className="text-sm text-ink-3">{t.priceUsd ? " / month" : ""}</span>
               </p>
-              <p className="mt-2 text-sm text-ink-2">{p.tagline}</p>
-              <p className="mt-3 text-xs text-ink-3">{planLimitLines(p)[1]}</p>
+              <p className="mt-2 text-sm font-medium text-brand-800">
+                {t.credits.toLocaleString("en-US")} credits {t.creditsNote}
+              </p>
+              <p className="mt-2 text-sm text-ink-2">{t.tagline}</p>
             </li>
           );
         })}
@@ -298,7 +294,7 @@ export function PricingTeaser({ headingId = "pricing-teaser-heading" }: { headin
           {CTA.start.label}
         </Link>
         <Link href="/pricing" className={buttonClasses({ variant: "secondary", size: "lg" })}>
-          Compare plans
+          See pricing
         </Link>
       </div>
     </Section>

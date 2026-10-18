@@ -8,6 +8,7 @@
 
 import type { PlanKey } from "./assumptions";
 import type { RoleKey } from "./roles";
+import { CREDIT_PACKAGES, CREDIT_TOPUPS, creditsToMicros, type CreditPackage } from "./credits";
 
 export type AutonomyMode = "copilot" | "review" | "bounded_autopilot";
 
@@ -36,15 +37,21 @@ export interface PlanEntitlement {
   defaultAutonomy: AutonomyMode;
   adsWorkflows: number;
   highlights: string[];
+  /** No longer sold (kept so old subscriptions resolve). */
+  retired?: boolean;
+  /** Credits included each month (credit-based versions). */
+  credits?: number;
 }
 
 export interface TopupProduct {
   key: string;
   name: string;
   priceUsd: number;
-  /** Maximum stressed incremental total delivery cost authorized, µUSD. */
+  /** Maximum stressed incremental total delivery cost authorized, µUSD (credit top-ups: the credits, in µUSD). */
   deliveryCostMicros: number;
   description: string;
+  /** Credits granted (credit-based versions). */
+  credits?: number;
 }
 
 export interface WorkspaceLimits {
@@ -247,8 +254,76 @@ export const ENTITLEMENTS_2026_10_17: EntitlementVersion = Object.freeze({
   retentionDays: { rawPayloads: 30, detailedActivity: 90, aggregates: 396 },
 }) as EntitlementVersion;
 
-export const ENTITLEMENT_VERSIONS: readonly EntitlementVersion[] = [ENTITLEMENTS_2026_10_17];
-export const CURRENT_ENTITLEMENTS = ENTITLEMENTS_2026_10_17;
+/** Credit meters: credits govern spend, so task counts are recorded, not capped. */
+const UNCAPPED = 1_000_000_000;
+
+function creditPlan(key: PlanKey, pkg: CreditPackage, opts: { retired?: boolean; brands: number; connections: number; adsWorkflows: number }): PlanEntitlement {
+  return {
+    key,
+    name: pkg.name,
+    priceUsd: pkg.priceUsd,
+    tagline: pkg.tagline,
+    brands: opts.brands,
+    seats: pkg.seats,
+    connections: opts.connections,
+    socialPosts: UNCAPPED,
+    deliveredImages: UNCAPPED,
+    imageAttempts: UNCAPPED,
+    searchCalls: UNCAPPED,
+    scrapeCredits: UNCAPPED,
+    transactionalEmails: UNCAPPED,
+    byoMarketingSends: UNCAPPED,
+    storageGb: 50,
+    analyticsEvents: UNCAPPED,
+    supportMinutes: 60,
+    aiWalletMicros: creditsToMicros(pkg.credits),
+    roleRuns: roleRuns(3),
+    autonomyModes: ["copilot", "review", "bounded_autopilot"],
+    defaultAutonomy: "review",
+    adsWorkflows: opts.adsWorkflows,
+    highlights: [`${pkg.credits.toLocaleString("en-US")} credits every month`, "Climb AI Expert", "Autopilot, publishing and sending"],
+    credits: pkg.credits,
+    ...(opts.retired ? { retired: true } : {}),
+  };
+}
+
+/**
+ * Credits (18 Oct 2026): two monthly packages and three top-ups replace the
+ * old plans. Old plan keys map to the nearest package so earlier
+ * subscriptions keep working; they are no longer sold.
+ */
+export const ENTITLEMENTS_2026_10_18: EntitlementVersion = Object.freeze({
+  id: "ent-credits-2026-10-18",
+  effectiveFrom: "2026-10-18",
+  rateVersionId: "verified-2026-10-17",
+  routingVersionId: "routing-openai-2026-10-18",
+  plans: {
+    starter: creditPlan("starter", CREDIT_PACKAGES.starter, { brands: 1, connections: 10, adsWorkflows: 1 }),
+    pro: creditPlan("pro", CREDIT_PACKAGES.pro, { brands: 3, connections: 30, adsWorkflows: 5 }),
+    basic: creditPlan("basic", CREDIT_PACKAGES.starter, { retired: true, brands: 1, connections: 10, adsWorkflows: 1 }),
+    growth: creditPlan("growth", CREDIT_PACKAGES.pro, { retired: true, brands: 3, connections: 30, adsWorkflows: 5 }),
+    business: creditPlan("business", CREDIT_PACKAGES.pro, { retired: true, brands: 3, connections: 30, adsWorkflows: 5 }),
+  },
+  topups: CREDIT_TOPUPS.map((t) => ({
+    key: t.key,
+    name: `${t.credits.toLocaleString("en-US")} credits`,
+    priceUsd: t.priceUsd,
+    deliveryCostMicros: creditsToMicros(t.credits),
+    credits: t.credits,
+    description: "Extra credits for when you need more this month. They last 12 months.",
+  })),
+  limits: { ...ENTITLEMENTS_2026_10_17.limits },
+  usageAlertThresholds: [0.7, 0.9, 1],
+  retentionDays: { rawPayloads: 30, detailedActivity: 90, aggregates: 396 },
+}) as EntitlementVersion;
+
+export const ENTITLEMENT_VERSIONS: readonly EntitlementVersion[] = [ENTITLEMENTS_2026_10_17, ENTITLEMENTS_2026_10_18];
+export const CURRENT_ENTITLEMENTS = ENTITLEMENTS_2026_10_18;
+
+/** Plans on sale now. */
+export function salePlanKeys(ent: EntitlementVersion = CURRENT_ENTITLEMENTS): PlanKey[] {
+  return (Object.keys(ent.plans) as PlanKey[]).filter((k) => !ent.plans[k].retired);
+}
 
 export function getEntitlementVersion(id: string): EntitlementVersion {
   const v = ENTITLEMENT_VERSIONS.find((e) => e.id === id);

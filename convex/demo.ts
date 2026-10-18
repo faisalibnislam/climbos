@@ -3,7 +3,6 @@ import { createRng, generateSyntheticDailySeries, runForecast, addDays } from ".
 import { fixtureOutput } from "./ai/fixtures";
 import type { BusinessInsights, SocialPostsOutput, StrategyOutput } from "../shared/ai/tasks";
 import { approvalHash, contentHash } from "../shared/policy";
-import { CURRENT_ENTITLEMENTS } from "../shared/economics";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
@@ -246,16 +245,15 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
   await ctx.db.insert("chatMessages", { orgId, author: "climbos", text: "Here's what I'd do. Nothing runs until you say go — the card shows what it creates and the most it can cost.", roles: ["coo"], actionCardIds: [cardId], status: "done", createdAt: now - DAY });
 
   await createDemoPeriod(ctx, orgId);
-  // Make the usage limits visible: social posts close to the monthly cap.
+  // Make credit usage visible: about 40% of the month's credits used.
   const period = await ctx.db
     .query("usagePeriods")
     .withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "demo"))
     .unique();
   if (period) {
-    const plan = CURRENT_ENTITLEMENTS.plans.growth;
     await ctx.db.patch(period._id, {
-      walletSpentMicros: 41_300_000,
-      meterUsed: { ...period.meterUsed, socialPosts: plan.socialPosts - 8, imageAttempts: 96, deliveredImages: 51, searchCalls: 44, scrapeCredits: 120, transactionalEmails: 61 },
+      walletSpentMicros: Math.round(period.walletCapMicros * 0.41),
+      meterUsed: { ...period.meterUsed, socialPosts: 34, imageAttempts: 96, deliveredImages: 51, searchCalls: 44, scrapeCredits: 120, transactionalEmails: 61 },
     });
   }
   for (const [i, a] of [

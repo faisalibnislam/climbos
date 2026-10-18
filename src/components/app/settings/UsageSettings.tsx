@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { Callout, DataTable, Stat, StatGroup } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
-import { microsToDisplay } from "../money";
+import { microsToCreditsLabel } from "../money";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { roleTitle } from "../roles";
 import { SettingsHeader } from "./SettingsNav";
@@ -27,7 +27,7 @@ export function UsageSettings({ slug }: { slug: string }) {
       ) : (
         <>
           <StatGroup className="lg:grid-cols-3">
-            <Stat label="Provider cost (last 31 days)" value={microsToDisplay(data.totalCostMicros)} sublabel="Measured from provider responses" />
+            <Stat label="Credits used (last 31 days)" value={microsToCreditsLabel(data.totalCostMicros)} sublabel="Measured from each job" />
             <Stat label="Recorded events" value={formatNumber(data.events)} sublabel="Model calls, searches, images and page reads" />
             <Stat label="AI roles used" value={formatNumber(data.byRole.length)} />
           </StatGroup>
@@ -47,7 +47,7 @@ export function UsageSettings({ slug }: { slug: string }) {
                 { key: "calls", header: "Model calls", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
                 { key: "in", header: "Input tokens", align: "right", cell: (r) => formatNumber(r.inputTokens), sortValue: (r) => r.inputTokens },
                 { key: "out", header: "Output tokens", align: "right", cell: (r) => formatNumber(r.outputTokens), sortValue: (r) => r.outputTokens },
-                { key: "cost", header: "Provider cost", align: "right", cell: (r) => microsToDisplay(r.costMicros), sortValue: (r) => r.costMicros },
+                { key: "cost", header: "Credits", align: "right", cell: (r) => microsToCreditsLabel(r.costMicros), sortValue: (r) => r.costMicros },
               ]}
             />
           </section>
@@ -64,7 +64,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               columns={[
                 { key: "model", header: "Model or service", rowHeader: true, cell: (r) => <span className="font-mono text-ui">{r.model}</span>, sortValue: (r) => r.model },
                 { key: "calls", header: "Events", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
-                { key: "cost", header: "Provider cost", align: "right", cell: (r) => microsToDisplay(r.costMicros), sortValue: (r) => r.costMicros },
+                { key: "cost", header: "Credits", align: "right", cell: (r) => microsToCreditsLabel(r.costMicros), sortValue: (r) => r.costMicros },
               ]}
             />
           </section>
