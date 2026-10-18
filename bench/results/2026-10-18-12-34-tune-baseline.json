@@ -1,0 +1,332 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run two plays: factual Google Forms switcher pages, with a one-off $60 Search pilot, plus agency intake outreach to 300 prospects. ClimbOS produces and sends; the owner approves, handles calls, and closes. The five-account P50 is a low-confidence portfolio estimate, not a promise.",
+     "positioning": "Formkit is for forms that represent your brand: practical AI creation, conditional logic, and a generous free plan, with paid features when needed.",
+     "audiences": [
+      {
+       "name": "Google Forms switchers",
+       "hypothesis": "People seeking branded links, partial answers, or question-level drop-off may compare alternatives before switching.",
+       "evidence": "Formkit’s comparison page names these differences; demand remains unverified (https://formkit.app/)."
+      },
+      {
+       "name": "Owner-led web and design agencies",
+       "hypothesis": "Agencies may adopt client-intake forms or bring multiple client accounts.",
+       "evidence": "Clutch lists agency prospects; Formkit has an agency use-case page (https://clutch.co/web-designers; https://formkit.app/use-cases/agencies)."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "primary",
+       "why": "76.3/100 adjusted mean. High-intent fit; keep comparisons specific, accurate and easy to verify."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 82,
+       "status": "in_plan",
+       "why": "76.3/100 adjusted mean. Strong intent fit; avoid unsupported competitor claims."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 81,
+       "status": "in_plan",
+       "why": "77.5/100 adjusted mean. Potentially scalable, but eligibility and listing effort need checking."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 80,
+       "status": "later",
+       "why": "80.0/100 adjusted mean. Strong freemium fit; validate activation and upgrade rates before scaling."
+      },
+      {
+       "name": "Templates",
+       "score": 78,
+       "status": "later",
+       "why": "73.8/100 adjusted mean. Templates can connect specific jobs to self-serve signup; prioritize one segment at a time."
+      },
+      {
+       "name": "Integration partnerships",
+       "score": 76,
+       "status": "later",
+       "why": "73.1/100 adjusted mean. Potential audience fit, but partnership access and owner time are unknown."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 76,
+       "status": "later",
+       "why": "75.0/100 adjusted mean. This directory listing has high comparison intent and modest setup effort."
+      },
+      {
+       "name": "Content SEO",
+       "score": 75,
+       "status": "later",
+       "why": "70.0/100 adjusted mean. Useful as a supporting asset, but slower to signal within 90 days."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Google Forms switcher page and Search pilot",
+       "hypothesis": "A factual comparison will attract switchers; paid conversion remains unverified and the supplied funnel rates are assumptions.",
+       "population": "Google Forms users searching for branded links, partial answers, or question-level drop-off.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid accounts per 100 qualified visits; signup rate is an early signal.",
+       "guardrails": [
+        "Baseline: export prior-90-day switcher visits, signups, and paid upgrades by day 7; label unavailable data unknown.",
+        "Portfolio assumptions: 1–5% visitor-to-signup and 5–15% signup-to-paid; 100 visits imply about 1–5 signups and 0.05–0.75 paid accounts.",
+        "A/B sample need ≈ 16p(1−p)/d² visitors per arm; baseline p and detectable difference d are unknown, so this pilot is directional.",
+        "Cap spend at $60; stop at 100 qualified visits or 21 days, whichever comes first.",
+        "Confounds: query mix, ranking, seasonality, and concurrent page changes; log these and avoid other page edits."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At 100 visits: kill zero signups; scale at ≥5 signups and 1 paid; otherwise revise once."
+      },
+      {
+       "name": "Agency intake outreach pilot",
+       "hypothesis": "Personalized outreach about AI-built intake and direct Stripe payments may earn agency bookings and paid accounts.",
+       "population": "300 Clutch-listed owner-led web and design agencies with published business emails.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid agency accounts per 300 delivered; replies and bookings are early signals.",
+       "guardrails": [
+        "Baseline: export prior-90-day outreach results if available; otherwise the business baseline is unknown.",
+        "ClimbOS grade-B estimates: 1–3% replies (3–9/300); 20–40% of replies book (0.6–3.6 bookings).",
+        "Assumption: 10–25% booked-to-paid yields 0.06–0.9 paid accounts; validate by day 21. Results are directional.",
+        "Pause above the 2% bounce guardrail from experiment-design guidance; check each batch.",
+        "Include opt-out; stop follow-ups on any reply or opt-out. List quality and deliverability are confounds."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At 300 delivered: kill below 3 replies; scale only after 2 bookings and 1 paid."
+      }
+     ],
+     "constraints": [
+      "Paid-ad ceiling: $600/month; initial Search pilot capped at $60; remaining spend held pending CAC fit.",
+      "Owner marketing time is unknown; assume two hours weekly until confirmed by day 3.",
+      "Weekly owner allocation: 30 minutes approvals; 30 minutes scorecard and replies; 60 minutes calls and closing.",
+      "Export actual gross margin, paid-seat mix, and account size from billing and costs by day 7.",
+      "Assume three-month payback, the SaaS playbook default; confirm or reset it by day 7.",
+      "Search geography is unspecified; confirm eligible markets before launching ads or outreach.",
+      "ClimbOS researches prospects, personalizes published business emails, sends from the owner’s mailbox, and follows up twice.",
+      "Pilot outreach: 300 agencies over 21 days, sent at 100 weekly; scale to 200 weekly only after passing."
+     ],
+     "measurementPlan": "By day 7, export prior-90-day traffic, source, signup, activation, paid upgrades, seats, and billing; mark unavailable baselines unknown. UTMs, a source question, and a weekly scorecard track account-level CAC. Separate AI referrals and run monthly prompt checks.",
+     "firstActions": [
+      {
+       "title": "Approve the Google Forms comparison outline.",
+       "why": "Keeps the primary page accurate and grounded in verified differences.",
+       "role": "Owner"
+      },
+      {
+       "title": "Export available funnel, billing, seat, and source data.",
+       "why": "Builds the actual baseline and account-level CAC ceiling before spend is released.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Build the agency prospect list from published business emails.",
+       "why": "Starts the secondary play using relevant prospects and permitted business contact details.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Confirm weekly hours, gross margin, paid seats, and eligible markets.",
+       "why": "Prevents the plan exceeding available time or targeting unapproved markets.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "The bottleneck is unverified conversion economics, not channel breadth: search volume, visitor-to-signup, signup-to-paid, seats per account, and margin are unknown. Prior-90-day source and billing data could falsify this.",
+     "affordableCac": "Account CAC ceiling = (actual Pro seats × $6 + Business seats × $19) × verified gross margin × assumed three-month payback; confirm by day 7. Compare channel spend per paid account.",
+     "notDoing": [
+      {
+       "channel": "Broad informational blog SEO",
+       "why": "Prioritize high-intent switcher pages; broad informational content is slower to signal."
+      },
+      {
+       "channel": "Meta ads",
+       "why": "Paid conversion economics are unverified; test high-intent Search first."
+      },
+      {
+       "channel": "Integration marketplaces and paid directories",
+       "why": "Eligibility and listing paths remain unverified; revisit after the pilots."
+      }
+     ],
+     "northStar": {
+      "metric": "Net-new paying accounts",
+      "baseline": "Campaign-attributed paid accounts: zero at launch; total baseline unknown.",
+      "target": "5 by day 90; low-confidence portfolio P50 estimate."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Qualified switcher visits",
+       "weeklyTarget": "Report weekly; 100 cumulative pilot visits.",
+       "source": "UTM analytics and search terms"
+      },
+      {
+       "metric": "Signup-to-paid conversion",
+       "weeklyTarget": "Set from prior-90-day baseline by day 7.",
+       "source": "Product events and billing"
+      },
+      {
+       "metric": "Agency emails delivered",
+       "weeklyTarget": "100 weekly during pilot; 200 only after pass.",
+       "source": "ClimbOS outbound log"
+      },
+      {
+       "metric": "Agency replies and bookings",
+       "weeklyTarget": "Report weekly; judge against the 300-email pilot rule.",
+       "source": "Inbox, CRM, and calendar"
+      },
+      {
+       "metric": "Account-level CAC by channel",
+       "weeklyTarget": "Compare weekly with the verified account ceiling.",
+       "source": "Ad spend and billing"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14",
+       "focus": "Confirm economics, hours, geography, and baselines; publish the page and start both pilots."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45",
+       "focus": "Finish pilots; compare realized account CAC by channel. Zero paid accounts means CAC is undefined; do not scale."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Days 46–90",
+       "focus": "Commit only to plays that meet account-level CAC; build comparison pages and agency outreach."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export prior-90-day traffic, signup, activation, billing, paid-seat, and source data.",
+      "Confirm gross margin, paid seats per account, and the payback assumption by day 7.",
+      "Confirm the two-hour weekly allocation and eligible sales markets by day 3.",
+      "Approve the factual switcher outline; verify every competitor comparison claim.",
+      "Have ClimbOS configure UTMs, the scorecard, the Search pilot, and an agency list."
+     ],
+     "risks": [
+      {
+       "risk": "Traffic and paid conversion may miss portfolio estimates.",
+       "mitigation": "Export the prior 90-day funnel by day 7; keep the pilot directional until business data replaces assumptions."
+      },
+      {
+       "risk": "Gross margin, seat mix, and account size are unknown.",
+       "mitigation": "Pull billing and cost data; recalculate account CAC ceiling by day 7."
+      },
+      {
+       "risk": "Owner may not have two marketing hours weekly.",
+       "mitigation": "Confirm the allocation by day 3; reduce cadence if hours are lower."
+      },
+      {
+       "risk": "Outreach reply and paid-conversion rates are estimates.",
+       "mitigation": "Check replies after 300 delivered by day 21; replace the paid-conversion assumption with observed data."
+      },
+      {
+       "risk": "Outreach may breach the 2% experiment-design bounce guardrail.",
+       "mitigation": "Pause above 2%; check actual bounce rate after every send batch."
+      },
+      {
+       "risk": "Search query mix may distort page results.",
+       "mitigation": "Review search terms and results by day 21 before releasing more ad spend."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Google Forms switcher pages",
+       "oneLiner": "Turn Formkit’s existing comparison into a useful page for Google Forms switchers.",
+       "kind": "bankable",
+       "audience": "Google Forms users searching for alternatives on Google Search.",
+       "trigger": "A user needs a branded link, partial answers, or question drop-off.",
+       "hook": "Compare Formkit’s free plan, partial responses, and question drop-off with Google Forms.",
+       "mechanic": "Factual comparison page plus high-intent search ads.",
+       "assetUsed": "Existing comparison page: https://formkit.app/",
+       "funnel": [
+        "600–1,200 visits (assumption, D); visitor→signup 1–5% [practitioner estimate, D]; signup→paid 5–15% (assumption, D)."
+       ],
+       "unit": "paying customers",
+       "p10": 0.5,
+       "p50": 3,
+       "p90": 8,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Qualified search volume and free-to-paid conversion.",
+       "test": "Publish one page; cap search ads at $60; stop at 100 visits or day 21.",
+       "killIf": "Zero signups per 100 visits, or $60 spent without 100 qualified visits.",
+       "scaleIf": "At least 5 signups and 1 paid account per 100 visits; publish two pages weekly.",
+       "scores": [
+        5,
+        2,
+        4,
+        3,
+        5,
+        4,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve the Google Forms comparison outline and search-ad group.",
+       "climbosCanDo": "Draft and publish two comparison pages weekly; track visits, signups, and paid accounts."
+      },
+      {
+       "name": "Agency intake outreach",
+       "oneLiner": "Reach agencies with an AI-built intake and direct-payment workflow.",
+       "kind": "creative",
+       "audience": "Owner-led web and design agencies listed on Clutch.",
+       "trigger": "An agency needs client intake or paid booking forms.",
+       "hook": "Create intake forms in Claude; send paid bookings directly to your Stripe account.",
+       "mechanic": "Personal email with two follow-ups; stop on reply.",
+       "assetUsed": "Claude and ChatGPT form creation; direct Stripe payments.",
+       "funnel": [
+        "2,400 emails; reply 1–3% [ClimbOS benchmark, B]; reply→booking 20–40% [ClimbOS benchmark, B]; booking→paid 10–25% (assumption, D)."
+       ],
+       "unit": "paying agency accounts",
+       "p10": 0.5,
+       "p50": 2,
+       "p90": 6,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Agency booking-to-paid conversion and account size.",
+       "test": "Email 300 Clutch-listed agencies; 21 days; no ad spend.",
+       "killIf": "Fewer than 3 replies from 300 delivered emails by day 21.",
+       "scaleIf": "At least 2 bookings and 1 paid account; send 200 contacts weekly.",
+       "scores": [
+        5,
+        3,
+        4,
+        5,
+        2,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Choose 30 Clutch agencies and approve the outreach angle.",
+       "climbosCanDo": "Find published business emails, personalize outreach, and send 200 weekly from the owner’s mailbox."
+      }
+     ],
+     "portfolioNote": "Run the comparison-page engine and agency outreach together. Combined P50 is about 5 paying customers in 90 days; the paid-conversion assumptions are unverified, so confidence is low."
+    },
+    "costMicros": 235388,
+    "ms": 1349659
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "basic": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 4,
+    "craft": 5,
+    "usefulness": 5,
+    "creativity": 3,
+    "overall": 5,
+    "topIssue": "The five-customer forecast depends on unexplained traffic growth and agency account economics, without a credible acquisition-to-upgrade path for a $6-per-seat product."
+   }
+  }
+ }
+]

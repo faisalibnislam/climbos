@@ -1,0 +1,374 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Focus on switcher pages, agency referrals, and a conditional assistant listing. Their combined forecast is about 6 paid accounts in 90 days (portfolio P50; assumption-led). Hold the $600 monthly ad budget until CAC is verified.",
+     "positioning": "Formkit helps freelancers and agencies make client-facing forms fit their brand: describe a form, publish it, and start free; upgrade when paid features matter.",
+     "audiences": [
+      {
+       "name": "Freelancers and small agencies switching from Google Forms",
+       "hypothesis": "Searchers with specific branding or response-analysis needs will try a free alternative when the comparison is clear.",
+       "evidence": "Formkit’s comparison names branded links, partial answers, and question-level drop-off: https://formkit.app/"
+      },
+      {
+       "name": "Small web and design agencies",
+       "hypothesis": "A useful assistant-built intake-form demo can earn partner calls and referrals.",
+       "evidence": "Clutch lists U.S. web agencies, a prospect pool—not confirmed referral partners: https://clutch.co/us/web-developers/"
+      },
+      {
+       "name": "People who build forms inside Claude or ChatGPT",
+       "hypothesis": "A permitted listing may bring self-serve users who want to build forms inside their assistant.",
+       "evidence": "OpenAI accepts app submissions; Claude’s partner route needs verification: https://openai.com/index/developers-can-now-submit-apps-to-chatgpt/; https://claude.com/marketplace-partners"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Integration marketplaces",
+       "score": 86,
+       "status": "primary",
+       "why": "Distinctive distribution angle; listing availability and attributable referrals remain unverified."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 85,
+       "status": "in_plan",
+       "why": "Top priority: captures active tool evaluation with a specific, supported reason to switch."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 84,
+       "status": "in_plan",
+       "why": "High-intent fit; the new brand and lack of visible customer proof constrain credibility."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 84,
+       "status": "later",
+       "why": "Strong conversion fit, though the size and activity of the free-user base are unknown."
+      },
+      {
+       "name": "Google Search Ads",
+       "score": 80,
+       "status": "later",
+       "why": "Search intent could fit, but the paid economics are not yet established."
+      },
+      {
+       "name": "Content SEO",
+       "score": 79,
+       "status": "later",
+       "why": "Useful for compounding discovery, but its signal is slower than product-led conversion."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 79,
+       "status": "later",
+       "why": "Relevant discovery context, but should support—not replace—owned comparison pages."
+      },
+      {
+       "name": "Google organic search",
+       "score": 78,
+       "status": "later",
+       "why": "Fits intent, with slower and currently unmeasured traffic potential."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Google Forms switcher pages",
+       "hypothesis": "Searchers needing branded links, partial answers, or question drop-off will sign up from a fair comparison.",
+       "population": "Three pages; 50/150/500 monthly visits are low/medium/high catalog estimates; review at day 45.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Free signups per qualified visit; paid upgrades secondary.",
+       "guardrails": [
+        "Date and source-check every competitor claim.",
+        "Do not present before/after results as causal proof."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Day 45: <500 directional; at ≥500, <1% stop, ≥5% + upgrade scale, else hold."
+      },
+      {
+       "name": "Agency assistant-built form referrals",
+       "hypothesis": "A practical assistant-built intake-form demo will earn agency calls and referrals.",
+       "population": "500 Clutch-listed U.S. web and design agencies over four weeks; play-plan volume.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Positive reply rate; partner calls and paid referrals secondary.",
+       "guardrails": [
+        "Use relevant published business contacts; include opt-out and stop on reply.",
+        "Pause if bounce rate reaches 2%."
+       ],
+       "durationDays": 28,
+       "stoppingRule": "At 500: <1% replies or no call stop; ≥3% + call scale; otherwise revise."
+      },
+      {
+       "name": "Assistant marketplace listing",
+       "hypothesis": "A permitted listing may convert people who want to build forms inside an assistant.",
+       "population": "Claude or OpenAI marketplace visitors, only if a permitted listing route exists; no paid placement.",
+       "method": "export_instructions",
+       "primaryMetric": "Paid accounts attributed to listing; free signups secondary.",
+       "guardrails": [
+        "Submit only if platform rules permit and eligibility is confirmed.",
+        "Describe current product capabilities accurately."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "No permitted route: stop; day 90 with no paid account: stop; three attributed: extend."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month per brief; hold all spend until CAC is verified.",
+      "Owner effort: assume 2 hours/week; validate in week one.",
+      "Owner allocation: pages 45m, agency calls 60m, listing checks 15m weekly; assumption.",
+      "Pro is $6 and Business $19 per seat/month; confirmed pricing.",
+      "Gross margin is unknown; export revenue and cost inputs by day 7.",
+      "Paid-upgrade baseline and acquisition sources are unknown; export records in week one.",
+      "Assets: free tier, comparison table, and assistant workflow; confirmed brief.",
+      "ClimbOS engine: draft three pages, send up to 150 personalized emails weekly, check listings weekly.",
+      "Fulfilment and support capacity are unknown; check before scaling referrals."
+     ],
+     "measurementPlan": "UTM every link; track qualified visits, free signups, paid accounts, sends, replies, and referrals. Log ClimbOS credits and owner time for fully loaded CAC; ask signup source and review billing weekly. Track AI referrals and run monthly prompt checks.",
+     "firstActions": [
+      {
+       "title": "Draft three dated Google Forms switcher pages",
+       "why": "Capture active evaluators with specific, source-checkable switch reasons.",
+       "role": "ClimbOS drafts; owner reviews"
+      },
+      {
+       "title": "Approve agency targets and the assistant-built form demo",
+       "why": "Test partner distribution without treating a low-priced seat as a direct-sales opportunity.",
+       "role": "ClimbOS researches; owner approves"
+      },
+      {
+       "title": "Verify assistant marketplace eligibility",
+       "why": "Confirm an actual distribution route before investing in a listing.",
+       "role": "ClimbOS checks; owner approves"
+      }
+     ],
+     "diagnosis": "The bottleneck is unknown free-to-paid conversion and gross margin, so neither paid acquisition nor fully loaded CAC is defensible. Billing history showing repeatable upgrades and verified margin would disprove this.",
+     "affordableCac": "Ceiling: $6/$19 monthly seat price × verified gross margin × assumed 3-month payback. Verify margin by day 7; all three plays’ fully loaded CAC remains unmeasured.",
+     "notDoing": [
+      {
+       "channel": "Google Search Ads",
+       "why": "Paid CAC is unverified; prioritize conversion and margin data first."
+      },
+      {
+       "channel": "Broad informational blog SEO",
+       "why": "Broad informational content is slower and less focused than switcher intent."
+      },
+      {
+       "channel": "Paid social ads",
+       "why": "No validated audience or creative economics; avoid unmeasured paid acquisition."
+      },
+      {
+       "channel": "Lifecycle email",
+       "why": "Free-user volume and feature-trigger conversion are unknown; revisit after tracking."
+      }
+     ],
+     "northStar": {
+      "metric": "Net-new paid customer accounts",
+      "baseline": "Not measured; export paid-account history by day 7.",
+      "target": "About 6 by day 90; portfolio P50 assumption"
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Switcher-page visits",
+       "weeklyTarget": "12/35/117; scenarios, verify week one",
+       "source": "Catalog traffic estimate"
+      },
+      {
+       "metric": "Page signup rate",
+       "weeklyTarget": "1%/3%/5%; assumptions, review day 45",
+       "source": "Play funnel estimate"
+      },
+      {
+       "metric": "Approved agency emails",
+       "weeklyTarget": "Up to 150/week; cap test at 500",
+       "source": "ClimbOS operating brief"
+      },
+      {
+       "metric": "Agency positive replies",
+       "weeklyTarget": "1–3%; estimate, assess after 500 sends",
+       "source": "ClimbOS grade-B benchmark"
+      },
+      {
+       "metric": "Net-new paid accounts",
+       "weeklyTarget": "About 0.5/week; validate against billing",
+       "source": "Portfolio P50 estimate"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14; plan schedule",
+       "focus": "Measure upgrades and margin; prepare approved pages, outreach, and listing checks."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45; plan schedule",
+       "focus": "Publish pages, run the agency test, and confirm a primary by day 45."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Days 46–90; plan schedule",
+       "focus": "Prioritize the strongest play; compound its pages or referral workflow."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export paid-account history, free signups, acquisition sources, and gross-margin inputs.",
+      "ClimbOS drafts three dated, source-checked switcher pages for owner review.",
+      "Approve relevant agency targets, demo, lawful outreach basis, and opt-out.",
+      "ClimbOS checks assistant listing routes; submit nothing without confirmed eligibility.",
+      "Install UTMs, signup-to-paid tracking, a source question, and a weekly scorecard."
+     ],
+     "risks": [
+      {
+       "risk": "Unknown margin makes the affordable CAC ceiling uncertain.",
+       "mitigation": "Export revenue and costs by day 7; recalculate margin-based CAC before scaling."
+      },
+      {
+       "risk": "Agencies may like the demo but refer no customers.",
+       "mitigation": "At 500 sends, apply the registered reply and call rules; stop if they fail."
+      },
+      {
+       "risk": "Switcher pages may attract low-intent traffic or contain stale comparisons.",
+       "mitigation": "Review sources and results by day 45; keep low-volume conclusions directional."
+      },
+      {
+       "risk": "Assistant marketplace listing may be unavailable.",
+       "mitigation": "Confirm a permitted route before submission; make no paid placement."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Google Forms switcher pages",
+       "oneLiner": "Capture Google Forms switchers with three fair comparison pages and a free-plan path.",
+       "kind": "bankable",
+       "audience": "Google Forms users searching alternatives on Google; prioritize freelancers and small agencies.",
+       "trigger": "Need branded links, partial answers, or question-level drop-off.",
+       "hook": "Google Forms covers basics; switch when branded links, partial answers, or question-level drop-off matter.",
+       "mechanic": "Comparison page → free signup → paid conversion.",
+       "assetUsed": "Formkit comparison table and unlimited free tier (confirmed fact 0).",
+       "funnel": [
+        "Three pages × L/M/H 50/150/500 visits monthly [catalog estimate,D]; signup 1/3/5% (D; 8.43% [eesel.ai,C]); paid 2/5/10% (D)."
+       ],
+       "unit": "paid customers",
+       "p10": 0.8,
+       "p50": 2,
+       "p90": 4.1,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Will qualified search traffic convert free users into paid customers?",
+       "test": "Publish three pages; test for 90 days or 500 visits; $0 media; track upgrades.",
+       "killIf": "After 500 visits, signup rate below 1%; pause page expansion.",
+       "scaleIf": "At 5% signups and one paid upgrade per 500 visits, publish six pages.",
+       "scores": [
+        5,
+        4,
+        5,
+        3,
+        4,
+        5,
+        5,
+        90,
+        3
+       ],
+       "firstActionToday": "Turn Formkit’s current Google Forms comparison into a dated, source-checked draft.",
+       "climbosCanDo": "Draft page variants, track visits and upgrades, and flag claims for owner review."
+      },
+      {
+       "name": "Assistant-built forms for agency clients",
+       "oneLiner": "Reach agencies with an assistant-built form workflow; earn referrals to Formkit’s free and paid plans.",
+       "kind": "creative",
+       "audience": "Small web and design agencies listed on Clutch; target owners via published business emails.",
+       "trigger": "An agency takes on a client needing intake or enquiry forms.",
+       "hook": "Show clients how to create and publish intake forms directly inside Claude or ChatGPT.",
+       "mechanic": "Agency prospecting → partner calls → client referrals.",
+       "assetUsed": "Claude/ChatGPT form publishing and unlimited free tier (confirmed facts 0, 3).",
+       "funnel": [
+        "1,800 sent; L/M/H replies 1/2/3% [instantly.ai,B], booked 20/30/40% [ClimbOS,B], active partners 10/20/30% (D), paid referrals 1/2/3 (D)."
+       ],
+       "unit": "paid customers",
+       "p10": 1,
+       "p50": 4.3,
+       "p90": 13,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Will agencies refer active clients, not just like the AI workflow?",
+       "test": "Send 500 Clutch agency emails in four weeks; $0 media; track replies, calls, paid referrals.",
+       "killIf": "After 500 sends, replies below 1% or no booked call; stop this audience.",
+       "scaleIf": "At 3% replies and one booked call after 500 sends, scale to 250 weekly.",
+       "scores": [
+        4,
+        3,
+        4,
+        4,
+        3,
+        5,
+        5,
+        78,
+        4
+       ],
+       "firstActionToday": "Approve 25 Clutch agency targets and a short form-building demo.",
+       "climbosCanDo": "Find and send 150 approved, personalized agency emails weekly; stop follow-ups on reply."
+      },
+      {
+       "name": "Assistant marketplace listing",
+       "oneLiner": "Test whether Formkit’s Claude workflow can acquire users through an assistant marketplace listing.",
+       "kind": "moonshot",
+       "audience": "Claude Marketplace users exploring form tools; the marketplace lists 2,000+ connectors and plugins.",
+       "trigger": "Users want to create or publish forms without leaving Claude.",
+       "hook": "Create and publish a Formkit form inside Claude or ChatGPT; start on the free plan.",
+       "mechanic": "Assistant marketplace listing → tracked free-plan signup.",
+       "assetUsed": "Claude/ChatGPT form creation and publishing (confirmed fact 3).",
+       "funnel": [
+        "Listing approval L/M/H 10/25/40% (D); views 100/300/1,000 (D); signup 1/3/5% (D); paid 2/5/10% (D)."
+       ],
+       "unit": "paid customers",
+       "p10": 0,
+       "p50": 0.1,
+       "p90": 0.5,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Is Formkit eligible, and will a listing send paid users?",
+       "test": "Verify eligibility and submit one listing; test 90 days; $0 spend, no paid placement.",
+       "killIf": "If listing eligibility fails or no paid account arrives by day 90, stop.",
+       "scaleIf": "At three attributed paid customers, test ChatGPT and workflow directories.",
+       "scores": [
+        4,
+        1,
+        4,
+        2,
+        4,
+        5,
+        4,
+        66,
+        5
+       ],
+       "firstActionToday": "Ask Claude Marketplace to confirm Formkit’s listing route and eligibility.",
+       "climbosCanDo": "Check two assistant-directory routes weekly and draft listing copy and tracking links."
+      }
+     ],
+     "portfolioNote": "P50 totals about 6 paid customers in 90 days, heavily assumption-led; agency outreach carries volume. Hold the $600/month ad budget until upgrade economics are measured. [NEEDS FACT: How many free signups upgraded in the past 90 days?]"
+    },
+    "costMicros": 180044,
+    "ms": 1101508
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "basic": {
+    "truth": 5,
+    "specificity": 7,
+    "strategy": 4,
+    "craft": 5,
+    "usefulness": 5,
+    "creativity": 4,
+    "overall": 5,
+    "topIssue": "The plan forecasts paid customers from speculative traffic and agency referrals but never specifies the activation steps or paid-feature upgrade prompts that turn free signups into revenue."
+   }
+  }
+ }
+]

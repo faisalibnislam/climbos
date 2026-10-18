@@ -106,6 +106,10 @@ When something is missing:
 - [ ] Risks with mitigations and validation dates.
 - [ ] Week-1 checklist of 5 items or fewer; no unsourced numbers.
 
+## One rulebook
+
+- The plan's guardrails (CAC ceiling, payback window, maturity days, spend caps) are the single source of truth. Rewrite any play's scale/kill rule that conflicts with them, and state each guardrail once.
+
 ## Ambition and readability
 
 - The plan must credibly move the goal in 90 days. Build phases around the plays' volume engines (weekly numbers, who runs them; ClimbOS runs outreach, creator finding, social autopilot, landing pages, chat and review requests).

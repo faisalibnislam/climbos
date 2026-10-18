@@ -1,0 +1,734 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run two plays: a fair Google Forms switcher page with capped high-intent search ads, and practical Claude/ChatGPT creator tutorials. Aim for five new paid workspaces; the target is low-confidence because Formkit-specific conversion and margin data are missing.",
+     "positioning": "For freelancers whose client form is part of how they present their work: describe the form, let AI build it, and use conditional logic to route responses. Start on the free plan; choose a paid plan when the workflow needs paid features. Formkit also works inside Claude and ChatGPT. Keep the pitch practical, not “best tool” claims.",
+     "audiences": [
+      {
+       "name": "Freelancers and small studios actively comparing form tools",
+       "hypothesis": "A fair feature comparison followed by a free-plan signup will convert more qualified searchers than a general product pitch.",
+       "evidence": "The supplied play targets U.S. freelancers and small studios searching for a Google Forms alternative or client-intake form; search volume is unverified."
+      },
+      {
+       "name": "Freelancers who use Claude or ChatGPT, reached through AI-workflow creators",
+       "hypothesis": "A hands-on demo of building and publishing a client-intake form will earn creator posts and tracked visits without paid placements.",
+       "evidence": "Formkit says it works inside Claude and ChatGPT; the supplied research identifies AI-workflow creators and Reddit’s Claude community as relevant discovery points."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 84,
+       "status": "primary",
+       "why": "High-intent positioning fits the existing comparison material and is a relatively small build."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 84,
+       "status": "in_plan",
+       "why": "This directly uses an identified switching opportunity; keep every comparison current and verifiable."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 83,
+       "status": "in_plan",
+       "why": "Integrations create a plausible discovery path, but listing access and demand need verification."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 80,
+       "status": "later",
+       "why": "A natural fit for freemium, subject to having user consent, lifecycle events, and enough active signups."
+      },
+      {
+       "name": "Templates",
+       "score": 78,
+       "status": "later",
+       "why": "Templates connect acquisition to an immediate product action and can serve several use cases without requiring ad spend."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 77,
+       "status": "later",
+       "why": "A low-cost listing test is plausible, but its reach and conversion contribution are unknown."
+      },
+      {
+       "name": "Content SEO",
+       "score": 76,
+       "status": "later",
+       "why": "Useful as a supporting asset, but broad content has a slower signal than targeted pages and product-led paths."
+      },
+      {
+       "name": "Integration partnerships",
+       "score": 76,
+       "status": "later",
+       "why": "The product has integration-based entry points, but partnership access and partner demand remain unvalidated."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Switcher page and high-intent search test",
+       "hypothesis": "Freelancers searching for a Google Forms alternative will start Formkit’s free plan after seeing a fair comparison. Supplied funnel assumptions imply about 3% signup and 5% signup-to-paid; both are unverified and the paid estimate is directional.",
+       "population": "U.S. searchers for exact/phrase Google Forms alternative and client intake form terms.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid-workspace CAC; supporting metric: free signups per search click.",
+       "guardrails": [
+        "Spend no more than $300 in any month.",
+        "Do not scale unless actual paid-workspace CAC is within three-month gross profit.",
+        "Keep comparison claims accurate and dated."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Assumption: CPC $2–$6; $900 over 90 days could buy roughly 150–450 clicks. Review signup rate on day 21. At 300 clicks, stop if fewer than 1% sign up. By day 90, stop ads if 300 clicks produced no paid workspace. Continue ads only if measured workspace CAC fits verified three-month gross profit; a signup-rate pass alone is not a scale signal."
+      },
+      {
+       "name": "Creator tutorial outreach pilot",
+       "hypothesis": "A practical demonstration of creating and publishing a client-intake form from Claude or ChatGPT will earn creator interest and tracked signups.",
+       "population": "50 relevant freelancer-focused AI-workflow creators, randomly split between two factual pitch angles: Claude demo and ChatGPT demo.",
+       "method": "ab_split",
+       "primaryMetric": "Paid workspaces from creator-tracked links; supporting metrics: replies, published tutorials, and clicks.",
+       "guardrails": [
+        "No paid placements during the test.",
+        "Use published contact routes and respect opt-outs.",
+        "Do not script praise or imply a creator has used Formkit."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Scale to 20 pitches weekly only if 50 pitches produce at least 10 replies, three published tutorials, and one paid workspace. Kill if fewer than five replies or no tutorial publishes; otherwise revise once. These are business thresholds, not statistical proof; 25 pitches per angle are directional only."
+      }
+     ],
+     "constraints": [
+      "Budget: $600/month from the brief; plan commits at most $300/month to ads and leaves the other $300 unspent unless CAC is proven.",
+      "Owner time: assume 3 hours/week until confirmed in week 1; ClimbOS handles page and pitch production.",
+      "Skills: owner approves factual claims and handles customer replies; assume ClimbOS handles research, drafts, tracking links, and scorecard setup.",
+      "Price: Pro $6/seat/month and Business $19/seat/month; yearly billing offers two months free. Source: https://formkit.app/.",
+      "Margin: 80% gross margin is an assumption; validate by day 7.",
+      "Sales cycle: assume self-serve because the plan starts with a free signup; verify signup-to-paid timing from product and billing data.",
+      "Geography: U.S. search audience, as specified in the supplied play.",
+      "Assets: existing comparison page, free tier, and the Claude/ChatGPT workflow; no first-party customer-source or conversion data was supplied."
+     ],
+     "measurementPlan": "Add UTMs to every ad and creator link; record landing visits, free signups, first published form if available, and paid workspaces. Add a source question at signup and review billing alongside platform reports weekly. Keep creator and search results separate; record AI referrals separately if they appear. ClimbOS prepares a weekly scorecard; owner reviews it in a 30-minute weekly check.",
+     "firstActions": [
+      {
+       "title": "Build a dated Google Forms alternative page with a clear free-plan next step.",
+       "why": "The existing comparison page is the fastest truthful base for the selected high-intent play.",
+       "role": "ClimbOS drafts; owner verifies"
+      },
+      {
+       "title": "Instrument signup and paid-workspace events before the first ad click.",
+       "why": "Paid search cannot be scaled responsibly until actual paid-workspace CAC is compared with gross profit.",
+       "role": "ClimbOS configures tracking; owner launches"
+      },
+      {
+       "title": "Prepare 20 relevant creator prospects and the first batch of personal pitches.",
+       "why": "The creator play needs volume, but the first 50 pitches are a learning gate.",
+       "role": "ClimbOS finds and drafts; owner approves"
+      }
+     ],
+     "diagnosis": "The constraint is unproven acquisition economics: at the supplied funnel assumptions, paid search CAC is about $2,000 per workspace versus an assumed $14.40–$45.60 three-month gross-profit cap per seat. This diagnosis is wrong if actual multi-seat gross profit or observed conversion data supports a higher workspace CAC.",
+     "affordableCac": "Assumption: 80% gross margin and a 3-month payback. Monthly billing gives a theoretical cap of $6 × 80% × 3 = $14.40 per Pro seat and $19 × 80% × 3 = $45.60 per Business seat. With two months free on annual billing, the corresponding assumed caps are $12 and $38 per seat. These are not verified workspace-level CAC limits; calculate actual gross profit per acquired workspace before scaling. At the supplied funnel assumptions of $3 CPC, 3% free signup, and 5% free-to-paid, search CAC is about $2,000 per paid workspace, so ads are a capped validation test, not a scale recommendation.",
+     "notDoing": [
+      {
+       "channel": "Broad informational blog schedule",
+       "why": "Informational blog SEO is slower than the 90-day window and broad informational clicks face AI-search uncertainty."
+      },
+      {
+       "channel": "Cold outbound to individual freelancers",
+       "why": "At $6/$19 per seat, one-to-one outreach to individual users is unlikely to support the time and cost without proven multi-seat value."
+      },
+      {
+       "channel": "Meta or LinkedIn ads",
+       "why": "No first-party economics or creative evidence supports broad paid social; keep the budget on the selected search test."
+      }
+     ],
+     "northStar": {
+      "metric": "New paid workspaces attributed to these plays, checked against billing records.",
+      "baseline": "[NEEDS FACT: How many new paid workspaces did Formkit add in the last 30 days? Confirm from billing data in week 1.",
+      "target": "5 in 90 days. This is a planning target aligned with the supplied combined P50 forecast, not a promised result."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "12–35 search clicks weekly at the $300/month cap; range assumes $2–$6 CPC.",
+       "weeklyTarget": "Track weekly; keep spend within the monthly cap.",
+       "source": "Google Ads; CPC range is the supplied play’s grade-D assumption."
+      },
+      {
+       "metric": "Switcher-page free-signup rate.",
+       "weeklyTarget": "Use 3% as a working test target; review the observed rate on day 21.",
+       "source": "Product analytics; 3% is the supplied funnel assumption, not a verified Formkit baseline."
+      },
+      {
+       "metric": "Personalized creator pitches sent; replies and published tutorials.",
+       "weeklyTarget": "20 prospects found weekly; send about 17 pitches weekly for the first three weeks to reach 50 by day 21.",
+       "source": "ClimbOS Pipeline and creator-specific links."
+      },
+      {
+       "metric": "New paid workspaces from both plays.",
+       "weeklyTarget": "Track cumulative pace toward five by day 90; the implied average is about 0.4 per week.",
+       "source": "Billing data matched to UTMs and self-reported source."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Foundation: ClimbOS builds a dated Google Forms alternative page from https://formkit.app/compare and verifies every comparison claim. Set up UTMs, signup/paid events, a source question, and the weekly scorecard. Start creator research and the capped search campaign."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Test: complete 50 personalized creator pitches by day 21; follow up and track replies, posts, clicks, and paid workspaces. Review search signup rate on day 21. At day 45, keep only the play with evidence of paid conversion and plausible unit economics."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "Commit: put 70–80% of effort into the stronger play and 20–30% into the other. If creator outreach clears its gate, send 20 pitches weekly; if search ads fail the CAC gate, stop paid spend and keep the comparison page live."
+      }
+     ],
+     "weekOneChecklist": [
+      "ClimbOS: pull the last 30 days of signup and billing data; add a “How did you hear about us?” question.",
+      "ClimbOS: draft the Google Forms alternative page from the existing comparison; owner verifies claims before launch.",
+      "ClimbOS: set UTMs and track page visits, free signups, and new paid workspaces.",
+      "ClimbOS: find 20 relevant creators and draft personal pitches; owner approves the first batch.",
+      "Owner: launch exact/phrase search ads with negatives, capped at $300 for the month."
+     ],
+     "risks": [
+      {
+       "risk": "Gross margin is unknown, so the seat-level CAC limits are assumptions.",
+       "mitigation": "Validate gross margin from billing and infrastructure costs by day 7; recalculate the CAC caps before continuing ads."
+      },
+      {
+       "risk": "Creators may not publish without paid placement.",
+       "mitigation": "After 50 pitches, kill if fewer than five creators reply or no tutorial publishes; revise once if results fall between kill and scale thresholds."
+      },
+      {
+       "risk": "Search ads may generate free signups but too few paid workspaces to cover acquisition cost.",
+       "mitigation": "Review search terms and paid-workspace CAC weekly; pause ads when the registered stopping rule is met."
+      },
+      {
+       "risk": "Competitor features or comparisons may change.",
+       "mitigation": "Recheck the comparison table against current product pages before launch and monthly after that."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Google Forms switcher page + search",
+       "oneLiner": "The most repeatable available acquisition play: capture switchers with a fair comparison and a free-plan next step.",
+       "kind": "bankable",
+       "audience": "U.S. freelancers and small studios searching Google for “Google Forms alternative” and “client intake form”; search volume not verified.",
+       "trigger": "A freelancer searching for a Google Forms alternative or a better client-intake form.",
+       "hook": "Looking for a Google Forms alternative for client intake? Compare the tools, then start free with Formkit.",
+       "mechanic": "High-intent search → fair, dated comparison → free signup; show only differences the current comparison supports.",
+       "assetUsed": "Formkit’s existing comparison page and free plan; verify competitor claims against https://formkit.app/compare before launch.",
+       "funnel": [
+        "Ad spend → clicks: $2–$6 CPC, assumption, grade D; $900 total over 90 days implies 150–450 clicks, likely 300.",
+        "Clicks → free signups: 1–5%, likely 3%; practitioner estimate for comparison pages, grade D (SaaS-B2B playbook; https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages).",
+        "Free signups → paid customers: 2–8%, likely 5%; assumption, grade D; Formkit conversion data not supplied."
+       ],
+       "unit": "paid customers",
+       "p10": 0.18,
+       "p50": 0.45,
+       "p90": 0.9,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Paid conversion and gross margin; the supplied comparison-page benchmark predicts signups, not Formkit customers.",
+       "test": "Run exact/phrase Google Search ads for up to $300/month for 90 days. Review signup rate on day 21; decide at 300 clicks or day 90.",
+       "killIf": "Stop if the page converts fewer than 1% of 300 clicks to free signups, or if 300 clicks produce no paid customer by day 90.",
+       "scaleIf": "At 300 clicks, if at least 5% start free and at least one pays, keep spend at $300/month and add one adjacent use-case page; expected additional volume is about 23 clicks/week at the assumed $3 CPC.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        5,
+        3,
+        4,
+        4
+       ],
+       "firstActionToday": "In 25 minutes, check the comparison table, draft a Google Forms alternative page, and prepare exact-match keywords.",
+       "climbosCanDo": "Build the landing page, draft the ads, track clicks and signups, and prepare headline tests; owner launches the ads."
+      },
+      {
+       "name": "AI-assistant form tutorials",
+       "oneLiner": "Put Formkit’s Claude/ChatGPT workflow in front of freelancers through practical creator demos, not generic product posts.",
+       "kind": "creative",
+       "audience": "Freelancer-focused YouTube and LinkedIn creators who publish AI workflow tutorials; no verified audience-size estimate was found.",
+       "trigger": "A creator’s audience is looking for practical Claude or ChatGPT workflows for client intake and forms.",
+       "hook": "Show how to build and publish a client-intake form from Claude or ChatGPT using Formkit’s free plan.",
+       "mechanic": "Seed hands-on tutorials with creators already teaching AI workflows; use tracked links and do not script praise.",
+       "assetUsed": "Formkit can build and publish forms inside Claude and ChatGPT, and has a free plan; see https://formkit.app/ and https://formkit.app/integrations.",
+       "funnel": [
+        "Pitches → replies: 10–20%, assumption aligned with ClimbOS creator-outreach planning range, grade C; https://elev8or.io/.",
+        "Replies → published tutorials: 20–35%, gifted-product post-rate proxy, grade C; a free software plan may not perform like a gifted physical product (https://elev8or.io/).",
+        "Published tutorials → tracked clicks: 20–100 per post, assumption, grade D.",
+        "Clicks → paid customers: 0.5–1%, affiliate click-to-sale proxy, grade C; this is not Formkit-specific (https://webtonic.io/)."
+       ],
+       "unit": "paid customers",
+       "p10": 0.5,
+       "p50": 4.5,
+       "p90": 13.5,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether creators will publish without a paid placement, and how many viewers become paying customers.",
+       "test": "Send 50 personalized pitches to relevant micro-creators over three weeks; no paid placements. Leading metrics: replies, published tutorials, and tracked clicks.",
+       "killIf": "Stop after 50 pitches if fewer than five creators reply or no tutorial is published; at scale, stop if 300 tracked clicks produce no paid customer.",
+       "scaleIf": "If 50 pitches produce at least 10 replies, three posts, and one paid customer, continue at 20 pitches/week for the remaining nine weeks; likely 4–5 paid customers across the 90-day campaign.",
+       "scores": [
+        5,
+        3,
+        4,
+        4,
+        3,
+        5,
+        4,
+        5
+       ],
+       "firstActionToday": "Write a one-page creator brief: demonstrate building and publishing a client-intake form inside Claude or ChatGPT; allow honest opinions.",
+       "climbosCanDo": "Find 20 matching creators/week, published contact routes, and draft personal pitches; prepare tracked links and log results. Owner approves and sends."
+      }
+     ],
+     "portfolioNote": "Combined P50 is about 5 paid customers in 90 days, but the creator forecast depends on unverified posting and click assumptions. The switcher page is the bankable-mechanic slot, not a proven Formkit revenue channel: no first-party funnel or gross-margin data was supplied; keep ads capped at $300/month."
+    },
+    "costMicros": 232551,
+    "ms": 1142139
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": true,
+    "output": {
+     "summary": "Conditional planning P50: seven new paying workspaces over 90 days, with zero marketplace contribution. This is an assumption-led midpoint, not a validated median; release spend only after actual economics and owner-approved payback pass.",
+     "positioning": "For small agencies that need review before client-intake forms go live: build inside Claude or ChatGPT, then use Formkit Business for the approval handoff. Lead with the demonstrated workflow; verify approval details against https://formkit.app/.",
+     "audiences": [
+      {
+       "name": "Small web and design agencies",
+       "hypothesis": "Agencies with genuine review responsibilities will pay for an intake approval handoff.",
+       "evidence": "Clutch and Webflow list relevant agencies; neither establishes seat demand or purchase intent: https://clutch.co/web-designers and https://webflow.com/certified-partners."
+      },
+      {
+       "name": "Agencies comparing assistant-based workflows",
+       "hypothesis": "A concrete build → review → publish comparison attracts buyers beyond generic free-form searches.",
+       "evidence": "Formkit supports assistant-based form building; supplied product insights describe Business publication approvals: https://formkit.app/."
+      },
+      {
+       "name": "Claude users seeking form-building connectors",
+       "hypothesis": "A discoverable approved listing could support self-serve acquisition later, without personal selling.",
+       "evidence": "Claude provides an official submission route, but Formkit eligibility is unverified: https://claude.com/marketplace/connectors-plugins."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Integration marketplaces",
+       "score": 83,
+       "status": "primary",
+       "why": "Strong audience alignment; distribution access remains an unverified prerequisite."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Closest to payment intent without buying more traffic; launch depends on an existing reachable cohort."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 79,
+       "status": "in_plan",
+       "why": "Relevant buying intent, but competitive organic discovery may exceed the 90-day window."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 78,
+       "status": "later",
+       "why": "Commercial intent is attractive; differentiation and timely rankings remain uncertain."
+      },
+      {
+       "name": "Templates",
+       "score": 77,
+       "status": "later",
+       "why": "A concrete task can shorten activation, but the template still needs distribution."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 77,
+       "status": "later",
+       "why": "Existing infrastructure reduces launch work, but free usage alone is not paying-customer intent."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 76,
+       "status": "later",
+       "why": "A focused discovery test is more proportionate than a large SEO build."
+      },
+      {
+       "name": "Integration partnerships",
+       "score": 75,
+       "status": "later",
+       "why": "Audience fit is credible; partner access and execution time are not yet proven."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Search feasibility screen",
+       "hypothesis": "An assistant-workflow comparison attracts agencies buying approval control. The assumed signup rate implies only two signups, so this is a directional feasibility screen, not a powered lift test.",
+       "population": "Proposed screen: 40 qualified paid visits, subject to the live demand and economics gates. Lock the card before launch; validate acquisition feasibility at its fixed read.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Free workspaces per qualified visit, with first Business payment and actual contribution required for commercial graduation.",
+       "guardrails": [
+        "Proposed screen cap: $80 media plus $40 owner-time and credit-equivalent allowance; approve before launch.",
+        "Exclude irrelevant queries and track actual paid seats; do not count checkout opens as sales.",
+        "Only guardrail failures permit early stopping; avoid simultaneous changes to the page, targeting and message."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Proposed rule, lock before launch: graduate only with at least three signups, one first-paying Business workspace and mature-cohort CAC within the approved actual-seat ceiling. Stop with zero signups; otherwise revise one variable within the approved budget. By day 45, stop scaled spend if mature cohorts have no payers, exceed that ceiling or show nonpositive contribution."
+      },
+      {
+       "name": "Agency intake demonstration screen",
+       "hypothesis": "A concrete intake-and-approval example earns qualified agency conversations. Supplied planning midpoints imply approximately ten replies and three bookings; actual delivery and response rates replace them at the fixed read.",
+       "population": "Proposed screen: 500 attempted agency contacts across the mailbox ramp. At assumed delivery, approximately 490 arrive; validate using actual delivered denominators at the fixed read.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Replies per delivered contact, followed by qualified held calls and actual first invoices.",
+       "guardrails": [
+        "Proposed owner-time plus credit-equivalent test cap: $120; approve before launch.",
+        "Pause above 2% bounces, following supplied ClimbOS guidance; investigate complaints immediately and honor every opt-out.",
+        "Keep the demonstration angle fixed; stop on reply and permit only one follow-up."
+       ],
+       "durationDays": 28,
+       "stoppingRule": "Proposed rule, lock before sending: graduate with at least eight replies and one booking; stop below four replies or with no held call within the following week. Intermediate results permit one revision. Continued outreach requires first invoices from mature cohorts within the approved actual-seat CAC ceiling; stop personal selling to single-seat Pro buyers."
+      },
+      {
+       "name": "Permissioned upgrade follow-up",
+       "hypothesis": "A relevant upgrade prompt may help activated users buy. Available volume is unknown, so the initial holdout is descriptive; record the actual arm sizes before sending.",
+       "population": "Eligible, permissioned free workspaces after acquisition screens close; establish the available population from product and permission records before assignment.",
+       "method": "holdout",
+       "primaryMetric": "First-paying workspaces divided by eligible workspaces in each arm, with counts and denominators.",
+       "guardrails": [
+        "Use the supplied 20% random workspace holdout; suppress purchasers and opt-outs.",
+        "No sequence without applicable permission; stop promotional messages immediately on a complaint.",
+        "Use approved existing assets and credits; do not overlap another message test on these workspaces."
+       ],
+       "durationDays": 28,
+       "stoppingRule": "At the fixed read, stop for permission or message-accuracy failures; revise once if reply evidence identifies workflow confusion; otherwise maintain the capped sequence. Do not expand it or claim lift from an underpowered payment comparison."
+      },
+      {
+       "name": "Deferred no-build marketplace check",
+       "hypothesis": "The existing workflow may qualify for a discoverable listing without engineering. Neither access nor traffic is established.",
+       "population": "Deferred hygiene only: proposed eligibility check after the acquisition decision, with no forecast contribution. Official route: https://claude.com/marketplace/connectors-plugins.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Eligible approved listing, followed by referred workspaces and first invoices.",
+       "guardrails": [
+        "Proposed combined owner-time and credit-equivalent cap: $60; approve before the check.",
+        "No engineering, placement fees, bought traffic or assumed Anthropic partnership.",
+        "Proposed deadlines: eligibility by day 52 and approval by day 66; validate directly with the official route."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Stop if either deadline fails or listing requires new development. If approved, publish one accurate demonstration and tracked link, then observe referrals for the fixed window; maintain only as low-effort hygiene while monitoring actual contribution."
+      }
+     ],
+     "constraints": [
+      "Media — owner budget: $600 per calendar month, paid directly to platforms. Proposed quarter cap: $1,400; approve before launch, check monthly pacing weekly.",
+      "Additional resources — proposed, unapproved quarter allowances: search $150 and outreach $220 credit-equivalent; deferred marketplace hygiene $60 including owner time. Confirm existing credits and approve any charges by day 7; reduce scope if unavailable.",
+      "Owner time — planning assumption: at most one hour weekly, confirmed by day 7. Search allows 2.2 hours and outreach 3.8 hours across the quarter; at the supplied $50/hour assumption, those represent $110 and $190, validated through weekly time logs.",
+      "Scenario assumptions — five Business seats, 80% gross margin and all downstream funnel rates remain unverified. Replace economics with billing and variable-cost data before spend; validate delivery by day 28, conversion and early retention by day 45, and outcomes by day 90.",
+      "Starting assets — customer-source shares, reachable permissioned users, geography, mailbox readiness and fulfilment capacity are unknown. Establish these in week one, protect any proven acquisition source, and select compliant markets before launch."
+     ],
+     "measurementPlan": "ClimbOS maintains a weekly scorecard joining source, workspace, product events and billing; one workspace receives one first-payment credit. Add UTMs, an optional discovery-source question, server-side billing events and consented offline conversion imports where supported. Before launch, derive cohort maturity from available first-touch-to-invoice records; if unavailable, use a conservative proposed 28-day window and validate it by day 45. Shorter graduation schedules require supporting data. CAC includes matched acquisition costs and allocated setup, owner time and approved credit-equivalent usage; report immature spending separately. At the day-45 decision, retain search only if mature invoices and actual contribution support it; otherwise make qualifying outreach primary or stop acquisition spend. Monthly, record relevant AI-answer descriptions and AI referrals separately from search.",
+     "firstActions": [
+      {
+       "title": "Export first invoices, paid seats, discounts, costs and source evidence",
+       "why": "Establishes the commercial baseline, actual contribution and sources worth protecting.",
+       "role": "ClimbOS analyst; owner grants access"
+      },
+      {
+       "title": "Verify live search demand and approve the agency comparison",
+       "why": "Releases search spend only when buying intent, inventory and approved economics support it.",
+       "role": "ClimbOS growth lead; owner approves and launches"
+      },
+      {
+       "title": "Confirm mailbox readiness and prepare the first agency batch",
+       "why": "Connects a useful intake example to qualified conversations and first payments.",
+       "role": "ClimbOS outreach operator; owner authorizes mailboxes and closes"
+      }
+     ],
+     "diagnosis": "Working constraint: CAC fit—single-seat Pro cannot support personal selling under the supplied economics, while multi-seat agency demand remains unverified. Falsifier: the billing-source audit finds an existing source generating repeatable paid conversions below its actual-seat CAC ceiling; protect that source first.",
+     "affordableCac": "Before spend, calculate monthly contribution from actual net receipts, paid seats, discounts, refunds and variable service costs; annual receipts must be spread across the service period. Owner approves the payback ceiling using available retention evidence; absent support for longer payback, use the proposed three-month maximum. Illustration only, validate before launch: five monthly Business seats × $19 × 80% margin gives $76 monthly contribution, supporting $228 CAC over three months; single-seat Pro supports $14.40. Six-month ceilings would be $456 and $28.80, but are not authorized without supporting retention evidence and explicit approval. Scenario search CAC is $1,660 ÷ five wins = $332; outreach is $410 ÷ two wins = $205. Search therefore fails the illustrated three-month ceiling: scale only if actual seats, costs or conversion improve its economics, or an evidenced longer payback is approved.",
+     "notDoing": [
+      {
+       "channel": "Meta, LinkedIn and ChatGPT ads",
+       "why": "The budget supports one intent-led paid screen, not parallel paid channels."
+      },
+      {
+       "channel": "Blog SEO, alternatives clusters and standalone video",
+       "why": "Use one comparison and reusable demonstration; broader production has uncertain near-term discovery."
+      },
+      {
+       "channel": "Creator, community, event and referral campaigns",
+       "why": "Preserve existing profitable sources, but do not start additional acquisition programs."
+      },
+      {
+       "channel": "Active marketplace acquisition and bespoke integrations",
+       "why": "The marketplace route is deferred hygiene; no connector development, placement fees or additional directory campaigns."
+      },
+      {
+       "channel": "Single-seat Pro outbound",
+       "why": "Personal selling must fit actual customer contribution; low-price buyers remain self-serve."
+      }
+     ],
+     "northStar": {
+      "metric": "New first-paying workspaces from plan cohorts, deduplicated across channels; report actual plans, paid seats and refunds.",
+      "baseline": "Current new-payer baseline is unknown; establish it from billing in week one and keep existing customers separate.",
+      "target": "Conditional scenario: five search-acquired and two outreach-acquired Business workspaces. That represents $665 new MRR only if each buys five monthly-billed seats; validate actual purchases by day 90."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Qualified search visits",
+       "weeklyTarget": "Set from the week-one baseline plus verified affordable inventory; the channel’s graduated volume remains a ceiling assumption until observed.",
+       "source": "UTMs, analytics and search-term review"
+      },
+      {
+       "metric": "Delivered agency contacts",
+       "weeklyTarget": "Follow the readiness-approved ramp, adjusted downward using observed delivery and sending capacity; confirm the sustainable target at the outreach read.",
+       "source": "ClimbOS Inbox delivery and suppression records"
+      },
+      {
+       "metric": "Qualified agency bookings",
+       "weeklyTarget": "After the first batch, use planned delivered contacts × observed qualified-reply rate × observed booking rate; replace planning midpoints at the fixed read.",
+       "source": "ClimbOS Pipeline"
+      },
+      {
+       "metric": "New workspace publication within seven days",
+       "weeklyTarget": "Establish the first complete cohort baseline, then maintain or improve it; set any numeric improvement target from that observed baseline.",
+       "source": "Product events joined to acquisition cohorts"
+      },
+      {
+       "metric": "Mature-cohort CAC and paid seats",
+       "weeklyTarget": "Stay within the owner-approved actual-seat ceiling; report first invoices, seats, refunds and cohort age alongside CAC.",
+       "source": "Billing, variable-cost ledger, credit usage and owner time log"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Audit customer sources and economics, approve the payback ceiling, build the agency comparison and demonstration, and install billing attribution. Start search and outreach only after their release gates pass."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Complete the registered screens and review mature cohorts weekly. Make the commercial decision using actual invoices, seats, costs and cancellations—not forecast conversion rates."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "Commit most production to the profitable engine and keep the other supporting it; otherwise stop paid acquisition and revisit the offer. Only then run the deferred marketplace hygiene check and compound the comparison, demonstration and agency list."
+      }
+     ],
+     "weekOneChecklist": [
+      "ClimbOS audits billing, acquisition sources and recent customers; owner grants access. Assumed owner time: 10 minutes.",
+      "Owner approves the actual-cost model, payback ceiling and credit limits; ClimbOS checks live search demand. Assumed owner time: 15 minutes.",
+      "ClimbOS builds the agency comparison, demonstration and tracking; owner approves the page and eligible ad launch. Assumed owner time: 15 minutes.",
+      "Owner authorizes mailboxes and recipient jurisdictions; ClimbOS checks lawful targeting, delivery readiness and suppression. Assumed owner time: 15 minutes.",
+      "Approve the weekly invoice-and-seat scorecard; defer marketplace work until acquisition decisions are settled. Assumed owner time: five minutes."
+     ],
+     "risks": [
+      {
+       "risk": "The five-seat purchase pattern and assumed margin may not hold.",
+       "mitigation": "Validate actual contribution and available retention evidence before releasing spend; refresh by day 45. If the model fails, change the offer or acquisition cost—not the evidence standard."
+      },
+      {
+       "risk": "Affordable agency search demand may be too small.",
+       "mitigation": "Check live auction estimates before launch and observed qualified traffic during the search screen. Reduce the forecast when graduation is delayed or inventory is insufficient."
+      },
+      {
+       "risk": "Outreach capacity depends on authorized, healthy mailboxes.",
+       "mitigation": "Confirm mailbox readiness and recipient jurisdictions before sending; audit delivery after each ramp step. Pause rather than exceed capacity or weaken permission safeguards."
+      },
+      {
+       "risk": "Credit availability and owner capacity remain unverified.",
+       "mitigation": "Confirm allowances and owner availability in week one; ClimbOS logs usage weekly. Reduce volume if existing credits or closing time cannot support production."
+      },
+      {
+       "risk": "Claude marketplace access and discovery are unverified.",
+       "mitigation": "Use the deferred eligibility deadline and stop if the existing workflow cannot qualify without development or payment."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Build in chat. Approve before launch.",
+       "oneLiner": "Catch agencies comparing workflows; sell approval control, not another cheap form builder.",
+       "kind": "bankable",
+       "audience": "Small agencies searching Google for Claude/ChatGPT form building and publication approvals; the page explicitly addresses teams considering five Business seats.",
+       "trigger": "An agency is choosing how to build, review and publish client-intake forms.",
+       "hook": "Build forms inside Claude or ChatGPT. Need approval before a form goes live? Formkit Business is $19 per seat/month. Compare the workflow, then start free at https://formkit.app.",
+       "mechanic": "One dated, evidence-checked comparison page with an agency intake example and an assistant walkthrough; ClimbOS operates the page, attribution and exact-match ad drafts. Keep a random 20% holdout from permissioned follow-up emails, suppress purchasers and opt-outs, and treat any lift as descriptive until the sample is adequate.",
+       "assetUsed": "Formkit's assistant-based publishing, Business approval workflow and existing fair comparison approach—not invented switching testimonials. Product source: https://formkit.app/.",
+       "funnel": [
+        "Search demand gate: obtain a live auction estimate supporting 65 qualified visits weekly near $2 CPC before treating that volume as available. Both figures are planning assumptions, grade D; no supplied research establishes search inventory.",
+        "Landing-page visits → free workspaces: low/likely/high 2%/5%/8%, assumption, grade D. Anchor: the supplied comparison-play catalog reports 8.43% average conversion across 95 articles: https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages, grade B; Formkit's rate remains unmeasured.",
+        "Free workspaces → first published form within 7 days: 40%/70%/85%, assumption, grade D.",
+        "Published forms → first five-seat Business payment within another 7 days: 10%/30%/45%, assumption, grade D; record actual seats rather than assuming every agency qualifies.",
+        "Conditional volume: 40 test visits plus 7 scaled weeks × 65 visits = 495 visits by day 70; × 5% × 70% × 30% gives about 5 paying workspaces by day 90. Derived scenario, grade D; the 0–15 range deliberately widens for uncertain demand and conversion."
+       ],
+       "unit": "new first-paying five-seat Business workspaces, conditional on passing the demand and scale gates",
+       "p10": 0,
+       "p50": 5,
+       "p90": 15,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Qualified search inventory at an affordable CPC. Predictability 4 follows the supplied comparison-play catalog and its 95-article benchmark; payment confidence is low because the downstream rates are assumptions.",
+       "test": "Hypothesis: agencies buying approval controls convert from an assistant-workflow comparison. Initial screen: 40 paid visits within 21 days; assumed $2 CPC means $80 media, with $40 reserved for owner time and credit-equivalent costs. At the assumed 5% signup rate, expect only 2 signups: this is a feasibility screen, not a statistically powered lift test.",
+       "killIf": "Do not launch without qualified search inventory; stop the initial screen if it produces no signups. Stop scaled ads if fully loaded CAC exceeds $456 on cohorts aged 14 days, reviewed by day 45; change one variable per iteration, at most three times.",
+       "scaleIf": "At least 3 signups and one first-paying Business workspace from the initial 40 visits, followed by acquisition cost below $456 for cohorts aged 14 days. Graduate to 65 qualified visits weekly at approximately $130 media spend, capped at $600 each month.",
+       "scores": [
+        5,
+        4,
+        4,
+        3,
+        4,
+        3,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve a 20-minute review of the agency angle and a live Google Keyword Planner demand estimate.",
+       "climbosCanDo": "Check keyword demand, evidence-check the comparison, build the page, draft ads and permissioned follow-ups, and report first invoices weekly; the owner approves and launches ads."
+      },
+      {
+       "name": "The agency intake handoff",
+       "oneLiner": "Show agencies an intake workflow they can review—not a generic software demo.",
+       "kind": "creative",
+       "audience": "Design and web agencies discovered through Clutch, then researched on their own websites; target teams plausibly needing five Business seats. Directory route: https://clutch.co/.",
+       "trigger": "An agency is reviewing its client-onboarding process; preparation for 2027 is a seasonal hypothesis, not established demand.",
+       "hook": "Would an approval-before-publication intake workflow fit your agency? Build the form inside Claude or ChatGPT, then use Formkit Business for the review step. See the workflow and plans at https://formkit.app.",
+       "mechanic": "Borrow the show-before-you-sell mechanic: lead with one useful agency intake example, then demonstrate the approval handoff. ClimbOS researches and sends from two owner-authorized mailboxes; at scale, 200 new contacts plus one follow-up each means at most 400 sends weekly across both mailboxes.",
+       "assetUsed": "A reusable Formkit client-intake demonstration combining assistant creation with Business publication approvals, shared templates and an audit log. Product source: https://formkit.app/.",
+       "funnel": [
+        "Researched contacts → delivered messages: 95%/98%/99%, assumption, grade D. Count the 500-contact test and scaled volume as delivered contacts, replacing failed deliveries without increasing mailbox limits.",
+        "Delivered contacts → replies: 1%/2%/3%, grade B, using the cold-email planning range supplied in the brief; external B2B reference: https://instantly.ai/.",
+        "Replies → bookings: 20%/30%/40%, grade B, using the ClimbOS planning range supplied in the brief; no Formkit-specific booking data exists.",
+        "Bookings → held calls: 60%/80%/90%, assumption, grade D.",
+        "Held calls → checkout opened for a qualified five-seat Business workspace: 50%/70%/90%, assumption, grade D.",
+        "Checkout opened → first payment: 30%/50%/70%, assumption, grade D.",
+        "Conditional volume: 500 delivered contacts in the test plus 7 weeks × 200 = 1,900 by day 70; × 2% × 30% × 80% × 70% × 50% gives about 3 paying workspaces. Derived scenario, grade D; the widened outcome range is 0–10."
+       ],
+       "unit": "new first-paying five-seat Business workspaces, conditional on qualified agency demand",
+       "p10": 0,
+       "p50": 3,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "How many agencies genuinely need five paid Business seats. Two available mailboxes, delivery capacity and five-seat purchases are assumptions—not verified assets or customer demand.",
+       "test": "Hypothesis: a concrete intake-and-approval demonstration attracts agencies worth personal outreach. Contact 500 agencies by day 21: assumed weekly batches of 100, 200 and 200; at a 2% reply baseline, expect 10 replies and 3 bookings. Cap owner time plus credit-equivalent test costs at $120; measure first payments again on day 45.",
+       "killIf": "Fewer than 4 replies from 500 delivered contacts, no held calls by day 30, or actual seat purchases push CAC above $456 at day 45. Do not continue personal selling to single-seat Pro buyers.",
+       "scaleIf": "At least 8 replies and one booking from 500 contacts, with total test cost no higher than $120; graduate to 200 new agencies weekly. Continue beyond day 45 only if actual seat purchases support fully loaded CAC below $456.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        4,
+        4,
+        4,
+        4
+       ],
+       "firstActionToday": "Approve the agency example and confirm access to two authorized mailboxes for a 20-minute setup check.",
+       "climbosCanDo": "Find published business emails, personalize each introduction, manage one follow-up, stop on reply, and track bookings through first payment; use the owner's verified postal footer, opt-out process and applicable privacy checks."
+      },
+      {
+       "name": "A form where the conversation happens",
+       "oneLiner": "Test the strongest audience fit without betting the quarter on marketplace access.",
+       "kind": "moonshot",
+       "audience": "Claude Marketplace users seeking form-building connectors; Formkit eligibility, approval and discovery remain unverified: https://claude.com/marketplace.",
+       "trigger": "A Claude user wants to turn a conversation into a published form without starting in a conventional builder.",
+       "hook": "Turn your next Claude conversation into a published form. Build and publish with Formkit, then start collecting responses. The free tier includes unlimited forms, responses and members. Start at https://formkit.app.",
+       "mechanic": "Publish one approved listing with a build-and-publish demonstration and tracked signup link. ClimbOS checks referral traffic weekly; do not assume an Anthropic partnership or buy traffic to disguise weak discovery.",
+       "assetUsed": "Formkit's existing ability to build and publish forms inside Claude; this experiment authorizes no new connector or engineering work.",
+       "funnel": [
+        "Eligibility → approved listing: unknown; assign no invented acceptance probability. Official route: https://claude.com/marketplace; any assumption of access is grade D.",
+        "Approved listing → qualified visits: low/likely/high 50/200/600 over the remaining horizon, assumption, grade D; no reliable marketplace traffic benchmark was supplied.",
+        "Qualified visits → free workspaces: 5%/10%/20%, assumption, grade D.",
+        "Free workspaces → first published form: 40%/60%/80%, assumption, grade D.",
+        "Published forms → first payment: 3%/10%/20%, assumption, grade D.",
+        "An approved-listing scenario of 200 × 10% × 60% × 10% yields about 1 payer, assumption-derived, grade D. Planning P50 remains zero while access is unverified; the 0–10 range includes failure to list and uncertain discovery."
+       ],
+       "unit": "new first-paying workspaces; zero planning contribution until listing access is established",
+       "p10": 0,
+       "p50": 0,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the existing workflow qualifies for a discoverable listing without additional engineering.",
+       "test": "Check the existing integration's eligibility within 7 days, without development. If approved and live, seek 100 qualified listing visits within a 21-day live test: assumed 10% signup rate × 100 visits gives 10 signups. Cap owner time plus credit-equivalent costs at $60; spend nothing on placement or ads.",
+       "killIf": "No eligible no-build route by day 7, no approval by day 21, fewer than 100 qualified visits during the live test, or fewer than 4 signups from those visits; stop rather than fund connector development.",
+       "scaleIf": "At least 8 signups and one first payment from 100 qualified listing visits, with CAC below $29; maintain one listing and seek 20 qualified visits weekly through approved listing improvements.",
+       "scores": [
+        4,
+        1,
+        4,
+        3,
+        4,
+        4,
+        5,
+        5
+       ],
+       "firstActionToday": "Authorize a 20-minute check of the official listing route and requirements for the existing workflow.",
+       "climbosCanDo": "Find the official submission route, draft accurate listing copy and a demonstration, add attribution, and track publication through first payment; the owner approves submission."
+      }
+     ],
+     "portfolioNote": "Run comparison/search, agency outreach and one no-build marketplace test. Economics assumptions, grade D: 80% gross margin, 12 paid months and five Business seats per agency imply $912 annual gross profit; single-seat Pro implies about $58, supporting CAC ceilings of $456 and $29 respectively. The graduated engines reach 65 qualified search visitors and 200 new agencies weekly; scenario costs are approximately $1,400 media + $110 owner time + $150 credit-equivalent allowance for search, and $260 owner time + $300 credit-equivalent allowance for outreach, giving roughly $330 and $190 CAC at 5 and 3 wins. These are assumptions, not approved credit charges; owner time uses the playbook's $50/hour assumption and averages under one hour weekly. Media remains below $600/month; the marketplace cap is $60 total. Together, the conditional scenario is about 8 new five-seat Business workspaces, or $760 monthly revenue—not a validated portfolio median while search inventory and agency seat demand remain unverified. Scores are editorial, in order: fit, predictability, people reached per owner-hour, time to signal, compounding, cost, safety, distinctiveness."
+    },
+    "costMicros": 891465,
+    "ms": 2439052
+   }
+  },
+  "comparisons": {
+   "expert>basic": {
+    "sol": {
+     "result": "loss",
+     "reasons": [
+      "B better matches Formkit’s low price: self-serve comparison traffic and creator distribution, rather than building the plan around unverified five-seat Business purchases.",
+      "B’s creator play uses a genuine differentiator—building and publishing inside Claude or ChatGPT—with a concrete demonstration, weekly prospecting volume, and a publication/payment gate.",
+      "A’s agency approval workflow is specific and potentially useful, but its paid-search scenario fails its own illustrated CAC ceiling. Its conflicting budgets, deadlines, thresholds, and forecasts make it unsafe to execute as written.",
+      "B is substantially easier for an owner to follow: two plays, clear production responsibilities, and a restrained spend commitment. A’s additional detail mostly creates reconciliation work.",
+      "B still needs correction: spending up to $900 testing a funnel it estimates at roughly $2,000 CAC is poorly justified, and its play-level scale rule must explicitly require the overarching gross-profit gate. Nevertheless, it is the stronger starting plan."
+     ],
+     "truthX": [
+      "Presents an 8.43% conversion benchmark across 95 articles, a comparison-play catalog, and a $50/hour owner-time assumption as supplied evidence, although they are not in the provided material.",
+      "Gives conflicting forecasts: seven paying workspaces in the summary versus eight in the portfolio, with different outreach costs and expected wins.",
+      "Its operational rules contradict its economics safeguards: the plays authorize scaling below $456 CAC and evaluate 14-day cohorts, while the main strategy says the illustrated authorized ceiling is $228 and proposes 28-day maturity unless evidence supports otherwise.",
+      "The P10/P50/P90 labels imply more forecasting precision than the explicitly unverified assumptions support."
+     ],
+     "truthY": [
+      "Claims that a U.S. audience and certain research were supplied, although neither is established in the provided brief.",
+      "Creator publication and click-to-paid benchmarks are attributed to broad website URLs without enough evidence to verify the claimed rates. Labeling them as proxies helps, but does not establish their validity.",
+      "The fractional P10/P50/P90 customer forecasts are assumption-based funnel outputs, not demonstrated outcome percentiles."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "expert": {
+    "truth": 6,
+    "specificity": 8,
+    "strategy": 4,
+    "craft": 4,
+    "usefulness": 4,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "Conflicting execution rules let individual plays authorize scaling at a $456 CAC and 14-day maturity despite the central plan explicitly withholding that payback ceiling and proposing a 28-day maturity window."
+   },
+   "basic": {
+    "truth": 6,
+    "specificity": 8,
+    "strategy": 4,
+    "craft": 6,
+    "usefulness": 6,
+    "creativity": 4,
+    "overall": 5,
+    "topIssue": "The plan commits up to $900 to search ads despite forecasting roughly $2,000 CAC against $14–$46 in assumed three-month gross profit per seat, and its play-level continuation rule conflicts with its profitability guardrail."
+   }
+  }
+ }
+]

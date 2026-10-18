@@ -13,6 +13,7 @@ From `docs/research/plays/saas-b2b.md` (Oct 2026; teams of 1–20). Ranked by pr
 - **Bundles:** switching = 1 + 6 + 20. AI visibility (8) is fed by 1, 2, 15, 27. A free tool (7) gives 9 and 18 something to launch. 11–12 creators seed 13. Partners (16) speak at 32. Research (25) feeds 15 and 27.
 - **Evidence caveat:** most figures are self-reports or from vendors selling the channel (Dupple, Rewardful, UserGems, Crossbeam, Zapier). Plan on the low half, show grades and estimate labels, never promise vendor numbers.
 - **2026 context:** G2 owns Capterra, Software Advice, GetApp (Feb 2026), concentrating risk. AI engines cite third-party lists and Reddit. LinkedIn TLAs boost non-employee posts. ChatGPT app directory is open.
+- **Freemium/self-serve under ~$50/seat:** acquisition alone can't pay back. The portfolio must include the conversion engine: the activation milestone (e.g. "first form published with 10 responses"), the moment a paid limit is hit, the in-product upgrade prompt and a 3-email nudge sequence, with signup→activated→paid rates (own data first, else labelled assumptions). Prefer plays that raise seats per account (team invites, agency/partner plans) over paid ads.
 - **Human in the loop:** for Show HN, Reddit, PR, podcasts and creator posts the owner posts or approves personally; ClimbOS never auto-posts or impersonates.
 
 ## Plays
