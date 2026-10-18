@@ -1,27 +1,55 @@
 import { describe, expect, it } from "vitest";
-import { lintEconomics, lockedNumbers, playMaths } from "../../shared/agents/economics";
+import { lintEconomics, lockedNumbers, playMaths, simulateCustomers, withForecasts } from "../../shared/agents/economics";
 
-const econ = { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthsRetained: 10, basis: "Business plan price; margin and retention assumed" };
-const play = (over: Partial<{ p50: number; kind: string; model: { weeklyReach: number; steps: { name: string; rate: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number } }> = {}) => ({ name: "Agency outreach", kind: "bankable", p50: 7, unit: "paying customers", horizonDays: 91, model: { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 }, ...over });
+const econ = { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthlyChurn: 0.1, basis: "Business plan price; margin and churn assumed", assumed: ["margin", "churn"] };
+type Model = { weeklyReach: number; weeklyReachLow?: number; weeklyReachHigh?: number; steps: { name: string; rate: number; low?: number; high?: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number };
+const play = (over: Partial<{ kind: string; model: Model }> = {}) => ({ name: "Agency outreach", kind: "bankable", unit: "paying customers", horizonDays: 91, model: { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 } as Model, ...over });
 
 describe("growth maths in code", () => {
-  it("computes customers, cost per customer and payback from the play's numbers", () => {
+  it("computes customers, cost per customer and payback with churn", () => {
     const m = playMaths(play(), econ);
     expect(m.customers).toBeCloseTo(9.75, 1); // 250 × 13 weeks × 0.02 × 0.5 × 0.3
     expect(m.costUsd).toBe(650); // 13 hours × $50
-    expect(m.valueUsd).toBeCloseTo(152, 0); // 19 × 0.8 × 10
+    expect(m.valueUsd).toBeCloseTo(15.2 * (1 - 0.9 ** 12) / 0.1, 4); // 12-month contribution with 10% churn ≈ 109
     expect(m.profitable).toBe(true);
+    expect(m.paybackMonths).toBeGreaterThan(650 / 9.75 / 15.2); // churn makes payback longer than simple
   });
-  it("rejects money-losing plays and forecasts that don't follow from the model", () => {
-    const losing = play({ p50: 0.3, model: { weeklyReach: 100, steps: [{ name: "click", rate: 0.02 }, { name: "paid", rate: 0.01 }], monthlySpendUsd: 600, ownerHoursPerWeek: 0 } });
-    const issues = lintEconomics({ economics: econ, plays: [losing, play({ p50: 40 })] });
+
+  it("supports older plans that give months retained", () => {
+    const m = playMaths(play(), { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthsRetained: 10, basis: "" });
+    expect(m.valueUsd).toBeCloseTo(15.2 * (1 - 0.9 ** 12) / 0.1, 4);
+  });
+
+  it("simulates a P10–P90 range from the input ranges, reproducibly", () => {
+    const model: Model = { weeklyReach: 250, weeklyReachLow: 150, weeklyReachHigh: 300, steps: [{ name: "reply", rate: 0.02, low: 0.01, high: 0.04 }, { name: "paid", rate: 0.15, low: 0.1, high: 0.25 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 };
+    const a = simulateCustomers(model, 13, "x");
+    expect(a.p10).toBeLessThan(a.p50);
+    expect(a.p50).toBeLessThan(a.p90);
+    expect(simulateCustomers(model, 13, "x")).toEqual(a);
+    const point = simulateCustomers({ ...model, weeklyReachLow: undefined, weeklyReachHigh: undefined, steps: model.steps.map(({ name, rate }) => ({ name, rate })) }, 13, "x");
+    expect(point.p10).toBe(point.p90);
+  });
+
+  it("writes the forecast onto plays (the model never does)", () => {
+    const out = withForecasts({ economics: econ, plays: [play()] });
+    expect(out.plays[0].p50).toBeCloseTo(9.8, 1);
+  });
+
+  it("rejects money-losing plays and bad ranges", () => {
+    const losing = play({ model: { weeklyReach: 100, steps: [{ name: "click", rate: 0.02 }, { name: "paid", rate: 0.01 }], monthlySpendUsd: 600, ownerHoursPerWeek: 0 } });
+    const badRange = play({ model: { ...play().model, steps: [{ name: "reply", rate: 0.02, low: 0.03, high: 0.05 }] } });
+    const issues = lintEconomics({ economics: econ, plays: [losing, badRange] });
     expect(issues.some((i) => /Loses money/.test(i.message))).toBe(true);
-    expect(issues.some((i) => /own numbers give/.test(i.message) && i.path === "plays[1].p50")).toBe(true);
+    expect(issues.some((i) => /low ≤ rate ≤ high/.test(i.message) && i.path === "plays[1].model.steps")).toBe(true);
     expect(lintEconomics({ economics: econ, plays: [play()] })).toEqual([]);
   });
-  it("hands the plan locked totals", () => {
-    const t = lockedNumbers({ economics: econ, plays: [play()] });
-    expect(t).toContain("TOTAL: ≈9.8 customers");
-    expect(t).toContain("North Star target = ≈10 customers");
+
+  it("hands the plan locked totals with overlap", () => {
+    const one = lockedNumbers({ economics: econ, plays: [play()] });
+    expect(one).toContain("TOTAL: ≈9.8 customers");
+    expect(one).toContain("North Star target = ≈10 customers");
+    const two = lockedNumbers({ economics: econ, plays: [play(), play({ kind: "creative" })] });
+    expect(two).toContain("TOTAL: ≈16 customers"); // 2 × 9.75 × (1 − 0.2)
+    expect(two).toContain("20% overlap");
   });
 });

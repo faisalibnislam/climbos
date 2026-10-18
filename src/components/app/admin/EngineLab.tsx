@@ -7,7 +7,7 @@ import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
 import { Badge, Button, Card, CardContent, EmptyState, Progress, toast } from "@/components/ui";
 
-const AGENT = { growth_plays: "Growth plays", growth_strategy: "Growth plan" } as Record<string, string>;
+const AGENT = { growth_plays: "Growth plays", growth_strategy: "Growth plan", business_insights: "Insights", channel_fit: "Channel fit" } as Record<string, string>;
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
 
 /** Engine lab: rules learned from reviews; test on the Formkit case, approve to ship. */
@@ -36,6 +36,43 @@ export function EngineLab() {
           <Progress value={Math.min(100, (d.spentMicros / d.capMicros) * 100)} label="Lab budget used" />
         </CardContent>
       </Card>
+      {d.health.length ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="heading-section">Engine health, last 14 days</h2>
+          <Card>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs text-ink-3">
+                  <tr>
+                    <th className="py-1 pr-3 font-medium">Agent</th>
+                    <th className="py-1 pr-3 font-medium">Runs</th>
+                    <th className="py-1 pr-3 font-medium">Check errors, draft → final</th>
+                    <th className="py-1 pr-3 font-medium">Untraced numbers</th>
+                    <th className="py-1 pr-3 font-medium">Numbers lost in revision</th>
+                    <th className="py-1 font-medium">Shipped</th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums text-ink-2">
+                  {d.health.map((h) => (
+                    <tr key={`${h.agent}-${h.mode}`} className="border-t border-line">
+                      <td className="py-1.5 pr-3 text-ink">
+                        {AGENT[h.agent] ?? h.agent} <span className="text-xs text-ink-3">{h.mode}</span>
+                      </td>
+                      <td className="py-1.5 pr-3">{h.runs}</td>
+                      <td className="py-1.5 pr-3">
+                        {h.draftErrors} → {h.finalErrors}
+                      </td>
+                      <td className="py-1.5 pr-3">{h.inventedFinal}</td>
+                      <td className="py-1.5 pr-3">{h.numbersDropped}</td>
+                      <td className="py-1.5">{h.shipRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
       <section className="flex flex-col gap-3">
         <h2 className="heading-section">Proposals</h2>
         {open.length === 0 ? (

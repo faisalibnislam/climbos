@@ -720,6 +720,15 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_agent_status", ["agentId", "status"]),
 
+  /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
+  engineQuality: defineTable({
+    runId: v.id("workflowRuns"),
+    agentId: v.string(),
+    mode: v.string(),
+    data: v.string(),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
+
   /** Learning from results: first-party rates, per workspace and pooled by business type (anonymized, k ≥ 5). */
   learnedRates: defineTable({
     /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled) or "all". */

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics } from "./economics";
+import { lintEconomics, withForecasts, type Economics } from "./economics";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -73,15 +73,20 @@ export const PlaySchema = z.object({
   climbosCanDo: z.string(),
   /** The play's numbers; ClimbOS code (not the model) turns them into customers, cost per customer and payback. */
   model: z.object({
-    /** Right-fit people reached per week at the planned volume. */
+    /** Right-fit people reached per week at the planned volume, with a realistic low and high. */
     weeklyReach: z.number(),
-    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1). */
-    steps: z.array(z.object({ name: z.string(), rate: z.number() })),
+    weeklyReachLow: z.number(),
+    weeklyReachHigh: z.number(),
+    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range. */
+    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number() })),
     monthlySpendUsd: z.number(),
     ownerHoursPerWeek: z.number(),
   }),
 });
 export type Play = z.infer<typeof PlaySchema>;
+/** What the plays agent writes: no forecast numbers (ClimbOS code computes P10/P50/P90 from the model). */
+export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true });
+export type PlayDraft = z.infer<typeof PlayDraftSchema>;
 
 export const SCORE_KEYS = ["fit", "predictability", "leverage", "timeToSignal", "compounding", "cost", "risk", "distinctiveness"] as const;
 export type PlayScores = Record<(typeof SCORE_KEYS)[number], number>;
@@ -114,10 +119,21 @@ export const PlaysOutputSchema = z.object({
   /** One or two sentences: why this portfolio, for this business, now. */
   portfolioNote: z.string(),
   /** What one customer is worth (facts first, else labelled assumptions in `basis`). */
-  economics: z.object({ revenuePerCustomerMonthUsd: z.number(), grossMargin: z.number(), monthsRetained: z.number(), basis: z.string() }),
-  plays: z.array(PlaySchema),
+  economics: z.object({
+    revenuePerCustomerMonthUsd: z.number(),
+    /** Contribution margin before acquisition, 0–1. */
+    grossMargin: z.number(),
+    /** Share of customers lost per month, 0–1. */
+    monthlyChurn: z.number(),
+    basis: z.string(),
+    /** Which inputs are assumptions, not facts. */
+    assumed: z.array(z.enum(["revenue", "margin", "churn"])),
+  }),
+  plays: z.array(PlayDraftSchema),
 });
 export type PlaysOutput = z.infer<typeof PlaysOutputSchema>;
+/** Saved portfolio: the agent's plays plus the forecast ClimbOS computed. */
+export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: Play[] };
 
 const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)\b/i;
 const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;
@@ -125,7 +141,8 @@ const GENERIC = /\b(post consistently|build a community|leverage social media|in
 /** Deterministic portfolio checks (growth-plays §3–4). */
 const CUSTOMER_UNIT = /customer|client|account|member|order|booking|job|sale|subscriber|patient|student|deal|sign-?up/i;
 
-export function lintPlays(plays: Play[]): LintIssue[] {
+export function lintPlays(drafts: PlayDraft[], economics?: Economics): LintIssue[] {
+  const plays = economics ? withForecasts({ economics, plays: drafts }).plays : (drafts as Play[]);
   const issues: LintIssue[] = [];
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
   if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
@@ -143,7 +160,6 @@ export function lintPlays(plays: Play[]): LintIssue[] {
   scored.forEach(({ p, s }, i) => {
     const path = `plays[${i}]`;
     if (p.scores.length !== 8) err("scores needs 8 numbers in order: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness.", `${path}.scores`);
-    if (!(p.p10 <= p.p50 && p.p50 <= p.p90)) err("Forecast must satisfy P10 ≤ P50 ≤ P90.", path);
     if (p.funnel.length < 2) err("The forecast needs a funnel with at least 2 steps.", `${path}.funnel`);
     if (VANITY.test(p.unit)) err(`"${p.unit}" is a vanity unit; use booked jobs, customers, members or revenue.`, `${path}.unit`);
     p.funnel.forEach((line, j) => {
@@ -416,7 +432,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

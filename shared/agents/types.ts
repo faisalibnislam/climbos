@@ -101,4 +101,19 @@ export interface AgentRunResult<T> {
   rounds: number;
   research: { notes: string; sources: { url: string; title?: string }[] } | null;
   history: { round: number; average: number; gatesPassed: boolean; lintErrors: number }[];
+  /** Run quality signals for the engine dashboard (spec §27). */
+  quality?: RunQuality;
+}
+
+export interface RunQuality {
+  /** Characters of each prompt block the writer saw. */
+  contextChars: { brief: number; facts: number; task: number; research: number };
+  /** Lint errors by rule on the first draft and on the shipped version. */
+  draftLint: Record<string, number>;
+  finalLint: Record<string, number>;
+  /** Numbers in the first draft that the shipped version no longer has (revisions stripping specifics). */
+  numbersDropped: string[];
+  finalAverage: number | null;
+  shipped: boolean | null;
+  rounds: number;
 }

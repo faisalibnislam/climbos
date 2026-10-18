@@ -71,6 +71,33 @@ async function qualityTrend(ctx: QueryCtx) {
   return [...weeks.entries()].map(([k, w]) => ({ agent: k.split("|")[0], week: k.split("|")[1], score: Math.round((w.sum / w.n) * 100) / 100, plans: w.n })).sort((a, b) => a.week.localeCompare(b.week));
 }
 
+/** Last 14 days of agent runs: mean lint errors draft → final, numbers lost in revision, ship rate. */
+async function engineHealth(ctx: QueryCtx) {
+  const rows = await ctx.db.query("engineQuality").withIndex("by_created", (q) => q.gte("createdAt", Date.now() - 14 * DAY)).order("desc").take(300);
+  const by = new Map<string, { n: number; draft: number; final: number; invented: number; dropped: number; shipped: number; research: number }>();
+  for (const r of rows) {
+    let q: { draftLint?: Record<string, number>; finalLint?: Record<string, number>; numbersDropped?: string[]; shipped?: boolean | null; contextChars?: { research?: number } };
+    try {
+      q = JSON.parse(r.data);
+    } catch {
+      continue;
+    }
+    const k = `${r.agentId}|${r.mode}`;
+    const a = by.get(k) ?? { n: 0, draft: 0, final: 0, invented: 0, dropped: 0, shipped: 0, research: 0 };
+    const sum = (x?: Record<string, number>) => Object.values(x ?? {}).reduce((s, v) => s + v, 0);
+    a.n++;
+    a.draft += sum(q.draftLint);
+    a.final += sum(q.finalLint);
+    a.invented += q.finalLint?.invented_fact ?? 0;
+    a.dropped += q.numbersDropped?.length ?? 0;
+    a.shipped += q.shipped ? 1 : 0;
+    a.research += q.contextChars?.research ?? 0;
+    by.set(k, a);
+  }
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  return [...by.entries()].map(([k, a]) => ({ agent: k.split("|")[0], mode: k.split("|")[1], runs: a.n, draftErrors: r1(a.draft / a.n), finalErrors: r1(a.final / a.n), inventedFinal: r1(a.invented / a.n), numbersDropped: r1(a.dropped / a.n), shipRate: Math.round((a.shipped / a.n) * 100), researchChars: Math.round(a.research / a.n) }));
+}
+
 export const overview = query({
   args: {},
   handler: async (ctx) => {
@@ -83,6 +110,7 @@ export const overview = query({
       capMicros: MONTHLY_CAP_MICROS,
       proposals: proposals.map((p) => ({ id: p._id, agentId: p.agentId, rules: p.rules, rationale: p.rationale, status: p.status, test: p.test ?? null, createdAt: p.createdAt })),
       trend: await qualityTrend(ctx),
+      health: await engineHealth(ctx),
     };
   },
 });
@@ -149,4 +177,12 @@ export const recentFeedback = internalQuery({
 export const saveProposal = internalMutation({
   args: { agentId: v.string(), rules: v.string(), rationale: v.string() },
   handler: async (ctx, a): Promise<Id<"engineProposals">> => ctx.db.insert("engineProposals", { ...a, rules: a.rules.slice(0, 2000), rationale: a.rationale.slice(0, 600), status: "proposed", createdAt: Date.now() }),
+});
+
+/** Engine quality log (no tenant text: counts, sizes and numbers only). */
+export const recordQuality = internalMutation({
+  args: { runId: v.id("workflowRuns"), agentId: v.string(), mode: v.string(), data: v.string() },
+  handler: async (ctx, a) => {
+    await ctx.db.insert("engineQuality", { ...a, data: a.data.slice(0, 8000), createdAt: Date.now() });
+  },
 });

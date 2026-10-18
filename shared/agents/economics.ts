@@ -1,71 +1,188 @@
 import type { LintIssue } from "./types";
+import { createRng } from "../forecasting/prng";
+import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 
 /**
- * Growth maths in code, not prose: each play's numbers become 90-day
- * customers, cost per customer (CAC) and payback against 12-month gross
- * profit. Plays that lose money or whose forecast doesn't follow from their
- * own numbers are sent back; the plan receives these totals as locked numbers.
+ * Growth maths in code, not prose (spec §15–17): each play's inputs (reach,
+ * step rates with low/high, spend, owner hours) become 90-day customers with
+ * a P10–P90 range from a seeded simulation over those ranges, a fully loaded
+ * cost per customer, payback with churn and the allowable cost per customer
+ * over 12 months. The model never writes these numbers; the plan receives
+ * them as locked numbers.
  */
 
+export interface PlayStep {
+  name: string;
+  /** Most-likely share passing this step (0–1). */
+  rate: number;
+  low?: number;
+  high?: number;
+}
 export interface PlayModel {
   weeklyReach: number;
-  steps: { name: string; rate: number }[];
+  weeklyReachLow?: number;
+  weeklyReachHigh?: number;
+  steps: PlayStep[];
   monthlySpendUsd: number;
   ownerHoursPerWeek: number;
 }
 export interface Economics {
   revenuePerCustomerMonthUsd: number;
+  /** Contribution margin before acquisition (0–1). */
   grossMargin: number;
-  monthsRetained: number;
+  /** Share of customers lost each month (0–1). Older plans give monthsRetained instead. */
+  monthlyChurn?: number;
+  monthsRetained?: number;
   basis: string;
+  /** Which of revenue / margin / churn are assumptions rather than facts. */
+  assumed?: string[];
 }
-interface PlayLike {
+export interface PlayLike {
   name: string;
   kind: string;
-  p50: number;
   unit: string;
   horizonDays: number;
   model: PlayModel;
 }
 
 export const OWNER_HOUR_USD = 50;
+/** Months a customer has to earn back their cost (owner's default payback horizon). */
+export const PAYBACK_HORIZON_MONTHS = 12;
+/** Stated share of customers two or more plays would both reach. */
+export const PLAY_OVERLAP = 0.2;
+const RUNS = 2000;
 
 export interface PlayMaths {
   name: string;
   kind: string;
+  /** Most-likely customers (every input at its most-likely value). */
   customers: number;
+  /** Simulated range from the input ranges; equals `customers` when no ranges are given. */
+  range: { p10: number; p50: number; p90: number };
   costUsd: number;
   cacUsd: number | null;
-  /** 12-month gross profit per customer. */
+  /** Contribution one customer earns within the payback horizon (the allowable cost per customer). */
   valueUsd: number;
-  /** Months to earn back the cost per customer. */
+  /** Months to earn back the cost per customer, with churn; null if it never pays back. */
   paybackMonths: number | null;
+  /** Most you can pay per right-fit person reached and still break even. */
+  breakevenPerReachUsd: number | null;
   profitable: boolean;
 }
 
+const share = (r: number) => Math.min(Math.max(r > 1 ? r / 100 : r, 0), 1);
+
+export function churnOf(e: Economics): number | null {
+  if (typeof e.monthlyChurn === "number" && e.monthlyChurn > 0) return share(e.monthlyChurn);
+  return churnFromLifetime(e.monthsRetained ?? null);
+}
+
+/** Contribution per customer per month. */
+export function monthlyContribution(e: Economics): number {
+  return contributionMonth(Math.max(0, e.revenuePerCustomerMonthUsd), share(e.grossMargin)) ?? 0;
+}
+
+/** Contribution one customer earns within the payback horizon. */
 export function customerValue(e: Economics): number {
-  const margin = e.grossMargin > 1 ? e.grossMargin / 100 : e.grossMargin;
-  return Math.max(0, e.revenuePerCustomerMonthUsd) * Math.min(Math.max(margin, 0), 1) * Math.min(Math.max(e.monthsRetained, 0), 12);
+  const churn = churnOf(e);
+  return allowableCac(monthlyContribution(e), churn ?? 0, PAYBACK_HORIZON_MONTHS) ?? 0;
+}
+
+function seedOf(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** Triangular(low, mode, high) from one uniform draw. */
+function tri(u: number, low: number, mode: number, high: number): number {
+  if (!(high > low)) return mode;
+  const m = Math.min(Math.max(mode, low), high);
+  const f = (m - low) / (high - low);
+  return u < f ? low + Math.sqrt(u * (high - low) * (m - low)) : high - Math.sqrt((1 - u) * (high - low) * (high - m));
+}
+
+function quantile(sorted: number[], q: number): number {
+  const i = (sorted.length - 1) * q;
+  const lo = Math.floor(i);
+  return sorted[lo] + (sorted[Math.min(lo + 1, sorted.length - 1)] - sorted[lo]) * (i - lo);
+}
+
+/** Customers over the horizon: P10/P50/P90 from triangular input ranges (seeded, reproducible). */
+export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { p10: number; p50: number; p90: number } {
+  const reach = Math.max(0, m.weeklyReach);
+  const point = (funnelCustomers(reach, m.steps.map((s) => share(s.rate))) ?? 0) * weeks;
+  const ranged = m.weeklyReachLow !== undefined || m.steps.some((s) => s.low !== undefined || s.high !== undefined);
+  if (!ranged) return { p10: point, p50: point, p90: point };
+  const rng = createRng(seedOf(seed));
+  const rL = Math.max(0, Math.min(m.weeklyReachLow ?? reach, reach));
+  const rH = Math.max(reach, m.weeklyReachHigh ?? reach);
+  const out: number[] = [];
+  for (let i = 0; i < RUNS; i++) {
+    let c = tri(rng.next(), rL, reach, rH) * weeks;
+    for (const s of m.steps) {
+      const mode = share(s.rate);
+      c *= tri(rng.next(), Math.min(share(s.low ?? mode), mode), mode, Math.max(share(s.high ?? mode), mode));
+    }
+    out.push(c);
+  }
+  out.sort((a, b) => a - b);
+  return { p10: quantile(out, 0.1), p50: quantile(out, 0.5), p90: quantile(out, 0.9) };
 }
 
 export function playMaths(p: PlayLike, e: Economics): PlayMaths {
+  if (!p.model?.steps) p = { ...p, model: { weeklyReach: 0, steps: [], monthlySpendUsd: 0, ownerHoursPerWeek: 0 } };
   const weeks = Math.max(1, Math.round((p.horizonDays || 90) / 7));
-  const conv = p.model.steps.reduce((acc, s) => acc * Math.min(Math.max(s.rate > 1 ? s.rate / 100 : s.rate, 0), 1), 1);
-  const customers = Math.max(0, p.model.weeklyReach) * weeks * conv;
-  const costUsd = Math.max(0, p.model.monthlySpendUsd) * (weeks / 4.33) + Math.max(0, p.model.ownerHoursPerWeek) * weeks * OWNER_HOUR_USD;
-  const cacUsd = customers > 0 ? costUsd / customers : null;
-  const valueUsd = customerValue(e);
-  const monthlyGp = valueUsd / Math.max(1, Math.min(12, e.monthsRetained || 12));
-  return { name: p.name, kind: p.kind, customers, costUsd, cacUsd, valueUsd, paybackMonths: cacUsd !== null && monthlyGp > 0 ? cacUsd / monthlyGp : null, profitable: cacUsd !== null && cacUsd <= valueUsd };
+  const rates = p.model.steps.map((s) => share(s.rate));
+  const customers = (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks;
+  const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
+  const spend = Math.max(0, p.model.monthlySpendUsd) * (weeks / 4.33);
+  const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
+  const costUsd = spend + hours * OWNER_HOUR_USD;
+  const cacUsd = cacFull(spend, hours, OWNER_HOUR_USD, 0, customers);
+  const cm = monthlyContribution(e);
+  const churn = churnOf(e) ?? 0;
+  const valueUsd = contributionOver(cm, churn, PAYBACK_HORIZON_MONTHS) ?? 0;
+  return {
+    name: p.name,
+    kind: p.kind,
+    customers,
+    range,
+    costUsd,
+    cacUsd,
+    valueUsd,
+    paybackMonths: cacUsd === null ? null : paybackWithChurn(cacUsd, cm, churn),
+    breakevenPerReachUsd: breakevenPerReach(valueUsd, rates),
+    profitable: cacUsd !== null && cacUsd <= valueUsd,
+  };
+}
+
+/** Rounded for display: whole numbers from 10 up, one decimal below. */
+export function roundCount(n: number): number {
+  return n >= 10 ? Math.round(n) : Math.round(n * 10) / 10;
+}
+
+/** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number })[] } {
+  return {
+    ...out,
+    plays: out.plays.map((p) => {
+      // Older plays without a model keep the forecast they were saved with.
+      if (!p.model?.steps?.length) return p as O["plays"][number] & { p10: number; p50: number; p90: number };
+      const m = playMaths(p, out.economics);
+      return { ...p, p10: roundCount(m.range.p10), p50: roundCount(m.range.p50), p90: roundCount(m.range.p90) };
+    }),
+  };
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
-const usd = (n: number | null) => (n === null ? "n/a" : `$${Math.round(n).toLocaleString("en-US")}`);
+const usd = (n: number | null) => (n === null ? "n/a" : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n).toLocaleString("en-US")}`);
 
 export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }): LintIssue[] {
   const issues: LintIssue[] = [];
   const e = out.economics;
-  if (!(e.revenuePerCustomerMonthUsd > 0) || !(e.monthsRetained > 0)) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, gross margin and months retained (facts first, else labelled assumptions).", path: "economics" });
+  if (!(e.revenuePerCustomerMonthUsd > 0) || churnOf(e) === null) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, contribution margin and monthly churn (facts first, else assumptions listed in `assumed`).", path: "economics" });
+  if (!(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
   out.plays.forEach((p, i) => {
     const path = `plays[${i}]`;
     if (!p.model?.steps?.length || !(p.model.weeklyReach > 0)) {
@@ -73,24 +190,30 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
       return;
     }
     if (p.model.steps.some((s) => !(s.rate > 0) || s.rate > 1)) issues.push({ severity: "error", rule: "economics", message: "Step rates are shares between 0 and 1 (e.g. 0.03 for 3%).", path: `${path}.model.steps` });
+    if (p.model.steps.some((s) => s.low !== undefined && s.high !== undefined && !(s.low <= s.rate && s.rate <= s.high))) issues.push({ severity: "error", rule: "economics", message: "Each step needs low ≤ rate ≤ high.", path: `${path}.model.steps` });
+    if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
     const m = playMaths(p, e);
-    if (m.customers > 0 && (p.p50 > m.customers * 2 || p.p50 < m.customers / 2)) issues.push({ severity: "error", rule: "economics", message: `Your P50 is ${p.p50}, but your own numbers give ${r1(m.customers)} customers in ${p.horizonDays || 90} days. Make them agree.`, path: `${path}.p50` });
-    if (!m.profitable && p.kind !== "moonshot") issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} vs ${usd(m.valueUsd)} 12-month gross profit. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
+    if (!m.profitable && p.kind !== "moonshot")
+      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
   });
   return issues;
 }
 
 /** The numbers the plan must use, computed here so it can't contradict them. */
 export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }): string {
-  const rows = out.plays.map((p) => playMaths(p, out.economics));
-  const total = rows.reduce((s, r) => s + r.customers, 0);
-  const cost = rows.reduce((s, r) => s + r.costUsd, 0);
+  const rows = out.plays.map((p) => ({ p, m: playMaths(p, out.economics) }));
+  const total = portfolioCustomers(rows.map((r) => r.m.range.p50), PLAY_OVERLAP) ?? 0;
+  const low = portfolioCustomers(rows.map((r) => r.m.range.p10), PLAY_OVERLAP) ?? 0;
+  const high = portfolioCustomers(rows.map((r) => r.m.range.p90), PLAY_OVERLAP) ?? 0;
+  const cost = rows.reduce((s, r) => s + r.m.costUsd, 0);
   const spend = out.plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
+  const e = out.economics;
+  const churn = churnOf(e);
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
-    `- One customer is worth ${usd(customerValue(out.economics))} gross profit over 12 months (${out.economics.basis}).`,
-    ...rows.map((r) => `- ${r.name} (${r.kind}): ≈${r1(r.customers)} customers in 90 days, cost ${usd(r.costUsd)}, cost per customer ${usd(r.cacUsd)}, payback ${r.paybackMonths === null ? "n/a" : `${r1(r.paybackMonths)} months`}.`),
-    `- TOTAL: ≈${r1(total)} customers in 90 days for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
+    `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}${e.assumed?.length ? `; assumed: ${e.assumed.join(", ")}` : ""}).`,
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.range.p50)} customers in ${p.horizonDays || 90} days (range ${roundCount(m.range.p10)}–${roundCount(m.range.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)}, payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}.`),
+    `- TOTAL: ≈${roundCount(total)} customers in 90 days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     `- North Star target = ≈${Math.round(total)} customers by day 90 (an estimate from these plays).`,
   ].join("\n");
 }

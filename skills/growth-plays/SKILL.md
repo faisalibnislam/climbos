@@ -42,7 +42,7 @@ Use the segment catalog's plays as a library of proven mechanics with sourced ra
   - **C:** vendor claim without method, or a small case study.
   - **D:** an anecdote or your own assumption.
 - **Plan on the lower half of vendor ranges** (vendors sell the channel).
-- **P50** = the product of the likely rates. For three or more uncertain steps, **P10 ≈ P50 × 0.4** and **P90 ≈ P50 × 2**; go wider if any step is grade D. Never multiply all the lows.
+- **Fill the model, not the forecast.** Give weekly reach and every step's likely rate, each with the low and high of the cited range. ClimbOS simulates the P10/P50/P90 forecast from those ranges; the low/high must be the real cited spread, not a guess at symmetry.
 - **State outcomes in business units** (booked jobs, members, paying customers, revenue), never impressions or "awareness".
 - **Confidence** = the lowest grade in the funnel, adjusted for fit (high = all A/B; medium = any C; low = any D).
 - **Where there is no benchmark** (partnership acceptance, marketplace share, event attendance), label the rate "assumption, grade D", give a wide range, and make the first test measure it.
@@ -99,7 +99,7 @@ Before writing any play, decide in this order:
 1. **The binding constraint.** What actually limits growth right now (demand, conversion, price/value, retention, reach)? Plays attack it.
 2. **Where the money is.** Which segment has the best value × reachability? Prefer customers worth more (teams, agencies, annual plans) when cheap ones can't pay for acquisition.
 3. **The offer.** What would make that segment act now (trigger, risk reversal, a reason to switch)?
-4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach, step rates as shares 0–1, monthly spend, owner hours); ClimbOS computes customers and cost per customer from it and rejects plays that lose money or whose P50 doesn't follow from the model.
+4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach with low/high, step rates as shares 0–1 with low/high, monthly spend, owner hours); ClimbOS computes customers (P10/P50/P90), cost per customer and payback with churn from it, and rejects plays that lose money.
 5. **What we won't do,** and why.
 
 ## Ambition (a plan, not a validation exercise)
@@ -124,7 +124,7 @@ Before writing any play, decide in this order:
 - The exact hook or offer.
 - The mechanic.
 - The asset only this business has.
-- The forecast funnel (steps with low, likely and high rates, plus source and grade), the P10/P50/P90 outcome in business units, and a confidence level.
+- The forecast funnel (steps with low, likely and high rates, plus source and grade) and a confidence level. ClimbOS computes the P10/P50/P90 outcome.
 - The test: size, budget, duration, leading metric, kill-if and scale-if.
 - The scores.
 - A first action the owner can take today in under 30 minutes.

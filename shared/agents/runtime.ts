@@ -4,7 +4,7 @@ import type { MessageParam, SystemBlock, TurnRequest, TurnResult } from "../ai/t
 import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
-import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CritiqueResult, LintIssue, Rubric } from "./types";
+import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
 
 /**
  * Engine v2 agent loop (Anthropic's evaluator-optimizer pattern, run as a
@@ -147,7 +147,7 @@ function rank(a: Assessment): number {
   return (a.gatesPassed ? 1000 : 0) - a.lint.filter((l) => l.severity === "error").length * 50 + a.average * 10 + a.minimum;
 }
 
-function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {
+export function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {
   const playbooks = spec.skills.map((id) => skillPlaybook(id)).join("\n\n---\n\n");
   return [
     { text: OPERATING_RULES, cache: false },
@@ -326,6 +326,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       firstReview = { c: cB, lint: lintB };
     } else firstReview = { c: cA, lint: lintA };
   }
+  const firstDraft = current;
   let best: { output: T; assessment: Assessment | null; round: number } = { output: current, assessment: null, round: 0 };
   const history: AgentRunResult<T>["history"] = [];
   const reviews = spec.maxRevisions >= 0 ? spec.maxRevisions + 1 : 0;
@@ -344,5 +345,37 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint });
   }
 
-  return { output: best.output, assessment: best.assessment, rounds: history.length, research, history };
+  const finalLint = best.assessment?.lint ?? lintOf(best.output);
+  const kept = numbersIn(best.output);
+  const quality: RunQuality = {
+    contextChars: { brief: input.brief.length, facts: input.facts.join("\n").length, task: input.task.length, research: research?.notes.length ?? 0 },
+    draftLint: errorsByRule(lintOf(firstDraft)),
+    finalLint: errorsByRule(finalLint),
+    numbersDropped: [...numbersIn(firstDraft)].filter((n) => !kept.has(n)).slice(0, 40),
+    finalAverage: best.assessment?.average ?? null,
+    shipped: best.assessment?.ship ?? null,
+    rounds: history.length,
+  };
+  return { output: best.output, assessment: best.assessment, rounds: history.length, research, history, quality };
+}
+
+function errorsByRule(lint: LintIssue[]): Record<string, number> {
+  return lint.filter((l) => l.severity === "error").reduce<Record<string, number>>((a, l) => ((a[l.rule] = (a[l.rule] ?? 0) + 1), a), {});
+}
+
+/** Numbers written in an output's text (with %, $ or k/m), for spotting specifics lost in revision. */
+export function numbersIn(output: unknown): Set<string> {
+  const texts: string[] = [];
+  const walk = (v: unknown) => {
+    if (typeof v === "string") texts.push(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(output);
+  const out = new Set<string>();
+  for (const m of texts.join("\n").matchAll(/[$£€]?\d[\d,.]*\d(?:\s?%|k|m)?|[$£€]?\d(?:\s?%|k|m)?/gi)) {
+    const n = m[0].replace(/[\s,]/g, "");
+    if (/[$£€%km]/i.test(n) || Number(n) > 12) out.add(n);
+  }
+  return out;
 }

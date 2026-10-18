@@ -15,7 +15,7 @@
  * scores. Outputs are saved for human reading.
  *
  *   pnpm bench --cases plausible,fishwife --tasks strategy,linkedin \
- *     --arms v1,v0f,v2s --compare v2s:v1,v2s:v0f --judges opus,sonnet --label run
+ *     --arms basic,expert,single,single-expert --compare basic:single --judges sol --max-usd 20 --blind --label run
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
@@ -25,13 +25,16 @@ import { runtimeModel } from "../shared/ai/models";
 import { draftsFor, routeModels, type AiMode } from "../shared/agents/routes";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
 import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
+import { fitJson } from "../shared/agents/context";
+import { planTask, playsTask } from "../shared/agents/planTasks";
 import { reconcile } from "../shared/agents/consistency";
-import { lockedNumbers } from "../shared/agents/economics";
+import { lockedNumbers, withForecasts } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, type PlaysOutput, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
-import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
+import { skillPlaybook } from "../shared/skills";
+import { draftSystem, OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
@@ -80,7 +83,18 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T, i: number) => Promis
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Model call with retries for transient errors (rate limits, overload, network). */
+/** Hard spend cap for the whole run (--max-usd); no new model call starts once it's reached. */
+const maxMicros = arg("max-usd") ? Math.round(Number(arg("max-usd")) * 1e6) : Infinity;
+let spentMicros = 0;
+
 async function turnWithRetry(input: TurnRequest): Promise<TurnResult> {
+  if (spentMicros >= maxMicros) throw new Error(`Budget cap reached ($${(spentMicros / 1e6).toFixed(2)} of $${(maxMicros / 1e6).toFixed(2)})`);
+  const r = await turnOnce(input);
+  spentMicros += r.costMicros;
+  return r;
+}
+
+async function turnOnce(input: TurnRequest): Promise<TurnResult> {
   // Long Sol/large turns run in background mode, as in production.
   // As in production, a pending background answer is resumed (polled again by its id), never restarted.
   let responseId: string | undefined;
@@ -319,11 +333,8 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
   return r.ok ? { arm: "v0f", ok: true, output: r.output, costMicros: r.costMicros, ms: Date.now() - t0 } : { arm: "v0f", ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
 
-const PLAYS_TASK =
-  "Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today. Be ambitious: together the plays must credibly move the goal within 90 days (a real volume engine with weekly numbers), not just validate assumptions. Keep each play card short and plain. Fill economics (what one customer is worth: facts first, else labelled assumptions) and each play's model; ClimbOS computes customers and cost per customer from them and sends back plays that lose money. " + capsHint(PLAYS_CAPS) + "\n\n" + CLIMBOS_ENGINES;
-const planTask = (plays: unknown) =>
-  `Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}\nWrite for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used. ${capsHint(PLAN_CAPS)}\n\n${CLIMBOS_ENGINES}`;
-
+/** The cached insights, as the plan job gives them (same budget). */
+const insightsOf = (p: Prepared) => fitJson(p.insights, 20_000, "insights").text;
 /** Strategy as in production: channel scoring, then the plays agent, then the plan agent; both arms get the same stages. */
 async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   let cost = 0;
@@ -353,11 +364,14 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
     const scored = scoreChannels(profile, adjustmentsFrom(f));
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
-    const plays = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: PLAYS_TASK + scorecard, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
-    const locked = lockedNumbers(plays.output as PlaysOutput);
-    const planRun = await runAgent(withMode(strategySpec({})), { ...base, task: `${locked}\n\n${planTask(plays.output)}${scorecard}` }, deps);
+    const insights = insightsOf(p);
+    const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const plays = { output: withForecasts(playsRun.output as PlaysOutput) };
+    const locked = lockedNumbers(plays.output);
+    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }) };
+    const planRun = await runAgent(withMode(strategySpec({})), planInput, deps);
     const sspec = strategySpec({});
-    const plan = { output: (await reconcile({ turn: deps.turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, { task: "", brief: "", facts: [] }) ?? [], caps: capsHint(PLAN_CAPS) })).plan };
+    const plan = { output: (await reconcile({ turn: deps.turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, planInput) ?? [], caps: capsHint(PLAN_CAPS) })).plan };
     return {
       arm,
       ok: true,
@@ -370,26 +384,37 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   }
 }
 
-async function runStrategyFrontier(p: Prepared): Promise<ArmResult> {
+/**
+ * Arm C (spec §02): one focused call per mode with the same evidence (brief, insights,
+ * deterministic channel scorecard, web research) and the same calculator; no critic or revision.
+ * "single" = Basic model (Luna), "single-expert" / "v0f" = Expert model (Sol).
+ */
+async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   const t0 = Date.now();
+  const mode: AiMode = arm === "single" ? "basic" : "expert";
   const base = inputFor(p, "strategy");
-  const call = (task: string, schema: z.ZodType, research?: { maxSearches: number; maxFetches?: number }) =>
-    turnWithRetry({
-      modelKey: "gpt-6.1-sol",
-      system: [{ text: OPERATING_RULES }, { text: `${ROLE_CHARTERS.ceo} You are a world-class expert at this work.` }],
-      messages: [{ role: "user", content: `BUSINESS BRIEF:\n${base.brief}\n\nYOUR TASK:\n${task}\n\nRespond only with JSON matching the schema.` }],
-      schema,
-      maxTokens: 32_000,
-      effort: "high",
-      webSearch: research ? { maxUses: research.maxSearches } : undefined,
-      webFetch: research?.maxFetches ? { maxUses: research.maxFetches } : undefined,
-    });
-  const a = await call(PLAYS_TASK, PlaysOutputSchema, researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }));
-  if (!a.ok) return { arm: "v0f", ok: false, error: a.message, costMicros: a.costMicros, ms: Date.now() - t0 };
-  const b = await call(planTask(a.output), strategySpec({}).schema as z.ZodType);
-  if (!b.ok) return { arm: "v0f", ok: false, error: b.message, costMicros: a.costMicros + b.costMicros, ms: Date.now() - t0 };
-  const plays = a.output as { plays: unknown; portfolioNote: string };
-  return { arm: "v0f", ok: true, output: { ...(b.output as object), plays: plays.plays, portfolioNote: plays.portfolioNote }, costMicros: a.costMicros + b.costMicros, ms: Date.now() - t0 };
+  const profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []) });
+  const scored = scoreChannels(profile, adjustmentsFrom({ channels: [] }));
+  const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
+  const insights = insightsOf(p);
+  const pspec = growthPlaysSpec({}, playCatalogsFor(p.c.type));
+  const sspec = strategySpec({});
+  const schema = z.object({ portfolio: PlaysOutputSchema, plan: sspec.schema as z.ZodType });
+  const research = researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name });
+  const task = `${playsTask({ scorecard, insights: "(below)" })}\n\nTHEN, in the same answer: ${planTask({ locked: "", plays: null, scorecard: "", insights })}\n\nReturn the portfolio and the plan built around it.`;
+  const r = await turnWithRetry({
+    modelKey: routeModels("growth_strategy", mode).draft,
+    system: [...draftSystem(pspec), { text: `Plan playbook:\n\n${sspec.skills.map((id) => skillPlaybook(id)).join("\n\n---\n\n")}`, cache: true }],
+    messages: [{ role: "user", content: `BUSINESS BRIEF (trusted):\n${base.brief}\n\nYOUR TASK:\n${task}\n\nBefore answering, check your work against the playbooks' checklists. Respond only with JSON matching the schema.` }],
+    schema,
+    maxTokens: 48_000,
+    effort: "high",
+    webSearch: { maxUses: research?.maxSearches ?? 8 },
+  });
+  if (!r.ok) return { arm, ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
+  const out = r.output as { portfolio: PlaysOutput; plan: object };
+  const plays = withForecasts(out.portfolio);
+  return { arm, ok: true, output: { ...out.plan, plays: plays.plays, portfolioNote: plays.portfolioNote, economics: plays.economics }, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
 
 const OUTBOUND_TASK =
@@ -453,7 +478,8 @@ async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult>
 
 function runArm(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   if (arm === "v1") return runV1(p, t);
-  if (arm === "v0f") return t === "strategy" ? runStrategyFrontier(p) : runFrontier(p, t);
+  if (arm === "v0f") return t === "strategy" ? runStrategySingle(p, arm) : runFrontier(p, t);
+  if (arm === "single" || arm === "single-expert") return runStrategySingle(p, arm);
   return runV2(p, t, arm);
 }
 
@@ -578,8 +604,37 @@ async function main() {
 
   writeFileSync(`${base}.json`, JSON.stringify(results, null, 1));
   writeFileSync(`${base}.md`, summarize(results));
+  if (process.argv.includes("--blind")) {
+    const { packet, key } = blindPacket(results as { case: string; task: string; outs: Record<string, ArmResult> }[]);
+    writeFileSync(`${base}-blind.md`, packet);
+    writeFileSync(`${base}-blind-key.json`, JSON.stringify(key, null, 1));
+    console.log(`Blind review packet: ${base}-blind.md (key kept separately)`);
+  }
+  console.log(`Spent $${(spentMicros / 1e6).toFixed(2)}${Number.isFinite(maxMicros) ? ` of $${(maxMicros / 1e6).toFixed(2)} cap` : ""}`);
   console.log(`\nWrote ${base}.md and .json`);
   console.log(summarize(results).split("\n").slice(0, 40).join("\n"));
+}
+
+/** Owner review (spec §26): plans shuffled per case, arm names hidden, rubric to fill in. */
+function blindPacket(rows: { case: string; task: string; outs: Record<string, ArmResult> }[]): { packet: string; key: Record<string, string> } {
+  const key: Record<string, string> = {};
+  const lines = ["# Blind plan review", "", "Score each plan 1–5 per row. Don't guess which engine made it.", "", "| Criterion | Weight |", "|---|---|", "| Decision usefulness | 25 |", "| Evidence and honesty | 20 |", "| Economics correct | 20 |", "| Feasible for this owner | 15 |", "| Focus | 10 |", "| Clarity | 10 |", ""];
+  let seed = 7;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  for (const r of rows.filter((x) => x.task === "strategy")) {
+    const ok = Object.entries(r.outs).filter(([, o]) => o?.ok);
+    const order = ok.map((x) => ({ x, k: rand() })).sort((a, b) => a.k - b.k).map((o) => o.x);
+    lines.push(`## Case: ${r.case}`, "");
+    order.forEach(([arm, o], i) => {
+      const id = `${r.case}-${String.fromCharCode(65 + i)}`;
+      key[id] = arm;
+      const plan = o.output as Record<string, unknown> & { plays?: { name: string; kind: string; oneLiner: string; p10?: number; p50?: number; p90?: number; unit: string; firstActionToday: string }[]; northStar?: { metric: string; target: string }; weekOneChecklist?: string[]; risks?: { risk: string }[] };
+      lines.push(`### Plan ${id}`, "", `**Diagnosis:** ${String(plan.diagnosis ?? plan.summary ?? "")}`, "", `**North Star:** ${plan.northStar ? `${plan.northStar.metric}: ${plan.northStar.target}` : "—"}`, "", `**Affordable CAC:** ${String(plan.affordableCac ?? "—")}`, "", "**Plays:**", "");
+      for (const pl of plan.plays ?? []) lines.push(`- **${pl.name}** (${pl.kind}): ${pl.oneLiner} · ${pl.p50 ?? "?"} ${pl.unit} (${pl.p10 ?? "?"}–${pl.p90 ?? "?"}) · first: ${pl.firstActionToday}`);
+      lines.push("", `**Week one:** ${(plan.weekOneChecklist ?? []).join(" · ")}`, "", `**Risks:** ${(plan.risks ?? []).map((x) => x.risk).join(" · ")}`, "", "| Usefulness | Evidence | Economics | Feasible | Focus | Clarity | Notes |", "|---|---|---|---|---|---|---|", "| | | | | | | |", "");
+    });
+  }
+  return { packet: lines.join("\n"), key };
 }
 
 function mean(xs: number[]): number {
