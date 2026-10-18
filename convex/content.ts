@@ -13,12 +13,20 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
-import { DIRECT_PUBLISH, invalidateApprovals, recordArtifactDecision } from "./lib/approvals";
-import { onOwnerDecision } from "./lib/autopilot";
+import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, SCHEDULE_GRACE_MS } from "./lib/approvals";
+import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
+/** The honest label shown with a library image on a post. */
+function assetPostLabel(a: Doc<"assets">): string {
+  if (a.kind === "ai_image") return "AI-generated illustration";
+  if (a.illustrative) return "Your product with sample data";
+  if (a.kind === "screenshot") return "Screenshot of your website";
+  if (a.kind === "product_photo") return "Your product photo";
+  return "Your image";
+}
 
 async function versionView(
   ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> }; db: { get: (id: Id<"users">) => Promise<Doc<"users"> | null> } },
@@ -64,6 +72,8 @@ export const list = query({
           .query("artifacts")
           .withIndex("by_org_updated", (q) => q.eq("orgId", org._id))
           .order("desc")
+          // "All" means active work: archived items have their own filter.
+          .filter((q) => q.neq(q.field("status"), "archived"))
           .paginate(paginationOpts);
     const items = await Promise.all(
       page.page.map(async (a) => {
@@ -115,13 +125,11 @@ export const get = query({
       .withIndex("by_subject", (q) => q.eq("subjectType", "artifact").eq("subjectId", a._id))
       .order("desc")
       .take(10);
-    const receipts = (
-      await ctx.db
-        .query("actionReceipts")
-        .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
-        .order("desc")
-        .take(200)
-    ).filter((r) => r.artifactId === a._id);
+    const receipts = await ctx.db
+      .query("actionReceipts")
+      .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
+      .order("desc")
+      .take(50);
     const factIds = versions[0]?.claimFactIds ?? [];
     const facts = [];
     for (const id of factIds.slice(0, 20)) {
@@ -135,6 +143,13 @@ export const get = query({
           .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", target))
           .first()
       : null;
+    const currentApproval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+    const curVer = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
+    const slot = await ctx.db
+      .query("calendarSlots")
+      .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
+      .first();
+    const reel = a.reelId ? await ctx.db.get(a.reelId) : null;
     return {
       id: a._id,
       kind: a.kind,
@@ -142,6 +157,11 @@ export const get = query({
       title: a.title,
       status: a.status,
       scheduledFor: a.scheduledFor ?? null,
+      lastPublishError: a.lastPublishError ?? null,
+      /** Why the current approval can't be used to publish (null when it can). */
+      approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null) : null,
+      autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
+      reel: reel ? { id: reel._id, status: reel.status, videoUrl: reel.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null, seconds: reel.seconds ?? null } : null,
       createdByRole: a.createdByRole ?? null,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
@@ -162,6 +182,8 @@ export const get = query({
         decidedAt: ap.decidedAt ?? null,
         invalidatedReason: ap.invalidatedReason ?? null,
         contentHash: ap.contentHash,
+        actionKind: ap.actionKind,
+        destination: ap.scope.destination ?? null,
         isCurrent: ap.contentHash === versions[0]?.contentHash,
       })),
       receipts: receipts.map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt })),
@@ -194,19 +216,25 @@ export const edit = mutation({
     hashtags: v.array(v.string()),
     altText: v.optional(v.string()),
     removeImage: v.optional(v.boolean()),
+    /** Use this image from the asset library (replaces any current image). */
+    imageAssetId: v.optional(v.id("assets")),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "draft");
     if (["publishing", "published"].includes(a.status)) throw appError("INVALID", "Published content can't be edited. Duplicate it instead.");
+    if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first, then edit it.");
     const prev = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     const body = args.body.trim().slice(0, 20_000);
     if (!body) throw appError("INVALID", "The text can't be empty.");
     if (args.destinationUrl && !/^https:\/\//i.test(args.destinationUrl.trim())) {
       throw appError("INVALID", "Links must start with https://");
     }
-    const imageStorageId = args.removeImage ? undefined : prev?.imageStorageId;
-    const imageR2Key = args.removeImage ? undefined : prev?.imageR2Key;
+    const asset = args.imageAssetId ? assertSameOrg(await ctx.db.get(args.imageAssetId), org._id, "image") : null;
+    if (asset && (asset.archived || (!asset.storageId && !asset.r2Key))) throw appError("INVALID", "That image isn't available any more. Pick another.");
+    const imageStorageId = asset ? asset.storageId : args.removeImage ? undefined : prev?.imageStorageId;
+    const imageR2Key = asset ? asset.r2Key : args.removeImage ? undefined : prev?.imageR2Key;
+    const imageLabel = asset ? assetPostLabel(asset) : imageStorageId || imageR2Key ? prev?.imageLabel : undefined;
     const ch = await contentHash({
       headline: args.headline,
       body,
@@ -232,8 +260,8 @@ export const edit = mutation({
       altText: args.altText?.slice(0, 1000),
       imageStorageId,
       imageR2Key,
-      imagePrompt: prev?.imagePrompt,
-      imageLabel: imageStorageId || imageR2Key ? prev?.imageLabel : undefined,
+      imagePrompt: asset ? undefined : prev?.imagePrompt,
+      imageLabel,
       claimFactIds: prev?.claimFactIds ?? [],
       unsupportedClaims: [],
       contentHash: ch,
@@ -250,6 +278,12 @@ export const edit = mutation({
       status: a.status === "archived" ? "archived" : "in_review",
       updatedAt: now,
     });
+    // An edited autopilot post no longer goes out at its slot until it's approved again.
+    const slot = await ctx.db
+      .query("calendarSlots")
+      .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
+      .first();
+    if (slot && slot.status === "scheduled") await ctx.db.patch(slot._id, { status: "needs_approval", updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.edited", subjectType: "artifact", subjectId: a._id, summary: `Edited "${a.title}" (v${version}). Any earlier approval no longer applies.` });
     return { changed: true, version };
   },
@@ -268,13 +302,31 @@ export const decide = mutation({
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "draft");
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     if (!ver) throw appError("INVALID", "Nothing to approve yet.");
+    if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first.");
+    if (!["draft", "in_review", "failed", "approved"].includes(a.status)) throw appError("INVALID", "This can't be approved or sent back in its current state.");
+    const { connection } = await publishTarget(ctx, org._id, a.channel);
+    if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection)) {
+      throw appError("INVALID", "This version is already approved.");
+    }
+    // Instagram can't take a text-only post (demo publishing is simulated, so it's exempt).
+    if (args.decision === "approve" && a.channel === "instagram" && org.kind !== "demo" && !ver.imageStorageId && !ver.imageR2Key && !a.reelId) {
+      throw appError("INVALID", "Instagram posts need an image. Add one in the editor first.");
+    }
     const approvalId = await recordArtifactDecision(ctx, { org, artifact: a, version: ver, decision: args.decision, decidedBy: user._id, note: args.note });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `content.${args.decision}d`, subjectType: "artifact", subjectId: a._id, summary: `${args.decision === "approve" ? "Approved" : "Sent back"} "${a.title}" (v${ver.version}).` });
     // Autopilot slots: approving schedules the post for its planned time; decisions feed the trust ladder.
-    await onOwnerDecision(ctx, { org, artifactId: a._id, decision: args.decision, edited: ver.version > 1 && Boolean(ver.editedByUser), userId: user._id });
-    return approvalId;
+    const slot = await onOwnerDecision(ctx, { org, artifactId: a._id, decision: args.decision, edited: ver.version > 1 && Boolean(ver.editedByUser), userId: user._id });
+    return { approvalId, slot };
   },
 });
+
+/** Refuse to schedule or publish on an approval the executor would reject (expired, edited, or made before connecting). */
+async function requireUsableApproval(ctx: MutationCtx, org: Doc<"organizations">, a: Doc<"artifacts">) {
+  const { connection } = await publishTarget(ctx, org._id, a.channel);
+  if (!connection) throw appError("INVALID", "Connect the account first, or use the export pack.");
+  const problem = approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null, connection);
+  if (problem) throw appError("INVALID", problem);
+}
 
 /**
  * Schedule an approved item. "Scheduled in ClimbOS" is distinct from
@@ -289,7 +341,10 @@ export const schedule = mutation({
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this before scheduling it.");
     if (when < Date.now() + 60_000) throw appError("INVALID", "Pick a time at least a minute from now.");
     if (when > Date.now() + 90 * 86_400_000) throw appError("INVALID", "Schedule within the next 90 days.");
-    await ctx.db.patch(a._id, { status: "scheduled", scheduledFor: when, updatedAt: Date.now() });
+    await requireUsableApproval(ctx, org, a);
+    // Approvals expire after a few days: a post scheduled further out keeps its approval until it goes.
+    if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS))) throw appError("INVALID", "The approval expired. Approve it again first.");
+    await ctx.db.patch(a._id, { status: "scheduled", scheduledFor: when, lastPublishError: undefined, updatedAt: Date.now() });
     await ctx.scheduler.runAt(when, internal.publish.scheduledPublish, { artifactId, expectedScheduledFor: when });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.scheduled", subjectType: "artifact", subjectId: a._id, summary: `Scheduled "${a.title}" in ClimbOS for ${new Date(when).toISOString()}.` });
   },
@@ -313,7 +368,8 @@ export const publishNow = mutation({
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this first.");
     if (org.emergencyStop?.active) throw appError("PAUSED", "All activity is paused. Resume activity first.");
-    await ctx.db.patch(a._id, { status: "publishing", updatedAt: Date.now() });
+    await requireUsableApproval(ctx, org, a);
+    await ctx.db.patch(a._id, { status: "publishing", lastPublishError: undefined, updatedAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.publish.publishArtifact, { artifactId, requestedBy: user._id });
   },
 });
@@ -323,8 +379,16 @@ export const archive = mutation({
   handler: async (ctx, { slug, artifactId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
+    if (a.status === "publishing") throw appError("INVALID", "It's being sent right now. Wait for the result, then archive it.");
+    if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first, then archive it.");
     await invalidateApprovals(ctx, a._id, "Archived");
-    await ctx.db.patch(a._id, { status: "archived", updatedAt: Date.now() });
+    await ctx.db.patch(a._id, { status: "archived", scheduledFor: undefined, updatedAt: Date.now() });
+    // Its autopilot slot won't post either.
+    const slot = await ctx.db
+      .query("calendarSlots")
+      .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
+      .first();
+    if (slot && slot.status !== "published") await ctx.db.patch(slot._id, { status: "skipped", updatedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.archived", subjectType: "artifact", subjectId: a._id, summary: `Archived "${a.title}".` });
   },
 });
@@ -338,10 +402,14 @@ export const exportPack = query({
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     if (!ver) return null;
     const imageUrl = await imageUrlFor(ctx, ver);
+    const reel = a.reelId ? await ctx.db.get(a.reelId) : null;
+    const videoUrl = reel?.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null;
     const social: DraftPlatform[] = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest", "youtube"];
-    const platforms = (social as string[]).includes(a.channel) ? [a.channel as DraftPlatform] : (["linkedin", "x", "facebook"] as DraftPlatform[]);
+    // A reel goes to every short-video platform from one export.
+    const platforms = reel ? (["instagram", "tiktok", "youtube"] as DraftPlatform[]) : (social as string[]).includes(a.channel) ? [a.channel as DraftPlatform] : (["linkedin", "x", "facebook"] as DraftPlatform[]);
+    const media = [videoUrl, imageUrl].filter((u): u is string => Boolean(u));
     const pack = buildManualExportPack(
-      { title: a.title, text: [ver.headline, ver.body].filter(Boolean).join("\n\n"), hashtags: ver.hashtags, altText: ver.altText, link: ver.destinationUrl, mediaUrls: imageUrl ? [imageUrl] : [] },
+      { title: a.title, text: [ver.headline, ver.body].filter(Boolean).join("\n\n"), hashtags: ver.hashtags, altText: ver.altText, link: ver.destinationUrl, mediaUrls: media },
       platforms,
     );
     // Free accounts: exports carry a small "Made with ClimbOS" line (removed on packages).
@@ -511,10 +579,10 @@ export const resolveUncertain = mutation({
     const receipts = (
       await ctx.db
         .query("actionReceipts")
-        .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+        .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
         .order("desc")
-        .take(200)
-    ).filter((r) => r.artifactId === a._id && r.status === "uncertain");
+        .take(50)
+    ).filter((r) => r.status === "uncertain");
     for (const r of receipts) {
       await ctx.db.patch(r._id, {
         status: outcome === "posted" ? "verified" : "failed",
@@ -522,8 +590,10 @@ export const resolveUncertain = mutation({
         verifiedAt: outcome === "posted" ? now : undefined,
       });
     }
-    // "Not posted" returns it to approved so it can be published again deliberately (new attempt, new receipt key only after an edit).
+    // "Not posted" marks it failed: approving it again is a deliberate new attempt (a new approval means a new receipt key).
     await ctx.db.patch(a._id, { status: outcome === "posted" ? "published" : "failed", updatedAt: now });
+    if (outcome === "posted" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
+    await onPublishOutcome(ctx, a._id, outcome === "posted" ? "published" : "failed");
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.uncertain_resolved", subjectType: "artifact", subjectId: a._id, summary: `Owner marked "${a.title}" as ${outcome === "posted" ? "posted" : "not posted"}.` });
   },
 });
@@ -553,9 +623,11 @@ export const startFirstWin = internalMutation({
     ];
     for (const j of jobs) {
       try {
-        const plan = planJob(j.job, { quantity: j.quantity, images: 0, channel: j.channel });
+        // Instagram can't post without an image, so its first posts come with one.
+        const images = j.channel === "instagram" ? 1 : 0;
+        const plan = planJob(j.job, { quantity: j.quantity, images, channel: j.channel });
         const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? "Your first 3 posts" : "Your welcome email", roles: plan.roles, input: { firstWin: true, channel: j.channel }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
-        await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images: 0, brief: j.brief });
+        await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images, brief: j.brief });
         runIds.push(runId);
       } catch {
         // Not enough credits or too many jobs at once: skip quietly; the owner can draft from Content.

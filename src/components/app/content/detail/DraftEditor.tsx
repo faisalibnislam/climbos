@@ -2,9 +2,11 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { CircleAlert } from "lucide-react";
+import type { Id } from "@convex/_generated/dataModel";
+import { CircleAlert, ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { Button, Callout, Checkbox, Field, Input, Textarea, toast } from "@/components/ui";
+import { AssetPicker } from "@/components/app/AssetPicker";
 import { cn } from "@/lib/utils";
 import { ErrorCallout } from "../shared";
 import { bodyLimit, composeSocial, fieldLabels, headlineLimit, isSocial, parseHashtags, type ArtifactView, type TextLimit } from "./model";
@@ -41,6 +43,10 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
   const [tags, setTags] = useState((cur?.hashtags ?? []).join(", "));
   const [alt, setAlt] = useState(cur?.altText ?? "");
   const [removeImage, setRemoveImage] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [choosing, setChoosing] = useState(false);
+  const imageAssetId = picked[0] as Id<"assets"> | undefined;
+  const canHaveImage = isSocial(artifact.channel) || ["meta_ad", "linkedin_ad", "blog", "website"].includes(artifact.channel);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,7 +58,7 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
   const hashtagList = parseHashtags(tags);
   const countedBody = isSocial(artifact.channel) ? composeSocial(body, hashtagList) : body;
   const approvedish = ["approved", "scheduled"].includes(artifact.status);
-  const imageKept = hasImage && !removeImage;
+  const imageKept = Boolean(imageAssetId) || (hasImage && !removeImage);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -78,7 +84,8 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
         destinationUrl: url.trim() || undefined,
         hashtags: hashtagList,
         altText: alt.trim() || undefined,
-        removeImage: removeImage || undefined,
+        removeImage: (removeImage && !imageAssetId) || undefined,
+        imageAssetId,
       });
       if (res.changed) {
         toast({ tone: "success", title: `Saved as version ${res.version}.`, description: "It now needs approval before it can go out." });
@@ -142,23 +149,30 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
         <Input type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
       </Field>
 
-      {hasImage ? (
-        <>
-          <Field
-            label="Image description (alt text)"
-            required={imageKept}
-            hint="Required with an image: describe what's in it for people who use screen readers."
-            error={errors.alt}
-          >
-            <Textarea value={alt} onChange={(e) => setAlt(e.target.value)} rows={2} autosize maxLength={1000} />
-          </Field>
-          <Checkbox
-            checked={removeImage}
-            onCheckedChange={(v) => setRemoveImage(v === true)}
-            label="Remove the image"
-            description="The post goes out as text only."
-          />
-        </>
+      {canHaveImage ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-ui font-medium text-ink">
+              Image{" "}
+              <span className="font-normal text-ink-3">
+                {imageAssetId ? "· new image picked" : hasImage && !removeImage ? "· current image kept" : artifact.channel === "instagram" ? "· required on Instagram" : "· optional"}
+              </span>
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => setChoosing((c) => !c)} aria-expanded={choosing}>
+              <ImagePlus aria-hidden /> {choosing ? "Done" : hasImage || imageAssetId ? "Change image" : "Add an image"}
+            </Button>
+          </div>
+          {choosing ? <AssetPicker slug={slug} selected={picked} onChange={setPicked} label="Pick from your images" /> : null}
+        </div>
+      ) : null}
+
+      {imageKept ? (
+        <Field label="Image description (alt text)" required hint="Required with an image: describe what's in it for people who use screen readers." error={errors.alt}>
+          <Textarea value={alt} onChange={(e) => setAlt(e.target.value)} rows={2} autosize maxLength={1000} />
+        </Field>
+      ) : null}
+      {hasImage && !imageAssetId ? (
+        <Checkbox checked={removeImage} onCheckedChange={(v) => setRemoveImage(v === true)} label="Remove the image" description="The post goes out as text only." />
       ) : null}
 
       {error ? <ErrorCallout error={error} /> : null}

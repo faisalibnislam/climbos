@@ -154,7 +154,7 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
 
   let statusLine: ReactNode;
   if (s === "draft" || s === "in_review") statusLine = "Approve this first. Nothing can be scheduled, published or exported before that.";
-  else if (s === "approved") statusLine = valid ? (direct ? `Approved and ready. Schedule it or publish it now.` : "Approved and ready to post yourself.") : "The approval expired. Approve it again first.";
+  else if (s === "approved") statusLine = valid ? (direct ? `Approved and ready. Schedule it or publish it now.` : "Approved and ready to post yourself.") : (artifact.approvalProblem ?? "The approval expired. Approve it again first.");
   else if (s === "scheduled") statusLine = `Scheduled in ClimbOS for ${artifact.scheduledFor && now ? formatDateTime(artifact.scheduledFor) : "…"}. It isn't on ${ch} yet — it shows “Accepted by platform” once ${ch} confirms.`;
   else if (s === "publishing")
     statusLine = (
@@ -176,6 +176,12 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
       <p role="status" aria-live="polite" className="text-sm text-ink-2">
         {statusLine}
       </p>
+
+      {artifact.lastPublishError && ["approved", "in_review", "draft", "failed"].includes(s) ? (
+        <Callout tone="warning" title="Last attempt wasn't posted">
+          {artifact.lastPublishError.message}
+        </Callout>
+      ) : null}
 
       {artifact.isDemo && direct ? (
         <p className="text-sm text-violet-800">Demo workspace: publishing is simulated. Receipts say “Demo: simulated acceptance”.</p>

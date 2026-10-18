@@ -92,7 +92,8 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
   }
 
   const cur = artifact.current;
-  const locked = ["publishing", "published"].includes(artifact.status);
+  // Uncertain posts are settled first (It was posted / It wasn't posted), then edited.
+  const locked = ["publishing", "published", "uncertain"].includes(artifact.status);
   const canEditNow = artifact.canEdit && !locked && Boolean(cur);
   const isAd = isCampaignAd(artifact.channel);
 
@@ -110,7 +111,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {artifact.canEdit && !editing ? <RepurposeDialog slug={slug} artifactId={artifact.id} /> : null}
             {artifact.canEdit && !editing ? <TranslateDialog slug={slug} artifactId={artifact.id} /> : null}
             {artifact.canEdit && artifact.status === "archived" ? <RestoreButton slug={slug} artifact={artifact} /> : null}
-            {artifact.canEdit && artifact.status !== "archived" ? <MoreMenu slug={slug} artifact={artifact} /> : null}
+            {artifact.canEdit && !["archived", "publishing", "uncertain"].includes(artifact.status) ? <MoreMenu slug={slug} artifact={artifact} /> : null}
           </div>
         </div>
         <h1 className="heading-page break-words">{artifact.title}</h1>
@@ -146,7 +147,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
           <Section id="preview-heading" title="Preview">
             <p className="-mt-2 text-ui text-ink-3">An approximation of how it will look. Each platform displays text slightly differently.</p>
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
-            {locked ? <p className="text-sm text-ink-3">Published content can&apos;t be edited.</p> : null}
+            {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check whether it was posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>
 
           <Section id="versions-heading" title="Version history">

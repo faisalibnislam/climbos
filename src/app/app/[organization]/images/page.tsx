@@ -35,6 +35,7 @@ import { useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
 import { StagedProgress } from "@/components/app/StagedProgress";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
+import { uploadToLibrary } from "@/components/app/AssetPicker";
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.assets.list>>>;
 type Asset = Data["assets"][number];
@@ -48,7 +49,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "ai_image", label: "AI images" },
 ];
 
-const CHANNELS = ["instagram", "facebook", "linkedin", "x", "pinterest"];
+const CHANNELS = ["instagram", "facebook", "linkedin", "x", "pinterest"] as const;
 
 /**
  * Real visuals first: your site's screenshots, your product photos and your
@@ -92,6 +93,13 @@ export default function ImagesPage() {
         </section>
       ))}
       {lastFailed && !running.length ? <Callout tone="warning" title="That didn't work this time">{lastFailed.message ?? "Try again in a moment."}</Callout> : null}
+      {data.failedEdits
+        .filter((r) => now !== null && now - r.createdAt < 86_400_000)
+        .map((r) => (
+          <Callout key={r.id} tone="warning" title={`${r.title} didn't finish`}>
+            {r.message ?? "Nothing was added. Try again."}
+          </Callout>
+        ))}
 
       <section aria-labelledby="library-heading" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -153,15 +161,11 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
   const upload = async (files: FileList | null) => {
     if (!files?.length) return;
     await run("upload", async () => {
-      for (const file of Array.from(files).slice(0, 12)) {
-        const url = await genUrl({ slug });
-        const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-        const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-        const dims = await imageSize(file);
-        await saveUpload({ slug, storageId, label: file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " "), kind: "upload", ...dims });
-      }
-      toast({ tone: "success", title: `Added ${files.length} image${files.length === 1 ? "" : "s"}` });
+      const { saved, failed } = await uploadToLibrary(slug, Array.from(files), genUrl, saveUpload);
+      if (saved.length) toast({ tone: "success", title: `Added ${saved.length} image${saved.length === 1 ? "" : "s"}` });
+      if (failed) toast({ tone: "danger", title: `${failed} image${failed === 1 ? "" : "s"} didn't upload. Try again.` });
     });
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const onTile = (key: string) => {
@@ -225,18 +229,6 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple className="sr-only" aria-label="Upload images" onChange={(e) => void upload(e.target.files)} />
     </section>
   );
-}
-
-function imageSize(file: File): Promise<{ width?: number; height?: number }> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      URL.revokeObjectURL(img.src);
-    };
-    img.onerror = () => resolve({});
-    img.src = URL.createObjectURL(file);
-  });
 }
 
 const VIEW_LABEL: Record<string, string> = { desktop: "Desktop", mobile: "Mobile", section: "Feature", product: "Product", other: "Upload" };
@@ -357,7 +349,7 @@ function ImproveDialog({ slug, asset, onClose }: { slug: string; asset: Asset; o
 function PickedBar({ slug, picked, onClear }: { slug: string; picked: string[]; onClear: () => void }) {
   const make = useMutation(api.assets.makePosts);
   const router = useRouter();
-  const [channel, setChannel] = useState("instagram");
+  const [channel, setChannel] = useState<(typeof CHANNELS)[number]>("instagram");
   const [busy, setBusy] = useState(false);
   return (
     <div className="fixed inset-x-0 bottom-16 z-30 px-4 lg:bottom-6 lg:left-60">

@@ -4,20 +4,36 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { Button, Callout, ConfirmDialog, Field, Textarea, toast } from "@/components/ui";
+import { formatDateTime } from "../../money";
 import { ErrorCallout, PERMISSION_WHO, channelLabel } from "../shared";
 import { ApprovalsList } from "./HistoryPanels";
 import { isCampaignAd, type ArtifactView } from "./model";
 
+const SLOT_TOAST: Record<string, string> = {
+  scheduled: "Approved. Autopilot posts it at its planned time.",
+  needs_time: "Approved. Its planned time has passed: pick a new time below.",
+  ready_to_post: "Approved. It's ready for you to post or schedule.",
+};
+
 export function hasValidApproval(artifact: ArtifactView, now: number | null): boolean {
+  // Approved for export before the account was connected, or similar: needs a fresh approval.
+  if (artifact.approvalProblem && artifact.publishTarget?.connected) return false;
   // No decision records (e.g. seeded demo data): trust the status; the backend re-checks before sending.
   if (artifact.approvals.length === 0) return artifact.status === "approved" || artifact.status === "scheduled";
   return artifact.approvals.some((a) => a.status === "approved" && a.isCurrent && (now === null || a.expiresAt > now));
 }
 
-export function approveConsequence(artifact: ArtifactView): string {
+export function approveConsequence(artifact: ArtifactView, now: number | null): string {
   const ch = channelLabel(artifact.channel);
   const v = artifact.current?.version ?? 1;
   const demo = artifact.isDemo ? " This is a demo workspace, so publishing is simulated — nothing is really posted." : "";
+  const slot = artifact.autopilotSlot;
+  if (slot && artifact.publishTarget?.connected) {
+    const when = formatDateTime(slot.slotAt);
+    return now === null || slot.slotAt > now + 120_000
+      ? `Autopilot posts this exact version (version ${v}) to ${ch} at its planned time, ${when}. Any edit cancels this approval.${demo}`
+      : `Its planned time (${when}) has passed, so nothing goes out on its own. After approving, pick a new time or publish it now.${demo}`;
+  }
   if (isCampaignAd(artifact.channel)) {
     const platform = artifact.channel === "google_search_ad" ? "Google Ads" : "Meta";
     return `Approving the ad text (version ${v}) lets you prepare a campaign. Nothing is created in ${platform} and no money is spent until you separately approve creating and starting a campaign. Any edit cancels this approval.${demo}`;
@@ -37,15 +53,17 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
   const [error, setError] = useState<unknown>(null);
   const valid = hasValidApproval(artifact, now);
   const claims = artifact.current?.unsupportedClaims ?? [];
+  // Uncertain posts are settled first ("It was posted" / "It wasn't posted"); then they can be approved again.
   const decidable =
     Boolean(artifact.current) &&
     (["draft", "in_review", "failed"].includes(artifact.status) || (artifact.status === "approved" && !valid));
+  const needsImage = artifact.channel === "instagram" && !artifact.isDemo && !artifact.current?.imageUrl && !artifact.reel;
 
   const run = async (decision: "approve" | "reject") => {
     setError(null);
     try {
-      await decide({ slug, artifactId: artifact.id, decision, note: decision === "reject" && note.trim() ? note.trim() : undefined });
-      toast({ tone: "success", title: decision === "approve" ? "Approved." : "Sent back to draft." });
+      const res = await decide({ slug, artifactId: artifact.id, decision, note: decision === "reject" && note.trim() ? note.trim() : undefined });
+      toast({ tone: "success", title: decision === "approve" ? (SLOT_TOAST[res.slot] ?? "Approved.") : "Sent back to draft." });
       setNote("");
     } catch (e) {
       setError(e);
@@ -54,18 +72,27 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
 
   return (
     <div className="flex flex-col gap-4">
-      {artifact.status === "approved" && !valid && artifact.approvals.length > 0 ? (
-        <Callout tone="warning" title="The approval has expired">
-          Approve it again before scheduling or publishing.
+      {artifact.status === "approved" && !valid && (artifact.approvals.length > 0 || artifact.approvalProblem) ? (
+        <Callout tone="warning" title={artifact.approvalProblem && artifact.publishTarget?.connected ? "Approve it again" : "The approval has expired"}>
+          {artifact.approvalProblem && artifact.publishTarget?.connected ? artifact.approvalProblem : "Approve it again before scheduling or publishing."}
+        </Callout>
+      ) : null}
+      {decidable && needsImage ? (
+        <Callout tone="info" title="Add an image first">
+          Instagram posts need an image. Edit the post and pick one from your images.
         </Callout>
       ) : null}
       {decidable ? (
         artifact.canApprove ? (
           <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
             <ConfirmDialog
-              trigger={<Button className="sm:flex-1">Approve</Button>}
+              trigger={
+                <Button className="sm:flex-1" disabled={needsImage}>
+                  Approve
+                </Button>
+              }
               title={`Approve version ${artifact.current?.version ?? 1}?`}
-              description={approveConsequence(artifact)}
+              description={approveConsequence(artifact, now)}
               confirmLabel={claims.length ? "Approve anyway" : "Approve this version"}
               onConfirm={() => run("approve")}
             >

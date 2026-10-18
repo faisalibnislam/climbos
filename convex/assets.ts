@@ -8,6 +8,7 @@ import { planJob } from "./lib/jobPlans";
 import { audit } from "./lib/audit";
 import { r2Configured, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { channelValidator } from "./schema";
 
 /**
  * Real visuals: the asset library posts and designs draw from. Real website
@@ -70,6 +71,13 @@ export const list = query({
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
+    const recentRuns = (
+      await ctx.db
+        .query("workflowRuns")
+        .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+        .order("desc")
+        .take(15)
+    ).filter((r) => r.kind === "image_edit");
     return {
       canEdit: ["owner", "admin", "editor"].includes(role),
       website: business?.website ?? null,
@@ -77,15 +85,12 @@ export const list = query({
       assets: await Promise.all(live.map(async (a) => assetView(a, await urlOf(ctx, a)))),
       jobs: jobs.map((j) => ({ id: j._id, kind: j.kind, status: j.status, count: j.count, message: j.message ?? null, target: j.target ?? null, createdAt: j.createdAt, stages: j.stages ?? [] })),
       // AI image edits run as engine jobs; the page shows their live progress too.
-      activeEdits: (
-        await ctx.db
-          .query("workflowRuns")
-          .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
-          .order("desc")
-          .take(15)
-      )
-        .filter((r) => r.kind === "image_edit" && ["cost_reserved", "preparing", "executing"].includes(r.status))
-        .map((r) => ({ id: r._id, title: r.title })),
+      activeEdits: recentRuns.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).map((r) => ({ id: r._id, title: r.title })),
+      // ...and the ones that didn't finish, so a failed edit never just disappears.
+      failedEdits: recentRuns
+        .filter((r) => r.status === "failed")
+        .slice(0, 3)
+        .map((r) => ({ id: r._id, title: r.title, message: r.userMessage ?? null, createdAt: r.createdAt })),
     };
   },
 });
@@ -401,7 +406,7 @@ export const forJob = internalQuery({
 
 /** Start posts built around chosen real images (checkbox selection in the image library). */
 export const makePosts = mutation({
-  args: { slug: v.string(), assetIds: v.array(v.id("assets")), channel: v.string(), brief: v.optional(v.string()) },
+  args: { slug: v.string(), assetIds: v.array(v.id("assets")), channel: channelValidator, brief: v.optional(v.string()) },
   handler: async (ctx, { slug, assetIds, channel, brief }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     if (!assetIds.length) throw appError("INVALID", "Pick at least one image.");
