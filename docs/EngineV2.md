@@ -229,6 +229,9 @@ Pairwise, v2.x engine vs Opus one-shot (`v0f`); a win needs both orders to agree
 | B | v2.2 | 11* | 6W 5T 0L | 9W 1T 1L | 4W 3T 3L | Absolute 7.20 vs 6.75; weakest: Instagram, ads |
 | C1 | v2.3 | 3* | 2W 0T 1L | 1W 2T 0L | 2W 0T 0L | Social only |
 
+| D (18 Oct) | v2.4 | 12 | 9W 0T 3L (75%) | 10W 1T 1L (91%) | — | Instagram and ads 8/8 wins; Facebook thin; mean score 6.17 vs 5.71 |
+| D2 (18 Oct) | v2.5 | 4 (Facebook) | 3W 1T 0L | — | — | Fix: brevity never applies to publishable copy, 40-word minimum, serve the goal first |
+
 \* The Anthropic credit balance ran out mid-run; the remaining pairs errored and are excluded.
 
 - Combined Phase B: **19 wins, 9 ties, 4 losses (83% excl. ties)**.

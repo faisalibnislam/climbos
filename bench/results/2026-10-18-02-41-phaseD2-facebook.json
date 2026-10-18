@@ -1,0 +1,895 @@
+[
+ {
+  "case": "finch",
+  "type": "b2c_app",
+  "task": "facebook",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Start small: one tiny goal today",
+       "body": "Self-care doesn't have to start with a full morning routine. Some days, one glass of water is the win. 💧\n\nThat's the idea behind Finch. You set small daily goals, take a moment to reflect, or try a short breathing exercise. Each one earns energy for your little virtual pet. You look after your bird by looking after yourself.\n\nIf big wellness plans have felt like too much lately, this is a softer place to begin. You don't need a perfect routine. You just need one small step, and then maybe another tomorrow.\n\nYou don't have to take our word for it. Finch has over 500,000 ratings with an average score of 5.0.\n\nDownload Finch free on iOS or Android and pick one small goal for today. Your bird will be cheering you on. 🐣",
+       "hashtags": [
+        "#SelfCare",
+        "#SmallSteps"
+       ],
+       "altText": "A phone screen showing a cute cartoon bird beside a short daily goal list with one item checked off: drink a glass of water.",
+       "imageIdea": "Close-up of a hand holding a phone with the Finch pet on screen, a glass of water on a sunny table in the background.",
+       "factIndexes": [
+        0,
+        2
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Self-care doesn't have to start with a full morning routine. Some days, one glass of water is the win.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Warm, soft natural light. Real phone showing the Finch bird and a simple goal list with one tick. Glass of water nearby. Pastel tones, calm and uncluttered. No text overlay beyond a small 'One small step counts' in brand font.",
+       "firstComment": "Get Finch free on iOS and Android: https://finchcare.com 💛"
+      },
+      {
+       "channel": "facebook",
+       "title": "Finch Plus: a little extra for you and your bird",
+       "body": "Your bird is already doing its best. Want to give your Finch journey a little extra? ✨\n\nFinch is free to use, with core self-care features included: daily goals, reflections and breathing exercises that earn energy for your virtual pet.\n\nFinch Plus is the optional upgrade for people who want more. It adds extra content and customization, so your time in Finch can feel even more like yours. If checking in with your bird has become a cozy part of your day, Plus gives you more to explore along the way.\n\nNo pressure at all. Your pet is happy to see you either way, and the free version is always there for you.\n\nFinch has over 500,000 ratings with an average score of 5.0, and we're grateful to every one of you.\n\nCurious? Open Finch and check out Finch Plus to see everything it includes. 🐦",
+       "hashtags": [
+        "#FinchPlus",
+        "#SelfCare"
+       ],
+       "altText": "A cheerful cartoon bird in a cozy little room, with soft sparkles around it, next to the words Finch Plus.",
+       "imageIdea": "Illustrated scene of the Finch bird in a personalized, cozy space with gentle sparkles, highlighting customization.",
+       "factIndexes": [
+        0,
+        1,
+        2
+       ],
+       "suggestedDay": 4,
+       "format": "single_image",
+       "hook": "Your bird is already doing its best. Want to give your Finch journey a little extra?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Soft pastel illustration or in-app screenshot showing the bird in a personalized setting. Small 'Finch Plus' label and the line 'A little extra, if you want it.' Gentle, not salesy. No prices or feature claims on the image.",
+       "firstComment": "Already using Finch? Open the app to see what Finch Plus adds. New here? Start free: https://finchcare.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "What tiny thing did you do for yourself today?",
+       "body": "What's one tiny thing you did for yourself today? 💛\n\nDrank some water? Stepped outside for five minutes? Took three slow breaths before a hard email? Tell us in the comments. We'd love to cheer you on.\n\nThese small moments are easy to brush off, but they matter. In Finch, every one of them counts. Completing a daily goal, writing a quick reflection or doing a breathing exercise earns energy for your virtual pet, so you can actually see your care showing up somewhere.\n\nThat gentle, small-steps approach is a big part of why Finch has over 500,000 ratings with an average score of 5.0.\n\nNew here? Finch is free on iOS and Android. Download it today and give your little bird its first bit of energy. 🐣",
+       "hashtags": [
+        "#SelfCare",
+        "#SmallWins"
+       ],
+       "altText": "A cartoon bird holding a small sign that reads: What tiny thing did you do for yourself today?",
+       "imageIdea": "Simple illustrated card with the Finch bird holding a sign asking the question, on a soft pastel background.",
+       "factIndexes": [
+        0,
+        2
+       ],
+       "suggestedDay": 7,
+       "format": "single_image",
+       "hook": "What's one tiny thing you did for yourself today?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Square graphic, pastel background, the Finch bird front and center holding a hand-lettered sign with the question. Plenty of white space so it reads instantly in the feed. Playful, warm, minimal.",
+       "firstComment": "Our tiny thing today: a slow cup of tea and a short breathing break. 🍵 Want to start your own? Get Finch free: https://finchcare.com"
+      }
+     ]
+    },
+    "costMicros": 84931,
+    "ms": 33345
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Small steps count: the glass-of-water goal",
+       "body": "Some days, a glass of water is the whole self-care plan. In Finch, that counts.\n\nYou set your own daily goals, as small as today needs them to be. Each one you finish earns energy for your virtual pet, so your progress looks like a little friend you're caring for rather than a to-do list.\n\nToo tired for a goal? A short breathing exercise or a quick reflection on your day earns energy too.\n\nDownload Finch free on iOS or Android and set one tiny goal for tomorrow morning.",
+       "hashtags": [
+        "#selfcare"
+       ],
+       "altText": "A glass of water on a bedside table beside a phone open on the Finch app, showing a 'Drink water' daily goal and the small virtual pet on screen.",
+       "imageIdea": "Real phone photo: glass of water beside a phone open on a Finch 'Drink water' goal.",
+       "factIndexes": [
+        0,
+        1
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Some days, a glass of water is the whole self-care plan.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: a tiny goal still counts. Shoot on a phone in soft morning light: a glass of water on a bedside table, a second phone propped beside it showing the real Finch app with a 'Drink water' goal set up on a demo account and the pet visible. Portrait or square, subject centred, no text added to the image. Real in-app screen only, no mock-ups, no notifications or personal data visible.",
+       "firstComment": "Download Finch free on iOS or Android: https://finchcare.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Your pet runs on your self-care",
+       "body": "Your pet runs on your self-care.\n\nDrink some water. Step outside. Write two lines about how today went. Every goal you finish in Finch earns your pet energy, and you choose the goals yourself, so they can be as gentle as you need. Short breathing exercises and daily reflections earn energy too, for the days your head needs a quieter kind of care.\n\nFinch has over 500,000 ratings, with an average score of 5.0, and the core self-care features are free.\n\nDownload Finch on iOS or Android and finish your first goal tonight.",
+       "hashtags": [
+        "#selfcare"
+       ],
+       "altText": "Vertical screen recording of the Finch app with burned-in captions. A thumb taps a 'Drink water' goal as complete, the pet's energy rises, then a breathing exercise opens. Captions read: This pet runs on my self-care. Drink water. Done. Every goal gives it energy. Breathing and reflections count too. Over 500,000 ratings. Average 5.0. Free to start.",
+       "imageIdea": "Short vertical screen recording, with burned-in captions, of completing a goal and the pet gaining energy.",
+       "factIndexes": [
+        0,
+        1,
+        2
+       ],
+       "suggestedDay": 4,
+       "format": "reel",
+       "hook": "Your pet runs on your self-care.",
+       "slides": [],
+       "videoScript": "Shot 1 (0-2s): close-up of the pet on the Finch home screen. Burned-in caption: 'This pet runs on my self-care.'\nShot 2 (2-5s): real screen recording, thumb taps the 'Drink water' goal as complete. Caption: 'Drink water. Done.'\nShot 3 (5-8s): the pet's energy goes up on screen. Caption: 'Every goal gives it energy.'\nShot 4 (8-11s): tap into a breathing exercise, then a reflection prompt. Caption: 'Breathing and reflections count too.'\nShot 5 (11-14s): pet on screen. Caption: 'Over 500,000 ratings. Average 5.0. Free to start.'\nNo voiceover; use the app's own sounds or silence, so the burned-in captions carry every word. Captions large, centred, kept out of the bottom fifth and right edge.",
+       "visualBrief": "Message: finishing a goal powers your pet. Vertical 9:16 screen recording of the real Finch app on a demo account. Burned-in captions exactly as in the script, large and centred, clear of the bottom ~20% and right edge. Real app only: no personal reflections, friend names or notifications on screen.",
+       "firstComment": "Get Finch free on iOS or Android: https://finchcare.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Finch Plus is optional; the free core comes first",
+       "body": "Finch Plus is optional. The free version already covers the core.\n\nWith free Finch you get the core self-care features: daily goals, reflections and breathing exercises, each one earning energy for your virtual pet. That's the whole idea of the app, and you can use it without paying.\n\nFinch Plus is an optional paid subscription for when you want more. It adds extra content and more ways to customize your Finch.\n\nNo pressure either way. If the free version suits you, carry on exactly as you are.\n\nDownload Finch free on iOS or Android, and add Plus only if you want more.",
+       "hashtags": [],
+       "altText": "A hand holding a phone open on the Finch Plus screen in the Finch app, with the virtual pet in view and the price area blurred, against a sofa and a soft blanket.",
+       "imageIdea": "Phone photo of a hand holding the real Finch Plus screen in a cosy sofa setting, price blurred.",
+       "factIndexes": [
+        0,
+        1
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Finch Plus is optional. The free version already covers the core.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: Plus is an optional extra. Phone photo in natural light: a hand holding a phone on the real Finch Plus screen, pet visible, sofa and blanket behind. Portrait or square, phone centred, no added text. Blur or crop out any price so the image doesn't go stale. Real screen only, no mock-ups.",
+       "firstComment": "Download Finch on iOS or Android: https://finchcare.com"
+      }
+     ]
+    },
+    "costMicros": 367366,
+    "ms": 112986,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 2.9,
+      "gatesPassed": false,
+      "lintErrors": 0
+     },
+     {
+      "round": 1,
+      "average": 3.2,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v22>v0f": {
+    "opus": {
+     "result": "tie",
+     "reasons": [
+      "B's Finch Plus post speaks to existing users who already enjoy the app ('Open Finch and check out Finch Plus'), and its first comment splits current and new users. That fits the goal of growing paid Plus subscribers better than A's Plus post, which mainly drives fresh free downloads and leads with a defensive 'Plus is optional' hook.",
+      "B's comment-prompt post ('What's one tiny thing you did for yourself today?') is native Facebook engagement. It fits the gentle, playful voice and builds organic reach, which A's three broadcast-style posts lack.",
+      "A has stronger production craft. Its reel script uses captions that work without sound, and its visual briefs are disciplined about real screens and privacy. Its copy is also tight and accurate.",
+      "Both stay largely within the confirmed facts. B's few small embellishments keep the gap narrow.",
+      "B repeats the 500k ratings line in all three posts, which gets stale. A uses the proof once, more sparingly."
+     ],
+     "truthX": [],
+     "truthY": [
+      "Claims the small-steps approach is 'a big part of why Finch has over 500,000 ratings', which is an unsupported causal claim.",
+      "'The free version is always there for you' is an implied permanence promise not in the facts.",
+      "The first comment invents a brand anecdote ('Our tiny thing today: a slow cup of tea'). This is minor, but it is fabricated."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 4,
+    "craft": 7,
+    "usefulness": 7,
+    "creativity": 5,
+    "overall": 5,
+    "topIssue": "The goal is paid Finch Plus subscribers, but two of the three posts only drive free installs, and the one Plus post actively downplays the upgrade: it gives vague benefits, blurs the price and offers no reason or moment to subscribe."
+   },
+   "v0f": {
+    "truth": 7,
+    "specificity": 6,
+    "strategy": 4,
+    "craft": 6,
+    "usefulness": 6,
+    "creativity": 3,
+    "overall": 5,
+    "topIssue": "The goal is paid Finch Plus subscribers, yet only one of three posts addresses Plus, and it offers nothing concrete beyond 'extra content and customization' with no price or specific benefits, so the set mostly drives free installs and is unlikely to move upgrades."
+   }
+  }
+ },
+ {
+  "case": "plausible",
+  "type": "b2b_saas",
+  "task": "facebook",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Analytics without the cookie banner",
+       "body": "Your cookie banner is the first thing visitors see. What if your analytics didn't need one?\n\nMost analytics tools set cookies and collect personal data. That's why so many sites greet people with a consent pop-up before they've read a single word, and why some visitors click \"reject\" and never show up in your stats.\n\nPlausible works differently. It doesn't use cookies and doesn't collect personal data, so your analytics don't need a cookie banner or a GDPR consent form. You still get the numbers that matter: where visitors come from and which pages they read, all on one clear dashboard.\n\nWe're an independent, self-funded company based in the EU, and we don't sell customer data.\n\nCurious what your site feels like without the banner? Start a free trial at plausible.io.",
+       "hashtags": [
+        "#PrivacyFirst",
+        "#WebAnalytics"
+       ],
+       "altText": "Split image of a website homepage. On the left, a large cookie consent pop-up covers the content. On the right, the same page loads clean with no pop-up, and a small Plausible dashboard sits below showing visitors and top pages.",
+       "imageIdea": "Before/after split of the same homepage: left covered by a cookie consent pop-up, right clean with a small Plausible dashboard preview underneath.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 2,
+       "format": "single_image",
+       "hook": "Your cookie banner is the first thing visitors see. What if your analytics didn't need one?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Clean flat design in Plausible brand colours. Left half: a generic homepage dimmed behind a big 'We use cookies' pop-up. Right half: identical page, no pop-up, with a cropped real Plausible dashboard card. Short label on top: 'No cookies. No banner.' No legal claims in the image.",
+       "firstComment": "Try it on your own site or explore the live demo: https://plausible.io"
+      },
+      {
+       "channel": "facebook",
+       "title": "A script 54x smaller than Google Analytics",
+       "body": "Your analytics script shouldn't slow down the site it's measuring.\n\nEvery bit of code you add to a page is something your visitors' phones have to download. Heavy tracking scripts add up, and on a slow mobile connection that weight is felt by the very people you're trying to win over: shoppers, readers and trial signups.\n\nPlausible's script is 54 times smaller than Google Analytics. That keeps it out of your visitors' way, so you get clear traffic stats without trading away site speed.\n\nThis isn't an experiment, either. More than 21,000 paying subscribers rely on Plausible, and we've tracked over 313 billion pageviews so far.\n\nIf you run an online store, a blog or a SaaS site where speed matters, start a free trial at plausible.io and add it to your own site.",
+       "hashtags": [
+        "#SiteSpeed",
+        "#WebAnalytics",
+        "#GoogleAnalyticsAlternative"
+       ],
+       "altText": "Bar graphic comparing script size. A long bar labelled Google Analytics stretches across the image, next to a tiny bar labelled Plausible. Text reads: 54 times smaller.",
+       "imageIdea": "Simple size comparison: a long bar for Google Analytics next to a tiny bar for Plausible, with the headline '54x smaller'.",
+       "factIndexes": [
+        0,
+        2
+       ],
+       "suggestedDay": 5,
+       "format": "single_image",
+       "hook": "Your analytics script shouldn't slow down the site it's measuring.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Minimal white background. Two horizontal bars: one long grey bar labelled 'Google Analytics', one tiny bar in Plausible brand colour labelled 'Plausible'. Large headline: '54x smaller script'. Small footer line: '21,000+ paying subscribers'. No other numbers.",
+       "firstComment": "See the dashboard and start a free trial: https://plausible.io"
+      },
+      {
+       "channel": "facebook",
+       "title": "Independent, self-funded, EU-based",
+       "body": "Who's behind your analytics tool, and what are they doing with your visitors' data?\n\nIt's a fair question. When a tool costs you nothing, the business model usually sits somewhere else.\n\nPlausible is independent, self-funded and profitable. We're based in the EU, and we don't sell customer data. Our business is simple: you pay for website analytics, and we build website analytics. There are no outside investors pushing us to make money from your visitors.\n\nThat model works. Over 21,000 paying subscribers have chosen it, and we've tracked more than 313 billion pageviews for them so far.\n\nIf you'd rather pay for a tool you trust than wonder where your data ends up, start a free trial at plausible.io.",
+       "hashtags": [
+        "#Privacy",
+        "#IndieBusiness",
+        "#WebAnalytics"
+       ],
+       "altText": "Text graphic on a plain background listing four points with check marks: Independent. Self-funded. Profitable. Based in the EU. Below in smaller text: We don't sell customer data.",
+       "imageIdea": "Typographic card with four checkmarked lines (Independent, Self-funded, Profitable, EU-based) and a closing line: 'We don't sell customer data.'",
+       "factIndexes": [
+        3,
+        2
+       ],
+       "suggestedDay": 9,
+       "format": "single_image",
+       "hook": "Who's behind your analytics tool, and what are they doing with your visitors' data?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Bold, calm typography on an off-white background, Plausible brand colour for check marks. Four short lines stacked: Independent / Self-funded / Profitable / Based in the EU. Footer: 'We don't sell customer data.' Small Plausible logo bottom right. No stock photos.",
+       "firstComment": "Read more about how we work and start a free trial: https://plausible.io"
+      }
+     ]
+    },
+    "costMicros": 92716,
+    "ms": 35140
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Analytics without the cookie banner",
+       "body": "A visitor in Lyon lands on your shop, and the first thing they see is a cookie pop-up.\n\nIf that pop-up is there for your analytics, it doesn't have to be. Plausible uses no cookies and collects no personal data, so you don't need a cookie banner or GDPR consent form for it. Your visitors go straight to your page, and you still get clear insights on your traffic.\n\nWe're an independent company based in the EU, and we don't sell customer data. Over 21,000 paying subscribers already run Plausible on their sites.\n\nStart a 30-day free trial at plausible.io and see your site without the analytics banner. No credit card needed.",
+       "hashtags": [
+        "#GDPR"
+       ],
+       "altText": "A phone showing a clean website homepage with no pop-up over it. Text above reads: Analytics without the cookie banner. Below: No cookies. No personal data.",
+       "imageIdea": "Phone screenshot of plausible.io's own homepage with no pop-up, set on a simple card with one headline.",
+       "factIndexes": [
+        1,
+        2,
+        3
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "A visitor in Lyon lands on your shop, and the first thing they see is a cookie pop-up.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: no analytics cookie banner on your site. Type: typographic card with a real phone screenshot of plausible.io (safest to show) with nothing covering the page. Hierarchy: the clean phone screen centred first; headline above, large: 'Analytics without the cookie banner'; support line below at about half size: 'No cookies. No personal data.' Logo small in a bottom corner. Colours are provisional: the indigo from the Plausible logo as background, white text. Portrait frame, all text away from the edges. Don'ts: no mock-ups of other companies' sites or banners, no legal-compliance wording on the image.",
+       "firstComment": "One honest note: Plausible removes the need for a cookie banner for your analytics. If your site also uses other cookies, such as ad pixels, chat widgets or embeds, check whether those still need consent."
+      },
+      {
+       "channel": "facebook",
+       "title": "The question you opened Google Analytics for",
+       "body": "You opened Google Analytics to see where last week's visitors came from.\n\nPlenty of reports and clicks later, you still don't have the answer. Plausible is built as a lightweight, simpler alternative to Google Analytics, giving you clear website insights so you can find the number you came for without digging.\n\nIt's light on your site as well. Our script is 54 times smaller than Google Analytics, so there's less for each visitor's browser to load before your page is ready. That helps keep your site fast for the people you're trying to reach.\n\nThe quickest way to judge it is to click around yourself. Open the live demo at plausible.io and explore the dashboard before you sign up for anything.",
+       "hashtags": [
+        "#GoogleAnalytics"
+       ],
+       "altText": "Screen recording of the Plausible live demo dashboard on a laptop, scrolling slowly through website traffic charts and lists. Caption text: Clear numbers, no digging.",
+       "imageIdea": "Short screen recording of the Plausible live demo dashboard, scrolled slowly from top to bottom.",
+       "factIndexes": [
+        0
+       ],
+       "suggestedDay": 4,
+       "format": "reel",
+       "hook": "You opened Google Analytics to see where last week's visitors came from.",
+       "slides": [],
+       "videoScript": "Opening shot: screen recording of the top of the Plausible live demo dashboard. Burned-in caption: 'You only wanted to know where your visitors came from.'\nMiddle: one slow scroll down the dashboard, no clicking into sub-reports. Caption: 'Clear numbers, no digging.'\nNear the end: hold on the lower part of the dashboard. Caption: 'Our script is 54x smaller than Google Analytics.'\nFinal shot: cut to the plausible.io homepage. Caption: 'Try the live demo at plausible.io.'\nKeep the whole clip under half a minute.",
+       "visualBrief": "Message: clear traffic numbers without digging. Type: real screen recording of the live demo, numbers unedited. Record full screen on a laptop, then crop to a vertical full-screen frame so the dashboard reads on a phone. Captions in white on a dark panel in the top third, clear of the bottom fifth and right edge where buttons sit. Don'ts: no mocked-up dashboards, no Google Analytics screenshots, no music you don't have rights to.",
+       "firstComment": "Why script size matters: a smaller script means less for the browser to download, so your page content isn't waiting on your analytics."
+      },
+      {
+       "channel": "facebook",
+       "title": "Who pays for your analytics?",
+       "body": "You're about to paste one more script into your website's header, and it will count every visitor who arrives.\n\nIt's fair to ask who pays for that script and what they get in return. For Plausible, the answer is our customers: over 21,000 paying subscribers. We're self-funded, profitable and independent, we're based in the EU, and we don't sell customer data.\n\nWe also don't use cookies or collect personal data. We've tracked over 313 billion pageviews that way, and your visitors stay anonymous to us.\n\nIf you want analytics paid for by the people who use it, start a 30-day free trial at plausible.io. No credit card needed.",
+       "hashtags": [],
+       "altText": "A plain card with large text reading: Paid for by over 21,000 subscribers. Not by your visitors' data. Plausible logo small in the corner.",
+       "imageIdea": "Simple typographic card stating who funds Plausible, using the confirmed subscriber figure.",
+       "factIndexes": [
+        1,
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "You're about to paste one more script into your website's header.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: paid for by subscribers, not by data. Type: typographic card, because the point is a confirmed number and a principle. Hierarchy: '21,000+' very large in the upper half; below it at about half size: 'Paid for by subscribers. Not by your visitors' data.'; Plausible logo small in a bottom corner. Colours are provisional: white background with the logo's indigo for text, strong contrast. Portrait frame, all text centred and away from edges. Don'ts: no competitor logos, no claims about how other tools make money.",
+       "firstComment": "What self-funded and profitable means for you: the money that keeps Plausible running comes from subscriptions, so your plan is the product, not your visitors."
+      }
+     ]
+    },
+    "costMicros": 383992,
+    "ms": 121890,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.3,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.2,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v22>v0f": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A stays closer to the confirmed facts. B adds unsupported generalisations, such as 'most analytics tools set cookies and collect personal data' and 'some visitors click reject and never show up in your stats'.",
+      "A's first comment on post 1 gives an honest caveat: other cookies, such as ad pixels and embeds, may still need consent. That fits the transparent brand voice and protects the owner from overpromising. B's first comments are just repeated links.",
+      "A mixes formats: a reel built from a real screen recording of the live demo, plus typographic cards. It also uses the live demo as a lower-commitment call to action. B is three static cards that all end with the same call to action.",
+      "A's visual briefs are more practical and lower-risk: a real screenshot, no mocked competitor banners, and safe-zone guidance for captions. B's split-screen before/after with a generic cookie pop-up is a strong visual, though, and its bar chart makes the 54x claim easy to grasp.",
+      "B's copy reads well and its hooks are solid, but the two sets are close. Both reuse the same three themes: no cookie banner, speed or simplicity, and independence."
+     ],
+     "truthX": [
+      "The 30-day trial with no credit card and the live demo come from the site insights, not the confirmed facts. The owner should verify both before posting."
+     ],
+     "truthY": [
+      "'Most analytics tools set cookies and collect personal data' is an unsupported claim about the market.",
+      "'Some visitors click reject and never show up in your stats' is an unsourced causal claim.",
+      "Specific dashboard features ('where visitors come from and which pages they read') go beyond the confirmed facts, though they are plausible.",
+      "'When a tool costs you nothing, the business model usually sits somewhere else' is an implied claim about competitors that is not in the sources."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 8,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "All three posts aim at the same broad 'site owner' persona with general trial CTAs, and none targets a higher-intent segment such as agencies, ecommerce or GA4 switchers, so they are unlikely to move paid conversions much within 90 days."
+   },
+   "v0f": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 7,
+    "usefulness": 7,
+    "creativity": 4,
+    "overall": 6,
+    "topIssue": "The three posts just restate the stock fact pillars (no cookies, 54x smaller, independent) and repeat the same proof stat. They ignore stronger, sharper levers for a 90-day paying-customer goal: the GA4-switcher audience, the AI-traffic angle, segment-specific hooks, and the no-credit-card trial and live demo."
+   }
+  }
+ },
+ {
+  "case": "bellbrothers",
+  "type": "local_service",
+  "task": "facebook",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Weekend furnace tune-up before the first cold snap",
+       "body": "Iowa's first truly cold night tends to show up before most of us are ready. It's also the worst night to find out the furnace won't kick on.\n\nGetting your furnace tuned up while it's still mild outside gives a technician time to look things over. If something needs attention, you can deal with it on your own timeline instead of scrambling during a cold snap.\n\nWe know weekdays are packed with work, school runs and everything in between. That's why Bell Brothers offers weekend appointments for regular service, so you don't have to burn a vacation day to get your heat checked.\n\nPick a weekend time that works for your family and book your furnace tune-up at bellbrothers.com. Your future self, on that first frosty morning, will thank you.",
+       "hashtags": [
+        "#DesMoines",
+        "#CentralIowa",
+        "#FurnaceTuneUp"
+       ],
+       "altText": "A Bell Brothers technician kneels beside a home furnace in a basement, checking the unit on a sunny weekend morning.",
+       "imageIdea": "Real photo of a Bell Brothers technician working on a furnace in a homeowner's basement, with soft daylight from a window to suggest a relaxed weekend visit.",
+       "factIndexes": [
+        0,
+        2
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Iowa's first truly cold night tends to show up before most of us are ready.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Use an authentic company photo, not stock. Technician in branded uniform at a furnace. Optional small text overlay: 'Weekend appointments available.' No prices or offers on the image.",
+       "firstComment": "Book a weekend furnace tune-up here: https://www.bellbrothers.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Planning a furnace replacement before winter",
+       "body": "Is this the winter your old furnace finally gets replaced?\n\nIf you've been nursing it along with repeat repairs, rooms that never quite warm up or noises that weren't there before, it's worth making the decision now, while it's calm, instead of on the coldest night in January.\n\nReplacing a heating system isn't one-size-fits-all. Bell Brothers installs furnaces, heat pumps, boilers and mini-splits, so the conversation can start with your home, your comfort and your budget, not a single product.\n\nWe've been helping central Iowa homeowners stay warm for more than 70 years. That's a lot of winters, a lot of basements and a lot of honest conversations about what makes sense for a house.\n\nThinking about a replacement before the snow flies? Start the conversation at bellbrothers.com.",
+       "hashtags": [
+        "#DesMoines",
+        "#CentralIowa",
+        "#HomeHeating"
+       ],
+       "altText": "A newly installed furnace in a clean basement utility room, with a Bell Brothers technician reviewing the system with a homeowner.",
+       "imageIdea": "Photo of a recent Bell Brothers furnace install, ideally with the technician talking with the homeowner beside the new unit.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 5,
+       "format": "single_image",
+       "hook": "Is this the winter your old furnace finally gets replaced?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Use a real install photo with the homeowner's permission. Clean, well-lit utility room. Optional overlay: 'Furnaces · Heat pumps · Boilers · Mini-splits.' No pricing, financing or efficiency claims.",
+       "firstComment": "Not sure whether to repair or replace? Reach out to our team: https://www.bellbrothers.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "70+ years of central Iowa winters",
+       "body": "For more than 70 years, Bell Brothers has been the team central Iowa neighbors call when the house needs attention.\n\nWinter puts the whole home to work. The furnace runs hard, and the plumbing has to hold up through the cold right alongside it. That's when it helps to have one company you trust for heating, cooling and plumbing, instead of juggling a different contractor for every problem.\n\nWe also know fall is busy. Weekend appointments are available for regular service, so getting your home ready for winter can fit around work, school and Friday night games.\n\nIf your furnace hasn't been looked at since last winter, now is a good time to get it on the calendar. Schedule your visit at bellbrothers.com and head into the cold season ready.",
+       "hashtags": [
+        "#DesMoines",
+        "#CentralIowa",
+        "#LocalBusiness"
+       ],
+       "altText": "A Bell Brothers service van parked in front of a Des Moines-area home with fall leaves on the lawn.",
+       "imageIdea": "Real photo of a Bell Brothers service van in a local neighborhood in autumn. If available, pair with a historic company photo as a second image to show the long local history.",
+       "factIndexes": [
+        0,
+        1,
+        2
+       ],
+       "suggestedDay": 10,
+       "format": "single_image",
+       "hook": "For more than 70 years, Bell Brothers has been the team central Iowa neighbors call when the house needs attention.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Warm fall tones, recognizable local setting. Use only genuine company photos; if an archive photo is used, caption it accurately. Optional overlay: 'Heating · Cooling · Plumbing.'",
+       "firstComment": "Get your home ready for winter. Weekend appointments for regular service: https://www.bellbrothers.com"
+      }
+     ]
+    },
+    "costMicros": 88816,
+    "ms": 36113
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Weekend appointments before the Iowa cold",
+       "body": "Your furnace shouldn't cost you a day off work.\n\nWe offer weekend appointments for regular service, so you can have your heating looked at without burning a vacation day. Book it now, while fall in Des Moines is still sweater weather, and you won't be calling around the first night the temperature drops below freezing.\n\nPick a weekend time that works for you at bellbrothers.com.",
+       "hashtags": [
+        "#DesMoines"
+       ],
+       "altText": "A Bell Brothers technician kneels beside a furnace in a home basement, checking the unit with the front panel removed, daylight coming through a small basement window.",
+       "imageIdea": "Phone photo of one of your own techs, in uniform, working on a furnace in a basement on a weekend morning.",
+       "factIndexes": [
+        2,
+        0
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Your furnace shouldn't cost you a day off work.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: get your heating looked at without a weekday off. Real photo, portrait or square. Focal point: the tech's hands on the open furnace. Optional small text panel top-left: 'Weekend appointments'. Provisional brand kit from your logo colours; logo small in a corner. Shoot in a staff member's home or a customer's with written permission; no house numbers, family photos or residents' faces.",
+       "firstComment": "Before your appointment, jot down any odd noises, smells or cold rooms you've noticed, so you can walk the tech straight to them."
+      },
+      {
+       "channel": "facebook",
+       "title": "Choosing a heating replacement this fall",
+       "body": "If your furnace limped through last winter, choose its replacement this fall, not the night it quits.\n\nWe install furnaces, heat pumps, boilers and mini-splits. The right one depends on your house: whether you have ductwork, whether there's an addition or finished attic that never warms up, and whether you want the same system cooling you in July. Swipe for the plain-English difference.\n\nBook a visit at bellbrothers.com to talk through which one fits your home.",
+       "hashtags": [
+        "#CentralIowa"
+       ],
+       "altText": "Carousel cover with photos of a furnace, a heat pump, a boiler and a ductless mini-split unit side by side. Text: Replacing your furnace this fall? You have four options.",
+       "imageIdea": "Carousel: cover collage of the four systems you install, one slide per system with a real photo of a unit you've installed, and a closing slide pointing to bellbrothers.com.",
+       "factIndexes": [
+        3,
+        0
+       ],
+       "suggestedDay": 4,
+       "format": "carousel",
+       "hook": "If your furnace limped through last winter, choose its replacement now.",
+       "slides": [
+        {
+         "heading": "Replacing your furnace this fall? You have four options.",
+         "body": "We install all four. Here's how they differ, in plain English."
+        },
+        {
+         "heading": "Furnace",
+         "body": "Heats air and pushes it through your ducts. The familiar choice for homes that already have ductwork."
+        },
+        {
+         "heading": "Heat pump",
+         "body": "Moves heat instead of making it, and runs in reverse to cool your home in summer. Often paired with a furnace for the coldest Iowa days."
+        },
+        {
+         "heading": "Boiler",
+         "body": "Heats water and sends it to radiators or in-floor tubing. Even, quiet heat with no air blowing."
+        },
+        {
+         "heading": "Mini-split",
+         "body": "No ductwork needed. A small indoor unit heats and cools one room or zone, which suits additions, finished attics and that cold back bedroom."
+        },
+        {
+         "heading": "Not sure which fits your home?",
+         "body": "Book a visit at bellbrothers.com to talk it through with our team."
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Message: four heating options, decide before winter. One template for every square slide: real photo of the unit in the top two-thirds, solid colour panel below with the heading large and the body line about half its size. Provisional brand kit from your logo colours; strong contrast, no text over busy photo areas. Logo small on the last slide only. Use photos of your own installs with homeowner permission; no addresses or people.",
+       "firstComment": "Heads-up for homes with an addition or finished attic: those rooms often run colder because they sit far from the furnace or outside the original ductwork, which is why mini-splits come up so often for them."
+      },
+      {
+       "channel": "facebook",
+       "title": "First Iowa winter in a new house",
+       "body": "Just bought a house in Ankeny, Altoona or Clive? This is your first Iowa winter with a furnace you've never met.\n\nYou don't know when the filter was last changed, how old the system is, or whether the last owner ever had it serviced. In the video, our tech shows three quick things to look at in your basement before the cold sets in.\n\nWe've been serving homes across Des Moines and central Iowa for over 70 years. Book a furnace tune-up at bellbrothers.com.",
+       "hashtags": [
+        "#DesMoines"
+       ],
+       "altText": "Short vertical video of a Bell Brothers technician in a basement pulling out a furnace filter, pointing to the label on the furnace, then moving a chair off a vent upstairs. Captions read: Just moved in? Check this before winter. The filter. The age label. The vents.",
+       "imageIdea": "Short vertical video of one tech walking through three quick furnace checks in a basement, shot on a phone.",
+       "factIndexes": [
+        1,
+        0
+       ],
+       "suggestedDay": 8,
+       "format": "reel",
+       "hook": "Just bought a house? You've never met this furnace.",
+       "slides": [],
+       "videoScript": "Opening shot: tech standing next to a furnace in a basement, looking at camera. Says: 'Just moved in? Here's what I'd check on your furnace before winter.' Caption: Just moved in? Check this before winter.\nNext: tech slides out the filter and holds it up to the light. Says: 'First, the filter. If you can't see light through it, it's time for a new one.' Caption: The filter.\nNext: tech points to the label on the side of the unit. Says: 'Second, this label. The model and serial number help tell you roughly how old your system is.' Caption: The age label.\nNext: cut to tech upstairs moving a chair off a floor vent. Says: 'Third, your vents. Furniture on top of them means cold rooms.' Caption: The vents.\nClosing shot: tech back at the furnace. Says: 'Want us to check the rest? Book a tune-up at bellbrothers.com.' Caption: Book a tune-up at bellbrothers.com.",
+       "visualBrief": "Message: three furnace checks for new homeowners. Vertical 9:16, shot on a phone in one afternoon, basement light on. Burned-in captions in the upper-middle of the frame, clear of the bottom 20% and right edge. Film in a staff member's home or with written owner permission; keep house numbers, mail and personal items out of shot. Logo small on the final frame only. Owner: confirm Ankeny, Altoona and Clive are in your service area before posting.",
+       "firstComment": "New-homeowner tip: write the date on your furnace filter with a marker when you change it, so you never have to guess again."
+      }
+     ]
+    },
+    "costMicros": 407642,
+    "ms": 135798,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.5,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v22>v0f": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A mixes formats Facebook rewards: a single image, a plain-English carousel comparing the four confirmed system types, and a phone-shot reel for new homeowners. B uses three single images with similar long-copy structure.",
+      "A gives real value: buyer education on furnace, heat pump, boiler and mini-split, plus three DIY checks for new owners. That builds trust for big-ticket replacements, which matters against rivals with huge review counts. B mostly restates the same urge-to-book message three times.",
+      "A's hooks are sharper and more native, such as 'Your furnace shouldn't cost you a day off work.' and 'You've never met this furnace.' B's openers are softer and wordier.",
+      "A's first comments add useful tips. B's first comments just repeat the homepage link already in the post.",
+      "A's copy is tighter and its visual briefs are production-ready, including privacy guidance and a flag to confirm the service towns before posting. B's briefs are thinner.",
+      "Both stay within the confirmed facts on the core claims. B adds mild unprovable puffery such as 'the team neighbors call' and 'honest conversations'."
+     ],
+     "truthX": [
+      "Names Ankeny, Altoona and Clive, which are not in the confirmed facts. The work does flag this for the owner to confirm before posting."
+     ],
+     "truthY": [
+      "'Bell Brothers has been the team central Iowa neighbors call' is an unsupported reputation claim.",
+      "'A lot of honest conversations' is mild unverified puffery."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 7,
+    "craft": 8,
+    "usefulness": 8,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "Nothing gives a reason to book now. There's no offer, price, Comfort Club or financing hook, and no urgency beyond weather. All three posts rely only on weekend appointments and the 70-year claim, which leaves them soft for driving tune-up and replacement bookings in a 60-day window. The work also never says how the $1,500 ad budget should boost these posts."
+   },
+   "v0f": {
+    "truth": 8,
+    "specificity": 5,
+    "strategy": 5,
+    "craft": 6,
+    "usefulness": 6,
+    "creativity": 3,
+    "overall": 5,
+    "topIssue": "The posts are accurate but generic pre-winter HVAC copy: three organic posts over 10 days, with no offer, urgency hook or boost/ad guidance tied to the $1,500 budget, are unlikely to move tune-up and replacement bookings in a 60-day window."
+   }
+  }
+ },
+ {
+  "case": "tartine",
+  "type": "local_food",
+  "task": "facebook",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Holiday pre-orders: let us handle the oven",
+       "body": "The best holiday tables are the ones where the host gets to sit down too.\n\nEvery season we bake for a lot of gatherings, and the calmest hosts are usually the ones who ordered ahead. Pre-ordering your holiday pastries, cakes and tarts means one less thing to bake at midnight, one less errand on the busiest week of the year, and something on the table you'll be proud to share.\n\nWe've been baking since 2002, when Elisabeth Prueitt and Chad Robertson opened Tartine in San Francisco. More than two decades later, we still treat every order as a chance to do it a little better than the last time.\n\nBrowse holiday pre-orders at tartinebakery.com, pick what your table needs, and reserve it ahead so the only thing left to do is slice and serve.",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayBaking",
+        "#SFBakery",
+        "#HolidayPreOrder"
+       ],
+       "altText": "A holiday table set with an assortment of Tartine pastries, a glossy fruit tart and a frosted cake, with hands reaching in to serve slices.",
+       "imageIdea": "Overhead shot of a warm, lived-in holiday table with Tartine tarts, pastries and a cake mid-serving, natural window light.",
+       "factIndexes": [
+        3
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "The best holiday tables are the ones where the host gets to sit down too.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Real Tartine products only, shot on a wooden table with linen and simple dishes. Show hands serving to feel like a gathering. Warm, natural light, no text overlay or a small 'Holiday pre-orders open' line at most.",
+       "firstComment": "Holiday pre-orders: https://tartinebakery.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Special order cakes: give us seven days",
+       "body": "Planning a holiday party, a December birthday, or a family dinner that deserves a real centerpiece? Start with the calendar.\n\nOur special order cakes are made for you, which is why we ask for seven days' notice. That week gives our bakers the time to do it properly, from the layers to the finish, instead of rushing something that should feel like an occasion.\n\nHere's how it works:\n• Order at least seven days before your event\n• Pick it up at 600 Guerrero St. in San Francisco\n• Bring it home and let it be the part of the night people talk about\n\nThe holidays fill up everyone's calendar, so put the cake on your list now and it becomes the one thing you don't have to think about later.\n\nOrder your special cake at tartinebakery.com.",
+       "hashtags": [
+        "#TartineBakery",
+        "#CustomCake",
+        "#SanFrancisco",
+        "#HolidayParty"
+       ],
+       "altText": "A finished Tartine special order cake on a cake stand on the counter at the 600 Guerrero St. bakery, ready for pickup.",
+       "imageIdea": "A finished special order cake on a stand at the Guerrero St. counter, with a pickup box beside it.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 4,
+       "format": "single_image",
+       "hook": "Planning a holiday party or December birthday? Start with the calendar.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Single hero shot of a real special order cake, eye level, clean background inside the 600 Guerrero St. bakery. Optional small overlay: 'Order 7 days ahead'.",
+       "firstComment": "Order a special cake (seven days' notice, pickup at 600 Guerrero St.): https://tartinebakery.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Send Tartine anywhere this holiday",
+       "body": "Know someone who talks about Tartine every time they visit San Francisco, but lives nowhere near us?\n\nYou can send them a taste of it. We ship nationwide through Goldbelly, so the bakery Elisabeth Prueitt and Chad Robertson started in San Francisco in 2002 can show up on a doorstep in Chicago, Atlanta or anywhere in between.\n\nIt makes a thoughtful holiday gift for the friend who has everything, the family you won't see this year, or yourself if you've been missing us. And if you live near one of our Bay Area or Los Angeles bakeries, it's an easy way to share what you love with the people who don't.\n\nFind our nationwide shipping through tartinebakery.com and send something baked with care this season.",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayGifts",
+        "#Goldbelly",
+        "#FoodGifts"
+       ],
+       "altText": "A Tartine shipping box being opened on a doorstep, revealing carefully packed baked goods inside, with a handwritten holiday note.",
+       "imageIdea": "A shipping box opened on a front step or kitchen counter, Tartine baked goods visible inside, a simple holiday gift note tucked in.",
+       "factIndexes": [
+        0,
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Know someone who talks about Tartine but lives nowhere near us?",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Unboxing moment with real Tartine shipped products, warm home setting, hands opening the box. Keep it quiet and personal, not staged-glossy.",
+       "firstComment": "Ship Tartine nationwide via Goldbelly, linked from https://tartinebakery.com"
+      }
+     ]
+    },
+    "costMicros": 90566,
+    "ms": 36705
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "facebook",
+       "title": "Holiday cakes: order a week ahead",
+       "body": "Our special order cakes need seven days' notice. Holiday calendars tend to fill up faster than that.\n\nSo if you're hosting this season, the cake is the one dish you can settle today. Each special order cake is made for your date and picked up at our bakery at 600 Guerrero St. in San Francisco, the city where Elisabeth Prueitt and Chad Robertson opened Tartine in 2002.\n\nCount back a week from your gathering, and that's your order-by day. Once that window has passed, we can't fit the cake in, and that's the last thing we want to tell someone with a full table coming.\n\nPlace your special order on tartinebakery.com at least seven days before your gathering, and dessert is one less thing on your list.",
+       "hashtags": [
+        "#SanFrancisco"
+       ],
+       "altText": "A whole Tartine celebration cake on a bakery counter next to an open white cake box, with the shop's front window behind it.",
+       "imageIdea": "Phone photo of a finished special order cake on the counter at 600 Guerrero St., box open beside it, window light.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "Our special order cakes need seven days' notice.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: order your holiday cake a week ahead. Real photo, portrait or square, shot on a phone at 600 Guerrero St. Focal point: one whole cake on the counter, slightly off-centre; open box second; storefront window soft in the background. Natural daylight, no filter that shifts the cake's colour. No on-image text. Keep the cake away from the edges so feed previews don't crop it. No customers' faces.",
+       "firstComment": "Special order cakes: https://tartinebakery.com. Pickup is at 600 Guerrero St., San Francisco. Please order at least seven days ahead."
+      },
+      {
+       "channel": "facebook",
+       "title": "Pre-order holiday pastries",
+       "body": "Holiday morning, the house is full, and nobody wants to be the one sent out to the bakery.\n\nYou can pre-order your holiday pastries from us on tartinebakery.com, so your order is set aside for you before the morning starts. No standing in line wondering what's still left in the case.\n\nWe've been baking in San Francisco since 2002, and the idea Elisabeth and Chad started with hasn't changed: bake it well, then keep working out how to bake it better. That's the pastry we'd want on our own table, so it's the pastry we're baking for yours.\n\nPre-order your holiday pastries on tartinebakery.com, then take the slow morning you've earned.",
+       "hashtags": [
+        "#BayArea"
+       ],
+       "altText": "A tray of freshly baked Tartine pastries cooling on a wooden bakery table in early morning light.",
+       "imageIdea": "Phone photo of a tray of holiday pastries just out of the oven on the bakery table, early morning light.",
+       "factIndexes": [
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Holiday morning, the house is full, and nobody wants the bakery run.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: your holiday pastries, ordered and waiting. Real photo, portrait or square, shot in the bakery on a phone. Focal point: a full tray of pastries, shot from a slight overhead angle; a baker's hands at the tray edge second (only with that staff member's consent); flour-dusted wood third. Morning window light, no heavy filter. No on-image text, no prices. Keep the tray centred so previews don't crop it.",
+       "firstComment": "Holiday pastry pre-orders: https://tartinebakery.com"
+      },
+      {
+       "channel": "facebook",
+       "title": "Ship Tartine to someone far away",
+       "body": "Not everyone who loves Tartine still lives near one.\n\nOur bakeries are in the Bay Area, Los Angeles and Korea. That leaves people on your holiday list who used to stop in on the way to work, then moved somewhere we aren't.\n\nWe ship nationwide through Goldbelly, so this year you can send them a box of Tartine instead of another scarf. It arrives at their door, wherever they've landed, and for a minute it tastes like the old neighborhood.\n\nIf you're sending for the holidays, check the delivery dates for their address on Goldbelly when you order, so the box shows up before the day does.\n\nFollow the Goldbelly link on tartinebakery.com and send a Tartine box to the person on your list who misses us most.",
+       "hashtags": [],
+       "altText": "A Tartine country loaf and pastries laid out on a home kitchen table beside an opened shipping box.",
+       "imageIdea": "Phone photo of a loaf and pastries unpacked on a home kitchen table next to the opened shipping box.",
+       "factIndexes": [
+        0,
+        2
+       ],
+       "suggestedDay": 15,
+       "format": "single_image",
+       "hook": "Not everyone who loves Tartine still lives near one.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: send Tartine to someone who moved away. Real photo, portrait or square, of an actual Goldbelly order unpacked on a kitchen table (a staff member's own order works). Focal point: the loaf; pastries second; opened box third, at the edge of frame. Soft daylight, homey setting. No on-image text, no delivery dates or prices on the image. No stock photos or AI-generated kitchens.",
+       "firstComment": "Ship nationwide through Goldbelly, starting at https://tartinebakery.com"
+      }
+     ]
+    },
+    "costMicros": 394300,
+    "ms": 133076,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.2,
+      "gatesPassed": false,
+      "lintErrors": 0
+     },
+     {
+      "round": 1,
+      "average": 2.7,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v22>v0f": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A sticks more tightly to the confirmed facts. Its only reason for the seven-day rule is the rule itself, and it frames the deadline as practical guidance: count back a week from your gathering.",
+      "A's shipping post adds a useful step: check Goldbelly delivery dates for the recipient's address before the holiday. This prevents a disappointed customer and directly serves the pre-order goal.",
+      "A's visual briefs are more practical for a small owner. They call for real phone photos taken at 600 Guerrero St., consent for staff hands, no stock or AI imagery, and framing that survives feed crops.",
+      "A's hooks are more specific and emotionally precise, such as 'Not everyone who loves Tartine still lives near one.' B's openers ('The best holiday tables…', 'Know someone who…') are more generic holiday copy.",
+      "B is well structured. Its bulleted 'how it works' list for cakes is clear and its hashtags are reasonable. However, it leans on unverified flourishes about bakery operations and has more boilerplate phrasing.",
+      "Both cover the same three paths (pastry and tart pre-orders, special order cakes, Goldbelly shipping) in a sensible sequence. A edges ahead on truth discipline and specificity rather than on strategy."
+     ],
+     "truthX": [
+      "The pastry pre-order post implies the order is 'set aside' without saying where pickup happens. Insights indicate pre-orders are picked up only at 600 Guerrero St., so local readers elsewhere could be misled."
+     ],
+     "truthY": [
+      "'Every season we bake for a lot of gatherings, and the calmest hosts are usually the ones who ordered ahead' is an unsupported operational and customer claim.",
+      "It explains the seven-day lead time as giving bakers time to work on 'the layers to the finish'. That reason is not confirmed.",
+      "The image idea shows a handwritten holiday note tucked into the shipping box, which implies a Goldbelly gift-note feature that is not confirmed.",
+      "The first post's pre-order pickup location is also unspecified."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 7,
+    "usefulness": 6,
+    "creativity": 5,
+    "overall": 6,
+    "topIssue": "The set ignores catering, half of the stated goal, and spreads only three posts across a 60-day push. The pastry pre-order post also never says pickup is only at 600 Guerrero St. or gives an order deadline, and all links point to the homepage rather than the specific order pages, which leaves avoidable friction for conversions."
+   },
+   "v0f": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 6,
+    "usefulness": 6,
+    "creativity": 4,
+    "overall": 5.5,
+    "topIssue": "The posts ignore catering, half of the stated goal, and give no order-by dates, deep links or placeholders for deadlines, so the pre-order push lacks the urgency and clear path that drive holiday conversions."
+   }
+  }
+ }
+]

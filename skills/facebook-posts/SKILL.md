@@ -90,6 +90,8 @@ Local groups are communities, not ad boards. Many ban promotion outright or allo
 - Rooted in at least one real local detail people would recognise.
 - Original photo or video brief with alt text; nothing stock or reposted.
 - Most posts 50–150 words with a strong first line; one-liners only for quick announcements. A thin two-line post that just restates a fact and a CTA is a failure, not "short and punchy".
+- Written as the Page talking to its community: warm, first person plural, and ending with one easy question people can answer from experience (not bait), or the next step.
+- Each post adds a first comment only when it adds value (the link, the order details, a tip).
 - One CTA using the most practical method (phone, booking link, directions).
 - Sounds like the owner talking to a neighbour; varied rhythm; no hype.
 - Group posts are disclosed, helpful first, link-free unless allowed and tailored to the thread.

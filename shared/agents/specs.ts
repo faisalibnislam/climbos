@@ -202,6 +202,9 @@ const CHANNEL_LIMITS: Record<string, { body: number; hashtags: number; fold?: nu
   pinterest: { body: 500, hashtags: 5, emojiPer150: 1 },
 };
 
+/** Below this, a feed post reads as a stub (blind reviews penalised clipped Facebook and LinkedIn copy). */
+const MIN_BODY_WORDS: Record<string, number> = { facebook: 40, linkedin: 50 };
+
 function evidenceOf(input: AgentInput): string {
   return [input.brief, input.facts.join("\n"), input.untrustedContext ?? ""].join("\n");
 }
@@ -223,6 +226,11 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
     if (p.format === "reel" && !p.videoScript.trim()) issues.push({ severity: "error", rule: "missing", message: "A Reel needs a script.", path: `${path}.videoScript` });
     if (!p.altText.trim() && p.format !== "text" && p.format !== "thread") issues.push({ severity: "error", rule: "accessibility", message: "Visual posts need alt text.", path: `${path}.altText` });
     issues.push(...lintVoice([p.body, ...p.slides, p.videoScript, p.firstComment].join("\n"), path));
+    const minWords = MIN_BODY_WORDS[p.channel];
+    const words = p.body.split(/\s+/).filter(Boolean).length;
+    if (minWords && words < minWords && p.format !== "reel" && p.format !== "story") {
+      issues.push({ severity: "error", rule: "thin", message: `${p.channel} post body is ${words} words; write ${minWords}-150 (hook, why it matters, proof, one next step).`, path: `${path}.body` });
+    }
     const promised = promisedCount([p.title, p.hook, p.altText].join(" "));
     if (promised && (p.format === "carousel" || p.format === "document") && p.slides.length < promised + 1) {
       issues.push({ severity: "error", rule: "promise", message: `The post promises ${promised} items but has ${p.slides.length} slides (with the cover). Deliver every item or change the number.`, path: `${path}.slides` });

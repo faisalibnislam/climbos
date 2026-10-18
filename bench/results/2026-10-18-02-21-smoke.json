@@ -1,0 +1,302 @@
+[
+ {
+  "case": "tartine",
+  "type": "local_food",
+  "task": "instagram",
+  "outs": {
+   "v0f": {
+    "arm": "v0f",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "instagram",
+       "title": "Your holiday table, four ways",
+       "body": "The holidays go better when the baking is already handled.\n\nThere's more than one way to bring Tartine to your table this season, whether you're hosting in San Francisco or sending something across the country. Swipe through to find the one that fits your plans, then head to the link in bio to place your order.\n\nWe'd rather you plan early than miss out. Our bakers would too.",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayBaking",
+        "#HolidayPreorder",
+        "#SanFranciscoBakery",
+        "#BayAreaEats",
+        "#LAFoodies",
+        "#HolidayHosting",
+        "#Goldbelly"
+       ],
+       "altText": "Carousel cover: a long wooden table set for a holiday meal, with a glossy fruit tart, a layered cake and a basket of pastries in the center under warm light.",
+       "imageIdea": "Overhead shot of a holiday table with Tartine cakes, tarts and pastries. Each following slide uses a clean cream background with one product photo and short text.",
+       "factIndexes": [
+        0,
+        1,
+        2
+       ],
+       "suggestedDay": 2,
+       "format": "carousel",
+       "hook": "Four ways to get Tartine on your holiday table",
+       "slides": [
+        {
+         "heading": "Four ways to get Tartine on your holiday table",
+         "body": "Swipe to find the one that fits your plans."
+        },
+        {
+         "heading": "1. Pre-order holiday pastries",
+         "body": "Reserve yours ahead and skip the scramble. Order through the link in bio."
+        },
+        {
+         "heading": "2. Special order a cake",
+         "body": "Give us seven days' notice and pick it up at 600 Guerrero St. in San Francisco."
+        },
+        {
+         "heading": "3. Feeding a crowd?",
+         "body": "For bigger gatherings, ask us about catering through our website."
+        },
+        {
+         "heading": "4. Far from SF and LA?",
+         "body": "We ship nationwide through Goldbelly. Send a box to the people you can't be with."
+        },
+        {
+         "heading": "Plan early, celebrate easy",
+         "body": "Tap the link in bio to start your order."
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Six square slides, warm cream background, Tartine-style serif headline, one real product photo per slide (no stock). Keep text under 20 words per slide. Use the same layout on every slide so it reads as a set.",
+       "firstComment": "Which one are you planning on: pre-order pickup, a special cake, or a box shipped to family? Tell us below."
+      },
+      {
+       "channel": "instagram",
+       "title": "Seven days, one cake",
+       "body": "A special order cake takes time, and we don't rush it.\n\nThat's why we ask for seven days' notice. It gives our bakers room to make your cake the way it should be made, ready for pickup at 600 Guerrero St.\n\nIf you're hosting this holiday season, count back seven days from your gathering. That's your order day. Link in bio.",
+       "hashtags": [
+        "#TartineBakery",
+        "#SpecialOrderCake",
+        "#HolidayCake",
+        "#SanFrancisco",
+        "#MissionDistrict",
+        "#HolidayHosting",
+        "#CakeOrder"
+       ],
+       "altText": "Short video of a baker's hands smoothing frosting on a layered cake, adding finishing touches, then placing it into a white bakery box.",
+       "imageIdea": "Behind-the-scenes reel of a special order cake being finished and boxed at the Guerrero St. bakery.",
+       "factIndexes": [
+        1,
+        3
+       ],
+       "suggestedDay": 6,
+       "format": "reel",
+       "hook": "Hosting this holiday? Here's the one date to put in your calendar.",
+       "slides": [],
+       "videoScript": "0-2s: Close-up of a calendar page. On-screen text: 'Hosting this holiday?'\n2-5s: Finger taps a date, slides back seven squares. Text: 'Count back 7 days.'\n5-10s: Cut to baker's hands layering and frosting a cake. Text: 'Special order cakes need seven days' notice.'\n10-14s: Finishing touches, slow and careful. Text: 'Baked with care since 2002.'\n14-18s: Cake goes into a box, lid closes. Text: 'Pickup at 600 Guerrero St., San Francisco.'\n18-20s: End card. Text: 'Order through the link in bio.'\nAudio: soft acoustic track, ambient kitchen sounds kept low.",
+       "visualBrief": "Vertical 9:16, natural light, real Tartine kitchen. Text in the upper third so it clears the caption area. No music with lyrics. Keep cuts calm, not fast, to match the brand's thoughtful voice.",
+       "firstComment": "Planning ahead for a holiday gathering? Your order day is seven days before. Link in bio to place it."
+      },
+      {
+       "channel": "instagram",
+       "title": "Send Tartine home for the holidays",
+       "body": "Not everyone you love lives near San Francisco or Los Angeles.\n\nWe've been baking in San Francisco since 2002, and today we're in the Bay Area, Los Angeles and Korea. But some of our favorite boxes are the ones that travel.\n\nWe ship nationwide through Goldbelly, so the family across the country can share the same table, in spirit at least. Order through the link in bio.",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayGifts",
+        "#Goldbelly",
+        "#FoodGifts",
+        "#SendLove",
+        "#HolidaySeason",
+        "#ArtisanBakery"
+       ],
+       "altText": "A Tartine bakery box opened on a kitchen counter in someone's home, showing pastries inside, with a handwritten holiday note tucked beside it.",
+       "imageIdea": "Lifestyle photo of a Tartine box being opened in a home kitchen far from the bakery, with a handwritten note that reads 'Wish we were there.'",
+       "factIndexes": [
+        0,
+        2,
+        3
+       ],
+       "suggestedDay": 10,
+       "format": "single_image",
+       "hook": "Not everyone you love lives near a Tartine.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Square or 4:5 image, warm home lighting, real Tartine packaging and products. Show hands opening the box to make it feel personal. No text overlay needed; let the note in the photo carry the message.",
+       "firstComment": "Who would you send a box to this year? Tag them, maybe they'll get the hint."
+      }
+     ]
+    },
+    "costMicros": 77216,
+    "ms": 32201
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "instagram",
+       "title": "Holiday cake planner: count back seven days",
+       "body": "Planning a Tartine cake for a holiday gathering? Order at least seven days before your pickup day.\n\nSpecial order cakes need a full week's lead time, with pickup at 600 Guerrero St. in San Francisco. So the easy way to plan is backward. Choose the day you'll collect, count back seven days, and set a phone reminder for that morning.\n\nThat date is your latest order day. Ordering earlier gives you more room if the guest list grows. Special orders are on tartinebakery.com, linked in our bio.\n\nSend this to whoever's hosting this year.\n\n#TartineBakery #SpecialOrderCake #HolidayCake #SanFranciscoBakery",
+       "hashtags": [
+        "#TartineBakery",
+        "#SpecialOrderCake",
+        "#HolidayCake",
+        "#SanFranciscoBakery"
+       ],
+       "altText": "Slide 1: A finished special order cake on the bakery counter. Text: Holiday cake? Order seven days ahead. Slide 2: Text: The week of the party is too late. Special order cakes need seven days' lead time. Slide 3: Hand circling a date on a paper calendar. Text: Step 1: Pick your pickup day. Slide 4: Calendar with seven days marked back from the circled date. Text: Step 2: Count back seven days. That's your latest order day. Slide 5: Phone showing tartinebakery.com beside a cake box. Text: Step 3: Order on tartinebakery.com. Slide 6: The bakery storefront. Text: Step 4: Pick up at 600 Guerrero St. Slide 7: Text: Pickup day minus 7 days = order day. Order online. Collect at 600 Guerrero St. Slide 8: A cake on a holiday table. Text: Send this to whoever's hosting this year.",
+       "imageIdea": "8-slide carousel mixing real bakery photos with a simple calendar planner, shot at 600 Guerrero St.",
+       "factIndexes": [
+        1
+       ],
+       "suggestedDay": 1,
+       "format": "carousel",
+       "hook": "Holiday cake? Order seven days ahead.",
+       "slides": [
+        {
+         "heading": "Holiday cake? Order seven days ahead.",
+         "body": "Visual: real photo of a finished special order cake on the counter at 600 Guerrero St., window light; cake and headline inside the central 3:4 area."
+        },
+        {
+         "heading": "The week of the party is too late",
+         "body": "Special order cakes need seven days' lead time. Visual: typographic card, dark text on cream."
+        },
+        {
+         "heading": "Step 1: Pick your pickup day",
+         "body": "The day you'll collect the cake. Visual: hand circling a date on a paper wall calendar."
+        },
+        {
+         "heading": "Step 2: Count back seven days",
+         "body": "That's your latest order day. Earlier is easier. Visual: same calendar, seven days marked back from the circle."
+        },
+        {
+         "heading": "Step 3: Order on tartinebakery.com",
+         "body": "Special orders are on our site, linked in our bio. Visual: phone showing the special order page, next to a cake box."
+        },
+        {
+         "heading": "Step 4: Pick up at 600 Guerrero St.",
+         "body": "Special order cakes are collected at our San Francisco bakery. Visual: storefront photo, no customer faces."
+        },
+        {
+         "heading": "Pickup day minus 7 days = order day",
+         "body": "Order online. Collect at 600 Guerrero St. Visual: high-contrast summary card built to be screenshotted."
+        },
+        {
+         "heading": "Send this to whoever's hosting this year",
+         "body": "Visual: a finished cake on a dressed holiday table (staff's own table or the bakery), no logo card."
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Provisional template (no brand kit given): cream background, dark brown text, one serif font for headlines, same headline position top-third on every slide, Tartine wordmark small on slide 8 only. Portrait 3:4-safe frames; confirm current pixel specs. Photos on a phone in one session at 600 Guerrero St.: finished cake on the counter, storefront (no identifiable customers), a paper calendar with a marker, phone on the order page. Slides 2 and 7 are typographic cards with strong contrast. Never show a price, date or cake name that isn't confirmed.",
+       "firstComment": ""
+      },
+      {
+       "channel": "instagram",
+       "title": "Reel: holiday pastry pre-orders from a San Francisco bakery since 2002",
+       "body": "Holiday pastry pre-orders are open at Tartine, the San Francisco bakery Elisabeth Prueitt and Chad Robertson founded in 2002.\n\nThis Reel is a morning bake in our kitchen, from the oven to the box. Ordering ahead means your holiday pastries are one thing already sorted before the guests arrive.\n\nPre-order your holiday pastries at tartinebakery.com, linked in our bio.\n\n#TartineBakery #HolidayPastries #HolidayPreOrder #SanFranciscoBakery",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayPastries",
+        "#HolidayPreOrder",
+        "#SanFranciscoBakery"
+       ],
+       "altText": "Bakers' hands dusting flour and shaping pastry dough, a tray of golden pastries coming out of the oven, and pastries being boxed. Text: Holiday pastry pre-orders are open. Baking in San Francisco since 2002. Pre-order at tartinebakery.com.",
+       "imageIdea": "Faceless process Reel: oven reveal, hands shaping dough, pastries boxed for holiday pre-orders.",
+       "factIndexes": [
+        3
+       ],
+       "suggestedDay": 4,
+       "format": "reel",
+       "hook": "Holiday pastry pre-orders are open",
+       "slides": [],
+       "videoScript": "Length: about half a minute, faceless (hands only).\n\nBeat 1, hook, first two seconds | Visual: oven door opens, a tray of golden pastries slides out | On-screen: Holiday pastry pre-orders are open | VO: \"Holiday pastry pre-orders are open at Tartine.\"\nBeat 2, setup, about five seconds | Visual: close-up, hands dusting flour across the bench | On-screen: Baking in San Francisco since 2002 | VO: \"We've been baking in San Francisco since 2002.\"\nBeat 3, about six seconds | Visual: hands shaping pastry dough, two quick cuts | On-screen: Started by Elisabeth and Chad | VO: \"Elisabeth Prueitt and Chad Robertson started this bakery, and this is still how a morning bake begins.\"\nBeat 4, about five seconds | Visual: pastries cooling on a rack, slow push in | On-screen: Order ahead for the holidays | VO: \"This holiday, you can order your pastries ahead.\"\nBeat 5, about five seconds | Visual: hands placing pastries in a box and closing the lid | On-screen: One holiday job, done early | VO: \"Order now, and that's one holiday job off your list.\"\nBeat 6, CTA, final few seconds | Visual: closed box on the counter by the oven, cut back to the oven door (loops to the opening shot) | On-screen: Pre-order at tartinebakery.com, link in bio | VO: \"Holiday pre-orders are on tartinebakery.com. Link's in our bio.\"\n\nShot list (one early bake, under half an hour, phone vertical, lock focus and exposure, record two seconds before and after each action): 1) Oven door opening, tray out, two or three takes. 2) Overhead: flour dusted on the bench. 3) Close-up: hands shaping dough, two angles. 4) Side light: pastries on the cooling rack. 5) Hands boxing pastries, closing the lid. 6) Closed box on the counter. Only film staff who have agreed; hands only.\nSound: a baker's own voiceover recorded close to the phone in a quiet room; optional low track from Instagram's commercial music library only. Must work with no music.\nCaptions: burned in for every spoken word, middle third of the frame, clear of the bottom fifth and the right edge.\nCover frame: pastry tray shot with 'Holiday pastry pre-orders' centred inside the 3:4 area.",
+       "visualBrief": "Real footage only, filmed in the bakery kitchen, natural or warm kitchen light, no filters that shift the color of the pastries. Text in the middle third, inside the 3:4 crop for the cover. No logo intro, no customer faces, no prices, product names or pickup details on screen.",
+       "firstComment": ""
+      },
+      {
+       "channel": "instagram",
+       "title": "Not near a Tartine? Send the holidays by mail",
+       "body": "Not near a Tartine this holiday? We ship nationwide through Goldbelly, so you can send a box to family wherever they live.\n\nWe started in San Francisco in 2002, and today our bakeries are in the Bay Area, Los Angeles and Korea. If the people you're celebrating with are far from all three, shipping puts Tartine on their table anyway, or on yours.\n\nOrder from our Goldbelly shop, linked in our bio, and it's delivered to their door.\n\nSend this to the sibling who always asks you to bring something back from San Francisco.\n\n#TartineBakery #HolidayFoodGifts #ShippedNationwide #SanFranciscoBakery",
+       "hashtags": [
+        "#TartineBakery",
+        "#HolidayFoodGifts",
+        "#ShippedNationwide",
+        "#SanFranciscoBakery"
+       ],
+       "altText": "A Tartine bakery item on a wooden board beside a shipping box on a kitchen table. Text: Not near a Tartine? We ship nationwide.",
+       "imageIdea": "Real photo of an item currently listed on the Goldbelly shop, beside a shipping box on a home kitchen table.",
+       "factIndexes": [
+        0,
+        2,
+        3
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Not near a Tartine? We ship nationwide.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "One message: you can send Tartine to family who live far away. Real photo, phone-shot, window light: an item currently on the Goldbelly listing on a wooden board, a plain shipping box beside it, on a staff member's home kitchen table. Focal point the product; headline 'Not near a Tartine? We ship nationwide.' in the provisional serif, dark brown on a cream panel, upper third; no support line. Keep product and text inside the central 3:4 area. Shot list: one shot, phone held vertical at table height, product front and centre with the box slightly behind, three takes with small angle changes. No Goldbelly logo, no prices, no product shown that isn't currently shippable.",
+       "firstComment": ""
+      }
+     ]
+    },
+    "costMicros": 528374,
+    "ms": 166020,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.6,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.6,
+      "gatesPassed": false,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {
+   "v22>v0f": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A stays strictly within confirmed facts. Its pickup-day-minus-seven-days planner turns the one hard constraint, the seven-day lead time, into a saveable, shareable utility post. That fits the goal of driving pre-orders before the deadline.",
+      "A's production guidance is far more usable for a non-expert owner: slide-by-slide visuals, a beat-by-beat Reel script with voiceover, a shot list, caption placement, a cover frame and a no-prices/no-unconfirmed-products rule. It also builds in native share prompts ('Send this to whoever's hosting').",
+      "B's 'four ways' carousel is a smart routing idea and the only one that addresses catering. However, the catering claim isn't supported by confirmed facts, and the carousel is thinner on execution.",
+      "B invents a rationale for the seven-day rule ('gives our bakers room…') and uses vaguer CTAs. Its Reel is shorter and less actionable, and it lacks voiceover and shot planning.",
+      "A's weaknesses: it ignores catering, which is part of the stated goal, and it duplicates hashtags in the body. These are minor next to B's truth risks."
+     ],
+     "truthX": [
+      "Claims holiday pastry pre-orders are open. This is supported only by the site-banner insight, not by a confirmed fact."
+     ],
+     "truthY": [
+      "'Ask us about catering through our website': catering availability is not in the confirmed facts.",
+      "Invents the reason behind the seven-day lead time ('gives our bakers room to make your cake the way it should be made').",
+      "Implies specific shippable items (a pastry box) without confirming what Goldbelly carries.",
+      "Holiday pastry pre-orders are asserted without a confirmed fact."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "v0f": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 7,
+    "usefulness": 6,
+    "creativity": 6,
+    "overall": 6,
+    "topIssue": "Catering is half the goal but gets only one vague slide with an unconfirmed offer. The posts also give no holiday order-by deadlines and no plan for the $300/month ad budget, so the push for pre-orders lacks urgency and reach."
+   },
+   "v22": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 7,
+    "usefulness": 7,
+    "creativity": 5,
+    "overall": 6,
+    "topIssue": "Catering, half of the stated goal, is never mentioned, and with only three posts, none carrying a concrete order-by deadline or an LA pickup option, the set will not sustain a 60-day pre-order push."
+   }
+  }
+ }
+]

@@ -121,6 +121,8 @@ A set fails if the pieces recycle the same facts for the same reader. Before you
 - Each piece names its reader and angle in one line before you draft it (keep that to yourself; write only the piece).
 - Vary the format too (carousel vs single image vs reel; story vs list vs question).
 - Use facts as support for the angle, not as the angle itself. A post that only lists features is the weakest kind.
+- **Serve the goal first.** At least one piece sells the goal's own offer directly (the goal is holiday pre-orders → one piece is the holiday pre-order post, with how to order). Never spend the whole set on side topics.
+- **Fact → benefit.** Every fact is followed by what it means for the reader ("54× smaller script" → "pages load faster, so fewer visitors leave").
 
 ## Quality bar
 
