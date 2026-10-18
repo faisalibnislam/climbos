@@ -28,6 +28,8 @@ export interface LiveConfig {
   seats: { free: number } & Record<PackageKey, number>;
   workspaces: { free: number } & Record<PackageKey, number>;
   freeHistoryDays: number;
+  /** Credits each side gets when a referred account buys its first package. */
+  referralCredits: number;
   /** "paid" = packages only; "free" = everyone. */
   features: Record<FeatureKey, "free" | "paid">;
 }
@@ -39,6 +41,7 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   seats: { free: FREE_LIMITS.seats, starter: CREDIT_PACKAGES.starter.seats, pro: CREDIT_PACKAGES.pro.seats },
   workspaces: { free: FREE_LIMITS.freeWorkspacesPerOwner, starter: CREDIT_PACKAGES.starter.workspaces, pro: CREDIT_PACKAGES.pro.workspaces },
   freeHistoryDays: FREE_LIMITS.historyDays,
+  referralCredits: 200,
   features: { expert: "paid", autopilot: "paid", publishing: "paid", sending: "paid", ads_publish: "paid", booking_page: "paid", mcp: "paid", full_history: "paid", no_badge: "paid" },
 };
 
@@ -54,6 +57,7 @@ export function mergeLiveConfig(saved: unknown): LiveConfig {
     seats: { free: num(s.seats?.free, d.seats.free, 1000), starter: num(s.seats?.starter, d.seats.starter, 1000), pro: num(s.seats?.pro, d.seats.pro, 1000) },
     workspaces: { free: num(s.workspaces?.free, d.workspaces.free, 1000), starter: num(s.workspaces?.starter, d.workspaces.starter, 1000), pro: num(s.workspaces?.pro, d.workspaces.pro, 1000) },
     freeHistoryDays: num(s.freeHistoryDays, d.freeHistoryDays, 3650),
+    referralCredits: num(s.referralCredits, d.referralCredits, 10_000),
     features: Object.fromEntries((Object.keys(d.features) as FeatureKey[]).map((k) => [k, s.features?.[k] === "free" ? "free" : "paid"])) as Record<FeatureKey, "free" | "paid">,
   };
 }

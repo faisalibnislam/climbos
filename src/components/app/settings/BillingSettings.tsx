@@ -9,6 +9,7 @@ import { Suspense, useState } from "react";
 import { Badge, Button, Callout, DataTable, Meter } from "@/components/ui";
 import { cn, formatNumber, formatUsd } from "@/lib/utils";
 import { errorMessage } from "../errors";
+import { ReferralCard } from "./ReferralCard";
 import { minorToDisplay } from "../money";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
@@ -86,6 +87,7 @@ export function BillingSettings({ slug }: { slug: string }) {
       ) : (
         <BillingBody data={data} busy={busy} onCheckout={checkout} onPortal={openPortal} />
       )}
+      {data && !data.isDemo ? <ReferralCard slug={slug} /> : null}
     </div>
   );
 }

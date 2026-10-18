@@ -154,7 +154,7 @@ describe("Polar billing lifecycle", () => {
     await deliver(t, "o1", "order.paid", orderPayload(orgId), subSnapshot(orgId));
     const upgraded = subSnapshot(orgId, { productId: "prod_pro", modifiedAt: Date.now() + 10 });
     await deliver(t, "up", "order.paid", orderPayload(orgId, { id: "ord_up", billing_reason: "subscription_update", product_id: "prod_pro" }), upgraded);
-    let p = (await periods(t, orgId)).filter((x) => x.source === "subscription");
+    const p = (await periods(t, orgId)).filter((x) => x.source === "subscription");
     expect(p).toHaveLength(1);
     expect(p[0].walletCapMicros).toBe(30_000_000);
 

@@ -8,7 +8,7 @@ import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "..
 import { contentHash } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
@@ -531,5 +531,33 @@ export const unarchive = mutation({
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status === "archived") await ctx.db.patch(a._id, { status: "draft", updatedAt: Date.now() });
+  },
+});
+
+/** First win (after the first plan): 3 social posts on the best-fit channel + 1 welcome email, if credits allow. */
+export const startFirstWin = internalMutation({
+  args: { orgId: v.id("organizations"), userId: v.id("users") },
+  handler: async (ctx, { orgId, userId }) => {
+    const org = await ctx.db.get(orgId);
+    if (!org || org.kind === "demo" || org.firstWinRunIds?.length) return;
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
+    const b2b = /saas|b2b|agency|services|consult|software/i.test(business?.businessType ?? "");
+    const channel = b2b ? "linkedin" : "instagram";
+    const runIds: Id<"workflowRuns">[] = [];
+    const jobs: { job: "content_social" | "content_email"; quantity?: number; channel?: "linkedin" | "instagram" | "email"; brief: string }[] = [
+      { job: "content_social", quantity: 3, channel, brief: "First posts from the new growth plan: introduce what makes the business different, one customer problem it solves, and one clear next step." },
+      { job: "content_email", channel: "email", brief: "A short welcome email for new subscribers or customers based on the growth plan." },
+    ];
+    for (const j of jobs) {
+      try {
+        const plan = planJob(j.job, { quantity: j.quantity, images: 0, channel: j.channel });
+        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? "Your first 3 posts" : "Your welcome email", roles: plan.roles, input: { firstWin: true, channel: j.channel }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
+        await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images: 0, brief: j.brief });
+        runIds.push(runId);
+      } catch {
+        // Not enough credits or too many jobs at once: skip quietly; the owner can draft from Content.
+      }
+    }
+    if (runIds.length) await ctx.db.patch(orgId, { firstWinRunIds: runIds });
   },
 });

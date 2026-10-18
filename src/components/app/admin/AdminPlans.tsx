@@ -27,6 +27,7 @@ const LIMITS: { label: string; get: Num; set: Set }[] = [
   { label: "Workspaces: Starter", get: (c) => c.workspaces.starter, set: (c, n) => ({ ...c, workspaces: { ...c.workspaces, starter: n } }) },
   { label: "Workspaces: Pro", get: (c) => c.workspaces.pro, set: (c, n) => ({ ...c, workspaces: { ...c.workspaces, pro: n } }) },
   { label: "Free results history (days)", get: (c) => c.freeHistoryDays, set: (c, n) => ({ ...c, freeHistoryDays: n }) },
+  { label: "Referral credits (each side)", get: (c) => c.referralCredits, set: (c, n) => ({ ...c, referralCredits: n }) },
 ];
 
 /** Live plans and feature locks: changes apply without a deploy (credit amounts from each account's next renewal). */

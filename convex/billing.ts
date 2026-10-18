@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { getLiveConfig } from "./lib/config";
+import { rewardReferral } from "./referrals";
 import { CREDIT_TOPUPS, creditsToMicros, CURRENT_ENTITLEMENTS, packageOf, salePlanKeys, TOPUP_VALID_DAYS, type TopupKey } from "../shared/economics";
 import type { PlanKey } from "../shared/economics/assumptions";
 import { grantForOrder, mapPolarSubscriptionStatus, shouldApplySnapshot, subscriptionAccess } from "../shared/billing";
@@ -486,6 +487,8 @@ export const applyPolarEvent = internalMutation({
         polarSubscriptionId: sub.polarSubscriptionId,
       });
       await ctx.db.patch(order._id, { grantedAt: now, periodStart: sub.currentPeriodStart, periodEnd: sub.currentPeriodEnd });
+      // Referral reward on the account's first paid package (both sides, once).
+      if (accountId) await rewardReferral(ctx, accountId);
       await audit(ctx, { orgId, actorType: "system", action: "billing.period_granted", summary: `${CURRENT_ENTITLEMENTS.plans[planKey].name}: ${(CURRENT_ENTITLEMENTS.plans[planKey].credits ?? 0).toLocaleString("en-US")} credits for this month.` });
       return finish("processed");
     }

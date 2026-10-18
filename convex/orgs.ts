@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
+import { recordReferral } from "./referrals";
 import { activePackage } from "./lib/access";
 import { packageOf } from "../shared/economics";
 import { getLiveConfig } from "./lib/config";
@@ -90,6 +91,8 @@ export const createWorkspace = mutation({
     website: v.optional(v.string()),
     timezone: v.optional(v.string()),
     currency: v.optional(v.string()),
+    /** Referral code from a share link (stored by /r/CODE). */
+    referralCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
@@ -155,6 +158,7 @@ export const createWorkspace = mutation({
       .unique();
     if (!prefs) await ctx.db.insert("userPreferences", { userId: user._id, digest: "weekly", usageAlerts: true });
     await createOnboardingPeriod(ctx, orgId, accountId);
+    if (owned.length === 0) await recordReferral(ctx, accountId, args.referralCode);
     await audit(ctx, { orgId, actorType: "user", actorId: user._id, action: "workspace.created", summary: `Workspace "${name}" created.` });
     return { slug, orgId };
   },
@@ -309,6 +313,7 @@ export const onboardingState = query({
           }
         : null,
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
         ? { kind: goal.kind, statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,

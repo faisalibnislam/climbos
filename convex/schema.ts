@@ -248,10 +248,26 @@ export default defineSchema({
     name: v.string(),
     /** The one-time free credits were granted (once per account). */
     freeCreditsGrantedAt: v.optional(v.number()),
+    /** Share link code (climbos.app/r/CODE). */
+    referralCode: v.optional(v.string()),
     suspendedAt: v.optional(v.number()),
     suspendedReason: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_owner", ["ownerUserId"]),
+  })
+    .index("by_owner", ["ownerUserId"])
+    .index("by_referral_code", ["referralCode"]),
+
+  /** Referrals: both accounts get credits when the referred account buys its first package. */
+  referrals: defineTable({
+    referrerAccountId: v.id("accounts"),
+    referredAccountId: v.id("accounts"),
+    status: v.union(v.literal("signed_up"), v.literal("rewarded")),
+    credits: v.optional(v.number()),
+    rewardedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_referrer", ["referrerAccountId", "createdAt"])
+    .index("by_referred", ["referredAccountId"]),
 
   organizations: defineTable({
     name: v.string(),
@@ -281,6 +297,8 @@ export default defineSchema({
     monthlyCreditCap: v.optional(v.number()),
     /** Set by ClimbOS staff: no new work until lifted. */
     suspendedAt: v.optional(v.number()),
+    /** "First win": drafts started automatically after the first plan (3 posts + 1 email). */
+    firstWinRunIds: v.optional(v.array(v.id("workflowRuns"))),
     /** Team rules: jobs above this many credits need an owner or admin to start them. */
     creditApprovalLimit: v.optional(v.number()),
     createdAt: v.number(),

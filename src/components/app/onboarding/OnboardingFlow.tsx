@@ -32,7 +32,7 @@ import { errorInfo, errorMessage } from "../errors";
 import { ROLE_META } from "../roles";
 import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
-import { RetryRunIfPossible, RunProgress } from "../content/RunProgress";
+import { RetryRunIfPossible, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
 
 
@@ -232,7 +232,8 @@ function BusinessStep({
     }
     setBusy(true);
     try {
-      const { slug, orgId } = await create({ businessName: fields.name, website: fields.website, timezone: TIMEZONE });
+      const referralCode = /(?:^|;\s*)climbos_ref=([a-z0-9]+)/.exec(document.cookie)?.[1];
+      const { slug, orgId } = await create({ businessName: fields.name, website: fields.website, timezone: TIMEZONE, referralCode });
       if (fields.parsed) {
         try {
           sessionStorage.setItem(`climbos:intro:${slug}`, JSON.stringify(fields.parsed));
@@ -926,6 +927,17 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
           </Card>
         </>
       )}
+      {ready && state.firstWinRunIds.length ? (
+        <Card className="mt-6">
+          <CardContent className="flex flex-col gap-3">
+            <p className="heading-card">Your first posts and a welcome email are on the way</p>
+            <p className="text-sm text-ink-3">Drafted from your new plan. You approve each one before anything goes out.</p>
+            {state.firstWinRunIds.map((id) => (
+              <RunProgressCompact key={id} slug={slug} runId={id} />
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
       {run?.status === "failed" && !ready && (
         <Callout tone="danger" className="mt-6" title="The plan didn't finish">
           {run.userMessage ?? "Something went wrong."}

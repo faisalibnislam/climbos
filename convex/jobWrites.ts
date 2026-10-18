@@ -13,6 +13,7 @@ import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
 import type { InsightsV2, StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { AUTO_RUN_KINDS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
@@ -358,6 +359,9 @@ export const saveStrategy = internalMutation({
       });
     }
     await audit(ctx, { orgId: run.orgId, actorType: "agent", actorId: "ceo", action: "strategy.created", subjectType: "strategy", subjectId: strategyId, summary: `Growth plan v${version} drafted and waiting for approval.` });
+    // First win: right after the very first plan, draft 3 posts and a welcome email so the owner has work to approve today.
+    const createdBy = run.createdBy;
+    if (version === 1 && createdBy) await ctx.scheduler.runAfter(0, internal.content.startFirstWin, { orgId: run.orgId, userId: createdBy });
     return strategyId;
   },
 });
