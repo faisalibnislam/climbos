@@ -79,7 +79,7 @@ export function creditMargin(priceUsd: number, credits: number, opts: { overhead
 /** What common actions cost at most, in credits (a test keeps these equal to the live job estimates). */
 export const CREDIT_EXAMPLES: readonly { kind: string; label: string; basic: number; expert?: number }[] = [
   { kind: "onboarding_research", label: "Research your business", basic: 19, expert: 54 },
-  { kind: "strategy", label: "90-day growth plan", basic: 25, expert: 132 },
+  { kind: "strategy", label: "90-day growth plan", basic: 26, expert: 133 },
   { kind: "content_social", label: "3 social posts", basic: 4 },
   { kind: "content_ads", label: "Ad set", basic: 9, expert: 47 },
   { kind: "content_email", label: "Email sequence", basic: 4 },

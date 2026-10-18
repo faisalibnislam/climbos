@@ -58,6 +58,8 @@ export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
 }
 
 /** The fast "first take" step long jobs show while they work (Luna, small). */
+/** Final consistency pass on the plan (Luna). */
+const CONSISTENCY: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 30_000, outputBudget: 16_000 };
 const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
 
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
@@ -78,7 +80,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "strategy": {
       const r = { maxSearches: searches("growth_strategy") };
       const fit = channelFitSpec({ candidateIds: [], typeKeys: [], dims: {} });
-      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [QUICK_TAKE, ...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
+      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [QUICK_TAKE, ...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec())), CONSISTENCY], { searchCalls: r.maxSearches });
     }
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));

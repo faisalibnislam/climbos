@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
+import { lintEconomics } from "./economics";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -70,6 +71,15 @@ export const PlaySchema = z.object({
   scores: z.array(z.number()),
   firstActionToday: z.string(),
   climbosCanDo: z.string(),
+  /** The play's numbers; ClimbOS code (not the model) turns them into customers, cost per customer and payback. */
+  model: z.object({
+    /** Right-fit people reached per week at the planned volume. */
+    weeklyReach: z.number(),
+    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1). */
+    steps: z.array(z.object({ name: z.string(), rate: z.number() })),
+    monthlySpendUsd: z.number(),
+    ownerHoursPerWeek: z.number(),
+  }),
 });
 export type Play = z.infer<typeof PlaySchema>;
 
@@ -103,6 +113,8 @@ export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[] };
 export const PlaysOutputSchema = z.object({
   /** One or two sentences: why this portfolio, for this business, now. */
   portfolioNote: z.string(),
+  /** What one customer is worth (facts first, else labelled assumptions in `basis`). */
+  economics: z.object({ revenuePerCustomerMonthUsd: z.number(), grossMargin: z.number(), monthsRetained: z.number(), basis: z.string() }),
   plays: z.array(PlaySchema),
 });
 export type PlaysOutput = z.infer<typeof PlaysOutputSchema>;
@@ -388,7 +400,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS)],
+      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

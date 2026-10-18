@@ -39,6 +39,8 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
+import { reconcile } from "../shared/agents/consistency";
+import { lockedNumbers } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -496,6 +498,36 @@ const QuickTakeSchema = z.object({ headline: z.string(), points: z.array(z.strin
  * owner a useful first take within about a minute. Checkpointed and metered
  * like any step; failures are ignored (the full job still runs).
  */
+/** Checkpointed, metered consistency pass; on any failure the plan is kept as written. */
+async function consistencyStep(ctx: ActionCtx, job: JobCtx, index: number, plan: StrategyOutput, locked: string): Promise<StrategyOutput> {
+  // The fake model can't edit meaningfully; tests keep the plan as written.
+  if (job.run.isFixture || job.run.engine !== "v2" || process.env.CLIMBOS_FAKE_LLM) return plan;
+  const step = await begin(ctx, job.run._id, index, "model", "Growth plan: consistency check", "ceo");
+  if (step.checkpoint !== undefined) return step.checkpoint as StrategyOutput;
+  const rates = getRateVersion(job.run.rateVersionId);
+  const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
+  const spec = strategySpec();
+  try {
+    const out = await reconcile({
+      turn: async (req) => {
+        const r = await call(req, rates);
+        if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(req.modelKey, r, rates) });
+        return r;
+      },
+      plan,
+      locked,
+      schema: spec.schema as never,
+      lint: (o) => spec.lint?.(o as never, { task: "", brief: "", facts: [] }) ?? [],
+      caps: capsHint(PLAN_CAPS),
+    });
+    await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(out.plan) });
+    return out.plan as StrategyOutput;
+  } catch (e) {
+    await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId!, error: (e as Error).message.slice(0, 200) });
+    return plan;
+  }
+}
+
 async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: string, task: string) {
   if (job.run.isFixture || job.run.engine !== "v2" || process.env.CLIMBOS_FAKE_LLM) return;
   try {
@@ -682,7 +714,7 @@ export const buildStrategy = internalAction({
             growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
             agentInput(
               job,
-              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today. Be ambitious: together the plays must credibly move the goal within 90 days (a real volume engine with weekly numbers), not just validate assumptions. Keep each play card short and plain. ${capsHint(PLAYS_CAPS)}${scorecard}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today. Be ambitious: together the plays must credibly move the goal within 90 days (a real volume engine with weekly numbers), not just validate assumptions. Keep each play card short and plain. Fill economics (what one customer is worth: facts first, else labelled assumptions) and each play's model; ClimbOS computes customers and cost per customer from them and sends back plays that lose money. ${capsHint(PLAYS_CAPS)}${scorecard}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
               { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
             ),
             startedAt,
@@ -690,14 +722,15 @@ export const buildStrategy = internalAction({
           )
         : null;
       // 2. The 90-day plan, built around those plays.
-      const strategy = await runAgentTask<StrategyOutput>(
+      const locked = plays ? lockedNumbers(plays) : "";
+      let strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
         100,
         strategySpec(),
         agentInput(
           job,
-          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason. Write for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used. ${capsHint(PLAN_CAPS)}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+          `${locked ? `${locked}\n\n` : ""}Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason. Write for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used. ${capsHint(PLAN_CAPS)}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
         ),
         startedAt,
         {
@@ -708,6 +741,8 @@ export const buildStrategy = internalAction({
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
         },
       );
+      // Final consistency pass: one editor reconciles the plan with the locked numbers.
+      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked);
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays } : strategy),

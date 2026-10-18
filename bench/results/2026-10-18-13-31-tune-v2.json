@@ -1,0 +1,689 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run the switcher page and agency-partner play with a capped $60/month Search test; hold $540/month. Combined play-model P50 is 3.7 paid accounts in 90 days; target four. ClimbOS builds and sends; owner approves and closes.",
+     "positioning": "Formkit is for branded client-intake, lead, and event forms: describe the workflow, let an assistant build it, and route responses with logic.",
+     "audiences": [
+      {
+       "name": "Google Forms switchers",
+       "hypothesis": "People seeking branded forms will try a template and upgrade when they need paid features.",
+       "evidence": "Formkit's comparison identifies branded links, partial responses, and question drop-off; traffic and upgrades remain unmeasured."
+      },
+      {
+       "name": "Small web and design agencies",
+       "hypothesis": "Agencies may adopt reusable intake forms and pay for multi-client workflows.",
+       "evidence": "Relevant agency prospects appear in https://www.shopify.com/partners/directory and https://ecosystem.hubspot.com/marketplace/solutions; demand is unproven."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 83,
+       "status": "primary",
+       "why": "Adjusted mean 76.9/100. High-intent asset with low media cost; organic reach may take time."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 83,
+       "status": "in_plan",
+       "why": "Adjusted mean 77.5/100. Strong search intent and a concrete comparison angle; page traffic is not yet evidenced."
+      },
+      {
+       "name": "Templates",
+       "score": 79,
+       "status": "in_plan",
+       "why": "Adjusted mean 75.6/100. Practical templates can shorten setup and serve several evidenced use cases."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 79,
+       "status": "later",
+       "why": "Adjusted mean 75.6/100. Relevant integrations could extend reach, but distribution and listing access are unverified."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 79,
+       "status": "later",
+       "why": "Adjusted mean 73.8/100. Strong low-friction entry, though free sign-ups alone do not meet the paying-customer goal."
+      },
+      {
+       "name": "Google organic search",
+       "score": 76,
+       "status": "later",
+       "why": "Adjusted mean 70.6/100. Search can compound, but there is no baseline to show current demand capture."
+      },
+      {
+       "name": "Content SEO",
+       "score": 76,
+       "status": "later",
+       "why": "Adjusted mean 71.3/100. Relevant pages can compound, but organic results may arrive slowly."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 76,
+       "status": "later",
+       "why": "Adjusted mean 73.1/100. Relevant discovery intent, but listing traffic and conversion are unknown."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Switcher page and Search demand",
+       "hypothesis": "A fair alternative page and three templates will attract switchers; free signups alone do not prove paid acquisition.",
+       "population": "Searchers seeking Google Forms alternatives who land on the switcher page.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid upgrades from Search visitors",
+       "guardrails": [
+        "Validate the assumed $3 click cost by day 7.",
+        "Review search terms weekly and add negatives.",
+        "Track paid upgrades and fully loaded cost, not signups alone.",
+        "Keep competitor claims dated and verified."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "2 upgrades below $365 cost: scale; 60 clicks, zero signups: pause; review day 45."
+      },
+      {
+       "name": "Agency intake-template outreach",
+       "hypothesis": "Reusable client-intake forms or the assistant-building workflow will prompt agencies to book partner calls.",
+       "population": "500 published-email agency contacts from relevant Shopify and HubSpot directory listings.",
+       "method": "ab_split",
+       "primaryMetric": "Qualified booked calls from 500 contacts",
+       "guardrails": [
+        "At the 1–3% total-reply assumption, 500 contacts imply about 5–15 replies; angle results are directional.",
+        "Report total replies and positive replies separately.",
+        "Include opt-out; stop follow-ups on reply.",
+        "Pause if bounces exceed 2%."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At 500, stop below 5 replies or zero calls; scale at 10 replies, 2 calls."
+      }
+     ],
+     "constraints": [
+      "Owner brief: $600/month ads; commit $60/month to Search, reserve $540/month.",
+      "Portfolio assumption: 10 owner hours/90 days; 8 calls/closing, 1 approval, 1 tracking/ad review.",
+      "Confirmed pricing: Pro $6/seat/month; Business $19/seat/month; margin and retention unverified.",
+      "Research: dated comparison exists at formkit.app; traffic baseline unavailable.",
+      "Unknown: customer sources, sales cycle, geography, and owner skills; verify in week one.",
+      "Capacity: SaaS delivery and support load unverified; confirm before scaling."
+     ],
+     "measurementPlan": "Track UTMs, first source, and server-side paid conversions where available. Reconcile signups, upgrades, owner time, media, and credits weekly; compare fully loaded channel cost with the $365 assumption. Tag assistant referrals; check answer visibility and search terms weekly.",
+     "firstActions": [
+      {
+       "title": "Approve the dated comparison outline and three template briefs.",
+       "why": "Set the primary message and scope before production.",
+       "role": "Owner"
+      },
+      {
+       "title": "Build the page, templates, tracking, and Search ad draft.",
+       "why": "Give switchers a practical next step and track the path to paid.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Research prospects and send the 500-contact agency test over 21 days.",
+       "why": "Test agency demand through relevant, published business contacts.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Review replies, take qualified calls, and close suitable agencies.",
+       "why": "Owner time goes to qualified calls and closing, not production.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "Constraint: validated acquisition. Search traffic, free-to-paid upgrades, agency demand, and paid retention have no supplied baseline; research also found no visible customer proof. Falsifier: billing and source data reveal a repeatable profitable acquisition path.",
+     "affordableCac": "Assume 2 seats × $19 × 12 months × portfolio margin ≈ $365 gross profit. Agency: 8 × $50 = $400; 2 accounts imply $200 each before credits; cap fully-loaded cost below $365.",
+     "notDoing": [
+      {
+       "channel": "Meta ads",
+       "why": "Low plan value and unproven conversion make paid social too risky."
+      },
+      {
+       "channel": "Broad informational blog SEO",
+       "why": "Slow 90-day payoff; prioritize high-intent comparison pages instead."
+      },
+      {
+       "channel": "Marketplace listings",
+       "why": "Eligibility and distribution are unverified; revisit after channel evidence."
+      },
+      {
+       "channel": "Cold outreach to solo freelancers",
+       "why": "One-to-one outreach needs partner accounts that can bring multiple seats."
+      }
+     ],
+     "northStar": {
+      "metric": "New paid accounts from both selected plays",
+      "baseline": "Trailing 90-day new-paid baseline: unknown; verify billing in week one.",
+      "target": "Four net-new paid accounts by day 90; play-model P50: 3.7."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Agency contacts completed",
+       "weeklyTarget": "500 over the first 21 days; pace evenly.",
+       "source": "ClimbOS outreach log"
+      },
+      {
+       "metric": "Agency total reply rate",
+       "weeklyTarget": "1–3% total replies; report positive replies separately.",
+       "source": "ClimbOS benchmark, grade B"
+      },
+      {
+       "metric": "Qualified calls per reply",
+       "weeklyTarget": "20–40% of replies book; replace with actual.",
+       "source": "ClimbOS benchmark, grade B"
+      },
+      {
+       "metric": "Search clicks",
+       "weeklyTarget": "5 weekly; assumed $3/click, verify by day 7.",
+       "source": "Google Ads and spend log"
+      },
+      {
+       "metric": "Net-new paid accounts",
+       "weeklyTarget": "Average 0.3 weekly; four by day 90.",
+       "source": "Billing records"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14",
+       "focus": "Instrument tracking, publish the switcher page and templates, start outreach and Search."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45",
+       "focus": "Run the 500-contact test; day 21 reply/call gate. Day 45: promote agencies below $365 acquisition cost; otherwise stop outreach."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Days 46–90",
+       "focus": "Put 70–80% effort into a proven primary, 20–30% into secondary; otherwise revise the offer."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export trailing 90-day paid accounts, paid seats, cancellations, and source data from billing.",
+      "Approve the dated Google Forms comparison outline; verify competitor details.",
+      "Approve client-intake, event-response, and lead templates; ClimbOS builds them.",
+      "Set tracking links, signup and paid events, first-source question, and weekly scorecard.",
+      "Approve agency profile, published-contact rules, opt-out, and two message angles."
+     ],
+     "risks": [
+      {
+       "risk": "Assumed two-seat economics may overstate gross profit or retention.",
+       "mitigation": "By day 14, verify paid seats, margin, and retention; reset the ceiling."
+      },
+      {
+       "risk": "Agency directory contacts may not be buyers or partners.",
+       "mitigation": "Review at day 21; stop below the registered reply and call gate."
+      },
+      {
+       "risk": "Search cost or volume may miss the planning case.",
+       "mitigation": "Verify assumed $3 click cost by day 7; pause after 60 clicks without signups."
+      },
+      {
+       "risk": "Unverified comparison claims could damage trust.",
+       "mitigation": "Verify claims before launch and monthly; date every comparison update."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Google Forms switcher page",
+       "oneLiner": "Capture switchers with a fair comparison page and practical templates.",
+       "kind": "bankable",
+       "audience": "Google searchers seeking a Google Forms alternative for branded forms.",
+       "trigger": "A Google Forms user needs a branded client-intake, event, or lead form.",
+       "hook": "Try a client-intake, RSVP, or lead form with question drop-off and partial responses.",
+       "mechanic": "Dated comparison page, starter templates, and capped Google Search ads.",
+       "assetUsed": "Unlimited free tier; partial responses; Claude and ChatGPT form publishing.",
+       "funnel": [
+        "$180/90d→clicks 30/60/120 (CPC assumed, D)→signup 1/3/5% [eesel.ai, C]→paid 2/5/10% (assumption, D).",
+        "P50=60×3%×5%=0.09; P10/P90=0.02/0.6 (wide D-adjusted scenarios)."
+       ],
+       "unit": "paid accounts",
+       "p10": 0.02,
+       "p50": 0.09,
+       "p90": 0.6,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Search volume and free-to-paid conversion.",
+       "test": "Build page and templates; spend $60/month; target 60 clicks; review terms day 7 and upgrades monthly.",
+       "killIf": "Pause after 60 clicks with no signup, or if CAC exceeds observed 12-month gross profit.",
+       "scaleIf": "After two paid upgrades below 12-month gross profit CAC, increase spend.",
+       "scores": [
+        4,
+        4,
+        5,
+        3,
+        4,
+        4,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve the dated comparison outline and three starter-form briefs.",
+       "climbosCanDo": "Draft page, templates, and ads; add tracking; owner approves claims and launches ads."
+      },
+      {
+       "name": "Agency intake-template partners",
+       "oneLiner": "Recruit agencies to bring paid accounts through a reusable intake-form workflow.",
+       "kind": "creative",
+       "audience": "Small web and design agencies in Shopify and HubSpot partner directories.",
+       "trigger": "An agency standardizes intake before onboarding or serving another client.",
+       "hook": "Build client-intake forms in Claude or ChatGPT; reuse templates across agency workspaces.",
+       "mechanic": "Personalized agency outreach → booked partner call → paid Business account.",
+       "assetUsed": "Claude/ChatGPT form publishing and a reusable client-intake template.",
+       "funnel": [
+        "3,000 contacts→reply 1/2/3% [ClimbOS, B]→book 20/30/40% [ClimbOS, B]→paid 10/20/30% (assumption, D).",
+        "P50=3,000×2%×30%×20%=3.6; P10/P90=0.7/10.8 (wide D-adjusted scenarios)."
+       ],
+       "unit": "paid Business agency accounts",
+       "p10": 0.7,
+       "p50": 3.6,
+       "p90": 10.8,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether agencies pay and bring multiple seats.",
+       "test": "Send 500 published-email contacts in 21 days; $0 media; allow eight owner hours; track replies, calls, paid accounts.",
+       "killIf": "Stop below five replies or with zero booked calls from 500 contacts.",
+       "scaleIf": "Day 21: at least 10 replies and two calls; then send 250 contacts weekly.",
+       "scores": [
+        4,
+        3,
+        4,
+        4,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve the agency target profile and one reusable client-intake form.",
+       "climbosCanDo": "Find agencies, personalize published-email outreach, follow up, stop on replies; scale to 250 weekly."
+      }
+     ],
+     "portfolioNote": "P50≈3.7 paid accounts. Assume two $19 Business seats, 80% margin: ~$365 12-month gross profit/account. Ten owner hours at $50 plus $180 ads imply ~$184 blended CAC; spend $60/month on Search, hold $540."
+    },
+    "costMicros": 213519,
+    "ms": 1628844
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": true,
+    "output": {
+     "summary": "Conditional supplied P50: 21.3 new paying accounts over 90 days; validate day45. Prioritize relevant paid-feature upgrades. Keep agency Search capped until fully loaded CAC passes an owner-approved payback rule; neither forecast is bankable without first-party data.",
+     "positioning": "Client intake that fits your brand: build in Claude or ChatGPT, publish free, and upgrade only for the paid capabilities your workflow needs.",
+     "audiences": [
+      {
+       "name": "Existing free client-intake owners",
+       "hypothesis": "Own-domain intake or payment collection can justify Pro after first value; unlimited free responses are not an upgrade trigger.",
+       "evidence": "Freelancers describe intake before discovery calls; willingness to pay remains unverified. https://www.reddit.com/r/freelance/comments/o9m70f"
+      },
+      {
+       "name": "Webflow and Framer agencies",
+       "hypothesis": "Verified publishing approvals and client workspaces can justify Business purchases; actual seat counts and willingness to pay must be measured.",
+       "evidence": "Directories identify relevant studios, not search demand or purchase intent: https://webflow.com/certified-partners https://www.framer.com/experts/"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Freemium plan",
+       "score": 84,
+       "status": "primary",
+       "why": "Primary engine: use the existing free product to reach first value, then test a specific reason to pay rather than promoting free usage alone."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Strong reserve candidate: useful buying intent, but organic discovery is less certain within the goal window."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Secondary engine: directly matches an existing product capability, but distribution access must be confirmed first."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 80,
+       "status": "later",
+       "why": "Upgrade hygiene supporting the primary engine; measure paying accounts rather than opens or clicks."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 79,
+       "status": "later",
+       "why": "Defer broad competitor-page production; a verified switching reason is stronger than a generic feature checklist."
+      },
+      {
+       "name": "Templates",
+       "score": 77,
+       "status": "later",
+       "why": "Strong supporting asset; defer a standalone template library until one workflow produces upgrades."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 76,
+       "status": "later",
+       "why": "Useful reserve discovery test, but weaker direct workflow alignment than assistant integration listings."
+      },
+      {
+       "name": "Integration partnerships",
+       "score": 75,
+       "status": "later",
+       "why": "Reserve channel; compatibility alone does not establish access to a partner's audience."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Week-one baseline and launch gate",
+       "hypothesis": "Observed eligibility and acquisition economics determine whether the supplied plays can run at their proposed volumes.",
+       "population": "Export existing account eligibility, preceding goal-length payment history and acquisition-source records. Ask recent customers about sources when records are missing; retain unknowns explicitly.",
+       "method": "export_instructions",
+       "primaryMetric": "Baseline report: source shares and counts/rates for eligible→published→genuine response→feature request→checkout→paid, plus prior-window new paying accounts.",
+       "guardrails": [
+        "No baseline figures were supplied; report observed counts and rates rather than substitute benchmarks.",
+        "Exclude internal accounts, bots and test submissions; distinguish existing free accounts from comparison-acquired accounts.",
+        "Record actual seat counts, billing cadence, refunds, delivery costs and available credit pricing before approving economics.",
+        "Preserve the strongest observed customer source while testing the chosen plays."
+       ],
+       "durationDays": 1,
+       "stoppingRule": "Launch only after export, cost quotes, payback approval, permissions and tracking pass."
+      },
+      {
+       "name": "First response, relevant upgrade",
+       "hypothesis": "Publishing help creates first value; a relevant paid-feature request provides a stronger upgrade reason than artificial free-tier restrictions.",
+       "population": "Supplied pilot assumption: up to 100 eligible existing accounts; day1 export fixes N=min(100,eligible). Enroll once; exclude comparison acquisitions, existing payers and test accounts.",
+       "method": "pre_post_observational",
+       "primaryMetric": "First publications/N; report genuine responses and payments alongside it, using observed denominators and directional confidence.",
+       "guardrails": [
+        "Assumed pilot ceiling, validate day1: $10 credits + 1 owner hour×$50 = $60. Actual CAC equals recorded credits and labor divided by net new payers.",
+        "Supplied P50 assumptions, validate day45: 300×50% published×60% genuine response×30% paid-feature request×40% purchase = 10.8 paying accounts.",
+        "Publication thresholds normalize the supplied pilot into directional business gates, not significance tests; evaluate once after the complete window.",
+        "Use permissioned emails; suppress payers, opt-outs and checkout reminders without checkout intent. Safety or tracking breaches pause enrollment immediately.",
+        "Expansion requires the approved CAC boundary; zero payers means undefined CAC, never a pass. Stop enrollment at the verified pool."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Graduate ≥40% published, payer and CAC-pass; kill <20%; otherwise revise once."
+      },
+      {
+       "name": "The agency handoff comparison",
+       "hypothesis": "Studios comparing intake tools will try a chat-built demonstration and pay for verified handoff controls; directory presence supports fit, not demand.",
+       "population": "Supplied assumption: 40 Search visits at $1/visit; validate pilot-day21. Observe actual traffic within a fixed window and media ceiling, rather than run an underpowered split test.",
+       "method": "export_instructions",
+       "primaryMetric": "Demo clicks/unique qualified visits; report signup, checkout, actual purchased seats and net payments as directional downstream evidence.",
+       "guardrails": [
+        "Assumed pilot ceiling, validate day1: $40 media + $20 credits + 3 owner hours×$50 = $210. Actual CAC equals recorded media, credits and labor divided by net new paying agencies.",
+        "Supplied P50 assumptions, validate day45: 1,400×25% demo×20% signup×30% checkout×50% purchase = 10.5 paying agencies.",
+        "Supplied-model media-only CAC=$1,400/10.5=$133.33; labor and credits increase it. Validate visit costs pilot-day21 and purchase assumptions day45.",
+        "Use exact/phrase intent terms, negatives and a fixed comparison; verify claims and consent. The pilot media allowance sits inside the monthly advertising cap.",
+        "Below planned visit volume is inconclusive: do not expand. Otherwise require paid-outcome economics and approved monthly pacing; stop early only for guardrail breaches."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At planned volume: graduate ≥25% demos, payer, CAC-pass; kill <10%; otherwise revise once."
+      }
+     ],
+     "constraints": [
+      "Owner: ads capped at $600/month, paid directly; the agency pilot counts inside this cap.",
+      "Assumptions: two owner hours/week and $50/hour; validate day1 before launch.",
+      "Assumed credits: $30/month, separate authorization required; verify quote day1 or pause both launches.",
+      "Weekly owner allocation: activation five minutes, agency sixty; remaining fifty-five reserved for approvals/closing.",
+      "Unverified geography, skills, capacity, sales cycle and existing sources: establish during the baseline export."
+     ],
+     "measurementPlan": "UTMs plus account IDs join publication, genuine-response, feature-request, checkout and paid events. Reconcile payments, refunds, spend, credits and owner time weekly; record source surveys, consented server-side conversions and monthly AI referrals/visibility.",
+     "firstActions": [
+      {
+       "title": "Export the week-one baseline",
+       "why": "Establish source shares, funnel denominators and account eligibility; protect the largest proven customer source.",
+       "role": "ClimbOS analyst"
+      },
+      {
+       "title": "Authorize the activation pilot",
+       "why": "Approve the starter, relevant paid-feature prompts and permissioned lifecycle sequence; checkout remains self-serve.",
+       "role": "ClimbOS lifecycle specialist + owner"
+      },
+      {
+       "title": "Authorize the agency comparison pilot",
+       "why": "Verify claims and approve the capped Search draft; ClimbOS produces assets, while the owner launches and closes qualified enquiries.",
+       "role": "ClimbOS landing-page and ads specialists + owner"
+      }
+     ],
+     "diagnosis": "Provisional constraint: activation. Unlimited free usage makes artificial limits inappropriate, but no first-party funnel establishes the leak; strong publication and first-response rates with weak paid-feature demand would falsify this diagnosis.",
+     "affordableCac": "Proposed payback <3 months; owner approval gates launch. Assumptions, validate day1: 80% margin, one/three seats. Fully-loaded CAC boundaries: Pro $6×80%×3=$14.40; Business $19×3×80%×3=$136.80; stay below.",
+     "notDoing": [
+      {
+       "channel": "Meta, paid social and creator campaigns",
+       "why": "Low entry pricing and unproven retention cannot support another paid experiment."
+      },
+      {
+       "channel": "Cold outreach and LinkedIn ads",
+       "why": "Keep upgrades self-serve; prospecting would dilute the chosen tests and increase acquisition labor."
+      },
+      {
+       "channel": "Blog SEO, template libraries and multiple alternative pages",
+       "why": "First prove one intake starter and one buying-intent comparison."
+      },
+      {
+       "channel": "Marketplace distribution and formal partnerships",
+       "why": "Eligibility checks stay in scope; listing reach and partner access remain unproven."
+      },
+      {
+       "channel": "Standalone social, video programs and paid review-site placement",
+       "why": "Reuse the demonstration; defer unverified reach and paid lead packages."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying accounts, excluding reactivations",
+      "baseline": "No first-party baseline supplied; export before either launch.",
+      "target": "Assumption: 21 new paying accounts; reforecast day45."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Eligible intake accounts enrolled",
+       "weeklyTarget": "Assumption: 25/week after graduation; pool validated day1.",
+       "source": "Eligibility export; supplied play"
+      },
+      {
+       "metric": "Published forms receiving genuine responses",
+       "weeklyTarget": "Assumption: 60% of publications; validate day45.",
+       "source": "Product events; supplied funnel"
+      },
+      {
+       "metric": "Qualified agency visits",
+       "weeklyTarget": "Assumption: 140/week after graduation; validate pilot-day21.",
+       "source": "UTMs; supplied agency play"
+      },
+      {
+       "metric": "Agency demo clicks",
+       "weeklyTarget": "Assumption: 25% of visits; validate pilot-day21.",
+       "source": "Demo events; supplied funnel"
+      },
+      {
+       "metric": "Fully loaded acquisition cost",
+       "weeklyTarget": "Below approved boundaries; reconcile weekly.",
+       "source": "Payments, spend, credits, time log"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Export baseline first; approve economics, permissions and claims; launch both pilots immediately after passing the gate."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Read pilots after their fixed windows; confirm or stop expansion at day45."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "Allocate ClimbOS effort 75% activation/25% comparison; expand passing cohorts and compound the starter, lifecycle sequence and handoff demonstration."
+      }
+     ],
+     "weekOneChecklist": [
+      "ClimbOS: export customer sources and funnel baseline; verify eligible users before enrollment.",
+      "Owner: approve payback, margin assumptions, geography, credit quote and permissions before either launch.",
+      "ClimbOS: prepare starter, prompts and emails; owner approves within twenty minutes.",
+      "ClimbOS: verify comparison, demonstration and listing eligibility; owner approves Search draft within twenty minutes.",
+      "ClimbOS: test events and scorecard; owner launches pilots only after the baseline gate passes."
+     ],
+     "risks": [
+      {
+       "risk": "Eligible users, tracking coverage and credit costs remain unverified.",
+       "mitigation": "Day1: verify exports, event coverage and quotes; no launch without approval."
+      },
+      {
+       "risk": "Supplied P50 may exceed available users or affordable traffic.",
+       "mitigation": "Day45: replace supplied assumptions with observed cohort volumes, conversion and maturity."
+      },
+      {
+       "risk": "Agency P50 leaves almost no room for labor.",
+       "mitigation": "Day45: stop unless measured seats, costs and conversion meet approved payback."
+      },
+      {
+       "risk": "Refunds, churn or AI costs could erase assumed margin.",
+       "mitigation": "Day45: recalculate realized gross profit; pause expansion if payback fails."
+      },
+      {
+       "risk": "Marketplace eligibility and competitor claims require verification.",
+       "mitigation": "Before publication: verify access and claims; count no unconfirmed distribution."
+      }
+     ],
+     "plays": [
+      {
+       "name": "First response, relevant upgrade",
+       "oneLiner": "Turn a useful free intake form into a relevant Pro upgrade—not an artificial response-limit upsell.",
+       "kind": "bankable",
+       "audience": "Existing free-account owners building client-intake forms inside Formkit; exclude users acquired through the second play.",
+       "trigger": "First publication, first real response, then a request for a paid feature.",
+       "hook": "Publish one client-intake form free. Need payments or your own domain? Choose Pro at $6/seat/month.",
+       "mechanic": "Publish→first response; paid-feature prompt; three emails: publishing help, relevant benefit, checkout reminder.",
+       "assetUsed": "Unlimited free forms plus paid domains, payments, and publishing approvals.",
+       "funnel": [
+        "300 eligible accounts (assumption,D).",
+        "→published:25/50/70% (assumption,D).",
+        "→first-response:40/60/80% (assumption,D).",
+        "→paid-feature-request:20/30/40% (assumption,D).",
+        "→paid:20/40/60% (assumption,D)."
+       ],
+       "unit": "new paying accounts, assuming one Pro seat each",
+       "p10": 1,
+       "p50": 10.8,
+       "p90": 33,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether 300 eligible free accounts and usable activation events exist.",
+       "test": "100 users; $60 labor/credit ceiling; 21 days; primary metric: first publication.",
+       "killIf": "Day21: <20/100 publish; day45: acquisition cost exceeds assumed $57.60 annual gross profit/account.",
+       "scaleIf": "Day21: ≥40/100 publish and ≥1 pays; expand to 25 eligible accounts/week.",
+       "scores": [
+        5,
+        1,
+        5,
+        3,
+        5,
+        3,
+        5,
+        4,
+        76
+       ],
+       "firstActionToday": "Approve the client-intake starter and eligible-user export; allow 20 minutes.",
+       "climbosCanDo": "ClimbOS drafts prompts and three behavior-triggered emails; enrolls 25 accounts/week after kickoff, capped at forecast pool."
+      },
+      {
+       "name": "The agency handoff comparison",
+       "oneLiner": "Apply comparison-shopping mechanics to agency handoffs: chat-built intake, publishing approvals, and a self-serve Business checkout.",
+       "kind": "creative",
+       "audience": "Webflow/Framer studios comparing client-intake tools on Google Search; audience-fit inference: https://tally.so/.",
+       "trigger": "Choosing a client-intake tool before a website handoff.",
+       "hook": "Build client intake in Claude. Need approval before publishing? Compare Formkit Business with your current setup.",
+       "mechanic": "A dated, verified comparison plus an interactive client-intake demonstration.",
+       "assetUsed": "Chat-built forms, separate client workspaces, and Business publishing approvals.",
+       "funnel": [
+        "1,400 visits (assumption,D;$1/visit).",
+        "→demo:15/25/35% (assumption,D).",
+        "→signup:10/20/30% (assumption,D; visitor-signup-benchmark:8.43%/95articles,https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages,B).",
+        "→checkout:15/30/45% (assumption,D).",
+        "→paid:30/50/70% (assumption,D)."
+       ],
+       "unit": "new paying agency accounts, assuming three Business seats each",
+       "p10": 1,
+       "p50": 10.5,
+       "p90": 32,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Search volume, click costs, and willingness to buy three Business seats.",
+       "test": "40 visits; $60 ceiling including $40 ads and labor/credits; 21 days; demo-click rate.",
+       "killIf": "Day21: <4/40 demo clicks; day45: cost exceeds assumed $547 annual gross profit/account.",
+       "scaleIf": "Day21: ≥10/40 demo clicks and ≥1 paid agency; target 140 visits/week within monthly cap.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        4,
+        3,
+        5,
+        4,
+        74
+       ],
+       "firstActionToday": "Approve the agency comparison outline and $40 Google Search draft; allow 20 minutes.",
+       "climbosCanDo": "ClimbOS builds the comparison page, drafts Google ads, and tracks checkouts; owner approves and launches."
+      }
+     ],
+     "portfolioNote": "Prioritize activation: conditional forecast ≈21 paying accounts. Ads ≤$600/month. Assumptions: 80% margin, $50/owner-hour, two hours/week, day-21 graduation. User volumes unverified; bankable status provisional without first-party data. Scores: fit/predictability/leverage/speed/compounding/cost/safety/distinctiveness/total."
+    },
+    "costMicros": 991164,
+    "ms": 1985964
+   }
+  },
+  "comparisons": {
+   "expert>basic": {
+    "sol": {
+     "result": "loss",
+     "reasons": [
+      "B better matches the supplied operating model: ClimbOS produces the assets and runs published-email outreach, with explicit volumes; the owner approves and closes. Agency partners are a defensible outreach audience for this low-priced product.",
+      "B anchors its outreach forecast to the supplied reply and booking benchmarks and labels purchase conversion as an assumption. A's headline 21-account forecast rests almost entirely on an unverified user pool and invented funnel inputs.",
+      "B is easier for an owner to execute: one switcher asset, one agency offer, a capped test and understandable decision gates. A's repeated qualifications and contradictory economics obscure what actually gets authorized.",
+      "B still wastes its primary-channel designation on a Search test whose own model predicts just 0.09 paying accounts from $180 media—about $2,000 media-only CAC. That should be a tightly capped learning expense, not a bankable growth play.",
+      "Neither is ready unchanged. B needs channel-specific CAC limits, a reconciled outreach schedule and a concrete mechanism for agencies to bring multiple client accounts. Those repairs are more straightforward than rebuilding A's forecast and approval rules."
+     ],
+     "truthX": [
+      "Repeatedly calls its forecasts and pilot inputs 'supplied,' although the brief supplied no such figures. The 300 eligible accounts, 1,400 visits, conversion rates and P50 outcomes are planner-generated assumptions, not supplied evidence.",
+      "The agency pilot has conflicting cost ceilings: $210 including labor in the experiment, versus $60 'including' labor and credits in the play.",
+      "Its stopping rules conflict: the main plan requires three-month payback, while the play-level kill rules allow acquisition costs approaching a full year's assumed gross profit."
+     ],
+     "truthY": [
+      "The ~$365 annual gross-profit ceiling assumes two Business seats and 80% margin. Applying it to the switcher/Search play is unsupported: those customers could buy a single $6 Pro seat, with much lower value.",
+      "The ~3.7-account forecast assumes 3,000 outreach contacts. The plan needs to reconcile that volume with its initial test, warm-up, conditional scaling and available mailbox capacity."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "expert": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 4,
+    "craft": 5,
+    "usefulness": 4,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "The agency growth forecast depends on economics that barely pass before labor and credits, while conflicting pilot budgets and CAC thresholds make the scale-or-stop instructions unreliable."
+   },
+   "basic": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 4,
+    "craft": 5,
+    "usefulness": 5,
+    "creativity": 3,
+    "overall": 5,
+    "topIssue": "The primary Search play models roughly $2,000 CAC against an assumed $365 annual gross profit per account, while nearly the entire paid-customer forecast depends on an unvalidated agency offer."
+   }
+  }
+ }
+]

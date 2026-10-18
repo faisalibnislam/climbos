@@ -83,9 +83,12 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         kind,
         funnel: ["a hundred contacted → replies: low to high [example.com, C]", "replies → booked: about a third [example.com, C]"],
         unit: "booked jobs",
-        p10: 1,
-        p50: 2,
-        p90: 4,
+        horizonDays: 90,
+        p10: 5,
+        p50: 13,
+        p90: 26,
+        // Numbers that add up and pay back (100 a week × 13 weeks × 10% × 10% ≈ 13).
+        model: { weeklyReach: 100, steps: [{ name: "reply", rate: 0.1 }, { name: "paid", rate: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 },
         confidence: "medium",
         test: "a hundred contacts · small budget · three weeks",
         killIf: "no replies",
@@ -93,6 +96,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         scores: [4, predictability, 3, 3, 3, 4, 5, distinctiveness],
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
+      (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthsRetained: 12, basis: "fake assumptions" };
     }
     // Channel scoring: valid library types and the candidates named in the prompt.
     const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };

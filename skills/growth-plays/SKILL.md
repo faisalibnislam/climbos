@@ -93,6 +93,15 @@ Score each play 1–5 on:
 - **No more than 4 active plays** for a business with fewer than 10 people, and no two plays in the same channel unless one follows on from the other.
 - **No generic fallback:** if nothing reaches distinctiveness ≥ 4 with predictability ≥ 3, recombine and transplant again before accepting a generic plan.
 
+## Think like a CMO with 20 years' experience
+
+Before writing any play, decide in this order:
+1. **The binding constraint.** What actually limits growth right now (demand, conversion, price/value, retention, reach)? Plays attack it.
+2. **Where the money is.** Which segment has the best value × reachability? Prefer customers worth more (teams, agencies, annual plans) when cheap ones can't pay for acquisition.
+3. **The offer.** What would make that segment act now (trigger, risk reversal, a reason to switch)?
+4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach, step rates as shares 0–1, monthly spend, owner hours); ClimbOS computes customers and cost per customer from it and rejects plays that lose money or whose P50 doesn't follow from the model.
+5. **What we won't do,** and why.
+
 ## Ambition (a plan, not a validation exercise)
 
 - The portfolio's combined P50 must **credibly move the goal in 90 days**. Small tests are how a play starts, not the plan itself. A plan whose main bet forecasts under one customer fails.
