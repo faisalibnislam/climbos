@@ -708,6 +708,18 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Engine lab (self-improvement loop 3): playbook rules proposed from reviews, A/B tested, approved in /ops. */
+  engineProposals: defineTable({
+    agentId: v.string(),
+    rules: v.string(),
+    rationale: v.string(),
+    status: v.union(v.literal("proposed"), v.literal("testing"), v.literal("approved"), v.literal("rejected"), v.literal("retired")),
+    test: v.optional(v.object({ baseline: v.optional(v.number()), variant: v.optional(v.number()), costMicros: v.number(), at: v.number(), error: v.optional(v.string()) })),
+    decidedBy: v.optional(v.id("users")),
+    decidedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_agent_status", ["agentId", "status"]),
+
   /** Learning from results: first-party rates, per workspace and pooled by business type (anonymized, k ≥ 5). */
   learnedRates: defineTable({
     /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled) or "all". */

@@ -151,6 +151,7 @@ function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {
   return [
     { text: OPERATING_RULES, cache: false },
     { text: `${ROLE_CHARTERS[spec.role]}\n\nYour playbook for this work (follow it):\n\n${playbooks}`, cache: true },
+    ...(spec.addendum ? [{ text: `LESSONS FROM PAST REVIEWS (approved; follow them):\n${spec.addendum}`, cache: true }] : []),
   ];
 }
 

@@ -31,6 +31,8 @@ crons.interval("airly apps sync", { minutes: 15 }, internal.airlyActions.syncAll
 // Self-improvement loop 2: refresh first-party rates every Sunday night.
 // Self-improvement loop 1: re-read each business's own site weekly.
 crons.weekly("site watch", { dayOfWeek: "monday", hourUTC: 6, minuteUTC: 0 }, internal.siteWatchActions.weekly, {});
+// Self-improvement loop 3: propose playbook rules from recent reviews (tested/approved in /ops).
+crons.weekly("engine lab proposals", { dayOfWeek: "tuesday", hourUTC: 2, minuteUTC: 0 }, internal.engineLabActions.proposeWeekly, {});
 crons.weekly("learn from results", { dayOfWeek: "sunday", hourUTC: 23, minuteUTC: 0 }, internal.learning.recompute, {});
 crons.interval("outbound: read replies and bounces", { minutes: 15 }, internal.mailbox.checkReplies, {});
 // One-tap approvals: a daily email of drafts waiting for the owner.

@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="17 October 2026"
+      updated="18 October 2026"
       draft
       intro="This explains, in plain English, what information ClimbOS collects, why, and the choices you have."
     >
@@ -55,6 +55,10 @@ export default function PrivacyPage() {
         <li>To publish or send things you&apos;ve approved, on the accounts you&apos;ve connected.</li>
         <li>To send you sign-in codes, approval requests, alerts and service messages.</li>
         <li>To keep the service secure, prevent abuse and meet legal obligations.</li>
+        <li>
+          To improve plans for everyone: we combine results (counts and rates, such as reply or sign-up rates) across businesses of the same type. These
+          statistics never include names, messages, contacts or anything that identifies you, and are only used when at least five businesses contribute.
+        </li>
       </ul>
 
       <h2>What we don&apos;t do</h2>

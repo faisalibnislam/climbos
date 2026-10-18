@@ -44,6 +44,8 @@ import type * as crons from "../crons.js";
 import type * as demo from "../demo.js";
 import type * as emailActions from "../emailActions.js";
 import type * as engine from "../engine.js";
+import type * as engineLab from "../engineLab.js";
+import type * as engineLabActions from "../engineLabActions.js";
 import type * as http from "../http.js";
 import type * as inbox from "../inbox.js";
 import type * as jobWrites from "../jobWrites.js";
@@ -145,6 +147,8 @@ declare const fullApi: ApiFromModules<{
   demo: typeof demo;
   emailActions: typeof emailActions;
   engine: typeof engine;
+  engineLab: typeof engineLab;
+  engineLabActions: typeof engineLabActions;
   http: typeof http;
   inbox: typeof inbox;
   jobWrites: typeof jobWrites;

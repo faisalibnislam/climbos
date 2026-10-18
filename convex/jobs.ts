@@ -294,6 +294,9 @@ async function runAgentTask<T>(
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
   }
   // Climb AI Expert (paid): Sol drafts this agent's work when it's one of the expert agents.
+  // Engine lab: rules approved in /ops join this agent's playbook.
+  const addendum: string = await ctx.runQuery(internal.engineLab.addendumFor, { agentId: spec.id });
+  if (addendum) spec = { ...spec, addendum };
   if (job.run.aiMode === "expert") spec = { ...spec, models: routeModels(spec.id, "expert") };
   // Climb AI Basic: best of two drafts for the strategy agents.
   else if (draftsFor(spec.id, "basic") > 1) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };

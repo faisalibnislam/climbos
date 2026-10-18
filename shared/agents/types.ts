@@ -62,6 +62,8 @@ export interface AgentSpec<T> {
   shipOn?: "gates" | "rubric";
   /** Owner-facing analysis (plans, insights, audits): drafted with low verbosity. Publishable copy keeps the default. */
   ownerFacing?: boolean;
+  /** Rules learned by the engine lab and approved in /ops, appended to the playbook. */
+  addendum?: string;
 }
 
 export interface AgentInput {
