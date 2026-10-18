@@ -1388,8 +1388,8 @@ export default defineSchema({
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
   assets: defineTable({
     orgId: v.id("organizations"),
-    kind: v.union(v.literal("screenshot"), v.literal("product_photo"), v.literal("upload"), v.literal("logo"), v.literal("ai_image"), v.literal("edited")),
-    source: v.union(v.literal("website"), v.literal("store"), v.literal("upload"), v.literal("ai"), v.literal("edit")),
+    kind: v.union(v.literal("screenshot"), v.literal("product_photo"), v.literal("upload"), v.literal("logo"), v.literal("ai_image"), v.literal("edited"), v.literal("design")),
+    source: v.union(v.literal("website"), v.literal("store"), v.literal("upload"), v.literal("ai"), v.literal("edit"), v.literal("design")),
     view: v.optional(v.union(v.literal("desktop"), v.literal("mobile"), v.literal("section"), v.literal("product"), v.literal("other"))),
     storageId: v.optional(v.id("_storage")),
     r2Key: v.optional(v.string()),
@@ -1409,6 +1409,22 @@ export default defineSchema({
   })
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind", ["orgId", "kind"]),
+
+  /** Designs made in ClimbOS's own design editor (image posts, carousels, documents). */
+  designs: defineTable({
+    orgId: v.id("organizations"),
+    title: v.string(),
+    format: v.string(),
+    /** The DesignDoc as JSON (shared/design/types). Images are "asset:<id>" references, never inline data. */
+    doc: v.string(),
+    pages: v.number(),
+    /** The post this design was made for or attached to, if any. */
+    artifactId: v.optional(v.id("artifacts")),
+    createdBy: v.id("users"),
+    archived: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_org_updated", ["orgId", "updatedAt"]),
 
   /** Short vertical videos (Reels, TikTok, Shorts) made by our own renderer. */
   reels: defineTable({

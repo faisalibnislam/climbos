@@ -130,7 +130,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             {NAV_GROUPS.map((group) => (
               <NavGroup key={group || "home"} label={rail ? "" : group}>
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "inbox" ? inboxUnread : undefined}>
+                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "inbox" ? inboxUnread : undefined}>
                     {item.label}
                   </NavLink>
                 ))}
@@ -225,7 +225,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                   <li key={item.key}>
                     <SheetClose asChild>
                       <Link
-                        href={item.key === "studio" ? `/studio/${slug}/new` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
+                        href={item.key === "studio" ? `/studio/${slug}` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
                         aria-current={section === item.key ? "page" : undefined}
                         className={cn(
                           "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 text-center text-ui font-medium",

@@ -40,6 +40,8 @@ export function EditorCanvas({ editor, resolve }: { editor: Editor; resolve: Ass
   const [fitScale, setFitScale] = useState(0.5);
   const [guides, setGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
   const drag = useRef<Drag | null>(null);
+  /** Layer under the pointer at the last press: pointer capture retargets the later click/dblclick to the stage. */
+  const lastDownId = useRef<string | null>(null);
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const scale = state.zoom || fitScale;
 
@@ -124,6 +126,7 @@ export function EditorCanvas({ editor, resolve }: { editor: Editor; resolve: Ass
       return;
     }
     const id = topLevelId(e.target);
+    lastDownId.current = id;
     const layer = id ? page.layers.find((l) => l.id === id) : undefined;
     if (!layer || layer.locked) {
       drag.current = { kind: "marquee", start: p, current: p, additive: e.shiftKey };
@@ -200,7 +203,8 @@ export function EditorCanvas({ editor, resolve }: { editor: Editor; resolve: Ass
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: ReactPointerEvent) => {
+    if ((e.currentTarget as HTMLElement).hasPointerCapture?.(e.pointerId)) (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     const d = drag.current;
     drag.current = null;
     setGuides({ x: [], y: [] });
@@ -218,7 +222,7 @@ export function EditorCanvas({ editor, resolve }: { editor: Editor; resolve: Ass
   };
 
   const onDoubleClick = (e: React.MouseEvent) => {
-    const id = topLevelId(e.target);
+    const id = topLevelId(e.target) ?? lastDownId.current;
     const l = id ? page.layers.find((x) => x.id === id) : undefined;
     if (l?.type === "text" && !l.locked) dispatch({ type: "editText", id: l.id });
   };

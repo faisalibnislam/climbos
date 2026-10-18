@@ -63,7 +63,7 @@ export function CommandPalette({ slug }: { slug: string }) {
       { id: "today", label: "Today", icon: Home, run: go(`/app/${slug}/today`) },
       { id: "plan", label: "Growth plan", icon: Compass, run: go(`/app/${slug}/plan`) },
       { id: "content", label: "Content", icon: CalendarDays, run: go(`/app/${slug}/content`) },
-      { id: "studio", label: "Design studio", hint: "Create an image post or carousel", icon: Palette, run: go(`/studio/${slug}/new`) },
+      { id: "studio", label: "Design studio", hint: "Create an image post or carousel", icon: Palette, run: go(`/studio/${slug}`) },
       { id: "results", label: "Results", icon: BarChart3, run: go(`/app/${slug}/results`) },
       { id: "connections", label: "Connections", icon: Plug, run: go(`/app/${slug}/connections`) },
       { id: "billing", label: "Plans and usage", icon: CreditCard, run: go(`/app/${slug}/settings/billing`) },

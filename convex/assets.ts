@@ -19,9 +19,9 @@ const DAILY_JOBS = 12;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 type AssetKind = Doc<"assets">["kind"];
-const kindValidator = v.union(v.literal("screenshot"), v.literal("product_photo"), v.literal("upload"), v.literal("logo"), v.literal("ai_image"), v.literal("edited"));
+const kindValidator = v.union(v.literal("screenshot"), v.literal("product_photo"), v.literal("upload"), v.literal("logo"), v.literal("ai_image"), v.literal("edited"), v.literal("design"));
 
-async function urlOf(ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> } }, a: Doc<"assets">) {
+export async function urlOf(ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> } }, a: Doc<"assets">) {
   if (a.r2Key) return r2SignedUrl(a.r2Key, 3600);
   if (a.storageId) return ctx.storage.getUrl(a.storageId);
   return null;

@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Copy, Download, Maximize2, Minus, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { newId } from "@shared/design/ops";
 import type { DesignDoc } from "@shared/design/types";
 import { Button, IconButton, Tooltip } from "@/components/ui";
@@ -26,30 +26,62 @@ export function DesignEditor({
   backHref,
   onSave,
   onExport,
+  onTitleChange,
+  resolve: externalResolve,
+  library,
+  onUpload: externalUpload,
+  headerActions,
+  readOnly = false,
 }: {
   initial: DesignDoc;
   title: string;
   backHref: string;
   onSave?: (doc: DesignDoc) => Promise<void> | void;
   onExport?: (doc: DesignDoc, pageIndex: number) => Promise<void> | void;
+  onTitleChange?: (title: string) => void;
+  /** Resolves "asset:<id>" references to URLs (the workspace asset library). */
+  resolve?: AssetResolver;
+  /** Photos and logos already in the workspace library. */
+  library?: UploadedAsset[];
+  /** Saves files to the workspace library and returns them; without it, uploads stay in this session only. */
+  onUpload?: (files: File[], kind: "upload" | "logo") => Promise<UploadedAsset[]>;
+  headerActions?: (ctx: { doc: DesignDoc; pageIndex: number }) => ReactNode;
+  readOnly?: boolean;
 }) {
   const editor = useEditor(initial);
   const { doc, committed, page, state, dispatch, apply, canUndo, canRedo } = editor;
   const [panel, setPanel] = useState<PanelKey | null>("templates");
-  const [assets, setAssets] = useState<UploadedAsset[]>([]);
+  const [sessionAssets, setSessionAssets] = useState<UploadedAsset[]>([]);
   const [savedDoc, setSavedDoc] = useState(initial);
-  const resolve: AssetResolver = useCallback((src) => (/^(https?:|data:|blob:|\/)/.test(src) ? src : undefined), []);
+  const [saveError, setSaveError] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [name, setName] = useState(title);
+  const resolve: AssetResolver = useCallback((src) => externalResolve?.(src) ?? (/^(https?:|data:|blob:|\/)/.test(src) ? src : undefined), [externalResolve]);
+  const assets = useMemo(() => [...sessionAssets, ...(library ?? []).filter((a) => !sessionAssets.some((s) => s.id === a.id))], [sessionAssets, library]);
 
-  // Autosave a moment after the last committed change.
+  // Autosave a moment after the last committed change; failures retry on the next change and show.
   useEffect(() => {
-    if (!onSave || committed === savedDoc) return;
+    if (!onSave || readOnly || committed === savedDoc) return;
     const t = setTimeout(async () => {
-      await onSave(committed);
-      setSavedDoc(committed);
-    }, 1200);
+      try {
+        await onSave(committed);
+        setSavedDoc(committed);
+        setSaveError(false);
+      } catch {
+        setSaveError(true);
+      }
+    }, 1000);
     return () => clearTimeout(t);
-  }, [committed, savedDoc, onSave]);
-  const saveStatus = !onSave ? "" : committed !== savedDoc ? "Saving…" : savedDoc !== initial ? "All changes saved" : "";
+  }, [committed, savedDoc, onSave, readOnly]);
+  const unsaved = Boolean(onSave) && !readOnly && committed !== savedDoc;
+  // Leaving with unsaved changes asks first.
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
+  const saveStatus = !onSave || readOnly ? (readOnly ? "View only" : "") : saveError ? "Couldn't save. Retrying with your next change." : unsaved ? "Saving…" : savedDoc !== initial ? "All changes saved" : "Saved";
 
   // Keyboard shortcuts (ignored while typing in a field).
   useEffect(() => {
@@ -95,19 +127,32 @@ export function DesignEditor({
     return () => window.removeEventListener("keydown", onKey);
   }, [state.selected, editor.selectedLayers, page, apply, dispatch]);
 
-  const upload = (files: FileList) => {
-    for (const file of Array.from(files)) {
+  const upload = async (files: FileList | File[], kind: "upload" | "logo" = "upload"): Promise<UploadedAsset[]> => {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/") && f.size <= 20 * 1024 * 1024);
+    if (externalUpload) {
+      setUploading(true);
+      try {
+        const saved = await externalUpload(list, kind);
+        setSessionAssets((a) => [...saved, ...a]);
+        if (kind === "upload") setPanel("photos");
+        return saved;
+      } finally {
+        setUploading(false);
+      }
+    }
+    for (const file of list) {
       if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) continue;
       const reader = new FileReader();
       reader.onload = () => {
         const url = String(reader.result);
         const img = new Image();
-        img.onload = () => setAssets((a) => [{ id: newId("a"), url, name: file.name, width: img.naturalWidth, height: img.naturalHeight }, ...a]);
+        img.onload = () => setSessionAssets((a) => [{ id: newId("a"), url, name: file.name, width: img.naturalWidth, height: img.naturalHeight }, ...a]);
         img.src = url;
       };
       reader.readAsDataURL(file);
     }
     setPanel("photos");
+    return [];
   };
 
   const pageIndex = doc.pages.findIndex((p) => p.id === page.id);
@@ -122,9 +167,30 @@ export function DesignEditor({
             <ArrowLeft aria-hidden="true" /> Back
           </Link>
         </Button>
-        <h1 className="heading-section ml-1 truncate">{title}</h1>
-        <span className="text-xs text-ink-3" role="status">
-          {saveStatus}
+        {onTitleChange && !readOnly ? (
+          <input
+            aria-label="Design name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => {
+              const t = name.trim();
+              if (t && t !== title) onTitleChange(t);
+              else setName(title);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") {
+                setName(title);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="heading-section ml-1 min-w-0 max-w-xs truncate rounded-md border border-transparent bg-transparent px-1.5 py-0.5 hover:border-line focus:border-brand-600 focus:outline-none"
+          />
+        ) : (
+          <h1 className="heading-section ml-1 truncate">{title}</h1>
+        )}
+        <span className={cn("text-xs", saveError ? "text-red-800" : "text-ink-3")} role="status">
+          {uploading ? "Uploading…" : saveStatus}
         </span>
         <div className="ml-auto flex items-center gap-1">
           <IconButton size="sm" aria-label="Undo" tooltip="Undo (⌘Z)" icon={<Undo2 />} onClick={() => dispatch({ type: "undo" })} disabled={!canUndo} className="text-ink-2 hover:text-ink" />
@@ -143,6 +209,7 @@ export function DesignEditor({
               <Download aria-hidden="true" /> Download
             </Button>
           ) : null}
+          {headerActions ? <div className="ml-2 flex items-center gap-2">{headerActions({ doc: committed, pageIndex })}</div> : null}
         </div>
       </header>
 

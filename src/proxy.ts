@@ -56,7 +56,7 @@ export const proxy = convexAuthNextjsMiddleware(
     if (request.nextUrl.pathname.startsWith("/api/")) return;
 
     const nonce = btoa(crypto.randomUUID());
-    const csp = contentSecurityPolicy(nonce, request.nextUrl.pathname.startsWith("/widget/"), request.nextUrl.pathname.startsWith("/report/"));
+    const csp = contentSecurityPolicy(nonce, request.nextUrl.pathname.startsWith("/widget/"), request.nextUrl.pathname.startsWith("/report/") || request.nextUrl.pathname.startsWith("/render/"));
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-nonce", nonce);
     requestHeaders.set("Content-Security-Policy", csp);

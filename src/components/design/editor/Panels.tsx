@@ -25,6 +25,8 @@ export const PANELS: { key: PanelKey; label: string; icon: LucideIcon }[] = [
 
 export interface UploadedAsset {
   id: string;
+  /** What the design stores ("asset:<id>" for library images); defaults to the URL. */
+  ref?: string;
   url: string;
   name: string;
   width: number;
@@ -35,7 +37,9 @@ function centered(doc: DesignDoc, w: number, h: number) {
   return { x: Math.round((doc.width - w) / 2), y: Math.round((doc.height - h) / 2), width: Math.round(w), height: Math.round(h), rotation: 0, opacity: 1 };
 }
 
-export function PanelBody({ panel, editor, resolve, assets, onUpload }: { panel: PanelKey; editor: Editor; resolve: AssetResolver; assets: UploadedAsset[]; onUpload: (files: FileList) => void }) {
+type Upload = (files: FileList | File[], kind?: "upload" | "logo") => Promise<UploadedAsset[]>;
+
+export function PanelBody({ panel, editor, resolve, assets, onUpload }: { panel: PanelKey; editor: Editor; resolve: AssetResolver; assets: UploadedAsset[]; onUpload: Upload }) {
   switch (panel) {
     case "templates":
       return <TemplatesPanel editor={editor} resolve={resolve} />;
@@ -46,7 +50,7 @@ export function PanelBody({ panel, editor, resolve, assets, onUpload }: { panel:
     case "photos":
       return <PhotosPanel editor={editor} assets={assets} onUpload={onUpload} />;
     case "brand":
-      return <BrandPanel editor={editor} />;
+      return <BrandPanel editor={editor} resolve={resolve} onUpload={onUpload} />;
     case "layers":
       return <LayersPanel editor={editor} />;
   }
@@ -154,13 +158,15 @@ const SHAPES: { shape: ShapeLayer["shape"]; label: string }[] = [
 ];
 
 const ICON_NAMES = Object.keys(icons);
+const ICON_SET = icons as Record<string, LucideIcon | undefined>;
+const STARTER_ICONS = ["Star", "Heart", "Check", "Sparkles", "Zap", "Rocket", "Target", "TrendingUp", "Coffee", "Leaf", "Sun", "Gift", "Camera", "Mail", "Phone", "MapPin", "Clock", "Calendar", "ShieldCheck", "Award", "PartyPopper", "Handshake", "ThumbsUp", "MessageCircle", "ArrowRight"].filter((n) => ICON_SET[n]);
 
 function ElementsPanel({ editor }: { editor: Editor }) {
   const { doc, page, apply } = editor;
   const [q, setQ] = useState("");
   const matches = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return (term ? ICON_NAMES.filter((n) => n.toLowerCase().includes(term)) : ["Star", "Heart", "Check", "Sparkles", "Zap", "Rocket", "Target", "TrendingUp", "Coffee", "Leaf", "Sun", "Gift", "Camera", "Mail", "Phone", "MapPin", "Clock", "Calendar", "ShieldCheck", "Award", "Smile", "ThumbsUp", "MessageCircle", "ArrowRight"]).slice(0, 48);
+    return (term ? ICON_NAMES.filter((n) => n.toLowerCase().includes(term)) : STARTER_ICONS).slice(0, 48);
   }, [q]);
   const s = Math.min(doc.width, doc.height);
   const addShape = (shape: ShapeLayer["shape"]) => {
@@ -200,7 +206,8 @@ function ElementsPanel({ editor }: { editor: Editor }) {
       </label>
       <div className="mt-3 grid grid-cols-6 gap-1.5">
         {matches.map((name) => {
-          const I = (icons as Record<string, LucideIcon>)[name];
+          const I = ICON_SET[name];
+          if (!I) return null;
           return (
             <Tooltip key={name} content={name}>
               <button type="button" aria-label={`Add ${name} icon`} onClick={() => addIcon(name)} className="grid aspect-square place-items-center rounded-lg text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink">
@@ -234,7 +241,7 @@ function ShapeGlyph({ shape }: { shape: ShapeLayer["shape"] }) {
   );
 }
 
-function PhotosPanel({ editor, assets, onUpload }: { editor: Editor; assets: UploadedAsset[]; onUpload: (files: FileList) => void }) {
+function PhotosPanel({ editor, assets, onUpload }: { editor: Editor; assets: UploadedAsset[]; onUpload: Upload }) {
   const { doc, page, apply, selectedLayers } = editor;
   const input = useRef<HTMLInputElement>(null);
   const target = selectedLayers.length === 1 && selectedLayers[0].type === "image" ? (selectedLayers[0] as ImageLayer) : null;
@@ -246,19 +253,22 @@ function PhotosPanel({ editor, assets, onUpload }: { editor: Editor; assets: Upl
       return imgR > boxR ? { x: (1 - boxR / imgR) / 2, y: 0, width: boxR / imgR, height: 1 } : { x: 0, y: (1 - imgR / boxR) / 2, width: 1, height: imgR / boxR };
     };
     if (target) {
-      apply([{ op: "update_layer", pageId: page.id, layerId: target.id, props: { src: a.url, crop: crop(target.width, target.height), alt: a.name } as Partial<Layer> }]);
+      apply([{ op: "update_layer", pageId: page.id, layerId: target.id, props: { src: a.ref ?? a.url, crop: crop(target.width, target.height), alt: a.name } as Partial<Layer> }]);
       return;
     }
     const maxW = doc.width * 0.7;
     const w = Math.min(maxW, (doc.height * 0.7 * a.width) / a.height);
     const h = (w * a.height) / a.width;
-    const layer: ImageLayer = { id: newId(), type: "image", src: a.url, ...centered(doc, w, h), crop: { x: 0, y: 0, width: 1, height: 1 }, fit: "cover", radius: 0, alt: a.name };
+    const layer: ImageLayer = { id: newId(), type: "image", src: a.ref ?? a.url, ...centered(doc, w, h), crop: { x: 0, y: 0, width: 1, height: 1 }, fit: "cover", radius: 0, alt: a.name };
     apply([{ op: "add_layer", pageId: page.id, layer }], [layer.id]);
   };
   return (
     <div>
       <PanelTitle>Photos</PanelTitle>
-      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple className="sr-only" onChange={(e) => e.target.files && onUpload(e.target.files)} aria-label="Upload images" />
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(e) => {
+        if (e.target.files?.length) void onUpload(Array.from(e.target.files)).catch(() => undefined);
+        e.target.value = "";
+      }} aria-label="Upload images" />
       <Button variant="secondary" onClick={() => input.current?.click()} className="w-full">
         <Upload aria-hidden="true" /> Upload your photos
       </Button>
@@ -278,7 +288,7 @@ function PhotosPanel({ editor, assets, onUpload }: { editor: Editor; assets: Upl
   );
 }
 
-function BrandPanel({ editor }: { editor: Editor }) {
+function BrandPanel({ editor, resolve, onUpload }: { editor: Editor; resolve: AssetResolver; onUpload: Upload }) {
   const { doc, apply } = editor;
   const logoInput = useRef<HTMLInputElement>(null);
   const slots = Object.keys(doc.brand.colors) as (keyof DesignDoc["brand"]["colors"])[];
@@ -310,9 +320,16 @@ function BrandPanel({ editor }: { editor: Editor }) {
           accept="image/png,image/svg+xml,image/webp,image/jpeg"
           className="sr-only"
           aria-label="Upload logo"
-          onChange={(e) => {
+          onChange={async (e) => {
             const file = e.target.files?.[0];
+            e.target.value = "";
             if (!file) return;
+            const saved = await onUpload([file], "logo").catch(() => []);
+            if (saved[0]) {
+              apply([{ op: "set_brand", brand: { logoSrc: saved[0].ref ?? saved[0].url } }]);
+              return;
+            }
+            // No library (local editing): keep it in the design.
             const reader = new FileReader();
             reader.onload = () => apply([{ op: "set_brand", brand: { logoSrc: String(reader.result) } }]);
             reader.readAsDataURL(file);
@@ -321,7 +338,7 @@ function BrandPanel({ editor }: { editor: Editor }) {
         <button type="button" onClick={() => logoInput.current?.click()} className="mt-2 flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-line-strong bg-surface transition-colors hover:border-brand-600 hover:bg-surface-2">
           {doc.brand.logoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={doc.brand.logoSrc} alt="Current logo" className="max-h-14 max-w-[80%] object-contain" />
+            <img src={resolve(doc.brand.logoSrc)} alt="Current logo" className="max-h-14 max-w-[80%] object-contain" />
           ) : (
             <span className="text-ui text-ink-3">Upload your logo</span>
           )}
