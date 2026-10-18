@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { requirePaid } from "./lib/access";
 import { sha256Hex } from "../shared/policy";
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -36,6 +37,7 @@ export const create = mutation({
   args: { slug: v.string(), name: v.string(), scopes: v.array(scope), days: v.number() },
   handler: async (ctx, { slug, name, scopes, days }) => {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    await requirePaid(ctx, org, "Agents & MCP access");
     if (scopes.includes("request_approval") && !["owner", "admin", "reviewer"].includes(role)) throw appError("FORBIDDEN", "Only people who can approve can let an agent request approvals.");
     const live = await ctx.db
       .query("agentTokens")

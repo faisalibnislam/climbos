@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { requirePaid } from "./lib/access";
 import {
   createPausedSearchCampaign,
   setCampaignStatus as setGoogleStatus,
@@ -152,6 +153,7 @@ export const decide = mutation({
   handler: async (ctx, { slug, campaignId, action }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const c = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
+    if (action !== "reject") await requirePaid(ctx, org, "Publishing ads");
     if (org.emergencyStop?.active && action !== "reject") throw appError("PAUSED", "All activity is paused. Resume activity first.");
     if (action === "reject") {
       await ctx.db.patch(c._id, { status: c.externalId ? "paused" : "draft", updatedAt: Date.now() });

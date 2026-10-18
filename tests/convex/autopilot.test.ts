@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { sha256Hex } from "../../shared/policy";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, setup, type T, makePaid } from "./helpers";
 
 /**
  * Social autopilot end to end on Engine v2 with the deterministic model:
@@ -14,6 +14,7 @@ import { asNewUser, setup, type T } from "./helpers";
 async function workspace(t: T, email: string) {
   const owner = await asNewUser(t, email);
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Wire Co" });
+  await makePaid(t, orgId);
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
   const oid = orgId as Id<"organizations">;
   await t.run(async (ctx) => {

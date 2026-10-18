@@ -65,6 +65,12 @@ export function ResultsView({ slug }: { slug: string }) {
             </Callout>
           ) : null}
 
+          {data.historyLimited ? (
+            <Callout tone="info" live="none" title="Showing the last 30 days">
+              Full history and period-over-period comparisons come with a package. <Link href={`/app/${slug}/settings/billing`}>See packages</Link>
+            </Callout>
+          ) : null}
+
           {data.gaps.length > 0 ? <GapsSection slug={slug} gaps={data.gaps} /> : null}
 
           <OutcomeSection slug={slug} data={data} />

@@ -153,6 +153,9 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
   const [hours, setHours] = useState<number[]>(s?.postingHours ?? []);
   const [topics, setTopics] = useState((s?.alwaysAskTopics ?? []).join(", "));
   const [images, setImages] = useState(s?.imagesPerWeek ?? 1);
+  const credits = useQuery(api.workspace.credits, { slug });
+  const paid = credits === undefined ? true : credits.paid || credits.isDemo;
+  const preview = useMutation(api.autopilot.previewWeek);
   const [enabled, setEnabled] = useState(s ? s.enabled : true);
   const ai = useAiMode(slug);
   const [planMode, setPlanMode] = useState<AiMode | null>((s?.aiMode as AiMode | null) ?? null);
@@ -165,7 +168,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
     try {
       await save({
         slug,
-        enabled,
+        enabled: paid && enabled,
         mode,
         channels: Object.entries(cadence).map(([channel, postsPerWeek]) => ({ channel, postsPerWeek })),
         postingHours: hours,
@@ -269,7 +272,32 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
           <Textarea value={topics} onChange={(e) => setTopics(e.target.value)} rows={2} placeholder="e.g. prices, new hires, our partners, health claims" />
         </Field>
 
-        {s ? <Switch label="Autopilot is on" description="Turning it off keeps scheduled posts as they are; nothing new is planned." checked={enabled} onCheckedChange={setEnabled} /> : null}
+        {s && paid ? <Switch label="Autopilot is on" description="Turning it off keeps scheduled posts as they are; nothing new is planned." checked={enabled} onCheckedChange={setEnabled} /> : null}
+        {!paid ? (
+          <Callout tone="info" live="none" title="Autopilot comes with a package">
+            Save your settings and preview one week free: your team plans it, and you see exactly what would go out.{" "}
+            <Link href={`/app/${slug}/settings/billing`} className="font-medium text-brand-800 hover:underline">
+              See packages
+            </Link>
+            {s ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="ml-2 mt-2"
+                onClick={async () => {
+                  try {
+                    await preview({ slug });
+                    toast({ tone: "success", title: "Planning your preview week" });
+                  } catch (e) {
+                    toast({ tone: "danger", title: errorMessage(e) });
+                  }
+                }}
+              >
+                Preview a week
+              </Button>
+            ) : null}
+          </Callout>
+        ) : null}
 
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
           <p className="mr-auto flex items-center gap-1.5 text-ui text-ink-3">
@@ -281,7 +309,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
             </Button>
           ) : null}
           <Button loading={busy} disabled={total === 0 && enabled} onClick={submit}>
-            {s ? "Save settings" : "Turn on autopilot"}
+            {s ? "Save settings" : paid ? "Turn on autopilot" : "Save settings"}
           </Button>
         </div>
       </CardContent>

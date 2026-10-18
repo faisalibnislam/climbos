@@ -7,6 +7,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";
 import { latestSubscription } from "./lib/access";
+import { seatState } from "./lib/accounts";
 import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess, requireUser } from "./lib/tenancy";
 
@@ -20,9 +21,8 @@ export const team = query({
       .query("memberships")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .take(100);
-    const sub = await latestSubscription(ctx, org);
-    const planKey = sub?.planKey ?? "basic";
-    const seatLimit = CURRENT_ENTITLEMENTS.plans[planKey].seats;
+    const seats = await seatState(ctx, org);
+    const seatLimit = seats.limit;
     const rows = [];
     for (const m of members) {
       if (m.status === "removed") continue;
@@ -41,7 +41,8 @@ export const team = query({
       canManage: ["owner", "admin"].includes(role),
       yourRole: role,
       seatLimit,
-      seatsUsed: rows.length,
+      /** Seats are per account: people across all of the account's workspaces. */
+      seatsUsed: seats.used,
       roles: Object.entries(ROLE_DESCRIPTIONS).map(([key, description]) => ({ key, description })),
       members: rows,
     };
@@ -60,10 +61,12 @@ export const invite = mutation({
       .query("memberships")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .take(100);
-    const sub = await latestSubscription(ctx, org);
-    const seatLimit = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"].seats;
     const active = members.filter((m) => m.status !== "removed");
-    if (active.length >= seatLimit) throw appError("LIMIT_REACHED", `Your plan includes ${seatLimit} seat${seatLimit === 1 ? "" : "s"}. Upgrade to add more people.`);
+    // Seats are per account: someone already on another of the account's workspaces doesn't take a new seat.
+    const seats = await seatState(ctx, org);
+    if (!seats.emails.has(clean) && seats.used >= seats.limit) {
+      throw appError(seats.limit <= 1 ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", seats.limit <= 1 ? "Free accounts are for one person. Choose a package to invite your team." : `Your package includes ${seats.limit} people. Upgrade to add more.`);
+    }
     if (active.some((m) => m.invitedEmail === clean)) throw appError("INVALID", "That person already has an invitation.");
     const tokenBytes = crypto.getRandomValues(new Uint8Array(24));
     const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");

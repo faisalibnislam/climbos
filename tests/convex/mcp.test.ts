@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, setup, type T, makePaid } from "./helpers";
 
 /** The ClimbOS MCP server: token auth, scoped tools, approvals instead of direct consequential actions. */
 
 async function withToken(t: T, scopes: ("draft" | "request_approval")[]) {
   const owner = await asNewUser(t, `mcp-${scopes.join("-") || "read"}@example.com`);
-  const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Agent Co" });
+  const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Agent Co" });
+  await makePaid(t, orgId);
   const { token } = await owner.client.mutation(api.agentTokens.create, { slug, name: "Claude Desktop", scopes, days: 30 });
   return { ...owner, slug, token };
 }

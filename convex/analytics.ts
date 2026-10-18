@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { isPaid } from "./lib/access";
+import { FREE_LIMITS } from "../shared/economics";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
@@ -177,7 +179,9 @@ export const overview = query({
   args: { slug: v.string(), days: v.optional(v.number()) },
   handler: async (ctx, { slug, days }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const span = Math.max(7, Math.min(365, days ?? 30));
+    // Free accounts see the last 30 days (full history comes with a package).
+    const historyLimited = org.kind !== "demo" && !(await isPaid(ctx, org));
+    const span = Math.max(7, Math.min(historyLimited ? FREE_LIMITS.historyDays : 365, days ?? 30));
     const today = dayKey(Date.now(), org.timezone);
     const from = addDays(today, -span);
     const prevFrom = addDays(today, -2 * span);
@@ -192,7 +196,7 @@ export const overview = query({
         ...METRICS[key],
         hasData: cur.points.length > 0,
         total,
-        previousTotal: prev.points.length > 0 ? prevTotal : null,
+        previousTotal: prev.points.length > 0 && !historyLimited ? prevTotal : null,
         points: cur.points,
         freshness: cur.freshness || null,
         sourceName: cur.source || null,
@@ -262,6 +266,8 @@ export const overview = query({
 
     return {
       span,
+      /** Free accounts: only the last 30 days. */
+      historyLimited,
       from,
       to: addDays(today, -1),
       currency: org.currency,
@@ -294,7 +300,9 @@ export const cohorts = query({
     const start = new Date(now);
     start.setUTCDate(1);
     start.setUTCHours(0, 0, 0, 0);
-    start.setUTCMonth(start.getUTCMonth() - 11);
+    // Free accounts: the last 30 days only.
+    if (org.kind !== "demo" && !(await isPaid(ctx, org))) start.setTime(now - FREE_LIMITS.historyDays * 86_400_000);
+    else start.setUTCMonth(start.getUTCMonth() - 11);
     const rows = await ctx.db
       .query("revenueEvents")
       .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", start.getTime()))

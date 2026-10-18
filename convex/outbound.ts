@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { requirePaid } from "./lib/access";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
@@ -226,6 +227,7 @@ export const saveBookingPage = mutation({
   },
   handler: async (ctx, a) => {
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    if (a.active) await requirePaid(ctx, org, "The booking page");
     const page = await ensurePage(ctx, org);
     const days = [...new Set(a.days.filter((d) => Number.isInteger(d) && d >= 1 && d <= 7))].sort();
     const startHour = Math.max(0, Math.min(23, Math.round(a.startHour)));

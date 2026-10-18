@@ -34,3 +34,14 @@ export async function asNewUser(t: T, email: string, opts: { anonymous?: boolean
   );
   return { userId: userId as Id<"users">, client: t.withIdentity({ subject: `${userId}|session-${email}`, tokenIdentifier: `test|${userId}` }) };
 }
+
+/** Put a workspace's account on an active Starter package (paid features unlocked), with room in the wallet. */
+export async function makePaid(t: T, orgId: string, walletMicros = 50_000_000) {
+  await t.run(async (ctx) => {
+    const org = (await ctx.db.get(orgId as never)) as { _id: never; accountId?: never } | null;
+    if (!org) throw new Error("no org");
+    const now = Date.now();
+    await ctx.db.insert("subscriptions", { orgId: org._id, accountId: org.accountId, polarSubscriptionId: `sub_${orgId}`, productId: "prod_starter", planKey: "starter", status: "active", cancelAtPeriodEnd: false, currentPeriodStart: now - 86_400_000, currentPeriodEnd: now + 29 * 86_400_000, entitlementVersionId: "ent-credits-2026-10-18", rateVersionId: "verified-2026-10-17", sourceModifiedAt: now, updatedAt: now });
+    for (const p of await ctx.db.query("usagePeriods").collect()) if (p.accountId && p.accountId === org.accountId) await ctx.db.patch(p._id, { source: "subscription", walletCapMicros: walletMicros });
+  });
+}

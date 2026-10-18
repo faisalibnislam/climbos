@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { expertUnlocked, resolveAiMode } from "./lib/aiMode";
+import { isPaid, requirePaid } from "./lib/access";
 import {
   AUTOPILOT_CHANNELS,
   DEFAULT_HOURS,
@@ -135,6 +136,7 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
     if (args.aiMode === "expert" && !(await expertUnlocked(ctx, org))) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
+    if (args.enabled) await requirePaid(ctx, org, "Autopilot");
     const channels = args.channels
       .filter((c) => (AUTOPILOT_CHANNELS as readonly string[]).includes(c.channel))
       .map((c) => ({ channel: c.channel, postsPerWeek: Math.min(MAX_PER_CHANNEL, clampCadence(c.postsPerWeek)) }))
@@ -175,6 +177,18 @@ export const save = mutation({
     // First switch-on: plan the rest of this week right away (or next week from Thursday on).
     if (args.enabled && !wasEnabled) await startPlanning(ctx, org, await ctx.db.get(settingsId), user._id);
     return settingsId;
+  },
+});
+
+/** Free accounts: plan one week once to see what autopilot would do (nothing is drafted or posted on its own). */
+export const previewWeek = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const settings = await settingsFor(ctx, org._id);
+    if (!settings || settings.channels.length === 0) throw appError("INVALID", "Pick your channels and how often to post first.");
+    if (settings.lastPlannedWeek && !(await isPaid(ctx, org))) throw appError("PAYMENT_REQUIRED", "Your free preview week is used. Choose a package for weekly autopilot.");
+    return startPlanning(ctx, org, settings, user._id, { force: true, preview: true });
   },
 });
 
@@ -223,9 +237,9 @@ async function startPlanning(
   org: Doc<"organizations">,
   settings: Doc<"autopilotSettings"> | null,
   createdBy: Id<"users">,
-  opts: { force?: boolean; weekOf?: string } = {},
+  opts: { force?: boolean; weekOf?: string; preview?: boolean } = {},
 ) {
-  if (!settings?.enabled) return null;
+  if (!settings || (!settings.enabled && !opts.preview)) return null;
   const now = Date.now();
   const today = localDate(now, org.timezone);
   // Monday–Wednesday: plan the rest of this week; later: plan next week.

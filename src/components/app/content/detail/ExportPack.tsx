@@ -74,6 +74,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
         Export pack
       </h3>
       <p className="text-sm text-ink-2">{data.pack.notice}</p>
+      {data.badge ? <p className="text-xs text-ink-3">Free exports include “{data.badge}”. Packages remove it.</p> : null}
       <ul className="flex flex-col gap-4">
         {data.pack.items.map((it) => (
           <li key={it.platform} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-3">

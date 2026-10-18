@@ -1,4 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
+import { isPaid, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { v } from "convex/values";
@@ -280,6 +281,7 @@ export const schedule = mutation({
   args: { slug: v.string(), artifactId: v.id("artifacts"), when: v.number() },
   handler: async (ctx, { slug, artifactId, when }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    await requirePaid(ctx, org, "Scheduling and publishing");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this before scheduling it.");
     if (when < Date.now() + 60_000) throw appError("INVALID", "Pick a time at least a minute from now.");
@@ -304,6 +306,7 @@ export const publishNow = mutation({
   args: { slug: v.string(), artifactId: v.id("artifacts") },
   handler: async (ctx, { slug, artifactId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    await requirePaid(ctx, org, "Publishing");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this first.");
     if (org.emergencyStop?.active) throw appError("PAUSED", "All activity is paused. Resume activity first.");
@@ -338,7 +341,10 @@ export const exportPack = query({
       { title: a.title, text: [ver.headline, ver.body].filter(Boolean).join("\n\n"), hashtags: ver.hashtags, altText: ver.altText, link: ver.destinationUrl, mediaUrls: imageUrl ? [imageUrl] : [] },
       platforms,
     );
-    return { pack, csv: manualExportToCsv(pack) };
+    // Free accounts: exports carry a small "Made with ClimbOS" line (removed on packages).
+    const badge = org.kind !== "demo" && !(await isPaid(ctx, org)) ? "Made with ClimbOS · climbos.app" : null;
+    const csv = manualExportToCsv(pack);
+    return { pack: badge ? { ...pack, badge } : pack, csv: badge ? `${csv}# ${badge}\r\n` : csv, badge };
   },
 });
 
