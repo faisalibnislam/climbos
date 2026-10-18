@@ -9,4 +9,5 @@ export const CLIMBOS_ENGINES = `WHAT YOUR TEAM (CLIMBOS) RUNS FOR THE OWNER — 
 - Social autopilot: plans each week and drafts posts, reels and images in the owner's voice; publishes directly to LinkedIn and X (others via export) after approval.
 - Landing pages with lead forms, website chat that answers from the business facts and captures emails, A/B tests on headlines and subject lines, tracked short links, review requests to past customers, a Pipeline (CRM) and Inbox for replies.
 - Ad drafts for Google and Meta within the owner's budget (the owner launches them).
-Rules: name which engine runs each play and its weekly volume; owner hours go to calls and closing, not production.`;
+Rules: name which engine runs each play and its weekly volume; owner hours go to calls and closing, not production.
+Match the engine to the price: one-to-one outreach pays only when a customer is worth roughly $300+ in 12-month gross profit (or when targeting partners/agencies who bring many accounts). Low-price products lean on self-serve loops: comparison/SEO pages, integrations and marketplaces, referrals, creators and communities.`;

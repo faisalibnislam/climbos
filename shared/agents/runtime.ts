@@ -228,7 +228,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
               role: "user",
               content: `A senior reviewer assessed your draft.\n\nKEEP (what works):\n${feedback.strengths.map((s) => `- ${s}`).join("\n") || "- (nothing specific)"}\n\nFIX (most important first):\n${feedback.fixes.map((f) => `- ${f}`).join("\n")}${
                 feedback.lint.length ? `\n\nAUTOMATIC CHECKS FAILED:\n${feedback.lint.map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}` : ""
-              }\n\nReturn the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. Don't mention the review in the output.`,
+              }\n\nReturn the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
             },
           ]
         : baseMessages;

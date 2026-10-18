@@ -474,7 +474,7 @@ async function judgeOnce(judge: string, p: Prepared, t: BenchTask, a: unknown, b
     messages: [
       {
         role: "user",
-        content: `THE OWNER'S BUSINESS:\n${brief(p, true)}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\n=== WORK A ===\n${JSON.stringify(a, null, 1).slice(0, 40_000)}\n\n=== WORK B ===\n${JSON.stringify(b, null, 1).slice(0, 40_000)}\n\nWhich is better?`,
+        content: `THE OWNER'S BUSINESS:\n${brief(p, true)}${t === "strategy" ? `\n\nSUPPLIED TO THE PLANNER (treat as established):\n${CLIMBOS_ENGINES}` : ""}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\n=== WORK A ===\n${JSON.stringify(a, null, 1).slice(0, 40_000)}\n\n=== WORK B ===\n${JSON.stringify(b, null, 1).slice(0, 40_000)}\n\nWhich is better?`,
       },
     ],
     schema: VerdictSchema,
@@ -522,7 +522,7 @@ async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | 
         cache: true,
       },
     ],
-    messages: [{ role: "user", content: `THE OWNER'S BUSINESS:\n${brief(p, true)}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\nTHE WORK:\n${JSON.stringify(work, null, 1).slice(0, 40_000)}` }],
+    messages: [{ role: "user", content: `THE OWNER'S BUSINESS:\n${brief(p, true)}${t === "strategy" ? `\n\nSUPPLIED TO THE PLANNER (treat as established):\n${CLIMBOS_ENGINES}` : ""}\n\nTHE JOB: ${DEFS[t].judgeFocus}.\n\nTHE WORK:\n${JSON.stringify(work, null, 1).slice(0, 40_000)}` }],
     schema: ScoreSchema,
     maxTokens: 8000,
     effort: "medium",

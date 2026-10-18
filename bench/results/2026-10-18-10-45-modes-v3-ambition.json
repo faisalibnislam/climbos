@@ -1,0 +1,733 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Make studio outreach the primary engine and run one capped Google Search test as secondary. The conditional forecast is about 5.3 new paying accounts, not a promise; expansion depends on confirmed account economics.",
+     "positioning": "Formkit fits when the form is part of how a freelancer or studio presents its work: describe the form, use logic to shape the path, and start on the free plan. Lead with the specific Google Forms comparison—branded links, question-level drop-off, and partial responses—rather than a generic AI form-builder claim.",
+     "audiences": [
+      {
+       "name": "Independent web and design studios",
+       "hypothesis": "A reusable client-intake workflow and agency templates will earn more relevant replies than a general form-builder pitch.",
+       "evidence": "Clutch lists web, UX, branding, and marketing providers (https://clutch.co/); Formkit’s agency page already offers client-workflow templates (https://formkit.app/use-cases/agencies)."
+      },
+      {
+       "name": "People actively searching for a Google Forms alternative",
+       "hypothesis": "Searchers who need more brand control or insight into form completion will try the free plan after seeing a focused, fair comparison.",
+       "evidence": "Formkit has an existing Google Forms comparison page at https://formkit.app/compare; its comparison angle includes branded links, question-level drop-off, and partial responses."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 86,
+       "status": "primary",
+       "why": "Good high-intent fit, but overlaps the more specific Google Forms alternative page."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 86,
+       "status": "in_plan",
+       "why": "Strong intent, a specific supported comparison angle, and a page can serve demand without consuming the ad budget."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 84,
+       "status": "in_plan",
+       "why": "Integrations are relevant, but no existing marketplace presence is confirmed."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 83,
+       "status": "later",
+       "why": "A direct conversion path, although the current user base and lifecycle setup are unknown."
+      },
+      {
+       "name": "Templates",
+       "score": 78,
+       "status": "later",
+       "why": "Templates make the broad product easier to try, with low-cost reuse across audiences."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 78,
+       "status": "later",
+       "why": "The offer is already in place and supports self-serve adoption; its paid conversion rate is unknown."
+      },
+      {
+       "name": "Google organic search",
+       "score": 77,
+       "status": "later",
+       "why": "Relevant demand capture, but broad SEO content is slower than the focused alternative page."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 77,
+       "status": "later",
+       "why": "Alternative-seeking intent fits, but no current listing or referral data is supplied."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Studio intake outreach test",
+       "hypothesis": "Studios that manage client work across projects will respond to a specific reusable intake-workflow pitch supported by Formkit’s agency templates.",
+       "population": "500 relevant studios identified through Clutch and studio websites; published business emails only.",
+       "method": "export_instructions",
+       "primaryMetric": "Replies per 500 delivered contacts; booked calls and paid accounts are downstream decision metrics.",
+       "guardrails": [
+        "Pause if bounce rate exceeds 2%; investigate before any further sends.",
+        "Honor opt-outs immediately and stop follow-up on reply.",
+        "Include actual ClimbOS charges and owner call time in CAC."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At 500 sends: fewer than 5 replies → stop or change audience; 5–12 replies → revise audience or hook before expanding; at least 13 replies and 4 booked calls → continue at about 250 contacts/week through day 90, subject to the confirmed CAC ceiling. These are business thresholds, not significance tests."
+      },
+      {
+       "name": "Capped Google Forms Search test",
+       "hypothesis": "A focused, fair comparison will turn high-intent Google Forms alternative searches into free sign-ups and, eventually, paid accounts.",
+       "population": "People searching Google for a Google Forms alternative; search demand is unverified.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid accounts from the test; free sign-ups per click are the early decision signal.",
+       "guardrails": [
+        "Hard cap: $600 total test spend.",
+        "Pause if 100 clicks produce no free sign-ups.",
+        "Do not continue past day 21 unless at least 6 of about 200 clicks become free sign-ups.",
+        "Do not scale after the test unless at least one customer paid and all-in CAC is within 50% of confirmed 12-month gross profit per account."
+       ],
+       "durationDays": 30,
+       "stoppingRule": "At about 200 clicks on day 21, continue to day 30 only if at least 6 free sign-ups occurred. Stop at the $600 cap or day 30. After day 30, further spend requires at least one paid customer, confirmed all-in CAC within the policy ceiling, and owner authorization. CPC and conversion expectations are assumptions, not benchmarks."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month paid directly to ad platforms; cap the first Search test at $600. Further spend is not authorized until account economics are confirmed. Source: business brief and portfolio note.",
+      "Owner time: plan around 3 hours/week as an assumption—about 2 hours for calls and follow-up, 1 hour for approvals and the scorecard. Confirm in week one.",
+      "Pricing: Pro is $6/seat/month and Business is $19/seat/month, with yearly billing options; plan details: https://formkit.app/.",
+      "Margins, seat mix, paid conversion, current sources, and sales cycle: not provided; treat CAC and forecasts as uncertain until measured.",
+      "Geography: not provided; target only markets where Formkit is available and confirm country targeting before launching ads.",
+      "Assets: existing Google Forms comparison and agency use-case templates at https://formkit.app/compare and https://formkit.app/use-cases/agencies. No customer proof or current listing presence is established in the research notes.",
+      "ClimbOS outreach costs credits, not ad budget; include actual credit charges and owner time in all-in CAC. Credit cost is unknown."
+     ],
+     "measurementPlan": "Before launch, tag every link with UTMs and verify landing-page visits, free sign-ups, and paid upgrades. Add “How did you hear about us?” and reconcile answers with billing records in a weekly scorecard. Review Search terms and negatives weekly; import paid-customer conversions where the stack allows. Track AI referrals separately and run a fixed prompt check monthly. Report ad spend, ClimbOS charges, and owner call time alongside paid accounts; never scale on platform attribution alone.",
+     "firstActions": [
+      {
+       "title": "Provide seat mix, plan mix, gross margin or 12-month gross profit per account, and ClimbOS credit cost.",
+       "why": "Without 12-month gross profit per account and actual outreach costs, a safe CAC ceiling cannot be set.",
+       "role": "Owner"
+      },
+      {
+       "title": "Review recent customer and signup records; note known acquisition sources and gaps.",
+       "why": "This protects any channel already producing customers and establishes the baseline for attribution.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Approve the Clutch and studio-website prospect profile, sender, and opt-out process.",
+       "why": "The play depends on a clearly defined, reachable studio audience and compliant contact handling.",
+       "role": "Owner"
+      },
+      {
+       "title": "Draft the focused Google Forms comparison page, Search ads, UTMs, and conversion events for owner review.",
+       "why": "The comparison page is the landing asset for the capped high-intent Search test.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Approve and launch the tests only after tracking and destination pages are verified.",
+       "why": "Both tests need a verified source of truth for sign-ups and paid accounts.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "The main constraint is unknown unit economics and paid-funnel baseline, not a proven lack of demand: no current traffic, source mix, paid conversion, or account gross-profit data was supplied, and the play forecasts are low-confidence assumptions. This diagnosis is falsified if existing cohort data shows repeatable paid conversions and all-in CAC within the confirmed 12-month gross-profit ceiling.",
+     "affordableCac": "Not computable yet. Formula: 50% × 12-month gross profit per paid account; 50% is a policy assumption. Formkit lists Pro at $6/seat/month and Business at $19/seat/month, but paid seat mix and gross margin are unknown (https://formkit.app/). Include actual ClimbOS charges and owner call time, valued at $50/hour per the play assumption. [NEEDS FACT: What are average paid seats, plan mix, gross margin or 12-month gross profit per account, and ClimbOS credit cost per 1,000 contacts?]",
+     "notDoing": [
+      {
+       "channel": "Meta ads",
+       "why": "Do not spread the $600 test budget across broad audiences; first learn whether high-intent search converts to paid accounts."
+      },
+      {
+       "channel": "General blog SEO",
+       "why": "Broad informational SEO is slower and less directly tied to purchase; prioritize the single high-intent comparison page."
+      },
+      {
+       "channel": "Creator partnerships",
+       "why": "No creator demand, customer proof, or attributable creator-to-paid path is established; revisit after the core funnel is measured."
+      },
+      {
+       "channel": "G2 and Capterra",
+       "why": "Listings may help later, but current presence and eligible customer reviews are unverified; check directories after the first tests."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying accounts from the studio outreach and Google Forms Search plays.",
+      "baseline": "Current new-paid-customer baseline and source data were not provided; record them in week one.",
+      "target": "About 5.3 by day 90 in the conditional P50 scenario: 4.5 from outreach plus 0.81 from Search. This assumes about 3,000 outreach contacts and $1,800 total Search spend; only the first $600 Search test is currently authorized."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Outreach sends: 500 in the first 21 days; then about 250 per week if the scale rule passes.",
+       "weeklyTarget": "About 167/week during the initial 3-week test; 250/week after passing the day-21 rule.",
+       "source": "ClimbOS Pipeline; planned operating volume."
+      },
+      {
+       "metric": "Replies from outreach: about 2.5% is the planning assumption; supplied operating range is 1–3%.",
+       "weeklyTarget": "About 6 replies per 250 contacts after the test phase; assumption, replace with observed data.",
+       "source": "ClimbOS Pipeline; 2.5% planning assumption from the play forecast."
+      },
+      {
+       "metric": "Booked calls: 30% of replies is the planning assumption within the supplied 20–40% operating range.",
+       "weeklyTarget": "About 2 calls per week after the test phase; assumption, replace with observed data.",
+       "source": "ClimbOS Pipeline; planning assumption from the play forecast."
+      },
+      {
+       "metric": "Search free sign-ups per click, with paid accounts tracked as the deciding outcome.",
+       "weeklyTarget": "Reach about 200 clicks by day 21 and at least 6 free sign-ups to continue the test; planning CPC is an assumption.",
+       "source": "Google Ads plus analytics and the Pipeline; no Formkit baseline supplied."
+      },
+      {
+       "metric": "New paying accounts attributable to either play.",
+       "weeklyTarget": "At least 1 paid account by the end of the Search test to pass its initial scale gate; no weekly conversion baseline is available.",
+       "source": "Billing records reconciled with UTMs and the signup source question."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Set the economics and tracking baseline. ClimbOS prepares the Google Forms comparison page, tracked Search ads, and a studio prospect list. Owner approves materials and starts the 500-contact outreach test; begin Search only after tracking and the page are ready."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Run the 500-contact outreach test over 21 days and the capped Search test for up to 30 days. Review outreach at 500 sends and Search at about 200 clicks on day 21; decide whether to revise or continue using the registered rules."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "If outreach meets its scale rule, ClimbOS sends about 250 relevant contacts weekly through day 90. Continue Search only after the paid-customer and confirmed CAC gates are met and the owner authorizes more budget. Improve the comparison page from search terms and sign-up data."
+      }
+     ],
+     "weekOneChecklist": [
+      "Owner: provide average paid seats, plan mix, gross margin or 12-month gross profit per account, and current ClimbOS credit cost.",
+      "ClimbOS: audit the latest customer and signup records; capture current sources where available.",
+      "Owner: approve the studio prospect profile, outreach sender, and opt-out handling.",
+      "ClimbOS: prepare the focused comparison page, UTMs, signup and paid-conversion tracking, and Search ad draft.",
+      "Owner: verify tracking, approve the materials, and start the capped outreach and Search tests."
+     ],
+     "risks": [
+      {
+       "risk": "Missing seat mix, margin, paid conversion data, and ClimbOS credit cost make affordable CAC unknown.",
+       "mitigation": "Calculate the account-level gross-profit ceiling and include actual ClimbOS charges and owner call time before any expansion; validate in week one."
+      },
+      {
+       "risk": "Studio outreach may harm deliverability or fail to reach enough suitable prospects.",
+       "mitigation": "Use only relevant, published business emails; personalize each message, identify the sender, honor opt-outs immediately, and pause if bounce rate exceeds 2%; review weekly."
+      },
+      {
+       "risk": "Search traffic may be too expensive or produce free sign-ups that do not become paid accounts.",
+       "mitigation": "Use a fair, specific comparison; review search terms and negatives weekly, and optimize to paid customers rather than ad-platform sign-ups; review at day 21 and day 30."
+      },
+      {
+       "risk": "Weak attribution could make a useful channel look ineffective—or make an ineffective one look successful.",
+       "mitigation": "Record current customer sources and add UTMs plus a “how did you hear about us?” question before launch; validate tracking in week one."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Google Forms comparison + Search test",
+       "oneLiner": "Use Formkit’s existing Google Forms comparison as one focused page, then test it with capped Search Ads.",
+       "kind": "bankable",
+       "audience": "People searching Google for a Google Forms alternative; search volume is unverified.",
+       "trigger": "A buyer searches for a Google Forms alternative because they need branded links or question-level drop-off insights.",
+       "hook": "Using Google Forms but need a branded link and question-level drop-off? Compare the differences and try Formkit’s free plan. https://formkit.app/",
+       "mechanic": "Use one focused comparison page as the landing page for high-intent Search Ads. Keep the comparison fair and send visitors to the free plan.",
+       "assetUsed": "Formkit’s existing Google Forms comparison at https://formkit.app/; focus it on branded links, question-level drop-off, and partial responses.",
+       "funnel": [
+        "90-day scenario: $1,800 total ad spend, assuming the $600 monthly budget continues for three months after test gates; CPC $3 / $2 / $1, assumption, grade D, yields 600 / 900 / 1,800 clicks. The initial $600 test alone yields about 200 / 300 / 600 clicks at those assumed CPCs.",
+        "Click → free sign-up: 1% / 3% / 5%, assumption, grade D. The comparison-page catalog cites 8.43% average conversion across 95 articles, vendor-sourced, grade C; this forecast uses lower planning rates: https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages.",
+        "Free sign-up → paying customer: 1% / 3% / 5%, assumption, grade D; Formkit conversion data was not supplied. Likely path: 900 clicks × 3% × 3% = 0.81 paying customers."
+       ],
+       "unit": "paying customers in 90 days, assuming the full conditional ad budget is used.",
+       "p10": 0.32,
+       "p50": 0.81,
+       "p90": 1.62,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Search CPC and visitor-to-paid conversion; neither is known for Formkit.",
+       "test": "Run Google Search Ads for 30 days, capped at $600. Target 300 clicks at the assumed $2 CPC; stop at budget or day 30. At day 21, review results after roughly 200 clicks.",
+       "killIf": "Pause if 100 clicks produce no free sign-ups. Do not continue beyond the $600 test without a paid customer and an all-in CAC within the confirmed ceiling.",
+       "scaleIf": "At day 21, continue through day 30 if at least 6 of roughly 200 clicks become free sign-ups. After day 30, continue at no more than $600/month only if at least one customer has paid and all-in CAC is at or below 50% of confirmed 12-month gross profit per account. This 50% ceiling is a policy assumption; no additional budget is authorized until the dollar ceiling is known.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        5,
+        3,
+        4,
+        3
+       ],
+       "firstActionToday": "Ask ClimbOS to draft a focused page from the existing comparison and a matching Search ad; review both before publishing.",
+       "climbosCanDo": "ClimbOS drafts the focused page and ad, sets up tracked links, and reports sign-ups and paid customers. The owner approves and launches the ad."
+      },
+      {
+       "name": "Studio intake outreach",
+       "oneLiner": "Use personalized outreach to studios that manage client intake across projects.",
+       "kind": "creative",
+       "audience": "Independent web and design studios found through Clutch and studio websites. Clutch is a relevant directory, but the size of the reachable audience was not established: https://clutch.co/.",
+       "trigger": "A studio takes on a client and needs a repeatable intake process.",
+       "hook": "Build a client-intake form once, reuse shared templates, and manage client workspaces in one place. https://formkit.app/use-cases/agencies.",
+       "mechanic": "ClimbOS finds relevant studios, uses published business emails, writes a personal first line, sends from the owner’s mailbox, follows up, and stops on reply. The pitch is a reusable client-intake workflow, not a generic form-builder pitch.",
+       "assetUsed": "Formkit’s agency use case, including client workspaces and shared templates: https://formkit.app/use-cases/agencies.",
+       "funnel": [
+        "Target 3,000 sends over 90 days: 250 contacts/week for 12 weeks, an operational assumption. ClimbOS’s stated capacity is 600–1,000 emails/month per mailbox after warm-up; the number of matching, reachable studios is unverified.",
+        "Sent → reply: 1% / 2.5% / 3%. ClimbOS’s operating range is 1–3% in the brief; the 2025 B2B average is 3.43%, vendor aggregate, grade B: https://instantly.ai. The 2.5% planning rate is an assumption, grade D.",
+        "Reply → booked call: 20% / 30% / 40%, ClimbOS operating benchmark in the brief, grade B.",
+        "Booked call → paying customer: 10% / 20% / 30%, assumption, grade D; Formkit close-rate data was not supplied. Likely path: 3,000 sends × 2.5% × 30% × 20% = 4.5 paying customers."
+       ],
+       "unit": "paying customers in 90 days, assuming the planned 3,000 contacts are reached.",
+       "p10": 1.8,
+       "p50": 4.5,
+       "p90": 9,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether replies turn into paid accounts, and whether enough suitable studios can be reached.",
+       "test": "ClimbOS researches and contacts 500 published business emails over 21 days. No ad spend; include actual ClimbOS credit charges and owner call time in CAC. Value owner time at $50/hour as the playbook’s cost assumption.",
+       "killIf": "After 500 sends, stop or change the audience if fewer than 5 reply. If 5–12 reply, revise the audience or hook before expanding; do not exceed the test volume.",
+       "scaleIf": "At day 21, if at least 13 of 500 contacts reply and at least 4 calls are booked, continue at 250 contacts per week through day 90. That is about 1,000 contacts per month; at the likely funnel rates, the remaining contacts imply roughly 3.7 additional paying customers. Stop expansion if all-in CAC exceeds 50% of confirmed 12-month gross profit per account; that ceiling is a policy assumption.",
+       "scores": [
+        5,
+        3,
+        5,
+        4,
+        3,
+        4,
+        4,
+        4
+       ],
+       "firstActionToday": "Approve a Clutch and studio-website prospect profile for ClimbOS to use in the first contact list.",
+       "climbosCanDo": "ClimbOS researches prospects, finds published business emails, writes personalized openers, sends and follows up, and tracks replies in the Pipeline. The owner handles calls and closing."
+      }
+     ],
+     "portfolioNote": "Conditional 90-day P50 is about 5.3 paying customers: 4.5 from studio outreach plus 0.81 from Search Ads. These are assumption-led forecasts, not promises; the repeatable acquisition mechanics are clearer than Formkit’s unknown paid conversion. All-in CAC must include ad spend, ClimbOS credit charges, and owner call time; the scale ceiling is 50% of 12-month gross profit per account, a policy assumption. No spend beyond the $600 Search test is authorized until the dollar ceiling is established. [NEEDS FACT: What are average paid seats, plan mix, gross margin or 12-month gross profit per account, and ClimbOS credit cost per 1,000 contacts?]"
+    },
+    "costMicros": 214365,
+    "ms": 1375843
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": true,
+    "output": {
+     "summary": "Proposed target: five first-time paying workspaces, using intent-triggered upgrades as primary and agency outreach as secondary; educator walkthroughs are a replacement, not a third active channel. Planning assumptions: at most two owner hours weekly, a $535 total economic-cost ceiling and no initial advertising; the owner approves work, takes qualified calls and reviews the weekly scorecard.",
+     "positioning": "Formkit helps turn an assistant-built form into a working client-intake process. Show the paid reason clearly: complete the intended workflow, use the required branding or payments, or review a team form before publishing; verify plan-specific details against https://formkit.app/ before release.",
+     "audiences": [
+      {
+       "name": "Existing free workspaces with recent paid-feature intent",
+       "hypothesis": "Helping someone finish an attempted workflow produces payments more efficiently than a general upgrade announcement.",
+       "evidence": "The supplied product insights identify paid domain and payment workflows, but provide no reachable-cohort count or upgrade history."
+      },
+      {
+       "name": "Small US agencies with genuine team-review needs",
+       "hypothesis": "A chat-built, reviewed-before-publishing intake workflow attracts higher-value team purchases.",
+       "evidence": "Use https://clutch.co/agencies for discovery, then verify team size and client-intake work on each agency website."
+      },
+      {
+       "name": "Freelancer and agency workflow educators",
+       "hypothesis": "An honest, practical walkthrough can generate users who publish a useful form and later need paid workflows.",
+       "evidence": "Relevant starting points include https://www.beingfreelance.com/, https://theagencyoperator.ai/ and https://community.bureauofdigital.com/newsletter-signup; no collaboration is confirmed."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 82,
+       "status": "primary",
+       "why": "Closest fit to the paying-customer goal without buying every new visit; validate the reachable free-user base first."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Strong product-context fit; keep conditional until listing requirements and access are verified."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Use the existing offer, not another launch; freemium still needs distribution and a measurable upgrade path."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 80,
+       "status": "later",
+       "why": "Useful conversion support for evaluators; do not assume a new page will earn search traffic within 90 days."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 80,
+       "status": "later",
+       "why": "High-intent support asset; defer a broad competitor-page rollout until one page produces qualified users."
+      },
+      {
+       "name": "Templates",
+       "score": 79,
+       "status": "later",
+       "why": "Makes first use concrete; embed it in the selected engine rather than launching a separate template-content programme."
+      },
+      {
+       "name": "AI search visibility (ChatGPT, Perplexity, Gemini)",
+       "score": 75,
+       "status": "later",
+       "why": "Product integration is not evidence of recommendation visibility; establish a baseline before investing."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 75,
+       "status": "later",
+       "why": "Relevant evaluation context; treat listing traffic as unproven rather than a dependable volume engine."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Qualify intent-triggered upgrades",
+       "hypothesis": "Resolving a recorded paid-feature attempt will reveal a viable upgrade path. There is no measured baseline; this cohort tests feasibility, not causal lift or statistical significance.",
+       "population": "Planning cohort: up to 500 distinct existing free workspaces with recent recorded paid-feature intent and appropriate permission. Availability is unverified.",
+       "method": "pre_post_observational",
+       "primaryMetric": "First-paying workspaces / delivered eligible workspaces; clicks and resumed workflows diagnose the result.",
+       "guardrails": [
+        "Maximum $60 all-in; no sensitive form-response content in messages.",
+        "Suppress opt-outs and payments immediately; any complaint triggers a permission review.",
+        "No acquisition-play users in this cohort; log other product or pricing changes."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Planning decision at day 45: at full cohort volume, at least ten clicks and three first payments plus affordable actual CAC qualifies expansion. Four or fewer clicks, or no payments, rejects the current version; allow one revised hook before stopping. Intermediate results or insufficient cohort volume mean hold expansion and report directional evidence."
+      },
+      {
+       "name": "Test agency demand for publishing approval",
+       "hypothesis": "Agencies will pay for the reviewed-before-publishing workflow rather than the AI demonstration alone. Supplied ClimbOS reply and booking ranges are planning guidance, not Formkit results.",
+       "population": "Planning cohort: 500 distinct qualified agencies by day 45, with payment observation through day 60. The expansion scenario reaches 1,000 contacts only after qualification.",
+       "method": "pre_post_observational",
+       "primaryMetric": "First-paying agencies and actual all-in CAC, with replies as the early diagnostic.",
+       "guardrails": [
+        "Initial all-in test cap: $120; total route ceiling: $300.",
+        "Pause above a 2% bounce rate; honour opt-outs and stop follow-ups on reply.",
+        "Keep target profile and demonstration fixed within the cohort; log seat count and owner call time."
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Planning decision at day 45: at least ten replies from the completed cohort, one paying agency and affordable actual CAC permit continuing toward the scenario volume. Three or fewer replies, or no payment after ten attended walkthroughs, stops expansion. Otherwise freeze new prospecting, complete already-booked conversations and reassess by day 60; payment plus affordable CAC permits continuation, while unresolved evidence closes the test without a success claim."
+      },
+      {
+       "name": "The chat-to-client walkthrough",
+       "hypothesis": "A useful assistant-to-intake tutorial can generate paying team users. Publication, traffic and seat mix are unverified; the supplied 7.1-payment editorial scenario implies approximately $24.65 CAC at the replacement ceiling and requires economic qualification.",
+       "population": "Conditional replacement only: the first fifty relevant educators, approached at a planning cadence of ten weekly. Exclude this route from the initial acquisition forecast.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Attributed first-paying workspaces and route-specific CAC; tracked visits and first form publications diagnose quality.",
+       "guardrails": [
+        "Initial test ceiling: $35 all-in; total replacement-route ceiling: $175.",
+        "No placement fees or positive-review requests; disclose material collaborations and obtain reuse permission.",
+        "Stop agency prospecting before activation; use published contact routes and stop on reply."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Planning decision after the replacement test: at least eight replies, a published demonstration, an attributed payment and affordable actual CAC permit completing the proposed hundred-educator cohort. Three or fewer replies, or no published demonstration, stops expansion; other results permit one pitch revision within the existing cap. An immature publication cohort remains inconclusive, not successful."
+      }
+     ],
+     "constraints": [
+      "Advertising — brief: maximum $600/month, paid directly to platforms. Proposed initial spend is $0; the available budget is not a spending target.",
+      "Resources — planning ceilings: lifecycle $60, agency outreach $300 and conditional educator replacement $175; total $535 includes $85 credits and $450 owner time, not additional advertising.",
+      "Owner capacity — planning assumptions: two hours available weekly, valued at $50/hour; allocate at most nine hours across the horizon, including approvals, audit review, calls and closing.",
+      "Economics — brief: Pro is $6/seat/month and Business $19/seat/month. Margin, retention and purchased seat mix remain unverified; targeting does not establish what buyers will purchase.",
+      "Audit and capacity — [NEEDS FACT: Can you provide prior-period workspace-level sources, billing, retained paid months, variable costs and recent paid-feature attempts?] Geography is a targeting choice, not a product restriction; confirm call capacity during the first week."
+     ],
+     "measurementPlan": "Audit status: source shares, the prior-period first-payment baseline, retained paid months and contribution margin remain unknown; do not substitute forecasts for findings. ClimbOS first reviews the prior ninety days of billing and the latest twenty paying workspaces, protects any proven source, and updates the diagnosis before expansion. Use UTMs, a signup source question, workspace IDs and events for signup, first publication, paid-feature attempt, resumed workflow, first payment and refund; retain original acquisition source and record lifecycle assistance separately. Reconcile billing and actual costs weekly, use privacy-appropriate server-side payment events where supported, and report denominators and confounds without causal claims. Monthly, record relevant AI recommendations and AI referrals separately; assistant integration does not establish recommendation visibility.",
+     "firstActions": [
+      {
+       "title": "Audit sources, billing and recent paid-feature attempts.",
+       "why": "Establish the baseline and protect any source already producing profitable customers.",
+       "role": "ClimbOS analysis engine; owner approves access and reviews findings."
+      },
+      {
+       "title": "Prepare the chat-built, team-approved intake demonstration.",
+       "why": "Make the agency purchase reason visible before contacting prospects.",
+       "role": "ClimbOS landing-page and outreach engines; owner checks accuracy."
+      },
+      {
+       "title": "Prepare the educator walkthrough and conditional target list.",
+       "why": "Preserve the replacement play without adding another active channel.",
+       "role": "ClimbOS creator finder; owner approves the shortlist only if activated."
+      }
+     ],
+     "diagnosis": "Working constraint: unproven paid-workflow conversion, not demonstrated lack of traffic. The prior-period audit has not been supplied, so this remains provisional; profitable upgrades at useful volume would shift the constraint to distribution, while an already-profitable source would take priority.",
+     "affordableCac": "Use one scale ceiling: all-in CAC must not exceed verified gross profit expected during the first three paid months, using actual seat mix, discounts, variable costs and observed retention. No scale approval until those inputs are verified. Illustration only, assuming 80% gross margin and full retention: the ceiling is $14.40 for one Pro seat, $28.80 for two Pro seats and $136.80 for three Business seats. Planning route costs imply approximately $26.67 lifecycle CAC, $125 agency CAC and $24.65 educator CAC; none fits one-Pro-seat economics. Lifecycle and educators therefore need lower observed costs or genuine multi-seat purchases; agencies need sufficient actual team revenue. If observed demand remains solo-only, revise the offer or onboarding before expanding acquisition.",
+     "notDoing": [
+      {
+       "channel": "Concurrent educator outreach",
+       "why": "Keep one primary and one secondary. Educators replace a failed secondary only after the economics review; they do not run alongside both initial routes."
+      },
+      {
+       "channel": "Google pilot, Meta, LinkedIn and other advertising",
+       "why": "The assistant-intent pilot remains a prepared option, not an active third route; first establish a working paid conversion path and affordable CAC."
+      },
+      {
+       "channel": "Blog-first SEO, broad comparison pages and template programmes",
+       "why": "Use one intake starter and the existing comparison as supporting assets; do not depend on unproven organic traffic within this horizon."
+      },
+      {
+       "channel": "Marketplace expansion, paid directories and sponsorships",
+       "why": "Check eligibility without forecasting acceptance or traffic; defer implementation and fees until an existing route qualifies."
+      },
+      {
+       "channel": "Standalone social, community, podcast and PR programmes",
+       "why": "Production would dilute the selected engines; reuse the demonstration without starting another publishing programme."
+      }
+     ],
+     "northStar": {
+      "metric": "Distinct workspaces making their first successful subscription payment, excluding refunds, renewals and extra seats.",
+      "baseline": "Not established: prior-period billing and acquisition exports were not supplied.",
+      "target": "Planning assumption: five first-time paying workspaces by January 16, 2027. The two initial routes imply approximately 4.65; the original ten-workspace target is not supported by this narrower portfolio."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Eligible lifecycle workspaces reached",
+       "weeklyTarget": "Process every eligible attempt; the planning volume is provisional until the cohort audit.",
+       "source": "Feature-attempt events and email delivery logs"
+      },
+      {
+       "metric": "Qualified agency contacts and replies",
+       "weeklyTarget": "Planning assumption: 100 new contacts after ramp-up; supplied reply guidance implies roughly one to three replies.",
+       "source": "ClimbOS Pipeline and mailbox logs"
+      },
+      {
+       "metric": "Signup-to-first-publication rate",
+       "weeklyTarget": "Report numerator and denominator weekly; establish the baseline before setting an improvement target.",
+       "source": "Product events grouped by original acquisition source"
+      },
+      {
+       "metric": "First payments, seats and acquisition cost",
+       "weeklyTarget": "Reconcile every first payment and refund; expansion requires the single verified payback ceiling.",
+       "source": "Billing ledger, Pipeline, credit charges and owner-time log"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Planning schedule: days 0–14",
+       "focus": "Audit sources and billing, approve costs, test attribution and build the demonstrations. Launch permission-qualified lifecycle messages and a gradual agency outreach ramp."
+      },
+      {
+       "name": "Qualify the engines",
+       "days": "Planning schedule: days 15–45",
+       "focus": "Run the two registered cohorts and review their scorecards weekly. At the final checkpoint, apply each experiment’s scale, stop or hold rule; do not expand an inconclusive route."
+      },
+      {
+       "name": "Commit or replace",
+       "days": "Planning schedule: days 46–90",
+       "focus": "Planning allocation: put roughly three-quarters of effort into the qualified winner and the remainder into the secondary. Educator walkthroughs may replace failed agency outreach; if neither initial route clears the economics, fix the offer before testing another acquisition route."
+      }
+     ],
+     "weekOneChecklist": [
+      "ClimbOS audits prior-period sources, billing and eligible feature attempts; owner approves access.",
+      "Owner confirms available hours, contribution costs, seat mix and quoted credit charges.",
+      "ClimbOS builds dummy-data intake demonstrations; owner verifies the paid workflows.",
+      "ClimbOS tests payment attribution, return links, permissions and mailbox safeguards.",
+      "Owner approves the first lifecycle messages and agency cohort; ClimbOS begins the ramp."
+     ],
+     "risks": [
+      {
+       "risk": "The existing-user cohort and current paid-customer baseline are unknown.",
+       "mitigation": "Validate reachable users, historical payments and source shares during the first week; revise the target from actual cohort availability."
+      },
+      {
+       "risk": "Solo-seat purchases may not support acquisition costs.",
+       "mitigation": "Verify contribution costs, retained paid months and purchased seats before expansion; stop routes that only work under the illustrative assumptions."
+      },
+      {
+       "risk": "Unquoted credits or extra calls could exhaust the resource caps.",
+       "mitigation": "Approve actual credit charges before launch and log owner time weekly; reduce volume when a route reaches its cost ceiling."
+      },
+      {
+       "risk": "Poor outreach or careless demonstrations could damage trust.",
+       "mitigation": "Check permission and suppression before sending, review mailbox health weekly and use dummy client information in demonstrations."
+      },
+      {
+       "risk": "Educators may publish late or attract free users rather than buyers.",
+       "mitigation": "Check publication and attributed payment within the registered educator test; disclose material collaborations and make no partnership claims."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Finish the workflow",
+       "oneLiner": "Measure the closest route to payment before buying more visits; this is not yet a bankable recommendation.",
+       "kind": "creative",
+       "audience": "Existing free Formkit workspaces with recent paid-feature intent and permission to receive relevant product emails; exclude users acquired by the other plays from this forecast.",
+       "trigger": "A recorded attempt to use a paid feature, such as a custom domain or payments.",
+       "hook": "Need your own domain or Stripe payments? Formkit Pro is $6 per seat per month. Payments go to your own Stripe account, and Formkit takes no cut. Open your workspace: https://formkit.app.",
+       "mechanic": "Send one workflow-specific email after the actual attempt, with one reminder maximum and a tested return link. Hypothesis: resolving an immediate paid-feature need converts better than a general upgrade announcement.",
+       "assetUsed": "Formkit’s own feature-attempt data and the direct path from a free workspace to its relevant paid workflow.",
+       "funnel": [
+        "Eligible existing free workspaces → delivered trigger email: 95% / 98% / 100%; assumption, grade D. Forecast input: 500 delivered emails, subject to cohort availability.",
+        "Delivered email → click: 1% / 2% / 3%; assumption, grade D, informed by the supplied 2.09% email-campaign click benchmark [https://www.mailerlite.com/, grade A]; that aggregate does not establish Formkit’s upgrade rate.",
+        "Click → resume the attempted workflow: 50% / 75% / 90%; assumption, grade D.",
+        "Resumed workflow → first payment: 10% / 30% / 40%; assumption, grade D."
+       ],
+       "unit": "first-time paying workspaces",
+       "p10": 0.2,
+       "p50": 2.25,
+       "p90": 7,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "The size and historical upgrade rate of the eligible cohort; these must establish whether this can become the bankable play.",
+       "test": "Assumed test: 500 eligible existing free workspaces, $60 total cost including owner time and credits; clicks checked on day 21, payments on day 45. If fewer qualify, use the actual count and reduce the forecast proportionally.",
+       "killIf": "Four or fewer clicks from 500 delivered emails, or no payments by day 45. Change the hook once; stop if the result repeats.",
+       "scaleIf": "At least 10 clicks and three first payments from 500 delivered emails, with actual CAC below half the verified 12-month gross profit. Then cover every eligible attempt weekly; the planning volume is about 40 workspaces a week.",
+       "scores": [
+        5,
+        2,
+        5,
+        3,
+        4,
+        3,
+        5,
+        3
+       ],
+       "firstActionToday": "Spend 20 minutes exporting recent paid-feature attempts and checking whether the corresponding workspaces are reachable.",
+       "climbosCanDo": "Build the trigger and return link, process every eligible attempt weekly, and track delivery, clicks, resumed workflows and first payments."
+      },
+      {
+       "name": "Chat-built intake, team-approved",
+       "oneLiner": "Sell the team approval step after AI builds the client-intake form.",
+       "kind": "creative",
+       "audience": "US agencies with 2–10 people and visible client-intake work; research through https://clutch.co and agency websites, using only published business emails.",
+       "trigger": "An agency reviewing its next client-onboarding process; January planning is a timing hypothesis, not verified seasonal demand.",
+       "hook": "Does someone approve your client-intake forms before they go live? Formkit lets you build and publish forms from Claude or ChatGPT, with publishing approvals on Business at $19 per seat per month. Reply “intake” for a short walkthrough, or explore https://formkit.app.",
+       "mechanic": "Transplant assisted software implementation into agency client intake: show one form built in chat, reviewed, then published. Hypothesis: the approval requirement attracts higher-value team purchases rather than low-value solo demos.",
+       "assetUsed": "Formkit’s Claude/ChatGPT form-building workflow paired with Business publishing approvals—a specific intake-and-approval demonstration, not a generic AI pitch.",
+       "funnel": [
+        "Forecast input: 1,000 distinct agency contacts reached during 90 days; assumption, grade D, conditional on mailbox health and test graduation.",
+        "Contacted → replied: 1% / 2% / 3% [supplied ClimbOS outreach benchmark, grade B].",
+        "Replied → booked walkthrough: 20% / 30% / 40% [supplied ClimbOS outreach benchmark, grade B].",
+        "Booked → attended: 60% / 80% / 90%; assumption, grade D.",
+        "Attended → first payment: 25% / 50% / 65%; assumption, grade D."
+       ],
+       "unit": "first-time paying workspaces",
+       "p10": 0.2,
+       "p50": 2.4,
+       "p90": 7.2,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether small agencies value publishing approvals enough to buy Business; the economics scenario assumes three monthly Business seats, not an observed seat mix.",
+       "test": "Assumed test: 500 distinct agency contacts, capped at $120 including owner time and credits; seek about 10 replies. Read the first approximately 200 contacts on day 21, finish the cohort by day 45, and check payments by day 60.",
+       "killIf": "Three or fewer replies from 500 contacts, or no payment after 10 attended walkthroughs. Stop instead of broadening to cheaper solo accounts.",
+       "scaleIf": "At day 21, at least four replies from 200 contacts and one paying agency permit 100 new agency contacts weekly. Continue only while actual CAC stays below half verified 12-month gross profit; the 90-day scenario uses 1,000 contacts and implies about 2.4 paying agencies.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        3,
+        3,
+        4,
+        4
+       ],
+       "firstActionToday": "Approve the small-agency target profile and record a two-minute intake-and-approval demonstration using dummy client details.",
+       "climbosCanDo": "Research targets, personalize first lines, send from the owner’s mailbox, manage one follow-up and stop on reply. After ramp-up, run 100 new agency contacts weekly, with booking and attribution handled in Pipeline."
+      },
+      {
+       "name": "The chat-to-client walkthrough",
+       "oneLiner": "Make assistant integration useful enough for an educator to demonstrate—not merely mention.",
+       "kind": "creative",
+       "audience": "Freelancer and agency workflow educators; start with https://www.beingfreelance.com/, https://theagencyoperator.ai/, https://growyouragency.group/ and https://community.bureauofdigital.com/newsletter-signup, then find smaller relevant creators.",
+       "trigger": "An educator needs a practical assistant workflow: turn a chat-built form into a branded client-intake process with a clear paid next step.",
+       "hook": "Would a client-intake walkthrough help your audience? Formkit lets you build and publish forms from Claude or ChatGPT. The free tier has unlimited forms, responses and members; Pro adds your own domain and Stripe payments at $6 per seat per month. Explore https://formkit.app. If it fits, would you show your own workflow? No praise or positive review requested.",
+       "mechanic": "Borrow an educator’s audience through an honest hands-on tutorial, then reuse that demonstration for a separate assistant-intent Google test. Hypothesis: this workflow attracts users who publish a useful form and subsequently need Pro.",
+       "assetUsed": "One real Claude/ChatGPT-to-client-intake demonstration, the unlimited free starting point, and a concrete Pro upgrade for domain or payment needs.",
+       "funnel": [
+        "Editorial input: 100 distinct educator pitches during 90 days; assumption, grade D.",
+        "Pitched → replied: 10% / 15% / 20% [supplied ClimbOS creator-outreach benchmark, grade C].",
+        "Replied → agreed to demonstrate: 10% / 25% / 40%; assumption, grade D.",
+        "Agreed → published within the acquisition window: 40% / 70% / 90%; assumption, grade D.",
+        "Published demonstration → tracked visits per demonstration: 50 / 150 / 300; assumption, grade D, not claimed audience sizes.",
+        "Tracked visit → signup: 5% / 12% / 20%; assumption, grade D.",
+        "Signup → first published form: 40% / 60% / 80%; assumption, grade D.",
+        "First publication → first payment: 10% / 25% / 35%; assumption, grade D. Editorial P50 is approximately 7.1 paying workspaces.",
+        "Separate Google input: $55 media spend; CPC $2 / $1.10 / $0.75, equivalent to approximately 28 / 50 / 73 clicks; assumption, grade D.",
+        "Google click → signup: 10% / 20% / 30%; signup → first publication: 40% / 60% / 80%; first publication → first payment: 10% / 20% / 30%; each rate is an assumption, grade D. Google-test P50 is 1.2 paying workspaces; additional ad scaling is excluded."
+       ],
+       "unit": "first-time paying workspaces",
+       "p10": 0.5,
+       "p50": 8.3,
+       "p90": 33,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether educators publish without fees and send buyers rather than curious free users; no partnership is verified, and material collaborations require disclosure.",
+       "test": "Assumed initial cap: $120 total—$35 for 50 editorial pitches and $85 for the Google test, including $55 media spend and $30 setup/time/credits. Read replies and signups on day 21; check publications and payments by day 45.",
+       "killIf": "Three or fewer replies from 50 pitches, or no published demonstration by day 45, stops editorial expansion. Zero payments from 50 Google clicks by day 45 stops paid expansion.",
+       "scaleIf": "Editorial: at least eight replies from 50 pitches and one attributed payment permit completing 100 pitches. Google: at least three payments from 50 clicks permit incremental spending, capped at $600/month; both routes must maintain actual CAC below half verified 12-month gross profit.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        5,
+        3,
+        4,
+        4
+       ],
+       "firstActionToday": "Record a 90-second assistant-built intake demonstration and approve the first five educator targets; make no partnership claims.",
+       "climbosCanDo": "Research and pitch 10 educators weekly, prepare tracked walkthrough assets and draft Google ads for owner launch. Also check assistant-directory eligibility without forecasting approval or traffic: https://help.openai.com/en/articles/12515353-build-with-the-apps-sdk and https://support.anthropic.com/en/articles/11697096-anthropic-mcp-directory-policy."
+      }
+     ],
+     "portfolioNote": "Proposed goal, assumption, grade D: 10 first-time paying workspaces by January 16, 2027. Acquisition P50 is 10.7; adding 2.25 upgrades from an unverified 500-workspace existing cohort gives 12.95, approximately 13, with no double-counting. These aggregate forecasts are assumptions, grade D. No supplied evidence supports a predictability-4 bankable play; the lifecycle card is a capped qualification experiment, not falsely labeled bankable. The two acquisition plays score 3 for predictability and 4 for distinctiveness; scores are editorial, ordered fit, predictability, reach per owner-hour, time to signal, compounding, cost, safety, distinctiveness. Planning assumptions, grade D: two owner hours weekly, $50/hour, monthly billing, 12 paid months and 80% gross margin imply $57.60 annual gross profit for one Pro seat or $547.20 for three Business seats. At those assumptions, 90-day all-in spending ceilings of $60 lifecycle, $500 agencies and $230 walkthroughs imply CAC of about $27, $208 and $28 respectively; these are ceilings, not verified costs. Before launch, approve actual credit charges and available hours; before scale, verify margin, billing, retention and seat mix, and require CAC below half actual 12-month gross profit. Advertising alone remains within $600/month; credits and owner time are separate costs. One mailbox handles both outbound plays: after ramp-up, 100 agency contacts plus 10 educator pitches weekly, with at most one follow-up each, stays within 50 total sends per working day. All test volumes, caps and decision thresholds are planning choices, not benchmarks."
+    },
+    "costMicros": 867592,
+    "ms": 2160637
+   }
+  },
+  "comparisons": {
+   "expert>basic": {
+    "sol": {
+     "result": "loss",
+     "reasons": [
+      "B is the more coherent handoff: two active plays, identifiable audiences, concrete tests and a mostly consistent approval process. A reads like several revisions merged without reconciliation.",
+      "A contradicts itself on the paying-customer target, spending ceilings, whether advertising runs, whether educators replace or accompany agency outreach, and whether scaling requires three-month payback or half of annual gross profit. Those conflicts prevent an owner from knowing which instructions govern.",
+      "B keeps the proposed acquisition mechanics specific to Formkit: studio intake workflows and a focused Google Forms comparison. Its forecasts are generally presented as conditional rather than promised results.",
+      "B still has a serious economic weakness: its Search midpoint spends $1,800 for 0.81 customers—about $2,222 in advertising per customer before other costs. That is a poor starting proposition for this pricing and audience. A recognizes the low-price acquisition problem better, but its contradictory execution plan outweighs that advantage."
+     ],
+     "truthX": [
+      "Repeatedly cites supposedly supplied ClimbOS benchmarks, service capabilities and credit arrangements that are not established in the provided material.",
+      "Claims a supplied MailerLite click benchmark, but provides only a homepage link rather than an identifiable supporting source.",
+      "Presents precise percentile forecasts without a stated statistical basis, and introduces an unexplained January 2027 deadline."
+     ],
+     "truthY": [
+      "Attributes reply rates, booking rates, mailbox capacity and service capabilities to a supplied ClimbOS brief that is not present in the provided material.",
+      "Presents an agency-page URL and its existing templates as verified assets, although that specific page was not established by the supplied evidence.",
+      "Labels the Search play “bankable” despite explicitly unknown demand, CPC and paid conversion. Its percentile forecasts have no stated statistical basis."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "basic": {
+    "truth": 4,
+    "specificity": 7,
+    "strategy": 3,
+    "craft": 5,
+    "usefulness": 4,
+    "creativity": 3,
+    "overall": 4,
+    "topIssue": "The plan prioritizes acquisition tactics whose own forecasts imply unaffordable costs for a $6-per-seat product, without establishing larger account values or a concrete free-to-paid conversion mechanism."
+   },
+   "expert": {
+    "truth": 4,
+    "specificity": 8,
+    "strategy": 4,
+    "craft": 4,
+    "usefulness": 3,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "The strategy contains conflicting targets, budgets, active channels and CAC rules across sections, leaving the owner without one executable 90-day plan."
+   }
+  }
+ }
+]
