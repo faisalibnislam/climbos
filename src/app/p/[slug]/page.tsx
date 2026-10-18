@@ -19,6 +19,7 @@ export default function LandingPage() {
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    if (page) document.title = `${page.content.headline} · ${page.name}`;
     if (page && !counted.current) {
       counted.current = true;
       void viewed({ slug });
