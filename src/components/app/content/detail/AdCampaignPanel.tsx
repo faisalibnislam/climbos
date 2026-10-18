@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Callout, ConfirmDialog, Field, Input, Skeleton, toast } from "@/components/ui";
+import { Button, Callout, ConfirmDialog, DatePicker, Field, Input, Skeleton, toast } from "@/components/ui";
 import { minorToDisplay } from "../../money";
 import { CampaignCard } from "../Campaigns";
 import { ErrorCallout, PERMISSION_WHO, majorToDisplay } from "../shared";
@@ -93,10 +93,10 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Start date" error={fieldErrors.start}>
-                <Input type="date" value={start} min={isoDay(now)} onChange={(e) => setStart(e.target.value)} />
+                <DatePicker value={start} min={isoDay(now)} onChange={setStart} />
               </Field>
               <Field label="End date" error={fieldErrors.end}>
-                <Input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
+                <DatePicker value={end} min={start || isoDay(now)} onChange={setEnd} />
               </Field>
             </div>
             <p className="text-sm text-ink-2" aria-live="polite">

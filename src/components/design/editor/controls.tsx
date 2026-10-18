@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { resolvePaint } from "@shared/design/ops";
 import type { BrandKit, Paint } from "@shared/design/types";
-import { Button, IconButton, Tooltip } from "@/components/ui";
+import { Button, HexInput, IconButton, Select, Tooltip } from "@/components/ui";
 import { controlClasses } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +133,7 @@ export function ColorControl({ label, value, brand, onChange }: { label: string;
           </div>
           <label className="mt-3 flex items-center justify-between gap-2">
             <span className="text-overline">Custom</span>
-            <input type="color" value={current.slice(0, 7)} onChange={(e) => onChange(e.target.value)} className="h-8 w-14 cursor-pointer rounded-lg border border-line-strong bg-surface px-1" />
+            <HexInput value={current.slice(0, 7)} onChange={onChange} label="Custom colour" />
           </label>
         </div>
       ) : null}
@@ -144,23 +144,18 @@ export function ColorControl({ label, value, brand, onChange }: { label: string;
 export function SelectField<T extends string | number>({ label, value, options, onChange, className }: { label: string; value: T; options: { value: T; label: string; style?: React.CSSProperties }[]; onChange: (v: T) => void; className?: string }) {
   return (
     <Tooltip content={label}>
-      <label className="inline-flex">
-        <span className="sr-only">{label}</span>
-        <select
+      <span className="inline-flex">
+        <Select
+          aria-label={label}
           value={String(value)}
-          onChange={(e) => {
-            const o = options.find((x) => String(x.value) === e.target.value);
+          onValueChange={(v) => {
+            const o = options.find((x) => String(x.value) === v);
             if (o) onChange(o.value);
           }}
-          className={cn(controlClasses, "h-8 w-auto px-2", className)}
-        >
-          {options.map((o) => (
-            <option key={String(o.value)} value={String(o.value)} style={o.style}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          options={options.map((o) => ({ value: String(o.value), label: <span style={o.style}>{o.label}</span> }))}
+          className={cn("h-8 w-auto gap-1.5 px-2", className)}
+        />
+      </span>
     </Tooltip>
   );
 }

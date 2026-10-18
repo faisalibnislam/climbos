@@ -26,7 +26,20 @@ const RULES: { name: string; re: RegExp }[] = [
   { name: "raw hex colour in a class (use tokens)", re: /\b(bg|text|border|fill|stroke|ring|outline|decoration)-\[#[0-9a-fA-F]{3,8}\]/ },
 ];
 
+/** Everywhere, including the design editor: no operating-system dropdowns or pickers. */
+const ALL_SOURCES = files("src");
+const NATIVE_PICKERS = /<select[\s>]|<datalist|type="(date|time|datetime-local|month|week|color)"/;
+
 describe("design-system guard", () => {
+  it("no native dropdowns or pickers (use Select, DatePicker, DateTimePicker, ColorPicker)", () => {
+    const hits = ALL_SOURCES.flatMap((f) =>
+      readFileSync(f, "utf8")
+        .split("\n")
+        .map((line, i) => (NATIVE_PICKERS.test(line) ? `${f}:${i + 1}: ${line.trim().slice(0, 120)}` : null))
+        .filter(Boolean),
+    );
+    expect(hits).toEqual([]);
+  });
   it("scans the app sources", () => {
     expect(SOURCES.length).toBeGreaterThan(80);
   });

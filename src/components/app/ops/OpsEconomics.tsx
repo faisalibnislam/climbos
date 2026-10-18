@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { CircleAlert, CircleCheck, Download } from "lucide-react";
 import { useState } from "react";
-import { Badge, Button, DataTable, Field, Input, Select } from "@/components/ui";
+import { Badge, Button, DataTable, Field, Select, monthOptions } from "@/components/ui";
 import { formatUsd } from "@/lib/utils";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { OpsSection } from "./opsShared";
@@ -101,7 +101,7 @@ export function ReconciliationSection() {
     <OpsSection id="reconciliation" title="Reconciliation">
       <div className="w-full sm:w-56">
         <Field label="Month" error={valid ? undefined : "Use the format YYYY-MM."}>
-          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <Select value={month} onValueChange={setMonth} options={monthOptions(24)} />
         </Field>
       </div>
       {!valid ? null : data === undefined ? (

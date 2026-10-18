@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Button, Callout, ConfirmDialog, Field, Input, Spinner, toast } from "@/components/ui";
+import { Button, Callout, ConfirmDialog, DateTimePicker, Field, Spinner, toast } from "@/components/ui";
 import { formatDateTime } from "../../money";
 import { ErrorCallout, PERMISSION_WHO, browserTimeZone, channelLabel } from "../shared";
 import { ExportPackPanel } from "./ExportPack";
@@ -63,13 +63,7 @@ function ScheduleForm({ slug, artifact, now, reschedule }: { slug: string; artif
       }}
     >
       <Field label={reschedule ? "Change the time" : "Schedule for"} hint={`In your time zone: ${tz}.`} error={fieldError ?? undefined}>
-        <Input
-          type="datetime-local"
-          value={value}
-          min={toLocalInput(now + 2 * 60_000)}
-          max={toLocalInput(now + 90 * 86_400_000)}
-          onChange={(e) => setValue(e.target.value)}
-        />
+        <DateTimePicker value={value} min={toLocalInput(now + 2 * 60_000)} max={toLocalInput(now + 90 * 86_400_000)} onChange={setValue} />
       </Field>
       <Button type="submit" variant={reschedule ? "secondary" : "primary"}>
         {reschedule ? "Reschedule" : "Schedule"}

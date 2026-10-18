@@ -68,6 +68,9 @@ import {
   ProgressRing,
   SocialIcon,
   StatTrend,
+  ColorPicker,
+  DatePicker,
+  DateTimePicker,
 } from "@/components/ui";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 
@@ -130,6 +133,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function DesignSystemReference() {
   const [mode, setMode] = useState("trust");
   const [channel, setChannel] = useState("linkedin");
+  const [day, setDay] = useState("");
+  const [when, setWhen] = useState("");
+  const [color, setColor] = useState("#0b5d46");
   const [auto, setAuto] = useState(true);
   return (
     <div className="min-h-dvh bg-bg">
@@ -239,6 +245,16 @@ export function DesignSystemReference() {
                     ]}
                   />
                 </Field>
+                <Field label="Start date" hint="Our own calendar. Arrow keys move, Enter picks.">
+                  <DatePicker value={day} onChange={setDay} />
+                </Field>
+                <Field label="Schedule for">
+                  <DateTimePicker value={when} onChange={setWhen} />
+                </Field>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-ui font-medium text-ink">Brand colour</span>
+                  <ColorPicker label="Brand colour" value={color} onChange={setColor} />
+                </div>
                 <Field label="Company name" error="Add your company name so posts sound like you.">
                   <Input defaultValue="" />
                 </Field>

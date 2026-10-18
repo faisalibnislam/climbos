@@ -5,7 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { newId } from "@shared/design/ops";
 import { TEMPLATES, templatePage } from "@shared/design/templates";
 import type { DesignDoc, ImageLayer, Layer, ShapeLayer, TextLayer } from "@shared/design/types";
-import { Button, IconButton, Input, Tooltip } from "@/components/ui";
+import { Button, ColorPicker, IconButton, Input, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { DesignThumbnail, type AssetResolver } from "../DesignRenderer";
 import { DESIGN_FONTS } from "../fonts";
@@ -290,10 +290,10 @@ function BrandPanel({ editor }: { editor: Editor }) {
       </div>
       <div className="grid grid-cols-1 gap-2">
         {slots.map((k) => (
-          <label key={k} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface py-1 pl-3 pr-1 text-ui font-medium capitalize text-ink-2">
+          <div key={k} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface py-1 pl-3 pr-1 text-ui font-medium capitalize text-ink-2">
             {k}
-            <input type="color" value={doc.brand.colors[k]} onChange={(e) => apply([{ op: "set_brand", brand: { colors: { [k]: e.target.value } } }])} className="h-8 w-14 cursor-pointer rounded-lg border border-line-strong bg-surface px-1" />
-          </label>
+            <ColorPicker label={`Brand ${k}`} value={doc.brand.colors[k]} onChange={(hex) => apply([{ op: "set_brand", brand: { colors: { [k]: hex } } }])} />
+          </div>
         ))}
       </div>
       <div className="flex flex-col gap-2">

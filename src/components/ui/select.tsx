@@ -49,7 +49,9 @@ export function Select({
           className,
         )}
       >
-        <RSelect.Value placeholder={placeholder} />
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+          <RSelect.Value placeholder={placeholder} />
+        </span>
         <RSelect.Icon>
           <ChevronDown aria-hidden="true" className="size-4 text-ink-3" />
         </RSelect.Icon>
