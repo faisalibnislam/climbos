@@ -3,24 +3,22 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowRight, CircleCheck, CircleDashed, CircleX, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BackLink, Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";
+import { BackLink, Badge, Button, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";
 import { OutputView } from "@/components/app/OutputView";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
-import { microsToDisplay, relativeTime } from "@/components/app/money";
+import { relativeTime } from "@/components/app/money";
+import { RunProgress } from "@/components/app/content/RunProgress";
 import { roleTitle } from "@/components/app/roles";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-
-const ACTIVE = new Set(["cost_reserved", "preparing", "executing"]);
 
 /** Work receipt: what one job was asked to do, who did it, every step, its cost and what it produced. */
 export default function WorkPage() {
   const { organization: slug, runId } = useParams<{ organization: string; runId: string }>();
   const run = useQuery(api.workspace.runDetail, { slug, runId: runId as Id<"workflowRuns"> });
   if (run === undefined) return <LoadingBlock label="Loading this job" lines={4} />;
-  const active = ACTIVE.has(run.status);
   const isPlan = run.kind === "strategy";
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -43,21 +41,15 @@ export default function WorkPage() {
       </div>
 
       {run.isFixture ? <StatusPill status="demo" /> : null}
-      {run.status === "failed" && run.userMessage ? <Callout tone="danger" title="This job didn't finish">{run.userMessage}</Callout> : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         <div className="flex min-w-0 flex-col gap-6">
-          {active ? (
-            <Card>
-              <CardContent className="flex items-center gap-3">
-                <Loader2 aria-hidden className="size-5 animate-spin text-brand-800" />
-                <div>
-                  <p className="heading-card">Your team is on it</p>
-                  <p className="text-ui text-ink-3">This page updates by itself as each step finishes.</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+          {/* Live while running; afterwards a receipt of every step, its timing and what it found. */}
+          <Card>
+            <CardContent>
+              <RunProgress slug={slug} runId={run.id as Id<"workflowRuns">} headingLevel="h2" />
+            </CardContent>
+          </Card>
 
           {run.artifacts.length > 0 ? (
             <Card>
@@ -103,42 +95,6 @@ export default function WorkPage() {
                   <RoleAvatar role={r} size="xs" /> {roleTitle(r)}
                 </span>
               ))}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle as="h2">Steps</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-3">
-              <ol className="flex flex-col gap-2">
-                {run.steps.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-ui">
-                    {s.status === "succeeded" ? (
-                      <CircleCheck aria-hidden className="size-4 text-brand-800" />
-                    ) : s.status === "running" ? (
-                      <Loader2 aria-hidden className="size-4 animate-spin text-brand-800" />
-                    ) : s.status === "failed" ? (
-                      <CircleX aria-hidden className="size-4 text-red-800" />
-                    ) : (
-                      <CircleDashed aria-hidden className="size-4 text-ink-3" />
-                    )}
-                    <span className={s.status === "succeeded" || s.status === "running" ? "text-ink" : "text-ink-3"}>{s.label}</span>
-                    <span className="sr-only">({s.status})</span>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex flex-col gap-1 text-ui">
-              <span className="flex justify-between">
-                <span className="text-ink-3">AI capacity used</span>
-                <span className="font-medium tabular-nums">{microsToDisplay(run.actualMicros)}</span>
-              </span>
-              <span className="flex justify-between">
-                <span className="text-ink-3">Most it could use</span>
-                <span className="tabular-nums text-ink-2">{microsToDisplay(run.estimateMicros)}</span>
-              </span>
             </CardContent>
           </Card>
         </aside>

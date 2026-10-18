@@ -35,6 +35,7 @@ import {
 } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
+import { RunProgress } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +79,13 @@ export default function OutboundPage() {
       {!c ? (
         <StartPanel slug={slug} businessType={data.businessType} canEdit={data.canEdit} />
       ) : c.status === "researching" ? (
-        <Researching />
+        c.run ? (
+          <section className="rounded-xl border border-line bg-surface p-5">
+            <RunProgress slug={slug} runId={c.run.id as Id<"workflowRuns">} headingLevel="h2" />
+          </section>
+        ) : (
+          <Researching />
+        )
       ) : c.status === "failed" ? (
         <Callout tone="danger" title="This search didn't finish">
           {c.run?.message ?? "Nothing was charged beyond what was used."}{" "}
@@ -147,7 +154,7 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         setBusy(true);
         try {
           await start({ slug, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
-          toast({ tone: "success", title: "Your team is on it", description: "Usually ready in 3–6 minutes." });
+          toast({ tone: "success", title: "Your team is on it", description: "About 10–15 minutes. You can leave this page." });
           onDone?.();
         } catch (err) {
           toast({ tone: "danger", title: errorMessage(err) });
