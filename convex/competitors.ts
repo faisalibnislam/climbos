@@ -72,15 +72,17 @@ export const remove = mutation({
   },
 });
 
-/** "Check now": at most every 6 hours. */
+/** "Check now": each competitor at most every 6 hours (a newly added one can be checked right away). */
 export const checkNow = mutation({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     const watches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20)).filter((w) => w.active);
     if (!watches.length) throw appError("INVALID", "Add a competitor first.");
-    if (watches.some((w) => w.lastCheckedAt && Date.now() - w.lastCheckedAt < 6 * 3_600_000)) throw appError("RATE_LIMITED", "Checked in the last 6 hours. Sites rarely change faster than that.");
-    await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: watches.map((w) => w._id) });
+    const due = watches.filter((w) => !w.lastCheckedAt || Date.now() - w.lastCheckedAt >= 6 * 3_600_000);
+    if (!due.length) throw appError("RATE_LIMITED", "All checked in the last 6 hours. Sites rarely change faster than that.");
+    await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: due.map((w) => w._id) });
+    return { checking: due.length, skipped: watches.length - due.length };
   },
 });
 
