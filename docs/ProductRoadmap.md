@@ -44,3 +44,17 @@
 6. Reviews (#9), competitor watch (#11), assets (#13), repurposing (#14), experiments (#15).
 
 Each item ships with tests, appears in `/design-system` if it adds UI patterns, and is listed in the morning report.
+
+## Shipped 18 Oct 2026
+
+All of these are in production (Convex prod + climbos.app), with tests:
+
+- **Unified Inbox** (#1): email replies, bookings, website chats, landing-page leads, private feedback and pasted reviews; AI-drafted answers; email answers go out threaded from the owner's mailbox.
+- **Pipeline / mini-CRM** (#3): lead → talking → booked → won/lost, auto-filled by replies, bookings, chats and forms; won deals with a value count as revenue.
+- **Tracked links** (#4): `/l/CODE`, UTM tags, human-only daily clicks; drafts get one automatically (ads keep the real URL + UTM).
+- **Weekly CEO report** (#8): Results → This week, emailed Mondays (replaces the weekly digest).
+- **Reviews** (#9): requests from the owner's mailbox, public review page without gating, private notes to Inbox.
+- **Brand kit + voice learning** (#10), **Competitor watch** (#11), **Content languages** (#12), **Repurposing** (#14), **A/B tests** (#15, landing headlines and outreach subjects), **PWA + push** (#16, own VAPID push), **White-label client reports** (#17), **Website chat** (#18).
+- Also: first win after the first plan, referrals (give 200 / get 200), low-credit nudges, landing pages, status page (`/status`) and changelog (`/changelog`), LinkedIn + X publishing.
+
+Still open: booking reminders/no-show follow-up (#2), safety window (#5), link-in-bio (#7), asset library (#13), Google Business Profile API for reviews, auto top-up (needs Polar).
