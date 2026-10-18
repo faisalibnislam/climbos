@@ -150,6 +150,8 @@ const FOOTER_GROUPS = [
       { href: "/security", label: "Security" },
       { href: "/privacy", label: "Privacy" },
       { href: "/terms", label: "Terms" },
+      { href: "/status", label: "Status" },
+      { href: "/changelog", label: "What's new" },
     ],
   },
 ];

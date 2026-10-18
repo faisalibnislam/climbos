@@ -702,6 +702,15 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Public status: a health sample every 5 minutes per component. */
+  statusSamples: defineTable({
+    at: v.number(),
+    day: v.string(),
+    components: v.array(v.object({ key: v.string(), status: v.union(v.literal("ok"), v.literal("degraded"), v.literal("down")), note: v.optional(v.string()) })),
+  })
+    .index("by_at", ["at"])
+    .index("by_day", ["day"]),
+
   /** Client report links (white-label for agencies). */
   reportShares: defineTable({
     orgId: v.id("organizations"),
