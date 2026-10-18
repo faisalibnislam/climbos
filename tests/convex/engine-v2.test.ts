@@ -69,6 +69,17 @@ describe("Engine v2 wiring", () => {
     const strategy = await t.run(async (ctx) => ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first());
     expect(strategy?.expert?.diagnosis).toContain("fake-v1");
     expect(strategy?.expert?.weekOneChecklist.length).toBeGreaterThan(0);
+    // Forecasts are computed in code from each play's model and ranges (never written by the model).
+    const plays = strategy?.expert?.plays as { p10: number; p50: number; p90: number }[];
+    expect(plays.length).toBe(2);
+    for (const p of plays) {
+      expect(p.p10).toBeLessThan(p.p50);
+      expect(p.p50).toBeLessThan(p.p90);
+      expect(p.p50).toBeGreaterThan(5); // 100 a week × 13 weeks × ~10% × ~10%
+    }
+    // Pages the research read are saved, and so is what the plan was built from.
+    expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
+    expect(strategy?.expert?.snapshot?.engine).toMatch(/^v2/);
   });
 
   it("revises when the review fails, reserving each extra round first, and keeps the better version", async () => {

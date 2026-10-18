@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
-import { playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
+import { churnOf, OWNER_HOUR_USD, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { PlanSection } from "./PlanSections";
 import { climbTarget } from "@/components/climb/context";
 
@@ -315,12 +315,36 @@ function PlayCard({ play, slug, economics }: { play: PlayView; slug: string; eco
   );
 }
 
+/** The unit economics every play's numbers rest on, with what's assumed called out (spec §25). */
+function EconomicsLine({ economics: e }: { economics: Economics }) {
+  const churn = churnOf(e);
+  const assumed = new Set(e.assumed ?? []);
+  const part = (label: string, value: string, key: string) => (
+    <span>
+      {label} <span className="font-medium text-ink">{value}</span>
+      {assumed.has(key) ? <span className="text-amber-800"> (assumed)</span> : null}
+    </span>
+  );
+  return (
+    <p className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
+      <span>Each play is costed on:</span>
+      {part("revenue", `$${Math.round(e.revenuePerCustomerMonthUsd * 100) / 100}/month`, "revenue")}
+      {part("margin", `${Math.round((e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100))}%`, "margin")}
+      {churn !== null ? part("churn", `${Math.round(churn * 1000) / 10}%/month`, "churn") : null}
+      <span>
+        owner time <span className="font-medium text-ink">${e.ownerHourUsd || OWNER_HOUR_USD}/hour</span>
+      </span>
+    </p>
+  );
+}
+
 export function GrowthPlays({ plays, slug, economics }: { plays: PlayView[]; slug: string; economics?: Economics }) {
   if (!plays.length) return null;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
   return (
-    <PlanSection id="plays" title="Growth plays" intro="One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Every forecast comes from cited base rates and gets tested before anything scales.">
+    <PlanSection id="plays" title="Growth plays" intro="One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Forecasts are computed from cited rates and their ranges; each play is tested before it scales.">
+      {economics ? <EconomicsLine economics={economics} /> : null}
       <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
           <PlayCard key={p.name} play={p} slug={slug} economics={economics} />
