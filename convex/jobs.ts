@@ -417,7 +417,8 @@ function businessBrief(job: JobCtx): string {
     b?.summary ? `SUMMARY: ${b.summary}` : "",
     `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${(job.goal.monthlyAdBudgetMinor / 100).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
-    job.brand ? `BRAND VOICE: ${job.brand.voice}. Avoid: ${job.brand.doNots.join("; ")}` : "",
+    job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
+    job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     factsBlock(job.facts),
   ]
     .filter(Boolean)

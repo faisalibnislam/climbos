@@ -3,6 +3,7 @@ import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { v } from "convex/values";
+import { recordVoiceSample } from "./brand";
 import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
 import { contentHash } from "../shared/policy";
@@ -239,6 +240,8 @@ export const edit = mutation({
       editedByUser: user._id,
       createdAt: now,
     });
+    // Voice learning: the owner rewrote an AI draft.
+    if (prev && !prev.editedByUser && prev.body !== body) await recordVoiceSample(ctx, org._id, a.channel, prev.body, body);
     await invalidateApprovals(ctx, a._id, "Edited after approval");
     await ctx.db.patch(a._id, {
       title: args.title?.trim().slice(0, 140) || a.title,

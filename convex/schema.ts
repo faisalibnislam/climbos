@@ -476,8 +476,20 @@ export default defineSchema({
     colors: v.array(v.string()),
     doNots: v.array(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
+    /** Voice learning: short rules learned from how the owner edits drafts. */
+    learnedRules: v.optional(v.array(v.object({ text: v.string(), at: v.number() }))),
     updatedAt: v.number(),
   }).index("by_business", ["businessId"]),
+
+  /** Before/after pairs from the owner's edits to AI drafts (input to voice learning). */
+  voiceSamples: defineTable({
+    orgId: v.id("organizations"),
+    channel: v.string(),
+    before: v.string(),
+    after: v.string(),
+    used: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_org_used", ["orgId", "used"]),
 
   /* ---------------- Connections ---------------- */
   connections: defineTable({

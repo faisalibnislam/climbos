@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bot, CreditCard, Gauge, LayoutGrid, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
+import { Activity, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -12,6 +12,7 @@ export const SETTINGS_SECTIONS = [
   { key: "workspaces", label: "Workspaces", icon: LayoutGrid, tone: "teal" },
   { key: "billing", label: "Billing", icon: CreditCard, tone: "violet" },
   { key: "ai", label: "Climb AI", icon: Sparkles, tone: "brand" },
+  { key: "brand", label: "Brand kit", icon: Palette, tone: "pink" },
   { key: "policies", label: "Policies", icon: SlidersHorizontal, tone: "orange" },
   { key: "activity", label: "Activity", icon: Activity, tone: "teal" },
   { key: "usage", label: "Usage", icon: Gauge, tone: "pink" },
