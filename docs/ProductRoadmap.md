@@ -57,4 +57,6 @@ All of these are in production (Convex prod + climbos.app), with tests:
 - **Brand kit + voice learning** (#10), **Competitor watch** (#11), **Content languages** (#12), **Repurposing** (#14), **A/B tests** (#15, landing headlines and outreach subjects), **PWA + push** (#16, own VAPID push), **White-label client reports** (#17), **Website chat** (#18).
 - Also: first win after the first plan, referrals (give 200 / get 200), low-credit nudges, landing pages, status page (`/status`) and changelog (`/changelog`), LinkedIn + X publishing.
 
-Still open: booking reminders/no-show follow-up (#2), safety window (#5), link-in-bio (#7), asset library (#13), Google Business Profile API for reviews, auto top-up (needs Polar).
+Also shipped later on 18 Oct: booking reminders, guest cancel/rebook links and no-show follow-up (#2), link in bio (#7). The safety window (#5) and email approvals (#6) were already live.
+
+Still open: asset library (#13), Google Business Profile API for reviews, auto top-up (needs Polar).

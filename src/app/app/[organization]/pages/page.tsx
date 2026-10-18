@@ -7,6 +7,7 @@ import { ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AbTestPanel } from "@/components/app/AbTestPanel";
+import { BioEditor } from "@/components/app/BioEditor";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
@@ -53,6 +54,7 @@ export default function PagesPage() {
           <p className="text-xs text-ink-3">About 2 credits. {data.liveLimit === 1 ? "Free: 1 live page." : `Up to ${data.liveLimit} live pages.`}</p>
         </CardContent>
       </Card>
+      <BioEditor slug={slug} defaultTitle="" />
       {data.pages.length === 0 ? (
         <EmptyState icon={<FileText />} title="No pages yet" body="Describe an offer above. Your team writes the page in about a minute." />
       ) : (

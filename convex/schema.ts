@@ -764,6 +764,23 @@ export default defineSchema({
     .index("by_target", ["targetId", "status"])
     .index("by_org", ["orgId", "startedAt"]),
 
+  /** Link in bio: one page per workspace at /bio/SLUG; each link is a tracked link. */
+  bioPages: defineTable({
+    orgId: v.id("organizations"),
+    slug: v.string(),
+    title: v.string(),
+    bio: v.string(),
+    color: v.string(),
+    links: v.array(v.object({ label: v.string(), url: v.string(), linkId: v.optional(v.id("links")) })),
+    collectEmails: v.boolean(),
+    live: v.boolean(),
+    views: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_org", ["orgId"]),
+
   /** Landing pages: written by Climb AI from the business facts, hosted at /p/SLUG. */
   landingPages: defineTable({
     orgId: v.id("organizations"),
