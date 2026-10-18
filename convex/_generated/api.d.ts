@@ -49,6 +49,7 @@ import type * as inbox from "../inbox.js";
 import type * as jobWrites from "../jobWrites.js";
 import type * as jobs from "../jobs.js";
 import type * as landing from "../landing.js";
+import type * as learning from "../learning.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_accounts from "../lib/accounts.js";
 import type * as lib_aiMode from "../lib/aiMode.js";
@@ -147,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   jobWrites: typeof jobWrites;
   jobs: typeof jobs;
   landing: typeof landing;
+  learning: typeof learning;
   "lib/access": typeof lib_access;
   "lib/accounts": typeof lib_accounts;
   "lib/aiMode": typeof lib_aiMode;

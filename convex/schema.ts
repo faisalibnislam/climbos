@@ -702,6 +702,18 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Learning from results: first-party rates, per workspace and pooled by business type (anonymized, k ≥ 5). */
+  learnedRates: defineTable({
+    /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled) or "all". */
+    scope: v.string(),
+    metric: v.string(),
+    workspaces: v.number(),
+    trials: v.number(),
+    successes: v.number(),
+    rate: v.number(),
+    updatedAt: v.number(),
+  }).index("by_scope_metric", ["scope", "metric"]),
+
   /** Public status: a health sample every 5 minutes per component. */
   statusSamples: defineTable({
     at: v.number(),

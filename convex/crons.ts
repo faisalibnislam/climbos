@@ -28,6 +28,8 @@ crons.interval("status sample", { minutes: 5 }, internal.status.sample, {});
 crons.interval("booking reminders", { minutes: 15 }, internal.bookings.sendReminders, {});
 crons.interval("webhook deliveries", { minutes: 1 }, internal.webhooks.deliverDue, {});
 crons.interval("airly apps sync", { minutes: 15 }, internal.airlyActions.syncAll, {});
+// Self-improvement loop 2: refresh first-party rates every Sunday night.
+crons.weekly("learn from results", { dayOfWeek: "sunday", hourUTC: 23, minuteUTC: 0 }, internal.learning.recompute, {});
 crons.interval("outbound: read replies and bounces", { minutes: 15 }, internal.mailbox.checkReplies, {});
 // One-tap approvals: a daily email of drafts waiting for the owner.
 crons.daily("approvals waiting", { hourUTC: 14, minuteUTC: 0 }, internal.emailActions.sendApprovalEmails, {});

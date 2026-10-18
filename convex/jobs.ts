@@ -623,7 +623,8 @@ export const buildStrategy = internalAction({
     if (!job) return;
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
-      const insightsBrief = insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)";
+      const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
+      const insightsBrief = `${insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)"}${learned ? `\n\n${learned}` : ""}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
       // Speed: a first take in about a minute while the full plan is researched and reviewed.
       await quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insightsBrief.slice(0, 6000)}`);
