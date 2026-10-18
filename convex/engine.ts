@@ -248,7 +248,8 @@ export const beginStep = internalMutation({
       return { proceed: false as const, reason: "checkpoint", checkpoint: existing.output ?? "null", stepId: existing._id };
     }
     if (run.status === "canceled" || run.status === "paused") return { proceed: false as const, reason: run.status };
-    if (org.emergencyStop?.active || (await fleetStopped(ctx))) {
+    // Suspended or deleted workspaces stop mid-job too (staff suspension, deletion).
+    if (org.emergencyStop?.active || org.suspendedAt || org.deletedAt || (await fleetStopped(ctx))) {
       return { proceed: false as const, reason: "paused" };
     }
     const used = { ...run.used };

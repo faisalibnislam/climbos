@@ -347,7 +347,7 @@ export const tick = internalMutation({
     const now = Date.now();
     for (const s of enabled) {
       const org = await ctx.db.get(s.orgId);
-      if (!org || org.emergencyStop?.active) continue;
+      if (!org || org.emergencyStop?.active || org.suspendedAt || org.deletedAt) continue;
       // The package lapsed: don't plan (or spend) until it's back.
       if (!(await featureAllowed(ctx, org, "autopilot"))) {
         if (!s.pausedReason) await ctx.db.patch(s._id, { pausedReason: "Autopilot comes with a package. Choose one in Settings → Billing to keep planning.", updatedAt: now });

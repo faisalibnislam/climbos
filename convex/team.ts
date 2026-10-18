@@ -69,9 +69,9 @@ async function requireAccountOwnerFor(ctx: MutationCtx, slug: string, orgId: Id<
   const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_team");
   const target = await ctx.db.get(orgId);
   if (!target || !org.accountId || target.accountId !== org.accountId) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+  // Caps spend the account's shared credits: only the account owner (not a client workspace's owner) sets them.
   const account = await ctx.db.get(org.accountId);
-  const ownerHere = await ctx.db.query("memberships").withIndex("by_org_user", (q) => q.eq("orgId", orgId).eq("userId", user._id)).unique();
-  if (account?.ownerUserId !== user._id && ownerHere?.role !== "owner") throw appError("FORBIDDEN", "Only the account owner can change this.");
+  if (account?.ownerUserId !== user._id) throw appError("FORBIDDEN", "Only the account owner can change this.");
   return { user, target };
 }
 
@@ -329,11 +329,16 @@ export const markNoticesRead = mutation({
   },
 });
 
-/** Daily: drop presence older than a day and notices older than 60 days. */
+/** Daily: drop presence older than a day and notices older than 60 days; close expired invitations. */
 export const cleanup = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
+    const expired = await ctx.db
+      .query("memberships")
+      .withIndex("by_status_expires", (q) => q.eq("status", "invited").lt("inviteExpiresAt", now))
+      .take(1000);
+    for (const m of expired) await ctx.db.patch(m._id, { status: "removed", inviteTokenHash: undefined });
     for (const p of await ctx.db.query("presence").take(2000)) if (now - p.lastSeen > 86_400_000) await ctx.db.delete(p._id);
     for (const n of await ctx.db.query("notices").take(5000)) if (now - n.createdAt > 60 * 86_400_000) await ctx.db.delete(n._id);
   },

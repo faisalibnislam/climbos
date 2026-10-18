@@ -455,9 +455,10 @@ export const disconnect = mutation({
       .query("connectionSecrets")
       .withIndex("by_connection", (q) => q.eq("connectionId", conn._id))
       .take(5);
-    // Best-effort provider-side revocation happens before the secret is deleted.
+    // Best-effort provider-side revocation happens before the secret is deleted. Bound to these secret
+    // rows, so a quick reconnect's new token is never the one revoked.
     if (secrets.length && !conn.isFixture) {
-      await ctx.scheduler.runAfter(0, internal.connectionActions.revokeProviderToken, { connectionId: conn._id });
+      await ctx.scheduler.runAfter(0, internal.connectionActions.revokeProviderToken, { connectionId: conn._id, secretIds: secrets.map((s) => s._id) });
     } else {
       for (const s of secrets) await ctx.db.delete(s._id);
     }
@@ -467,20 +468,43 @@ export const disconnect = mutation({
 });
 
 export const deleteSecrets = internalMutation({
-  args: { connectionId: v.id("connections") },
-  handler: async (ctx, { connectionId }) => {
+  args: { connectionId: v.id("connections"), secretIds: v.optional(v.array(v.id("connectionSecrets"))) },
+  handler: async (ctx, { connectionId, secretIds }) => {
     const secrets = await ctx.db
       .query("connectionSecrets")
       .withIndex("by_connection", (q) => q.eq("connectionId", connectionId))
       .take(5);
-    for (const s of secrets) await ctx.db.delete(s._id);
+    for (const s of secrets) if (!secretIds || secretIds.includes(s._id)) await ctx.db.delete(s._id);
+  },
+});
+
+/** Decrypt specific secret rows for revocation (whatever the connection's status is now). */
+export const secretsForRevocation = internalQuery({
+  args: { connectionId: v.id("connections"), secretIds: v.array(v.id("connectionSecrets")) },
+  handler: async (ctx, { connectionId, secretIds }) => {
+    const conn = await ctx.db.get(connectionId);
+    if (!conn) return [];
+    const out: { provider: typeof conn.provider; value: string }[] = [];
+    for (const id of secretIds) {
+      const s = await ctx.db.get(id);
+      if (!s || s.connectionId !== connectionId) continue;
+      out.push({ provider: conn.provider, value: await decryptSecret(s, secretAad(conn.orgId, connectionId)) });
+    }
+    return out;
   },
 });
 
 export const markSync = internalMutation({
-  args: { connectionId: v.id("connections"), ok: v.boolean(), error: v.optional(v.string()) },
-  handler: async (ctx, { connectionId, ok, error }) => {
-    await ctx.db.patch(connectionId, ok ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now() } : { lastSyncError: error?.slice(0, 300), updatedAt: Date.now() });
+  args: { connectionId: v.id("connections"), ok: v.boolean(), error: v.optional(v.string()), expired: v.optional(v.boolean()) },
+  handler: async (ctx, { connectionId, ok, error, expired }) => {
+    const conn = await ctx.db.get(connectionId);
+    if (!conn) return;
+    await ctx.db.patch(
+      connectionId,
+      ok
+        ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now() }
+        : { lastSyncError: error?.slice(0, 300), updatedAt: Date.now(), ...(expired && conn.status === "connected" ? { status: "expired" as const } : {}) },
+    );
   },
 });
 

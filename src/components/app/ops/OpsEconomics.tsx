@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import { CircleAlert, CircleCheck, Download } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Button, DataTable, Field, Select, monthOptions } from "@/components/ui";
 import { formatUsd } from "@/lib/utils";
 import { LoadingBlock } from "../results/QueryBoundary";
@@ -95,7 +96,21 @@ export function EconomicsSection() {
 export function ReconciliationSection() {
   const [month, setMonth] = useState(currentMonth);
   const valid = /^\d{4}-\d{2}$/.test(month);
-  const data = useQuery(api.ops.reconciliation, valid ? { month } : "skip");
+  const reconcile = useAction(api.ops.reconciliation);
+  const [result, setResult] = useState<{ month: string; data: FunctionReturnType<typeof api.ops.reconciliation> | null; error?: string } | null>(null);
+  // Read in pages on the server (a month of usage can be far more than one query may read).
+  useEffect(() => {
+    if (!valid) return;
+    let live = true;
+    reconcile({ month }).then(
+      (d) => live && setResult({ month, data: d }),
+      (e: Error) => live && setResult({ month, data: null, error: e.message }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [month, valid, reconcile]);
+  const data = result?.month === month ? result.data : undefined;
 
   return (
     <OpsSection id="reconciliation" title="Reconciliation">
@@ -106,6 +121,8 @@ export function ReconciliationSection() {
       </div>
       {!valid ? null : data === undefined ? (
         <LoadingBlock label="Loading reconciliation…" lines={1} />
+      ) : data === null ? (
+        <p className="text-ui text-ink-2">Couldn&apos;t load this month. {result?.error}</p>
       ) : (
         <>
           <p className="text-ui text-ink-2">{data.note}</p>

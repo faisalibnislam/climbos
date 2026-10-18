@@ -4,21 +4,44 @@ import { planMarkdown, planTasks } from "../shared/airly/plan";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
+import { safePublicUrl } from "../shared/net/safeUrl";
 import { decryptSecret, encryptSecret } from "./lib/crypto";
 import { appError } from "./lib/tenancy";
 
 const AAD = (orgId: string) => `climbos:${orgId}:airly`;
 
+/** An app's HTTP error; 401/403 mean the token is bad (stop syncing), anything else is transient. */
+export class AirlyHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+export const isFatalAirlyError = (e: unknown) => e instanceof AirlyHttpError && (e.status === 401 || e.status === 403);
+
 async function call(base: string, token: string, path: string, init: RequestInit = {}) {
   if (process.env.CLIMBOS_FAKE_AIRLY) return fake(path, init);
-  const res = await fetch(`${base}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}), ...(init.headers ?? {}) }, signal: AbortSignal.timeout(15_000) });
+  const res = await fetch(`${base}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}), ...(init.headers ?? {}) }, signal: AbortSignal.timeout(15_000), redirect: "manual" });
   const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
   if (!res.ok) {
     const err = body?.error;
     const message = typeof err === "string" ? err : (err as { message?: string } | undefined)?.message ?? (body?.message as string | undefined) ?? `HTTP ${res.status}`;
-    throw new Error(res.status === 401 ? "The token was rejected. Check it's the right one and still active." : res.status === 403 ? `Not allowed: ${message}` : message);
+    throw new AirlyHttpError(res.status === 401 ? "The token was rejected. Check it's the right one and still active." : res.status === 403 ? `Not allowed: ${message}` : message, res.status);
   }
   return body ?? {};
+}
+
+/** Taskeni's API base: its own hosts or its Convex deployment, https, ending in /api/v1. */
+export function taskeniBase(raw: string): string | null {
+  const b = raw.trim().replace(/\/+$/, "");
+  const u = safePublicUrl(b);
+  if (!u || u.protocol !== "https:" || u.search || u.hash || u.port || u.pathname !== "/api/v1") return null;
+  const h = u.hostname.toLowerCase();
+  if (!(/^[a-z0-9-]+\.convex\.site$/.test(h) || h === "taskeni.app" || h.endsWith(".taskeni.app") || h === "taskeni.com" || h.endsWith(".taskeni.com"))) return null;
+  return `https://${h}/api/v1`;
 }
 
 /** Test doubles (CLIMBOS_FAKE_AIRLY): the shapes each app returns. */
@@ -48,7 +71,10 @@ async function tokenFor(ctx: ActionCtx, orgId: Id<"organizations">, app: AirlyAp
   if (!l) throw appError("INVALID", `Connect ${AIRLY_APPS[app].name} first.`);
   const token = await decryptSecret({ keyId: l.tokenKeyId, iv: l.tokenIv, ciphertext: l.tokenCiphertext }, AAD(orgId));
   const settings = l.settings ? (JSON.parse(l.settings) as Record<string, string>) : {};
-  return { link: l, token, base: settings.base ?? AIRLY_APPS[app].base!, settings };
+  // A stored Taskeni base is re-checked on every use (links saved before the host rule included).
+  const base = AIRLY_APPS[app].base ?? taskeniBase(settings.base ?? "");
+  if (!base) throw appError("INVALID", `Reconnect ${AIRLY_APPS[app].name} with its API base.`);
+  return { link: l, token, base, settings };
 }
 
 /** Connect an app with the owner's token: verify it with a cheap read, then store it encrypted. */
@@ -62,8 +88,8 @@ export const connect = action({
     if (!meta.tokenPattern.test(token)) return { ok: false, message: `That doesn't look like a ${meta.name} token. ${meta.tokenHelp}` };
     let base = meta.base;
     if (!base) {
-      const b = (a.base ?? "").trim().replace(/\/+$/, "");
-      if (!/^https:\/\/[a-z0-9-]+\.convex\.site\/api\/v1$/i.test(b) && !/^https:\/\/[a-z0-9.-]+\/api\/v1$/i.test(b)) return { ok: false, message: "Paste the API base shown next to your token (it ends with /api/v1)." };
+      const b = taskeniBase(a.base ?? "");
+      if (!b) return { ok: false, message: "Paste the Taskeni API base shown next to your token (it ends with /api/v1)." };
       base = b;
     }
     let label = meta.name;
@@ -137,7 +163,7 @@ export const syncOne = internalAction({
     try {
       token = await decryptSecret({ keyId: l.tokenKeyId, iv: l.tokenIv, ciphertext: l.tokenCiphertext }, AAD(l.orgId));
     } catch {
-      await ctx.runMutation(internal.airly.markSync, { id, error: "Reconnect this app." });
+      await ctx.runMutation(internal.airly.markSync, { id, error: "Reconnect this app.", fatal: true });
       return;
     }
     const base = AIRLY_APPS[l.app].base!;
@@ -184,7 +210,7 @@ export const syncOne = internalAction({
         await ctx.runMutation(internal.airly.markSync, { id, cursor: new Date(Date.now() - 7 * 86_400_000).toISOString(), added });
       }
     } catch (e) {
-      await ctx.runMutation(internal.airly.markSync, { id, error: (e as Error).message });
+      await ctx.runMutation(internal.airly.markSync, { id, error: (e as Error).message, fatal: isFatalAirlyError(e) });
     }
   },
 });
@@ -246,7 +272,8 @@ export const saveReportToFolevi = internalAction({
       const settings = l.settings ? (JSON.parse(l.settings) as Record<string, string>) : {};
       await call(AIRLY_APPS.folevi.base!, token, "/notes", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ title: title.slice(0, 200), markdown: markdown.slice(0, 95_000), ...(settings.place ? { place: settings.place } : {}) }) });
     } catch (e) {
-      await ctx.runMutation(internal.airly.markSync, { id: l._id, error: `Couldn't save the weekly report: ${(e as Error).message}` });
+      // Only a rejected token stops the link; a transient failure is noted and the next report tries again.
+      await ctx.runMutation(internal.airly.markSync, { id: l._id, error: `Couldn't save the weekly report: ${(e as Error).message}`, fatal: isFatalAirlyError(e) });
     }
   },
 });

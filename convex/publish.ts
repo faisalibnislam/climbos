@@ -103,7 +103,7 @@ export const publishContext = internalQuery({
       policyVersion: policy?.version ?? 1,
       provider: provider ?? null,
       connection: conn,
-      emergencyStop: Boolean(org.emergencyStop?.active) || (await fleetStopped(ctx)),
+      emergencyStop: Boolean(org.emergencyStop?.active || org.suspendedAt || org.deletedAt) || (await fleetStopped(ctx)),
       idempotencyKey,
       existingReceipt: receipt,
       imageUrl,

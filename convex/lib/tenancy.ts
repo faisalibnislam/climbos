@@ -73,7 +73,7 @@ export async function requireOrgAccess(
       .query("staffViews")
       .withIndex("by_staff_org", (q) => q.eq("staffUserId", user._id).eq("orgId", org._id))
       .first();
-    if (!view || view.expiresAt < Date.now()) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (!view || view.expiresAt < Date.now() || !(await isStaffNow(ctx, user))) throw appError("NOT_FOUND", "We couldn't find that workspace.");
     if ("insert" in ctx.db) throw appError("FORBIDDEN", "Support view is read-only.");
     membership = { _id: view._id as unknown as Id<"memberships">, _creationTime: view._creationTime, orgId: org._id, userId: user._id, role: "viewer", status: "active", createdAt: view.createdAt } as Doc<"memberships">;
   }
@@ -84,6 +84,18 @@ export async function requireOrgAccess(
     });
   }
   return { user, org, membership, role: membership.role };
+}
+
+/** A view-as session only works while the person is still ClimbOS staff (every staff role may view as). */
+async function isStaffNow(ctx: Ctx, user: Doc<"users">): Promise<boolean> {
+  const email = user.email?.toLowerCase();
+  if (!email || user.isAnonymous) return false;
+  if (operatorEmails().includes(email)) return true;
+  const row = await ctx.db
+    .query("staff")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+  return Boolean(row);
 }
 
 /** Assert a document belongs to the org the caller was authorized for. */

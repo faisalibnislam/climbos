@@ -6,6 +6,7 @@ import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
+import { featureAllowed } from "./lib/access";
 import { audit } from "./lib/audit";
 import { CLIMB_TOOLS, toolByName, type Caller } from "./lib/climbTools";
 
@@ -18,6 +19,7 @@ import { CLIMB_TOOLS, toolByName, type Caller } from "./lib/climbTools";
 
 const SUPPORTED = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"];
 const SERVER = { name: "ClimbOS", title: "ClimbOS", version: "1.0.0" };
+const MAX_BATCH = 20;
 
 type RpcRequest = { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: Record<string, unknown> };
 
@@ -30,12 +32,15 @@ export const verify = internalQuery({
       .first();
     if (!t || t.revokedAt || t.expiresAt < Date.now()) return null;
     const org = await ctx.db.get(t.orgId);
+    if (!org || org.deletedAt || org.suspendedAt) return null;
     const member = await ctx.db
       .query("memberships")
-      .withIndex("by_org", (q) => q.eq("orgId", t.orgId))
-      .collect();
+      .withIndex("by_org_user", (q) => q.eq("orgId", t.orgId).eq("userId", t.userId))
+      .unique();
     // The person must still be an active member of the workspace.
-    if (!org || !member.some((m) => m.userId === t.userId && m.status === "active")) return null;
+    if (!member || member.status !== "active") return null;
+    // Agent access comes with a package: a lapsed package stops existing tokens too (they work again on renewal).
+    if (!(await featureAllowed(ctx, org, "mcp"))) return { lapsed: true as const };
     return { token: t, slug: org.slug, orgId: org._id };
   },
 });
@@ -121,6 +126,9 @@ export const handle = httpAction(async (ctx, req) => {
       headers: { ...JSON_HEADERS, "www-authenticate": 'Bearer realm="ClimbOS", error="invalid_token"' },
     });
   }
+  if ("lapsed" in found) {
+    return new Response(JSON.stringify(rpcError(null, -32002, "Agent access comes with a ClimbOS package. Choose one in Settings → Billing.")), { status: 402, headers: JSON_HEADERS });
+  }
   const { token, slug, orgId } = found;
   await ctx.runMutation(internal.mcp.touch, { tokenId: token._id });
 
@@ -191,6 +199,8 @@ export const handle = httpAction(async (ctx, req) => {
   };
 
   if (Array.isArray(body)) {
+    // Bounded batches: each call can run a tool, so one request can't fan out without limit.
+    if (body.length > MAX_BATCH) return new Response(JSON.stringify(rpcError(null, -32600, `Send at most ${MAX_BATCH} requests per batch.`)), { status: 400, headers: JSON_HEADERS });
     const out = (await Promise.all(body.map(handleOne))).filter(Boolean);
     return out.length ? new Response(JSON.stringify(out), { headers: JSON_HEADERS }) : new Response(null, { status: 202 });
   }

@@ -2,7 +2,7 @@ import { subscriptionAccess } from "../../shared/billing";
 import { FEATURES, type FeatureKey } from "../../shared/economics/liveConfig";
 import { getLiveConfig } from "./config";
 import { appError } from "./tenancy";
-import type { Doc, Id } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { currentPeriod, type BillingScope } from "./periods";
 
@@ -31,15 +31,20 @@ export async function latestSubscription(ctx: Ctx, scope: BillingScope) {
         .query("subscriptions")
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
         .order("desc")
-        .take(5)
+        .take(20)
     : await ctx.db
         .query("subscriptions")
         .withIndex("by_org", (q) => q.eq("orgId", scope._id))
         .order("desc")
-        .take(5);
-  // Prefer a subscription that currently grants access.
-  return subs.sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null;
+        .take(20);
+  // The one that grants access wins (an old canceled sub touched later must not hide an active one),
+  // then the one whose period runs longest, then the most recently updated.
+  const now = Date.now();
+  const rank = (s: Doc<"subscriptions">) => ACCESS_RANK[subscriptionAccess(s, now)];
+  return [...subs].sort((a, b) => rank(b) - rank(a) || b.currentPeriodEnd - a.currentPeriodEnd || b.updatedAt - a.updatedAt)[0] ?? null;
 }
+
+const ACCESS_RANK: Record<ReturnType<typeof subscriptionAccess>, number> = { full: 3, grace_read_only: 2, pending: 1, ended: 0 };
 
 /** The account has an active paid package (Expert, autopilot, publishing, sending, seats, MCP). */
 export async function isPaid(ctx: Ctx, scope: BillingScope, now = Date.now()): Promise<boolean> {

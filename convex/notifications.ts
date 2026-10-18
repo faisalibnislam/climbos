@@ -3,7 +3,7 @@ import { METER_LABELS, type MeterKey } from "../shared/economics/entitlements";
 import { usageFractions } from "../shared/economics/ledger";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { sha256Hex } from "../shared/policy";
 import { creditAlertEmail, digestEmail, invitationEmail, usageAlertEmail } from "./lib/emailTemplates";
 import { isPaid } from "./lib/access";
@@ -183,6 +183,8 @@ export const sendPlatformEmail = internalAction({
     subject: v.string(),
     html: v.string(),
     text: v.string(),
+    /** Stable key for this exact email when a caller may retry it; otherwise each call is a distinct email. */
+    dedupeKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const toHash = await sha256Hex(args.to.trim().toLowerCase());
@@ -197,7 +199,7 @@ export const sendPlatformEmail = internalAction({
     }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `${args.template}:${toHash}:${Math.floor(Date.now() / 60_000)}` },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": args.dedupeKey ? `${args.template}:${toHash}:${args.dedupeKey}`.slice(0, 256) : `${args.template}:${toHash}:${crypto.randomUUID()}` },
       body: JSON.stringify({
         from: process.env.RESEND_FROM ?? "ClimbOS <hello@climbos.app>",
         to: [args.to],
@@ -221,7 +223,34 @@ export const sendPlatformEmail = internalAction({
 /** Resend delivery webhooks: bounces/complaints become platform suppressions. */
 export const applyResendEvent = internalMutation({
   args: { type: v.string(), resendId: v.optional(v.string()), toHashes: v.array(v.string()) },
-  handler: async (ctx, { type, resendId, toHashes }) => {
+  handler: async (ctx, args) => applyResend(ctx, args),
+});
+
+/** Retry a stored Resend event that failed (scheduled by billing.retryFailedWebhooks). */
+export const applyStoredResendEvent = internalMutation({
+  args: { webhookId: v.id("webhookEvents") },
+  handler: async (ctx, { webhookId }) => {
+    const ev = await ctx.db.get(webhookId);
+    if (!ev || ev.source !== "resend" || ev.status === "processed") return;
+    const p = JSON.parse(ev.payload) as { type?: string; resendId?: string; toHashes?: string[] };
+    await applyResend(ctx, { type: p.type ?? ev.type, resendId: p.resendId, toHashes: p.toHashes ?? [] });
+    await ctx.db.patch(webhookId, { status: "processed", error: undefined, attempts: ev.attempts + 1, processedAt: Date.now() });
+  },
+});
+
+export const reprocessResendEvent = internalAction({
+  args: { webhookId: v.id("webhookEvents") },
+  handler: async (ctx, { webhookId }) => {
+    try {
+      await ctx.runMutation(internal.notifications.applyStoredResendEvent, { webhookId });
+    } catch (e) {
+      await ctx.runMutation(internal.billing.markWebhook, { id: webhookId, status: "failed", error: (e as Error).message });
+    }
+  },
+});
+
+async function applyResend(ctx: MutationCtx, { type, resendId, toHashes }: { type: string; resendId?: string; toHashes: string[] }) {
+  {
     const STATUS = {
       "email.delivered": "delivered",
       "email.bounced": "bounced",
@@ -252,5 +281,5 @@ export const applyResendEvent = internalMutation({
         }
       }
     }
-  },
-});
+  }
+}

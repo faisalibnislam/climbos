@@ -17,6 +17,8 @@ export const COMPONENTS = [
 ] as const;
 
 const HOUR = 3_600_000;
+/** Down samples (5 minutes apart) before a whole day shows as down. */
+const DOWN_SAMPLES = 3;
 
 export const sample = internalMutation({
   args: {},
@@ -64,16 +66,24 @@ export const overview = query({
     const latest = await ctx.db.query("statusSamples").withIndex("by_at").order("desc").first();
     const since = new Date(Date.now() - 29 * 24 * HOUR).toISOString().slice(0, 10);
     const samples = await ctx.db.query("statusSamples").withIndex("by_day", (q) => q.gte("day", since)).take(9000);
-    const days = new Map<string, Map<string, Status>>();
-    const rank = { ok: 0, degraded: 1, down: 2 } as const;
+    // Per day and component: how many samples were down or degraded.
+    const counts = new Map<string, Map<string, { down: number; degraded: number }>>();
     for (const s of samples) {
-      const d = days.get(s.day) ?? new Map<string, Status>();
+      const d = counts.get(s.day) ?? new Map<string, { down: number; degraded: number }>();
       for (const c of s.components) {
-        const prev = d.get(c.key) ?? "ok";
-        // A day is "down" only if 3+ samples were down; one blip shows as degraded.
-        d.set(c.key, rank[c.status] > rank[prev] ? c.status : prev);
+        const n = d.get(c.key) ?? { down: 0, degraded: 0 };
+        if (c.status === "down") n.down++;
+        else if (c.status === "degraded") n.degraded++;
+        d.set(c.key, n);
       }
-      days.set(s.day, d);
+      counts.set(s.day, d);
+    }
+    const days = new Map<string, Map<string, Status>>();
+    for (const [day, d] of counts) {
+      const out = new Map<string, Status>();
+      // A day is "down" only if 3+ samples were down; a blip shows as degraded.
+      for (const [key, n] of d) out.set(key, n.down >= DOWN_SAMPLES ? "down" : n.down > 0 || n.degraded > 0 ? "degraded" : "ok");
+      days.set(day, out);
     }
     const dayList = [...Array(30)].map((_, i) => new Date(Date.now() - (29 - i) * 24 * HOUR).toISOString().slice(0, 10));
     return {

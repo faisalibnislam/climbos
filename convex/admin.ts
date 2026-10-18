@@ -2,9 +2,12 @@ import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS, creditsToMicros, microsToCredits, packageOf, TOPUP_VALID_DAYS } from "../shared/economics";
 import { mergeLiveConfig, type LiveConfig } from "../shared/economics/liveConfig";
 import { subscriptionAccess } from "../shared/billing";
+import type { PlanKey } from "../shared/economics/assumptions";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { reopenFailedRun } from "./engine";
+import { endBillingIfLastWorkspace } from "./settings";
 import { latestSubscription } from "./lib/access";
 import { accountWorkspaces } from "./lib/accounts";
 import { audit } from "./lib/audit";
@@ -58,58 +61,174 @@ export const me = query({
 
 /* ---------------- business dashboard ---------------- */
 
+type DashboardStats = {
+  users: number;
+  signups7d: number;
+  signups30d: number;
+  accounts: number;
+  paying: number;
+  comps: number;
+  byPackage: Record<string, number>;
+  mrrUsd: number;
+  revenue30dUsd: number;
+  aiCost30dUsd: number;
+  grossMargin30d: number | null;
+  creditsUsed30d: number;
+  funnel: { step: string; count: number }[];
+  signupsByDay: { day: string; count: number }[];
+};
+
+function signupDays(now: number): { day: string; start: number }[] {
+  const out = [];
+  for (let i = 29; i >= 0; i--) {
+    const start = new Date(now - i * DAY);
+    start.setUTCHours(0, 0, 0, 0);
+    out.push({ day: start.toISOString().slice(0, 10), start: start.getTime() });
+  }
+  return out;
+}
+
+/**
+ * The business dashboard reads a snapshot (refreshed every 30 minutes by reading each table in
+ * pages), so the page never tries to read ~100k documents in one query.
+ */
 export const dashboard = query({
+  args: {},
+  handler: async (ctx): Promise<DashboardStats & { updatedAt: number | null }> => {
+    await requireStaff(ctx, "read");
+    const row = await ctx.db.query("opsSnapshots").withIndex("by_key", (q) => q.eq("key", "dashboard")).unique();
+    if (row) return { ...(JSON.parse(row.value) as DashboardStats), updatedAt: row.updatedAt };
+    const empty = { users: 0, signups7d: 0, signups30d: 0, accounts: 0, paying: 0, comps: 0, byPackage: {}, mrrUsd: 0, revenue30dUsd: 0, aiCost30dUsd: 0, grossMargin30d: null, creditsUsed30d: 0 };
+    return { ...empty, funnel: [], signupsByDay: signupDays(Date.now()).map((d) => ({ day: d.day, count: 0 })), updatedAt: null };
+  },
+});
+
+/** Staff can ask for a fresh snapshot now. */
+export const refreshDashboardNow = mutation({
   args: {},
   handler: async (ctx) => {
     await requireStaff(ctx, "read");
+    await ctx.scheduler.runAfter(0, internal.admin.refreshDashboard, {});
+  },
+});
+
+const DASH_PAGE = 4000;
+const dashTable = v.union(v.literal("users"), v.literal("accounts"), v.literal("subscriptions"), v.literal("orders"), v.literal("usageEvents"), v.literal("organizations"), v.literal("businesses"), v.literal("strategies"));
+type DashRow = { t?: number; anon?: boolean; planKey?: PlanKey; full?: boolean; comp?: boolean; netMinor?: number; costMicros?: number; id?: string; orgId?: string; researched?: boolean };
+
+/** One page of a table, projected to what the dashboard counts. `stop` ends a newest-first scan early. */
+export const dashboardPage = internalQuery({
+  args: { table: dashTable, cursor: v.union(v.string(), v.null()), since: v.number() },
+  handler: async (ctx, { table, cursor, since }): Promise<{ rows: DashRow[]; cursor: string | null }> => {
+    const opts = { numItems: DASH_PAGE, cursor };
     const now = Date.now();
-    const users = (await ctx.db.query("users").order("desc").take(10_000)).filter((u) => !u.isAnonymous);
-    const accounts = await ctx.db.query("accounts").order("desc").take(10_000);
-    const subs = await ctx.db.query("subscriptions").take(10_000);
-    const active = subs.filter((s) => subscriptionAccess(s, now) === "full");
-    const paying = active.filter((s) => !s.comp);
-    const orders = (await ctx.db.query("orders").order("desc").take(5_000)).filter((o) => o.createdAt > now - 30 * DAY);
-    const revenueMinor = orders.filter((o) => o.status === "paid" || o.status === "partially_refunded").reduce((s, o) => s + o.amountMinor - (o.taxMinor ?? 0) - (o.refundedMinor ?? 0), 0);
-    const usage = (await ctx.db.query("usageEvents").order("desc").take(30_000)).filter((e) => e.createdAt > now - 30 * DAY);
-    const aiCostMicros = usage.reduce((s, e) => s + e.costMicros, 0);
-    const mrrUsd = paying.reduce((s, x) => s + CURRENT_ENTITLEMENTS.plans[x.planKey].priceUsd, 0);
-    const byPackage: Record<string, number> = {};
-    for (const s of paying) byPackage[CURRENT_ENTITLEMENTS.plans[s.planKey].name] = (byPackage[CURRENT_ENTITLEMENTS.plans[s.planKey].name] ?? 0) + 1;
-    // Funnel: signed up → workspace → research done → plan built → paying.
-    // Customer workspaces only (demos excluded).
-    const customerOrgs = new Set((await ctx.db.query("organizations").withIndex("by_kind_created", (q) => q.eq("kind", "customer")).take(10_000)).filter((o) => !o.deletedAt).map((o) => o._id));
-    const businesses = (await ctx.db.query("businesses").take(10_000)).filter((b) => customerOrgs.has(b.orgId));
-    const strategies = (await ctx.db.query("strategies").take(10_000)).filter((s) => customerOrgs.has(s.orgId));
-    const orgsWithPlan = new Set(strategies.map((s) => s.orgId));
-    const signupsByDay: { day: string; count: number }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const start = new Date(now - i * DAY);
-      start.setUTCHours(0, 0, 0, 0);
-      const end = start.getTime() + DAY;
-      signupsByDay.push({ day: start.toISOString().slice(0, 10), count: users.filter((u) => u._creationTime >= start.getTime() && u._creationTime < end).length });
+    const done = <T,>(p: { page: T[]; isDone: boolean; continueCursor: string }, rows: DashRow[], stop = false) => ({ rows, cursor: p.isDone || stop ? null : p.continueCursor });
+    switch (table) {
+      case "users": {
+        const p = await ctx.db.query("users").paginate(opts);
+        return done(p, p.page.map((u) => ({ t: u._creationTime, anon: Boolean(u.isAnonymous) })));
+      }
+      case "accounts": {
+        const p = await ctx.db.query("accounts").paginate(opts);
+        return done(p, p.page.map(() => ({})));
+      }
+      case "subscriptions": {
+        const p = await ctx.db.query("subscriptions").paginate(opts);
+        return done(p, p.page.map((s) => ({ planKey: s.planKey, full: subscriptionAccess(s, now) === "full", comp: Boolean(s.comp) })));
+      }
+      case "orders": {
+        const p = await ctx.db.query("orders").order("desc").paginate(opts);
+        const rows = p.page.filter((o) => o.createdAt > since && (o.status === "paid" || o.status === "partially_refunded")).map((o) => ({ netMinor: o.amountMinor - (o.taxMinor ?? 0) - (o.refundedMinor ?? 0) }));
+        return done(p, rows, p.page.length > 0 && p.page[p.page.length - 1]._creationTime < since - 7 * DAY);
+      }
+      case "usageEvents": {
+        const p = await ctx.db
+          .query("usageEvents")
+          .withIndex("by_created", (q) => q.gt("createdAt", since))
+          .paginate(opts);
+        return done(p, p.page.map((e) => ({ costMicros: e.costMicros })));
+      }
+      case "organizations": {
+        const p = await ctx.db
+          .query("organizations")
+          .withIndex("by_kind_created", (q) => q.eq("kind", "customer"))
+          .paginate(opts);
+        return done(p, p.page.filter((o) => !o.deletedAt).map((o) => ({ id: o._id as string })));
+      }
+      case "businesses": {
+        const p = await ctx.db.query("businesses").paginate(opts);
+        return done(p, p.page.map((b) => ({ orgId: b.orgId as string, researched: b.researchStatus === "done" || b.researchStatus === "partial" || b.researchStatus === "owner_supplied" })));
+      }
+      case "strategies": {
+        const p = await ctx.db.query("strategies").paginate(opts);
+        return done(p, p.page.map((s) => ({ orgId: s.orgId as string })));
+      }
     }
-    return {
+  },
+});
+
+export const saveSnapshot = internalMutation({
+  args: { key: v.string(), value: v.string() },
+  handler: async (ctx, { key, value }) => {
+    const row = await ctx.db.query("opsSnapshots").withIndex("by_key", (q) => q.eq("key", key)).unique();
+    if (row) await ctx.db.patch(row._id, { value, updatedAt: Date.now() });
+    else await ctx.db.insert("opsSnapshots", { key, value, updatedAt: Date.now() });
+  },
+});
+
+/** Every 30 minutes (and on demand): rebuild the dashboard snapshot from paged reads. */
+export const refreshDashboard = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const since = now - 30 * DAY;
+    const all = async (table: "users" | "accounts" | "subscriptions" | "orders" | "usageEvents" | "organizations" | "businesses" | "strategies") => {
+      const rows: DashRow[] = [];
+      let cursor: string | null = null;
+      for (let i = 0; i < 1000; i++) {
+        const page: { rows: DashRow[]; cursor: string | null } = await ctx.runQuery(internal.admin.dashboardPage, { table, cursor, since });
+        rows.push(...page.rows);
+        cursor = page.cursor;
+        if (!cursor) break;
+      }
+      return rows;
+    };
+    const users = (await all("users")).filter((u) => !u.anon);
+    const accounts = (await all("accounts")).length;
+    const active = (await all("subscriptions")).filter((s) => s.full);
+    const paying = active.filter((s) => !s.comp);
+    const revenueMinor = (await all("orders")).reduce((s, o) => s + (o.netMinor ?? 0), 0);
+    const aiCostMicros = (await all("usageEvents")).reduce((s, e) => s + (e.costMicros ?? 0), 0);
+    const byPackage: Record<string, number> = {};
+    for (const s of paying) byPackage[CURRENT_ENTITLEMENTS.plans[s.planKey!].name] = (byPackage[CURRENT_ENTITLEMENTS.plans[s.planKey!].name] ?? 0) + 1;
+    // Funnel: signed up → workspace → research done → plan built → paying. Customer workspaces only (demos excluded).
+    const customerOrgs = new Set((await all("organizations")).map((o) => o.id!));
+    const researched = (await all("businesses")).filter((b) => customerOrgs.has(b.orgId!) && b.researched).length;
+    const orgsWithPlan = new Set((await all("strategies")).filter((s) => customerOrgs.has(s.orgId!)).map((s) => s.orgId!));
+    const stats: DashboardStats = {
       users: users.length,
-      signups7d: users.filter((u) => u._creationTime > now - 7 * DAY).length,
-      signups30d: users.filter((u) => u._creationTime > now - 30 * DAY).length,
-      accounts: accounts.length,
+      signups7d: users.filter((u) => u.t! > now - 7 * DAY).length,
+      signups30d: users.filter((u) => u.t! > now - 30 * DAY).length,
+      accounts,
       paying: paying.length,
       comps: active.length - paying.length,
       byPackage,
-      mrrUsd,
+      mrrUsd: paying.reduce((s, x) => s + CURRENT_ENTITLEMENTS.plans[x.planKey!].priceUsd, 0),
       revenue30dUsd: revenueMinor / 100,
       aiCost30dUsd: aiCostMicros / 1_000_000,
       grossMargin30d: revenueMinor > 0 ? (revenueMinor / 100 - aiCostMicros / 1_000_000) / (revenueMinor / 100) : null,
       creditsUsed30d: microsToCredits(aiCostMicros),
       funnel: [
         { step: "Signed up", count: users.length },
-        { step: "Created a workspace", count: accounts.length },
-        { step: "Research done", count: businesses.filter((b) => b.researchStatus === "done" || b.researchStatus === "partial" || b.researchStatus === "owner_supplied").length },
+        { step: "Created a workspace", count: accounts },
+        { step: "Research done", count: researched },
         { step: "Plan built", count: orgsWithPlan.size },
         { step: "Paying", count: paying.length },
       ],
-      signupsByDay,
+      signupsByDay: signupDays(now).map((d) => ({ day: d.day, count: users.filter((u) => u.t! >= d.start && u.t! < d.start + DAY).length })),
     };
+    await ctx.runMutation(internal.admin.saveSnapshot, { key: "dashboard", value: JSON.stringify(stats) });
+    return stats;
   },
 });
 
@@ -210,7 +329,12 @@ export const deleteWorkspace = mutation({
     const { user } = await requireStaff(ctx, "manage_accounts");
     const org = await ctx.db.get(orgId);
     if (!org || org.slug !== confirmSlug) throw appError("INVALID", "Type the workspace's slug to confirm.");
-    await ctx.db.patch(orgId, { deletedAt: Date.now() });
+    const now = Date.now();
+    // Same as an owner's deletion: stop all work now, then purge in batches.
+    await ctx.db.patch(orgId, { deletedAt: now, emergencyStop: { active: true, at: now, by: user._id, reason: "Workspace deleted by ClimbOS" } });
+    await ctx.db.insert("privacyRequests", { orgId, kind: "delete_workspace", status: "running", requestedBy: user._id, createdAt: now });
+    await ctx.scheduler.runAfter(0, internal.settings.purgeWorkspaceBatch, { orgId });
+    await endBillingIfLastWorkspace(ctx, org);
     await audit(ctx, { orgId, actorType: "operator", actorId: user._id, action: "admin.workspace_deleted", summary: `Workspace "${org.name}" deleted by ClimbOS.` });
   },
 });
@@ -310,16 +434,20 @@ export const endComp = mutation({
   },
 });
 
-/** Daily: roll complimentary packages into their next month (fresh credits) until they end. */
+/** Renew a comp this long before its month ends, so there's never a gap with no credits. */
+export const COMP_RENEW_AHEAD_MS = 2 * 3_600_000;
+
+/** Hourly: roll complimentary packages into their next month (fresh credits) just before it starts, until they end. */
 export const renewComps = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
     let renewed = 0;
     for (const sub of await ctx.db.query("subscriptions").take(5_000)) {
-      if (!sub.comp || sub.status !== "active" || sub.currentPeriodEnd > now) continue;
-      if (sub.comp.until <= now) {
-        await ctx.db.patch(sub._id, { status: "canceled", endedAt: now, updatedAt: now });
+      if (!sub.comp || sub.status !== "active" || sub.currentPeriodEnd > now + COMP_RENEW_AHEAD_MS) continue;
+      if (sub.comp.until <= sub.currentPeriodEnd) {
+        // No next month: it ends when this month does (access stays until then).
+        if (sub.currentPeriodEnd <= now) await ctx.db.patch(sub._id, { status: "canceled", endedAt: now, updatedAt: now });
         continue;
       }
       const start = sub.currentPeriodEnd;

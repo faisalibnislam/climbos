@@ -145,9 +145,15 @@ describe("approvals and execution safety", () => {
     await t.action(internal.publish.publishArtifact, { artifactId: target._id });
     expect((await d.client.query(api.content.get, { slug: d.slug, artifactId: target._id })).status).toBe("in_review");
 
-    // Re-approve, then change the policy: approval no longer valid.
+    // Re-approve. Changing only the expiry window keeps existing approvals (it applies to new ones)…
     await d.client.mutation(api.content.decide, { slug: d.slug, artifactId: target._id, decision: "approve" });
-    await d.client.mutation(api.settings.updatePolicy, { slug: d.slug, mode: "review", allowRecurringPostsUnderCalendar: false, allowAdPauseRules: true, maxMonthlyAdSpend: 600, approvalTtlHours: 48 });
+    const ttlOnly = await d.client.mutation(api.settings.updatePolicy, { slug: d.slug, mode: "review", allowAdPauseRules: true, maxMonthlyAdSpend: 600, approvalTtlHours: 48 });
+    expect(ttlOnly).toMatchObject({ invalidated: false });
+    const kept = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(target._id))!.approvalId!));
+    expect(kept?.status).toBe("approved");
+    expect((await d.client.query(api.settings.policies, { slug: d.slug })).policy).toMatchObject({ version: 1, approvalTtlHours: 48 });
+    // …while a rule change (the ad budget) voids them.
+    await d.client.mutation(api.settings.updatePolicy, { slug: d.slug, mode: "review", allowAdPauseRules: true, maxMonthlyAdSpend: 700, approvalTtlHours: 48 });
     await t.action(internal.publish.publishArtifact, { artifactId: target._id });
     const res = await d.client.query(api.content.get, { slug: d.slug, artifactId: target._id });
     expect(res.status).not.toBe("published");

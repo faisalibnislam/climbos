@@ -9,7 +9,7 @@ import { useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, EmptyState, Field, Input, Segmented, TableFrame, Table, TBody, Td, Th, THead, Tr, CellStack, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
-import { LoadingBlock } from "@/components/app/results/QueryBoundary";
+import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 
 const SCOPE_LABEL: Record<string, string> = { read: "Read", draft: "Prepare work", request_approval: "Request approvals" };
@@ -38,7 +38,16 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
 }
 
 /** Let external AI agents (Claude Desktop, Claude Code, ChatGPT…) use this workspace through MCP. */
+/** Query errors (e.g. a role without access) show the shared error state, not a crash. */
 export default function AgentsSettingsPage() {
+  return (
+    <QueryBoundary>
+      <AgentsSettings />
+    </QueryBoundary>
+  );
+}
+
+function AgentsSettings() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.agentTokens.list, { slug });
   const create = useMutation(api.agentTokens.create);

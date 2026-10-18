@@ -1,8 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useAction } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Callout, DataTable, Stat, StatGroup } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { microsToCreditsLabel } from "../money";
@@ -11,7 +13,19 @@ import { roleTitle } from "../roles";
 import { SettingsHeader } from "./SettingsNav";
 
 export function UsageSettings({ slug }: { slug: string }) {
-  const data = useQuery(api.settings.usage, { slug });
+  const load = useAction(api.settings.usage);
+  const [data, setData] = useState<FunctionReturnType<typeof api.settings.usage> | null | undefined>(undefined);
+  // Summed on the server across every event of the last 31 days (read in pages).
+  useEffect(() => {
+    let live = true;
+    load({ slug }).then(
+      (d) => live && setData(d),
+      () => live && setData(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [slug, load]);
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader
@@ -24,6 +38,8 @@ export function UsageSettings({ slug }: { slug: string }) {
       </Callout>
       {data === undefined ? (
         <LoadingBlock label="Loading usage…" />
+      ) : data === null ? (
+        <Callout tone="warning">Usage couldn&apos;t load. Refresh to try again.</Callout>
       ) : (
         <>
           <StatGroup className="lg:grid-cols-3">
@@ -31,7 +47,6 @@ export function UsageSettings({ slug }: { slug: string }) {
             <Stat label="Recorded events" value={formatNumber(data.events)} sublabel="Model calls, searches, images and page reads" />
             <Stat label="AI roles used" value={formatNumber(data.byRole.length)} />
           </StatGroup>
-          {data.events >= 3000 ? <p className="text-sm text-ink-3">Showing the most recent 3,000 events.</p> : null}
           <section aria-labelledby="by-role" className="flex flex-col gap-3">
             <h2 id="by-role" className="heading-section">
               By AI role

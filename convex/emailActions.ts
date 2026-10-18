@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { sha256Hex } from "../shared/policy";
+import { can, sha256Hex } from "../shared/policy";
 import { label } from "../shared/autopilot";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -187,7 +187,16 @@ export const consume = mutation({
     if (!t || t.usedAt || t.expiresAt < Date.now()) return { ok: false as const, message: "This link has expired or was already used. Open ClimbOS to make changes." };
     const a = await ctx.db.get(t.subjectId as Id<"artifacts">);
     const org = await ctx.db.get(t.orgId);
-    if (!a || !org) return { ok: false as const, message: "That post no longer exists." };
+    if (!a || !org || org.deletedAt) return { ok: false as const, message: "That post no longer exists." };
+    // The link acts as the person it was sent to: they must still be on the workspace with the right role.
+    const member = await ctx.db
+      .query("memberships")
+      .withIndex("by_org_user", (q) => q.eq("orgId", org._id).eq("userId", t.userId))
+      .unique();
+    if (!member || member.status !== "active" || !can(member.role, t.kind === "approve_post" ? "approve" : "pause")) {
+      return { ok: false as const, message: "You no longer have access to do this. Open ClimbOS to check." };
+    }
+    if (org.suspendedAt) return { ok: false as const, message: "This workspace is suspended. Contact support." };
     await ctx.db.patch(t._id, { usedAt: Date.now() });
 
     if (t.kind === "stop_post") {

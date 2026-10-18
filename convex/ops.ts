@@ -10,9 +10,10 @@ import {
   RATE_VERSIONS,
 } from "../shared/economics";
 import { internal } from "./_generated/api";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { currentPeriod } from "./lib/periods";
+import { settleCredits } from "./lib/credits";
 import { ensureFleet } from "./circuits";
 import { audit } from "./lib/audit";
 import { appError, requireOperator } from "./lib/tenancy";
@@ -187,40 +188,92 @@ export const economics = query({
 });
 
 /** Monthly reconciliation: predicted vs actual cost, unrealized reservations and realized margin by plan. */
-export const reconciliation = query({
-  args: { month: v.string() },
-  handler: async (ctx, { month }) => {
+/** Operator check for actions (the caller's identity is forwarded to queries). */
+export const assertOperator = internalQuery({
+  args: {},
+  handler: async (ctx) => {
     await requireOperator(ctx);
-    if (!/^\d{4}-\d{2}$/.test(month)) throw appError("INVALID", "Month must look like 2026-10.");
-    const start = Date.parse(`${month}-01T00:00:00Z`);
-    const end = new Date(start);
-    end.setUTCMonth(end.getUTCMonth() + 1);
-    const events = await ctx.db
-      .query("usageEvents")
-      .withIndex("by_created", (q) => q.gte("createdAt", start).lt("createdAt", end.getTime()))
-      .take(20_000);
-    const orders = (await ctx.db.query("orders").take(5000)).filter((o) => o.createdAt >= start && o.createdAt < end.getTime());
-    const subs = await ctx.db.query("subscriptions").take(5000);
-    const planOf = new Map(subs.map((s) => [s.orgId, s.planKey]));
-    const byPlan = new Map<string, { revenueMinor: number; refundsMinor: number; costMicros: number; orgs: Set<string> }>();
-    for (const o of orders) {
-      const k = o.productKey === "boost_29" ? (planOf.get(o.orgId) ?? "unknown") : o.productKey;
-      const b = byPlan.get(k) ?? { revenueMinor: 0, refundsMinor: 0, costMicros: 0, orgs: new Set() };
-      if (o.status === "paid" || o.status === "partially_refunded" || o.status === "refunded") b.revenueMinor += o.amountMinor - o.taxMinor;
-      b.refundsMinor += o.refundedMinor;
-      b.orgs.add(o.orgId);
-      byPlan.set(k, b);
+    return true;
+  },
+});
+
+const PAGE = 4000;
+const reconTable = v.union(v.literal("usageEvents"), v.literal("orders"), v.literal("subscriptions"), v.literal("usageReservations"));
+
+/** One page of the rows reconciliation needs, projected to the few fields it sums (keeps every read small). */
+export const reconciliationPage = internalQuery({
+  args: { table: reconTable, start: v.number(), end: v.number(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { table, start, end, cursor }) => {
+    const opts = { numItems: PAGE, cursor };
+    if (table === "usageEvents") {
+      const p = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_created", (q) => q.gte("createdAt", start).lt("createdAt", end))
+        .paginate(opts);
+      return { rows: p.page.map((e) => ({ orgId: e.orgId as string, costMicros: e.costMicros })), cursor: p.isDone ? null : p.continueCursor };
     }
-    for (const e of events) {
-      const k = planOf.get(e.orgId) ?? "unpaid";
-      const b = byPlan.get(k) ?? { revenueMinor: 0, refundsMinor: 0, costMicros: 0, orgs: new Set() };
-      b.costMicros += e.costMicros;
-      byPlan.set(k, b);
+    if (table === "orders") {
+      const p = await ctx.db.query("orders").paginate(opts);
+      return {
+        rows: p.page
+          .filter((o) => o.createdAt >= start && o.createdAt < end)
+          .map((o) => ({ orgId: o.orgId as string, productKey: o.productKey, status: o.status, amountMinor: o.amountMinor, taxMinor: o.taxMinor, refundedMinor: o.refundedMinor })),
+        cursor: p.isDone ? null : p.continueCursor,
+      };
     }
-    const unresolved = await ctx.db
+    if (table === "subscriptions") {
+      const p = await ctx.db.query("subscriptions").paginate(opts);
+      return { rows: p.page.map((s) => ({ orgId: s.orgId as string, planKey: s.planKey as string })), cursor: p.isDone ? null : p.continueCursor };
+    }
+    const p = await ctx.db
       .query("usageReservations")
       .withIndex("by_status_created", (q) => q.eq("status", "unresolved"))
-      .take(1000);
+      .paginate(opts);
+    return { rows: p.page.map((r) => ({ micros: r.walletMicros + r.topupMicros })), cursor: p.isDone ? null : p.continueCursor };
+  },
+});
+
+type ReconRow = { orgId?: string; costMicros?: number; productKey?: string; status?: string; amountMinor?: number; taxMinor?: number; refundedMinor?: number; planKey?: string; micros?: number };
+
+/** Monthly reconciliation, read in pages (a month's usage events can run far past one query's limits). */
+export const reconciliation = action({
+  args: { month: v.string() },
+  handler: async (ctx, { month }) => {
+    await ctx.runQuery(internal.ops.assertOperator, {});
+    if (!/^\d{4}-\d{2}$/.test(month)) throw appError("INVALID", "Month must look like 2026-10.");
+    const start = Date.parse(`${month}-01T00:00:00Z`);
+    const endDate = new Date(start);
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+    const end = endDate.getTime();
+    const all = async (table: "usageEvents" | "orders" | "subscriptions" | "usageReservations") => {
+      const rows: ReconRow[] = [];
+      let cursor: string | null = null;
+      for (let i = 0; i < 500; i++) {
+        const page: { rows: ReconRow[]; cursor: string | null } = await ctx.runQuery(internal.ops.reconciliationPage, { table, start, end, cursor });
+        rows.push(...page.rows);
+        cursor = page.cursor;
+        if (!cursor) break;
+      }
+      return rows;
+    };
+    const subs = await all("subscriptions");
+    const planOf = new Map(subs.map((s) => [s.orgId!, s.planKey!]));
+    const byPlan = new Map<string, { revenueMinor: number; refundsMinor: number; costMicros: number; orgs: Set<string> }>();
+    for (const o of await all("orders")) {
+      const k = o.productKey === "boost_29" ? (planOf.get(o.orgId!) ?? "unknown") : o.productKey!;
+      const b = byPlan.get(k) ?? { revenueMinor: 0, refundsMinor: 0, costMicros: 0, orgs: new Set() };
+      if (o.status === "paid" || o.status === "partially_refunded" || o.status === "refunded") b.revenueMinor += o.amountMinor! - o.taxMinor!;
+      b.refundsMinor += o.refundedMinor!;
+      b.orgs.add(o.orgId!);
+      byPlan.set(k, b);
+    }
+    for (const e of await all("usageEvents")) {
+      const k = planOf.get(e.orgId!) ?? "unpaid";
+      const b = byPlan.get(k) ?? { revenueMinor: 0, refundsMinor: 0, costMicros: 0, orgs: new Set() };
+      b.costMicros += e.costMicros!;
+      byPlan.set(k, b);
+    }
+    const unresolved = await all("usageReservations");
     return {
       month,
       note: "Direct variable AI/research/image cost only (provider-reported). Hosting, support, Polar fees and fixed services come from vendor invoices; compare with the economics model.",
@@ -231,7 +284,7 @@ export const reconciliation = query({
         variableCostUsd: microsToUsd(b.costMicros),
         variableMargin: b.revenueMinor > 0 ? 1 - microsToUsd(b.costMicros) / ((b.revenueMinor - b.refundsMinor) / 100) : null,
       })),
-      unresolvedReservationsUsd: microsToUsd(unresolved.reduce((s, r) => s + r.walletMicros + r.topupMicros, 0)),
+      unresolvedReservationsUsd: microsToUsd(unresolved.reduce((s, r) => s + (r.micros ?? 0), 0)),
     };
   },
 });
@@ -279,15 +332,13 @@ export const resolveUncertain = mutation({
       const r = await ctx.db.get(run.reservationId);
       if (r && r.status === "unresolved") {
         const period = await ctx.db.get(r.periodId);
+        // Same settlement as a finished job: charge what it used (monthly credits, then account top-up lots)
+        // and release the rest of the hold. Only what wasn't settled by an earlier finish is charged.
+        const actual = Math.max(0, run.actualMicros - (run.settled?.micros ?? 0));
         if (period) {
-          await ctx.db.patch(period._id, {
-            walletReservedMicros: Math.max(0, period.walletReservedMicros - r.walletMicros),
-            walletSpentMicros: period.walletSpentMicros + Math.min(run.actualMicros, r.walletMicros),
-            topupReservedMicros: Math.max(0, period.topupReservedMicros - r.topupMicros),
-            updatedAt: Date.now(),
-          });
+          await settleCredits(ctx, { orgId: run.orgId, period, reservation: { walletMicros: r.walletMicros, topupMicros: r.topupMicros, meters: r.meters }, actualMicros: actual, meters: {} });
         }
-        await ctx.db.patch(r._id, { status: "reconciled", actualMicros: run.actualMicros, reconciledAt: Date.now() });
+        await ctx.db.patch(r._id, { status: "reconciled", actualMicros: actual, reconciledAt: Date.now() });
       }
     }
     await audit(ctx, { orgId: run.orgId, actorType: "operator", actorId: op._id, action: "run.resolved", subjectType: "run", subjectId: run._id, summary: `Operator marked uncertain run ${outcome}: ${note.slice(0, 200)}` });

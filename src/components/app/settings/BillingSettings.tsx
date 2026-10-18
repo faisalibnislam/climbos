@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import { CircleCheck, ExternalLink, FlaskConical } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Badge, Button, Callout, DataTable, Meter } from "@/components/ui";
+import { Badge, Button, Callout, DataTable, Meter, toast } from "@/components/ui";
 import { cn, formatNumber, formatUsd } from "@/lib/utils";
 import { errorMessage } from "../errors";
 import { ReferralCard } from "./ReferralCard";
@@ -42,6 +42,7 @@ export function BillingSettings({ slug }: { slug: string }) {
   const data = useQuery(api.billing.overview, { slug });
   const createCheckout = useAction(api.billing.createCheckout);
   const portal = useAction(api.billing.customerPortal);
+  const changePlan = useAction(api.billing.changePlan);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +57,20 @@ export function BillingSettings({ slug }: { slug: string }) {
       setBusy(null);
     }
   }
-  const checkout = (productKey: ProductKey) => go(productKey, () => createCheckout({ slug, productKey }));
+  async function switchPlan(planKey: "starter" | "pro") {
+    setBusy(planKey);
+    setError(null);
+    try {
+      await changePlan({ slug, planKey });
+      toast({ tone: "success", title: "Package switched", description: "Polar adjusts the price for the rest of this month." });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+    setBusy(null);
+  }
+  // An active package is switched in place (never a second checkout, which would mean a second subscription).
+  const checkout = (productKey: ProductKey) =>
+    (productKey === "starter" || productKey === "pro") && data?.subscription?.access === "full" ? switchPlan(productKey) : go(productKey, () => createCheckout({ slug, productKey }));
   const openPortal = () => go("portal", () => portal({ slug }));
 
   return (
@@ -208,7 +222,7 @@ function BillingBody({
                 {current ? (
                   <Badge tone="green">Your package</Badge>
                 ) : (
-                  <Button disabled={!canBuy || !p.available} loading={busy === p.key} onClick={() => onCheckout(p.key as ProductKey)}>
+                  <Button disabled={!canBuy || !p.available || Boolean(sub?.comp && sub.access === "full")} loading={busy === p.key} onClick={() => onCheckout(p.key as ProductKey)}>
                     {sub && sub.access === "full" ? `Switch to ${p.name}` : `Choose ${p.name}`}
                   </Button>
                 )}
@@ -216,6 +230,7 @@ function BillingBody({
             );
           })}
         </div>
+        {!data.isDemo && !data.isAccountOwner ? <p className="mt-2 text-xs text-ink-3">Only the account owner can change the package or buy top-ups.</p> : null}
         <p className="mt-2 text-xs text-ink-3">Free: {formatNumber(data.freeCredits)} credits once, 1 workspace, 1 person, Climb AI Basic, drafts you copy yourself.</p>
       </section>
 
