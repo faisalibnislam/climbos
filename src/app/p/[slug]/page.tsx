@@ -8,6 +8,20 @@ import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { Skeleton } from "@/components/ui";
 
+/** A/B test: each visitor keeps one version (remembered in this browser). */
+function pickVariant(testId: string): "A" | "B" {
+  const key = `climbos:ab:${testId}`;
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved === "A" || saved === "B") return saved;
+    const v = Math.random() < 0.5 ? "A" : "B";
+    localStorage.setItem(key, v);
+    return v;
+  } catch {
+    return "A";
+  }
+}
+
 /** A ClimbOS landing page: hero, benefits, steps, proof, FAQ and a lead form. */
 export default function LandingPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -18,16 +32,17 @@ export default function LandingPage() {
   const [f, setF] = useState({ name: "", email: "", message: "" });
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
+  const variant = page?.test ? pickVariant(page.test.id) : undefined;
   useEffect(() => {
     if (page) document.title = `${page.content.headline} · ${page.name}`;
     if (page && !counted.current) {
       counted.current = true;
-      void viewed({ slug });
+      void viewed({ slug, variant });
     }
-  }, [page, slug, viewed]);
+  }, [page, slug, viewed, variant]);
   if (page === undefined) return <Skeleton className="mx-auto mt-24 h-64 w-full max-w-3xl" />;
   if (page === null) return <main className="grid min-h-dvh place-items-center p-6 text-sm text-ink-3">This page isn&apos;t available.</main>;
-  const c = page.content;
+  const c = variant === "B" && page.test ? { ...page.content, ...page.test.b } : page.content;
   const color = page.color;
   const input = "w-full rounded-xl border border-line bg-white px-4 py-3 text-base outline-none focus:border-ink-3";
   return (
@@ -105,7 +120,7 @@ export default function LandingPage() {
                 setState("busy");
                 setError(null);
                 try {
-                  await submit({ slug, ...f });
+                  await submit({ slug, ...f, variant });
                   setState("done");
                 } catch (err) {
                   setError(errorMessage(err));

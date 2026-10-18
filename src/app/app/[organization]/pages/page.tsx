@@ -6,6 +6,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { AbTestPanel } from "@/components/app/AbTestPanel";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
@@ -148,6 +149,7 @@ function Editor({ slug, page, content, onClose }: { slug: string; page: Page; co
             <Input value={c.formIntro} onChange={(e) => setC({ ...c, formIntro: e.target.value })} />
           </Field>
         </div>
+        {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canEdit /> : null}
         <div className="flex flex-wrap items-center gap-3">
           <Button loading={busy === "save"} onClick={() => run("save", () => update({ slug, id: page.id, content: { ...c, steps: c.steps.filter((s) => s.trim()) } }), "Saved")}>
             Save

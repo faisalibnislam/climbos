@@ -7,6 +7,7 @@ import { cleanLanding, LandingContent, landingSlug } from "../shared/landing";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { recordAb, runningTest } from "./abtests";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed, isPaid } from "./lib/access";
 import { claudeUsageRecords } from "./lib/usage";
@@ -174,20 +175,25 @@ export const publicPage = query({
     if (!org || org.deletedAt || org.suspendedAt) return null;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first();
     const booking = await ctx.db.query("bookingPages").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first();
-    return { name: business?.name ?? org.name, website: business?.website ?? null, color: p.color, content: JSON.parse(p.content) as LandingContent, bookingUrl: booking?.active ? `${SITE()}/book/${booking.slug}` : null, badge: !(await featureAllowed(ctx, org, "no_badge")) };
+    const test = await ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", p._id).eq("status", "running")).first();
+    const b = test?.variants.find((x) => x.key === "B")?.value;
+    return { name: business?.name ?? org.name, website: business?.website ?? null, color: p.color, content: JSON.parse(p.content) as LandingContent, bookingUrl: booking?.active ? `${SITE()}/book/${booking.slug}` : null, badge: !(await featureAllowed(ctx, org, "no_badge")), test: test && b ? { id: test._id, b: JSON.parse(b) as Partial<LandingContent> } : null };
   },
 });
 
 export const viewed = mutation({
-  args: { slug: v.string() },
-  handler: async (ctx, { slug }) => {
+  args: { slug: v.string(), variant: v.optional(v.string()) },
+  handler: async (ctx, { slug, variant }) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
-    if (p?.status === "live") await ctx.db.patch(p._id, { views: p.views + 1 });
+    if (p?.status !== "live") return;
+    await ctx.db.patch(p._id, { views: p.views + 1 });
+    const test = variant ? await runningTest(ctx, p._id) : null;
+    if (test && variant) await recordAb(ctx, test, variant, "trials");
   },
 });
 
 export const submit = mutation({
-  args: { slug: v.string(), name: v.string(), email: v.string(), message: v.optional(v.string()) },
+  args: { slug: v.string(), name: v.string(), email: v.string(), message: v.optional(v.string()), variant: v.optional(v.string()) },
   handler: async (ctx, a) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", a.slug)).first();
     if (!p || p.status !== "live") throw appError("NOT_FOUND", "This page isn't available.");
@@ -202,5 +208,7 @@ export const submit = mutation({
     await ctx.db.insert("deals", { orgId: p.orgId, name, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From landing page “${p.title}”${message ? `: “${message.slice(0, 200)}”` : ""}`, at: now }], createdAt: now, updatedAt: now });
     await ctx.db.insert("communityMessages", { orgId: p.orgId, channel: "landing_page", kind: "form", externalId: `form:${p._id}:${now}`, authorName: name, fromEmail: email, subject: p.title, text: message || `Asked to be contacted via “${p.title}”.`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await ctx.db.patch(p._id, { leads: p.leads + 1 });
+    const test = a.variant ? await runningTest(ctx, p._id) : null;
+    if (test && a.variant) await recordAb(ctx, test, a.variant, "wins");
   },
 });

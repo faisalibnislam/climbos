@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { syncDealFromProspect } from "./crm";
+import { recordAb, runningTest } from "./abtests";
+import { variantFor } from "../shared/abtest";
 import { sha256Hex } from "../shared/policy";
 import { composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
@@ -152,7 +154,10 @@ export const prepareSend = internalQuery({
     const token = await unsubscribeToken(p._id, SECRET());
     const unsub = `${SITE()}/u/${token}`;
     const oneClick = process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/unsubscribe?token=${encodeURIComponent(token)}` : unsub;
-    const email = composeEmail({ step, stepIndex: s.step, firstLine: p.firstLine, contactName: p.contact, sender: { name: c.sending.senderName, company: c.sending.company, address: c.sending.address, bookingUrl: c.sending.bookingUrl }, unsubscribeUrl: unsub });
+    // A/B subject test: half the prospects get subject B on the first email.
+    const test = s.step === 0 ? await ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", c._id).eq("status", "running")).first() : null;
+    const b = test && variantFor(p._id) === "B" ? test.variants.find((x) => x.key === "B")?.value : undefined;
+    const email = composeEmail({ step: b ? { ...step, subject: b } : step, stepIndex: s.step, firstLine: p.firstLine, contactName: p.contact, sender: { name: c.sending.senderName, company: c.sending.company, address: c.sending.address, bookingUrl: c.sending.bookingUrl }, unsubscribeUrl: unsub });
     return { to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo: previous?.messageId ?? null };
   },
 });
@@ -175,6 +180,10 @@ export const recordSend = internalMutation({
       return;
     }
     await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId });
+    if (s.step === 0) {
+      const test = await runningTest(ctx, s.campaignId);
+      if (test) await recordAb(ctx, test, variantFor(s.prospectId), "trials");
+    }
     const c = await ctx.db.get(s.campaignId);
     const p = await ctx.db.get(s.prospectId);
     const org = await ctx.db.get(s.orgId);
@@ -206,6 +215,10 @@ export const applyInbox = internalMutation({
         await ctx.db.insert("communityMessages", { orgId: c.orgId, channel: "email", kind: "email", externalId, prospectId: p._id, campaignId, fromEmail: r.from.toLowerCase(), subject: r.subject, messageRef: r.messageId, authorName: p.company, text: r.text, receivedAt: r.at ?? now, status: r.optOut ? "dismissed" : "new", createdAt: now, updatedAt: now });
       }
       if (!r.optOut) await syncDealFromProspect(ctx, p, "talking", "outbound", r.text ? `Replied: “${r.text.slice(0, 160)}”` : "Replied to your email.");
+      if (!r.optOut && p.stage !== "replied" && p.stage !== "booked" && p.stage !== "won") {
+        const test = await runningTest(ctx, campaignId);
+        if (test) await recordAb(ctx, test, variantFor(p._id), "wins");
+      }
       if (p.stage === "replied" || p.stage === "booked" || p.stage === "won" || p.stage === "lost") continue;
       await ctx.db.patch(p._id, { stage: r.optOut ? "lost" : "replied", updatedAt: now });
       await cancelQueued(ctx, p._id);

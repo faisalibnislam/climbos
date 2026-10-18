@@ -694,6 +694,24 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** A/B tests ClimbOS runs end to end: landing page headlines and outreach subject lines. */
+  abTests: defineTable({
+    orgId: v.id("organizations"),
+    kind: v.union(v.literal("landing"), v.literal("email_subject")),
+    /** The landing page or outbound campaign id. */
+    targetId: v.string(),
+    /** A is the current version; B the challenger (JSON for landing pages, text for subjects). */
+    variants: v.array(v.object({ key: v.string(), value: v.string() })),
+    stats: v.array(v.object({ key: v.string(), trials: v.number(), wins: v.number() })),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("stopped")),
+    winner: v.optional(v.string()),
+    note: v.optional(v.string()),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+  })
+    .index("by_target", ["targetId", "status"])
+    .index("by_org", ["orgId", "startedAt"]),
+
   /** Landing pages: written by Climb AI from the business facts, hosted at /p/SLUG. */
   landingPages: defineTable({
     orgId: v.id("organizations"),

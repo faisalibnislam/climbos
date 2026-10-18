@@ -1,5 +1,6 @@
 "use client";
 
+import { AbTestPanel } from "@/components/app/AbTestPanel";
 import { MailboxSending } from "@/components/app/outbound/MailboxSending";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -588,6 +589,11 @@ function SendPanel({ data }: { data: Data }) {
           canApprove={data.canApprove}
         />
       </div>
+      {data.campaign?.sequence[0] && data.campaign.kind !== "creators" ? (
+        <div className="mt-4">
+          <AbTestPanel slug={data.slug} kind="email_subject" targetId={data.campaign.id as Id<"outboundCampaigns">} current={data.campaign.sequence[0].subject} canEdit={data.canEdit} />
+        </div>
+      ) : null}
       <p className="mt-4 text-xs text-ink-3">Or export and send from any tool:</p>
       <div className="mt-2 flex flex-col gap-2">
         <Button onClick={download} disabled={!approved.length}>

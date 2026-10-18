@@ -42,3 +42,37 @@ describe("landing pages", () => {
     await expect(owner.client.mutation(api.landing.setLive, { slug, id: second, live: true })).rejects.toThrow(/1 live page/);
   });
 });
+
+describe("landing A/B test", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    process.env.CLIMBOS_FAKE_LLM = "ship";
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete process.env.CLIMBOS_FAKE_LLM;
+  });
+
+  it("splits views, counts leads per version and applies a clear B win", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "AB Co" });
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: page.content!.headline })).rejects.toThrow(/different/);
+    await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Double your leads in 30 days" });
+    expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test?.b.headline).toBe("Double your leads in 30 days");
+    for (let i = 0; i < 110; i++) {
+      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
+      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "B" });
+    }
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", variant: "A" });
+    for (let i = 0; i < 18; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, variant: "B" });
+    const [test] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
+    expect(test).toMatchObject({ status: "done", winner: "B" });
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
+    expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
+  });
+});
