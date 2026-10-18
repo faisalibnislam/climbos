@@ -19,9 +19,11 @@ import {
   Input,
   RadioCards,
   Select,
+  Progress,
   Skeleton,
   StepList,
   Textarea,
+  type StepItem,
   buttonClasses,
   toast,
   Toaster,
@@ -31,6 +33,22 @@ import { errorInfo, errorMessage } from "../errors";
 import { ROLE_META } from "../roles";
 import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
+import { formatDuration, formatEta, PHASE_LABEL, phaseOf, progressOf, type Phase } from "../../../../shared/progress";
+
+/** Re-render every `ms` with the current time (null on the server render). */
+function useTicker(ms: number): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, ms);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [ms]);
+  return now;
+}
 
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
 const STEP_ORDER: Step[] = ["business", "research", "facts", "goal", "preferences", "plan"];
@@ -425,14 +443,49 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
   const [busy, setBusy] = useState(false);
   const research = state.research;
   const failed = research?.status === "failed";
-  const steps = [
-    { key: "read", label: "Reading your website", match: "Read your website" },
-    { key: "profile", label: `${ROLE_META.data_analyst.emoji} ${ROLE_META.data_analyst.title} is pulling out the facts`, match: "Understand the business" },
-    { key: "insights", label: `${ROLE_META.cmo.emoji} ${ROLE_META.cmo.title} is studying your customers and competitors`, match: "Business insights" },
-  ].map((s) => {
-    const st = research?.steps.find((x) => x.label === s.match);
-    const status = st ? (st.status === "succeeded" ? "done" : st.status === "running" ? "running" : st.status === "failed" ? "failed" : "pending") : "pending";
-    return { key: s.key, label: s.label, status: status as "pending" | "running" | "done" | "failed" };
+  const now = useTicker(1000);
+  const raw = research?.steps ?? [];
+  const insightSteps = raw.filter((x) => /^business insights/i.test(x.label) && x.kind !== "compute");
+  const v2 = research?.engine === "v2";
+  const finished = research?.status === "verified" || Boolean(research?.finishedAt);
+  const planned: Phase[] = [...(raw.some((x) => x.label === "Read your website") ? (["read"] as Phase[]) : []), "profile", ...(v2 ? (["research", "draft", "review"] as Phase[]) : (["other"] as Phase[]))];
+  const progress = now ? progressOf(raw.filter((x) => x.kind !== "compute"), planned, now, finished) : null;
+  const stepStatus = (st?: { status: string }) => (st ? (st.status === "succeeded" ? "done" : st.status === "running" ? "running" : st.status === "failed" ? "failed" : "pending") : "pending") as "pending" | "running" | "done" | "failed";
+  const timer = (st?: { startedAt: number | null; finishedAt: number | null }) => (st?.startedAt && now ? formatDuration(((st.finishedAt ?? now) - st.startedAt) / 1000) : undefined);
+  const insightStatus: "pending" | "running" | "done" | "failed" = insightSteps.some((x) => x.status === "failed")
+    ? "failed"
+    : insightSteps.length && insightSteps.every((x) => x.status === "succeeded" || x.status === "skipped") && (finished || !v2 || insightSteps.some((x) => /review \d+$/i.test(x.label) && x.status === "succeeded"))
+      ? "done"
+      : insightSteps.length
+        ? "running"
+        : "pending";
+  // The CMO's phases: research, write, review (and any revision round), with live timers.
+  const phases = v2
+    ? (["research", "draft", "review"] as Phase[]).map((ph) => {
+        const matches = insightSteps.filter((x) => phaseOf(x.label) === ph || (ph === "draft" && phaseOf(x.label) === "revise"));
+        const last = matches[matches.length - 1];
+        const status: "pending" | "running" | "done" | "failed" = !last ? "pending" : stepStatus(last);
+        const first = matches[0];
+        return {
+          key: ph,
+          label: PHASE_LABEL[ph] + (ph === "draft" && matches.length > 1 ? " (improving after review)" : ""),
+          status,
+          meta: first ? timer({ startedAt: first.startedAt, finishedAt: status === "running" ? null : (last?.finishedAt ?? null) }) : undefined,
+        };
+      })
+    : [];
+  const steps: StepItem[] = [
+    { key: "read", label: "Reading your website", st: raw.find((x) => x.label === "Read your website") },
+    { key: "profile", label: `${ROLE_META.data_analyst.emoji} ${ROLE_META.data_analyst.title} is pulling out the facts`, st: raw.find((x) => x.label === "Understand the business") },
+  ]
+    .filter((x) => x.key !== "read" || x.st)
+    .map((x) => ({ key: x.key, label: x.label, status: stepStatus(x.st), detail: timer(x.st ?? undefined) }));
+  steps.push({
+    key: "insights",
+    label: `${ROLE_META.cmo.emoji} ${ROLE_META.cmo.title} is studying your customers and competitors`,
+    status: insightStatus,
+    detail: insightStatus === "running" && progress?.current ? PHASE_LABEL[progress.current] : undefined,
+    ...(phases.length && insightStatus !== "pending" ? { substeps: phases } : {}),
   });
   return (
     <div>
@@ -441,9 +494,22 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
       </h1>
       {!failed ? (
         <>
-          <p className="mt-1 text-sm text-ink-3">This usually takes under a minute. You’ll check everything before anything is used.</p>
+          <p className="mt-1 text-sm text-ink-3">
+            {v2 ? "Deep research takes about 5–10 minutes. You can leave this page; your team keeps working." : "This usually takes under a minute."} You’ll check everything before anything is used.
+          </p>
           <Card className="mt-6">
-            <CardContent aria-live="polite">
+            <CardContent className="flex flex-col gap-5">
+              {progress ? (
+                <div>
+                  <Progress value={progress.percent} label="Research progress" />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="font-medium text-ink" aria-live="polite">
+                      {progress.percent}% · {formatEta(progress.etaSeconds)}
+                    </span>
+                    <span className="tabular-nums text-ink-3">{formatDuration(progress.elapsedSeconds)} elapsed</span>
+                  </div>
+                </div>
+              ) : null}
               <StepList steps={steps} />
             </CardContent>
           </Card>

@@ -290,7 +290,9 @@ export const onboardingState = query({
                 : /^no_content/.test(researchRun.error ?? "")
                   ? ("site_unreadable" as const)
                   : ("other" as const),
-            steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status })),
+            engine: researchRun.engine ?? null,
+            finishedAt: researchRun.finishedAt ?? null,
+            steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status, kind: s.kind, startedAt: s.startedAt ?? null, finishedAt: s.finishedAt ?? null })),
           }
         : null,
       strategyRun: strategyRun ? { status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,

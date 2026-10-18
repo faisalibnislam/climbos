@@ -11,6 +11,8 @@ export interface StepItem {
   status: StepStatus;
   /** Optional detail line under the label. */
   detail?: ReactNode;
+  /** Optional nested phases shown under a running or finished step. */
+  substeps?: { key: string; label: ReactNode; status: StepStatus; meta?: ReactNode }[];
 }
 
 const statusText: Record<StepStatus, string> = {
@@ -70,6 +72,24 @@ export function StepList({ steps, className }: { steps: StepItem[]; className?: 
                 {statusText[s.status]}
                 {s.detail ? <> · {s.detail}</> : null}
               </span>
+              {s.substeps?.length ? (
+                <ol className="mt-2 flex flex-col gap-1.5" aria-label="Phases">
+                  {s.substeps.map((x) => (
+                    <li key={x.key} className="flex items-center gap-2 text-sm" aria-current={x.status === "running" ? "step" : undefined}>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          x.status === "done" ? "bg-brand-700" : x.status === "running" ? "animate-soft-pulse bg-sun" : x.status === "failed" ? "bg-red-800" : "bg-line-strong",
+                        )}
+                      />
+                      <span className={cn(x.status === "pending" ? "text-ink-3" : "text-ink-2", x.status === "running" && "font-medium text-ink")}>{x.label}</span>
+                      <span className="sr-only">{statusText[x.status]}</span>
+                      {x.meta ? <span className="ml-auto tabular-nums text-xs text-ink-3">{x.meta}</span> : null}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
             </span>
           </li>
         );
