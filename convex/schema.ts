@@ -357,6 +357,10 @@ export default defineSchema({
     summary: v.optional(v.string()),
     /** Where happy customers leave a review (e.g. the Google review link). */
     reviewUrl: v.optional(v.string()),
+    /** Self-improvement loop 1: last weekly read of the business's own site (normalised text, for the diff). */
+    siteHash: v.optional(v.string()),
+    siteText: v.optional(v.string()),
+    siteCheckedAt: v.optional(v.number()),
     currency: v.string(),
     timezone: v.string(),
     researchStatus: v.union(
@@ -429,6 +433,8 @@ export default defineSchema({
       v.literal("rejected"),
     ),
     provenance: v.union(v.literal("researched"), v.literal("owner_supplied"), v.literal("demo_fixture")),
+    /** A fact the weekly site check proposes to replace (rejected when this one is confirmed). */
+    replacesFactId: v.optional(v.id("businessFacts")),
     sourceIds: v.array(v.id("factSources")),
     updatedBy: v.optional(v.id("users")),
     createdAt: v.number(),

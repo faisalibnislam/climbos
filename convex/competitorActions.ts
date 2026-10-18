@@ -18,7 +18,7 @@ const MODEL = CALL_ROUTES.chat_intent;
 const resolveHost = async (h: string) => (await lookup(h, { all: true, verbatim: true })).map((r) => r.address);
 
 /** Homepage plus the pricing page if the homepage links to one (own fetcher, no credits). */
-async function readSite(url: string): Promise<{ text: string } | { error: string }> {
+export async function readSite(url: string): Promise<{ text: string } | { error: string }> {
   const home = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
   if (!home?.ok) return { error: home?.error ?? "Couldn't reach the site" };
   const page = extractPageContent(home.body, home.finalUrl, { maxTextChars: 20_000, maxLinks: 80 });
