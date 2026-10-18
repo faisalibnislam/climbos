@@ -1123,6 +1123,19 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
+        /** What this plan was built from (spec §04), for tracing results back to inputs. */
+        snapshot: v.optional(
+          v.object({
+            engine: v.string(),
+            aiMode: v.string(),
+            goal: v.string(),
+            horizonDays: v.number(),
+            monthlyAdBudget: v.number(),
+            facts: v.number(),
+            insightsChars: v.number(),
+            ownerEconomics: v.optional(v.any()),
+          }),
+        ),
         /** Web pages the research phases actually read (spec §07): what the plan's citations can point to. */
         webSources: v.optional(v.array(v.object({ url: v.string(), title: v.optional(v.string()) }))),
       }),

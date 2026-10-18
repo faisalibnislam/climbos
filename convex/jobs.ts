@@ -63,6 +63,8 @@ import {
   type ChannelFit,
   type OutreachOutput,
   type PlaysOutput,
+  type PlanSnapshot,
+  ENGINE_VERSION,
   type ProspectsOutput,
   type SocialCalendar,
 } from "../shared/agents/specs";
@@ -416,7 +418,7 @@ async function runAgentTask<T>(
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
       const q = await begin(ctx, job.run._id, baseIndex + 95, "compute", `${spec.label}: quality`, spec.role);
       if (q.checkpoint === undefined) {
-        const data = JSON.stringify(result.quality);
+        const data = JSON.stringify({ ...result.quality, engine: ENGINE_VERSION });
         console.log(`[engine-quality] ${spec.id} ${job.run.aiMode ?? "basic"} ${data}`);
         await ctx.runMutation(internal.engineLab.recordQuality, { runId: job.run._id, agentId: spec.id, mode: job.run.aiMode ?? "basic", data });
         await ctx.runMutation(internal.engine.completeStep, { stepId: q.stepId!, output: "true" });
@@ -467,6 +469,19 @@ function businessBrief(job: JobCtx): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
+  return {
+    engine: ENGINE_VERSION,
+    aiMode: job.run.aiMode ?? "basic",
+    goal: (job.goal?.statement ?? "").slice(0, 300),
+    horizonDays: job.goal?.horizonDays ?? 90,
+    monthlyAdBudget: (job.goal?.monthlyAdBudgetMinor ?? 0) / 100,
+    facts: job.facts.length,
+    insightsChars,
+    ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
+  };
 }
 
 function uniqueSources(xs: { url: string; title?: string }[]): { url: string; title?: string }[] {
@@ -803,7 +818,7 @@ export const buildStrategy = internalAction({
       if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief })));
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]) } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length) } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });

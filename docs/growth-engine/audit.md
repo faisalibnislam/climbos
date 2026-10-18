@@ -65,11 +65,15 @@ Each one was checked in code. Its effect on quality is listed separately (§3).
 5. **D5:** the owner can't inspect the evidence.
 6. **D9:** we can't tell whether a change helped.
 
-## 5. Already live before this audit
+## 5. Status
+
+D1–D8 and D10 have fixes live as of 2026-10-18 (see `backlog.md`). D9 (evaluation) has tooling ready but no paid runs yet: budget is $0.
+
+## 6. Already live before this audit
 
 These shipped before AUDIT_AND_DESIGN mode began: economics lint, locked numbers, consistency pass, word caps (`77fd896`, `85d8691`, `38326f6`). The owner chose to keep them and to measure them as arm B. Their interaction with D1 is untested.
 
-## 6. Not inspected or verified
+## 7. Not inspected or verified
 
 - Prod data: real run counts, failure rates, how often truncation hits, credit margin per plan.
 - Owner outcomes after a plan (no outcome data yet).
