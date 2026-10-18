@@ -58,7 +58,7 @@ async function reportFor(ctx: QueryCtx, org: Doc<"organizations">, weeksAgo: num
   const thisWeek = weekStartUtc(now);
   // weeksAgo 0 = the week so far; the Monday email reports the full week before (weeksAgo 1).
   const weekStart = thisWeek - weeksAgo * WEEK;
-  const weekEnd = Math.min(weekStart + WEEK, now);
+  const weekEnd = Math.min(weekStart + WEEK, now + 1);
   const [current, before] = await Promise.all([countsFor(ctx, org._id, weekStart, weekEnd), countsFor(ctx, org._id, weekStart - WEEK, weekStart)]);
   const pending = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).take(100);
   const upcoming = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", org._id).gte("startAt", now).lt("startAt", now + WEEK)).take(20);
@@ -66,7 +66,8 @@ async function reportFor(ctx: QueryCtx, org: Doc<"organizations">, weeksAgo: num
   const campaigns = await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).take(50);
   const strategy = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
   const balance = await creditBalance(ctx, org, await currentPeriod(ctx, org));
-  return buildWeeklyReport({
+  const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id).gte("at", weekStart).lt("at", weekEnd)).take(10);
+  const report = buildWeeklyReport({
     weekStart,
     weekEnd,
     now: current,
@@ -80,6 +81,7 @@ async function reportFor(ctx: QueryCtx, org: Doc<"organizations">, weeksAgo: num
       creditsLeft: balance.available,
     },
   });
+  return { ...report, competitors: changes.map((c) => ({ name: c.name, summary: c.summary })) };
 }
 
 export const weekly = query({

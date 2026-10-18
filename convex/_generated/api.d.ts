@@ -26,6 +26,8 @@ import type * as autopilot from "../autopilot.js";
 import type * as billing from "../billing.js";
 import type * as circuits from "../circuits.js";
 import type * as climb from "../climb.js";
+import type * as competitorActions from "../competitorActions.js";
+import type * as competitors from "../competitors.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
@@ -105,6 +107,8 @@ declare const fullApi: ApiFromModules<{
   billing: typeof billing;
   circuits: typeof circuits;
   climb: typeof climb;
+  competitorActions: typeof competitorActions;
+  competitors: typeof competitors;
   connectionActions: typeof connectionActions;
   connections: typeof connections;
   content: typeof content;

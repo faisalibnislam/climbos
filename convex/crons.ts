@@ -28,5 +28,7 @@ crons.interval("outbound: read replies and bounces", { minutes: 15 }, internal.m
 crons.daily("approvals waiting", { hourUTC: 14, minuteUTC: 0 }, internal.emailActions.sendApprovalEmails, {});
 // Owner digests at the frequency each user selected.
 crons.daily("digests", { hourUTC: 13, minuteUTC: 0 }, internal.maintenance.sendDigests, {});
+// Competitor watch: Monday mornings, before the weekly report.
+crons.weekly("competitor watch", { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0 }, internal.competitors.weekly, {});
 
 export default crons;

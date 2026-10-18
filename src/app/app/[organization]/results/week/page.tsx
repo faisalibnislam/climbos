@@ -60,6 +60,20 @@ export default function WeekReportPage() {
               ))}
             </ul>
           ) : null}
+          {r.competitors?.length ? (
+            <Card>
+              <CardContent className="flex flex-col gap-2">
+                <p className="heading-card">Competitors</p>
+                <ul className="space-y-1 text-sm text-ink-2">
+                  {r.competitors.map((c, i) => (
+                    <li key={i}>
+                      <span className="font-medium text-ink">{c.name}:</span> {c.summary}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
           {r.next.length ? (
             <Card>
               <CardContent className="flex flex-col gap-2">

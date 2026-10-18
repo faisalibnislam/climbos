@@ -682,6 +682,32 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Competitor watch: pages we check weekly, and what changed. */
+  competitorWatches: defineTable({
+    orgId: v.id("organizations"),
+    name: v.string(),
+    url: v.string(),
+    active: v.boolean(),
+    lastCheckedAt: v.optional(v.number()),
+    lastHash: v.optional(v.string()),
+    /** Normalised text of the last check (homepage + pricing), for the next diff. */
+    lastText: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_active", ["active"]),
+
+  competitorChanges: defineTable({
+    orgId: v.id("organizations"),
+    watchId: v.id("competitorWatches"),
+    name: v.string(),
+    summary: v.string(),
+    bullets: v.array(v.string()),
+    soWhat: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_org_at", ["orgId", "at"]),
+
   /** Review requests sent to the owner's customers (from their own mailbox). */
   reviewRequests: defineTable({
     orgId: v.id("organizations"),
