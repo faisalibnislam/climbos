@@ -29,5 +29,5 @@ export const CASES: BenchCase[] = [
   { id: "bellbrothers", name: "Bell Brothers", website: "https://www.bellbrothers.com", type: "local_service", goal: "Book more furnace tune-ups and replacements before winter", horizonDays: 60, monthlyAdBudget: 1500, currency: "USD" },
 ];
 
-export type BenchTask = "insights" | "strategy" | "linkedin" | "instagram" | "facebook" | "x" | "tiktok" | "ads" | "email" | "seo" | "audit";
+export type BenchTask = "insights" | "strategy" | "linkedin" | "instagram" | "facebook" | "x" | "tiktok" | "ads" | "email" | "seo" | "audit" | "outbound";
 export const TASKS_ALL: BenchTask[] = ["insights", "strategy", "linkedin", "instagram", "facebook", "x", "tiktok", "ads", "email", "seo", "audit"];

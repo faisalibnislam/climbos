@@ -21,7 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
-import { adsSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, playCatalogsFor, PlaysOutputSchema, researchFor, seoSpec, socialSpec, strategySpec } from "../shared/agents/specs";
+import { adsSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ProspectsOutput } from "../shared/agents/specs";
 import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
@@ -225,6 +225,13 @@ const DEFS: Record<BenchTask, TaskDef> = {
     research: (p) => researchFor("seo_brief", { website: p.c.website, businessName: p.c.name }),
     judgeFocus: "an SEO page (brief + draft)",
   },
+  outbound: {
+    v1: { task: "sales_sequence", prompt: (p) => `TASK: Find 10 real companies that need this business and write a cold email sequence.\n\n${brief(p, true)}` },
+    spec: (o) => prospectingSpec(o) as unknown as AgentSpec<unknown>,
+    task: () => OUTBOUND_TASK,
+    research: (p) => researchFor("prospecting", { website: p.c.website, businessName: p.c.name }),
+    judgeFocus: "outbound: 10 evidenced prospect companies plus a cold email sequence with a personal first line for each",
+  },
   audit: {
     v1: { task: "conversion_audit", prompt: (p) => `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${brief(p, false)}\n\n${p.pagesText}` },
     spec: (o) => conversionAuditSpec(o) as unknown as AgentSpec<unknown>,
@@ -343,8 +350,43 @@ async function runStrategyFrontier(p: Prepared): Promise<ArmResult> {
   return { arm: "v0f", ok: true, output: { ...(b.output as object), plays: plays.plays, portfolioNote: plays.portfolioNote }, costMicros: a.costMicros + b.costMicros, ms: Date.now() - t0 };
 }
 
+const OUTBOUND_TASK =
+  "Find 10 real companies that need this business now, from public web sources only, each with evidence URLs, a trigger if one exists, fit and timing scores, and the decision-maker role. Write the ICP first. Never invent a company, person or email.";
+
+/** Outbound is two stages in production (prospecting, then the cold sequence and openers). */
+async function runOutboundV2(p: Prepared, arm: string): Promise<ArmResult> {
+  let cost = 0;
+  const deps: AgentDeps = {
+    turn: async (req) => {
+      const r = await turnWithRetry(req);
+      cost += r.costMicros;
+      return r;
+    },
+    phase: async (_key, _label, fn) => (await fn()).value,
+  };
+  const t0 = Date.now();
+  try {
+    const base = inputFor(p, "outbound");
+    const found = await runAgent(prospectingSpec({}), base, deps);
+    const f = found.output as ProspectsOutput;
+    const mail = await runAgent(
+      outreachSpec({}),
+      {
+        ...base,
+        research: undefined,
+        task: `Write the cold email sequence for these prospects (one template, 3-4 steps on business days 0, 3, 7 and 14) and one opener per prospect for {{firstLine}}, built only on that prospect's cited evidence. The system adds greeting, footer, opt-out and booking link.\n\nICP: ${JSON.stringify(f.icp)}\n\nPROSPECTS:\n${JSON.stringify(f.prospects.map((x) => ({ company: x.company, why: x.why, trigger: x.trigger, evidence: x.evidence, contact: x.contact }))).slice(0, 16_000)}`,
+      },
+      deps,
+    );
+    return { arm, ok: true, output: { ...f, ...(mail.output as object) }, costMicros: cost, ms: Date.now() - t0 };
+  } catch (e) {
+    return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
+  }
+}
+
 async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   if (t === "strategy") return runStrategyV2(p, arm);
+  if (t === "outbound") return runOutboundV2(p, arm);
   const draft: ModelKey = arm.startsWith("v2o") ? "claude-opus-5.5" : "claude-sonnet-5.5";
   const maxRevisions = arm.endsWith("1") ? 1 : 2;
   // v22: the production configuration exactly as shipped (expert/lean profiles).
