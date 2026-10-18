@@ -226,8 +226,9 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
             },
           ]
         : baseMessages;
+      const modelKey = round > 0 && spec.models.revise ? spec.models.revise : spec.models.draft;
       const result = await deps.turn({
-        modelKey: spec.models.draft,
+        modelKey,
         system,
         messages,
         schema: spec.schema,
@@ -235,7 +236,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         effort: spec.effort.draft,
       });
       if (!result.ok) failure(result);
-      return { value: stripFactMarkers(result.output) as T, record: { phase: round === 0 ? "draft" : "revise", round, modelKey: spec.models.draft, result } };
+      return { value: stripFactMarkers(result.output) as T, record: { phase: round === 0 ? "draft" : "revise", round, modelKey, result } };
     });
   };
 

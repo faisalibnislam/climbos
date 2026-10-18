@@ -93,25 +93,29 @@ export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
   "gpt-6-luna": {
     key: "gpt-6-luna",
     provider: "openai",
-    apiModelId: "unverified",
-    availability: "disabled",
-    contextWindow: 0,
-    maxOutputTokens: 0,
+    apiModelId: "gpt-6-luna",
+    availability: "enabled",
+    contextWindow: 1_050_000,
+    maxOutputTokens: 128_000,
+    longContextThreshold: 272_000,
     structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://developers.openai.com/api/docs/pricing",
+    verifiedAt: "2026-10-18",
+    docs: "https://developers.openai.com/api/docs/models",
   },
+
   "gpt-6.1-sol": {
     key: "gpt-6.1-sol",
     provider: "openai",
-    apiModelId: "unverified",
-    availability: "disabled",
-    contextWindow: 0,
-    maxOutputTokens: 0,
+    apiModelId: "gpt-6.1-sol",
+    availability: "enabled",
+    contextWindow: 1_050_000,
+    maxOutputTokens: 128_000,
+    longContextThreshold: 272_000,
     structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://developers.openai.com/api/docs/pricing",
+    verifiedAt: "2026-10-18",
+    docs: "https://developers.openai.com/api/docs/models",
   },
+
 };
 
 export interface ImageRoute {

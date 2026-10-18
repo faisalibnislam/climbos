@@ -35,6 +35,8 @@ export interface PhaseModels {
   research: ModelKey;
   draft: ModelKey;
   critic: ModelKey;
+  /** Conditional escalation: the model that writes revisions after a failed review (defaults to draft). */
+  revise?: ModelKey;
 }
 
 /** Declarative definition of one expert agent (a role doing one kind of work). */

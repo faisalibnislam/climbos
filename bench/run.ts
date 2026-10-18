@@ -19,7 +19,8 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
-import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
+import { type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
+import { modelTurn } from "../shared/ai/turn";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
 import { adsSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ProspectsOutput } from "../shared/agents/specs";
 import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
@@ -32,7 +33,7 @@ import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 
 // ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
-  const m = line.match(/^\s*(ANTHROPIC_API_KEY|ANTHROPIC_WORKSPACE_ID|GEMINI_API_KEY)\s*=\s*"?([^"#]*)"?/);
+  const m = line.match(/^\s*(ANTHROPIC_API_KEY|ANTHROPIC_WORKSPACE_ID|GEMINI_API_KEY|OPENAI_API_KEY)\s*=\s*"?([^"#]*)"?/);
   if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
 }
 const rates = currentRateVersion();
@@ -71,10 +72,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Claude call with retries for transient errors (rate limits, overload, network). */
 async function turnWithRetry(req: ClaudeTurnRequest): Promise<ClaudeTurnResult> {
-  let r = await claudeTurn(req, rates);
+  let r = await modelTurn(req, rates);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
     await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);
-    r = await claudeTurn(req, rates);
+    r = await modelTurn(req, rates);
   }
   return r;
 }

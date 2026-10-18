@@ -30,7 +30,9 @@ import { researchWebsite } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
-import { claudeTurn, type ClaudeTurnResult } from "../shared/ai/claude";
+import { type ClaudeTurnResult } from "../shared/ai/claude";
+import { modelTurn, providerOf } from "../shared/ai/turn";
+import { CALL_ROUTES, routesEnabled } from "../shared/agents/routes";
 import {
   adsSpec,
   conversionAuditSpec,
@@ -171,7 +173,8 @@ async function runModelTask<T>(
 
   const rates = getRateVersion(run.rateVersionId);
   const roleRoute = CURRENT_ROUTING.routes[task.role];
-  const route = task.primaryModel ? { ...roleRoute, primary: task.primaryModel } : roleRoute;
+  const primary = task.type === "chat_intent" && routesEnabled() ? CALL_ROUTES.chat_intent : task.primaryModel;
+  const route = primary ? { ...roleRoute, primary } : roleRoute;
   const system = systemPrompt(task.role);
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
   const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "anthropic" ? 2 : 0);
@@ -304,22 +307,35 @@ async function runAgentTask<T>(
       return reserved.ok;
     },
     turn: async (req) => {
-      const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: "anthropic" });
-      if (circuit === "open") {
-        return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] };
-      }
-      const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : claudeTurn;
-      let r = await call(req, rates);
-      if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
-        await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
-        r = await call(req, rates);
-      }
-      if (currentStep && (r.usage.calls > 0 || r.costMicros > 0)) {
-        await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(req.modelKey, r, rates) });
-      }
-      const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
-      if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
-        await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: healthy, billing: !r.ok && r.kind === "spend_limit", reason: r.ok ? undefined : r.message.slice(0, 120) });
+      const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
+      // One provider attempt (with a short rate-limit retry), metered and fed to that provider's circuit.
+      const attemptOn = async (modelKey: ModelKey) => {
+        const provider = providerOf(modelKey);
+        const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider });
+        if (circuit === "open") {
+          return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as ClaudeTurnResult;
+        }
+        const q = { ...req, modelKey };
+        let r = await call(q, rates);
+        if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
+          await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
+          r = await call(q, rates);
+        }
+        if (currentStep && (r.usage.calls > 0 || r.costMicros > 0)) {
+          await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(modelKey, r, rates) });
+        }
+        const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
+        if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
+          await ctx.runMutation(internal.circuits.recordProviderResult, { provider, ok: healthy, billing: !r.ok && r.kind === "spend_limit", reason: r.ok ? undefined : r.message.slice(0, 120) });
+        }
+        return r;
+      };
+      const r = await attemptOn(req.modelKey);
+      // Cross-provider fallback when a provider is down, out of credit or not configured.
+      if (!r.ok && ["provider_unavailable", "spend_limit", "provider_error"].includes(r.kind) && !process.env.CLIMBOS_FAKE_LLM) {
+        const fallback: ModelKey = providerOf(req.modelKey) === "openai" ? "claude-sonnet-5.5" : CALL_ROUTES.fallback;
+        const f = await attemptOn(fallback);
+        if (f.ok || !["provider_unavailable", "spend_limit"].includes(f.kind)) return f;
       }
       return r;
     },

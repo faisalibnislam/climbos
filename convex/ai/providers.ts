@@ -6,6 +6,7 @@ import { z } from "zod";
 import { type ModelKey, type RateVersion } from "../../shared/economics/rates";
 import { actualStepMicros, IMAGE_ROUTES, MODEL_SPECS } from "../../shared/ai/models";
 import { usdToMicrosCeil } from "../../shared/economics/money";
+import { openaiTurn } from "../../shared/ai/openai";
 import { anthropicWorkspaceHeaders } from "../../shared/ai/claude";
 
 /**
@@ -38,7 +39,7 @@ export interface ModelUsage {
 export type ModelResult =
   | {
       ok: true;
-      provider: "anthropic" | "google";
+      provider: "anthropic" | "google" | "openai";
       actualModelId: string;
       output: unknown;
       rawText: string;
@@ -245,7 +246,31 @@ export async function callModel(req: ModelRequest, rates: RateVersion): Promise<
   if (!spec || spec.availability !== "enabled") {
     return { ok: false, kind: "provider_unavailable", message: `${req.modelKey} is not enabled.`, costMicros: 0, usage: ZERO_USAGE };
   }
-  return spec.provider === "anthropic" ? callAnthropic(req, rates) : callGemini(req, rates);
+  return spec.provider === "anthropic" ? callAnthropic(req, rates) : spec.provider === "openai" ? callOpenAI(req, rates) : callGemini(req, rates);
+}
+
+/** Single-call tasks on OpenAI (Responses API), in this module's result shape. */
+async function callOpenAI(req: ModelRequest, rates: RateVersion): Promise<ModelResult> {
+  const r = await openaiTurn(
+    {
+      modelKey: req.modelKey,
+      system: [{ text: req.system }],
+      messages: [{ role: "user", content: req.user }],
+      schema: req.schema,
+      maxTokens: req.outputBudget,
+      effort: "low",
+      webSearch: req.webSearches ? { maxUses: req.webSearches } : undefined,
+      timeoutMs: req.deadlineMs ?? 90_000,
+    },
+    rates,
+  );
+  const usage: ModelUsage = { inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, reasoningTokens: r.usage.thinkingTokens, cacheReadTokens: r.usage.cacheReadTokens, cacheWriteTokens: 0, webSearches: r.usage.webSearches };
+  const searchCostMicros = usdToMicrosCeil(r.usage.webSearches * rates.services.searchCall);
+  if (!r.ok) {
+    const kind = r.kind === "spend_limit" ? "provider_unavailable" : r.kind;
+    return { ok: false, kind, message: r.message, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, rawText: r.text } as ModelResult;
+  }
+  return { ok: true, provider: "openai", actualModelId: r.actualModelId, output: r.output, rawText: r.text, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, finishReason: r.stopReason, sourceUrls: r.sources.map((x) => x.url).slice(0, 20) };
 }
 
 export type ImageResult =

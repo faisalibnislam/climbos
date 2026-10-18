@@ -9,7 +9,7 @@ export function claudeUsageRecords(modelKey: ModelKey, r: ClaudeTurnResult, rate
   const records = [
     {
       type: "model_call" as const,
-      provider: "anthropic",
+      provider: MODEL_SPECS[modelKey].provider,
       model: MODEL_SPECS[modelKey].apiModelId,
       inputTokens: r.usage.inputTokens,
       outputTokens: r.usage.outputTokens,

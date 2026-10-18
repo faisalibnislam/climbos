@@ -5,6 +5,7 @@ import { MODEL_SPECS } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
+import { CALL_ROUTES, routesEnabled } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -50,7 +51,7 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
 /** The two steps (revised draft + review) one extra revision round needs. */
 export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
   return [
-    { kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
+    { kind: "model", role: spec.role, modelKey: spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
     { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic },
   ];
 }
@@ -149,7 +150,7 @@ export interface JobPlan {
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   const contract = TASKS[task];
-  const modelKey = contract.primaryModel ?? CURRENT_ROUTING.routes[contract.role].primary;
+  const modelKey = (task === "chat_intent" && routesEnabled() ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? CURRENT_ROUTING.routes[contract.role].primary;
   const searches = MODEL_SPECS[modelKey].provider === "anthropic" ? webSearches : 0;
   return {
     kind: "model",

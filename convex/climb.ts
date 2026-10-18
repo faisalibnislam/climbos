@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type Anthropic from "@anthropic-ai/sdk";
-import { claudeTurn } from "../shared/ai/claude";
+import { modelTurn, providerOf } from "../shared/ai/turn";
+import { CALL_ROUTES, routesEnabled } from "../shared/agents/routes";
 import { getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { fakeTurn } from "../shared/agents/fake";
@@ -20,7 +21,16 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
  * publishes, sends, spends or changes settings without a confirmation tap.
  */
 
-const MODEL: ModelKey = "claude-sonnet-5.5";
+const CLASSIC_MODEL: ModelKey = "claude-sonnet-5.5";
+/** Reservations assume the costlier route so an escalation always fits. */
+const MODEL: ModelKey = routesEnabled() ? CALL_ROUTES.climbEscalated : CLASSIC_MODEL;
+
+/** Routine turns on Luna; analysis, strategy and multi-part questions on Sol (owner routes). */
+export function climbModelFor(text: string): ModelKey {
+  if (!routesEnabled()) return CLASSIC_MODEL;
+  const analytical = /\b(why|analy[sz]e|compare|strategy|plan|forecast|explain|diagnos|what should|recommend|trade-?off)\b/i.test(text) || text.length > 280;
+  return analytical ? CALL_ROUTES.climbEscalated : CALL_ROUTES.climb;
+}
 const MAX_TURNS = 8;
 
 const RULES = `You are Climb AI, the assistant inside ClimbOS, an AI growth team for small businesses. You sit in a side panel next to whatever screen the owner is looking at.
@@ -196,7 +206,18 @@ export const respond = action({
     const { message: m, run } = c;
     const caller = callerFor(ctx);
     const rates = getRateVersion(run.rateVersionId);
-    const turn = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : claudeTurn;
+    const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
+    const chosen = climbModelFor(m.text);
+    let active: ModelKey = chosen;
+    // Cross-provider fallback when the chosen provider is down or not configured.
+    const turn: typeof modelTurn = async (req, r8) => {
+      const first = await call({ ...req, modelKey: active }, r8);
+      if (!first.ok && ["provider_unavailable", "spend_limit", "provider_error"].includes(first.kind) && !process.env.CLIMBOS_FAKE_LLM) {
+        active = providerOf(active) === "openai" ? CLASSIC_MODEL : CALL_ROUTES.fallback;
+        return call({ ...req, modelKey: active }, r8);
+      }
+      return first;
+    };
 
     // Screen context: where they are, what's on screen (entity ids for tools), what they pointed at.
     const onScreen = (entities ?? []).slice(0, 40).map((e) => `- ${e.type} "${e.label.slice(0, 100)}" (id ${e.id})`).join("\n");
@@ -234,12 +255,12 @@ export const respond = action({
         failed = step.reason === "paused" ? "Activity is paused, so Climb AI stopped." : "Climb AI reached its limit for this message.";
         break;
       }
-      const r = await turn({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages, customTools: tools as Anthropic.Tool[], maxTokens: 3_000, effort: "low", thinkingOff: true }, rates);
-      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+      const r = await turn({ modelKey: active, system: [{ text: RULES, cache: true }], messages, customTools: tools as Anthropic.Tool[], maxTokens: 3_000, effort: "low", thinkingOff: true }, rates);
+      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(active, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) {
         if (["provider_error", "timeout", "spend_limit"].includes(r.kind)) {
-          await ctx.runMutation(internal.circuits.recordProviderResult, { provider: "anthropic", ok: false, billing: r.kind === "spend_limit", reason: r.message.slice(0, 120) });
+          await ctx.runMutation(internal.circuits.recordProviderResult, { provider: providerOf(active), ok: false, billing: r.kind === "spend_limit", reason: r.message.slice(0, 120) });
         }
         failed =
           r.kind === "rate_limited"

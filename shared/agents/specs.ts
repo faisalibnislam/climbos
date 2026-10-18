@@ -24,6 +24,8 @@ import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubri
  * detail. Models and efforts are the starting point; the benchmark decides.
  */
 
+import { routeModels } from "./routes";
+
 const SONNET: ModelKey = "claude-sonnet-5.5";
 const OPUS: ModelKey = "claude-opus-5.5";
 
@@ -335,7 +337,8 @@ function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxR
   const lean = profile === "lean";
   return {
     ...s,
-    models: { research: SONNET, draft: OPUS, critic: lean ? SONNET : OPUS, ...o.models },
+    // Explicit overrides (benchmark arms, tests) beat the route; the route beats the classic defaults.
+    models: { ...routeModels(s.id, { research: SONNET, draft: OPUS, critic: lean ? SONNET : OPUS }), ...o.models },
     effort: { research: "medium", draft: "high", critic: lean ? "low" : "medium", ...o.effort },
     // Thinking counts against max_tokens (Opus always thinks), so leave generous headroom.
     maxTokens: s.maxTokens ?? { research: 24_000, draft: 32_000, critic: lean ? 8_000 : 16_000 },
@@ -607,7 +610,7 @@ export function channelFitSpec(ctx: { candidateIds: string[]; typeKeys: string[]
       maxTokens: { research: 8_000, draft: 16_000, critic: 8_000 },
     },
     // One pass, no review: deterministic rules and sanitising (mergeFit, adjustmentsFrom) carry the structure.
-    { models: { draft: SONNET, critic: SONNET }, maxRevisions: -1, ...o },
+    { maxRevisions: -1, ...o },
     "lean",
   );
 }
