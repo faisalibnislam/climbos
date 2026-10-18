@@ -1,7 +1,7 @@
 import { EXPERT_KINDS, type AiMode } from "../../shared/agents/routes";
+import { chargeableAccess, featureAllowed } from "./access";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { chargeableAccess } from "./access";
 import { appError } from "./tenancy";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -9,7 +9,8 @@ type Ctx = QueryCtx | MutationCtx;
 /** Climb AI Expert is for paid plans; free and trial workspaces use Basic. */
 export async function expertUnlocked(ctx: Ctx, org: Doc<"organizations">): Promise<boolean> {
   const access = await chargeableAccess(ctx, org);
-  return access.allowed && access.mode === "paid";
+  if (!access.allowed) return false;
+  return access.mode === "paid" || (access.mode !== "demo" && (await featureAllowed(ctx, org, "expert")));
 }
 
 /** What the picker shows: the default mode and whether Expert can be chosen. */

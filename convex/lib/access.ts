@@ -1,4 +1,6 @@
 import { subscriptionAccess } from "../../shared/billing";
+import { FEATURES, type FeatureKey } from "../../shared/economics/liveConfig";
+import { getLiveConfig } from "./config";
 import { appError } from "./tenancy";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -45,10 +47,16 @@ export async function isPaid(ctx: Ctx, scope: BillingScope, now = Date.now()): P
   return Boolean(sub && subscriptionAccess(sub, now) === "full");
 }
 
-/** Paid-only features (owner decision 18 Oct 2026): throws a plain "needs a package" error on free accounts. Demos are exempt. */
-export async function requirePaid(ctx: Ctx, org: Doc<"organizations">, feature: string): Promise<void> {
-  if (org.kind === "demo") return;
-  if (!(await isPaid(ctx, org))) throw appError("PAYMENT_REQUIRED", `${feature} comes with a package. Choose one in Settings → Billing.`, { reason: "paid_feature" });
+/** Whether this workspace may use a feature: packages always; free accounts only if staff set it free (admin panel). Demos always. */
+export async function featureAllowed(ctx: Ctx, org: Doc<"organizations">, key: FeatureKey): Promise<boolean> {
+  if (org.kind === "demo") return true;
+  if ((await getLiveConfig(ctx)).features[key] === "free") return true;
+  return isPaid(ctx, org);
+}
+
+/** Paid-only features (owner decision 18 Oct 2026; editable in the admin panel): a plain "needs a package" error. */
+export async function requirePaid(ctx: Ctx, org: Doc<"organizations">, key: FeatureKey): Promise<void> {
+  if (!(await featureAllowed(ctx, org, key))) throw appError("PAYMENT_REQUIRED", `${FEATURES[key]} comes with a package. Choose one in Settings → Billing.`, { reason: "paid_feature", feature: key });
 }
 
 /** The package the account is on, or null for free. */

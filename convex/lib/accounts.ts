@@ -1,4 +1,5 @@
-import { CREDIT_PACKAGES, FREE_LIMITS } from "../../shared/economics";
+import { packageOf } from "../../shared/economics/liveConfig";
+import { getLiveConfig } from "./config";
 import type { Doc, Id } from "../_generated/dataModel";
 import { activePackage } from "./access";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -48,8 +49,8 @@ export async function accountSeats(ctx: Ctx, accountId: Id<"accounts">): Promise
 /** Seat limit for the workspace's account (free: 1; packages: their seats) and who already holds a seat. */
 export async function seatState(ctx: Ctx, org: Doc<"organizations">) {
   const sub = await activePackage(ctx, org);
-  const key = sub ? (sub.planKey === "starter" || sub.planKey === "basic" ? "starter" : "pro") : null;
-  const limit = org.kind === "demo" ? 10 : key ? CREDIT_PACKAGES[key].seats : FREE_LIMITS.seats;
+  const config = await getLiveConfig(ctx);
+  const limit = org.kind === "demo" ? 10 : sub ? config.seats[packageOf(sub.planKey)] : config.seats.free;
   if (!org.accountId) return { limit, used: 0, emails: new Set<string>(), userIds: new Set<string>() };
   const { users, invites } = await accountSeats(ctx, org.accountId);
   const emails = new Set(invites);

@@ -8,6 +8,8 @@ import {
   type PlanEntitlement,
   zeroMeters,
 } from "../../shared/economics";
+import { getLiveConfig } from "./config";
+import { packageOf } from "../../shared/economics/liveConfig";
 import type { PlanKey } from "../../shared/economics/assumptions";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -113,6 +115,7 @@ export async function createOnboardingPeriod(ctx: MutationCtx, orgId: Id<"organi
   if (existing) return existing._id;
   const now = Date.now();
   await ctx.db.patch(accountId, { freeCreditsGrantedAt: now });
+  const freeCredits = (await getLiveConfig(ctx)).freeCredits;
   return ctx.db.insert("usagePeriods", {
     orgId,
     accountId,
@@ -121,7 +124,7 @@ export async function createOnboardingPeriod(ctx: MutationCtx, orgId: Id<"organi
     entitlementVersionId: CURRENT_ENTITLEMENTS.id,
     startsAt: now,
     endsAt: now + ONBOARDING_ALLOWANCE.days * 86_400_000,
-    walletCapMicros: ONBOARDING_ALLOWANCE.walletMicros,
+    walletCapMicros: creditsToMicros(freeCredits),
     walletReservedMicros: 0,
     walletSpentMicros: 0,
     topupCapMicros: 0,
@@ -195,12 +198,14 @@ export async function grantSubscriptionPeriod(
         .withIndex("by_org_period", (q) => q.eq("orgId", params.orgId).eq("periodKey", periodKey))
         .unique();
   const caps = planCaps(plan);
+  // Credit packages: the month's credits come from the live settings at grant time (so edits apply from the next renewal).
+  const walletMicros = plan.credits !== undefined ? creditsToMicros((await getLiveConfig(ctx)).packageCredits[packageOf(params.planKey)]) : plan.aiWalletMicros;
   if (existing) {
     const raised = { ...existing.meterCaps };
     for (const k of Object.keys(caps) as (keyof Meters)[]) raised[k] = Math.max(raised[k], caps[k]);
     await ctx.db.patch(existing._id, {
       planKey: params.planKey,
-      walletCapMicros: Math.max(existing.walletCapMicros, plan.aiWalletMicros),
+      walletCapMicros: Math.max(existing.walletCapMicros, walletMicros),
       meterCaps: raised,
       grantedByOrderId: params.polarOrderId,
       updatedAt: now,
@@ -216,7 +221,7 @@ export async function grantSubscriptionPeriod(
     entitlementVersionId: params.entitlementVersionId,
     startsAt: params.periodStart,
     endsAt: params.periodEnd,
-    walletCapMicros: plan.aiWalletMicros,
+    walletCapMicros: walletMicros,
     walletReservedMicros: 0,
     walletSpentMicros: 0,
     topupCapMicros: 0,

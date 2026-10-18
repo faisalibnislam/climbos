@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { isPaid, requirePaid } from "./lib/access";
+import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { v } from "convex/values";
@@ -281,7 +281,7 @@ export const schedule = mutation({
   args: { slug: v.string(), artifactId: v.id("artifacts"), when: v.number() },
   handler: async (ctx, { slug, artifactId, when }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
-    await requirePaid(ctx, org, "Scheduling and publishing");
+    await requirePaid(ctx, org, "publishing");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this before scheduling it.");
     if (when < Date.now() + 60_000) throw appError("INVALID", "Pick a time at least a minute from now.");
@@ -306,7 +306,7 @@ export const publishNow = mutation({
   args: { slug: v.string(), artifactId: v.id("artifacts") },
   handler: async (ctx, { slug, artifactId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
-    await requirePaid(ctx, org, "Publishing");
+    await requirePaid(ctx, org, "publishing");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "approved" && a.status !== "scheduled") throw appError("INVALID", "Approve this first.");
     if (org.emergencyStop?.active) throw appError("PAUSED", "All activity is paused. Resume activity first.");
@@ -342,7 +342,7 @@ export const exportPack = query({
       platforms,
     );
     // Free accounts: exports carry a small "Made with ClimbOS" line (removed on packages).
-    const badge = org.kind !== "demo" && !(await isPaid(ctx, org)) ? "Made with ClimbOS · climbos.app" : null;
+    const badge = (await featureAllowed(ctx, org, "no_badge")) ? null : "Made with ClimbOS · climbos.app";
     const csv = manualExportToCsv(pack);
     return { pack: badge ? { ...pack, badge } : pack, csv: badge ? `${csv}# ${badge}\r\n` : csv, badge };
   },

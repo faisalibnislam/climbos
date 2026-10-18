@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { expertUnlocked, resolveAiMode } from "./lib/aiMode";
-import { isPaid, requirePaid } from "./lib/access";
+import { featureAllowed, requirePaid } from "./lib/access";
 import {
   AUTOPILOT_CHANNELS,
   DEFAULT_HOURS,
@@ -136,7 +136,7 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
     if (args.aiMode === "expert" && !(await expertUnlocked(ctx, org))) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
-    if (args.enabled) await requirePaid(ctx, org, "Autopilot");
+    if (args.enabled) await requirePaid(ctx, org, "autopilot");
     const channels = args.channels
       .filter((c) => (AUTOPILOT_CHANNELS as readonly string[]).includes(c.channel))
       .map((c) => ({ channel: c.channel, postsPerWeek: Math.min(MAX_PER_CHANNEL, clampCadence(c.postsPerWeek)) }))
@@ -187,7 +187,7 @@ export const previewWeek = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const settings = await settingsFor(ctx, org._id);
     if (!settings || settings.channels.length === 0) throw appError("INVALID", "Pick your channels and how often to post first.");
-    if (settings.lastPlannedWeek && !(await isPaid(ctx, org))) throw appError("PAYMENT_REQUIRED", "Your free preview week is used. Choose a package for weekly autopilot.");
+    if (settings.lastPlannedWeek && !(await featureAllowed(ctx, org, "autopilot"))) throw appError("PAYMENT_REQUIRED", "Your free preview week is used. Choose a package for weekly autopilot.");
     return startPlanning(ctx, org, settings, user._id, { force: true, preview: true });
   },
 });

@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as acquisition from "../acquisition.js";
+import type * as admin from "../admin.js";
 import type * as ads from "../ads.js";
 import type * as agentTokens from "../agentTokens.js";
 import type * as ai_fixtures from "../ai/fixtures.js";
@@ -41,6 +42,7 @@ import type * as lib_audit from "../lib/audit.js";
 import type * as lib_autopilot from "../lib/autopilot.js";
 import type * as lib_cards from "../lib/cards.js";
 import type * as lib_climbTools from "../lib/climbTools.js";
+import type * as lib_config from "../lib/config.js";
 import type * as lib_credits from "../lib/credits.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
@@ -48,6 +50,7 @@ import type * as lib_jobPlans from "../lib/jobPlans.js";
 import type * as lib_media from "../lib/media.js";
 import type * as lib_periods from "../lib/periods.js";
 import type * as lib_r2 from "../lib/r2.js";
+import type * as lib_staff from "../lib/staff.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_usage from "../lib/usage.js";
 import type * as maintenance from "../maintenance.js";
@@ -74,6 +77,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   acquisition: typeof acquisition;
+  admin: typeof admin;
   ads: typeof ads;
   agentTokens: typeof agentTokens;
   "ai/fixtures": typeof ai_fixtures;
@@ -105,6 +109,7 @@ declare const fullApi: ApiFromModules<{
   "lib/autopilot": typeof lib_autopilot;
   "lib/cards": typeof lib_cards;
   "lib/climbTools": typeof lib_climbTools;
+  "lib/config": typeof lib_config;
   "lib/credits": typeof lib_credits;
   "lib/crypto": typeof lib_crypto;
   "lib/emailTemplates": typeof lib_emailTemplates;
@@ -112,6 +117,7 @@ declare const fullApi: ApiFromModules<{
   "lib/media": typeof lib_media;
   "lib/periods": typeof lib_periods;
   "lib/r2": typeof lib_r2;
+  "lib/staff": typeof lib_staff;
   "lib/tenancy": typeof lib_tenancy;
   "lib/usage": typeof lib_usage;
   maintenance: typeof maintenance;

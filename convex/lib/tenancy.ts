@@ -63,12 +63,19 @@ export async function requireOrgAccess(
           .unique()
       : await ctx.db.get(ref.orgId);
   if (!org || org.deletedAt) throw appError("NOT_FOUND", "We couldn't find that workspace.");
-  const membership = await ctx.db
+  let membership = await ctx.db
     .query("memberships")
     .withIndex("by_org_user", (q) => q.eq("orgId", org._id).eq("userId", user._id))
     .unique();
   if (!membership || membership.status !== "active") {
-    throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    // ClimbOS staff with an active read-only "view as user" session see the workspace as a viewer.
+    const view = await ctx.db
+      .query("staffViews")
+      .withIndex("by_staff_org", (q) => q.eq("staffUserId", user._id).eq("orgId", org._id))
+      .first();
+    if (!view || view.expiresAt < Date.now()) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if ("insert" in ctx.db) throw appError("FORBIDDEN", "Support view is read-only.");
+    membership = { _id: view._id as unknown as Id<"memberships">, _creationTime: view._creationTime, orgId: org._id, userId: user._id, role: "viewer", status: "active", createdAt: view.createdAt } as Doc<"memberships">;
   }
   if (!can(membership.role, permission)) {
     throw appError("FORBIDDEN", `Your role (${membership.role}) can't do this. Ask an owner or admin.`, {
@@ -97,17 +104,25 @@ export function operatorEmails(): string[] {
 }
 
 /** Operators are a separate allowlist; customer roles never grant operator access. */
+/** Operators: OPS_EMAILS owners plus staff admins (support members can't operate the fleet). */
 export async function requireOperator(ctx: Ctx): Promise<Doc<"users">> {
   const user = await requireUser(ctx);
-  const email = user.email?.toLowerCase();
-  if (!email || user.isAnonymous || !operatorEmails().includes(email)) {
-    throw appError("NOT_FOUND", "Not found.");
-  }
+  if (!(await operatorCheck(ctx, user))) throw appError("NOT_FOUND", "Not found.");
   return user;
 }
 
 export async function isOperator(ctx: Ctx): Promise<boolean> {
   const user = await optionalUser(ctx);
-  const email = user?.email?.toLowerCase();
-  return Boolean(email && !user?.isAnonymous && operatorEmails().includes(email));
+  return Boolean(user && (await operatorCheck(ctx, user)));
+}
+
+async function operatorCheck(ctx: Ctx, user: Doc<"users">): Promise<boolean> {
+  const email = user.email?.toLowerCase();
+  if (!email || user.isAnonymous) return false;
+  if (operatorEmails().includes(email)) return true;
+  const row = await ctx.db
+    .query("staff")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+  return row?.role === "owner" || row?.role === "admin";
 }

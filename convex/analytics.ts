@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { isPaid } from "./lib/access";
-import { FREE_LIMITS } from "../shared/economics";
+import { featureAllowed } from "./lib/access";
+import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
@@ -180,8 +180,9 @@ export const overview = query({
   handler: async (ctx, { slug, days }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     // Free accounts see the last 30 days (full history comes with a package).
-    const historyLimited = org.kind !== "demo" && !(await isPaid(ctx, org));
-    const span = Math.max(7, Math.min(historyLimited ? FREE_LIMITS.historyDays : 365, days ?? 30));
+    const historyLimited = !(await featureAllowed(ctx, org, "full_history"));
+    const freeDays = (await getLiveConfig(ctx)).freeHistoryDays;
+    const span = Math.max(7, Math.min(historyLimited ? freeDays : 365, days ?? 30));
     const today = dayKey(Date.now(), org.timezone);
     const from = addDays(today, -span);
     const prevFrom = addDays(today, -2 * span);
@@ -301,7 +302,7 @@ export const cohorts = query({
     start.setUTCDate(1);
     start.setUTCHours(0, 0, 0, 0);
     // Free accounts: the last 30 days only.
-    if (org.kind !== "demo" && !(await isPaid(ctx, org))) start.setTime(now - FREE_LIMITS.historyDays * 86_400_000);
+    if (!(await featureAllowed(ctx, org, "full_history"))) start.setTime(now - (await getLiveConfig(ctx)).freeHistoryDays * 86_400_000);
     else start.setUTCMonth(start.getUTCMonth() - 11);
     const rows = await ctx.db
       .query("revenueEvents")

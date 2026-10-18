@@ -37,7 +37,7 @@ export const create = mutation({
   args: { slug: v.string(), name: v.string(), scopes: v.array(scope), days: v.number() },
   handler: async (ctx, { slug, name, scopes, days }) => {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
-    await requirePaid(ctx, org, "Agents & MCP access");
+    await requirePaid(ctx, org, "mcp");
     if (scopes.includes("request_approval") && !["owner", "admin", "reviewer"].includes(role)) throw appError("FORBIDDEN", "Only people who can approve can let an agent request approvals.");
     const live = await ctx.db
       .query("agentTokens")

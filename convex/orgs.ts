@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
 import { activePackage } from "./lib/access";
-import { CREDIT_PACKAGES, FREE_LIMITS } from "../shared/economics";
+import { packageOf } from "../shared/economics";
+import { getLiveConfig } from "./lib/config";
 import { resolveAiMode } from "./lib/aiMode";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -100,7 +101,8 @@ export const createWorkspace = mutation({
     const accountId = await ensureAccountForOwner(ctx, user, name0 || "My account");
     const owned = await accountWorkspaces(ctx, accountId);
     const sub = await activePackage(ctx, { _id: owned[0]?._id ?? (accountId as unknown as Id<"organizations">), accountId });
-    const allowed = sub ? (CREDIT_PACKAGES[sub.planKey === "pro" || sub.planKey === "growth" || sub.planKey === "business" ? "pro" : "starter"].workspaces) : FREE_LIMITS.freeWorkspacesPerOwner;
+    const config = await getLiveConfig(ctx);
+    const allowed = sub ? config.workspaces[packageOf(sub.planKey)] : config.workspaces.free;
     if (owned.length >= allowed) {
       throw appError(sub ? "LIMIT_REACHED" : "PAYMENT_REQUIRED", sub ? `Your package includes ${allowed} workspaces. Upgrade to add more.` : "Free accounts have one workspace. Choose a package to add more.");
     }

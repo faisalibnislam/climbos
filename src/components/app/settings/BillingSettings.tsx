@@ -213,7 +213,7 @@ function BillingBody({
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-ink-3">Free: 50 credits once, 1 workspace, 1 person, Climb AI Basic, drafts you copy yourself.</p>
+        <p className="mt-2 text-xs text-ink-3">Free: {formatNumber(data.freeCredits)} credits once, 1 workspace, 1 person, Climb AI Basic, drafts you copy yourself.</p>
       </section>
 
       <section aria-labelledby="topups-heading">

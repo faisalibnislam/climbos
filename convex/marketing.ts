@@ -270,7 +270,7 @@ export const approveSend = mutation({
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
-    await requirePaid(ctx, org, "Sending emails");
+    await requirePaid(ctx, org, "sending");
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "email");
     if (a.kind !== "email_sequence" && a.kind !== "email") throw appError("INVALID", "Only email drafts can be sent.");
     if (a.status !== "approved") throw appError("INVALID", "Approve the email content first.");

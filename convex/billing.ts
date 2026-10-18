@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { CREDIT_TOPUPS, creditsToMicros, CURRENT_ENTITLEMENTS, salePlanKeys, TOPUP_VALID_DAYS, type TopupKey } from "../shared/economics";
+import { getLiveConfig } from "./lib/config";
+import { CREDIT_TOPUPS, creditsToMicros, CURRENT_ENTITLEMENTS, packageOf, salePlanKeys, TOPUP_VALID_DAYS, type TopupKey } from "../shared/economics";
 import type { PlanKey } from "../shared/economics/assumptions";
 import { grantForOrder, mapPolarSubscriptionStatus, shouldApplySnapshot, subscriptionAccess } from "../shared/billing";
 import { internal } from "./_generated/api";
@@ -80,6 +81,7 @@ export const overview = query({
       : [];
     const paid = Boolean(sub && subscriptionAccess(sub, Date.now()) === "full");
     const account = org.accountId ? await ctx.db.get(org.accountId) : null;
+    const config = await getLiveConfig(ctx);
     return {
       canManage: ["owner", "admin"].includes(role),
       isDemo: org.kind === "demo",
@@ -87,9 +89,11 @@ export const overview = query({
       environment: process.env.POLAR_SERVER === "production" ? "production" : "sandbox",
       packages: salePlanKeys().map((k) => {
         const p = CURRENT_ENTITLEMENTS.plans[k];
-        return { key: k, name: p.name, priceUsd: p.priceUsd, credits: p.credits ?? 0, tagline: p.tagline, seats: p.seats, available: Boolean(process.env[PRODUCT_ENV[k]]) };
+        const pk = packageOf(k);
+        return { key: k, name: p.name, priceUsd: p.priceUsd, credits: config.packageCredits[pk], tagline: p.tagline, seats: config.seats[pk], available: Boolean(process.env[PRODUCT_ENV[k]]) };
       }),
-      topups: CREDIT_TOPUPS.map((t) => ({ key: t.key, priceUsd: t.priceUsd, credits: t.credits, available: Boolean(process.env[PRODUCT_ENV[t.key]]) && paid })),
+      topups: CREDIT_TOPUPS.map((t) => ({ key: t.key, priceUsd: t.priceUsd, credits: config.topupCredits[t.key], available: Boolean(process.env[PRODUCT_ENV[t.key]]) && paid })),
+      freeCredits: config.freeCredits,
       paid,
       subscription: sub
         ? {
@@ -452,10 +456,11 @@ export const applyPolarEvent = internalMutation({
         const pack = CREDIT_TOPUPS.find((t) => t.key === productKey);
         if (!pack || !accountId) return finish("ignored", "unknown top-up or no account");
         // Top-up credits belong to the account and last 12 months (paid for, so granted even if the package lapsed).
-        const micros = creditsToMicros(pack.credits);
+        const credits = (await getLiveConfig(ctx)).topupCredits[pack.key];
+        const micros = creditsToMicros(credits);
         await ctx.db.insert("creditPurchases", { orgId, accountId, polarOrderId: o.id, topupKey: pack.key, deliveryCostMicros: micros, creditsMicros: micros, remainingMicros: micros, expiresAt: now + TOPUP_VALID_DAYS * 86_400_000, status: "active", createdAt: now });
         await ctx.db.patch(order._id, { grantedAt: now });
-        await audit(ctx, { orgId, actorType: "system", action: "billing.topup_granted", summary: `${pack.credits.toLocaleString("en-US")} credits added (valid 12 months).` });
+        await audit(ctx, { orgId, actorType: "system", action: "billing.topup_granted", summary: `${credits.toLocaleString("en-US")} credits added (valid 12 months).` });
         return finish("processed");
       }
 

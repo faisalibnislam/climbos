@@ -147,6 +147,30 @@ export default defineSchema({
   ...authTables,
 
   /* ---------------- Tenancy ---------------- */
+  /** ClimbOS staff (beyond the OPS_EMAILS owners): admins and support members. */
+  staff: defineTable({
+    email: v.string(),
+    role: v.union(v.literal("owner"), v.literal("admin"), v.literal("support")),
+    addedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
+
+  /** Read-only "view as user" sessions for staff (logged and shown in the workspace's activity). */
+  staffViews: defineTable({
+    staffUserId: v.id("users"),
+    orgId: v.id("organizations"),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  }).index("by_staff_org", ["staffUserId", "orgId"]),
+
+  /** Live settings staff change without a deploy (plans, credits, feature locks). */
+  appConfig: defineTable({
+    key: v.string(),
+    value: v.string(),
+    updatedBy: v.optional(v.id("users")),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   /**
    * Billing account: one owner, one package and one credit balance shared by
    * all of its workspaces (agencies get one bill). Seats are per account.
@@ -1296,6 +1320,8 @@ export default defineSchema({
   subscriptions: defineTable({
     orgId: v.id("organizations"),
     accountId: v.optional(v.id("accounts")),
+    /** Complimentary package granted by staff (no Polar): renews monthly until `until`. */
+    comp: v.optional(v.object({ until: v.number(), by: v.id("users"), reason: v.string() })),
     polarSubscriptionId: v.string(),
     polarCustomerId: v.optional(v.string()),
     productId: v.string(),
