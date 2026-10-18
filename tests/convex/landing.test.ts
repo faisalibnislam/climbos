@@ -75,4 +75,29 @@ describe("landing A/B test", () => {
     expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
   });
+
+  it("a page that didn't finish can be written again; deleting a page ends its running test", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab-retry@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Retry Co" });
+    process.env.CLIMBOS_FAKE_LLM = "fail";
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    let list = await owner.client.query(api.landing.list, { slug });
+    expect(list.pages[0].status).toBe("failed");
+    expect(list).toMatchObject({ canEdit: true, canPublish: true });
+
+    process.env.CLIMBOS_FAKE_LLM = "ship";
+    await owner.client.mutation(api.landing.retry, { slug, id });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    list = await owner.client.query(api.landing.list, { slug });
+    expect(list.pages[0].status).toBe("draft");
+    await expect(owner.client.mutation(api.landing.retry, { slug, id })).rejects.toThrow(/didn't finish/);
+
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "A brand new headline" });
+    await owner.client.mutation(api.landing.remove, { slug, id });
+    const tests = await t.run(async (ctx) => ctx.db.query("abTests").collect());
+    expect(tests[0]).toMatchObject({ status: "stopped" });
+  });
 });
