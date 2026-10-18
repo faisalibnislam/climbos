@@ -60,6 +60,8 @@ export interface AgentSpec<T> {
   drafts?: number;
   /** What must pass to stop revising: hard gates + lint only ("gates", lean) or the full rubric ("rubric", default). */
   shipOn?: "gates" | "rubric";
+  /** Owner-facing analysis (plans, insights, audits): drafted with low verbosity. Publishable copy keeps the default. */
+  ownerFacing?: boolean;
 }
 
 export interface AgentInput {

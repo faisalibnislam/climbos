@@ -78,7 +78,7 @@ export const check = internalAction({
       if (!step.proceed && step.reason !== "checkpoint") break;
       const d = diffLines(c.before, c.after);
       const content = `COMPETITOR: ${c.name}\n<untrusted_content source="competitor_site">\nREMOVED LINES:\n${d.removed.join("\n").slice(0, 3000)}\n\nADDED LINES:\n${d.added.join("\n").slice(0, 3000)}\n</untrusted_content>`;
-      const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Summary, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
+      const r = await call({ modelKey: MODEL, cacheKey: "climbos:competitor_watch", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Summary, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
       if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) continue;

@@ -355,6 +355,7 @@ function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxR
     maxTokens: withFloors(s.maxTokens ?? { research: 24_000, draft: 32_000, critic: 16_000 }),
     maxRevisions: o.maxRevisions ?? 1,
     shipOn: o.shipOn ?? (lean ? "gates" : "rubric"),
+    ownerFacing: s.ownerFacing ?? !lean,
   };
 }
 

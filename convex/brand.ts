@@ -153,7 +153,7 @@ export const learn = internalAction({
       ...c.samples.map((s, i) => `EDIT ${i + 1} (${s.channel})\nAI DRAFT:\n${s.before}\nOWNER'S VERSION:\n${s.after}`),
       `</untrusted_content>`,
     ].join("\n\n");
-    const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Rules, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
+    const r = await call({ modelKey: MODEL, cacheKey: "climbos:voice_learning", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Rules, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
     if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     const parsed = r.ok ? Rules.safeParse(r.output) : null;

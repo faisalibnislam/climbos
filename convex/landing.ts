@@ -104,7 +104,7 @@ export const write = internalAction({
       return;
     }
     const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
-    const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
+    const r = await call({ modelKey: MODEL, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
     if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     const parsed = r.ok ? LandingContent.safeParse(r.output) : null;

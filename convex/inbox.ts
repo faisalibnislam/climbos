@@ -156,7 +156,7 @@ export const writeReply = internalAction({
     ]
       .filter(Boolean)
       .join("\n");
-    const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content: context }], maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
+    const r = await call({ modelKey: MODEL, cacheKey: "climbos:inbox_reply", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content: context }], maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
     if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     if (!r.ok || !r.text.trim()) {

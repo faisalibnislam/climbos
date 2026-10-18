@@ -260,7 +260,7 @@ export const respond = action({
         failed = step.reason === "paused" ? "Activity is paused, so Climb AI stopped." : "Climb AI reached its limit for this message.";
         break;
       }
-      const r = await turn({ modelKey: active, system: [{ text: RULES, cache: true }], messages, customTools: tools as ToolDef[], maxTokens: 3_000, effort: "low", thinkingOff: true }, rates);
+      const r = await turn({ modelKey: active, cacheKey: "climbos:climb", system: [{ text: RULES, cache: true }], messages, customTools: tools as ToolDef[], maxTokens: 3_000, effort: "low", thinkingOff: true }, rates);
       if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(active, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) {

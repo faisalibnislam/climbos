@@ -160,7 +160,8 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
     store: false,
     ...(effort ? { reasoning: { effort } } : {}),
     ...(tools.length ? { tools, tool_choice: "auto", include: req.webSearch ? ["web_search_call.action.sources"] : undefined } : {}),
-    ...(req.schema ? { text: { format: { type: "json_schema", name: "answer", schema: strictSchema(jsonSchemaFor(req.schema)), strict: true } } } : {}),
+    ...(req.schema || req.verbosity ? { text: { ...(req.schema ? { format: { type: "json_schema", name: "answer", schema: strictSchema(jsonSchemaFor(req.schema)), strict: true } } : {}), ...(req.verbosity ? { verbosity: req.verbosity } : {}) } } : {}),
+    ...(req.cacheKey ? { prompt_cache_key: req.cacheKey.slice(0, 64) } : {}),
   };
 
   const headers = { authorization: `Bearer ${apiKey}`, "content-type": "application/json" };

@@ -217,7 +217,7 @@ export const answer = internalAction({
     ]
       .filter(Boolean)
       .join("\n");
-    const r = await call({ modelKey: MODEL, system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Answer, maxTokens: 500, effort: "low", thinkingOff: true }, rates);
+    const r = await call({ modelKey: MODEL, cacheKey: "climbos:chat_answer", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Answer, maxTokens: 500, effort: "low", thinkingOff: true }, rates);
     if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     const parsed = r.ok ? Answer.safeParse(r.output) : null;

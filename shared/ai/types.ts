@@ -58,6 +58,10 @@ export interface TurnRequest {
   effort?: Effort;
   /** Minimal reasoning (routine turns). */
   thinkingOff?: boolean;
+  /** OpenAI text verbosity: "low" for owner-facing analysis (plans, reviews); default for publishable copy. */
+  verbosity?: "low" | "medium" | "high";
+  /** Prompt-cache routing key: requests sharing a long static prefix (same agent + phase) hit the cache. */
+  cacheKey?: string;
   webSearch?: {
     maxUses: number;
     allowedDomains?: string[];
