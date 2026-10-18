@@ -26,6 +26,7 @@ import { AdCampaignPanel } from "@/components/app/content/detail/AdCampaignPanel
 import { ApprovalPanel } from "@/components/app/content/detail/ApprovalPanel";
 import { ChannelPreview } from "@/components/app/content/detail/ChannelPreview";
 import { DraftEditor } from "@/components/app/content/detail/DraftEditor";
+import { RepurposeDialog } from "@/components/app/content/RepurposeDialog";
 import { FactsList, FlaggedClaims, ReceiptsTimeline, VersionHistory } from "@/components/app/content/detail/HistoryPanels";
 import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/EmailSendPanel";
 import { PublishPanel } from "@/components/app/content/detail/PublishPanel";
@@ -105,6 +106,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                 <Pencil aria-hidden="true" /> Edit
               </Button>
             ) : null}
+            {artifact.canEdit && !editing ? <RepurposeDialog slug={slug} artifactId={artifact.id} /> : null}
             {artifact.canEdit && artifact.status === "archived" ? <RestoreButton slug={slug} artifact={artifact} /> : null}
             {artifact.canEdit && artifact.status !== "archived" ? <MoreMenu slug={slug} artifact={artifact} /> : null}
           </div>

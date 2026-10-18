@@ -10,6 +10,7 @@ import { AdsPanel } from "@/components/app/content/Campaigns";
 import { ContentCalendar } from "@/components/app/content/ContentCalendar";
 import { ContentList, FilterChips, filterKeyFromParam } from "@/components/app/content/ContentList";
 import { CreateContentDialog } from "@/components/app/content/CreateContentDialog";
+import { RepurposeDialog } from "@/components/app/content/RepurposeDialog";
 import { SectionBoundary } from "@/components/app/content/shared";
 
 const TABS = ["list", "calendar", "ads"] as const;
@@ -30,6 +31,7 @@ export default function ContentPage() {
                 <Palette aria-hidden="true" /> Design studio
               </Link>
             </Button>
+            <RepurposeDialog slug={slug} />
             <CreateContentDialog slug={slug} />
           </>
         }

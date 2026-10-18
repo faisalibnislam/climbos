@@ -376,7 +376,7 @@ export async function activePolicyVersion(ctx: MutationCtx, orgId: Id<"organizat
   return policy?.version ?? 1;
 }
 
-type ArtifactInput = {
+export type ArtifactInput = {
   kind: Doc<"artifacts">["kind"];
   channel: Doc<"artifacts">["channel"];
   title: string;

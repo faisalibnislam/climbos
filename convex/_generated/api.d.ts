@@ -80,6 +80,8 @@ import type * as publish from "../publish.js";
 import type * as reels from "../reels.js";
 import type * as referrals from "../referrals.js";
 import type * as reports from "../reports.js";
+import type * as repurpose from "../repurpose.js";
+import type * as repurposeActions from "../repurposeActions.js";
 import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
 import type * as team from "../team.js";
@@ -164,6 +166,8 @@ declare const fullApi: ApiFromModules<{
   reels: typeof reels;
   referrals: typeof referrals;
   reports: typeof reports;
+  repurpose: typeof repurpose;
+  repurposeActions: typeof repurposeActions;
   reviews: typeof reviews;
   settings: typeof settings;
   team: typeof team;
