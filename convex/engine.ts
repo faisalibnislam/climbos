@@ -5,6 +5,7 @@ import {
   CURRENT_ROUTING,
   currentRateVersion,
   getRateVersion,
+  microsToCredits,
   stressedDeliveryCostMicros,
   usdToMicrosCeil,
 } from "../shared/economics";
@@ -159,6 +160,13 @@ export async function createRunWithReservation(
   const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
   const period = access.period;
+  // Team rule: jobs above the workspace's approval limit need an owner or admin to start them.
+  if (org.creditApprovalLimit !== undefined && params.createdBy && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
+    const m = await ctx.db.query("memberships").withIndex("by_org_user", (q) => q.eq("orgId", org._id).eq("userId", params.createdBy!)).unique();
+    if (m && m.role !== "owner" && m.role !== "admin") {
+      throw appError("FORBIDDEN", `Jobs over ${org.creditApprovalLimit} credits need an owner or admin to start them.`, { reason: "approval_limit", title: params.title.slice(0, 120), credits: microsToCredits(estimate.costMicros) });
+    }
+  }
   const decision = await reserveCredits(ctx, { org, period, costMicros: estimate.costMicros, meters: params.meters });
 
   const now = Date.now();

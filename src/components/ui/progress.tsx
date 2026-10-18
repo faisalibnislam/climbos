@@ -52,6 +52,8 @@ export interface MeterProps {
   thresholds?: readonly [number, number, number];
   /** Extra line under the meter, e.g. "Resets on 1 Nov". */
   footnote?: ReactNode;
+  /** Message at 100% (default: monthly-limit wording). */
+  fullText?: string;
   className?: string;
 }
 
@@ -59,7 +61,7 @@ export interface MeterProps {
  * Usage meter for monthly limits. Changes color AND icon AND text at 70%, 90%
  * and 100% so the state never relies on color alone.
  */
-export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], footnote, className }: MeterProps) {
+export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], footnote, fullText, className }: MeterProps) {
   const ratio = max > 0 ? used / max : used > 0 ? 1 : 0;
   const pct = Math.round(ratio * 100);
   const level = ratio >= thresholds[2] ? 3 : ratio >= thresholds[1] ? 2 : ratio >= thresholds[0] ? 1 : 0;
@@ -68,7 +70,7 @@ export function Meter({ label, used, max, unit, thresholds = [0.7, 0.9, 1], foot
     null,
     { text: `${Math.round(thresholds[0] * 100)}% used — heads up`, Icon: TriangleAlert, cls: "text-amber-800" },
     { text: "Almost used up", Icon: TriangleAlert, cls: "text-amber-800" },
-    { text: "Limit reached — nothing more runs until it resets or you add capacity", Icon: CircleAlert, cls: "text-red-800" },
+    { text: fullText ?? "Limit reached — nothing more runs until it resets or you add capacity", Icon: CircleAlert, cls: "text-red-800" },
   ][level];
   const unitText = unit ? ` ${unit}` : "";
   const valueText = `${formatNumber(used)} of ${formatNumber(max)}${unitText} used (${pct}%)`;

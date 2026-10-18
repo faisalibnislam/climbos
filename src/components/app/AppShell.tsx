@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationBell } from "./NotificationBell";
+import { Presence } from "./Presence";
 import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
@@ -182,9 +184,8 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                 <Sparkles aria-hidden /> <span className="hidden md:inline">Climb AI</span>
               </Button>
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
-              <Link href={`/app/${slug}/settings/activity`} className={buttonClasses({ variant: "ghost", size: "sm", className: "hidden w-8 px-0 text-ink-2 sm:inline-flex" })} aria-label="Activity">
-                <Bell className="size-4" aria-hidden />
-              </Link>
+              <Presence slug={slug} />
+              <NotificationBell slug={slug} />
               <AccountMenu />
             </div>
           </header>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Discussion } from "@/components/app/Discussion";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -189,6 +190,7 @@ function PlanScreen({ slug }: { slug: string }) {
 
       <BusinessInsights insights={plan.insights} />
       {s ? <Sources sources={plan.sources} /> : null}
+      {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>
 

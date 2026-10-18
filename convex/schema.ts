@@ -147,6 +147,72 @@ export default defineSchema({
   ...authTables,
 
   /* ---------------- Tenancy ---------------- */
+  /** Shareable invite links (role, expiry, max uses). Seats still apply per account. */
+  inviteLinks: defineTable({
+    orgId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("editor"), v.literal("reviewer"), v.literal("viewer")),
+    tokenHash: v.string(),
+    createdBy: v.id("users"),
+    expiresAt: v.number(),
+    maxUses: v.number(),
+    uses: v.number(),
+    revokedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_token", ["tokenHash"]),
+
+  /** Team comments on drafts, plans, cards and jobs, with @mentions. */
+  comments: defineTable({
+    orgId: v.id("organizations"),
+    subjectType: v.union(v.literal("artifact"), v.literal("card"), v.literal("run"), v.literal("strategy"), v.literal("campaign")),
+    subjectId: v.string(),
+    authorId: v.id("users"),
+    body: v.string(),
+    mentions: v.array(v.id("users")),
+    createdAt: v.number(),
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_subject", ["orgId", "subjectType", "subjectId", "createdAt"])
+    .index("by_org_created", ["orgId", "createdAt"]),
+
+  /** Who owns a piece of work. */
+  assignments: defineTable({
+    orgId: v.id("organizations"),
+    subjectType: v.union(v.literal("artifact"), v.literal("card"), v.literal("run"), v.literal("strategy"), v.literal("campaign")),
+    subjectId: v.string(),
+    title: v.string(),
+    href: v.string(),
+    assigneeId: v.id("users"),
+    assignedBy: v.id("users"),
+    doneAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_subject", ["orgId", "subjectType", "subjectId"])
+    .index("by_assignee", ["assigneeId", "createdAt"]),
+
+  /** Who's looking at what right now (heartbeat every 30s; stale after 75s). */
+  presence: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    path: v.string(),
+    lastSeen: v.number(),
+  })
+    .index("by_org_path", ["orgId", "path"])
+    .index("by_user_org", ["userId", "orgId"]),
+
+  /** In-app notices for a person (mentions, assignments, approvals). */
+  notices: defineTable({
+    userId: v.id("users"),
+    orgId: v.id("organizations"),
+    kind: v.union(v.literal("mention"), v.literal("assigned"), v.literal("approval"), v.literal("comment"), v.literal("system")),
+    text: v.string(),
+    href: v.string(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user_created", ["userId", "createdAt"]),
+
   /** ClimbOS staff (beyond the OPS_EMAILS owners): admins and support members. */
   staff: defineTable({
     email: v.string(),
@@ -213,6 +279,8 @@ export default defineSchema({
     monthlyCreditCap: v.optional(v.number()),
     /** Set by ClimbOS staff: no new work until lifted. */
     suspendedAt: v.optional(v.number()),
+    /** Team rules: jobs above this many credits need an owner or admin to start them. */
+    creditApprovalLimit: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])

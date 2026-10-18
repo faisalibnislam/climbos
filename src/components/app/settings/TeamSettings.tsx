@@ -1,5 +1,6 @@
 "use client";
 
+import { ApprovalLimit, InviteLinks } from "./TeamLinks";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
@@ -41,14 +42,17 @@ export function TeamSettings({ slug }: { slug: string }) {
               used={team.seatsUsed}
               max={team.seatLimit}
               unit="seats"
+              fullText="All seats in use. Choose a bigger package to add people."
               footnote={
                 <>
-                  Pending invitations count as seats. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
+                  Seats are shared across all your workspaces. Pending invitations count. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
                 </>
               }
             />
           </section>
 
+          {team.canManage ? <InviteLinks slug={slug} canInviteAdmins={team.yourRole === "owner"} /> : null}
+          {team.canManage ? <ApprovalLimit slug={slug} current={team.creditApprovalLimit} /> : null}
           {team.canManage ? <InviteForm slug={slug} team={team} /> : (
             <Callout tone="info" title="View only">
               Your role is {ROLE_NAMES[team.yourRole] ?? team.yourRole}. Only owners and admins can invite people or change roles.

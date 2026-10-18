@@ -66,6 +66,7 @@ import type * as previewRunner from "../previewRunner.js";
 import type * as publicConfig from "../publicConfig.js";
 import type * as publish from "../publish.js";
 import type * as settings from "../settings.js";
+import type * as team from "../team.js";
 import type * as workspace from "../workspace.js";
 
 import type {
@@ -133,6 +134,7 @@ declare const fullApi: ApiFromModules<{
   publicConfig: typeof publicConfig;
   publish: typeof publish;
   settings: typeof settings;
+  team: typeof team;
   workspace: typeof workspace;
 }>;
 

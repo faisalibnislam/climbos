@@ -8,6 +8,7 @@ import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";
 import { latestSubscription } from "./lib/access";
 import { seatState } from "./lib/accounts";
+import { acceptInviteLink } from "./team";
 import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess, requireUser } from "./lib/tenancy";
 
@@ -41,6 +42,7 @@ export const team = query({
       canManage: ["owner", "admin"].includes(role),
       yourRole: role,
       seatLimit,
+      creditApprovalLimit: org.creditApprovalLimit ?? null,
       /** Seats are per account: people across all of the account's workspaces. */
       seatsUsed: seats.used,
       roles: Object.entries(ROLE_DESCRIPTIONS).map(([key, description]) => ({ key, description })),
@@ -90,6 +92,9 @@ export const acceptInvite = mutation({
   handler: async (ctx, { token }) => {
     const user = await requireUser(ctx);
     if (user.isAnonymous || !user.email) throw appError("FORBIDDEN", "Sign in with your email to accept the invitation.");
+    // Shareable invite links (team.createInviteLink) use the same page.
+    const viaLink = await acceptInviteLink(ctx, user, token);
+    if (viaLink) return viaLink;
     const hash = await sha256Hex(token);
     const invite = await ctx.db
       .query("memberships")

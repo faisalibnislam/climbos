@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { ConvexError } from "convex/values";
 import {
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Component, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
+import { Component, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
 import { Badge, Button, Callout, SocialIcon } from "@/components/ui";
 import { RoleAvatar } from "../RoleAvatar";
 import { cn } from "@/lib/utils";
@@ -141,6 +141,26 @@ export function explainError(err: unknown): ExplainedError {
   return { ...info, who, title: titles[info.code] };
 }
 
+/** "Ask an admin" for a job over the workspace's approval limit: notifies its owners and admins. */
+function AskApproval({ slug, error }: { slug: string; error: unknown }) {
+  const ask = useMutation(api.team.requestApproval);
+  const [sent, setSent] = useState(false);
+  const data = (error instanceof ConvexError ? error.data : {}) as { title?: string; credits?: number };
+  if (sent) return <span>Sent. You&apos;ll see it start once they approve.</span>;
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={async () => {
+        await ask({ slug, title: data.title ?? "A job", credits: data.credits ?? 0, href: typeof window !== "undefined" ? window.location.pathname : `/app/${slug}/today` });
+        setSent(true);
+      }}
+    >
+      Ask an owner or admin
+    </Button>
+  );
+}
+
 /** Inline, announced explanation of a failed request with the right next step. */
 export function ErrorCallout({ error, onRetry, className }: { error: unknown; onRetry?: () => void; className?: string }) {
   const params = useParams<{ organization: string }>();
@@ -154,6 +174,8 @@ export function ErrorCallout({ error, onRetry, className }: { error: unknown; on
     );
   } else if (e.code === "PAUSED") {
     next = <span>An Owner or Admin can resume activity from the banner at the top of the page.</span>;
+  } else if (e.code === "FORBIDDEN" && e.reason === "approval_limit") {
+    next = <AskApproval slug={slug} error={error} />;
   } else if (e.code === "FORBIDDEN") {
     next = <span>{e.who ? `This needs ${e.who}. Ask one of them to do it, or to change your role.` : "Ask an Owner or Admin for help."}</span>;
   } else if (e.code === "RATE_LIMITED") {

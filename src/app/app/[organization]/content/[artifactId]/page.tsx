@@ -1,5 +1,6 @@
 "use client";
 
+import { Discussion } from "@/components/app/Discussion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -179,6 +180,8 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
           <Section id="facts-heading" title="Facts this draft relies on">
             <FactsList facts={artifact.facts} />
           </Section>
+
+          <Discussion slug={slug} subjectType="artifact" subjectId={artifact.id} title={artifact.title} href={`/app/${slug}/content/${artifact.id}`} />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ crons.interval("recover stuck runs", { minutes: 5 }, internal.engine.recoverStuc
 crons.interval("retry failed webhooks", { minutes: 15 }, internal.billing.retryFailedWebhooks, {});
 // Authoritative subscription reconciliation with Polar.
 crons.daily("reconcile billing", { hourUTC: 4, minuteUTC: 10 }, internal.billing.reconcileAll, {});
+crons.daily("team cleanup", { hourUTC: 4, minuteUTC: 40 }, internal.team.cleanup, {});
 crons.daily("renew complimentary packages", { hourUTC: 4, minuteUTC: 20 }, internal.admin.renewComps, {});
 // Retention: raw scrape payloads 30 days; previews 30 days; demo workspaces 7 days.
 crons.daily("purge raw research", { hourUTC: 5, minuteUTC: 0 }, internal.maintenance.purgeExpiredSources, {});

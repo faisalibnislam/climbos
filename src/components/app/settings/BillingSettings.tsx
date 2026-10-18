@@ -146,6 +146,7 @@ function BillingBody({
             used={b.monthly.used}
             max={Math.max(b.monthly.total, 1)}
             unit="credits"
+            fullText="Out of this month's credits. Add a top-up or wait for the reset."
           />
           <div className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-ink">Top-ups</span>

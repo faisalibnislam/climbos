@@ -1,5 +1,6 @@
 "use client";
 
+import { Discussion } from "@/components/app/Discussion";
 import { RoleExplainer } from "@/components/app/RoleExplainer";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -86,6 +87,11 @@ export default function WorkPage() {
         </div>
 
         <aside className="flex flex-col gap-4">
+          <Card>
+            <CardContent>
+              <Discussion slug={slug} subjectType="run" subjectId={run.id} title={run.title} href={`/app/${slug}/work/${run.id}`} />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle as="h2">Who worked on it</CardTitle>
