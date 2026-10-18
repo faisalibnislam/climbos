@@ -51,7 +51,7 @@ When something is missing:
 
 7. **Qualify each company against the ICP with evidence.** For each must-have, record: the evidence (a short verbatim snippet or a plain observation), the source URL, and the date you saw it. Mark each must-have as met, not met or unknown. Do the same for disqualifiers.
 
-8. **Apply disqualifiers and compliance filters.** Drop or hold a company, and record the reason, when any of these is true:
+8. **Apply disqualifiers and compliance filters.** A missing published email, headcount or legal form is NOT a reason to hold a company that otherwise fits: list it with the contact role and its contact page, and note what enrichment will confirm later. Never list partners, resellers or certified agencies of a direct competitor. Drop or hold a company, and record the reason, only when any of these is true:
    - Existing customer, competitor, or on any suppression or objection list.
    - Outside the service area or capacity; dissolved or dormant in the registry; no working website.
    - Purchasing controlled elsewhere (a franchise unit whose head office buys centrally), unless the ICP says otherwise.

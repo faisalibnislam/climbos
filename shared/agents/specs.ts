@@ -716,10 +716,15 @@ Only report what you actually found, with URLs.`,
         brief: `Look for competitors' current ads and offers (Google results for the main keywords, competitor landing pages) and the exact phrases buyers use. Note claims competitors make so ours can differ.`,
       };
     case "prospecting":
+      // Searches are metered per plan; page reads (one per candidate's own site) are where verification happens.
       return {
-        maxSearches: 10,
-        maxFetches: 8,
-        brief: `Find real companies that are a strong fit to buy from ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}. Use public web sources only: category + location searches, directories, marketplaces, association member lists, job boards (hiring triggers), local news. Open each candidate's own website. For each, note: name, website, location, size clues, a dated or observable trigger, the decision-maker role (a name only if it's on their own team page), and any contact email published verbatim on their site. Record the URL for every observation. Skip anything you can't verify.`,
+        maxSearches: 12,
+        maxFetches: 25,
+        brief: `Find real companies that are a strong fit to buy from ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}, from public web sources only.
+1. Look for companies SHOWING THE NEED: e.g. their own site uses a weaker alternative or a manual workaround this business replaces, they are hiring for the job it does, they just launched or expanded, or they complain about the problem in public. Category + location searches, directories, marketplaces, association member lists, job boards and local news all work.
+2. Skip competitors, and partners/resellers/certified agencies of a direct competitor (they are invested in the rival).
+3. Gather about 1.5x the companies needed, then open EACH candidate's own website (one fetch each) to confirm it exists, what it does, where it is, and any published contact email (copy verbatim).
+4. Note for each: name, website, location, size clues, a dated or observable trigger, the decision-maker role (a name only if on their own team page). Record the URL for every observation. Skip anything you can't verify.`,
       };
     case "conversion_audit":
       return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };

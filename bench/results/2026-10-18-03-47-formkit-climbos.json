@@ -1,0 +1,1190 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "linkedin",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "posts": [
+      {
+       "channel": "linkedin",
+       "title": "A percentage cut costs most in your best month",
+       "body": "A form tool that takes a percentage of your payments earns the most from you in your best month.\n\nA percentage cut grows with every sale. Each extra booking adds to it, and a large project deposit makes it larger. It's easy to miss, because it comes out of each payment instead of arriving as a bill you'd notice and question.\n\nThat matters most when the form is how you get paid. A freelancer taking a booking deposit. A studio that needs payment before a project starts. An organiser selling places on a workshop. For all of them, the cost rises exactly when the form is doing its job.\n\nSo we built Formkit the other way round. Payments go straight into your own Stripe account and we take no cut. What you pay us is flat: Pro is $6 a seat a month, with two months free if you pay yearly. A good month for you doesn't change our price.\n\nBefore you pick any tool to take payments through a form, ask two questions. Does the money land in my own account? Does the tool take a share of each payment on top of what the payment processor charges? Those two answers tell you what the form really costs once it starts working.\n\nHow do you take deposits today: an invoice after the call, or a payment inside the form?",
+       "hashtags": [
+        "#FreelanceBusiness",
+        "#OnlinePayments"
+       ],
+       "altText": "Text card reading: Your form takes the payment. We take no cut. Below it: Payments go to your own Stripe account. Formkit Pro, $6 a seat a month.",
+       "imageIdea": "Typographic card stating that payments go to the user's own Stripe account and Formkit takes no cut.",
+       "factIndexes": [
+        1,
+        2
+       ],
+       "suggestedDay": 1,
+       "format": "single_image",
+       "hook": "A form tool that takes a percentage of your payments earns the most from you in your best month.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: payments go to you; Formkit takes no cut. Type: typographic card, portrait 4:5 (confirm current LinkedIn specs). Provisional brand kit: dark background, one accent colour taken from the Formkit logo, one sans-serif family. Hierarchy: 1) headline, largest, upper half: 'Your form takes the payment. We take no cut.' 2) support line at about half size: 'Payments go to your own Stripe account.' 3) small line: 'Formkit Pro, $6 a seat a month.' 4) Formkit logo small, bottom-left. Keep text away from edges. Don'ts: no Stripe logo, no mocked-up payment screen, no example amounts.",
+       "firstComment": "Pro plan, with payments through your own Stripe account and yearly billing (two months free): https://formkit.app"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Stop writing the same form twice",
+       "body": "Drafting a form in ChatGPT, then rebuilding it field by field in a builder, is the same job done twice.\n\nThe draft in the chat is usually the better thinking. It's the conversation where you worked out who fills the form in, what you need from them and what you'll do with each answer. Retyping it into a separate tool adds nothing, except a chance to drop or change a question on the way.\n\nSo Formkit works inside Claude and ChatGPT: you build and publish the form in the same conversation where you planned it. It works on every plan, including the free one, which has unlimited forms, responses and members.\n\nThe catch is that the form is only as good as the description you give the assistant. Say who will fill it in, which answers are required, and what decision each answer feeds. A question that doesn't change what you do next probably doesn't belong on the form.\n\nThe document below shows how to write that description, using a client intake form as the example.\n\nWould you let an assistant publish a form without opening it in a builder first? If not, what's the first thing you'd check?",
+       "hashtags": [
+        "#ChatGPT",
+        "#ClaudeAI"
+       ],
+       "altText": "An eight-page document titled 'You're writing the same form twice'. It shows how to describe a client intake form to an AI assistant: who fills it in, what you need to know, which answers are required, and the decision each answer feeds. It ends by noting Formkit works inside Claude and ChatGPT on every plan, including free.",
+       "imageIdea": "Eight-page document post on writing a good form description for an AI assistant, using a client intake form as the example.",
+       "factIndexes": [
+        3,
+        0
+       ],
+       "suggestedDay": 4,
+       "format": "document",
+       "hook": "Drafting a form in ChatGPT, then rebuilding it field by field in a builder, is the same job done twice.",
+       "slides": [
+        {
+         "heading": "You're writing the same form twice",
+         "body": "Once in the chat. Again, field by field, in a builder."
+        },
+        {
+         "heading": "Retyping adds risk, not value",
+         "body": "Every manual copy is a chance to drop or change a question."
+        },
+        {
+         "heading": "Start with who fills it in",
+         "body": "Example: a new client enquiring about a website project."
+        },
+        {
+         "heading": "List what you need to know",
+         "body": "Example: name, email, project type, budget range, start date."
+        },
+        {
+         "heading": "Mark what's required",
+         "body": "Require only the answers you can't price or plan without."
+        },
+        {
+         "heading": "Tie each question to a decision",
+         "body": "If an answer won't change what you do next, cut it."
+        },
+        {
+         "heading": "Build and publish in the same chat",
+         "body": "Formkit works inside Claude and ChatGPT, on every plan including free."
+        },
+        {
+         "heading": "Describe it once. Publish it once.",
+         "body": "Link to try it on the free plan is in the comments."
+        }
+       ],
+       "videoScript": "",
+       "visualBrief": "Message: describe the form once, publish it from the chat. Type: document (PDF carousel), portrait 4:5, 8 pages, one template throughout. Provisional brand kit: light background, dark text, one accent colour from the Formkit logo, one sans-serif family. Headline in the same top-third position on every page, support line at about half size below, Formkit logo small bottom-left. Pages 3 and 4: show the example text inside a large plain speech bubble. Page 8 is the high-contrast summary readers screenshot. Don'ts: no mocked-up Claude or ChatGPT interface, no assistant logos; use a real screen capture only if taken from the actual product.",
+       "firstComment": "Formkit works with Claude and ChatGPT on every plan, including free. Set it up here: https://formkit.app"
+      },
+      {
+       "channel": "linkedin",
+       "title": "Find the question where people quit",
+       "body": "Your form only shows you the people who finished it. The ones who quit halfway leave no trace.\n\nThat hides the most useful thing a form can tell you: which question made people stop. When an enquiry form gets fewer replies than you expected, the usual instinct is to cut questions at random or rewrite the whole thing. Both are guesses.\n\nThe better move is to measure, question by question, how many people reached each one and how many carried on. The biggest gap between two questions points at the one to change. Candidates worth checking first: a budget question asked before you've explained anything, a required phone number, a file upload that's awkward to do on a phone.\n\nFormkit shows drop-off by question and keeps partial responses on every plan, including the free one. So you change that one question, leave the rest alone, and see whether the drop at that point shrinks.\n\nIf you have a form live right now, pick the question you'd bet loses the most people. Then check whether your current tool can prove it.\n\nWhich question on your forms do people quit at most?",
+       "hashtags": [
+        "#LeadGeneration",
+        "#FormDesign"
+       ],
+       "altText": "Screenshot of Formkit's drop-off by question report for a demo enquiry form, labelled 'Demo data', showing how many people reached each question, with the question that lost the most people outlined.",
+       "imageIdea": "Real screenshot of Formkit's drop-off by question view on a demo form, clearly labelled as demo data.",
+       "factIndexes": [
+        0,
+        1
+       ],
+       "suggestedDay": 8,
+       "format": "single_image",
+       "hook": "Your form only shows you the people who finished it. The ones who quit halfway leave no trace.",
+       "slides": [],
+       "videoScript": "",
+       "visualBrief": "Message: see the exact question where people quit. Type: real screenshot of Formkit's drop-off by question view, portrait 4:5 (confirm current specs). Build a demo enquiry form, fill it with test responses, and capture the report. Add a small 'Demo data' label top-right. Focal point: the question with the biggest drop, marked with a simple outline (not colour alone). Optional headline above the screenshot: 'See the question where people quit.' Formkit logo small, bottom-left. Don'ts: no real customer data, no invented numbers presented as real results.",
+       "firstComment": "Drop-off by question and partial responses are on every Formkit plan, including the free one with unlimited forms. Pro ($6 a seat a month) adds your own domain and removes the Formkit badge: https://formkit.app"
+      }
+     ]
+    },
+    "costMicros": 478540,
+    "ms": 160048,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3.4,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.9,
+      "gatesPassed": true,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 7,
+    "craft": 8,
+    "usefulness": 8,
+    "creativity": 7,
+    "overall": 7,
+    "topIssue": "Post 3 rests on drop-off-by-question, partial responses on every plan, and Pro's own domain and badge removal, none of which are confirmed facts; its cited fact indexes (0, 1) don't support those claims, so the owner must verify them before posting."
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "outbound",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "icp": {
+      "summary": "Agencies and studios of 1–20 people that build client forms on Typeform, Jotform or Google Forms and want branded forms, Stripe payments with no Formkit cut and low per-seat pricing ($6 Pro, $19 Business). Confidence: Low (a hypothesis from the brief, with no customer data yet).",
+      "mustHaves": [
+       "Agency, studio or consultancy of about 1–20 people. Seen on the about or team page, or in directory wording. Small teams buy per seat without procurement.",
+       "Builds forms for clients today. Seen in the Typeform or Jotform partner directory, or in site services. They already feel form cost, branding and payment limits.",
+       "Located where cold email is allowed: US, UK Ltd or LLP, or France. Canada or Australia only with a verbatim published email. Seen in the site address, footer or registry. Unknown means hold.",
+       "A published work contact on the company's own site, quoted verbatim."
+      ],
+      "disqualifiers": [
+       "Form-builder vendors (Typeform, Jotform, Tally, Fillout and similar) or existing Formkit customers.",
+       "Germany or Austria, UK sole traders or partnerships, or an unknown country or UK legal form (held).",
+       "No evidence of building forms for clients, such as design-only web or brand agencies.",
+       "Over about 20 staff, or tools bought centrally by a parent or franchise office."
+      ],
+      "triggers": [
+       "A confirmed, dated price or plan change at the form tool they resell. None confirmed yet.",
+       "A new client service involving intake, quizzes, payments or onboarding.",
+       "Job ads for automation, ops or funnel and form builders.",
+       "Public complaints about form limits, branding badges or payment fees."
+      ],
+      "decisionMaker": "Founder, owner or managing director. In studios under 20 people, buying is a one-person decision."
+     },
+     "prospects": [
+      {
+       "company": "Desborough Consulting Group Inc.",
+       "website": "https://typeformsolutions.com",
+       "location": "Ottawa, Canada",
+       "sizeBand": "1–10 core staff plus freelancers (self-described 'small consultancy')",
+       "why": "Builds quiz funnels, surveys and autoresponders for clients, all on Typeform. Formkit's unlimited free tier and $6/seat Pro (own domain, no badge, Stripe with no cut) give it a cheaper second option for budget clients. Pitch an add-on, not a replacement.\n\nFilter check:\n- Size: met (about page).\n- Builds client forms: met (Typeform partner listing).\n- Jurisdiction: met on condition. Canada needs a verbatim email, which is found; the CASL page check is still pending.\n- Published contact: met.\n\nScores:\n- Fit 4: every must-have is met with a source. No extra positive signals are confirmed, so not 5.\n- Timing 1: the only signal is an undated 'Accepting new clients' status. That is general, not tied to a form problem.\n- Priority B.",
+       "evidence": [
+        {
+         "url": "https://typeformsolutions.com/about-us/",
+         "observation": "Verbatim: 'small consultancy', working with a network of freelancers. Founder named as 'Chief Thinking Officer and Founder'. Date seen: not recorded in the research run. Capture it before sending."
+        },
+        {
+         "url": "https://www.typeform.com/agencies/desborough-consulting-group-inc",
+         "observation": "Typeform certified partner since 2021. Worked with over 200 clients and built over 1,000 typeforms. Status 'Accepting new clients'. Date seen: not recorded."
+        },
+        {
+         "url": "https://typeformsolutions.com/contact-us/",
+         "observation": "Email published verbatim: john@desboroughgroup.com. Not yet checked for a 'no unsolicited messages' statement. Capture date not recorded."
+        }
+       ],
+       "trigger": "Why now: no dated trigger exists; timing rests on undated directory status only.\n\nOpener candidate: 'You've built over 1,000 typeforms for 200+ clients (Typeform partner listing). For clients who need a branded form on a smaller budget, Formkit's free plan has unlimited forms and responses, and Pro sends payments to their own Stripe with no cut.'",
+       "fit": 4,
+       "timing": 1,
+       "contact": "John Desborough, 'Chief Thinking Officer and Founder', named on /about-us/. CASL: before sending, re-open /contact-us/, confirm there is no 'no unsolicited messages' statement and record the capture date.",
+       "publicEmail": "john@desboroughgroup.com"
+      },
+      {
+       "company": "Maypop Creative Studio",
+       "website": "https://maypopcreativestudio.com",
+       "location": "Unknown (not confirmed; contact and about pages not opened in this run)",
+       "sizeBand": "1 (solo studio; 'very few clients at a time')",
+       "why": "A solo studio building branded Squarespace sites, 'micro automations' and branded systems, and a listed Typeform partner. Pro's own domain, no Formkit badge and no-cut Stripe payments fit client-branded intake work.\n\nFilter check:\n- Size: met.\n- Builds client forms: met (Typeform directory).\n- Jurisdiction: unknown.\n- Published contact: unknown.\n\nScores:\n- Fit 3: two must-haves are unknown and none contradicted, so hold.\n- Timing 0.\n- Priority C. Do not send.",
+       "evidence": [
+        {
+         "url": "https://maypopcreativestudio.com/squarespace-web-designer",
+         "observation": "Verbatim: 'very few clients at a time'. Offers Squarespace sites, micro automations and branded systems. Date seen: not recorded."
+        },
+        {
+         "url": "https://www.typeform.com/agencies",
+         "observation": "Listed as a Typeform agency, 'Accepting new clients'. The directory names founder Carolyn Leasure. Date seen: not recorded."
+        }
+       ],
+       "trigger": "Why now: none found.\n\nOpener candidate (only once qualified): 'You build micro automations and branded systems for solopreneurs. Formkit Pro puts forms on your client's own domain with no badge, and payments go to their own Stripe with no cut.'",
+       "fit": 3,
+       "timing": 0,
+       "contact": "Founder. The directory names Carolyn Leasure, but her name is not yet confirmed on the studio's own site. Do not use it until confirmed on the about or contact page.",
+       "publicEmail": ""
+      }
+     ],
+     "excluded": [
+      {
+       "company": "List shortfall: 1 qualified, 1 held, 8 not found",
+       "reason": "Research budget ran out before the 14 directory names were verified. The market is not proven thin.\n\nExclusion counts:\n- 2 excluded for no form signal.\n- 14 held as unverified. Of these, 1 has no jurisdiction rule (UAE) and 1 is UK with unknown legal form.\n- 0 blocked for Germany or Austria, and 0 suppressed.\n\nNext steps:\n1. Open each held name's own site to record country, team size, Companies House form for UK names, and a verbatim email.\n2. Re-capture the Desborough and Maypop contact pages with dates and the CASL check.\n3. Search the Jotform and Tally partner directories for more form-building studios.\n\nOwner note: [NEEDS FACT: who are your 3 favourite paying customers and why?]"
+      },
+      {
+       "company": "RSA Creative Studio",
+       "reason": "Excluded, fit 2: no evidence it builds forms. Hiring an SEO expert, UI/UX designer and Webflow developer (/careers) shows growth, not a form need."
+      },
+      {
+       "company": "Refokus",
+       "reason": "Excluded, fit 2: a Webflow and brand agency with no form signal. Its open roles (/careers) are all creative and brand."
+      },
+      {
+       "company": "MakeBuild",
+       "reason": "Hold: a London Webflow studio, from the Typeform directory only. Needs size, Companies House legal form (Ltd or LLP) and a published email."
+      },
+      {
+       "company": "Six & Flow",
+       "reason": "Hold: a UK growth agency (HubSpot Elite). Needs UK legal form, team size (may exceed 20) and a published email."
+      },
+      {
+       "company": "Wavai Technology",
+       "reason": "Hold: a UAE-based Shopify agency. There is no jurisdiction rule on file for the UAE, so it stays held until one exists."
+      },
+      {
+       "company": "Virtuoso Digital",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Rocket Launch Media",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Growth Era",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "StarApple AI",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Juice",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Binary Mango",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Avidly",
+       "reason": "Hold: name from the Typeform directory only. Needs country and size (may exceed 20), plus a published email."
+      },
+      {
+       "company": "Authencio",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Flowium",
+       "reason": "Hold: a Klaviyo agency from the Typeform directory. Needs country, size and a published email."
+      },
+      {
+       "company": "T4 Research",
+       "reason": "Hold: name from the Typeform directory only. Needs its own site, country, size and a published email."
+      },
+      {
+       "company": "Groupe Mercure",
+       "reason": "Hold: name from the Typeform directory only. Needs its country confirmed, since France and Canada have different rules."
+      }
+     ],
+     "sequence": [
+      {
+       "day": 0,
+       "subject": "second form tool for clients",
+       "body": "{{firstLine}}\n\nSome of those clients probably want a branded form that takes payments, without a big monthly tool bill. Formkit could be the cheaper option for those jobs.\n\nOur free plan has unlimited forms, responses and members. Pro is $6 a seat a month, and Stripe payments go straight to your client's account. We take no cut.\n\nI'm not suggesting you drop your current tool. Worth sending a two-line comparison?",
+       "purpose": "Step 1: sourced observation, budget-client bridge, confirmed pricing and no-cut proof, one-word CTA. Alternative subject: 'forms for smaller clients'."
+      },
+      {
+       "day": 3,
+       "subject": "Re: second form tool for clients",
+       "body": "Another way Formkit could fit quick client jobs: it works inside Claude and ChatGPT on every plan, including free.\n\nYou describe the form in the chat, and it builds and publishes it there, without opening a builder. Useful for a fast intake form or survey.\n\nWant a short example of how that looks?",
+       "purpose": "New angle: building forms inside AI assistants on every plan."
+      },
+      {
+       "day": 7,
+       "subject": "Re: second form tool for clients",
+       "body": "If you run forms for several clients, Formkit gives each client its own workspace, upgraded on its own, so you only pay more for the clients who need more.\n\nI've written a one-page note on how a studio could split client work between the free plan, Pro at $6 a seat and Business at $19, and how no-cut Stripe payments work.\n\nWant it?",
+       "purpose": "Agency-specific angle plus a free resource offered without a link."
+      },
+      {
+       "day": 14,
+       "subject": "Re: second form tool for clients",
+       "body": "I'll leave it here.\n\nIf a client ever needs a branded form that takes payments on a small budget, reply 'comparison' and I'll send the two-line version.",
+       "purpose": "Polite close-out with an easy way back in."
+      }
+     ],
+     "firstLines": [
+      {
+       "company": "Desborough Consulting Group Inc.",
+       "line": "Your Typeform partner listing says you've built over 1,000 typeforms for more than 200 clients."
+      },
+      {
+       "company": "Maypop Creative Studio",
+       "line": "Your site says you take on very few clients at a time and offer micro automations and branded systems alongside Squarespace sites."
+      }
+     ],
+     "ownerNotes": [
+      "Desborough (Canada): send only after re-checking /contact-us/ for a 'no unsolicited messages' line and recording capture dates. CASL footer needs your real name, mailing address and a phone, email or web contact.",
+      "Maypop: hold. Country and published email unknown; don't use Carolyn Leasure's name until it's on the studio's own site.",
+      "Turn off the booking link in all four cold steps. Offer a call only after a positive reply.",
+      "Write the two-line comparison (step 1) and one-page note (step 3) before sending; the emails promise them.",
+      "No customer proof yet, so emails rely on pricing and mechanism. [NEEDS FACT: a customer result or name you're allowed to cite?] With two prospects, don't test; just read the replies."
+     ]
+    },
+    "costMicros": 1100372,
+    "ms": 357082
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 7,
+    "specificity": 6,
+    "strategy": 4,
+    "craft": 6,
+    "usefulness": 3,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "The job asked for 10 evidenced prospects, but the work delivers only one sendable prospect. That prospect is a certified Typeform partner whose domain is literally typeformsolutions.com, and sourcing only from Typeform's partner directory targets agencies with the least reason to adopt a rival tool."
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "insights",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "audiences": [
+      {
+       "name": "Typeform payers who feel they overpay",
+       "description": "Freelancers, coaches and small teams (1–3 seats) on a paid Typeform plan. Trigger: a renewal bill or hitting a plan limit. Evidence: 5 of 8 Typeform-customer snippets complain about price, and 2 Tally reviews name Typeform's price as the reason they switched.",
+       "confidence": "medium"
+      },
+      {
+       "name": "Free-tier users who hit a response cap",
+       "description": "Teams on capped free plans (Typeform: 10 responses a month; Fillout: 1,000; Jotform: low limits, per reviewers) whose forms get 100+ responses a month (assumption threshold). Formkit Free has unlimited forms, responses and members.",
+       "confidence": "medium"
+      },
+      {
+       "name": "People who already work in Claude or ChatGPT",
+       "description": "Users who want to build and publish forms from a chat window, which Formkit supports. It is unverified whether rivals offer this through MCP.",
+       "confidence": "low"
+      },
+      {
+       "name": "Event organisers, trainers and coaches taking payments",
+       "description": "Payments go through their own Stripe account with no Formkit cut. There is no customer evidence yet that they choose a form tool for this.",
+       "confidence": "low"
+      },
+      {
+       "name": "Disqualified: 5+ seat teams on monthly billing, and anyone needing a free custom domain",
+       "description": "At 5 seats on monthly billing, Pro costs $30, more than Tally Pro at about $29. Custom domains are Pro-only. Don't target either group with ads.",
+       "confidence": "medium"
+      }
+     ],
+     "competitors": [
+      {
+       "name": "Typeform",
+       "url": "https://www.typeform.com",
+       "note": "Main switch-from target. Free plan: 10 responses a month. Paid: $39–$379 a month monthly (third-party; sources vary). Praised for interface and completion (2 of 8 snippets); criticised on price (5 of 8). Homepage not accessed.",
+       "sourceUrl": "https://www.growform.co/typeform-pricing/"
+      },
+      {
+       "name": "Tally",
+       "url": "https://tally.so",
+       "note": "Closest rival on free unlimited forms and submissions. Pro is about $29 a month (third-party, unverified) and is needed for a custom domain. G2 reviewers want a statistics graph and version history.",
+       "sourceUrl": "https://www.g2.com/products/tally-forms-tally/reviews?qs=pros-and-cons"
+      },
+      {
+       "name": "Fillout",
+       "url": "https://www.fillout.com",
+       "note": "Free: 1,000 responses a month, unlimited seats. Starter is $15 a month and Business $75, both billed annually. It has AI form generation, so 'AI builds your form' is not unique.",
+       "sourceUrl": "https://formbricks.com/blog/fillout-pricing"
+      },
+      {
+       "name": "Jotform",
+       "url": "https://www.jotform.com",
+       "note": "3 Capterra snippets: low free-plan limits, limited customisation, and price. Paid price not captured.",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/?page=37"
+      },
+      {
+       "name": "Paperform",
+       "url": "https://paperform.co",
+       "note": "Compared with Tally on G2. Liked for multimedia and conditional logic. Price and weaknesses not captured.",
+       "sourceUrl": "https://www.g2.com/compare/paperform-vs-tally-forms-tally"
+      },
+      {
+       "name": "Google Forms",
+       "url": "https://forms.google.com",
+       "note": "The free default. Formkit's own compare page says it lacks a custom link, kept partial answers and per-question drop-off. That is Formkit's own claim, so verify it before any ad uses it.",
+       "sourceUrl": "https://formkit.app"
+      }
+     ],
+     "positioning": "Frame: the free form builder with no response cap, aimed at Typeform switchers. Building in Claude or ChatGPT is the wedge. Style: big fish, small pond. • Frames compared: (1) 'Typeform alternative': obvious value for switchers and sets a lower-price expectation that $6 a seat fits. But it invites a design fight Typeform wins in reviews, so use it as a keyword, not an identity. (2) 'Free form builder with no response cap': instantly clear, matches the top complaint (price or caps in 11 of 18 snippets) and sets a $0 expectation that Free meets. Risk: Tally also offers free unlimited submissions. (3) 'Form builder in ChatGPT and Claude': the most distinct, but search demand is unknown, it needs explaining and it sets no price expectation. Chosen: (2), with (3) as proof it isn't just another free tool. • Rejected: head-to-head with Typeform, because its interface is praised and Formkit has zero reviews to prove parity. Also rejected: a new category such as 'AI form agent', because a $600 monthly budget can't educate a market. • Swap test: Typeform and Fillout fail on uncapped free responses. Tally fails on in-chat building, if its MCP status checks out as absent. • Headlines: 'Unlimited forms and responses, on the free plan.' / 'Overpaying for your form builder? Start free with unlimited responses.' / 'Build and publish forms without leaving Claude or ChatGPT.' • Subheads: 'No response cap on Free. Move to Pro at $6 a seat when you want your own domain.' / 'See the question people quit on, and keep their half-finished answers, on the free plan.' / 'Take payments through your own Stripe account. The money goes straight to you, and Formkit takes no cut.' • Pillar 1, no cap: Free includes unlimited forms, responses and members. Contrast: Typeform's free plan allows 10 responses a month (third-party source; verify and date it before use). • Pillar 2, build where you already work: Claude and ChatGPT can build and publish Formkit forms. • Pillar 3, pricing that stays fair: Pro is $6 a seat, yearly billing gives two months free, Stripe payments carry no Formkit cut, and cancelling takes one click with no survey. • Words to use: overpaying, a fraction of the price, a decent number of responses, capped, limits, clunky, look professional, test run. • Words to avoid: AI-powered, unlimited AI (Pro AI replies cover 20 responses a seat), seamless, solutions, best, 'only Formkit' (MCP is unverified for rivals), free custom domain. • Landing page order: 1 headline and 'Start free'; 2 the problem in customer words (caps, overpaying); 3 the alternatives and their trade-offs (Typeform caps, Tally's paid domain); 4 what to look for (no cap, drop-off data, payments with no cut); 5 the three pillars with proof; 6 pricing at $0, $6 and $19 a seat, yearly two months free; 7 FAQ (domain on Pro, one-click cancel); 8 'Build a form' CTA.",
+     "pricingNotes": "Formkit Pro is $6 a seat a month ($5 billed yearly). Business is $19 a seat. Free is $0. • At 1 seat: Formkit Pro $6, Fillout Starter $15 (annual), Tally Pro about $29, Typeform from $39 monthly. All rival prices are third-party, undated and unverified. • Per-seat pricing erodes the advantage as teams grow. On yearly billing, 3 Pro seats cost $15 ($5 × 3), the same as Fillout Starter. On monthly billing, 5 Pro seats cost $30 ($6 × 5), more than Tally's roughly $29. Tally's and Fillout's seat models were not confirmed. • Pro AI replies cover 20 responses a seat a month; credits start at $5 for 100. Never advertise 'unlimited AI'. • Custom domains are Pro-only, as on Tally. That is parity, not a differentiator. • Stripe payments carry no Formkit cut. Rivals' fees were not checked, so make no contrast claim.",
+     "swot": {
+      "strengths": [
+       "Free: unlimited forms, responses and members.",
+       "Builds and publishes forms inside Claude and ChatGPT.",
+       "Per-question drop-off, kept partial answers and 30-day version history on Free (own compare page).",
+       "$6 a seat entry price; Stripe payments with no Formkit cut.",
+       "One-click cancel, no survey."
+      ],
+      "weaknesses": [
+       "Name collision: searching 'Formkit' returns the unrelated FormKit Vue.js library.",
+       "Zero public reviews found, so no social proof.",
+       "Per-seat pricing costs more than flat-priced rivals at 3–5 seats.",
+       "Small Pro AI allowance on responses: 20 a seat a month."
+      ],
+      "opportunities": [
+       "Typeform price-switchers: price is the top theme, 8 of 18 snippets.",
+       "Free-plan cap complaints: 5 of 18 snippets across 3 rival pools.",
+       "Tally users asking for a statistics graph and version history.",
+       "An in-chat building angle few rivals visibly claim (unverified)."
+      ],
+      "threats": [
+       "Tally already offers free unlimited submissions.",
+       "Fillout already has AI generation; rivals could add MCP quickly.",
+       "Google Forms remains the free default.",
+       "Brand-search confusion sends clicks to the Vue library."
+      ]
+     },
+     "journey": [
+      {
+       "stage": "Trigger",
+       "observation": "Switchers start when they feel overcharged or hit a cap: 'Felt like I was overpaying on Typeform'.",
+       "opportunity": "Build ads and the hero around caps and overpaying, in customers' own words."
+      },
+      {
+       "stage": "Search",
+       "observation": "A 'Formkit' search shows the Vue.js FormKit library. No Formkit reviews or Reddit mentions exist.",
+       "opportunity": "Use 'Formkit form builder' everywhere and bid on your own brand term."
+      },
+      {
+       "stage": "Compare",
+       "observation": "The compare page benchmarks only Google Forms. Switchers weigh Typeform, Tally and Fillout.",
+       "opportunity": "Publish dated, sourced comparison pages against Typeform, Tally and Fillout."
+      },
+      {
+       "stage": "Sign-up",
+       "observation": "Free's unlimited responses remove the cap fear that drives switching.",
+       "opportunity": "Make 'Unlimited responses on Free' the line next to the CTA."
+      },
+      {
+       "stage": "Activation",
+       "observation": "Users can build and publish a form from Claude or ChatGPT.",
+       "opportunity": "Offer 'build your first form in chat' as an onboarding path and measure first publishes."
+      },
+      {
+       "stage": "Upgrade",
+       "observation": "The custom domain sits on Pro; Tally users also resent domain paywalls ('Had to take the pro plan').",
+       "opportunity": "State the domain-on-Pro rule upfront and prompt the upgrade when a user tries to add a domain."
+      }
+     ],
+     "opportunities": [
+      {
+       "title": "3-week Google Search test on switcher intent",
+       "why": "Week 1 (days 1–7): launch 3 ad groups, 'typeform alternative', 'free form builder unlimited responses' and 'form builder chatgpt claude', splitting the $600 monthly budget evenly (assumption: $200 each). Week 2 (days 8–14): judge each group only after 100 clicks. The primary metric is sign-up rate; the secondary is paid upgrades per $100. Pause any group whose sign-up rate is under half the best group's. Week 3 (days 15–21): move its budget to the best group. Read results as directional because volume is low.",
+       "effort": "medium"
+      },
+      {
+       "title": "5 customer calls in week 3",
+       "why": "There is no own-customer evidence yet. Ask paying users: what did you use before, what made you look, what almost stopped you, and why did you upgrade?",
+       "effort": "small"
+      },
+      {
+       "title": "Comparison pages: vs Typeform, vs Tally, vs Fillout",
+       "why": "Buyers compare these by name; the current page covers only Google Forms. Each page needs dated, sourced competitor facts.",
+       "effort": "medium"
+      },
+      {
+       "title": "Fix the brand-search collision",
+       "why": "'Formkit' searches surface the Vue library. Bid on the brand term with a small share of the budget (assumption) and always use 'Formkit form builder'.",
+       "effort": "small"
+      },
+      {
+       "title": "Collect first reviews on G2, Capterra and Trustpilot",
+       "why": "Switchers read these sites and Formkit has zero reviews there. Ask 20 active users after they publish a form, with no incentives.",
+       "effort": "medium"
+      }
+     ],
+     "alternatives": [
+      {
+       "name": "Typeform",
+       "kind": "competitor",
+       "evidence": "The incumbent people leave on price: 'Felt like I was overpaying on Typeform so I went to find an alternative.'",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "name": "Tally",
+       "kind": "competitor",
+       "evidence": "Where Typeform leavers land: 'As easy as Typeform but only a fraction of the price.'",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "name": "Google Forms",
+       "kind": "competitor",
+       "evidence": "The free default. Its listed gaps come only from Formkit's own compare page; verify them first.",
+       "sourceUrl": "https://formkit.app"
+      },
+      {
+       "name": "Build your own forms",
+       "kind": "diy",
+       "evidence": "One freelancer web designer: 'Typeform was too expensive so I built my own forms'. This is a single anecdote.",
+       "sourceUrl": "https://dev.to/preetsuthar17/typeform-was-too-expensive-so-i-built-my-own-forms-3oe8"
+      },
+      {
+       "name": "Email and spreadsheet intake, or doing nothing",
+       "kind": "do_nothing",
+       "evidence": "Likely but unevidenced: no snippet found. Test it on the 5 customer calls.",
+       "sourceUrl": "https://formkit.app"
+      }
+     ],
+     "vocPhrases": [
+      {
+       "phrase": "Felt like I was overpaying on Typeform so I went to find an alternative.",
+       "theme": "trigger: price (Tally pool)",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "phrase": "As easy as Typeform but only a fraction of the price. I'm not switching back ever.",
+       "theme": "outcome: price; headline language (Tally pool)",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "phrase": "super expensive if you want a decent number of responses to your forms, even as a Non-Profit",
+       "theme": "problem: price + caps (Typeform pool)",
+       "sourceUrl": "https://capterra.com/p/137289/Typeform/reviews/?page=3"
+      },
+      {
+       "phrase": "Too expensive for people who aren't big companies.",
+       "theme": "problem: price (Typeform pool)",
+       "sourceUrl": "https://capterra.com/p/137289/Typeform/reviews/?page=5"
+      },
+      {
+       "phrase": "Too expensive and restrictive both on the free version and on the paid plans.",
+       "theme": "problem: price + caps (Typeform pool)",
+       "sourceUrl": "https://capterra.com/p/137289/Typeform/reviews/?page=5"
+      },
+      {
+       "phrase": "pretty expensive compared to the extra features I get",
+       "theme": "problem: price (Typeform pool)",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "phrase": "It can get expensive once you need more than the basics",
+       "theme": "problem: price (Typeform pool)",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "phrase": "the amount of responses cannot be deleted if it is just a test run",
+       "theme": "problem: caps (Typeform pool)",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "phrase": "The free plan has relatively low submission and storage limits",
+       "theme": "problem: caps (Jotform pool)",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/?page=11"
+      },
+      {
+       "phrase": "I can be a bit pricy, it should have as you go option",
+       "theme": "objection: price (Jotform pool)",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/?page=11"
+      },
+      {
+       "phrase": "It's not customizable enough and I find that it doesn't always look very professional",
+       "theme": "problem: looks; signal (Jotform pool)",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/?page=37"
+      },
+      {
+       "phrase": "a lifesaver if you are sick of clunky form tools that need custom coding just to look halfway decent",
+       "theme": "problem: looks; signal (Tally pool)",
+       "sourceUrl": "https://www.g2.com/products/tally-forms-tally/reviews?qs=pros-and-cons"
+      },
+      {
+       "phrase": "Had to take the pro plan so that I can host on my domain.",
+       "theme": "objection: domain paywall; signal (Tally pool)",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "phrase": "the file upload limit on the free plan is rather small",
+       "theme": "problem: caps (Tally pool)",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "phrase": "quite limited for a 'pro' product",
+       "theme": "objection: paid plan underdelivers; signal (Tally pool)",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "phrase": "the paid features can feel harder to use than the free ones",
+       "theme": "anxiety: complexity; signal (Tally pool)",
+       "sourceUrl": "https://hackceleration.com/labs/review/tally"
+      },
+      {
+       "phrase": "the best form builder out there in terms of user interface",
+       "theme": "habit: design bar; signal (Typeform pool)",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "phrase": "excellent tool for encouraging completion of forms",
+       "theme": "habit: completion; signal (Typeform pool)",
+       "sourceUrl": "https://capterra.com/p/137289/Typeform/reviews/?page=3"
+      }
+     ],
+     "objections": [
+      {
+       "objection": "the best form builder out there in terms of user interface",
+       "force": "habit",
+       "counter": "Existing: a small first step. Build one form on Free with unlimited responses, keep the Typeform plan until satisfied, and cancel any Formkit plan in one click with no survey.",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "objection": "super expensive if you want a decent number of responses to your forms",
+       "force": "push",
+       "counter": "Existing: Free has unlimited forms, responses and members.",
+       "sourceUrl": "https://capterra.com/p/137289/Typeform/reviews/?page=3"
+      },
+      {
+       "objection": "the amount of responses cannot be deleted if it is just a test run",
+       "force": "push",
+       "counter": "Existing: Free has no response cap, so test runs use up nothing.",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/?page=12"
+      },
+      {
+       "objection": "Had to take the pro plan so that I can host on my domain.",
+       "force": "anxiety",
+       "counter": "Existing: say it upfront. A custom domain is on Pro at $6 a seat, and yearly billing gives two months free.",
+       "sourceUrl": "https://www.trustpilot.com/review/tally.so"
+      },
+      {
+       "objection": "I can be a bit pricy, it should have as you go option",
+       "force": "anxiety",
+       "counter": "Existing: Pro is $6 a seat, AI credits start at $5 for 100, and cancelling takes one click with no survey.",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/?page=11"
+      },
+      {
+       "objection": "the paid features can feel harder to use than the free ones",
+       "force": "anxiety",
+       "counter": "Owner to decide: a short demo video of Claude or ChatGPT building and publishing a Formkit form.",
+       "sourceUrl": "https://hackceleration.com/labs/review/tally"
+      }
+     ],
+     "gaps": [
+      {
+       "gap": "No public reviews of Formkit",
+       "evidence": "No Formkit reviews found on Capterra, G2, Trustpilot or Reddit.",
+       "risk": "Comparison shoppers see no proof, which caps conversion. Test: ask 20 active users for a review.",
+       "sourceUrl": "https://www.g2.com/compare/tally-forms-tally-vs-typeform"
+      },
+      {
+       "gap": "Brand name collides with the FormKit Vue.js library",
+       "evidence": "A 'Formkit' search returns only the unrelated Vue library.",
+       "risk": "Brand searches and AI answers may point people to the wrong product. Check: Search Console brand impressions vs clicks.",
+       "sourceUrl": "https://formkit.app"
+      },
+      {
+       "gap": "Rivals' MCP and AI-assistant support is unverified",
+       "evidence": "One third-party comparison shows no assistant support for rivals. Fillout has ChatGPT-powered generation, and its MCP status is unknown.",
+       "risk": "An 'only Formkit' claim could be false. Check each rival's docs before any comparative ad (about 15 minutes).",
+       "sourceUrl": "https://www.g2.com/compare/tally-forms-tally-vs-typeform"
+      },
+      {
+       "gap": "No Typeform import or migration offer seen",
+       "evidence": "Absence only: no rival visibly offers one, and switchers cite price.",
+       "risk": "It may be empty because it is costly to build. Owner to decide; test with a 'we'll rebuild your first form' page and count requests.",
+       "sourceUrl": "https://dev.to/preetsuthar17/typeform-was-too-expensive-so-i-built-my-own-forms-3oe8"
+      },
+      {
+       "gap": "Competitor ads not checked",
+       "evidence": "No ad-library data was retrieved.",
+       "risk": "Ad budget is set blind to rivals' angles. Manual check: search 'Typeform' and 'Tally' in the Meta Ad Library and Google Ads Transparency Center (about 5 minutes).",
+       "sourceUrl": "https://formkit.app"
+      }
+     ],
+     "positioningStatement": "For freelancers and small teams of 1–3 seats who pay for Typeform or keep hitting a free plan's response cap, Formkit is the free form builder with no response cap. Unlike Typeform's free plan (10 responses a month, per a third-party source), Formkit Free has unlimited forms, responses and members, and you can build and publish forms from Claude or ChatGPT. Pro is $6 a seat when you want your own domain, and Stripe payments go straight to you with no Formkit cut.",
+     "confidenceNotes": "• Thin bank: 18 verbatim snippets, all from competitors' customers: Typeform 8 (Capterra), Tally 7 (Trustpilot, G2, hackceleration), Jotform 3 (Capterra). Own-customer snippets: 0. • Finding, price: 8 of 18 snippets (Typeform 5 of 8; Tally 2 of 7; Jotform 1 of 3) from 6 pages on 2 platforms. • Finding, free-plan caps and limits: 5 of 18 snippets (Typeform 3, Jotform 1, Tally 1) on 2 platforms. Price or caps combined: 11 of 18. • Signals only: domain or Pro limits (2), looks (2), design bar (2), complexity (1). • Competitor prices are third-party, undated and vary by source. • Not accessed: rival homepages, ad libraries, Reddit. • Confidence: segment Medium; frame Medium; in-chat angle Low. Validate with the 3-week search test and 5 calls asking 'what did you use before?'"
+    },
+    "costMicros": 1320719,
+    "ms": 395053,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 3,
+      "gatesPassed": false,
+      "lintErrors": 1
+     },
+     {
+      "round": 1,
+      "average": 3.78,
+      "gatesPassed": true,
+      "lintErrors": 1
+     }
+    ]
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 7,
+    "creativity": 7,
+    "overall": 7,
+    "topIssue": "The chosen frame, 'free form builder with no response cap', is matched by Tally's free unlimited submissions, and the swot itself admits this. The only real differentiator is the in-chat building angle, rated low confidence. The positioning therefore rests on a claim the closest rival can equal, and on internal figures (20 AI replies a seat, $5 credits, 30-day version history) that don't trace to the confirmed facts."
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "summary": "Sell Pro at the moment free users need it, not through ads. Primary: an upgrade screen when a free user clicks a Pro-only feature. Secondary: cold email to small agencies. Hygiene: a one-off, capped Claude directory listing. Ad spend stays at $0 unless the wall proves too small at the start of week 3. Monthly Pro at $6 cannot fund paid traffic, so any paid traffic leads with yearly Pro or Business.",
+     "positioning": "Formkit is the form builder for when the form is part of how people see you. Describe a form and AI builds it, even inside Claude or ChatGPT. Pro puts it on your own domain with no badge and sends payments to your own Stripe account, with no cut taken. Every channel leads with 'no cut on payments' and 'looks like yours', not 'free', because Tally and Google Forms are free too.",
+     "audiences": [
+      {
+       "name": "Free users hitting a Pro wall",
+       "hypothesis": "Users who click payments, own domain or badge removal already want Pro. A clear price plus the no-cut message at that click converts best.",
+       "evidence": "Free tier is unlimited, and payments with no cut are a Pro value (confirmed facts). Pro is $6/seat/month. Wall-click volume is unknown until analytics is pulled on day 1."
+      },
+      {
+       "name": "Small web and marketing agencies",
+       "hypothesis": "Agencies building client sites will try chat-built forms in per-client workspaces if we send a working sample in their client's brand.",
+       "evidence": "Per-client workspaces and Business approvals, templates and audit log come from site insights. Tally's own comparison page points users who want branding and payments to other tools (tally.so/help/tally-a-free-and-powerful-google-forms-alternative)."
+      },
+      {
+       "name": "People who work inside Claude or ChatGPT",
+       "hypothesis": "Directory browsers who need a form mid-chat will install Formkit and upgrade when they need payments.",
+       "evidence": "Formkit builds and publishes forms inside Claude and ChatGPT (confirmed). Tally, Jotform and Typeform also support MCP (tally.so/help/best-mcp-form-builders), so the listing leads with payments, not 'free'."
+      },
+      {
+       "name": "People outgrowing Google Forms",
+       "hypothesis": "Searchers for 'google forms alternative' want their own link, drop-off by question and brand control, which Formkit's compare table covers.",
+       "evidence": "Many vendor roundups compete for the term (paperform.co, clickup.com, zonkafeedback.com). Click costs were not checked, so this audience is reached only if the conditional search test unlocks."
+      }
+     ],
+     "channels": [
+      {
+       "key": "conversion_optimization",
+       "name": "Play 1: Payment-wall upgrade (primary)",
+       "why": "Free users who click a Pro feature cost $0 to reach and already show intent. Best revenue per owner-hour of any option, and the only route that clears payback on monthly Pro.",
+       "priority": 1,
+       "deliverables": [
+        "In-product upgrade screen on payment field, own domain and badge removal clicks, with yearly price (two months free) shown next to monthly",
+        "One follow-up email, sent once, one hour after a non-upgrade",
+        "Events: pro_feature_click (by feature), upgrade_screen_view, checkout_start, pro_paid (monthly or yearly)",
+        "Weekly wall-click to paid report"
+       ],
+       "dependencies": [
+        "About 6 developer hours, one-off",
+        "Analytics access to read Pro-feature clicks",
+        "Email to free users allowed under existing signup terms"
+       ],
+       "measurement": "Wall-click to paid rate. Minimum volume: enough wall-clicks for 10 upgrades at 6%. Kill under 3%, scale at 6% or more.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "sales_outreach",
+       "name": "Play 2: Agency client forms by cold email (secondary)",
+       "why": "An agency on 2 Business seats brings 2 × $19 a month, more than six Pro seats, and each client workspace can upgrade on its own. That value can carry personal outreach.",
+       "priority": 2,
+       "deliverables": [
+        "Trigger-based emails in 3 batches, one per trigger list, sized for 10 positive replies at an assumed 4% reply rate",
+        "One follow-up after 4 days",
+        "A working branded enquiry form for each agency that replies, sent within a day",
+        "Reply-to-paid tracker by list"
+       ],
+       "dependencies": [
+        "Agency names from Tally's Product Hunt reviews, AlternativeTo and Clutch",
+        "Public business emails from each agency's own site only, no scraping",
+        "Postal address and opt-out line in every email, as US commercial email law requires"
+       ],
+       "measurement": "Positive reply rate by list. Kill under about 3% (break-even). Scale at 6% or more with at least 1 paid agency.",
+       "suggestedMonthlyAdSpend": 0
+      },
+      {
+       "key": "partnerships",
+       "name": "Hygiene: Claude Connectors Directory listing (one-off, 10-hour cap)",
+       "why": "A one-time listing in a new directory can keep bringing installs after day 90. It is a capped task, not an ongoing channel.",
+       "priority": 3,
+       "deliverables": [
+        "Submission at claude.ai/directory/manage with screenshots",
+        "Listing copy leading with build-and-publish from chat plus no-cut Stripe payments on Pro",
+        "Tool names matching how users ask: 'create a form', 'event sign-up with limited places', 'take payments'",
+        "ChatGPT app submission only if the scale rule is met"
+       ],
+       "dependencies": [
+        "Formkit's Claude integration meets remote MCP server requirements (claude.com/docs/connectors/building/submission)",
+        "Verified OpenAI organisation for the ChatGPT step",
+        "Hard cap of 10 hours in total"
+       ],
+       "measurement": "Install-to-Pro after one month live. Kill at 0 Pro after 50 installs, under 3%, or past 10 hours. Submit to ChatGPT only at 6% or more.",
+       "suggestedMonthlyAdSpend": 0
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Payment-wall upgrade screen",
+       "hypothesis": "Showing price, the yearly two-months-free option and 'no cut on payments' at the Pro-feature click turns at least 6% of wall-clicks into paid Pro.",
+       "population": "Free users who click payments, own domain or badge removal",
+       "method": "pre_post_observational",
+       "primaryMetric": "Wall-click to paid Pro rate (pro_paid within 7 days of pro_feature_click ÷ wall-clicks), split monthly vs. yearly",
+       "guardrails": [
+        "Free-user weekly active forms not down more than 10% vs. the two weeks before",
+        "Spam complaints on the follow-up email within Gmail bulk-sender limits",
+        "Refunds or cancellations in the first two weeks after upgrade not above pre-test level"
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Decide at 21 days, or later if fewer wall-clicks than 10 ÷ 6% have arrived. Under 3% paid: kill and test a yearly-led screen. 3–6%: iterate once on copy. 6% or more: extend the trigger to quizzes, limited places and AI replies. Business thresholds, not significance; directional."
+      },
+      {
+       "name": "Agency cold email by trigger list",
+       "hypothesis": "A free branded sample form on reply lifts positive replies above the roughly 3% break-even.",
+       "population": "Small web and marketing agencies across 3 trigger lists, public business emails only, sized for 10 positive replies at 4%",
+       "method": "pre_post_observational",
+       "primaryMetric": "Positive reply rate per list",
+       "guardrails": [
+        "Bounce rate under 2%; pause sends above it",
+        "Negative or spam replies under 1%",
+        "Every email has a postal address and a working opt-out"
+       ],
+       "durationDays": 42,
+       "stoppingRule": "Read replies at end of week 2, paid conversions at end of week 6. Under about 3% positive: kill, switch list first, then hook. 6% or more with 1 paid agency: repeat the send to the best list. Directional only: each list is far below the size needed to detect a doubling of reply rate."
+      },
+      {
+       "name": "Claude directory listing",
+       "hypothesis": "Directory installs convert to Pro at 6% or more when the listing leads with payments.",
+       "population": "Users who install the Formkit connector from the Claude directory",
+       "method": "pre_post_observational",
+       "primaryMetric": "Install to Pro within one month of install",
+       "guardrails": [
+        "Total build and listing work 10 hours or less",
+        "Free AI usage per install stays within current free-plan limits"
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Measure one month after the listing goes live. Kill at 0 Pro after 50 installs, under 3%, or past 10 hours. Scale to ChatGPT at 6% or more with at least 1 Pro."
+      },
+      {
+       "name": "Conditional: Google Forms switcher search test",
+       "hypothesis": "If the wall is too small, high-intent switcher searches can buy free signups at or under $6 each (one month of Pro; assumption).",
+       "population": "Searchers for 'google forms alternative' and 'tally alternative'; runs only if wall-clicks are under 60 a month",
+       "method": "pre_post_observational",
+       "primaryMetric": "Ad spend ÷ new free signups with google/cpc source",
+       "guardrails": [
+        "Spend capped at one fifth of $600 a month",
+        "No spend on FormKit Vue library terms (negatives vue, react, npm, github; weekly search-term review)",
+        "Switcher page and ads lead with yearly Pro, not monthly"
+       ],
+       "durationDays": 30,
+       "stoppingRule": "Sizing: one fifth of $600 at an assumed $2–6 per click buys only tens of clicks, too few to show 3 Pro, so judge on signups. Check real click cost after the first week of spend; stop if it makes $6 per signup impossible. After one month: over $6 per signup, kill; at or under, keep and track signup-to-Pro."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month (owner). Plan spends $0 unless search unlocks at the start of week 3; then one fifth.",
+      "Owner time: about 3 hours/week (assumption, grade D).",
+      "Hours used: owner 1 agency lists + 1 replies and approvals + 1 scorecard = 3 of 3. Developer one-off: 6 (wall) + up to 10 (listing). ClimbOS writes copy, emails and samples.",
+      "Price: Pro $6/seat/month, Business $19/seat/month; yearly gives two months free (confirmed).",
+      "Assumption: gross margin is high (AI and hosting are the main costs). Validate from bills in week 1. If low, even yearly Pro cannot fund paid traffic.",
+      "Assumption: monthly Pro churn about 5% (grade D). Validate from billing in week 1. If higher, push yearly harder on the wall screen.",
+      "Assumption: wall-click volume matches the forecast. Validate on day 1. Under 60 a month unlocks the search test and shifts owner effort to agencies.",
+      "Assumption: 6% of wall-clicks pay. Validate at minimum volume, week 3. Under 3% switches to a yearly-led screen.",
+      "Assumption: 4% agency positive reply rate. Validate at end of week 2. Under 3% switches the trigger list.",
+      "Assumption: about 60 installs in the first 60 live days, 6% to Pro. Validate one month after going live. Under 3% stops the ChatGPT step.",
+      "Assets: unlimited free tier, no-cut Stripe payments, works in Claude and ChatGPT (confirmed). No visible reviews or case studies (site insights).",
+      "Name collision with the FormKit Vue library at formkit.com (research)."
+     ],
+     "measurementPlan": "One weekly scorecard sheet, read every Monday, that does not depend on ad-platform attribution. Product events (pro_feature_click by feature, upgrade_screen_view, checkout_start, pro_paid with plan and source) feed it. UTMs on every link: email, listing, switcher page and any ad. A required 'How did you hear about Formkit?' question at signup, with AI referrals (claude.ai, chatgpt.com, perplexity.ai) logged as their own source. If search runs, Google Ads receives signups via Enhanced Conversions. Agency outreach is tracked in a sheet from send through reply, workspace and paid. Each assumption row in the constraints is checked on its validation date.",
+     "firstActions": [
+      {
+       "title": "Pull last month's Pro-feature clicks, signups and upgrades",
+       "why": "Wall-click volume decides whether Play 1 reaches minimum volume in 21 days and whether search unlocks.",
+       "role": "Owner"
+      },
+      {
+       "title": "Ship the upgrade screen and one-hour follow-up email",
+       "why": "Highest-scoring play, $0 cash, and it uses users you already have.",
+       "role": "Developer"
+      },
+      {
+       "title": "Check Claude directory submission requirements",
+       "why": "Tells us in an hour whether the listing fits its 10-hour cap.",
+       "role": "Developer"
+      },
+      {
+       "title": "Screen Tally's Product Hunt reviews for agencies",
+       "why": "Builds the first of three outreach lists for Play 2.",
+       "role": "Owner"
+      },
+      {
+       "title": "Set up the weekly scorecard, UTMs and signup source question",
+       "why": "Every kill or scale call depends on numbers the owner can trust.",
+       "role": "ClimbOS growth lead"
+      }
+     ],
+     "diagnosis": "The constraint is monetisation, not traffic: an unlimited free tier puts paid value behind feature walls, and there is no proven pitch at the moment a free user needs Pro. Falsifier: if fewer than about 60 free users a month click a Pro-only feature, the constraint is top-of-funnel signups, and agency outreach plus the conditional search test become primary.",
+     "affordableCac": "Pro monthly: $6/seat/month revenue, minus unconfirmed margin and assumed 5% monthly churn. A 3-month payback caps CAC below 3 × $6, and lower after margin. Pro yearly: $6 × 10 months paid upfront, so cash CAC is recovered at once with no year-one churn. Business: $19/seat/month; an agency on 2 seats brings 2 × $19 a month. Offer lever: only $0-cash channels sell monthly Pro; any paid traffic must lead with yearly Pro or Business.",
+     "notDoing": [
+      {
+       "channel": "Google Search ads (for now)",
+       "why": "Runs only if wall-clicks are under 60 a month, decided at the start of week 3. One fifth of $600 buys tens of clicks at an assumed $2–6 CPC, too few to show Pro payback."
+      },
+      {
+       "channel": "Meta ads",
+       "why": "No click-cost data, and monthly Pro at $6 cannot repay creative testing."
+      },
+      {
+       "channel": "LinkedIn ads",
+       "why": "Practitioner guidance puts a useful test above the whole $600 budget (assumption, validate by quote)."
+      },
+      {
+       "channel": "Product Hunt launch",
+       "why": "Tens of owner hours for mostly free signups (assumption)."
+      },
+      {
+       "channel": "Paid newsletters",
+       "why": "No click-cost data found in research."
+      },
+      {
+       "channel": "Blog SEO",
+       "why": "Third-party studies (Pew, Seer Interactive; disputed by Google) report fewer clicks under AI answers (assumption), and payback is too slow for 90 days."
+      },
+      {
+       "channel": "Reddit posting",
+       "why": "Self-promotion is often banned. Read r/nocode and r/smallbusiness threads, and reply only where Formkit truly fits."
+      },
+      {
+       "channel": "Organic social",
+       "why": "No evidence buyers pick form builders there, and no hours left."
+      }
+     ],
+     "northStar": {
+      "metric": "New paid accounts (Pro + Business) per 90 days",
+      "baseline": "Unknown. Measured from billing in week 1.",
+      "target": "Baseline + 6% of 90-day wall-clicks + 1 paying agency + 3 from the directory (all assumptions, grade D). The wall share depends entirely on the unvalidated wall-click volume read on day 1."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Wall-click to paid Pro rate",
+       "weeklyTarget": "6% or more of the week's wall-clicks",
+       "source": "Product events: pro_feature_click, pro_paid"
+      },
+      {
+       "metric": "Wall-clicks per week",
+       "weeklyTarget": "At or above week-1 baseline; under 60 a month triggers the search test",
+       "source": "Product events: pro_feature_click by feature"
+      },
+      {
+       "metric": "Agency positive replies",
+       "weeklyTarget": "4% of each batch (assumption)",
+       "source": "Outreach tracker sheet"
+      },
+      {
+       "metric": "Claude connector installs",
+       "weeklyTarget": "About 7 a week once live (assumption)",
+       "source": "Integration logs plus UTM on listing link"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Weeks 1–2",
+       "focus": "Pull baselines, ship the upgrade screen and events, add the signup source question, submit the Claude listing, send the first agency batch. End of week 2: unlock search only if wall-clicks are under 60 a month."
+      },
+      {
+       "name": "Test",
+       "days": "Weeks 3–6",
+       "focus": "Run each test to its pre-set rule; review weekly. End of week 6: confirm Play 1 as primary or swap in whichever play has the lowest cost per paid account."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Week 7 to day 90",
+       "focus": "Most effort on the winner: extend the upgrade trigger to quizzes, limited places and AI replies. The rest on the secondary. Build one lasting asset: agency sample forms reused as templates."
+      }
+     ],
+     "weekOneChecklist": [
+      "Pull last month's Pro-feature clicks by feature, plus signups, upgrades and churn from billing",
+      "Ship the upgrade screen (yearly shown next to monthly), the one-hour follow-up email and the four tracking events",
+      "Check claude.com/docs/connectors/building/submission and start the submission if the integration qualifies",
+      "List agencies and studios from Tally's Product Hunt reviews and send the names to ClimbOS",
+      "Set up the weekly scorecard, UTMs on every link and the 'How did you hear about Formkit?' question"
+     ],
+     "risks": [
+      {
+       "risk": "Too few free users hit a Pro wall to reach minimum volume.",
+       "mitigation": "Check on day 1. Under 60 a month: unlock the capped search test at the start of week 3 and lean on agencies. Validate by day 3."
+      },
+      {
+       "risk": "Tally, Jotform and Typeform already work in Claude, so 'free in chat' is not unique.",
+       "mitigation": "Listing leads with no-cut Stripe payments and branded forms. Judge by install-to-Pro one month after going live."
+      },
+      {
+       "risk": "If search runs, clicks leak to FormKit Vue library searches.",
+       "mitigation": "Negatives from day 1, weekly search-term review, and a click-cost check after the first week of spend."
+      },
+      {
+       "risk": "Buyers distrust a newer brand with payments or HR data.",
+       "mitigation": "Ask early Pro users for honest reviews with no incentive and no gating; link the DPA on key pages. Review at end of week 6."
+      },
+      {
+       "risk": "Cold email breaches law or harms sender reputation.",
+       "mitigation": "Public business emails only, postal address and opt-out in every email, pause if bounces exceed 2%. Check after batch 1."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Payment-wall upgrade",
+       "oneLiner": "Pitch Pro at the moment a free user adds a payment field, custom domain or badge removal, then send one follow-up email.",
+       "kind": "bankable",
+       "audience": "Formkit free users who click a Pro-only feature (payments, own domain, badge removal) in the builder. The size comes from your own analytics.",
+       "trigger": "The click on a Pro-only feature, usually a payment field on a booking, quote or event sign-up form.",
+       "hook": "In-product screen: 'Take payments on this form. Pro is $6 a seat a month. Payments go straight to your own Stripe account, and Formkit takes no cut. Pay yearly and get two months free.' Buttons: Upgrade to Pro / Not now.\n\nFollow-up email, sent once, one hour later, only if the user has not upgraded.\nSubject: Your form is one step from taking payments\nBody: 'You added a payment field to your form. Payments are a Pro feature: $6 a seat a month, or pay yearly and get two months free. Money goes straight to your own Stripe account, and Formkit takes no cut. Pro also puts your form on your own domain and removes the Formkit badge, so the form looks like yours. Upgrade from your dashboard at formkit.app. Not ready yet? Your forms, responses and members stay unlimited on the free plan.'",
+       "mechanic": "Offer at the moment of need. It is the same logic as a service plan pitched at the end of a paid visit, which sells far better than one mailed later (assumption, grade D).",
+       "assetUsed": "No cut on Stripe payments, $6 Pro, yearly billing with two months free, and a free user base that is already building forms.",
+       "funnel": [
+        "Free users who click a Pro-only feature in 90 days: read from analytics on day 1. The forecast assumes about 400 (assumption, grade D).",
+        "See the upgrade screen: nearly all of them, since it shows on every click (own product design; assumption, grade D until tracked).",
+        "Start checkout: low 6%, likely 12%, high 20% (assumption, grade D; no in-product benchmark in this research).",
+        "Complete payment: low 40%, likely 50%, high 65% (assumption, grade D).",
+        "Follow-up email to non-upgraders: counted as upside, not in P50 (assumption, grade D).",
+        "Outcome: about 6% of wall-clicks become Pro, about 24 accounts at P50 (assumption, grade D)."
+       ],
+       "unit": "new Pro accounts",
+       "p10": 8,
+       "p50": 24,
+       "p90": 55,
+       "horizonDays": 90,
+       "confidence": "medium",
+       "biggestUnknown": "How many free users hit a Pro-only feature each month. Your analytics answers this on day 1.",
+       "test": "Size: 170 wall-clicks (10 ÷ 6% likely wall-to-paid). Budget: $0 cash plus about 6 build hours ($300 at $50/hour; assumption). Break-even: $300 ÷ $58 ≈ 5 Pro accounts, about 3% of 170. Duration: 21 days or 170 wall-clicks. Leading metric: wall-click to paid rate.",
+       "killIf": "Fewer than 5 paid upgrades (under 3%) after 170 wall-clicks. Then change one thing at a time: lead with the yearly offer, then the copy.",
+       "scaleIf": "10 or more paid upgrades from 170 wall-clicks (6%). Then add the same trigger to quizzes, limited places, AI replies and the free AI cap.",
+       "scores": [
+        5,
+        4,
+        5,
+        4,
+        3,
+        5,
+        5,
+        3
+       ],
+       "firstActionToday": "Pull the last 30 days of free users who clicked a Pro-only feature, split by payments, domain, badge and AI cap.",
+       "climbosCanDo": "Finalise the screen and email copy, list the tracking events, report the upgrade rate weekly and make the kill or scale call when the test ends."
+      },
+      {
+       "name": "Describe it, ship it: agency client forms",
+       "oneLiner": "Pitch small agencies on building each client's forms by describing them in Claude or ChatGPT, free, inside a separate workspace per client.",
+       "kind": "creative",
+       "audience": "Small web and marketing agencies at a visible switch moment. Trigger lists, sized where research found it:\n1. Agencies and studios among Tally's Product Hunt reviewers. Roughly 100–160 reviews to screen (producthunt.com/products/tally/reviews). G2 reviewers flag Tally's limited design customization (formbricks.com/blog/tally-alternatives).\n2. Agencies weighing agency-focused form tools. Form 'n Go's AlternativeTo page targets agencies and freelancers (alternativeto.net/software/form-n-go). Not sized.\n3. Web agencies on Clutch with a recent client site launch (clutch.co). Not sized; assumption.",
+       "trigger": "A public sign the agency is choosing form tools: a rival review mentioning design limits, a comparison of agency form tools, or a new client site that needs forms.",
+       "hook": "Subject: Build each client's forms by describing them\n\n'Hi, a quick one for agencies that build sites for clients.\n\nMost client sites need an enquiry, quote or booking form, and someone on your team has to build and manage it. With Formkit, you describe the form in Claude or ChatGPT, and it is built and published from the chat. That works on every plan, including free. Each client gets its own workspace, upgraded on its own, so forms and responses never mix between clients.\n\nWhen a client needs more: on Pro, forms sit on the client's own domain with no Formkit badge, and payments go to the client's own Stripe account, with no cut taken by Formkit. On Business, forms need approval before they go live, your team shares templates, and every change is kept in an audit log.\n\nReply with one client's website and we'll send back a working enquiry form in their brand within a day. The free plan has unlimited forms, responses and members, so you can try it on a real client first.\n\nThe Formkit team, formkit.app\nNot relevant? Reply no and we won't email again.'",
+       "mechanic": "Trigger-based cold email with a done-for-you sample on reply, plus one follow-up after 4 days (follow-ups add replies; assumption, grade D). The note speaks to the pain and never cites the review.",
+       "assetUsed": "Chat-built and chat-published forms on the free plan, per-client workspaces upgraded separately, and Business approvals, shared templates and audit log.",
+       "funnel": [
+        "Agencies emailed: 250 across the three trigger lists (10 ÷ likely 4% reply; assumption, grade D).",
+        "Positive reply: low 2%, likely 4%, high 7% (assumption, grade D; cold-email benchmarks not checked in this research).",
+        "Sample sent, then the agency creates a workspace: low 35%, likely 50%, high 65% (assumption, grade D).",
+        "Workspace to paid Pro or Business within 45 days: low 15%, likely 25%, high 40% (assumption, grade D).",
+        "Value per agency: 2 Business seats at $19 is $38 a month, about $365 gross profit in year one (assumption, grade D)."
+       ],
+       "unit": "paying agency accounts",
+       "p10": 0,
+       "p50": 1,
+       "p90": 4,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the free chat-built sample lifts agency replies above typical cold-email rates.",
+       "test": "Size: 250 sends in 3 batches, one per trigger list. Budget: $0 cash plus about 7 owner hours ($350 at $50/hour; assumption). Break-even: $1.40 per contact ÷ $45.60 value per positive reply (50% × 25% × $365) = 3.1%. Duration: replies by day 14, paid check by day 45. Leading metric: positive reply rate by trigger list.",
+       "killIf": "Positive reply rate below 3.1% (fewer than 8 of 250). Change one thing next: first the trigger list, then the hook.",
+       "scaleIf": "Positive reply rate above 6.1% (16 or more of 250) with at least 1 paid agency. Then send 250 more to the best list and offer a shared template pack.",
+       "scores": [
+        4,
+        3,
+        2,
+        4,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "On Tally's Product Hunt reviews page, note reviewers who name an agency or studio, and send ClimbOS the company names.",
+       "climbosCanDo": "Find each agency's public business email on its own site (no scraping of review or directory sites) and personalise and queue the emails. Add your postal address and an unsubscribe line, as US email law requires. Then build sample forms and track replies through to paid."
+      },
+      {
+       "name": "Free in Claude: directory listing",
+       "oneLiner": "List Formkit in the Claude Connectors Directory, then the ChatGPT app directory, leading with build-and-publish from chat on the free plan.",
+       "kind": "moonshot",
+       "audience": "People who work inside Claude or ChatGPT and browse the Claude Connectors Directory (claude.com/docs/directory/publish). Typeform, Jotform, Cognito Forms and FormHug publish Claude form-building guides, which shows demand (typeform.com/mcp, jotform.com/help/how-to-create-a-form-in-claude).",
+       "trigger": "A user in the middle of a chat needs a form: a client intake, an event sign-up or a job application.",
+       "hook": "Listing description: 'Build and publish forms without leaving Claude. Describe the form you need, such as a client intake, an event sign-up or a job application, and Formkit builds it, publishes it and returns a live link. Works on every Formkit plan, including free, with unlimited forms, responses and members. On Pro, take payments through your own Stripe account; Formkit takes no cut.'",
+       "mechanic": "Early listing in a new app directory, with tool names that match how users phrase requests: 'create a form', 'event sign-up with limited places', 'take payments'.",
+       "assetUsed": "Chat build-and-publish on every plan including free, combined with no-cut Stripe payments on Pro.",
+       "funnel": [
+        "Listing approved: low 50%, likely 75%, high 90% (assumption, grade D; review rules are new).",
+        "Connector installs in about 60 live days: low 20, likely 60, high 150 (assumption, grade D; no directory install data in this research).",
+        "Install to Pro within 60 days: low 3%, likely 6%, high 10% (assumption, grade D).",
+        "Outcome: about 3 Pro accounts at P50, against about 9 needed to repay the $500 cap. Payback depends on the listing compounding after day 90 (assumption, grade D)."
+       ],
+       "unit": "new Pro accounts",
+       "p10": 0,
+       "p50": 3,
+       "p90": 9,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether Formkit's current Claude integration already qualifies for the directory, or is already listed. Today's first action answers it.",
+       "test": "Cap: 10 dev or owner hours ($500 at $50/hour; assumption) and $0 ad spend. Break-even: $500 ÷ $58 ≈ 9 Pro accounts. Duration: submit this week, measure 30 days after the listing goes live. Leading metric: install-to-Pro rate, with installs as the volume check.",
+       "killIf": "Zero Pro after 50 installs, meaning the true rate is below 6% by the rule of three. Also kill if install-to-Pro is under 3% at 30 live days, or the work passes the 10-hour cap.",
+       "scaleIf": "Install-to-Pro at or above 6%, with at least 1 Pro and installs on pace for 9 Pro accounts within six months. Then submit the ChatGPT app, add payment and event tools, and announce it to free users.",
+       "scores": [
+        4,
+        2,
+        4,
+        2,
+        4,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Open claude.com/docs/connectors/building/submission and check whether Formkit's Claude integration meets the remote-server requirements.",
+       "climbosCanDo": "Check submission requirements, draft listing copy and tool names, and track installs and install-to-Pro conversions weekly against the 9-account payback."
+      }
+     ],
+     "portfolioNote": "Lead with the upgrade moment, not ads. One Pro seat is worth about $58 gross profit in its first year ($6 × 12 months × an assumed 80% margin; assumption, grade D), so most paid channels cannot pay back.\n- **Play 1, bankable (score 90/100):** upgrade free users when they hit a Pro-only feature.\n- **Play 2, creative (70/100):** win agencies with chat-built client forms in per-client workspaces.\n- **Play 3, moonshot (70/100):** list Formkit in the Claude directory. Distinctiveness is 4, not 5, because Typeform, Jotform, Cognito Forms and FormHug already work with Claude. Formkit's edge is that it works on the free plan.\n- **Ad test:** put one fifth of the $600 monthly budget into Google search for 'google forms alternative' and 'tally alternative'. Send clicks to a Google Forms switcher page built from Formkit's compare table.\n  - Add negative keywords vue, react, npm and github. FormKit, the Vue library at formkit.com, shares the name.\n  - Kill after one month if each new Pro account costs more than $58. Widen to half the budget if it costs under half that and brings at least 3 Pro accounts.\n  - Click costs were not checked in this research.\n- **Skipped:** Product Hunt (assumption: tens of owner hours for mostly free signups) and paid newsletters (no click-cost data in this research).\n- **Scores order:** fit, predictability, revenue per owner-hour, time to signal, compounding, cost, risk safety, distinctiveness.\n- **Owner time:** about 3 hours a week at $50/hour (assumption, grade D)."
+    },
+    "costMicros": 2791392,
+    "ms": 1062140
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 8,
+    "craft": 7,
+    "usefulness": 6,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "The portfolio note contradicts the rest of the plan on the ad test: it presents it as a standing one-fifth spend killed at $58 per Pro account, while the experiments and notDoing make it conditional on fewer than 60 wall-clicks and killed at $6 per signup, so the owner gets two different rules for the only cash decision."
+   }
+  }
+ }
+]

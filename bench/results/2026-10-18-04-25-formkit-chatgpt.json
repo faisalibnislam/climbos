@@ -1,0 +1,681 @@
+{
+ "insights": {
+  "pairs": {
+   "climbos>sol": {
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B checked competitors' own pricing and home pages and found that Tally, Typeform and Jotform already list MCP or Claude/ChatGPT connections. That undercuts A's chosen wedge of building forms inside Claude or ChatGPT. A flagged the point as unverified but still built a positioning pillar, a headline and a $200/month ad group on it.",
+      "B correctly concludes that 'unlimited responses' alone cannot differentiate Formkit, since Tally offers the same. It reorients to a concrete job: branded client intake for solo professionals and small agencies. That is more defensible strategy for a $6/seat product.",
+      "B's competitor pricing comes from primary sources (vendor pricing pages and support docs). A's rival prices are all third-party, undated and unverified, by its own admission.",
+      "B's spending rule is the honest, economically sound call: tie acquisition cost to $6 revenue, AI cost and retention, and don't scale ads on free signups alone. Its assisted-switching and interview tests are realistic for winning paying customers on this budget.",
+      "A has real strengths. It spots the brand-name collision with the FormKit Vue library, offers ready headlines, a landing-page order and a structured 3-week search test, and is transparent about its evidence counts. On craft and immediacy A is stronger, but its core positioning rests on a likely-false differentiator.",
+      "B's weakness is that it is slower and less copy-ready. Paid search is delayed to day 30 with only $150, which leaves much of the 90-day window to research."
+     ],
+     "truthX": [
+      "Its positioning wedge (building and publishing in Claude or ChatGPT, 'few rivals visibly claim') is very likely contradicted by rivals' own sites: Tally lists MCP, Typeform markets MCP, and Jotform lists Claude, ChatGPT and MCP. A hedged this but still allocated budget and headlines to it.",
+      "All competitor prices rely on third-party blogs, not vendor pages. A labels this, but the Typeform 10-response free cap is used in the positioning statement.",
+      "Google Forms gaps and Formkit's free-feature claims rest only on Formkit's own compare page. This is labelled."
+     ],
+     "truthY": [
+      "The research date 'October 2026' is odd or unverifiable.",
+      "Some VoC excerpts come from older Reddit threads that may not reflect current products. B acknowledges this.",
+      "Claims such as Fillout including integrations and payments on Free, and competitors offering import options, are cited but broad."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A gives an honest, evidence-grounded positioning built on a clear frame (free, no response cap, for Typeform switchers). It states the risks, including Tally's free unlimited submissions, and compares three frames before picking one.",
+      "A's 18 verbatim snippets are tallied by theme (price 8 of 18, caps 5 of 18), and each carries a source URL. B's phrase bank is also real, but its themes come from Reddit threads that are partly older and not independent.",
+      "A's 3-week search test is specific and runnable: $200 per ad group, a 100-click threshold, a kill rule and a budget reallocation. B's paid search is vague, 'proposed $150 cap' from day 30, and defers spend heavily.",
+      "A flags what's unverified (rivals' MCP status, competitor ad libraries, the Google Forms claims) and tells the owner how to check each in about 5-15 minutes. A also disqualifies segments, which is useful prioritization.",
+      "B is strong on pricing math and honest about the narrowing seat advantage. It also found that rivals do offer MCP, which corrects A's open question. But its segment choice (solo service pros and client intake) is less tied to evidence, and it recommends interviews and assisted switching over acquisition. Its positioning is generic ('turn enquiries into structured client intake').",
+      "A's headline and subhead lines are ready to use. B is more of a research report with fewer ready-to-use outputs."
+     ],
+     "truthX": [
+      "Rival prices (Typeform $39-$379, Tally ~$29, Fillout) are third-party and undated, though labeled as such.",
+      "A hedges that rivals' MCP support is unverified, but B's sources show Tally, Typeform and Jotform list MCP. The in-chat 'wedge' is therefore likely weaker than A presents.",
+      "A cites a Tally Trustpilot page as the source for the Typeform alternative. The quote is about a Tally switcher, so it is a mild mismatch."
+     ],
+     "truthY": [
+      "B's claim that competitors offer import and migration options is cited only loosely, to the Fillout pricing page.",
+      "The $56 illustrative calculation relies on the credit pack figures and labels itself illustrative.",
+      "Some of the Reddit evidence is old, though B flags it."
+     ]
+    }
+   },
+   "climbos>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A is unmistakably built for Formkit. It names a narrow 1–3 seat Typeform-switcher segment, rules out segments where the pricing math loses (5+ seats monthly, free custom domain) and chooses one positioning frame after comparing it against two alternatives. B's segments are mostly a restatement of the use cases on Formkit's own site, and its positioning statement is generic.",
+      "A's evidence work is more disciplined. It counts themes across snippets (price in 8 of 18, price or caps in 11 of 18), tags each quote by competitor pool and theme, and ties objections to verbatim quotes with specific counters. B's objections are unsourced hypotheses.",
+      "A surfaces non-obvious, actionable risks: the brand-name collision with the FormKit Vue library, zero public reviews, unverified rival MCP support (so avoid any 'only Formkit' claim), and per-seat pricing losing its edge at 3–5 seats. It also gives words to avoid, such as 'unlimited AI'.",
+      "A's 90-day plan is concrete: three named Google ad groups, a 100-click decision threshold, pause and reallocate rules, a primary and secondary metric, 5 customer calls with questions, and a review-collection ask. B's plan is directionally sensible but vague, e.g. a 'small, capped' search test and 'build pages for high-intent jobs'.",
+      "B's real strengths are fresher, first-party competitor pricing from official pages and catching an inconsistency in Formkit's own AI allowance wording. These are useful but don't outweigh A's strategic sharpness."
+     ],
+     "truthX": [
+      "Competitor prices come from third-party, undated sources (it labels this). Typeform's official page per B shows $29 or $39 variants, and Fillout Starter includes 2,000 responses, which A doesn't capture.",
+      "The brand-collision claim ('returns only the unrelated Vue library') is cited only to formkit.app, so it is weakly sourced.",
+      "The 100-clicks-per-group judgment within about a week, on $200 a month per group, is likely optimistic for a 'typeform alternative' CPC. It is flagged as directional but not quantified."
+     ],
+     "truthY": [
+      "The Google Forms pricing citation uses a non-Google domain (googleapps.com), which is questionable sourcing.",
+      "'The current comparison page helps' and 'the homepage clearly presents… comparison' are asserted without noting that the comparison benchmarks only Google Forms.",
+      "It is light on labeling inferences about drop-off being a differentiator that 'no competitor clearly leads with', though it does add a caveat."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A is unmistakably built for Formkit. It picks a focused positioning (free with no response cap, aimed at Typeform switchers), rejects alternatives with reasons, and sets out words to use and avoid and a landing page order.",
+      "A is honest about its evidence. It reports the snippet bank (18 verbatim quotes, 0 from Formkit's own customers), labels rival prices as third-party and unverified, flags assumptions, and warns against an 'only Formkit' claim.",
+      "A's opportunities are actionable and tested: a 3-week search test with budget splits and kill rules, 5 customer calls, comparison pages, brand-collision handling, and a review drive. It also names where per-seat pricing loses to rivals and disqualifies those segments.",
+      "A identifies a real, non-obvious problem: the name collision with the FormKit Vue library. It also lists gaps with cheap checks, such as the Ad Library check and verifying rivals' MCP status.",
+      "B is well sourced and has useful, current-looking competitor pricing with links. Its drop-off analytics angle is reasonable. But it is more generic: a broad five-segment list, general objections, and a lighter paid plan with no budget split or metrics.",
+      "B's VOC bank is more varied but includes weak fits such as Fillout section headings and 'undo button'. It has no clear single positioning choice and its 'gap' claim is hedged. It lacks A's prioritization and numeric test design.",
+      "B's pricing math has a flaw: a 5-seat Business account at $95 is correct but irrelevant to the competitive comparison. It also calls Formkit 'competitively priced' against Typeform and Jotform without addressing Tally's $29 flat price or Fillout's flat fee."
+     ],
+     "truthX": [
+      "Some competitor claims (Typeform free plan at 10 responses/month, Fillout 1,000 free responses) rely on third-party sources, but A labels them unverified.",
+      "The Trustpilot Tally page is cited as the source for the Typeform quote; this is plausible since the quote is in the Tally pool, but the source mapping is a little loose.",
+      "A's 'Fillout Starter $15' and 'Tally about $29' come from third-party sources, and the Fillout price is hedged inconsistently with B's more current figures."
+     ],
+     "truthY": [
+      "Typeform Basic is described as including 100 responses/month and with two conflicting price variants; B discloses the conflict but leaves it unresolved.",
+      "The 'Fillout Starter includes 2,000 responses/month' and the Jotform '5 forms and 100 submissions' details depend on pages that can't be checked here; some sources are secondary, such as costbench.",
+      "Some VOC items are headings or paraphrases, such as Fillout G2 headings, presented as quotes."
+     ]
+    }
+   },
+   "sol>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A commits to one priority segment (solo professionals and small agencies doing client intake) and builds the whole report around it. B spreads across five segments and a generic 'small teams' positioning.",
+      "A's pricing analysis is sharper and more useful. It shows that per-seat costs reach parity with Tally's flat $29 at about five seats, quantifies the AI credit allowance and overage cost, and ties allowable acquisition cost to a $6 subscription. That is the kind of unit-economics warning a non-expert owner needs before spending $600 a month.",
+      "B's lead opportunity, 'own drop-off analytics', is weaker than it looks. A correctly notes that Tally and Fillout also offer drop-off tools, which undercuts B's 'gaps no competitor owns' claim, even though B hedges it.",
+      "A's 90-day plan is sequenced, with concrete test sizes (10 interviews, 5 assisted switches, a $150 search cap) and a decision signal for each test. B's opportunities are reasonable but more generic: build pages, reduce friction, test search.",
+      "Both are carefully sourced and label their inferences. A is more disciplined about separating evidence from hypothesis, for example by noting that several quotes come from the same thread and so are not independent respondents.",
+      "B does add some useful details: the inconsistency between the homepage and FAQ on the AI allowance, the Stripe clarification, and the MCP segment."
+     ],
+     "truthX": [
+      "Typeform pricing is reported from the main cards, while the conflicting second figure is mentioned only vaguely. It is acknowledged, but not fully reconciled."
+     ],
+     "truthY": [
+      "The claim that no competitor clearly leads with the full combination is weakly supported, since Tally and Fillout also offer drop-off analytics.",
+      "It relies partly on a third-party pricing aggregator (costbench) for Jotform free-tier limits rather than the vendor's own page.",
+      "It describes Business as $19 per seat/month, which may not match how the pricing page states it; A reports it as $19 monthly. This needs verification."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A commits to one prioritized segment (solo professionals and small agencies needing branded client intake). B spreads across five groups and a generic 'small teams' positioning.",
+      "A's pricing analysis is sharper: it shows per-seat pricing narrowing against Tally's unlimited collaborators, flags the AI credit allowance (20 responses per seat) with a worked example, and recommends against claiming to be cheaper at every team size. B only notes the per-seat issue and an FAQ inconsistency.",
+      "A's recommendations are more actionable: interview 10 prospects, assisted switching for 5, a comprehension test of total cost, and a $150 capped search test with a decision signal for each. B's plan is more generic, with no test sizes.",
+      "A labels assumptions, notes that its phrase bank comes from only a few discussions, and cautions that one reviewer's complaint is not a verified defect. B has similar caveats, but its voice-of-customer entries are thinner, including review headings, and are less tied to a strategy.",
+      "A's spending rule is realistic: a $6 subscription leaves little room for expensive acquisition. B is more generic here.",
+      "B has good coverage, including the drop-off lead story, but it builds its positioning on that and on free-tier generosity, which is weaker against Tally."
+     ],
+     "truthX": [
+      "Some claims about Formkit's features, such as the 20-response AI allowance and credit packs, could not be verified. Overall they are cited and labeled as vendor claims.",
+      "Competitor prices carry minor discrepancies across pages, though A flags them."
+     ],
+     "truthY": [
+      "B says Business is $19 per seat per month, while A lists it as $19 monthly flat. One of the two is wrong, so B's '5-seat Business account $95/month' calculation may be invented.",
+      "Several voice-of-customer entries are review headings rather than true quotes, and B attributes some quotes to Reddit threads with unverifiable URLs.",
+      "B claims Fillout Starter includes 2,000 responses, while A cites other figures, so this is a possible mismatch."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "climbos": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 7,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "The plan to reach paying customers depends on a Google Search test that is not realistic: about $47 per ad group per week cannot buy 100 clicks on 'typeform alternative' within a week, the primary metric is sign-ups rather than payers, and the plan covers only 3 of the 90 days, while leading with a free-forever frame that Tally already owns."
+   },
+   "luna": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 6,
+    "craft": 7,
+    "usefulness": 6,
+    "creativity": 5,
+    "overall": 6,
+    "topIssue": "The 90-day plan to win paying customers is generic: it lacks concrete budget allocation, keyword or bid specifics, and any conversion lever tied to Formkit's actual upgrade triggers, and it never questions whether a free tier with unlimited responses plus drop-off analytics undercuts the reasons to pay."
+   },
+   "sol": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 7,
+    "craft": 7,
+    "usefulness": 6,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "The report is carefully sourced and rightly flags that a $6/seat price leaves almost no room for paid acquisition, but it gives a non-expert owner few concrete, ready-to-use assets (page copy, outreach scripts, ad keywords, unit-economics thresholds) to hit the 90-day paying-customer goal, and the plan leans on slow interviews and proof-gathering."
+   }
+  },
+  "words": {
+   "climbos": 3080,
+   "luna": 2253,
+   "sol": 2567
+  }
+ },
+ "linkedin": {
+  "pairs": {
+   "sol>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A's posts give readers real practical value, which suits LinkedIn: an intake-form branching structure, a phone-based form audit checklist and a ready-to-paste AI brief. That earns engagement before the product mention.",
+      "A's hooks are sharper and more native to LinkedIn ('Before I'd spend more money sending people to an enquiry form, I'd fill it out on my phone'). B's openers are fine but read more like product messaging.",
+      "A ties each feature claim (conditional logic, agency templates, drop-off analytics on every plan, logic map and tester) to a concrete use, and it is honest about limits ('That won't tell you why someone left').",
+      "B adds useful carousel and visual specs and a smart pricing-objection post, which is a real conversion asset. However, the free-plan post leans toward free signups rather than paying customers, and its copy is thinner and more generic.",
+      "Both appear grounded in Formkit's own pages, and neither invents customers or results. A lists GOV.UK guidance as a source but never actually uses it.",
+      "A's lack of visuals is a minor weakness, since text-only posts perform acceptably on LinkedIn."
+     ],
+     "truthX": [
+      "Lists GOV.UK form-design guidance as a source, but none of its content is used or attributed in the posts.",
+      "Feature specifics such as 'drop-off analytics on every plan' and the named agency templates cannot be verified here. They are presented as coming from Formkit's pages."
+     ],
+     "truthY": [
+      "The pricing alt text mentions 'a note to check the pricing page for included features', but the visual spec includes no such note. The footer reads 'Choose the plan that fits.'",
+      "Post 1 is framed for 'sales and service teams', yet its website/branding example is agency-specific, which muddles the audience. This is a strategy weakness rather than a factual error."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A's posts give readers something concrete to use: a branching agency intake structure, a phone-test audit checklist, and a ready AI prompt. That makes them valuable standalone LinkedIn content and a stronger path to trial.",
+      "A is honest about limits, e.g. 'That won't tell you why someone left', and keeps product claims modest and sourced. It separates product facts from recommendations.",
+      "A's three posts target distinct audiences and objections (agencies, founders running traffic, AI-control skeptics) and are sequenced deliberately.",
+      "B is safe and accurate-looking, but its posts are more generic product explainers. Post 1 and Post 3 read like feature blurbs.",
+      "B's free-plan and pricing post speaks directly to a conversion objection and adds visuals, which is a real plus for a paying-customer goal. But a post that mostly lists plan prices is weak LinkedIn content.",
+      "B's carousels add native-format craft, but the slide text is thin. The 'try free' framing is useful but has more risk if the plan details are wrong or change.",
+      "A's posts are text-only. That is a craft gap versus B's carousels, which narrows the margin."
+     ],
+     "truthX": [
+      "Claims like 'question-level drop-off analytics on every plan' and the list of agency templates are attributed to the sources but can't be verified here. A's cited sources include a GOV.UK link that is never actually used in the posts.",
+      "The 'sources checked on October 18, 2026' date is unverifiable."
+     ],
+     "truthY": [
+      "Specific prices ($6 and $19 per seat per month) and Free plan inclusions (unlimited members, partial responses) can't be verified here, and a stale price would be a risk.",
+      "Post 1 says 'Build one free', which depends on the Free plan details staying accurate."
+     ]
+    }
+   },
+   "climbos>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A's angles are sharper and tied to revenue. The 'no percentage cut, flat $6/seat' post gives buyers a concrete reason to choose the paid tier. The drop-off post teaches a real diagnostic and lands on a product capability. B's posts are feature descriptions ('conditional logic exists', 'free plan exists', 'AI drafts, you publish') with little insight.",
+      "A's LinkedIn craft is stronger. It has scroll-stopping first lines, a genuine argument in each body, and specific engagement questions. Links go in the first comment rather than the body, and the visual briefs are detailed and well constrained ('Demo data' label, no fake numbers, no mocked interfaces).",
+      "B puts links directly in post bodies, which typically suppresses LinkedIn reach. Its copy is thin, around 80 words of generic phrasing ('A good form doesn't just collect information. It guides the conversation.').",
+      "B's Post 2 mostly promotes the free plan, which works against the stated goal of paying customers. A consistently points readers toward Pro and its paid benefits.",
+      "B is better on sourcing discipline: it cites specific Formkit pages and disambiguates the FormKit developer framework. A gives no source list, which breaks the brief's citation rule and leaves several claims unverifiable. A's claims are plausible and partly corroborated by B's sources, but that gap is a real weakness."
+     ],
+     "truthX": [
+      "No sources are cited anywhere, which violates the 'cite sources' rule.",
+      "'We take no cut' and 'payments go straight into your own Stripe account' are central claims with no citation.",
+      "'Two months free if you pay yearly' is not supported by any cited source.",
+      "'Formkit works inside Claude and ChatGPT on every plan' (built and published in the conversation) is uncited, and B's AI-builder description suggests a different, in-app workflow.",
+      "'Pro adds your own domain and removes the Formkit badge' is uncited."
+     ],
+     "truthY": [
+      "The claim of a monthly AI allowance on the Free plan is specific, and while plausibly sourced from the pricing page, it isn't quoted."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A has sharper strategic angles: the no-percentage-cut payments contrast, the double-work of drafting in ChatGPT and rebuilding in a builder, and drop-off by question. These are differentiated and tied to buying decisions.",
+      "A's hooks are stronger and native to LinkedIn, with a tension-first opening, useful teaching content and an engagement question in each post. B opens with generic statements.",
+      "A comes as publishable packages with hashtags, a first comment with the link, alt text, a detailed visual brief and slide copy. That is more usable for a non-expert owner.",
+      "A's teaching content (how to write a form description, how to find drop-off) gives value before the pitch, which suits LinkedIn. B is more feature-description and reads like website copy.",
+      "B is honest and clean but generic. Post 2 is a pricing recap that is weak for LinkedIn, and the posts lack hooks, hashtags and a clear priority for converting paying customers.",
+      "B is safer on the facts and cites sources, but A is also plausibly consistent with product facts, so the extra craft and strategy decide it."
+     ],
+     "truthX": [
+      "Claims such as 'no cut' on payments, Stripe integration, Claude/ChatGPT integration on every plan and drop-off/partial responses on every plan are not cited inline. They plausibly come from the site but are unverified here.",
+      "No sources section is given, despite the rule to cite sources.",
+      "Post 1 implies payments are available on Pro, while B says payments are on paid plans. This is consistent, but it is not verified."
+     ],
+     "truthY": [
+      "No clear fabrications. Pricing for Business at $19 is plausible but unverified in the text.",
+      "The claim that the free plan includes conditional logic and themes is not independently verifiable here."
+     ]
+    }
+   },
+   "climbos>sol": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A has the sharper strategy. The 'no percentage cut, flat $6 a seat' angle is a concrete, differentiated buying reason aimed at people who take payments through forms. The other two posts ('stop writing the same form twice' and 'find the question where people quit') each tie one specific capability to a felt pain.",
+      "A's channel craft is stronger. Each post has a strong hook, a native single-image or document-carousel format, and a detailed visual brief with honest guardrails (demo-data labels, no fake payment screens). Links go in the first comment rather than the body, and each post ends on a closing question that invites comments.",
+      "B is honest and well sourced. Its use-case-led posts are practical and credible, especially the 'before you buy more traffic' audit. But B has no visuals and puts links in the post body, which LinkedIn tends to show to fewer people.",
+      "B is written in a first-person 'I' voice without saying whose account will post it, which could feel off on a company page.",
+      "A's main weakness is that it cites no sources for its product facts (pricing, the Stripe no-cut model, Claude and ChatGPT integration, free-plan limits, the custom domain and badge). This breaks the brief's sourcing rule and leaves the owner to verify them. That is why A wins only slightly. B, by contrast, cites its sources and separates product facts from recommendations."
+     ],
+     "truthX": [
+      "No sources are cited for any product claim: Pro at $6 a seat a month, two months free on yearly billing, payments through your own Stripe account with no Formkit cut, working inside Claude and ChatGPT, a free plan with unlimited forms, responses and members, drop-off and partial responses on every plan, and Pro adding a custom domain and removing the badge. None are shown to be false, but all are unverified against the citation rule."
+     ],
+     "truthY": [
+      "The first-person 'I' voice implies a specific person's practice without saying whose account will post it.",
+      "'Formkit's logic map and tester' and 'Nothing goes live until you publish' come from the cited homepage, but this can't be confirmed independently beyond B's own citation."
+     ]
+    },
+    "sonnet": {
+     "result": "tie",
+     "reasons": [
+      "B's posts are ready to publish, tightly written, and every product claim traces to cited Formkit pages (conditional logic, agency templates, question-level drop-off, logic map and tester). It shows its sources and dates, and labels its workflow advice as recommendation.",
+      "B's posts read like native LinkedIn: a clear hook, short lines, a practical framework and a specific CTA with a relevant URL, including the agency-specific page. It is credible and focused on the agency audience.",
+      "A has strong strategic ideas, namely the no-percentage-cut angle, the ChatGPT/Claude integration and drop-off analytics, plus rich visual briefs. But it cites no sources, and its pricing and plan claims ($6 a seat, two months free, no cut, Stripe payments, free plan unlimited, Claude/ChatGPT on every plan) cannot be verified from the text. If they are wrong, that is a serious flaw.",
+      "A's posts are longer and more essay-like, with generic closing questions. Its document carousel and screenshot require production work. Its first-comment CTAs repeat the sales pitch. It assumes a payments use case that may not fit the main B2B audience.",
+      "B has no visuals, which is a minor craft gap, but text-only posts are acceptable on LinkedIn and ready to use now."
+     ],
+     "truthX": [
+      "No sources are cited anywhere, despite the rules requiring citation.",
+      "Specific pricing claims ($6 per seat per month, two months free yearly) are unsourced.",
+      "The claim that payments go to the user's own Stripe account with no Formkit cut is unsourced.",
+      "The claim that unlimited forms, responses and members are included on the free plan is unsourced.",
+      "The claim that the Claude/ChatGPT integration works on every plan is unsourced.",
+      "The claim that Pro adds a custom domain and removes the badge is unsourced.",
+      "The visuals assume features such as the drop-off report screenshot without verification."
+     ],
+     "truthY": [
+      "The claim that analytics show views, starts, completions and completion time is only as reliable as the cited homepage.",
+      "The AI builder claim that nothing goes live until you publish is not clearly sourced to a specific page.",
+      "The GOV.UK source is listed but never visibly used in the posts."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "climbos": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 7,
+    "craft": 7,
+    "usefulness": 8,
+    "creativity": 7,
+    "overall": 7,
+    "topIssue": "The goal is paying customers, but two of three posts push the free plan (AI building, drop-off analytics on every plan) without any clear reason to upgrade to Pro, and the product claims ($6 seat, no cut, free unlimited, Claude/ChatGPT integration) are presented without any cited source, so they cannot be verified against the brief."
+   },
+   "luna": {
+    "truth": 7,
+    "specificity": 6,
+    "strategy": 5,
+    "craft": 6,
+    "usefulness": 7,
+    "creativity": 4,
+    "overall": 5.5,
+    "topIssue": "The posts are accurate but read like feature-page summaries. Their hooks are flat and there is no differentiation from look-alike free form builders such as Tally or Typeform. The three posts also show no plan for which buyer segment to reach or how they lead to paid upgrades within 90 days, and putting links in the post body likely costs LinkedIn reach."
+   },
+   "sol": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 6,
+    "usefulness": 7,
+    "creativity": 5,
+    "overall": 6,
+    "topIssue": "All three posts drive cold LinkedIn readers to generic homepage or use-case links with no visual, no offer, and no tie to the 90-day paying-customer goal, such as a free-trial or upgrade path. The posts lack hooks or proof strong enough to stop the scroll, so they are unlikely to move paid conversions."
+   }
+  },
+  "words": {
+   "climbos": 1482,
+   "luna": 652,
+   "sol": 599
+  }
+ },
+ "strategy": {
+  "pairs": {
+   "sol>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A is more specific to Formkit. Its agency client-handoff kit builds on Formkit's documented agency features and templates. Its workshop registration kit ties directly to Pro-gated capabilities (Stripe payments, integrations). B's plays (upgrade prompts, template SEO pages, an AI-assistant guide) are more generic.",
+      "A's forecasts are more honest and conservative. It uses 2/4/8% free-to-paid rates and notes that the benchmark measures six-month conversion, not 90-day results. It shows that even its best paid-search case costs about $156 per customer, and that eight companies add only $48 in MRR. B's 8%-likely and 15%-high upgrade rates, and its 42-account high case, are more optimistic despite its own caveat about price mismatch.",
+      "A's test, kill and scale rules are concrete and tied to owner time. They include a 15-minute-per-company cap, outreach to 15 partners over three weeks, a $25 cutoff for irrelevant search queries, and letting cohorts mature for 30 days. B's rules are thinner, and several cutoffs are self-labeled assumptions.",
+      "A's ad plan is disciplined and fully specified: $100 test, conditional $150/$150, and a stated payback rule. B's $0-then-$150 plan is also sensible but less developed.",
+      "B has some useful touches: the AI-assistant discoverability angle and the warning not to present the illustrative 12,483-views showcase as customer results. These do not offset A's stronger strategic depth."
+     ],
+     "truthX": [
+      "The workshop audience and January timing are speculative, though labeled as hypotheses.",
+      "The ChartMogul and Unbounce benchmark figures cannot be independently verified here. They are cited and caveated, which is appropriate."
+     ],
+     "truthY": [
+      "The '8% median free-to-paid across 200 B2B products' citation conflicts with how the same ChartMogul source is characterized elsewhere. It may be misapplied, and it inflates the likely case.",
+      "The 15% high upgrade rate and 1.2% visitor-to-paid high rate are unsupported optimistic assumptions. They drive a 42-account high scenario."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A gives three concrete, distinct plays: an agency client-handoff kit, a workshop registration kit for a business deadline, and in-product upgrade moments. Each has a named audience, asset, distribution route and paid reason. B's plays are largely generic SEO template pages plus AI-assistant discoverability.",
+      "A's economics are honest. It shows that 8 companies at one Pro seat is only $48 MRR, that the search test costs about $156 per customer even in the high case, and it labels that test a capped moonshot. This is the evidence-based forecasting the brief asks for, and B has no equivalent.",
+      "A ties each play to precedent (Typeform agency partners, Tally community templates) while stating that the precedent does not validate Formkit's own results. That is creative but predictable, built on proven mechanics.",
+      "A's test/kill/scale rules are specific and actionable: thresholds, a 25-company pilot, 15 partner approaches, and a $25 irrelevant-query stop. It also includes a 'today' action per play, an owner time allocation, a not-doing list, and a budget table with conditional release.",
+      "B is cleaner and more concise, and it has a good week-one checklist, including a check on the illustrative analytics numbers. But its high-end forecasts (15% free-to-paid, 1.2% visitor-to-paid yielding 19 accounts) are optimistic and loosely anchored, and the portfolio total of 4/14/42 overstates what the evidence supports.",
+      "B's play 3 (Claude/ChatGPT discoverability) is novel and tied to a real product feature, but it carries thin evidence and no distribution mechanism beyond publishing a guide."
+     ],
+     "truthX": [
+      "The 'workshop/January training businesses' audience and the agency partner willingness are hypotheses. A labels them as such, so they are not really falsehoods.",
+      "The 2/4/8% conversion scenarios rest on a ChartMogul six-month benchmark. A flags the caveat openly."
+     ],
+     "truthY": [
+      "B cites an '8% median free-to-paid' and a 5-in-1,000 example from the ChartMogul report. These are plausible, but applying 8% as the likely rate for a $6/seat product is weakly justified, even with the 'directional' caveat.",
+      "The 15% high free-to-paid and 1.2% visitor-to-paid rates are invented assumptions. They are labelled, but they inflate the portfolio range to 42."
+     ]
+    }
+   },
+   "climbos>sol": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A gives the owner one clear primary play: an upgrade screen at the Pro-feature click. It is built on Formkit's actual monetisation structure (unlimited free tier, no-cut Stripe payments, $6 Pro). It comes with event definitions, break-even math and explicit kill/scale thresholds.",
+      "A ships publishable copy: the upgrade screen text, the follow-up email, the agency cold email and the directory listing. The rules required ready-to-use copy, and B provides none, only descriptions of assets still to be built.",
+      "A's plays are non-obvious but rest on proven mechanics (offer at the moment of need, trigger-based outreach with a done-for-you sample, early listing in a new directory). B's partnerships, template kits and community contributions are closer to generic channel lists, and the 'January workshops' audience is speculative.",
+      "A deals with real execution risks: the name collision with the FormKit Vue library and ad negatives, US commercial email law requirements, and competitor MCP support. It also states its own diagnosis and what would prove it wrong.",
+      "B's strength is honesty. It cites real benchmarks (ChartMogul, Unbounce) and correctly shows that paid search economics are weak at $6. But it is less actionable for a non-expert, and its 90-day forecasts lean on six-month conversion benchmarks.",
+      "Both label assumptions well. A's estimates are mostly grade-D guesses, but they are flagged honestly and paired with day-1 validation steps."
+     ],
+     "truthX": [
+      "Internal inconsistency on the search test's kill rule: the experiment says kill above $6 per signup, while the Portfolio Note says kill above $58 per Pro account.",
+      "The 'Pew, Seer Interactive' claim and the LinkedIn 'practitioner guidance' are cited vaguely, with no links.",
+      "The Portfolio Note says the edge is that Formkit works on the free plan, but competitor free-plan MCP support is not checked; this sits uneasily with the cited competitor MCP evidence.",
+      "It refers to an internal system name (ClimbOS) that the owner may not recognise.",
+      "It states 'Formkit takes no cut' and per-client workspaces as confirmed via 'site insights' without a direct citation."
+     ],
+     "truthY": [
+      "It applies ChartMogul's six-month free-to-paid benchmarks to 90-day cohorts. It acknowledges this, but the forecasts still rest on them.",
+      "The January workshop timing and training-business audience are unsupported hypotheses (labelled as such)."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A is far more specific to Formkit: it pitches Pro at the moment a free user clicks a Pro-only feature, with ready-to-use upgrade screen copy and a follow-up email. B only describes this play in the abstract.",
+      "A has a real diagnosis (monetisation, not traffic), a falsifier, and an affordable-CAC logic. It correctly sees that $6/month Pro cannot fund paid traffic, so it spends $0 until the wall proves too small. B reaches similar economics but still schedules a search test.",
+      "A gives kill/scale thresholds, guardrails, stopping rules and a measurement plan for each play, and labels assumptions with grades. Its forecasts are honest, with a low P10 of 0 for the agency and directory plays.",
+      "A includes publishable copy: the cold email, the listing description, the upgrade screen and the follow-up email. B has almost no ready-to-use copy.",
+      "A handles the FormKit Vue name collision and competitor MCP support, which shows real research on this business. B misses the name collision.",
+      "B is clean and honest, with sourced benchmarks and careful caveats. But its plays are generic: a kit and templates. Its 'proven mechanic' claims rest on Typeform and Tally. Its forecast applies ChartMogul free-to-paid rates to modeling units, and the 100-company pool is invented.",
+      "B's plays are less actionable, and its January workshop audience is an unsupported hypothesis. Its $400 ad cap is weakly justified given its own admission that the economics are poor."
+     ],
+     "truthX": [
+      "Several numbers are assumptions (about 400 wall-clicks, 80% margin, $50/hour, 4% reply rate), though they are labelled as such.",
+      "Some claims, such as the 'service plan sells better' analogy, rest on weak support, though they are flagged as assumptions.",
+      "Details about Tally's reviews and competitors' MCP support are cited, and I cannot verify them."
+     ],
+     "truthY": [
+      "The 100 eligible companies figure is invented, though it is called a modeling unit.",
+      "Applying the ChartMogul six-month freemium conversion benchmarks to 90-day cohorts is shaky, though it is disclosed.",
+      "The workshop and January audience is an unsupported hypothesis, though it is labelled as one.",
+      "The claim that the mechanics are proven rests on competitor examples rather than on Formkit results, though this is disclosed."
+     ]
+    }
+   },
+   "climbos>luna": {
+    "opus": {
+     "result": "win",
+     "reasons": [
+      "A is unmistakably built for Formkit. It identifies that monetisation, not traffic, is the constraint, and backs that with a stated falsifier. It anchors every channel on a differentiator ('no cut on Stripe payments', 'looks like yours') rather than 'free', where Tally and Google Forms already compete.",
+      "A gives the owner ready-to-use assets: in-product upgrade screen copy, the follow-up email, an agency cold email with a done-for-you sample offer, and Claude directory listing copy. B provides no publishable copy at all.",
+      "A's unit economics are explicit: about $58 gross profit per Pro seat in year one, break-even reply and conversion rates, and a rule that yearly Pro or Business must lead any paid traffic. Those numbers justify keeping ads at $0, and the conditional search test has sensible guardrails, including the FormKit Vue name-collision negatives.",
+      "A's plays are non-obvious but rest on proven mechanics: a trigger-based agency outreach list mined from rival reviews, and an early listing in a new connector directory. Each has numeric kill and scale rules and owner-hour budgeting.",
+      "B is honest and well cited (ChartMogul, WordStream), with good caveats. Its plays are generic, though: upgrade prompts, template SEO pages and an AI guide, all reported per 100 workspaces. It lacks specificity, positioning and execution detail.",
+      "B's SEO template play is slow to pay back within 90 days for a non-expert owner, and B does not address the low per-seat economics beyond a caveat."
+     ],
+     "truthX": [
+      "Several 'confirmed' claims, such as yearly billing giving two months free and chat build-and-publish working on the free plan, rely on site insights that are not shown and cannot be verified here.",
+      "It claims Tally's help page points users who want branding and payments to other tools. This is a characterisation of a source that may be overstated.",
+      "The ad-test kill criteria are inconsistent: the portfolio note uses $58 per Pro account, while the experiment uses $6 per signup.",
+      "Some funnel numbers (about 400 wall-clicks, 60 installs) are labelled assumptions, but the P50 forecasts are built on them before any baseline exists."
+     ],
+     "truthY": [
+      "The ChartMogul report is cited as '2026', and its 8% median free-to-paid figure is applied to a very different price point. The mismatch is acknowledged, but the figure still drives the day-90 target of 8.",
+      "The day-90 target of 8 is not derived from any Formkit data, which B itself admits."
+     ]
+    },
+    "sonnet": {
+     "result": "win",
+     "reasons": [
+      "A is far more specific to Formkit: it centers on the free-to-Pro paywall moment (payments with no cut, own domain, badge removal), which fits the unlimited free tier and the $6 Pro price.",
+      "A does real unit economics: affordable CAC, $58 first-year gross profit per Pro seat, break-even per play, and the conclusion that monthly Pro can't fund paid traffic. B only says low per-seat pricing makes ads risky.",
+      "A's kill/scale thresholds, minimum sample sizes, guardrails and stopping rules are concrete and tied to break-even. B's rules are vaguer.",
+      "A names the FormKit Vue library name collision and adds negative keywords. It also notes that Tally, Jotform and Typeform already support MCP, so it positions on no-cut payments rather than 'free in chat'. Both show strategic awareness B lacks.",
+      "A includes ready-to-use copy: upgrade screen text, follow-up email, cold agency email and directory listing copy. B has none, despite the 'publishable copy' rule.",
+      "A labels nearly every estimate as an assumption with a grade and has a falsifier for its diagnosis, plus an honest P10/P50/P90 with low confidence on riskier plays.",
+      "B is honest and cites ChartMogul and WordStream, but its play scenarios are generic (templates SEO, AI guide) with big assumed traffic numbers and no basis for the traffic. SEO-style plays are slow for 90 days, and its 8-account target is arbitrary.",
+      "B's 8% free-to-paid median comes from companies with much higher ARPA, and it admits this is only directional. It is an unreliable basis for a $6 product. B also leaves $450 of budget 'reserve' with little plan to use it."
+     ],
+     "truthX": [
+      "Unsupported assumptions like about 400 wall-clicks, 6% conversion, 4% reply rate and 80% margin are labeled as assumptions, but they still drive the forecasts.",
+      "The 'two months free' yearly pricing and the Stripe no-cut claim are stated as confirmed facts that can't be checked here.",
+      "Some cited URLs, such as the Tally help page and the claude.com docs, can't be verified from the text."
+     ],
+     "truthY": [
+      "The 8% median free-to-paid benchmark and the 5-in-1,000 example are applied to a $6/seat product, even though the source's customers have much higher revenue per customer. B flags this, but the modeled results still rest on it.",
+      "The visit volume scenarios (300/800/1,600 and 100/300/700) are invented assumptions with no basis in Formkit data, though labeled as assumptions.",
+      "The portfolio total of 4/14/42 sums arbitrary assumptions and implies precision it doesn't have."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "climbos": {
+    "truth": 8,
+    "specificity": 8,
+    "strategy": 8,
+    "craft": 6,
+    "usefulness": 7,
+    "creativity": 6,
+    "overall": 7,
+    "topIssue": "The plan contradicts itself in ways the owner can't resolve alone. The positioning, audience notes and experiment all say to lead with no-cut payments, not 'free', yet the shipped directory listing and agency email both lead with free. The search test also carries two different kill rules: $6 per signup in the experiment versus $58 per Pro with a 3-Pro scale bar in the portfolio note, which the plan itself says the budget can't reach."
+   },
+   "luna": {
+    "truth": 8,
+    "specificity": 6,
+    "strategy": 7,
+    "craft": 5,
+    "usefulness": 6,
+    "creativity": 5,
+    "overall": 6,
+    "topIssue": "The plan is carefully hedged and sourced but delivers no ready-to-use assets (no upgrade prompt copy, no template page draft, no AI-assistant guide outline), so the owner gets a measurement framework rather than executable growth plays."
+   },
+   "sol": {
+    "truth": 7,
+    "specificity": 7,
+    "strategy": 7,
+    "craft": 5,
+    "usefulness": 6,
+    "creativity": 6,
+    "overall": 6,
+    "topIssue": "Despite the rule that publishable copy be ready to use, the plan supplies no ad copy, partner outreach messages, in-product upgrade prompts or landing-page text, so a non-expert owner must still write every customer-facing asset; the eight-company target also exceeds the five-company likely acquisition case if no existing eligible pool exists."
+   }
+  },
+  "words": {
+   "climbos": 4914,
+   "luna": 1355,
+   "sol": 2342
+  }
+ },
+ "outbound": {
+  "pairs": {
+   "sol>luna": {
+    "opus": {
+     "result": "tie",
+     "reasons": [
+      "A cites a specific page for every claim, such as a contact, CRO or Chicago Cause page, so the owner can quickly check each first line. B cites only homepages for very specific dated details (sessions on Oct 19–21, a $5–$20 price, a deadline). That makes B's evidence much harder to verify and raises the risk of errors.",
+      "A is candid that most prospects lack a dated buying trigger and scores timing low. B's trigger logic looks strong but is shaky. An event that runs tomorrow (Forecast Pro, Oct 19–21) or within two weeks already has its registration built. B's 90–95 timing scores overstate how urgently these prospects need a new form tool.",
+      "B is more actionable on the surface. It gives named contacts and public emails, and its event/training ICP fits a form builder's payment and registration features well. That is a real strength over A, which supplies roles only and no addresses.",
+      "A's sequence is coherent and pitches a concrete deliverable (an intake outline based on the prospect's services). B's Day 0 email packs in features, plan limits and pricing, so it reads like a spec sheet. B's first lines mostly just restate an event date and lack an insight-driven hook.",
+      "A's agency ICP plausibly fits Pro (custom domains, connections) and flags free-plan cannibalization risk. Both handle compliance responsibly, and B also documents an exclusion."
+     ],
+     "truthX": [
+      "Fit scores of 68–88 are presented with false precision, though they are labeled as judgments.",
+      "A few first lines are flat observations rather than hooks; this is a craft weakness, not a truth problem."
+     ],
+     "truthY": [
+      "Highly specific event dates, prices, deadlines and stats (33,000 AEC customers, 200+ events per year) are cited only to homepages, so the claims cannot be verified from the cited sources.",
+      "Pricing and plan claims in the email copy ($6 per seat, unlimited free forms, responses and members, Stripe payments, version history) are risky to send. Their accuracy cannot be confirmed from what is shown here.",
+      "Timing scores of 85–95 overstate urgency for events whose registration is already live or that happen within days."
+     ]
+    },
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B's prospects carry dated, near-term triggers (specific November workshops, deadlines, a December webinar), so the 'why now' is real and the timing scores are credible. A admits most of its prospects have no dated trigger and gives them timing scores of 25-40.",
+      "B's first lines cite concrete public details (dates, pricing, form fields) and read as personal. A's lines are generic observations about contact pages and could apply to any agency.",
+      "B gives named contacts and public emails for most prospects, so the owner can send immediately. A deliberately gives no emails and mostly gives only role guesses, which leaves the owner more research to do.",
+      "B's email copy is more specific to Formkit: it mentions pricing, a free plan, payments through the owner's Stripe account, the logic map and drop-off metrics, and it has a clear low-risk ask. A's emails are vaguer and tell the prospect to 'consider an outline', which is weaker.",
+      "B flags a date discrepancy for DMI, excludes MBX Events for its no-spam terms, and raises UK PECR, which shows careful diligence. A's compliance notes are good but its fit logic is weaker.",
+      "A's agency ICP is coherent, but several of its prospects (Webstacks, Solid Digital, Clay) are admitted to be poor fits because they likely have their own stack, which weakens the list."
+     ],
+     "truthX": [
+      "Claims that Formkit's feature set (custom domains, connections) is confirmed rest on the homepage only; this is minor.",
+      "Cites Amply as 34 people and Orbit as 50+; these are plausibly sourced, so there are no clear fabrications, but several contact-title guesses are speculative."
+     ],
+     "truthY": [
+      "Pricing ($6 per seat) and free-plan details are stated in the email copy; they are cited to the pricing page but should be verified before sending.",
+      "Event dates, workshop details and emails are all cited to homepage URLs rather than specific pages, so they are hard to verify.",
+      "DMI's date discrepancy is acknowledged but unresolved.",
+      "Some job titles and public emails (such as Icenhower's info@icenhowercoaching.com domain mismatch) may be unverified."
+     ]
+    }
+   },
+   "climbos>sol": {
+    "opus": {
+     "result": "loss",
+     "reasons": [
+      "B delivers what was asked: 10 named prospects, each with cited URLs, a 4-step sequence and a first line for every company. A delivers 4 holds, none sendable, and only 3 first lines. The owner can act on B this week; A mostly hands them a research to-do list.",
+      "A's ICP is strategically sharper for a $6/seat tool. Solo-to-15-person studios whose branded inquiry form is the client's first step are a tight fit, and its openers are concrete (Rocky West's four separate forms plus Typeform, Thirteen's spam warning).",
+      "B's targeting is weaker. Several picks (Orbit 50+, Clay, Ramotion, Webstacks) are sophisticated web agencies that build forms in their own stacks, and B admits this in places. Fit scores in the 80s look inflated against that.",
+      "B's first lines are mostly flat restatements of a contact page with no tension. Its sequence is coherent and offers a useful free brief structure, but it is generic.",
+      "A's process discipline is excellent: it refuses to pad the list, sets verifiable qualification gates and gives compliance notes. That honesty does not make up for zero usable output in a 90-day revenue push.",
+      "Neither supplies verified email addresses. B names one decision maker (Jeremy Durant); A names none."
+     ],
+     "truthX": [
+      "Sequence claims Formkit features (AI form building, AI-written personal replies, Claude/ChatGPT integration, partial answers on free plan, Slack/Sheets connections) without citing the Formkit page they come from.",
+      "Several evidence items are paraphrased, with no verbatim snippets or dates logged."
+     ],
+     "truthY": [
+      "Some location and size claims (e.g., HUEMOR in Pittsburgh, Amply's 34 people) rest on single pages and may be outdated or wrong. Worth rechecking before send.",
+      "Numeric fit and timing scores (e.g., 88/100) imply precision the evidence does not support, though they are labelled as judgments.",
+      "Orbit's timing angle depends on a future application window that was not verified as open."
+     ]
+    },
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B delivers all 10 real, cited prospects with URLs, fit and timing scores labelled as analyst judgment, and a ready sequence with a personal first line for each. A delivers 0 sendable prospects and 4 holds against 10 requested.",
+      "B is honest about limits: it says no evidence shows any prospect is shopping, flags Orbit's applications as unverified, and avoids guessed emails.",
+      "B's pitch is consistent and tied to Formkit's confirmed features (conditional logic, drop-off reporting, custom domains).",
+      "A is very rigorous, but it is mostly process: unknown size and country, undated evidence, paraphrased snippets, and blocked sends. The owner can do almost nothing with it today.",
+      "A's sequence is decent and its first lines are specific, but only 3 of its first lines exist and none is cleared for sending. The spam-warning opener for Thirteen is a nice touch, but that prospect is blocked.",
+      "B's weaknesses: no named contacts except Bop's Jeremy Durant, mostly undated triggers, low timing scores, and agencies that may be too sophisticated or ill-fitting for Formkit. Its sequence is somewhat generic and drops the greeting and footer by design. Still far more usable than A."
+     ],
+     "truthX": [
+      "Evidence observations are largely paraphrased with no verbatim snippets or dates logged, which weakens verifiability.",
+      "Claims like 'AI builds it', 'unlimited forms and responses on free' and 'Pro $6 a seat' are not cited in the output.",
+      "Offers to rebuild forms for prospects, a commitment the owner has not confirmed (the notes flag this)."
+     ],
+     "truthY": [
+      "Fit and timing scores are labelled as judgment but have no stated basis.",
+      "Orbit's '50+ people' and Amply's '34 people' rely on claims that are not independently verified here.",
+      "Contacts are given as roles, not people, apart from Bop's Jeremy Durant. Some role titles are guesses, though they are marked as roles."
+     ]
+    }
+   },
+   "climbos>luna": {
+    "opus": {
+     "result": "tie",
+     "reasons": [
+      "Truth is weighted first. A ties every claim to a specific deep URL (inquiry or form pages), marks paraphrase versus verbatim, and refuses to list emails or contacts it didn't capture. It reports a 6-of-10 shortfall instead of padding the list.",
+      "B cites only homepages for very specific claims: named contacts, exact session dates, prices, '33,000 AEC customers', '200+ events'. None of it can be traced to a page. The 84/95-style fit scores show false precision.",
+      "A's ICP is sharper and fits a $6/seat form builder better. Small studios where the inquiry form is client-facing brand work suit Formkit's custom-domain, no-badge pitch. B targets large orgs (AIA NY, Main Street America, DMI) that likely run established event platforms and are unlikely to switch.",
+      "A's first lines are genuinely personal and set up the pitch. The Rocky West four-forms-to-conditional-logic line is strong. Most of B's lines just restate an event date and give no reason to care.",
+      "Against A: it delivers 0 sendable prospects and only 3 first lines. That is a real usefulness failure for a 90-day revenue goal. B is far closer to send-ready if its facts hold, so the margin is slight.",
+      "Both sequences are competent. A's has a two-variant opener, a concrete offer to rebuild their form, and good compliance notes. B's is clean, with CAN-SPAM and ICO sources, but more generic."
+     ],
+     "truthX": [
+      "Product claims (AI-written replies, Claude/ChatGPT integration, partial answers on the free plan) are not linked to a Formkit source page in the deliverable.",
+      "Rocky West's Typeform link is reported as confirmed but was not opened, though A flags this itself."
+     ],
+     "truthY": [
+      "Specific facts (named contacts like Sabina Khadr and Gustavo Ustariz, session dates, prices, customer and event counts) are cited only to homepages, so they cannot be verified.",
+      "Fit/timing scores like 84/95 are presented with unsupported precision, despite a caveat that they are directional.",
+      "DMI first line says the deadline is 'end of October', while the evidence column says the deadline shows Nov. 4. The line picks one side of an unresolved discrepancy.",
+      "Generic info@ addresses are listed as contacts without the specific page where each was found."
+     ]
+    },
+    "sonnet": {
+     "result": "loss",
+     "reasons": [
+      "B delivers the requested 10 prospects, each with a dated trigger, a source link, a named contact where available, and a public email. A delivers 0 sendable prospects and only 4 holds.",
+      "B's first lines are specific to each prospect's observed event or form and are usable as written. A has first lines for only 3 of 4 holds, and none can be sent because size, country and email are unconfirmed.",
+      "B's sequence is concise, sells one low-risk action (a parallel test form for one event), and covers payments, logic and drop-off with product-grounded claims. A's sequence is decent, but it can't be used without prospects.",
+      "B's fit and timing scores are labelled directional estimates, and it flags the DMI date discrepancy and compliance steps honestly. A is honest about its shortfall, but the output is nearly unusable.",
+      "A's honesty and compliance rigor are admirable, but a top specialist would rather hand the owner B, which is actionable now."
+     ],
+     "truthX": [
+      "Evidence 'date seen' is not logged and snippets are paraphrased, so the evidence is weak.",
+      "Item 3 of the sequence claims 'Formkit Pro can write a personal reply' and the first-line claims about the prospects' forms rest on unverified paraphrases."
+     ],
+     "truthY": [
+      "Every source link is only a homepage, so the specific claims about workshop dates and prices can't be verified from the cited URLs.",
+      "Fit and timing scores such as 84/95 look falsely precise, though they are labelled estimates.",
+      "Some emails and named contacts could be unverified; the output does tell the owner to verify them.",
+      "The 'research date' of Oct 2026 and the specific workshop details are unsupported by what is cited."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "climbos": {
+    "truth": 7,
+    "specificity": 6,
+    "strategy": 4,
+    "craft": 6,
+    "usefulness": 3,
+    "creativity": 5,
+    "overall": 4,
+    "topIssue": "The deliverable falls far short of the job: 4 unverified holds and 0 sendable prospects against 10 requested. Size, country and contact emails are missing for every studio, so the owner cannot send a single email without redoing the research."
+   },
+   "luna": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 4,
+    "usefulness": 6,
+    "creativity": 4,
+    "overall": 5,
+    "topIssue": "The personal first lines only restate a public fact without linking it to a problem Formkit solves, and the Day 0 email is a feature-and-price dump sent mostly to generic info@ inboxes, so replies and paid conversions are likely to be low. Compounding this, citations point to homepages rather than the specific event pages, and the DMI line asserts an end-of-October deadline the research itself flagged as unverified."
+   },
+   "sol": {
+    "truth": 8,
+    "specificity": 6,
+    "strategy": 4,
+    "craft": 5,
+    "usefulness": 5,
+    "creativity": 4,
+    "overall": 5,
+    "topIssue": "The list pitches sophisticated web agencies on replacing their own low-volume contact forms, a weak paid use case with mostly self-admitted low timing scores, while ignoring the stronger angle of agencies deploying Formkit across client sites. It pairs this with a bland, feature-led sequence that has weak or missing CTAs and only one named contact."
+   }
+  },
+  "words": {
+   "climbos": 2471,
+   "luna": 1664,
+   "sol": 1982
+  }
+ }
+}
