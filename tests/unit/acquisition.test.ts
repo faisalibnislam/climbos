@@ -1,0 +1,61 @@
+import { describe, expect, it } from "vitest";
+import { BUSINESS_TYPES, CHANNELS, CHANNEL_BY_ID, budgetBand } from "../../shared/acquisition/library";
+import { candidatesFor, dimensionsToConfirm, scoreChannels, type AcquisitionProfile } from "../../shared/acquisition/scoring";
+
+const v = (value: string) => ({ value, confidence: "high" as const, source: "owner" as const });
+const formkit: AcquisitionProfile = { types: ["b2b_saas"], budgetUsd: 600, horizonDays: 90, dims: { customerType: v("b2b"), geography: v("global"), aov: v("low"), salesMotion: v("self_service"), team: v("solo") } };
+const plumber: AcquisitionProfile = { types: ["local_services"], budgetUsd: 400, horizonDays: 60, dims: { customerType: v("b2c"), geography: v("local"), team: v("small") } };
+
+describe("acquisition library", () => {
+  it("has unique channel ids and every type references real channels", () => {
+    expect(new Set(CHANNELS.map((c) => c.id)).size).toBe(CHANNELS.length);
+    expect(CHANNELS.length).toBeGreaterThan(200);
+    expect(BUSINESS_TYPES).toHaveLength(30);
+    for (const t of BUSINESS_TYPES) for (const id of [...t.starters, ...t.channels]) expect(CHANNEL_BY_ID[id], `${t.key} → ${id}`).toBeTruthy();
+  });
+  it("maps budgets to the framework's bands", () => {
+    expect(budgetBand(600).label).toBe("$500–1,000");
+    expect(budgetBand(50).maxPaid).toBe(0);
+  });
+});
+
+describe("channel scoring", () => {
+  it("B2B SaaS at $600: focused, at most one paid channel, no local or app-store channels", () => {
+    const rows = scoreChannels(formkit);
+    const plan = rows.filter((r) => r.status === "primary" || r.status === "in_plan");
+    expect(plan.length).toBeGreaterThanOrEqual(2);
+    expect(plan.length).toBeLessThanOrEqual(3);
+    expect(plan.filter((r) => r.paid).length).toBeLessThanOrEqual(1);
+    expect(rows.find((r) => r.id === "S04")?.status).toBe("ineligible"); // Google Maps
+    expect(rows.find((r) => r.id === "M06")?.status).toBe("ineligible"); // App Store
+    expect(rows.find((r) => r.id === "P09")?.status).not.toMatch(/primary|in_plan/); // LinkedIn Ads needs $1,500
+    expect(rows[0].status).toBe("primary");
+    expect(rows[0].family).not.toBe("outreach"); // low-ticket self-serve: not one-to-one selling
+  });
+  it("local services: Google Maps ranks near the top", () => {
+    const rows = scoreChannels(plumber).filter((r) => r.status !== "ineligible");
+    expect(rows.slice(0, 5).map((r) => r.id)).toContain("S04");
+  });
+  it("evidence-backed adjustments move a channel, within bounds", () => {
+    const before = scoreChannels(formkit).find((r) => r.id === "M10")!.score;
+    const after = scoreChannels(formkit, [{ channelId: "M10", deltas: { competition: 90, audience: 20 }, reason: "No rival launched there in 2 years", evidence: "producthunt.com search" }]).find((r) => r.id === "M10")!;
+    expect(after.score).toBeGreaterThan(before);
+    expect(after.factors.competition).toBe(80); // 50 + capped 30
+    expect(after.why).toMatch(/No rival/);
+  });
+  it("eligibility follows traits: Ad Grants only for nonprofits, ASO only for apps", () => {
+    const np = scoreChannels({ ...plumber, types: ["nonprofit"] });
+    expect(np.find((r) => r.id === "X09")?.status).not.toBe("ineligible");
+    expect(scoreChannels(formkit).find((r) => r.id === "X09")?.status).toBe("ineligible");
+    const app = scoreChannels({ ...plumber, types: ["mobile_app"], dims: { customerType: v("b2c"), geography: v("global") } });
+    expect(app.find((r) => r.id === "S18")?.status).not.toBe("ineligible");
+  });
+  it("asks only about unknown or low-confidence dimensions", () => {
+    expect(dimensionsToConfirm({ ...formkit, dims: {} })).toEqual(["customerType", "geography", "salesMotion"]);
+    expect(dimensionsToConfirm(formkit)).toEqual(["salesCycle", "scale"]);
+  });
+  it("candidates include every starter for the type", () => {
+    const ids = candidatesFor(formkit, 10).map((r) => r.id);
+    for (const s of ["S09", "S10", "P01", "R07"]) expect(ids).toContain(s);
+  });
+});

@@ -254,6 +254,8 @@ export default defineSchema({
         runId: v.optional(v.id("workflowRuns")),
       }),
     ),
+    /** Business classification for channel scoring; owner-confirmed values are kept across plan refreshes. */
+    acquisition: v.optional(v.object({ types: v.array(v.string()), dims: v.any(), updatedAt: v.number() })),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_org", ["orgId"]),
@@ -586,6 +588,8 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
       }),
     ),
+    /** Acquisition Intelligence: the profile used and the agent's evidence-backed adjustments (scores are recomputed on read). */
+    acquisition: v.optional(v.object({ libraryVersion: v.string(), profile: v.any(), adjustments: v.any(), summary: v.array(v.string()) })),
     reviewDate: v.string(),
     sourceFactIds: v.array(v.id("businessFacts")),
     generationCostMicros: v.number(),

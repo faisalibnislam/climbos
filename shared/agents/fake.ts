@@ -94,6 +94,16 @@ export async function fakeTurn(req: ClaudeTurnRequest, rates: RateVersion): Prom
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
     }
+    // Channel scoring: valid library types and the candidates named in the prompt.
+    const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };
+    if (cf && typeof cf === "object" && Array.isArray(cf.types) && Array.isArray(cf.dimensions) && Array.isArray(cf.channels)) {
+      const ids = [...lastUser.matchAll(/^([A-Z]\d{2}) · /gm)].map((m) => m[1]).slice(0, 10);
+      cf.types = ["b2b_saas"];
+      // Neutral text: these reasons flow into later prompts, where a draft marker would confuse the fake reviewer.
+      cf.dimensions = [{ key: "customerType", value: "b2b", confidence: "medium", evidence: "scoring evidence" }];
+      cf.channels = ids.map((id, i) => ({ id, deltas: [i === 0 ? 10 : 0, 0, 0, 0, 0, 0, 0, 0], reason: "scoring reason", evidence: "scoring evidence", platform: "Google", tactic: "scoring tactic", audience: "scoring audience" }));
+      cf.summary = ["scoring summary"];
+    }
     // Outbound: three distinct, evidenced prospects and a mergeable sequence.
     const o = output as { prospects?: Record<string, unknown>[]; sequence?: Record<string, unknown>[]; firstLines?: unknown[] };
     if (o && typeof o === "object" && Array.isArray(o.prospects)) {

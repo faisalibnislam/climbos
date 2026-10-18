@@ -60,6 +60,10 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await expect(page.getByText(/experiment/i).first()).toBeVisible();
     await expect(page.getByText(/SWOT|strengths/i).first()).toBeVisible();
     await expectAccessible(page, "plan");
+    await page.getByRole("tab", { name: "Channels" }).click();
+    await expect(page.getByRole("heading", { name: "Your business" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "In the plan" })).toBeVisible();
+    await expectAccessible(page, "channels");
   });
 
   test("results: observed vs attributed vs projected, reconciliation and forecast detail", async () => {

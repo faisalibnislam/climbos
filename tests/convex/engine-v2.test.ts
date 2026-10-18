@@ -73,6 +73,10 @@ describe("Engine v2 wiring", () => {
     process.env.CLIMBOS_FAKE_LLM = "revise";
     const t = setup();
     const w = await workspace(t, "v2-revise@example.com");
+    // Headroom so every agent's revision round fits (a trial wallet covers the plan, not every worst case).
+    await t.run(async (ctx) => {
+      for (const p of await ctx.db.query("usagePeriods").collect()) if (p.orgId === w.orgId) await ctx.db.patch(p._id, { walletCapMicros: 20_000_000 });
+    });
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await latestRun(t, w.orgId, "strategy");

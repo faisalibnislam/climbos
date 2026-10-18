@@ -7,6 +7,7 @@ import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
 import {
   adsSpec,
+  channelFitSpec,
   conversionAuditSpec,
   emailSpec,
   growthPlaysSpec,
@@ -40,7 +41,8 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
   }
   for (let r = 0; r < rounds; r++) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft });
-    steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic });
+    // maxRevisions < 0 means a single draft with no review.
+    if (spec.maxRevisions >= 0) steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic });
   }
   return steps;
 }
@@ -69,7 +71,8 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     }
     case "strategy": {
       const r = { maxSearches: searches("growth_strategy") };
-      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
+      const fit = channelFitSpec({ candidateIds: [], typeKeys: [], dims: {} });
+      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
     }
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));

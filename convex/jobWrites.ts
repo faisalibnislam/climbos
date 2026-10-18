@@ -206,8 +206,8 @@ export const saveInsights = internalMutation({
 });
 
 export const saveStrategy = internalMutation({
-  args: { runId: v.id("workflowRuns"), strategy: v.string(), factIds: v.array(v.id("businessFacts")) },
-  handler: async (ctx, { runId, strategy, factIds }) => {
+  args: { runId: v.id("workflowRuns"), strategy: v.string(), factIds: v.array(v.id("businessFacts")), acquisition: v.optional(v.string()) },
+  handler: async (ctx, { runId, strategy, factIds, acquisition }) => {
     const run = await ensureRunOrg(ctx, runId);
     const s = JSON.parse(strategy) as StrategyOutput;
     const business = await ctx.db
@@ -237,10 +237,13 @@ export const saveStrategy = internalMutation({
       conversion_optimization: "conversion_audit",
       retention: "retention_plan",
     };
+    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[] }) : null;
+    if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
     const strategyId = await ctx.db.insert("strategies", {
       orgId: run.orgId,
       businessId: business._id,
       goalId: goal._id,
+      ...(acq ? { acquisition: { libraryVersion: acq.libraryVersion, profile: acq.profile, adjustments: acq.adjustments, summary: acq.summary } } : {}),
       version,
       status: "needs_approval",
       summary: s.summary,

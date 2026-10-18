@@ -547,6 +547,71 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
   );
 }
 
+/* ---------------- Acquisition intelligence: classify, then score channels ---------------- */
+
+export const ChannelFitSchema = z.object({
+  /** 1-3 library business type keys, most specific first. */
+  types: z.array(z.string()),
+  dimensions: z.array(z.object({ key: z.string(), value: z.string(), confidence: z.enum(["high", "medium", "low"]), evidence: z.string() })),
+  channels: z.array(
+    z.object({
+      id: z.string(),
+      /** Changes to the 8 factor priors, in order: audience, intent, budget, time, feasibility, competition, scalability, measurement. Each −30…+30; 0 = keep. */
+      deltas: z.array(z.number()),
+      reason: z.string(),
+      evidence: z.string(),
+      platform: z.string(),
+      tactic: z.string(),
+      audience: z.string(),
+    }),
+  ),
+  /** Two short bullets for the owner: what wins and why. */
+  summary: z.array(z.string()),
+});
+export type ChannelFit = z.infer<typeof ChannelFitSchema>;
+
+function lintChannelFit(out: ChannelFit, input: AgentInput, candidateIds: string[], typeKeys: string[], dims: Record<string, readonly string[]>): LintIssue[] {
+  const issues: LintIssue[] = lintCopy({ summary: out.summary, reasons: out.channels.map((c) => c.reason) }, { evidence: evidenceOf(input) });
+  if (!out.types.length || out.types.length > 3) issues.push({ severity: "error", rule: "types", message: "Pick 1-3 business types.", path: "types" });
+  out.types.forEach((t, i) => {
+    if (!typeKeys.includes(t)) issues.push({ severity: "error", rule: "types", message: `"${t}" isn't a library type. Use one of: ${typeKeys.join(", ")}.`, path: `types[${i}]` });
+  });
+  out.dimensions.forEach((d, i) => {
+    const allowed = dims[d.key];
+    if (!allowed) issues.push({ severity: "error", rule: "dimension", message: `Unknown dimension "${d.key}".`, path: `dimensions[${i}]` });
+    else if (!allowed.includes(d.value)) issues.push({ severity: "error", rule: "dimension", message: `${d.key} must be one of: ${allowed.join(", ")}.`, path: `dimensions[${i}].value` });
+  });
+  if (out.channels.length < 8) issues.push({ severity: "error", rule: "count", message: "Review at least 8 candidate channels.", path: "channels" });
+  out.channels.forEach((c, i) => {
+    const path = `channels[${i}]`;
+    if (!candidateIds.includes(c.id)) issues.push({ severity: "error", rule: "channel", message: `${c.id} isn't in the candidate list.`, path });
+    if (c.deltas.length !== 8) issues.push({ severity: "error", rule: "deltas", message: "deltas needs 8 numbers in factor order.", path: `${path}.deltas` });
+    if (c.deltas.some((d) => Math.abs(d) > 30)) issues.push({ severity: "error", rule: "deltas", message: "Each delta is between −30 and +30.", path: `${path}.deltas` });
+    if (c.deltas.some((d) => d !== 0) && !c.evidence.trim()) issues.push({ severity: "error", rule: "evidence", message: "Any change needs evidence (a source, a confirmed fact or the owner's data).", path: `${path}.evidence` });
+  });
+  return issues;
+}
+
+/** Scores the library's candidate channels for this business with evidence (Acquisition Intelligence). */
+export function channelFitSpec(ctx: { candidateIds: string[]; typeKeys: string[]; dims: Record<string, readonly string[]> }, o: SpecOptions = {}): AgentSpec<ChannelFit> {
+  return base(
+    {
+      id: "channel_fit",
+      role: "cmo",
+      label: "Channel scoring",
+      skills: ["owner-brevity", "growth-strategy", "positioning"],
+      schema: ChannelFitSchema,
+      rubric: rubricOf("growth-strategy"),
+      criticSkills: ["growth-strategy"],
+      lint: (out, input) => lintChannelFit(out, input, ctx.candidateIds, ctx.typeKeys, ctx.dims),
+      maxTokens: { research: 8_000, draft: 16_000, critic: 8_000 },
+    },
+    // One pass, no review: deterministic rules and sanitising (mergeFit, adjustmentsFrom) carry the structure.
+    { models: { draft: SONNET, critic: SONNET }, maxRevisions: -1, ...o },
+    "lean",
+  );
+}
+
 /* ---------------- Outbound: find the people, write the emails ---------------- */
 
 export const ProspectsOutputSchema = z.object({

@@ -7,7 +7,8 @@ import { Compass, Target } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Badge, Callout, Card, CardContent, EmptyState, Skeleton, buttonClasses, type Tone } from "@/components/ui";
+import { Badge, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
+import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
@@ -127,6 +128,15 @@ function PlanScreen({ slug }: { slug: string }) {
         />
       </SectionBoundary>
 
+      <Tabs defaultValue="plan">
+        <TabsList>
+          <TabsTrigger value="plan">Plan</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
+        </TabsList>
+        <TabsContent value="channels" className="mt-5">
+          <ChannelScorecard slug={slug} />
+        </TabsContent>
+        <TabsContent value="plan" className="mt-5 flex flex-col gap-6">
       {!s ? (
         <>
           {plan.strategyRun?.status === "failed" && plan.strategyRun.userMessage ? (
@@ -178,6 +188,8 @@ function PlanScreen({ slug }: { slug: string }) {
 
       <BusinessInsights insights={plan.insights} />
       {s ? <Sources sources={plan.sources} /> : null}
+        </TabsContent>
+      </Tabs>
 
       <SectionBoundary label="recent work">
         <RecentWork slug={slug} />

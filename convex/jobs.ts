@@ -36,6 +36,7 @@ import {
   conversionAuditSpec,
   emailSpec,
   insightsSpec,
+  channelFitSpec,
   outreachSpec,
   prospectingSpec,
   researchFor,
@@ -47,6 +48,7 @@ import {
   socialCalendarSpec,
   socialSpec,
   strategySpec,
+  type ChannelFit,
   type OutreachOutput,
   type PlaysOutput,
   type ProspectsOutput,
@@ -54,6 +56,8 @@ import {
 } from "../shared/agents/specs";
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
+import { BUSINESS_TYPES, budgetBand, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
+import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -517,8 +521,50 @@ export const buildStrategy = internalAction({
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
       const insightsBrief = insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)";
-      // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const v2 = !job.run.isFixture && job.run.engine === "v2";
+      // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
+      let profile = profileFrom({
+        saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null,
+        legacyType: job.business?.businessType,
+        budgetMinor: job.goal?.monthlyAdBudgetMinor ?? 0,
+        horizonDays: job.goal?.horizonDays ?? 90,
+        legacyTypes: typesFromLegacy,
+      });
+      let adjustments: Adjustment[] = [];
+      let channelSummary: string[] = [];
+      if (v2) {
+        const candidates = candidatesFor(profile);
+        const typeKeys = BUSINESS_TYPES.map((t) => t.key);
+        const dimValues = Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values]));
+        const fit = await runAgentTask<ChannelFit>(
+          ctx,
+          job,
+          200,
+          channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys, dims: dimValues }),
+          agentInput(
+            job,
+            [
+              "Classify this business and score its candidate acquisition channels for the goal and budget, so the plan uses the channels most likely to bring profitable customers.",
+              `1. types: 1-3 of these library keys, most specific first: ${BUSINESS_TYPES.map((t) => `${t.key} (${t.label})`).join("; ")}.`,
+              `2. dimensions: infer each you can from the website and research, with confidence and evidence. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed values (below) are fixed.`,
+              `3. channels: review every candidate below. Each has rule-based factor priors (audience, intent, budget, time, feasibility, competition, scalability, measurement). Give deltas (−30…+30, 0 = keep) only where evidence for THIS business says the prior is wrong: e.g. competitors already dominate it (competition down) or are absent (up); the audience provably gathers there (audience up); the owner can't execute it (feasibility down). Name the platform, the tactic and the audience for each.`,
+              `4. summary: two short bullets on what wins and why.`,
+              `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
+              `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
+              `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
+              `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,
+            ].join("\n\n"),
+          ),
+          startedAt,
+          { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },
+        );
+        profile = mergeFit(profile, fit, new Set(typeKeys));
+        adjustments = adjustmentsFrom(fit);
+        channelSummary = fit.summary.slice(0, 3);
+      }
+      const scored = scoreChannels(profile, adjustments);
+      const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
+      // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const plays = v2
         ? await runAgentTask<PlaysOutput>(
             ctx,
@@ -527,7 +573,7 @@ export const buildStrategy = internalAction({
             growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
             agentInput(
               job,
-              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.${scorecard}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
               { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
             ),
             startedAt,
@@ -542,7 +588,7 @@ export const buildStrategy = internalAction({
         strategySpec(),
         agentInput(
           job,
-          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
         ),
         startedAt,
         {
@@ -553,7 +599,12 @@ export const buildStrategy = internalAction({
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
         },
       );
-      await ctx.runMutation(internal.jobWrites.saveStrategy, { runId, strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays } : strategy), factIds: job.facts.map((f) => f.id) });
+      await ctx.runMutation(internal.jobWrites.saveStrategy, {
+        runId,
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays } : strategy),
+        factIds: job.facts.map((f) => f.id),
+        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
+      });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
     }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId }));
   },
