@@ -32,13 +32,13 @@ export default function LandingPage() {
   return (
     <main className="min-h-dvh bg-white text-ink">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
-        <span className="text-lg font-bold">{page.name}</span>
+        <span className="text-lg font-semibold">{page.name}</span>
         <a href="#start" className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: color }}>
           {c.ctaLabel}
         </a>
       </header>
       <section className="mx-auto max-w-3xl px-5 pb-16 pt-10 text-center sm:pt-20">
-        <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{c.headline}</h1>
+        <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">{c.headline}</h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-ink-2 sm:text-xl">{c.subhead}</p>
         <a href="#start" className="mt-8 inline-block rounded-full px-7 py-3.5 text-base font-semibold text-white shadow-lg" style={{ background: color }}>
           {c.ctaLabel}
@@ -59,11 +59,11 @@ export default function LandingPage() {
       ) : null}
       {c.steps.length ? (
         <section className="mx-auto max-w-3xl px-5 py-16">
-          <h2 className="text-center text-3xl font-bold">How it works</h2>
+          <h2 className="text-center text-3xl font-semibold">How it works</h2>
           <ol className="mt-8 space-y-4">
             {c.steps.map((s, i) => (
               <li key={i} className="flex items-start gap-4">
-                <span className="grid size-9 shrink-0 place-items-center rounded-full font-bold text-white" style={{ background: color }}>
+                <span className="grid size-9 shrink-0 place-items-center rounded-full font-semibold text-white" style={{ background: color }}>
                   {i + 1}
                 </span>
                 <p className="pt-1.5 text-lg">{s}</p>
@@ -81,7 +81,7 @@ export default function LandingPage() {
       ) : null}
       {c.faq.length ? (
         <section className="mx-auto max-w-3xl px-5 pb-16">
-          <h2 className="text-center text-3xl font-bold">Questions</h2>
+          <h2 className="text-center text-3xl font-semibold">Questions</h2>
           <div className="mt-6 divide-y divide-line">
             {c.faq.map((q, i) => (
               <details key={i} className="py-4">
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 }
               }}
             >
-              <p className="text-xl font-bold">{c.ctaLabel}</p>
+              <p className="text-xl font-semibold">{c.ctaLabel}</p>
               {c.formIntro ? <p className="text-ink-2">{c.formIntro}</p> : null}
               <input className={input} placeholder="Your name" aria-label="Your name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
               <input className={input} type="email" placeholder="Email" aria-label="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} required />
