@@ -24,6 +24,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Client reports for agencies, in your own brand.",
       "Direct publishing to LinkedIn and X.",
       "Refer a friend: you both get 200 credits when they buy a package.",
+      "Booked calls: reminders the day before, a private link to cancel or rebook, and no-show follow-ups.",
+      "Link in bio: one tracked page for your Instagram or TikTok bio, with email sign-ups.",
+      "Webhooks for Zapier, Make or your own server: new leads, won deals, bookings, chats, replies and posts.",
+      "Airly apps: Formkit responses and Meetrao bookings flow into your Pipeline; send plans to Taskeni and Folevi.",
+      "Faster, bolder growth plans: two drafts written at once, built on what your team can actually run.",
     ],
   },
   {
