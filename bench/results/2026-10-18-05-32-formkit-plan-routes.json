@@ -1,0 +1,951 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "classic": {
+    "arm": "classic",
+    "ok": true,
+    "output": {
+     "summary": "First action: pull last month's count of free users who hit a Pro wall, which decides where owner hours go. Spend at most a fifth of the $600 ad budget, all on the Google Forms switcher-page search test, and hold the rest. At the end of week 6, keep or swap the primary using the pre-set kill and scale rules.",
+     "positioning": "Formkit is the form builder for when the form is part of how people see you. Describe a form and AI builds it. Payments go to your own Stripe account and Formkit takes no cut. It works inside Claude and ChatGPT, even on the free plan. Every channel leads with an honest comparison ('both are good tools') and these two unusual facts.",
+     "audiences": [
+      {
+       "name": "Google Forms users who need to take payments",
+       "hypothesis": "Event organisers, trainers and freelancers who use payment add-ons will switch for built-in Stripe with no Formkit cut.",
+       "evidence": "Google Forms has no built-in payment field (forms.app/en/blog/google-forms-payment). Payments are among its most requested features (formnx.com). Add-ons like Payable and PayQ fill the gap (9to5google.com, March 2026; Google Workspace Marketplace)."
+      },
+      {
+       "name": "Freelancers and agencies choosing from roundups",
+       "hypothesis": "They pick from 'best form builder for freelancers, agencies or client intake' lists, and Formkit is missing from those lists.",
+       "evidence": "Hackceleration's freelancer and agency lists and StackPilot's client-intake list name Fillout, Gravity Forms and others, but not Formkit (research snippets, about 8 searches)."
+      },
+      {
+       "name": "People who already work inside Claude or ChatGPT",
+       "hypothesis": "A directory listing that says 'build and publish from this chat, free plan included' brings sign-ups for owner time only.",
+       "evidence": "The integration works on every plan. Both directories accept submissions (claude.com/docs/connectors/building/submission; help.openai.com submission page). Typeform and Jotform are already listed."
+      },
+      {
+       "name": "Free users who hit a Pro wall",
+       "hypothesis": "Users who click payments, own domain or AI replies, or who hit the free AI cap, already want Pro. An email sent within the hour converts them cheaply.",
+       "evidence": "These features are Pro-only, and free AI is capped at 3 forms and 10 edits a month (site insights). Volume is unknown until the week-1 data pull."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "primary",
+       "why": "Buyers decide in comparison content, and Formkit is absent. Its own compare table already lists real gaps versus Google Forms."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 82,
+       "status": "in_plan",
+       "why": "The Claude and ChatGPT integration already exists (fact 3). Typeform, FormHug and Makeform are already listed, so this is a presence play, not a differentiator."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 81,
+       "status": "in_plan",
+       "why": "High-intent 'X alternative' searches fit. But Tally, Jotform and forms.app already own those results."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 81,
+       "status": "later",
+       "why": "Small tools get listed there and buyers browse Typeform alternatives deep. Listing is quick and free."
+      },
+      {
+       "name": "AI tool directories",
+       "score": 81,
+       "status": "later",
+       "why": "Good fit; add once the first channels show results."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 81,
+       "status": "later",
+       "why": "Free users hit paid features such as payments, own domain and AI replies. Triggered emails use the product's own data, so measurement does not rely on ad platforms."
+      },
+      {
+       "name": "Templates",
+       "score": 78,
+       "status": "later",
+       "why": "Ready templates (client intake, RSVP, job application) get users to a published form faster and can capture search from the segments."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 77,
+       "status": "later",
+       "why": "The free tier already exists and is the entry point. Tally and Fillout match or beat the free offer, so it alone will not win."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Paywall-moment upgrade emails (conversion infrastructure, sequential read)",
+       "hypothesis": "Wall-hitters upgrade more often after a triggered email within the hour (payments, own domain, AI replies or AI cap) than wall-hitters did before the emails existed.",
+       "population": "Every free user who clicks a Pro-only feature or hits the AI cap. They are compared with wall-hitters in the 4 weeks before launch. Add a random holdout only if wall hits run to several thousand a month.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Share of wall-hitters who upgrade to Pro or Business within 4 weeks of the wall hit, before vs after launch",
+       "guardrails": [
+        "Unsubscribe rate under 1% per send",
+        "Spam complaints kept well under Gmail's bulk-sender limit",
+        "No rise in one-click cancellations among upgraders in their first month"
+       ],
+       "durationDays": 42,
+       "stoppingRule": "Read clicks at day 10 and upgrades at the end of week 4. Kill if the post-launch upgrade rate is no higher than the pre-launch rate after 500 sends. Scale if clicks exceed 5% and upgrades rise by at least 2 over the baseline, then add quiz and limited-places triggers. Label the result directional because it is a sequential comparison."
+      },
+      {
+       "name": "Switcher page plus search test",
+       "hypothesis": "Google Forms users looking for payments who land on a fair comparison page sign up at 5% or more, and some upgrade to Pro for payments. The 5% rate is an assumption, to be validated from page analytics by the end of week 4.",
+       "population": "Visitors from search ads, organic search and AlternativeTo. Ad clicks are capped at a fifth of the $600 budget a month at an assumed $2–4 a click, to be validated from Google Ads data by the end of week 2.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Visit-to-free-sign-up rate, read once half the test budget is spent",
+       "guardrails": [
+        "Cost per free sign-up no more than $10 once half the budget is spent",
+        "Ad spend never above a fifth of the $600 monthly budget"
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Pause ads if a sign-up costs more than $10 at half budget; the page stays live for organic traffic. Rewrite the hook if sign-ups are under 2% at that point. Scale to Typeform and Jotform pages if sign-ups reach 5% and at least 1 Pro upgrade comes from the page by day 60."
+      },
+      {
+       "name": "Roundup pitch angle test",
+       "hypothesis": "Leading with 'payments go to your own Stripe, no Formkit cut' gets more positive replies than leading with 'build forms inside Claude or ChatGPT on the free plan'.",
+       "population": "50 neutral roundup authors, randomly split into two equal groups. The standard two-variant formula needs several hundred authors per angle to detect a doubled reply rate, so this read is directional only.",
+       "method": "ab_split",
+       "primaryMetric": "Positive reply rate per angle, with inclusions as a secondary read",
+       "guardrails": [
+        "Bounce rate under 2%",
+        "Personal one-to-one emails only, each with an easy opt-out",
+        "FTC disclosure requested from anyone given a free Pro account"
+       ],
+       "durationDays": 28,
+       "stoppingRule": "Kill the play if there are 0 inclusions and fewer than 2 positive replies by the end of week 4. Scale if there are at least 3 inclusions and referred visits sign up at 3% or more. Use the angle with more positive replies in the next batch."
+      },
+      {
+       "name": "Directory listing yield",
+       "hypothesis": "Live Claude, ChatGPT and MCP listings bring at least 20 sign-ups a month combined, because chat users can build a form without leaving the assistant.",
+       "population": "Sign-ups tagged by listing source after each listing goes live",
+       "method": "pre_post_observational",
+       "primaryMetric": "Sign-ups per live listing, then Pro upgrades",
+       "guardrails": [
+        "Owner time capped at 6 hours for all directory work",
+        "Listing copy makes no claims beyond the confirmed integration"
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Stop if no listing is accepted by the end of week 4, or if there are 0 attributed sign-ups 60 days after the first listing goes live; keep only the best listing. Scale if there are 20+ sign-ups a month and at least 1 Pro upgrade."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600 a month (owner). The plan spends at most a fifth of it on the search test and holds the rest.",
+      "Owner time: heavy in month one, then about 10 hours a month (plan input). Per-channel hours are listed in the channel deliverables.",
+      "Price: Pro $6 a seat a month, Business $19 a seat a month, and yearly billing gives two months free (confirmed facts).",
+      "Gross margin: unknown. The plan assumes a typical high software margin; validate by the end of week 1 from hosting, AI and payment costs per seat.",
+      "Proof: no public reviews, customer names or case studies (site insights).",
+      "Directory fit: it is unverified whether the integration is a remote MCP server (research notes). Validate by the end of week 1.",
+      "Q4 event window: an assumption. Validate by the end of week 2 from Formkit's own monthly event and RSVP form creation data.",
+      "Search volume for switching queries is unknown. The capped ad test measures it."
+     ],
+     "measurementPlan": "Weekly one-sheet scorecard built from product and billing data, not ad platforms. Every link, page, pitch and listing carries a UTM, sign-up asks 'how did you hear about us?', and paid upgrades are tagged by first-touch source. AI referrals (chatgpt.com, claude.ai, perplexity.ai) count as their own source, and a monthly buyer-prompt check records whether Formkit is cited. Conversion infrastructure, not counted as a channel: three upgrade emails (payments, own domain, AI replies or cap), each sent within 1 hour, with one follow-up on day 3. ClimbOS writes them and the owner approves and switches them on in week 1: about 6 hours once, then 0.5 hour a week reading results.",
+     "firstActions": [
+      {
+       "title": "Pull last month's wall-hit count and the current number of paying accounts",
+       "why": "It sets the North Star baseline and decides whether conversion or visibility gets first claim on owner hours.",
+       "role": "Owner"
+      },
+      {
+       "title": "Write the three upgrade emails and the follow-up, with event triggers",
+       "why": "This is the highest-scoring play, it needs no ad spend and it turns existing demand into revenue.",
+       "role": "ClimbOS lifecycle specialist"
+      },
+      {
+       "title": "Draft the Google Forms switcher page and the capped search campaign",
+       "why": "This is the primary engine, and it must be live by the end of week 2 to catch the assumed Q4 event season.",
+       "role": "ClimbOS content and ads specialist"
+      },
+      {
+       "title": "Run buyer prompts and build the list of 50 neutral authors",
+       "why": "Pitches take 3 weeks to send and should land before the year-end list refresh.",
+       "role": "ClimbOS research specialist"
+      },
+      {
+       "title": "Check whether the integration meets MCP directory rules",
+       "why": "It decides whether the directory listings can run at all.",
+       "role": "Owner or developer"
+      }
+     ],
+     "diagnosis": "Main constraint: Formkit is invisible where buyers decide. About 8 searches of roundups and Google Forms alternatives lists found no mention of it, and the site shows no reviews. Day-7 decision: if the wall-hit pull shows 500 or more free users a month hitting a Pro wall, free-to-paid conversion becomes the main constraint. In that case the upgrade emails get first claim on owner hours, and the page and pitches continue at a slower pace.",
+     "affordableCac": "Ceiling per monthly Pro seat: $6 × gross margin × 3-month payback. That is always under $6 × 3, even before costs (margin is an assumption; validate by the end of week 1 from billing and AI costs). Business: $19 × margin × 3. Yearly Pro collects $6 × 10 upfront, so it carries a higher ceiling. Search check: $2–4 a click ÷ 5% sign-up ÷ 20% free-to-Pro is many times the ceiling. These are assumptions: validate CPC from Google Ads by the end of week 2, and both rates from analytics and billing by day 60. So ads stay a capped demand test unless buyers turn out to be multi-seat, yearly or Business. Pitches, listings and emails cost only owner time.",
+     "notDoing": [
+      {
+       "channel": "Meta ads",
+       "why": "A $6 seat can't carry paid-social costs, and there is no proof yet to build creative from."
+      },
+      {
+       "channel": "LinkedIn ads",
+       "why": "The budget is too small to gather data, and click costs would exceed the affordable CAC (assumption; revisit only if Business seats dominate upgrades by day 60)."
+      },
+      {
+       "channel": "Outbound sales",
+       "why": "Owner time spent per $6 seat makes it unprofitable."
+      },
+      {
+       "channel": "Informational blog SEO",
+       "why": "It would take months to rank against Tally, Typeform and Jotform, so it can't pay back within 90 days."
+      },
+      {
+       "channel": "G2 and Capterra",
+       "why": "No reviews yet, and a thin profile converts poorly. Revisit once real users review unprompted, with no incentives."
+      },
+      {
+       "channel": "Organic social posting",
+       "why": "No owner hours are left, and it isn't where people choose a form tool."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying accounts (Pro or Business) a month",
+      "baseline": "Not yet known. The owner pulls it from billing in week 1, and targets reset then.",
+      "target": "New paying accounts above baseline by day 90. The plan forecast (assumption) is a little over 10 from the page, roundups and directories, plus email upgrades scaled to the real wall-hit count."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Switcher page visit-to-sign-up rate",
+       "weeklyTarget": "5% or more once half the test budget is spent (assumption)",
+       "source": "Analytics with UTMs"
+      },
+      {
+       "metric": "Cost per free sign-up from search",
+       "weeklyTarget": "$10 or less",
+       "source": "Google Ads plus sign-up tracking"
+      },
+      {
+       "metric": "Roundup pitches sent and positive replies",
+       "weeklyTarget": "50 pitches spread over weeks 1–3; 1 or more positive replies a week",
+       "source": "Pitch tracking sheet"
+      },
+      {
+       "metric": "Upgrade-email click rate by trigger",
+       "weeklyTarget": "5% or more (assumption; review under 2%)",
+       "source": "Email tool plus product events"
+      },
+      {
+       "metric": "Free-to-paid upgrades by source",
+       "weeklyTarget": "2 or more a week by the end of week 4 (assumption; reset after baseline)",
+       "source": "Billing data plus sign-up source"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Weeks 1–2",
+       "focus": "Pull the baseline and wall-hit count, install UTMs and the sign-up question, and switch on the upgrade emails. Publish the switcher page and AlternativeTo listing, start the capped search test, start pitches and submit to the directories."
+      },
+      {
+       "name": "Test",
+       "days": "Weeks 3–6",
+       "focus": "Finish pitches, run the search test, read email clicks at day 10 and upgrades at the end of week 4. End of week 6: keep or swap the primary using the kill and scale rules."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Week 7 to day 90",
+       "focus": "Put most effort on the winner and the rest on the runner-up. If the page wins, clone Typeform and Jotform alternatives pages and send the next pitch batch. Release more ad budget only if a paid account costs less than its payback ceiling."
+      }
+     ],
+     "weekOneChecklist": [
+      "Pull last month's count of free users who hit payments, own domain, AI replies or the AI cap, plus current paying accounts (1 hour).",
+      "Add 'how did you hear about us?' to sign-up and set a UTM convention for every link (1 hour).",
+      "Approve the three upgrade emails and the follow-up, then switch them on (2 hours).",
+      "Copy the Google Forms rows of the compare table into a new page draft, then add the payments section and today's date (1.5 hours).",
+      "Ask ChatGPT and Claude 'best form builder for freelancers' and 'best client intake form tool', then paste the cited links into a sheet (1 hour)."
+     ],
+     "risks": [
+      {
+       "risk": "Fewer than 500 wall hits a month, so the upgrade emails add little.",
+       "mitigation": "Check at day 7. If low, keep the emails running in the background and put the hours into the page and pitches."
+      },
+      {
+       "risk": "Directories reject the integration because it isn't a remote MCP server.",
+       "mitigation": "Verify in week 1. If it fails, list only where accepted and stop at 6 hours."
+      },
+      {
+       "risk": "Comparison claims go stale or overstate Google Forms gaps.",
+       "mitigation": "Date-stamp the page, use only rows from Formkit's own compare table, and re-check monthly from the end of week 4."
+      },
+      {
+       "risk": "Search clicks cost more than the affordable CAC.",
+       "mitigation": "Hard cap at a fifth of the budget and a $10 cost-per-sign-up pause rule. Review at the end of week 4."
+      },
+      {
+       "risk": "Reviewers given free Pro don't disclose it.",
+       "mitigation": "Put the FTC disclosure request in every offer email from week 1."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Paywall-moment upgrade emails",
+       "oneLiner": "Email free users the moment they try payments, their own domain or AI replies, or hit the free AI cap.",
+       "kind": "bankable",
+       "audience": "Formkit free-plan users who click a Pro-only feature or hit the free AI cap of 3 forms and 10 edits a month.",
+       "trigger": "The click on a locked feature, or hitting the cap. Send within 1 hour, with one follow-up on day 3.",
+       "hook": "Subject: Take payments on this form today. Body: You just tried to add payments. On Pro, at $6 a seat a month, you connect your own Stripe account and the money goes straight to you. Formkit takes no cut. Upgrade now, and cancel any time in one click.",
+       "mechanic": "Behaviour-triggered lifecycle email in three versions: payments, own domain, and AI replies or AI cap. Send one follow-up only, since later follow-ups tend to lose replies (practitioner benchmark, assumption, grade D).",
+       "assetUsed": "First-party product data on who hit which wall. Also no cut on Stripe payments, $6 Pro and one-click cancel.",
+       "funnel": [
+        "Triggered emails sent: your real wall-hit count. Forecast shown per 1,000 sends (plan input)",
+        "Sent → clicked upgrade: 2% / 5% / 10% (assumption, grade D; triggered emails should beat average campaign email)",
+        "Clicked → paid Pro or Business: 20% / 30% / 50% (assumption, grade D)"
+       ],
+       "unit": "new paying accounts per 1,000 triggered emails (multiply by your real count)",
+       "p10": 6,
+       "p50": 15,
+       "p90": 30,
+       "horizonDays": 45,
+       "confidence": "low",
+       "biggestUnknown": "How many free users hit a Pro wall each month. Today's first action pulls the number. Confidence rises to medium after the first sends, and the bankable rating holds if there are at least 100 wall hits a month.",
+       "test": "Send until about 10 clicks are expected (10 ÷ 5% likely click rate). Cost: about 6 owner hours and no ad spend, so break-even is near zero and owner time is the only cost. Leading metric: click rate by trigger. Read clicks within 10 days and upgrades by day 30.",
+       "killIf": "Click rate is under 2% once 10 clicks were expected, or 0 upgrades after 500 sends. Zero in 500 means the true rate is under 1%.",
+       "scaleIf": "Click rate is above 5% and at least 2 upgrades come in. Then add triggers for quizzes and limited places, which are also on Pro.",
+       "scores": [
+        5,
+        4,
+        5,
+        5,
+        3,
+        5,
+        5,
+        3
+       ],
+       "firstActionToday": "Pull the last 30 days' count of free users who clicked payments, own domain or AI replies, or hit the AI cap.",
+       "climbosCanDo": "Write the three email versions and the follow-up, define the event triggers, and track click and upgrade rates by trigger."
+      },
+      {
+       "name": "Google Forms → paid sign-ups switcher page",
+       "oneLiner": "A fair, dated 'Google Forms vs Formkit' page for people who need to take payments, timed for Q4 event season.",
+       "kind": "creative",
+       "audience": "Google Forms users searching for ways to collect payments or use their own link: event organisers, trainers and freelancers. Search volume was not found, so the first test measures it.",
+       "trigger": "Q4 event season, with paid places and RSVPs from October to December 2026 (assumed window). The page must be live within 2 weeks to catch it.",
+       "hook": "Headline: Google Forms vs Formkit: when your form needs to take paid sign-ups. Subhead: Both are good tools. Formkit fits when the form is part of your brand. You get your own link, payments to your own Stripe account with no Formkit cut, and drop-off by question on every plan. Start free; payments are on Pro at $6 a seat a month. Ad: Formkit.app Forms That Take Payments | Your Stripe, No Formkit Cut | Start Free.",
+       "mechanic": "Competitor comparison page (catalogue play 1, rated predictability 4 in ClimbOS's SaaS play research), backed by a capped search-ad test on switch-intent queries such as 'google forms collect payment' and 'google forms stripe'. A free AlternativeTo listing under Google Forms alternatives also feeds the page.",
+       "assetUsed": "Formkit's own dated compare table, which already says 'all three are good tools'. Also no cut on Stripe payments, drop-off and partial responses on free, and the Formkit.app name to avoid confusion with the Vue framework.",
+       "funnel": [
+        "Page visits in 90 days from ads, organic and AlternativeTo: 100 / 500 / 1,000 (assumption, grade D; niche pages draw 50–2,000 visits a month once ranked)",
+        "Visit → free sign-up: 2% / 5% / 10% (assumption, grade D; comparison-page benchmarks run higher, so we plan on the lower half)",
+        "Free sign-up → Pro within 60 days: 10% / 20% / 30% (assumption, grade D; payment seekers need Pro)"
+       ],
+       "unit": "new paying accounts (Pro or Business)",
+       "p10": 2,
+       "p50": 5,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether enough Google Forms users search for payment or own-link fixes for the page to get traffic within 90 days.",
+       "test": "Run the page plus search ads at 20% of the monthly ad budget for 2 months, with cost per click assumed at $2 to $4 (assumption, grade D). Owner time: 6–10 hours. Leading metric: visit-to-sign-up rate over the first 100 visits. Read by day 30 and check Pro upgrades by day 60.",
+       "killIf": "Pause the ads if a free sign-up costs more than $10 once half the test budget is spent; the page stays live for organic traffic. Rewrite the hook if visit-to-sign-up is under 2% after 100 visits.",
+       "scaleIf": "Visit-to-sign-up is at least 5% and at least 1 Pro upgrade comes from the page. Then clone it as Typeform and Jotform alternatives pages on the same angle.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        3,
+        3,
+        5,
+        4
+       ],
+       "firstActionToday": "Copy the existing Google Forms rows from the compare table into a new page draft. Add the payments section and today's date.",
+       "climbosCanDo": "Draft the page and ads, research switch-intent keywords, write the AlternativeTo listing copy, and track sign-ups by source."
+      },
+      {
+       "name": "Get onto the roundups buyers read",
+       "oneLiner": "Pitch the authors of 'best form builder for freelancers, agencies and client intake' lists with Formkit's two unusual facts.",
+       "kind": "creative",
+       "audience": "Authors of neutral roundups: Hackceleration's freelancer and agency lists and StackPilot's client-intake list, plus list pages that ChatGPT and Claude cite for common buyer prompts. Skip lists owned by competitors.",
+       "trigger": "Authors refresh 'best of' lists for the new year. Pitch from now to November so Formkit is in the late-2026 and 2027 updates (timing is an assumption).",
+       "hook": "Your form-builder list is one of the pages people read before choosing a tool, and Formkit may be worth a slot. Two things set it apart. Payments go to the user's own Stripe account with no Formkit cut. Users can also build and publish forms from inside Claude or ChatGPT on every plan, including free. Happy to set you up with a Pro account to test it. If it doesn't fit your list, no reply needed.",
+       "mechanic": "AI-cited list inclusion (catalogue play 8). Run buyer prompts, log the cited list pages, then send a short personal pitch to each author.",
+       "assetUsed": "No cut on Stripe payments, and building in Claude or ChatGPT on the free plan. Typeform and Jotform have MCP servers, but research did not find them offering this on free.",
+       "funnel": [
+        "Pitches sent: 50 (plan input)",
+        "Pitch → inclusion: 5% / 10% / 20% (assumption, grade D; practitioner estimate of 2–8 inclusions per 30–60 pitches)",
+        "Visits per inclusion over 2 months: 30 / 100 / 500 (assumption, grade D)",
+        "Visit → free sign-up: 2% / 5% / 10% (assumption, grade D)",
+        "Free → Pro: 10% / 20% / 30% (assumption, grade D)"
+       ],
+       "unit": "new paying accounts (Pro or Business)",
+       "p10": 2,
+       "p50": 5,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether neutral authors add a new brand with no public reviews.",
+       "test": "50 pitches over 3 weeks, with a check at day 30. Cost: about 10 owner hours and $0 cash. Leading metric: positive replies and inclusions. Any author given a free Pro account must disclose it under FTC rules.",
+       "killIf": "0 inclusions and fewer than 2 positive replies from 50 pitches by day 30. Zero in 50 means the true rate is under 6%.",
+       "scaleIf": "At least 3 inclusions, and referred visits sign up at 3% or more. Then pitch the next batch of list pages and re-run the prompts monthly.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Ask ChatGPT and Claude 'best form builder for freelancers' and 'best client intake form tool'. Paste the cited links into a sheet.",
+       "climbosCanDo": "Run buyer prompts across assistants, log cited pages and author contacts, draft each pitch for your approval, and track inclusions and referred sign-ups."
+      },
+      {
+       "name": "List Formkit in the Claude and ChatGPT app directories",
+       "oneLiner": "Put Formkit's existing assistant integration where people already build things by chat, led by 'works on the free plan'.",
+       "kind": "moonshot",
+       "audience": "People who work inside Claude or ChatGPT. Listing surfaces: the ChatGPT app directory, Claude's connector directory, the MCP Registry, mcp-apps.directory on GitHub and Composio. Audience sizes were not found.",
+       "trigger": "The moment someone in a chat needs a form, sign-up or survey and asks the assistant to make one.",
+       "hook": "Formkit: describe a form and it is built and published from this chat. Conditional logic, payments to your own Stripe account and AI replies to responses are available on Pro. Building works on Formkit's free plan.",
+       "mechanic": "AI assistant app and MCP directory listings, from the SaaS play catalogue. It is a presence play, since Typeform and Jotform are already listed.",
+       "assetUsed": "The existing Claude and ChatGPT integration, which works on every plan, including free.",
+       "funnel": [
+        "Listings submitted: 5 (plan input)",
+        "Submitted → accepted: 20% / 60% / 100% (assumption, grade D; submission rules not verified)",
+        "Sign-ups per live listing over 60 days: 3 / 10 / 30 (assumption, grade D; practitioner estimate of tens of sign-ups a month for a niche tool)",
+        "Free → Pro: 5% / 10% / 20% (assumption, grade D)"
+       ],
+       "unit": "new paying accounts (Pro or Business)",
+       "p10": 1,
+       "p50": 3,
+       "p90": 10,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the official directories accept the current integration as it stands, and how much traffic they send.",
+       "test": "Submit to all 5 within 2 weeks. Cost: about 6 owner hours and no ad spend, capped there. Leading metric: acceptances, then sign-ups tagged by listing source.",
+       "killIf": "No listing accepted by day 30, or 0 attributed sign-ups 60 days after the first listing goes live. Then stop all work except the best listing.",
+       "scaleIf": "At least 20 sign-ups a month from listings and at least 1 Pro upgrade. Then add the chat angle to the homepage test.",
+       "scores": [
+        3,
+        2,
+        4,
+        3,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Open the mcp-apps.directory GitHub repo and note its submission format. Check whether Formkit is already listed anywhere.",
+       "climbosCanDo": "Write listing copy and tool descriptions in users' own words, track submissions and approvals, and attribute sign-ups by listing."
+      }
+     ],
+     "portfolioNote": "Run 4 plays in this order: upgrade emails, Google Forms switcher page, roundup pitches, then Claude and ChatGPT directory listings. Plays 2–4 should add 5 to 30 paying accounts in 90 days, most likely a little over 10. Play 1 adds more, scaled to your real count of free users who hit a Pro feature. Owner time is about 30 hours in month one and about 10 a month after. Spend at most 20% of the $600 monthly ad budget, all on play 2's search test, and hold the rest. Reason: a $6 Pro seat earns little gross profit in a year, so release more only when a paid sign-up costs less than the seats it brings in. Each scores array reads fit, predictability, reach per owner-hour, time to signal, compounding, cost, risk, then distinctiveness, each 1–5. Totals out of 100: upgrade emails 92, roundups 78, switcher page 72, directories 65."
+    },
+    "costMicros": 2848295,
+    "ms": 903586
+   },
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "summary": "Plan: convert the free users Formkit already has, then feed more people into that funnel. Primary: Pro-moment upgrade nudges. Secondary: a demo-led compare page submitted to AI directories. Hygiene: a capped studio demo-outreach test. The first task is pulling real signups, sources and paid seats, then rebasing every target by Oct 25. Plan expectation is about 8 new paying seats by Jan 16, 2027, with a range of about 3 to 20. This is an assumption, not a promise. The $600/month ad budget stays uncommitted.",
+     "positioning": "Formkit is the form builder for when the form is part of how people see you. Describe a form and AI builds it. Put it on your own domain without the Formkit badge. Payments go straight to your own Stripe account and Formkit takes no cut. You can see where people drop off, by question, on every plan. The free plan has unlimited forms, responses and members. Pro is $6 a seat a month, cancels in one click, and nothing is deleted. Use buyers' own words: they want a tool that puts emphasis on 'actually analyzing survey responses' (r/nocode), and studios already use a form tool 'for the client brief' (r/framer). Never say 'only' or 'unique': Tally also builds forms in chat.",
+     "audiences": [
+      {
+       "name": "Free users who hit a Pro feature",
+       "hypothesis": "Freelancers, event organizers, teachers and sales teams upgrade when a message names the exact feature they just tried. Those features are payments, own domain, no badge, AI replies, quizzes, limited places and the free AI cap.",
+       "evidence": "The free tier is unlimited, so gated features are the natural upgrade moment. Pro is $6 a seat a month. Payments to the user's own Stripe account with no cut is a confirmed fact. All post-signup funnel rates are assumptions until the Oct 25 data pull."
+      },
+      {
+       "name": "Buyers comparing form tools",
+       "hypothesis": "People looking for a Tally or Typeform alternative that helps them analyze responses will sign up if they see a live intake-plus-review workflow with drop-off by question.",
+       "evidence": "An r/nocode thread asks for a Tally alternative 'that puts more emphasis on actually analyzing survey responses'. Tally and Jotform reps already reply there. AlternativeTo lists 367 Typeform alternatives. Future Tools rejects over 75% of submissions."
+      },
+      {
+       "name": "US Framer and no-code studios",
+       "hypothesis": "Studios that run client briefs in a form tool will try an intake form built from their own site. Business ($19 a seat a month) fits agencies running per-client workspaces.",
+       "evidence": "An r/framer poster describes 'Figma for design, Framer for the build, Tally for the client brief'. J Squared Team, DigitalTree and Orange Lamp Studio are named prospects. No willingness to partner was found. Tally has an official Framer plugin, and Formkit's embed is unconfirmed."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Competitor alternative pages",
+       "score": 81,
+       "status": "primary",
+       "why": "Buyers search for alternatives in their own words. The page already exists, and AlternativeTo shows 100+ alternatives to Typeform, so it is crowded."
+      },
+      {
+       "name": "AI tool directories",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Strong fit that the budget can support alongside the primary channel."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 80,
+       "status": "in_plan",
+       "why": "A compare page already exists, so improving it is cheap. Competitor coverage means it must be specific, fair and dated."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 80,
+       "status": "later",
+       "why": "The ecosystems are real, but an approved listing needs engineering, approval and partner recruitment first. Tally and Fillout already hold these slots."
+      },
+      {
+       "name": "Google organic search",
+       "score": 78,
+       "status": "later",
+       "why": "Good fit; add once the first channels show results."
+      },
+      {
+       "name": "Cold email",
+       "score": 78,
+       "status": "later",
+       "why": "Agencies and no-code builders are easy to name and list. At $6 to $19 per seat, outbound time per paid account is costly, so scalability is lower."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 78,
+       "status": "later",
+       "why": "Good fit; add once the first channels show results."
+      },
+      {
+       "name": "Webinars",
+       "score": 76,
+       "status": "later",
+       "why": "Ben's Bites offers tutorials and workshops to a large AI-workflow audience, but pricing is not visible and fit to the $600 budget is unverified."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Pro-moment nudges with a random holdout",
+       "hypothesis": "Free users who see a nudge naming the feature they just hit upgrade clearly more often than held-out users. Plan: about 2% of all signups pay within 90 days (assumption, grade D, below the 3-5% six-month range in the ChartMogul survey).",
+       "population": "All new free signups from switch-on to Jan 16. One in five are randomly held out from nudges.",
+       "method": "holdout",
+       "primaryMetric": "Pro upgrades among users who hit a gated moment, exposed vs holdout. Leading metric: nudge click-through by trigger.",
+       "guardrails": [
+        "Spam complaints stay under Gmail's bulk-sender limit (source: Gmail sender guidelines). Unsubscribes are tracked weekly.",
+        "No countdowns or fake scarcity.",
+        "Cancellations and support complaints do not rise.",
+        "Free-user publishing rate does not drop vs the holdout."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Volume maths (assumption): about three hundred signups, about fifty gated users, roughly forty exposed and ten held out. That is too few for significance, so thresholds are business rules. Counts get rebased on Oct 25. On Dec 2, kill if exposed users produce fewer than two upgrades and click-through is under one in ten. Scale if they produce five or more upgrades at a rate at least double the holdout's, then add the remaining triggers and the yearly message. Anything between: rewrite the weakest trigger once and decide on Jan 16. A guardrail breach is the only early stop."
+      },
+      {
+       "name": "Compare-page demo in AI directories",
+       "hypothesis": "A concrete intake-to-review workflow page gets listed by at least one directory and sends visits that convert to signups at about 6% (assumption, below ChartMogul's freemium visitor-to-signup average).",
+       "population": "Three submissions: Future Tools, Supertools and AlternativeTo, each tagged with its own UTM.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Referral visits by directory. Secondary: signups and paid seats.",
+       "guardrails": [
+        "No unsupported 'better', 'only' or 'unique' claims.",
+        "Resubmit Future Tools no sooner than one week after a rejection.",
+        "Every link carries a UTM."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Three submissions test whether listings happen and send traffic, not a rate. Kill on Dec 2 if there are fewer than seventy-five referral visits in total and no signups. Scale if there are two hundred or more visits, ten or more signups and one paid seat. In that case, release up to a third of one month's $600 to search ads on the same page, with negatives and search-term review."
+      },
+      {
+       "name": "Studio working-demo outreach (capped)",
+       "hypothesis": "Studios reply to a live intake form built from their own site at about 7%, range 3-12% (assumption; no researched benchmark).",
+       "population": "Sixty US Framer and no-code studios, using public business contacts only. Wave one goes out by Oct 28 and wave two on Jan 11-15.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Replies per wave. Secondary: demo opens and paid accounts.",
+       "guardrails": [
+        "Bounce rate under 2%.",
+        "Opt-outs honoured the same day.",
+        "Spam complaints under Gmail's bulk-sender limit.",
+        "At most one follow-up per studio."
+       ],
+       "durationDays": 75,
+       "stoppingRule": "Read wave one on Nov 11 and change only the hook if needed. Kill if there are no replies after the follow-up and one hook change, or fewer than two replies and no paid account after all sixty. Scale if one wave produces three or more replies plus a paying account, then widen to more directory studios. Wave two's paid outcome is incomplete at Jan 16."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month (owner). Committed spend is $0. Up to a third of one month's budget can be released, only through the directory scale rule.",
+      "Owner hours are not stated. Assumption: about five hours a week at peak in weeks one and two, under one hour a week after. Confirm by Oct 25. If short, drop studio wave two first.",
+      "Price: Pro is $6 and Business is $19 per seat a month (confirmed). Gross margin is assumed at about four-fifths (grade D). Confirm by Oct 25.",
+      "Volume assumption: about three hundred free signups in 90 days (grade D). Replace with the real last-month count by Oct 25 and rebase every target.",
+      "Hours and spend for nudges: about four hours in weeks one and two (trigger map, copy approval, switch-on), then about half an hour a week on the scorecard. $0.",
+      "Hours and spend for compare page and directories: about half an hour for the demo pair and about three hours for the page and submissions in weeks one and two. Minutes a week after that. $0.",
+      "Hours and spend for studio outreach: about three hours by Oct 28, about one hour around Nov 11, and about two hours on Jan 11-15. $0.",
+      "Totals: about fourteen owner hours over 90 days and $0 committed spend of $600/month.",
+      "Proof: the site shows no customer names, reviews or user counts. Use live demos and never invent testimonials.",
+      "Claims: Tally also builds forms in chat and offers paid drop-off insights. No 'only' or 'unique' claims.",
+      "The Framer embed is unconfirmed. Validate by Oct 25, before any studio email.",
+      "Calendar: no first-touch outreach in the weeks of Nov 26, Dec 25 and Jan 1. The window ends Jan 16, 2027.",
+      "Research found no verified placement price or channel CAC."
+     ],
+     "measurementPlan": "Oct 25: pull real signups, sources and paid seats, and rebase every target. Put a UTM on every link (nudge, directory, studio email, Reddit reply). Add 'how did you hear about us?' at signup. Set a random holdout flag at signup and log gated-moment events per user. Run a weekly scorecard from product and billing data, not platform attribution. Track AI referrals (chatgpt.com, perplexity.ai) separately and run a monthly prompt check. Reason for the AI checks: Pew Research (July 2025) found people click traditional results less often when Google shows an AI summary, and Seer Interactive found pages cited in AI Overviews get more clicks than uncited ones. Volumes are too small for significance: decide by pre-set thresholds and label results directional.",
+     "firstActions": [
+      {
+       "title": "Pull last month's signups, sources and paid seats; add 'how did you hear about us?' at signup",
+       "why": "This replaces the signup assumption and rebases every target by Oct 25.",
+       "role": "Owner"
+      },
+      {
+       "title": "Map every free-plan Pro moment with screenshots, approve nudge copy and switch on with the holdout",
+       "why": "The primary play depends on the trigger map.",
+       "role": "Owner, with ClimbOS drafting copy and tracking"
+      },
+      {
+       "title": "Build and publish the client-intake and post-project review forms",
+       "why": "One demo pair serves the compare page, the directories and studio outreach.",
+       "role": "Owner"
+      },
+      {
+       "title": "Test a published Formkit form inside a Framer embed",
+       "why": "This gates studio outreach. Tally already has an official plugin.",
+       "role": "Owner"
+      },
+      {
+       "title": "Draft the compare section, directory submissions, studio emails and UTMs",
+       "why": "This keeps the owner's work to approving and sending.",
+       "role": "ClimbOS"
+      }
+     ],
+     "diagnosis": "Likely constraint: free-to-paid conversion. The free plan is unlimited, while payments, own domain, AI replies and quizzes sit behind Pro, and nothing shows users that value at the moment they need it. The plan therefore converts existing signups first and adds demand second. Falsifier: if the Oct 25 data shows few signups or few gated-moment hits, demand capture is the constraint, and the compare page plus directories becomes primary at the Dec 2 review.",
+     "affordableCac": "Pro: $6 at about four-fifths margin (assumption, confirm Oct 25) is just under five dollars a month gross profit, under sixty dollars in year one. A three-month payback caps CAC near fifteen dollars per Pro seat. Business: $19 gives about fifteen dollars a month, roughly forty-five dollars at three months and about one hundred eighty in year one. At a planned 2% free-to-paid, each signup is worth about a dollar on Pro, so paid ads fail. Nudges cost a few dollars of owner time per seat. Studio outreach costs close to a two-seat Business account's year-one profit.",
+     "notDoing": [
+      {
+       "channel": "Paid search and Meta ads (now)",
+       "why": "Signups are worth about a dollar each on Pro, and no placement price was found. Google AI Max and Meta Andromeda both optimise on volume and creative breadth that a small budget can't feed (Google and Meta announcements). Only released through the directory scale rule."
+      },
+      {
+       "channel": "Ben's Bites tutorial pitch",
+       "why": "Expected seats are near zero, pricing is contact-only, and the audience claims (120K+ vs 160K+ subscribers) conflict. Revisit after Dec 2 if the core plays run on time."
+      },
+      {
+       "channel": "Informational blog SEO",
+       "why": "Payback is slow and AI summaries cut informational clicks (Pew Research, July 2025). The compare page covers high-intent searches."
+      },
+      {
+       "channel": "Cold email at scale and LinkedIn outreach",
+       "why": "At $6 to $19 per seat, outbound time per account is costly. Studio outreach is capped at sixty contacts."
+      },
+      {
+       "channel": "Integration marketplace listings (Framer, Zapier)",
+       "why": "These need engineering and approval, and Tally and Fillout already hold slots. Only validate the Framer embed."
+      },
+      {
+       "channel": "HR vertical push",
+       "why": "The owner must confirm the data-handling terms (a DPA is listed) and how to explain that the AI runs on Gemini models."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying seats (Pro and Business) added by Jan 16, 2027",
+      "baseline": "Not yet measured. To be pulled from billing and product data by Oct 25, when all targets get rebased.",
+      "target": "About 8 new paying seats (plan P50; low about 3, high about 20). Assumption-based, rebased Oct 25, not a promise."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "New free signups",
+       "weeklyTarget": "Rebased Oct 25 from the real count. Until then, about two dozen a week (assumption: about three hundred in 90 days).",
+       "source": "Product signup data with UTMs and the 'how did you hear' answer"
+      },
+      {
+       "metric": "Nudge click-through on gated moments",
+       "weeklyTarget": "About one in four gated users click (assumption). Read by trigger each week from switch-on.",
+       "source": "In-product and email click events by trigger"
+      },
+      {
+       "metric": "Directory referral visits",
+       "weeklyTarget": "About ten to fifteen a week once listed (assumption, validated Dec 2)",
+       "source": "UTM-tagged analytics by directory"
+      },
+      {
+       "metric": "Studio replies",
+       "weeklyTarget": "About two replies from wave one by Nov 11 (assumption, about 7%)",
+       "source": "Owner inbox log plus UTM visits"
+      },
+      {
+       "metric": "New paying seats, exposed vs holdout",
+       "weeklyTarget": "About 0.6 a week on average to reach 8 (rebased Oct 25)",
+       "source": "Billing data matched to source, trigger and holdout flag"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Oct 18 - Nov 1, 2026",
+       "focus": "Pull real data and rebase targets by Oct 25, and add the signup question. Verify the Framer embed. Build the demo pair and trigger map, then switch on nudges with the holdout. Publish the compare section and submit to three directories. Send studio wave one by Oct 28. About five owner hours a week."
+      },
+      {
+       "name": "Test",
+       "days": "Nov 2 - Dec 2, 2026",
+       "focus": "Read wave one on Nov 11 and change only the hook if needed. Resubmit to Future Tools after a week if rejected. Weekly scorecard, under one hour a week. No first-touch outreach in Thanksgiving week. On Dec 2, apply kill and scale rules and confirm or swap the primary."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Dec 3, 2026 - Jan 16, 2027",
+       "focus": "Put about three-quarters of effort on what passed its scale rule. Add nudges for the remaining gated moments and test the yearly-billing message. Grow the template pair, compare section and studio list. Skip the Dec 25 and Jan 1 weeks for outreach. Send wave two on Jan 11-15 and mark its paid outcome incomplete at Jan 16."
+      }
+     ],
+     "weekOneChecklist": [
+      "Pull last month's free signups, sources and paid seats; add 'how did you hear about us?' at signup (about an hour).",
+      "List every Pro-gated moment with screenshots (about 20 minutes), then approve the nudge copy and holdout setup.",
+      "Build and publish the client-intake and post-project review forms, then copy both links (about 25 minutes).",
+      "Paste a published Formkit form into a Framer embed and confirm it loads (about 25 minutes).",
+      "Approve the three named-studio demo emails and the directory submissions; send wave one by Oct 28."
+     ],
+     "risks": [
+      {
+       "risk": "Real signups are far below the assumption, so nudge counts stay tiny.",
+       "mitigation": "Rebase on Oct 25, run the holdout all 90 days and label results directional. If confirmed on Dec 2, make the compare page and directories primary."
+      },
+      {
+       "risk": "Formkit forms don't embed cleanly in Framer.",
+       "mitigation": "Test by Oct 25. If it fails, use a link-based demo or pause studio outreach until the embed is fixed."
+      },
+      {
+       "risk": "Directories reject the page or send no traffic.",
+       "mitigation": "The page still feeds nudges and studio demos. Resubmit to Future Tools after a week. Kill check on Dec 2."
+      },
+      {
+       "risk": "Buyers distrust a new brand with payments and no visible proof.",
+       "mitigation": "Show live forms, the no-cut Stripe fact and one-click cancellation. Add real customer examples only once they exist. Review on Dec 2."
+      },
+      {
+       "risk": "Comparison claims draw pushback because Tally also has chat building and paid drop-off insights.",
+       "mitigation": "State exact plan boundaries and date the section. Recheck the claims before publishing (by Oct 28) and again on Dec 2."
+      },
+      {
+       "risk": "Outreach breaches contact rules or reads as spam.",
+       "mitigation": "Public business contacts only, sender identity and opt-out in every email, one follow-up, and opt-outs honoured the same day. Check bounces on Nov 11."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Pro-moment upgrade nudges",
+       "oneLiner": "Message free users the moment they hit a Pro feature, not on a calendar.",
+       "kind": "bankable",
+       "audience": "Free-plan users who are freelancers, event organizers, teachers and sales teams, reached inside the product and by email.",
+       "trigger": "The user hits something Pro unlocks: payments through their own Stripe account, their own domain, removing the Formkit badge, AI replies, quizzes, limited places, or the free AI cap of 3 forms and 10 edits a month.",
+       "hook": "Your form can take payments straight into your own Stripe account, and Formkit takes no cut. Pro is $6 a seat a month. Cancel in one click, and nothing is deleted.",
+       "mechanic": "One short in-product banner and one email per gated moment, each naming the exact feature the user just tried. A second message offers yearly billing with two months free. No countdowns and no fake scarcity.",
+       "assetUsed": "The generous free tier, zero-cut Stripe payments, one-click cancellation with nothing deleted, and the $6 Pro price.",
+       "funnel": [
+        "Base: about three hundred free signups in 90 days (assumption, grade D; replace with the real count in week one).",
+        "About two in five publish a form (assumption, grade D).",
+        "About two in five publishers hit a Pro-gated moment (assumption, grade D).",
+        "About one in four of those click the in-context nudge (assumption, grade D).",
+        "About half of clickers pay for Pro, so roughly 6 seats (assumption, grade D).",
+        "Cross-check: that is 2% end-to-end in 90 days, against 3-5% 'good' free-to-paid over six months in the 200-product survey [chartmogul.com, grade B]. Planned lower because of the shorter window and the newer brand."
+       ],
+       "unit": "paying seats in 90 days",
+       "p10": 2.4,
+       "p50": 6,
+       "p90": 12,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Real signup volume, and how many free users reach a Pro-gated moment. Every step after signup is grade D until the first two weeks of data arrive.",
+       "test": "Show the nudges to the next 500 free signups. Sample maths: about 10 upgrades at the planned 2% rate needs 500 signups. If volume is lower, run all 90 days and treat the result as directional. Compare against the previous month's paid rate. Cost: about four owner hours at $50/hour and $0 ad spend, so about $35 per paying seat at P50. Leading metric: nudge clicks by trigger within two weeks. Lagging metric: upgrades by week six.",
+       "killIf": "Fewer than 4 upgrades from the first 500 exposed signups by week six (below 0.4 times the planned rate).",
+       "scaleIf": "10 or more upgrades from 500 (2% or better), including at least one on yearly billing. Then add nudges for the remaining gated moments and test the yearly-billing second message.",
+       "scores": [
+        4,
+        4,
+        4,
+        3,
+        3,
+        5,
+        5,
+        2
+       ],
+       "firstActionToday": "List every point where the free plan hits a Pro feature (payments, domain, AI cap, quizzes, limited places) and screenshot what a free user sees at each one. About 20 minutes.",
+       "climbosCanDo": "Draft the banner and email copy for each trigger, set up trigger and UTM tracking, and report upgrades by trigger each week. The owner approves the copy and switches the triggers on."
+      },
+      {
+       "name": "Intake form built from their own site",
+       "oneLiner": "Show Framer and no-code studios a working client-intake form, built for them in one chat, before asking for anything.",
+       "kind": "creative",
+       "audience": "US Framer Experts and no-code studios. Start with J Squared Team, DigitalTree LLC and Orange Lamp Studio, then add more studios from the same directory (https://www.framer.com/community/experts/countries/united-states/). Use public business contact routes only.",
+       "trigger": "A studio starting new client projects needs an intake form that looks like part of its own brand. Send wave 1 within 10 days and wave 2 in the second week of January. Avoid the Dec 25 and Jan 1 weeks.",
+       "hook": "I built a client-intake form for your studio from your own website, in one chat. It's live here. If it fits, your clients' intake can run on your own domain, and each client can get its own workspace.",
+       "mechanic": "Personal working-demo outreach: build the prospect's own form first, then send email 1 with the live link. Send one follow-up after 4 days, then stop. First confirm that a Formkit form embeds in Framer, because Tally already has an official Framer plugin and Formkit's embed path is unconfirmed.",
+       "assetUsed": "AI form building inside Claude or ChatGPT on every plan, per-client company workspaces, own-domain forms on Pro, and shared templates and approvals on Business ($19 a seat a month).",
+       "funnel": [
+        "60 studios emailed in two waves of 30 (planned volume; assumption, grade D).",
+        "About 7% reply, range 3-12%, so about 4 replies (assumption, grade D; no researched benchmark for demo-first outreach to studios).",
+        "About three in five repliers try the demo or open an account (assumption, grade D).",
+        "About one in three of those pays within 90 days, so roughly 1 account (assumption, grade D).",
+        "About 2 Business seats per account, so about 1.5 paying seats expected (assumption, grade D)."
+       ],
+       "unit": "paying seats in 90 days",
+       "p10": 0,
+       "p50": 1.5,
+       "p90": 6,
+       "horizonDays": 75,
+       "confidence": "low",
+       "biggestUnknown": "Whether studios accept this kind of outreach at all (partnership acceptance has no benchmark), and whether the Framer embed works.",
+       "test": "Send wave 1 of 30 and review replies at two weeks. If needed, change only the hook, then send wave 2 of 30. Sample maths: about 10 replies at 7% needs roughly a hundred and forty contacts, so 60 contacts gives a directional read only. Zero replies in 60 would mean the true rate is under 5% (rule of three). Cost: about six owner hours at $50/hour and $0 ad spend, so about $300 per paying account. That is a little under the first-year gross profit on two Business seats (2 x $19 a month for a year, at four-fifths margin; assumption, grade D). Include sender identity and an opt-out line in every email.",
+       "killIf": "No replies from wave 1 after the follow-up, and none again after one hook change; or fewer than 2 replies and no paid account after all 60 contacts.",
+       "scaleIf": "3 or more replies from one 30-contact wave and at least one paying account. Then widen to the next hundred-plus studios in the directory and offer a referral arrangement.",
+       "scores": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Paste a published Formkit form link into a Framer embed on a test page and check that it loads. Then shortlist the three named studios. About 25 minutes.",
+       "climbosCanDo": "Find public contact routes for each studio, draft every personal email and follow-up, write the demo-form brief for each studio, and track replies and accounts. The owner sends from their own address."
+      },
+      {
+       "name": "Intake-to-review demo page for AI directories",
+       "oneLiner": "One live page that shows the intake form, the post-project review and drop-off by question, submitted as a concrete workflow rather than another AI-builder blurb.",
+       "kind": "creative",
+       "audience": "Readers of Future Tools, Supertools by The Rundown AI (which claims 2M+ readers) and AlternativeTo (367 Typeform alternatives, so crowded). These reach freelancers, consultants and no-code builders comparing form tools.",
+       "trigger": "A buyer asks which tool shows where responses drop off and what clients said. A recent r/nocode thread asks for exactly this: a Tally alternative with better survey analysis (https://www.reddit.com/r/nocode/comments/1w7fzbr/tally_alternative_with_better_survey_analysis/).",
+       "hook": "One form for client intake, one for the post-project review, and a view of where people drop off by question. Copy both to your own account for free.",
+       "mechanic": "Add a dated, fair section to the existing compare page on response analysis, drop-off by question and kept partial answers, with a copy-this-template pair. Submit that page to the three directories. If Future Tools rejects it, resubmit no sooner than one week later. If the r/nocode thread is still open, the owner may post one reply from a personal account that states the Formkit affiliation.",
+       "assetUsed": "Partial responses and drop-off by question on every plan including free, the live compare page (https://formkit.app/compare, checked October 2026), and a free tier that lets anyone copy the templates.",
+       "funnel": [
+        "3 directory submissions: Future Tools, Supertools and AlternativeTo (planned volume; assumption, grade D).",
+        "Listings: Future Tools rejects over 75% of submissions [futuretools.io/faq, grade C], so plan on fewer than one in five. Plan on about half for Supertools and most likely for AlternativeTo (assumption, grade D). Expect about 1.5 listings.",
+        "Visits: roughly a hundred per listing in 90 days, about a hundred and fifty in total, with a wide range (assumption, grade D).",
+        "Free signups: plan on 6% of visits, below the 9% freemium visitor-to-signup average [chartmogul.com, grade B], so about 10.",
+        "Paid in 90 days: 2% of signups, adapted from 3-5% over six months [chartmogul.com, grade B], so about 0.3 seats."
+       ],
+       "unit": "paying seats in 90 days",
+       "p10": 0,
+       "p50": 0.3,
+       "p90": 2,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether any directory lists Formkit and how much traffic a listing sends. Most of the value compounds: the same page also supports plays 1 and 2.",
+       "test": "Build the page and send the 3 submissions, with a UTM for each directory. Sample maths: about 10 signups at 6% needs about a hundred and seventy visits. Three submissions are too few to measure a rate, so this test checks whether listings happen and send any traffic. Cost: about three extra owner hours at $50/hour, because the demo forms are shared with play 2. That is about $500 per paying seat at P50, offset by the page's reuse. Leading metric: referral visits within three weeks. Lagging metric: signups by week six.",
+       "killIf": "Fewer than 75 referral visits in total (under half the plan) and no signups by week six.",
+       "scaleIf": "200 or more visits, 10 or more signups and at least one paid seat. Then spend up to $200 of the ad budget on search ads to the same page, and pitch more directories.",
+       "scores": [
+        3,
+        3,
+        4,
+        3,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Build the client-intake form and the post-project review form with the AI builder, publish both and copy the links. About 25 minutes.",
+       "climbosCanDo": "Draft the page section, the three submissions and the optional Reddit reply, set up the UTMs, and report visits and signups per directory. The owner approves everything, submits, and posts any reply personally."
+      },
+      {
+       "name": "Ben's Bites tutorial pitch",
+       "oneLiner": "Pitch one free tutorial to an AI-workflow audience instead of buying unpriced placement.",
+       "kind": "moonshot",
+       "audience": "Ben's Bites readers. Its partner page claims 120K+ subscribers and 20K+ community members, while its ad seller lists 160K+ subscribers (https://catalog.bensbites.com/partners, https://discover.buysellads.com/bens-bites). The two figures conflict.",
+       "trigger": "The publisher accepts tutorial proposals through its contribution page (https://catalog.bensbites.com/contribute).",
+       "hook": "Build and publish a client-intake form by asking Claude or ChatGPT, then see where people drop off, start to finish.",
+       "mechanic": "Submit a tutorial outline with a finished demo. Spending cap: $0 by default, and at most 10% of the 90-day ad budget (three months of $600) in total, used only if a quote arrives. Why run it at near-zero expected value: it costs about three owner hours, reuses play 3's demo forms, and gets a real price for the webinar channel on the scorecard. Upside is one tutorial in front of a large AI-workflow audience.",
+       "assetUsed": "Chat-based form building on every plan including free, plus the finished demo-form pair from play 3.",
+       "funnel": [
+        "1 tutorial pitch plus one second angle (planned volume; assumption, grade D).",
+        "Acceptance: about one in ten, wide range (assumption, grade D; no benchmark found).",
+        "If published: visits of about a third of a percent of the 120K+ claimed readers, a few hundred in total (assumption, grade D).",
+        "Free signups: 9% of visits [chartmogul.com, grade B].",
+        "Paid in 90 days: 2% of signups, adapted from 3-5% over six months [chartmogul.com, grade B]. That is under one seat if published and near zero across all outcomes."
+       ],
+       "unit": "paying seats in 90 days",
+       "p10": 0,
+       "p50": 0,
+       "p90": 2,
+       "horizonDays": 60,
+       "confidence": "low",
+       "biggestUnknown": "Whether the tutorial is accepted, and which audience figure is right. Pricing is contact-only, so paid placement stays uncommitted.",
+       "test": "Send one pitch now, one follow-up after 10 days, and a second angle after three weeks. Sample size: a single pitch gives only a yes or no. It measures acceptance, not a rate. Cost: about three owner hours at $50/hour and $0 ad spend unless a quote fits the cap. Leading metric: a reply or acceptance within three weeks.",
+       "killIf": "No acceptance after two pitches by week five.",
+       "scaleIf": "Published with 200 or more visits and 8 or more signups. Then request a workshop quote, and buy only if the cost per paid seat comes in below one year's gross profit on a Pro seat.",
+       "scores": [
+        3,
+        1,
+        4,
+        3,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Open the contribution page and draft a 3-line tutorial outline for the client-intake build. About 25 minutes.",
+       "climbosCanDo": "Draft the pitch and tutorial outline, reconcile the audience figures, prepare UTMs, and track replies. The owner sends the pitch and approves any spend."
+      }
+     ],
+     "portfolioNote": "Most likely result: **about 8 paying seats in 90 days**. That is the sum of the play P50s (6 + 1.5 + 0.3 + 0). Expect about 3 if every play lands low, and about twenty only if every play hits its high case at once.\n- Base assumption: about three hundred new free signups in 90 days (assumption, grade D). Swap in the real count in week one; play 1 scales with it.\n- Unit economics: Pro is $6 a seat a month and Business is $19. Assuming about four-fifths gross margin (assumption, grade D), a Pro seat earns under $60 gross profit in its first year, and a Business seat about three times that.\n- Cost per paying seat, with owner time at $50/hour (assumption): play 1 about $35, play 2 about $200, play 3 about $500, play 4 open-ended.\n- Ad budget: hold the $600/month. At 2% free-to-paid, ads would need to buy signups for about a dollar each to break even on Pro, and no placement price was found. Release up to $200 only through play 3's scale rule.\n- Claims: Tally also builds forms in chat, so no 'only' or 'unique' claims anywhere.\n- Score order: fit, predictability, reach per owner-hour, time to signal, compounding, cost, risk, distinctiveness (1 to 5)."
+    },
+    "costMicros": 2442670,
+    "ms": 960463
+   }
+  },
+  "comparisons": {
+   "v22>classic": {
+    "sonnet": {
+     "result": "tie",
+     "reasons": [
+      "A gives a single honest, summed forecast (about 8 seats, range 3 to 20) with per-play P10/P50/P90 numbers and a week-one data pull to rebase them. B's portfolio forecast is vaguer: 'a little over 10', with play 1 'scaled to your real count'.",
+      "A is better on unit economics. Nudge CAC works out to about $35 per seat, and A says plainly that paid ads fail at a $6 seat. It commits $0 and releases at most a third of one month's budget through a scale rule. B spends 20% on a search test its own CAC math says is many times over the ceiling.",
+      "A has concrete, named, non-obvious plays built on proven mechanics. These are a holdout-controlled nudge test, a demo-first intake form built from the prospect's own site, and an intake-to-review demo page for directories. The calendar is dated and holiday-aware.",
+      "A flags honestly that Tally also builds forms in chat and that the Framer embed is unconfirmed, and it bans 'only' and 'unique' claims. B shows similar honesty, but its roundup pitch says Formkit's building on the free plan 'sets it apart' while admitting Typeform and Jotform have MCP servers.",
+      "B has strong ideas: the Google Forms payments switcher, roundup inclusion, and a good unit-per-1,000-emails framing. But its plays are more generic channel plays, its funnels are mostly guessed ranges, and the P50s for the switcher page and roundups are identical (5 and 5).",
+      "A's methodology is stronger: a randomized holdout for the main play versus B's pre/post comparison. A's heavy assumption stacking (300 signups) is labeled grade D and rebased by Oct 25, which keeps it honest."
+     ],
+     "truthX": [
+      "Prospect studio names (J Squared Team, DigitalTree, Orange Lamp Studio) and the 'Figma/Framer/Tally' quote come from research, not the confirmed facts. They are cited as sourced, not invented.",
+      "The 300 signups, 2% conversion, and 80% margin are assumptions, labeled as such.",
+      "The portfolio note uses markdown bold, a minor style issue."
+     ],
+     "truthY": [
+      "The claim that Formkit is absent from roundups rests on only about 8 searches, yet it drives the diagnosis.",
+      "The Q4 event-season window is assumed, though labeled as an assumption.",
+      "The pitch hook lists 'AI replies to responses' and 'conditional logic' as Pro features without clear confirmation. Conditional logic may not be Pro-gated.",
+      "The email hook says 'Upgrade now' with 'you just tried to add payments' framing, which is fine. The stated 'catalogue play' scores and ranks are internal and unverifiable."
+     ]
+    },
+    "opus": {
+     "result": "tie",
+     "reasons": [
+      "A's forecasts are anchored to a cited free-to-paid benchmark (ChartMogul 3-5% over six months) and deliberately planned below it. B assumes 10-30% of new switcher-page and roundup signups pay for Pro within 60 days. That is unsupported optimism and inflates its 'a little over 10' forecast.",
+      "A gives a concrete North Star target with a range: about 8 seats, roughly 3 to 20, to be rebased Oct 25. B's target is only 'above baseline', and its main play is forecast per 1,000 sends with no volume anchor, which gives the owner nothing firm to hold it to.",
+      "A's unit economics are internally consistent: at a 2% conversion rate a signup is worth about $1, so ads are held back. B's own CAC math shows search ads cost many times the affordable ceiling, yet it still commits $120 a month to them.",
+      "Both lead with the paywall-moment nudge, which is the right bankable play. A adds a random holdout, while B relies on a weaker pre/post comparison and calls a holdout infeasible below several thousand wall hits a month.",
+      "B has some sharper distribution ideas: Claude and ChatGPT directory listings that use confirmed fact 3, and pitches to roundup authors. These are genuinely non-obvious, and they keep B close.",
+      "A's studio demo-first outreach is specific (named studios, Framer embed verified first) and honestly capped. A also flags competitor overlap (Tally also builds forms in chat) to keep claims honest."
+     ],
+     "truthX": [
+      "Play 1's test calls for 500 exposed signups while the plan assumes only about 300 signups in 90 days, which is internally inconsistent.",
+      "The AlternativeTo figure is given as both '100+' and '367' alternatives.",
+      "It relies on research citations (Reddit threads, named studios, the Future Tools rejection rate) that the owner cannot verify from the confirmed facts, though they are presented as sourced."
+     ],
+     "truthY": [
+      "The 10-30% free-to-Pro conversion assumption for page and roundup signups is unsupported and well above typical benchmarks.",
+      "'Formkit is absent' from roundups rests on about 8 searches, which is a thin basis for its main diagnosis.",
+      "The Q4 event-season timing and the year-end roundup refresh are asserted as drivers but are assumptions.",
+      "It claims Typeform and Jotform don't offer chat building on their free plans based on research that 'did not find' it."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "classic": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 7,
+    "craft": 6,
+    "usefulness": 5,
+    "creativity": 7,
+    "overall": 7,
+    "topIssue": "The plan contradicts itself: upgrade emails are play 1 and a first action, yet listed as a 'later' channel, and channel scores (81–82) don't match the play totals (92/78/72/65). Combined with heavy jargon (p10/p50, pre_post_observational, grade D), this leaves a non-expert owner unsure what is actually prioritized."
+   },
+   "v22": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 5,
+    "usefulness": 4,
+    "creativity": 5,
+    "overall": 5,
+    "topIssue": "The plan contradicts itself and drowns a non-expert owner in jargon. Kill and scale rules disagree between sections: Dec 2 versus week six, 500 exposed signups against a 300-signup base, and $200 versus $300 per studio account. Ben's Bites appears both as a play and under not-doing. All of this lands on a plan that commits none of the $600/month to chase about 8 seats."
+   }
+  }
+ }
+]

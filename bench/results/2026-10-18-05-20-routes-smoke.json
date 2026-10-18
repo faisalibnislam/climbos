@@ -1,0 +1,676 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "insights",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "audiences": [
+      {
+       "name": "Solo freelancers preparing client intake",
+       "description": "First test: a freelancer who uses Claude or ChatGPT and needs an intake form for an upcoming project or service launch. Disqualify buyers whose existing free form already meets the need, or whose required capabilities remain unverified.",
+       "confidence": "low"
+      },
+      {
+       "name": "Small agencies managing client forms",
+       "description": "Potential trigger: a new client requires a separate intake workflow or branded form. Validate client-workspace billing, guest access and approval requirements before prioritizing this segment.",
+       "confidence": "low"
+      },
+      {
+       "name": "Organizers launching a paid workshop or event",
+       "description": "A focused second test: registration connected to the organizer’s own Stripe account. Disqualify requirements for ticketing, refunds or attendee management until those capabilities are verified.",
+       "confidence": "low"
+      },
+      {
+       "name": "Sales teams redesigning inbound enquiries",
+       "description": "Potential trigger: an existing enquiry process creates manual qualification and follow-up work. Validate the complete response-handling workflow before positioning Formkit as a sales-automation product.",
+       "confidence": "low"
+      }
+     ],
+     "competitors": [
+      {
+       "name": "Typeform",
+       "url": "https://www.typeform.com/",
+       "note": "Direct rival and expectation-setter; supplied notes captured October 18, 2026 quote “Your favorite forms. Now with AI automation.” Basic is $29/month monthly or $25/month equivalent billed yearly, with a 100-response monthly base; compare capacity and total cost, not exclusive AI-chat access.",
+       "sourceUrl": "https://www.typeform.com/pricing"
+      },
+      {
+       "name": "Jotform",
+       "url": "https://www.jotform.com/",
+       "note": "Direct rival and expectation-setter; supplied notes captured October 18, 2026 quote “Powerful forms get it done.” Bronze starts at $34/month equivalent billed annually for one user, 25 forms and 1,000 monthly submissions; ask which submission allowance the buyer actually needs.",
+       "sourceUrl": "https://form.jotform.com/teams/pricing/"
+      },
+      {
+       "name": "Tally",
+       "url": "https://tally.so/",
+       "note": "Direct free-tier rival; supplied notes captured October 18, 2026 quote “The simplest way to create forms.” Unlimited forms and submissions are free within fair-use guidelines; Pro is $29/month or $290/year, making unlimited free use insufficient as Formkit’s sole buying argument.",
+       "sourceUrl": "https://tally.so/help/tally-pro"
+      },
+      {
+       "name": "Fillout",
+       "url": "https://www.fillout.com/",
+       "note": "Direct workflow rival; supplied notes captured October 18, 2026 quote “Forms that do it all.” Free includes 1,000 responses/month and Starter is advertised at $15/month with flat pricing and unlimited seats; the notes do not establish the billing commitment behind that entry price.",
+       "sourceUrl": "https://www.fillout.com/pricing"
+      },
+      {
+       "name": "Paperform",
+       "url": "https://paperform.co/",
+       "note": "Direct payment-form rival; supplied notes captured October 18, 2026 quote “Forms at the center. Everything else in reach.” Free includes 30 submissions/month and Pro starts at $49/month equivalent billed annually; its no-transaction-fee messaging means Formkit’s no-cut arrangement is not exclusive.",
+       "sourceUrl": "https://paperform.co/pricing/"
+      }
+     ],
+     "positioning": "DECISION — Test client intake for solo freelancers who already use Claude or ChatGPT. Confidence: Low for segment demand; High for the supplied chat-building, free-tier and paid-entry facts.\n\nWORKFLOW TO DEMONSTRATE — Give Claude or ChatGPT a client-intake request → build the form → review it → publish from chat → submit a genuine test enquiry. Chat-based building and publishing are confirmed; this particular end-to-end intake demonstration has not been observed, and no speed, conversion or follow-up benefit is established.\n\nALTERNATIVE — Email/spreadsheet intake or an existing form builder. These are candidate alternatives, not verified Formkit switching histories; interviews must establish what buyers actually replace.\n\nFRAME — A client-intake form builder, positioned within an existing category. Reject “cheapest forms” because free alternatives exist, and reject “unique AI-chat forms” because Typeform and Jotform also promote MCP access: https://www.typeform.com/mcp and https://www.jotform.com/mcp/.\n\nSWAP TEST — The complete claim combines building and publishing in chat, unlimited free forms and responses, and Pro at $6 per seat monthly. Substituting Typeform or Jotform makes the stated package inaccurate against their supplied entry prices and free limits; the workflow mechanism alone is not unique.\n\nVALUE THEMES — All are Low-confidence Formkit hypotheses, not established customer outcomes.\n• “Get intake ready without wrestling with setup.” Four of 21 supplied competitor excerpts concern setup/usability, including “customizing the templates can be a tad cumbersome” and “take a bit of time to fully understand the workflow.” Sources: https://www.capterra.com/p/137289/Typeform/ and https://www.g2.com/products/jotform/reviews?page=4. Demonstrate the workflow rather than claiming Formkit is easier.\n• “Keep collecting responses without watching a submission counter.” One of 21 excerpts mentions submission capacity and another describes expensive topping up; this is thin evidence, not a frequency estimate. Sources: https://www.capterra.com/p/158456/JotForm-4-0/reviews/ and https://www.g2.com/products/paperform/reviews. Formkit’s unlimited free responses support the offer, not a claim of unlimited AI processing.\n• “Know the paid cost before switching.” Seven of 21 excerpts concern price/value, including “The pricing is the main downside” and “hard to justify the price tag.” Sources: https://www.g2.com/products/typeform/pricing and https://www.g2.com/products/jotform/reviews?qs=pros-and-cons. Show seat totals and allowances, not a blanket savings promise.\n\nMESSAGING — Ready-to-use options; each headline pairs with its numbered subhead.\n1. Headline: “Build your next client-intake form in Claude or ChatGPT.”\nSubhead: “Use Formkit to build and publish forms directly inside your AI assistant. Start free with unlimited forms and responses.”\n2. Headline: “Unlimited forms and responses. Free to start.”\nSubhead: “Try Formkit on your next client-intake form, with unlimited members included on Free. Choose a paid plan when it fits your needs.”\n3. Headline: “Pro for $6 per seat a month.”\nSubhead: “Start with Formkit’s free tier or choose Pro at $6 per seat per month. Yearly billing gives you two months free.”\n\nPILLARS WITH PROOF — “Build and publish where you already chat”: confirmed Claude and ChatGPT compatibility. “Collect responses without a free-plan submission cap”: confirmed unlimited forms, responses and members. “See the paid entry price clearly”: confirmed Pro and Business per-seat prices; do not attach unverified entitlements to either plan.\n\nWORDS TO USE — Client intake, questions, responses, workflow, build and publish, per seat. WORDS TO AVOID — Unlimited AI, unique MCP, cheapest, effortless, guaranteed conversions, replaces your team.\n\nPITCH ORDER — 1. Show the freelancer’s intake task. 2. Acknowledge email and existing forms as valid alternatives. 3. Set buying criteria: publishing workflow, response capacity and total cost. 4. Show the actual chat-to-published-form recording. 5. Explain Free, paid-seat pricing and verified limits. 6. Ask the visitor to build their next intake form.\n\nVALIDATION — Proposed window: October 19–November 29, 2026. Start with 12 buyer interviews, then test the focused page against the current page; do not call the position validated from competitor language or a small ad sample.",
+     "pricingNotes": "Pro is $6/seat/month and Business $19; yearly options offer two months free. The supplied research explicitly gives three Pro seats as $18/month, versus Fillout’s advertised $15/month entry with unlimited seats; features and billing commitments differ: https://www.fillout.com/pricing. Formkit’s free tier is not unique against Tally, and no-cut Stripe payments are not exclusive against Paperform: https://tally.so/ and https://paperform.co/pricing/. Do not publish AI-response allowances or plan-specific payment entitlements until confirmed; unlimited submissions must not imply unlimited AI processing.",
+     "swot": {
+      "strengths": [
+       "High confidence: unlimited forms, responses and members on Free.",
+       "High confidence: Pro starts at $6 per seat monthly.",
+       "High confidence: build and publish inside Claude or ChatGPT.",
+       "High confidence: Stripe money goes directly to users; Formkit takes no cut."
+      ],
+      "weaknesses": [
+       "Evidence gap: no attributable independent Formkit reviews surfaced in the supplied research.",
+       "Low-confidence inference: six audience groups dilute the buying story.",
+       "Evidence gap: conversion, retention and acquisition economics were not supplied."
+      ],
+      "opportunities": [
+       "Low confidence: demonstrate one freelancer-intake workflow before broadening acquisition.",
+       "Low confidence: connect an explicit paid need to the upgrade decision.",
+       "Medium evidence confidence: address competitor price and setup signals with visible proof."
+      ],
+      "threats": [
+       "Medium confidence: established free alternatives reduce the reason to switch.",
+       "Medium confidence: flat-price competitors can become cheaper as paid seats increase.",
+       "Medium confidence: competing MCP offerings weaken compatibility-only positioning.",
+       "Scenario, not forecast: Tally expands free AI workflows; monitor pricing and MCP changes."
+      ]
+     },
+     "journey": [
+      {
+       "stage": "Discover",
+       "observation": "Low confidence: the proposed trigger is an upcoming client project requiring intake, rather than interest in AI forms alone.",
+       "opportunity": "Use task-specific search and community placements; record the visitor’s actual trigger."
+      },
+      {
+       "stage": "Compare",
+       "observation": "Medium confidence in the evidence signal: supplied competitor excerpts raise price, limits and customization concerns, but prevalence is unknown.",
+       "opportunity": "Show free inclusions, paid-seat totals and verified allowances before signup."
+      },
+      {
+       "stage": "Activate",
+       "observation": "Low confidence: no measured Formkit activation funnel was supplied.",
+       "opportunity": "Track signup → form created → form published → first genuine response; exclude internal tests."
+      },
+      {
+       "stage": "Upgrade",
+       "observation": "Low confidence: branding, payments or response automation may create a paid trigger; their effect on purchases is unmeasured.",
+       "opportunity": "After confirming entitlements, explain the requested paid capability at its point of use."
+      },
+      {
+       "stage": "Retain",
+       "observation": "Low confidence: no repeat-use, renewal or cancellation evidence was supplied.",
+       "opportunity": "Measure repeat workflows, renewals and cancellation reasons by use case and acquisition source."
+      }
+     ],
+     "opportunities": [
+      {
+       "title": "Establish the buying trigger and expand the evidence bank",
+       "why": "October 19–November 1, 2026: hypothesis—freelancers share a recurring intake problem that requires more than their current method; interview 12 relevant buyers, requesting permission for exact quotes, and review at least two public forum threads. Primary metric: buyers independently showing the same problem and a paid-capability need; stop after 12 interviews and proceed only if at least eight demonstrate that pattern, otherwise revise the segment.",
+       "effort": "medium"
+      },
+      {
+       "title": "Record and test the client-intake workflow",
+       "why": "November 2–29, 2026: hypothesis—a recorded chat-to-published-intake workflow increases new paid workspaces per visitor versus the current page. Require at least 300 eligible visitors and 10 new paid workspaces per version before a directional comparison; stop on November 29, report insufficient evidence below those thresholds, and make no statistical claim without a baseline-based sample calculation.",
+       "effort": "medium"
+      },
+      {
+       "title": "Screen alternative-intent search without overspending",
+       "why": "November 2–29, 2026: hypothesis—Typeform/Jotform alternative searches generate paying customers more efficiently than broad builder searches; primary metric is cost per new paid workspace, with publication as a diagnostic. Cap exploration at $300, pause a keyword group after $75 without a published form, and stop for review at the cap; do not rank groups on payment economics below 10 paid workspaces each or exceed $600 in any month.",
+       "effort": "medium"
+      },
+      {
+       "title": "Explain the paid capability at the point of need",
+       "why": "Enroll November 30–December 27, 2026, with follow-up through January 10, 2027: hypothesis—a clear explanation of the requested paid capability and verified limits improves first payment within 14 days of publication. Compare against current onboarding, require 100 activated workspaces per version before a directional decision, and stop at the scheduled close; below that volume, use interviews rather than declaring a winner.",
+       "effort": "medium"
+      },
+      {
+       "title": "Distribute the demonstration in relevant communities",
+       "why": "November 2–December 6, 2026: hypothesis—an actual intake demonstration attracts qualified buyers more effectively than a feature list; primary metric is attributed new paid workspaces, with published forms as a diagnostic. Use six placements where promotion is allowed, stop or revise if none produces a published form, and require 200 tracked visitors plus 10 paid workspaces before comparing channel payment performance.",
+       "effort": "small"
+      }
+     ],
+     "alternatives": [
+      {
+       "name": "Google Forms",
+       "kind": "competitor",
+       "evidence": "Medium confidence as a category alternative: Google documents collaboration and response storage in Sheets. This supports a credible free default, not evidence that Formkit customers switched from it.",
+       "sourceUrl": "https://support.google.com/a/users/answer/9303071?hl=en"
+      },
+      {
+       "name": "SurveyMonkey",
+       "kind": "competitor",
+       "evidence": "Low-confidence switching signal: one supplied Typeform excerpt says “SurveyMonkey was much more difficult to use.” It is neither a Formkit win nor a representative product comparison.",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/"
+      },
+      {
+       "name": "Email and spreadsheet intake",
+       "kind": "diy",
+       "evidence": "Low-confidence research hypothesis for occasional collection; no attributable switching quote was supplied. Ask buyers to show the actual emails, spreadsheet and follow-up process they use.",
+       "sourceUrl": ""
+      },
+      {
+       "name": "Website-builder or custom-code forms",
+       "kind": "diy",
+       "evidence": "Low-confidence research hypothesis: buyers may extend their existing website instead of adding another product. No attributable customer example or comparable implementation price was supplied.",
+       "sourceUrl": ""
+      },
+      {
+       "name": "Keep the existing form or postpone the change",
+       "kind": "do_nothing",
+       "evidence": "Low-confidence status-quo hypothesis: an adequate existing form may not justify migration. Establish the switching event and cost of leaving things unchanged through interviews.",
+       "sourceUrl": ""
+      }
+     ],
+     "vocPhrases": [
+      {
+       "phrase": "SurveyMonkey was much more difficult to use",
+       "theme": "Problem — setup/usability; switching context, not a stated trigger",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/"
+      },
+      {
+       "phrase": "the UX was not great for the consumer",
+       "theme": "Problem — respondent experience/reliability",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/"
+      },
+      {
+       "phrase": "the form was taking too long to load.",
+       "theme": "Problem — respondent experience/reliability",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/reviews/"
+      },
+      {
+       "phrase": "customizing the templates can be a tad cumbersome",
+       "theme": "Problem — setup/usability",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/"
+      },
+      {
+       "phrase": "inability to place two questions on the same screen.",
+       "theme": "Problem — layout/customization",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/"
+      },
+      {
+       "phrase": "limited customization options.",
+       "theme": "Problem — layout/customization",
+       "sourceUrl": "https://www.g2.com/products/typeform/reviews?page=4&qs=pros-and-cons"
+      },
+      {
+       "phrase": "response limit of 100",
+       "theme": "Problem — submission capacity",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/"
+      },
+      {
+       "phrase": "customer support can be slow.",
+       "theme": "Problem — support",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/"
+      },
+      {
+       "phrase": "take a bit of time to fully understand the workflow.",
+       "theme": "Problem — setup/usability",
+       "sourceUrl": "https://www.g2.com/products/jotform/reviews?page=4"
+      },
+      {
+       "phrase": "a few more language options",
+       "theme": "Problem — languages",
+       "sourceUrl": "https://www.g2.com/products/fillout/reviews"
+      },
+      {
+       "phrase": "data visualization capabilities could be better",
+       "theme": "Problem — reporting/exports",
+       "sourceUrl": "https://www.g2.com/products/fillout/reviews"
+      },
+      {
+       "phrase": "crash all mobile browsers.",
+       "theme": "Problem — respondent experience/reliability; isolated report",
+       "sourceUrl": "https://www.g2.com/products/fillout/reviews"
+      },
+      {
+       "phrase": "functions are difficult on calculation fields",
+       "theme": "Problem — setup/usability",
+       "sourceUrl": "https://www.g2.com/products/paperform/reviews"
+      },
+      {
+       "phrase": "multi-paragraph comments got cut off.",
+       "theme": "Problem — reporting/exports",
+       "sourceUrl": "https://www.g2.com/products/paperform/reviews"
+      },
+      {
+       "phrase": "pricing can become expensive",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.capterra.com/p/137289/Typeform/"
+      },
+      {
+       "phrase": "The pricing is the main downside",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.g2.com/products/typeform/pricing"
+      },
+      {
+       "phrase": "It’s pretty expensive for such a tool.",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.g2.com/products/typeform/pricing"
+      },
+      {
+       "phrase": "Pricing is on the higher side",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.g2.com/products/typeform/reviews?page=4&qs=pros-and-cons"
+      },
+      {
+       "phrase": "pricing is a bit steep for what you receive",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.capterra.com/p/158456/JotForm-4-0/reviews/"
+      },
+      {
+       "phrase": "hard to justify the price tag.",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.g2.com/products/jotform/reviews?qs=pros-and-cons"
+      },
+      {
+       "phrase": "very low and very expensive to keep topping up",
+       "theme": "Objection — price/value",
+       "sourceUrl": "https://www.g2.com/products/paperform/reviews"
+      }
+     ],
+     "objections": [
+      {
+       "objection": "Why pay when Google Forms or Tally is free? — inferred; frequency unknown",
+       "force": "habit",
+       "counter": "Recommend staying on Free when it solves the task. Explain a specific, verified paid need instead of arguing that free forms are inadequate.",
+       "sourceUrl": "https://tally.so/"
+      },
+      {
+       "objection": "Will per-seat pricing still make sense as my team grows? — inferred; frequency unknown",
+       "force": "anxiety",
+       "counter": "Show the buyer’s actual member count: the supplied pricing example gives three Pro seats as $18/month. Compare equivalent features and billing commitments against flat-price alternatives, not entry prices alone.",
+       "sourceUrl": "https://www.fillout.com/pricing"
+      },
+      {
+       "objection": "take a bit of time to fully understand the workflow. — setup/usability pool: 4 of 21 supplied excerpts",
+       "force": "anxiety",
+       "counter": "Recommendation: demonstrate the buyer’s exact intake task before asking them to switch. Do not promise migration services, setup assistance or a faster completion time without evidence.",
+       "sourceUrl": "https://www.g2.com/products/jotform/reviews?page=4"
+      },
+      {
+       "objection": "Are responses unlimited, or is there another AI limit? — inferred; frequency unknown",
+       "force": "anxiety",
+       "counter": "Confirmed: Free includes unlimited form responses. Recommendation: separately publish verified AI-processing allowances and extra-credit terms before advertising response automation; those details remain unconfirmed here.",
+       "sourceUrl": "https://formkit.app/"
+      },
+      {
+       "objection": "Why switch for AI chat when another builder supports it? — inferred; frequency unknown",
+       "force": "habit",
+       "counter": "Acknowledge competing MCP options and offer a small pilot rather than a wholesale migration. Show the actual build-and-publish workflow, free response capacity and paid-seat price without claiming exclusive chat compatibility.",
+       "sourceUrl": "https://www.typeform.com/mcp"
+      }
+     ],
+     "gaps": [
+      {
+       "gap": "Own-customer and forum evidence are absent from the supplied bank",
+       "evidence": "Zero Formkit-user excerpts and zero forum excerpts were supplied; the 21 available excerpts come only from competitor reviews. Confidence: High about the supplied bank’s limits, not about the absence of public discussion.",
+       "risk": "Search selection may explain the gap, and competitor complaints cannot establish Formkit outcomes. Cheapest next step: review two public discussion threads and interview available users; keep paying-user, free-user and prospect quotes separate.",
+       "sourceUrl": ""
+      },
+      {
+       "gap": "The proposed workflow and paid entitlements need verification",
+       "evidence": "Chat-based building and publishing are confirmed; the particular intake demonstration, paid-feature packaging and AI-response allowances are not independently verified. [NEEDS FACT: Can the proposed intake workflow be demonstrated end to end, and which paid entitlements and AI-response allowances apply?]",
+       "risk": "A feature-rich supplied page may be incomplete or stale; neither a customer promise nor a comparison should depend on unchecked details. Cheapest test: record an actual account walkthrough and reconcile the live plan matrix before publishing.",
+       "sourceUrl": "https://formkit.app/"
+      },
+      {
+       "gap": "Workflow-first messaging is a testable angle, not an empty market",
+       "evidence": "Four of 21 competitor excerpts concern setup/usability across four cited pages, while competitors already promote broad workflow capabilities. Confidence: Low for a Formkit messaging advantage.",
+       "risk": "The apparent opening may reflect missing research rather than unmet demand. Cheapest test: compare a specific freelancer-intake demonstration with the current page, measuring new paid workspaces per visitor.",
+       "sourceUrl": "https://www.g2.com/products/jotform/reviews?page=4"
+      },
+      {
+       "gap": "The paid trigger and acquisition-cost ceiling remain unvalidated",
+       "evidence": "Formkit and Tally both offer extensive free functionality, and no Formkit conversion, gross-margin or retention data was supplied. Confidence: Low for willingness to pay or sustainable paid acquisition.",
+       "risk": "Free may fully satisfy the target segment, making additional traffic unprofitable. Cheapest test: connect requested paid capabilities to actual first payments before releasing more ad budget.",
+       "sourceUrl": "https://tally.so/"
+      },
+      {
+       "gap": "No channel whitespace or exclusive feature gap was established",
+       "evidence": "The research did not verify competitor absence from search, ads, communities or assistant directories; Tally already documents MCP access. Confidence: Medium that compatibility alone is insufficient, Low for any underserved-channel claim.",
+       "risk": "An apparently empty channel may lack buying intent or restrict promotion. Check current ad libraries and community rules manually, then test a permitted placement before investing further.",
+       "sourceUrl": "https://developers.tally.so/api-reference/mcp"
+      }
+     ],
+     "positioningStatement": "For solo freelancers preparing client intake, Formkit lets you build and publish your form inside Claude or ChatGPT, start with unlimited forms and responses free, and choose Pro at $6 per seat per month.",
+     "confidenceNotes": "EVIDENCE DATE — Supplied research was captured October 18, 2026; no fresh browsing or customer interviews were performed in this drafting pass. Proposed validation dates run October 19, 2026–January 10, 2027, within the requested 90-day horizon.\n\nPOOLS — Thin bank: 21 competitor-review excerpts across nine cited pages on two review platforms; Formkit-user pool N=0 and forum pool N=0. Unique-review totals, review dates, deduplication and authenticity checks are unavailable; excerpts are not necessarily independent reviews.\n\nCOUNTS — Within the competitor-excerpt pool only: price/value 7/21 across six pages; setup/usability 4/21 across four; respondent experience/reliability 3/21 across two; layout/customization 2/21 across two; reporting/exports 2/21 across two; submission capacity, support and languages each 1/21 on one page. These are coding counts, not complaint prevalence; intensity was not scored, and all remain signals rather than validated findings.\n\nPHRASE GROUPS — Problem and objection groups contain verbatim supplied excerpts. Trigger, outcome and proof groups remain empty because no qualifying quotations were supplied; no phrase is verified as repeated high-confidence language, and no Formkit site copy is treated as customer voice.\n\nCONFIDENCE BY COMPONENT — High: supplied confirmed Formkit product/pricing facts and identified evidence limits. Medium: competitor offer observations as of the research date and review-language signals. Low: segment priority, buyer triggers, value themes, conversion journey, workflow advantage, positioning demand and channel economics; the messaging uses confirmed claims but its effectiveness is untested.\n\nNOT ACCESSED — No forum threads or Formkit-user sources were supplied or accessed in this pass; no login barrier is being inferred. Live competitor prices, ad libraries, rankings and social activity were not rechecked, so the report makes no current channel-absence, ad-spend or performance claim.\n\nEXPERIMENT LIMITS — Budgets, dates, minimum volumes and decision thresholds are proposed operating assumptions, not benchmarks or forecasts. Volume thresholds may not be reachable on this budget; stop at the stated cap or date, report inconclusive results when necessary, and never increase spend merely to reach a sample target."
+    },
+    "costMicros": 479927,
+    "ms": 570275,
+    "rounds": 2,
+    "history": [
+     {
+      "round": 0,
+      "average": 2.56,
+      "gatesPassed": false,
+      "lintErrors": 3
+     },
+     {
+      "round": 1,
+      "average": 3.22,
+      "gatesPassed": true,
+      "lintErrors": 0
+     }
+    ]
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 8,
+    "specificity": 7,
+    "strategy": 5,
+    "craft": 4,
+    "usefulness": 4,
+    "creativity": 4,
+    "overall": 5,
+    "topIssue": "The report hedges so heavily that it buries the plan. It downgrades every audience to low confidence and spends weeks on interviews and sample thresholds likely unreachable on $600/month. A non-expert owner trying to get paying customers within 90 days gets caveats and jargon (MCP, swap test, paid workspaces per visitor) instead of a clear, confident path to revenue."
+   }
+  }
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "outbound",
+  "outs": {
+   "v22": {
+    "arm": "v22",
+    "ok": true,
+    "output": {
+     "icp": {
+      "summary": "Low-confidence hypothesis, without favourite-customer or switching evidence: U.S. operators of recurring classes or vendor events whose primary intake uses standalone forms or separate payment steps, where Formkit’s free tier or direct Stripe payments could support repeat registrations.",
+      "mustHaves": [
+       "U.S. trading location: observe the business contact or location page; establishes the contact jurisdiction, rather than inferring it from event venues.",
+       "Operates classes or vendor events: observe the operator’s event pages and calendar; establishes a concrete registration or application use case.",
+       "Uses forms for primary attendee or vendor intake: observe application links and registration instructions; distinguishes a relevant workflow from a secondary scholarship-only form."
+      ],
+      "disqualifiers": [
+       "Exclude existing customers, competitors, competitor partners and suppressed contacts; customer and suppression inputs were not provided.",
+       "Exclude closed operations, unusable websites or purchasing confirmed to be controlled elsewhere; verify these before outreach.",
+       "Exclude secondary-only form use; block ineligible jurisdictions and addresses, including the supplied organizational Gmail addresses.",
+       "Disposition: 9 candidates, 1 exclusion for secondary-only intake; 8 source-refresh holds and 1 jurisdiction-plus-refresh hold. All 9 also require customer and suppression checks.",
+       "No company is cleared for outreach: page capture dates and verbatim page text are unavailable, so the linked observations below are not fresh page verification."
+      ],
+      "triggers": [
+       "Application launch or announced form migration: creates a deadline to choose and publish the intake process; observe dated application announcements.",
+       "Market-season opening or scheduled paid workshop: creates registration and payment work; observe season dates and registration instructions, without assuming dissatisfaction.",
+       "Nice-to-have: multiple simultaneous application cycles; observe calendars and application links, because unlimited forms can support separate event intake.",
+       "Nice-to-have: existing Stripe use; observe payment instructions, because it would reduce payment-provider change. No prospect’s Stripe use is confirmed.",
+       "Scores are analyst judgments against the research’s October 18, 2026 reference date, not current buying intent. Limit the first verification wave to Little Corner Events, Home Baking Day and Fresh Air Markets; other score-A candidates remain reserves."
+      ],
+      "decisionMaker": "Target the owner, market manager, studio manager or event coordinator; titles below are target roles unless explicitly confirmed. Next enrichment: capture dated page evidence and verbatim must-have snippets; confirm purchasing authority, permitted contact routes and Strange Cvlt’s trading country; then run customer and suppression checks before outreach."
+     },
+     "prospects": [
+      {
+       "company": "Little Corner Events",
+       "website": "https://www.littlecornerevents.com/",
+       "location": "Delaware, United States",
+       "sizeBand": "Unknown; an owner/founder is described, but employee count is not established.",
+       "why": "Priority A, first verification wave: Formkit’s free tier could support the announced vendor-form change and later event intake. Opener candidate: “You’re moving Ostara vendor applications to Google Forms; Formkit’s free tier could be worth comparing before the November opening.”",
+       "evidence": [
+        {
+         "url": "https://www.littlecornerevents.com/",
+         "observation": "Recorded page observations support all three must-haves: Delaware-based operator; events in 2025–2027; Ostara vendor applications moving to Google Forms, with applications opening in November 2026. Date seen: unknown; verbatim page quotation unavailable."
+        }
+       ],
+       "trigger": "November 2026 application opening and announced form migration create a deadline to establish vendor intake. Timing 2: the specific change is announced, but its publication date is unknown; release the source-refresh hold only after confirming the opening and current application method.",
+       "fit": 4,
+       "timing": 2,
+       "contact": "Owner / event coordinator — target role; no name or title verified. Public page route: https://www.littlecornerevents.com/; confirm the business enquiry route and purchasing authority.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Home Baking Day — Irvine studio",
+       "website": "https://www.homebakingday.com/",
+       "location": "Irvine, California, United States",
+       "sizeBand": "Unknown; one confirmed Irvine studio does not establish company or local headcount.",
+       "why": "Priority A, first verification wave: the Google Form and separate Zelle payment make Formkit’s direct Stripe-payment option relevant, if the studio is willing to change payment methods. Opener candidate: “Your children’s workshop uses Google Forms and separate Zelle payment; would a form taking payments through your own Stripe account be useful?”",
+       "evidence": [
+        {
+         "url": "https://www.homebakingday.com/contact/en/5",
+         "observation": "Recorded page observations support the U.S. location must-have: an Irvine baking studio at Culver Plaza. Date seen: unknown; verbatim page quotation, legal entity and local purchasing authority unavailable."
+        },
+        {
+         "url": "https://www.eventbrite.com/e/spooktacular-little-bakers-kids-halloween-pastry-workshop-tickets-2002947413632",
+         "observation": "Recorded listing observations support the event-operation and primary-intake must-haves: an October 25, 2026 children’s workshop using Google Form registration and separate Zelle payment. Date seen: unknown; verbatim listing quotation unavailable."
+        }
+       ],
+       "trigger": "The October 25, 2026 workshop creates a registration-and-payment coordination task. Timing 2: it is a specific upcoming event at the research reference date, but the announcement date is unknown; confirm registration remains open and whether software purchasing is local.",
+       "fit": 4,
+       "timing": 2,
+       "contact": "Irvine studio manager / events lead — target role, unnamed. Public contact route: https://www.homebakingday.com/contact/en/5; confirm authority before proposing a change.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Fresh Air Markets & Events",
+       "website": "https://freshairmarketsandevents.com/",
+       "location": "North Port, Florida, United States",
+       "sizeBand": "Unknown; one weekly market does not establish employee count.",
+       "why": "Priority A, first verification wave: recurring vendor applications and payment after approval make Formkit’s direct Stripe payments relevant, but the existing custom form creates migration friction. Opener candidate: “Your vendor payments follow application approval; would collecting those payments through your own Stripe account be useful for the weekly market?”",
+       "evidence": [
+        {
+         "url": "https://freshairmarketsandevents.com/",
+         "observation": "Recorded page observations support all three must-haves: North Port operations; weekly markets from October 3, 2026 through May 29, 2027; a custom vendor application collecting dates, agreements and insurance documents, followed by payment after approval. Date seen: unknown; verbatim page quotation unavailable."
+        }
+       ],
+       "trigger": "The season began October 3, 2026, creating ongoing vendor-date, approval and payment coordination. Timing 3: that dated season launch falls within 90 days of the research reference date; refresh the page and confirm an unmet need before suggesting replacement of the custom workflow.",
+       "fit": 4,
+       "timing": 3,
+       "contact": "Market manager / owner — target role, unnamed. The recorded public route is the contact form at https://freshairmarketsandevents.com/; confirm purchasing authority.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Northern Kentucky Cheerleading Coaches Association",
+       "website": "https://nkycheer.com/",
+       "location": "Northern Kentucky, United States",
+       "sizeBand": "Unknown; listed officers and directors do not establish employee count.",
+       "why": "Reserve, score-based priority A: Google Forms registration plus mailed payment makes Formkit’s direct Stripe payments a relevant option for a future cycle, not a last-minute Fall migration. Opener candidate: “Your vendor instructions pair Google Forms with mailed payment; would direct Stripe payments be useful when planning the Winter intake?”",
+       "evidence": [
+        {
+         "url": "https://nkycheer.com/what-we-do/competition/vendors/",
+         "observation": "Recorded page observations support all three must-haves: Northern Kentucky competitions; vendor registration through Google Forms; payment by mail, with Fall and tentative Winter cycles. Date seen: unknown; verbatim page quotation and legal form unavailable."
+        }
+       ],
+       "trigger": "The Fall deadline is October 18, 2026, while the tentative Winter application/payment deadline is January 5, 2027. Timing 3 reflects the dated Fall deadline at the reference date; do not interrupt that closing cycle, and release the hold only after confirming Winter intake and its responsible organizer.",
+       "fit": 4,
+       "timing": 3,
+       "contact": "Event director / association president — target role, unnamed. Public page route: https://nkycheer.com/what-we-do/competition/vendors/; the supplied organizational Gmail address is withheld under the address rules.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Titan Band Boosters — Titan Winter Arts Showcase",
+       "website": "https://lhstitanband.com/",
+       "location": "Mandeville, Louisiana, United States",
+       "sizeBand": "Unknown; annual-event history does not establish employee count.",
+       "why": "Reserve, score-based priority A: separate vendor and food-truck applications provide a concrete use for Formkit’s free unlimited forms. Opener candidate: “Your Winter Arts Showcase has vendor and food-truck applications; Formkit’s free tier could be worth comparing for those separate intake forms.”",
+       "evidence": [
+        {
+         "url": "https://lhstitanband.com/winter-arts-showcase/",
+         "observation": "Recorded page observations support all three must-haves: the seventh annual showcase in Mandeville on November 14, 2026; vendor and food-truck applications; a linked Google Form. Date seen: unknown; verbatim page quotation and application deadline unavailable."
+        },
+        {
+         "url": "https://lhstitanband.com/winter-arts-showcase/",
+         "observation": "The event page is the public contact route; the individual information contact’s role and purchasing authority are unconfirmed. No individual email is retained; date seen is unknown."
+        }
+       ],
+       "trigger": "The November 14, 2026 showcase creates a deadline for handling vendor and food-truck intake. Timing 2: the future event is specific, but announcement recency and application availability are unknown; confirm both before proposing any change.",
+       "fit": 4,
+       "timing": 2,
+       "contact": "Showcase coordinator / band-booster event lead — target role, unnamed. Use the public event-page route: https://lhstitanband.com/winter-arts-showcase/; confirm the responsible role before collecting an individual work address.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Portage Northern Bands — Huskies Holiday Craft Show",
+       "website": "https://www.pnbands.org/",
+       "location": "Portage, Michigan, United States",
+       "sizeBand": "Unknown; school affiliation does not establish organizer headcount.",
+       "why": "Reserve, score-based priority A: the announced Google-Form-only process makes Formkit’s free unlimited forms and responses relevant for comparison, without evidence that switching is wanted. Opener candidate: “Your 2026 craft-show applications are moving to Google-Form-only intake; Formkit’s free tier is another option to compare for future shows.”",
+       "evidence": [
+        {
+         "url": "https://www.pnbands.org/craft-show",
+         "observation": "Recorded page observations support all three must-haves: a Portage school craft show on November 14, 2026; vendor applications through Google Forms; a stated change to form-only applications for 2026. Date seen: unknown; verbatim page quotation, payment workflow and deadline unavailable."
+        }
+       ],
+       "trigger": "The November 14, 2026 show and 2026 intake change create a vendor-application administration task. Timing 2: the process change is specific but its announcement date is unknown; confirm applications remain open and identify the organizer before outreach.",
+       "fit": 4,
+       "timing": 2,
+       "contact": "Craft-show coordinator / band-booster organizer — target role, unnamed. Public page route: https://www.pnbands.org/craft-show; the supplied organizational Gmail address is withheld under the address rules.",
+       "publicEmail": ""
+      },
+      {
+       "company": "West Asheville Street Market",
+       "website": "https://www.westavlstreetmarket.com/",
+       "location": "West Asheville, North Carolina, United States",
+       "sizeBand": "Unknown; weekend operating frequency does not establish employee count.",
+       "why": "Priority B: rotating vendors and repeated market dates provide a potential use for Formkit’s free unlimited forms, but no next application opening is confirmed. Opener candidate: “Your November vendor applications used Google Forms; Formkit’s free tier could be worth comparing when you plan the next intake.”",
+       "evidence": [
+        {
+         "url": "https://www.westavlstreetmarket.com/",
+         "observation": "Recorded page observations support all three must-haves historically: a West Asheville weekend market with rotating vendors and Google Form applications for November 2026, open October 1–15. Date seen: unknown; verbatim page quotation and next application window unavailable."
+        }
+       ],
+       "trigger": "The October 1–15, 2026 application window has closed. Timing 1: only generic recurring-market timing remains; release the source-refresh hold after confirming the next intake window and responsible coordinator.",
+       "fit": 4,
+       "timing": 1,
+       "contact": "Market owner / vendor coordinator — target role, unnamed. Public page route: https://www.westavlstreetmarket.com/; no eligible email confirmed.",
+       "publicEmail": ""
+      },
+      {
+       "company": "EM Hawaii LLC",
+       "website": "https://www.emhawaii.com/",
+       "location": "Honolulu, Hawaii, United States",
+       "sizeBand": "Unknown; workshop capacities of six or eight participants are not employee counts.",
+       "why": "Priority B: the recorded registration-review-payment sequence makes Formkit’s direct Stripe payments relevant if workshops continue. Opener candidate: “Your workshop instructions describe review followed by an emailed payment link; would direct Stripe payments be useful for a future workshop?”",
+       "evidence": [
+        {
+         "url": "https://www.emhawaii.com/events",
+         "observation": "Recorded page observations support all three must-haves historically: Honolulu workshops, Google Form registration, a review step and an emailed payment link; visible event dates are January–February 2026. Date seen: unknown; verbatim page quotation and current activity unavailable; the LLC name is not registry-verified."
+        }
+       ],
+       "trigger": "No current trigger confirmed. Timing 0: the January–February 2026 listings do not establish a current buying window; release the source-refresh hold only after finding an upcoming workshop and its current registration process.",
+       "fit": 4,
+       "timing": 0,
+       "contact": "Owner / events coordinator — target role, unnamed. Public page route: https://www.emhawaii.com/events; the published role address is withheld because a 1–10 employee size band is not established.",
+       "publicEmail": ""
+      },
+      {
+       "company": "Strange Cvlt / Monster Mall",
+       "website": "https://strangecvlt.com/",
+       "location": "Events in California and Arizona; business trading country unconfirmed.",
+       "sizeBand": "Unknown; event count and retail activity do not establish employee count.",
+       "why": "Priority C, jurisdiction hold: multiple event-specific applications suggest a use for Formkit’s free unlimited forms, but the trading-location must-have is unknown. Opener candidate: “Your Monster Mall page lists separate applications for several events; Formkit’s free tier could be worth comparing for those event-specific forms.”",
+       "evidence": [
+        {
+         "url": "https://strangecvlt.com/pages/monster-mall-vendor-applications",
+         "observation": "Recorded page observations support event operation and primary vendor intake: separate applications for California and Arizona events in October–December 2026 and further 2027 dates. U.S. trading location remains unknown because venues do not establish the operator’s country; date seen and verbatim page quotation are unavailable."
+        }
+       ],
+       "trigger": "Multiple October–December 2026 application cycles create parallel vendor-intake work. Timing 2: event dates are specific, but announcement recency is unknown; release the hold only after confirming the trading country, applicable contact rules and current application availability.",
+       "fit": 3,
+       "timing": 2,
+       "contact": "Monster Mall event operations / vendor-market manager — target role, unnamed. Public page route: https://strangecvlt.com/pages/monster-mall-vendor-applications; do not contact until jurisdiction is confirmed.",
+       "publicEmail": ""
+      }
+     ],
+     "excluded": [
+      {
+       "company": "New York Sign Museum",
+       "reason": "Excluded for secondary-only form evidence: the Google Form handles scholarship applications, while workshop ticket registration is separate, so the primary-intake filter is not met. Source: https://www.nysignmuseum.org/nov-2026-type-design-for-sign-painters; date seen and verbatim page quotation unavailable."
+      }
+     ],
+     "sequence": [
+      {
+       "day": 0,
+       "subject": "vendor application forms",
+       "body": "{{firstLine}}\n\nForms and payments in separate places usually mean someone matches names to payments by hand. Formkit takes the form and the payment together: money goes through Stripe straight to your own account, and we take no cut. The free plan has unlimited forms, responses and members.\n\nWant me to send a sample of how your form would look with the payment built in?",
+       "purpose": "Step 1, variant A (payment pain): one sourced observation, the mechanism (form and payment together through the prospect's own Stripe account, no cut), the free plan, and a one-word-answer ask."
+      },
+      {
+       "day": 3,
+       "subject": "build forms from chat",
+       "body": "One more way in: Formkit works with Claude and ChatGPT, so you can ask the assistant to build and publish a form from the chat without opening a builder. Or you describe the form in plain words and Formkit's AI builds it. Want a sample vendor application to start from?",
+       "purpose": "New angle: AI-built forms and the Claude and ChatGPT route, with the same easy ask. No plan limits claimed."
+      },
+      {
+       "day": 7,
+       "subject": "application outline offer",
+       "body": "If useful, I can write a one-page outline of how I'd set your application up as one form: the questions, the logic that sends each applicant down the right path, and where payment fits. Want it? For reference, paid plans are Pro at $6 a seat a month and Business at $19.",
+       "purpose": "Rung 2 resource, offered without a link and tied to their form, plus the confirmed paid prices as a new fact."
+      },
+      {
+       "day": 14,
+       "subject": "leaving it here",
+       "body": "I'll leave it here. If vendor applications or registrations get harder to juggle, reply and I'll send the sample form. Yearly billing on paid plans gets two months free, and the free plan has unlimited forms, responses and members.",
+       "purpose": "Polite close-out with no link and no pressure, restating only confirmed offer terms."
+      }
+     ],
+     "firstLines": [
+      {
+       "company": "Little Corner Events",
+       "line": "Your site says Ostara vendor applications are moving to Google Forms, with applications opening in November."
+      },
+      {
+       "company": "Home Baking Day — Irvine studio",
+       "line": "Your listing for the Halloween pastry workshop has families register with a Google Form and pay separately by Zelle."
+      },
+      {
+       "company": "Fresh Air Markets & Events",
+       "line": "Your vendor application collects dates, agreements and insurance documents, and payment follows once a vendor is approved."
+      },
+      {
+       "company": "Northern Kentucky Cheerleading Coaches Association",
+       "line": "Your vendor page has vendors register through a Google Form and send payment by mail."
+      },
+      {
+       "company": "Titan Band Boosters — Titan Winter Arts Showcase",
+       "line": "Your Winter Arts Showcase page lists separate vendor and food-truck applications, with a linked Google Form."
+      },
+      {
+       "company": "Portage Northern Bands — Huskies Holiday Craft Show",
+       "line": "Your craft show page says vendor applications are now Google Form only."
+      }
+     ],
+     "ownerNotes": [
+      "Do not send yet. No prospect is cleared: page capture dates and verbatim text are missing, and customer and suppression checks are not done.",
+      "Withheld until cleared: Strange Cvlt (trading country unknown), West Asheville (application window closed), EM Hawaii (only early-2026 listings). Their openers are dropped.",
+      "First wave: Little Corner, Home Baking Day, Fresh Air. Re-open each source and confirm the first line is still true. NKY Cheer is a reserve: wait for the next intake.",
+      "Step 1 variant B, for form-only prospects (Little Corner, Titan, Portage): \"{{firstLine}}\\n\\nIf each event or show gets its own application, that can mean another form to build and another sheet to check. Formkit's free plan has unlimited forms, responses and members, so a form per event costs nothing to add. You describe the form and AI builds it, or ask Claude or ChatGPT to build and publish it from the chat.\\n\\nWant a sample vendor application to compare with your current one?\"",
+      "Step 1 variant C, short, for any payment-pain prospect: \"{{firstLine}}\\n\\nWould one form that also takes the payment, through your own Stripe account with no cut to Formkit, be useful? The free plan has unlimited forms, responses and members. I can send a sample built for your event if you'd like to see it.\" Use A for most, B and C for others, so bodies differ across mailboxes.",
+      "Use fallback {{firstLine}} only if the specific line fails re-verification: \"Your event page has vendors or attendees apply or register through an online form.\" Otherwise drop the prospect.",
+      "Subject alternates: step 1 \"forms and payments\"; step 2 \"Claude and ChatGPT forms\"; step 3 \"setup outline\"; step 4 \"closing the loop\". Send follow-ups in the same thread. Do not type \"Re:\" yourself.",
+      "Before launch, have ready: the sample vendor form, the sample with payment, and the one-page outline. Steps 3 and 4 promise them. Confirm on formkit.app which plan includes Stripe payments before answering price questions.",
+      "Turn off the booking link in steps 1-3. Only offer a call after someone replies. Use public business routes only, never the supplied Gmail addresses."
+     ]
+    },
+    "costMicros": 762650,
+    "ms": 732990
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "v22": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 3,
+    "craft": 5,
+    "usefulness": 3,
+    "creativity": 5,
+    "overall": 4,
+    "topIssue": "The prospect list is mostly volunteer-run band boosters, cheer associations and tiny markets, which are unlikely to pay. The emails pitch the free plan while implying that Stripe payments come with it, so the work misses the goal of paying customers and blurs which plan delivers the payment feature. Every prospect is also left on hold, with no named contact or email address, so the owner cannot actually start the outreach."
+   }
+  }
+ }
+]
