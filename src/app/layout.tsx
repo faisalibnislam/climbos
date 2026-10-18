@@ -29,7 +29,8 @@ export const metadata: Metadata = {
     siteName: "ClimbOS",
     type: "website",
   },
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "ClimbOS", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

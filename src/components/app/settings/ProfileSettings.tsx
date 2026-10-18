@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { Button, Callout, Field, Input, RadioCards, Switch, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { LoadingBlock } from "../results/QueryBoundary";
+import { PushSettings } from "./PushSettings";
 import { SettingsHeader } from "./SettingsNav";
 
 type Prefs = FunctionReturnType<typeof api.settings.preferences>;
@@ -61,6 +62,7 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
         </div>
       </section>
 
+      <PushSettings />
       <section aria-labelledby="email-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
         <h2 id="email-heading" className="heading-section">
           Emails from ClimbOS

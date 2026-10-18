@@ -105,4 +105,26 @@ http.route({
   }),
 });
 
+/** The service worker pulls its notification text here (the endpoint identifies the device). */
+http.route({
+  path: "/push/pull",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const cors = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json", "Cache-Control": "no-store" };
+    try {
+      const { endpoint } = (await req.json()) as { endpoint?: string };
+      if (!endpoint || endpoint.length > 1000) return new Response(JSON.stringify({ items: [] }), { headers: cors });
+      const items = await ctx.runMutation(internal.push.pull, { endpoint });
+      return new Response(JSON.stringify({ items }), { headers: cors });
+    } catch {
+      return new Response(JSON.stringify({ items: [] }), { status: 400, headers: cors });
+    }
+  }),
+});
+http.route({
+  path: "/push/pull",
+  method: "OPTIONS",
+  handler: httpAction(async () => new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type" } })),
+});
+
 export default http;

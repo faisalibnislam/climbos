@@ -9,6 +9,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed } from "./lib/access";
+import { notifyOwners } from "./lib/notify";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -99,6 +100,7 @@ async function upsertInbox(ctx: MutationCtx, t: Doc<"chatThreads">, text: string
   }
   const id = await ctx.db.insert("communityMessages", { orgId: t.orgId, channel: "website_chat", kind: "chat", externalId: `chat:${t._id}`, authorName: name, fromEmail: t.email, text: text.slice(0, 2000), receivedAt: now, status: "new", createdAt: now, updatedAt: now });
   await ctx.db.patch(t._id, { inboxMessageId: id });
+  await notifyOwners(ctx, t.orgId, `New website chat: “${text.slice(0, 120)}”`, "inbox");
   return id;
 }
 

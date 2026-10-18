@@ -213,7 +213,9 @@ export default defineSchema({
     href: v.string(),
     readAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_user_created", ["userId", "createdAt"]),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_created", ["createdAt"]),
 
   /** ClimbOS staff (beyond the OPS_EMAILS owners): admins and support members. */
   staff: defineTable({
@@ -693,6 +695,29 @@ export default defineSchema({
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
+
+  /** Web push: a user's devices, and messages waiting for the service worker to pull. */
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    endpointHash: v.string(),
+    label: v.optional(v.string()),
+    failures: v.number(),
+    lastOkAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_hash", ["endpointHash"]),
+
+  pushOutbox: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    body: v.string(),
+    url: v.string(),
+    tag: v.optional(v.string()),
+    deliveredAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user_created", ["userId", "createdAt"]),
 
   /** A/B tests ClimbOS runs end to end: landing page headlines and outreach subject lines. */
   abTests: defineTable({

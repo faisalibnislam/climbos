@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requirePaid } from "./lib/access";
 import { audit } from "./lib/audit";
+import { notifyOwners } from "./lib/notify";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 import { sha256Hex } from "../shared/policy";
 
@@ -146,6 +147,7 @@ export const privateFeedback = mutation({
     const req = r && r.orgId === org._id ? r : null;
     if (req) await ctx.db.patch(req._id, { feedbackAt: now });
     const rating = a.rating ? Math.max(1, Math.min(5, Math.round(a.rating))) : null;
+    await notifyOwners(ctx, org._id, `Private feedback${rating ? ` (${rating}★)` : ""}: “${text.slice(0, 120)}”`, "inbox");
     await ctx.db.insert("communityMessages", { orgId: org._id, channel: "feedback", kind: "review", externalId: `feedback:${now}:${Math.random().toString(36).slice(2, 8)}`, authorName: req?.name ?? (a.name?.trim().slice(0, 80) || "A customer"), fromEmail: req?.email, text: `${rating ? `${"★".repeat(rating)}${"☆".repeat(5 - rating)}\n\n` : ""}${text}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
   },
 });

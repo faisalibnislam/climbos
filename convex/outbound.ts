@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { dealFromBooking, syncDealFromProspect } from "./crm";
+import { notifyOwners } from "./lib/notify";
 import { requirePaid } from "./lib/access";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { sha256Hex } from "../shared/policy";
@@ -343,6 +344,7 @@ export const book = mutation({
     await ctx.db.insert("communityMessages", { orgId: page.orgId, channel: "booking", kind: "booking", externalId: `booking:${id}`, prospectId: prospect?.orgId === page.orgId ? prospect._id : undefined, authorName: a.company ? `${name} (${a.company.trim().slice(0, 60)})` : name, text: `Booked a ${page.durationMin}-minute call for ${when}.${a.note ? `\n\n“${a.note.trim().slice(0, 500)}”` : ""}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: page.orgId, actorType: "system", action: "booking.created", subjectType: "booking", subjectId: id, summary: `${name}${a.company ? ` (${a.company.trim().slice(0, 60)})` : ""} booked a call` });
     await ctx.scheduler.runAfter(0, internal.outbound.notifyBooking, { bookingId: id });
+    await notifyOwners(ctx, page.orgId, `${name} booked a call for ${when}.`, "inbox");
     return { bookingId: id, startAt: a.startAt, endAt: a.startAt + page.durationMin * 60_000 };
   },
 });
