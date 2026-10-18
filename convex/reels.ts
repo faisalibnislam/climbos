@@ -3,7 +3,9 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
+import { contentHash } from "../shared/policy";
 import { featureAllowed, requirePaid } from "./lib/access";
+import { invalidateApprovals } from "./lib/approvals";
 import { audit } from "./lib/audit";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { r2SignedUrl } from "./lib/r2";
@@ -32,9 +34,78 @@ export const list = query({
         badge: r.badge,
         error: r.error ?? null,
         url: r.videoStorageId ? await ctx.storage.getUrl(r.videoStorageId) : null,
+        artifactId: r.artifactId ?? null,
+        isDemo: Boolean(r.isDemo),
         createdAt: r.createdAt,
       })),
     );
+  },
+});
+
+/** A finished reel becomes a post (kind video_script), so it goes through approval and export like any post. */
+export const createPost = internalMutation({
+  args: { reelId: v.id("reels") },
+  handler: async (ctx, { reelId }) => {
+    const reel = await ctx.db.get(reelId);
+    if (!reel || reel.artifactId || reel.status !== "ready") return;
+    const business = await ctx.db
+      .query("businesses")
+      .withIndex("by_org", (q) => q.eq("orgId", reel.orgId))
+      .first();
+    if (!business) return;
+    const now = Date.now();
+    const body = (reel.caption ?? reel.brief).slice(0, 2200);
+    // Reels go out from the export pack (download the video, post it), so they use a channel with no direct publishing.
+    const channel = "tiktok" as const;
+    const artifactId = await ctx.db.insert("artifacts", {
+      orgId: reel.orgId,
+      businessId: business._id,
+      kind: "video_script",
+      channel,
+      title: `Reel: ${reel.title}`.slice(0, 140),
+      status: "in_review",
+      currentVersion: 1,
+      createdByRole: "creative_director",
+      createdBy: reel.createdBy,
+      runId: reel.runId,
+      reelId: reel._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const versionId = await ctx.db.insert("artifactVersions", {
+      orgId: reel.orgId,
+      artifactId,
+      version: 1,
+      body,
+      hashtags: [],
+      claimFactIds: [],
+      unsupportedClaims: [],
+      // Bound to the exact video, so a different render needs a new approval.
+      contentHash: await contentHash({ body, hashtags: [], imageRef: reel.videoStorageId ? `reel:${reel.videoStorageId}` : `reel:${reel._id}`, channel }),
+      editedByRole: "creative_director",
+      createdAt: now,
+    });
+    await ctx.db.patch(artifactId, { currentVersionId: versionId });
+    await ctx.db.patch(reel._id, { artifactId, updatedAt: now });
+  },
+});
+
+/** Delete a reel and its video. Its post is archived (anything already posted stays on the platform). */
+export const remove = mutation({
+  args: { slug: v.string(), reelId: v.id("reels") },
+  handler: async (ctx, { slug, reelId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const reel = assertSameOrg(await ctx.db.get(reelId), org._id, "reel");
+    if (reel.status === "working") throw appError("INVALID", "It's still being made. Delete it when it's done.");
+    const post = reel.artifactId ? await ctx.db.get(reel.artifactId) : null;
+    if (post && ["publishing", "uncertain"].includes(post.status)) throw appError("INVALID", "Its post is being sent. Wait for the result first.");
+    if (post && post.status !== "archived") {
+      await invalidateApprovals(ctx, post._id, "Reel deleted");
+      await ctx.db.patch(post._id, { status: "archived", scheduledFor: undefined, updatedAt: Date.now() });
+    }
+    if (reel.videoStorageId) await ctx.storage.delete(reel.videoStorageId).catch(() => undefined);
+    await ctx.db.delete(reel._id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "reel.deleted", subjectType: "reel", subjectId: reel._id, summary: `Deleted the reel "${reel.title}".` });
   },
 });
 

@@ -10,12 +10,26 @@ import { errorMessage } from "./errors";
 type Form = { title: string; bio: string; color: string; links: { label: string; url: string }[]; collectEmails: boolean; live: boolean };
 
 /** Link in bio editor (one page per workspace). */
-export function BioEditor({ slug, defaultTitle }: { slug: string; defaultTitle: string }) {
+export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string; defaultTitle: string; canEdit?: boolean }) {
   const data = useQuery(api.bio.get, { slug });
   const save = useMutation(api.bio.save);
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
   if (data === undefined) return null;
+  // Roles that can't edit see the live link only.
+  if (!canEdit) {
+    return data?.live ? (
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-2">
+          <p className="heading-card">Link in bio</p>
+          <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
+            {data.url.replace(/^https?:\/\//, "")} <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+          <p className="basis-full text-sm text-ink-3">{data.views} views</p>
+        </CardContent>
+      </Card>
+    ) : null;
+  }
   const f: Form = form ?? (data ? { title: data.title, bio: data.bio, color: data.color, links: data.links.map((l) => ({ label: l.label, url: l.url })), collectEmails: data.collectEmails, live: data.live } : { title: defaultTitle, bio: "", color: "#0b5d46", links: [{ label: "Book a call", url: "" }], collectEmails: true, live: true });
   const set = (patch: Partial<Form>) => setForm({ ...f, ...patch });
   return (

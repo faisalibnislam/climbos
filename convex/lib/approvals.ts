@@ -82,6 +82,43 @@ export async function recordArtifactDecision(
     expiresAt,
     createdAt: now,
   });
-  await ctx.db.patch(a._id, { status: p.decision === "approve" ? "approved" : "draft", approvalId, updatedAt: now });
+  await ctx.db.patch(a._id, { status: p.decision === "approve" ? "approved" : "draft", approvalId, lastPublishError: undefined, updatedAt: now });
   return approvalId;
+}
+
+/** Scheduled posts keep their approval until a little after the planned time. */
+export const SCHEDULE_GRACE_MS = 6 * 3_600_000;
+
+/**
+ * Keep an artifact's approval valid until `until` (re-hashed, since the expiry
+ * is part of the binding). Returns false when there is no live approval.
+ */
+export async function extendApprovalUntil(ctx: MutationCtx, a: Doc<"artifacts">, until: number): Promise<boolean> {
+  const ap = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+  if (!ap || ap.status !== "approved" || ap.expiresAt <= Date.now()) return false;
+  if (ap.expiresAt >= until) return true;
+  const binding = { orgId: ap.orgId, subjectType: ap.subjectType, subjectId: ap.subjectId, actionKind: ap.actionKind, contentHash: ap.contentHash, scope: ap.scope, policyVersion: ap.policyVersion, expiresAt: until };
+  await ctx.db.patch(ap._id, { expiresAt: until, approvalHash: await approvalHash(binding) });
+  return true;
+}
+
+/**
+ * Why an artifact's approval can't be used as it stands, or null when it can:
+ * missing, expired, for older content, or made for a different destination
+ * (e.g. approved for export before the account was connected).
+ */
+export function approvalProblem(
+  ap: Doc<"approvals"> | null,
+  ver: Doc<"artifactVersions"> | null,
+  connection: Doc<"connections"> | null,
+  now = Date.now(),
+): string | null {
+  if (!ap || ap.status !== "approved") return "Approve this first.";
+  if (ap.expiresAt <= now) return "The approval expired. Approve it again first.";
+  if (!ver || ap.contentHash !== ver.contentHash) return "The content changed after approval. Approve the new version.";
+  const wanted = connection ? "publish" : "export";
+  if (ap.actionKind !== wanted || (ap.scope.connectionId ?? null) !== (connection?._id ?? null)) {
+    return connection ? "Approved before this account was connected. Approve it again to publish it." : "The connected account changed. Approve it again.";
+  }
+  return null;
 }

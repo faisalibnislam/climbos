@@ -13,6 +13,19 @@ export const maxDuration = 180;
 
 const run = promisify(execFile);
 
+/** Only our own Convex deployment's storage upload URLs are accepted. */
+function storageUploadUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  try {
+    const u = new URL(raw);
+    const own = process.env.NEXT_PUBLIC_CONVEX_URL ? new URL(process.env.NEXT_PUBLIC_CONVEX_URL).host : null;
+    if (u.protocol !== "https:" || !(u.host === own || u.host.endsWith(".convex.cloud"))) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * ClimbOS reel worker: draws each scene as a 1080×1920 frame in headless
  * Chrome, then ffmpeg adds motion and cross-fades and encodes an MP4.
@@ -22,7 +35,7 @@ const run = promisify(execFile);
 export async function POST(req: Request) {
   const secret = process.env.CLIMBOS_SERVER_SECRET;
   if (!secret || req.headers.get("x-climbos-secret") !== secret) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = (await req.json().catch(() => ({}))) as { scenes?: ReelScene[]; brand?: ReelBrand; secondsEach?: number; badge?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { scenes?: ReelScene[]; brand?: ReelBrand; secondsEach?: number; badge?: boolean; uploadUrl?: string };
   const scenes = (body.scenes ?? []).slice(0, 8).map((s) => ({ ...s, caption: String(s.caption ?? "").slice(0, 120), sub: s.sub ? String(s.sub).slice(0, 160) : undefined, imageUrl: s.imageUrl && (s.imageUrl.startsWith("data:image/") || safePublicUrl(s.imageUrl)) ? s.imageUrl : undefined, videoUrl: s.videoUrl && safePublicUrl(s.videoUrl) ? s.videoUrl : undefined }));
   if (scenes.length < 2) return NextResponse.json({ error: "A reel needs at least 2 scenes." }, { status: 400 });
   const brand: ReelBrand = { name: String(body.brand?.name ?? "").slice(0, 40), color: String(body.brand?.color ?? "#0b5d46"), website: body.brand?.website ? String(body.brand.website).slice(0, 80) : undefined };
@@ -62,7 +75,17 @@ export async function POST(req: Request) {
     await run(ffmpegPath, ffmpegArgs(frames, secondsEach, out), { timeout: 150_000, maxBuffer: 10_000_000 });
     const mp4 = await readFile(out);
     console.log(`[reel] ${scenes.length} scenes, ${mp4.length} bytes, ${Date.now() - t0}ms`);
-    return NextResponse.json({ mp4: mp4.toString("base64"), seconds: reelSeconds(scenes.length, secondsEach), width: REEL_W, height: REEL_H });
+    const meta = { seconds: reelSeconds(scenes.length, secondsEach), width: REEL_W, height: REEL_H };
+    // Upload straight to storage when the backend sent an upload URL: a base64 MP4 in the
+    // response would pass the platform's ~4.5 MB response limit.
+    const uploadUrl = storageUploadUrl(body.uploadUrl);
+    if (uploadUrl) {
+      const up = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": "video/mp4" }, body: new Uint8Array(mp4) });
+      const saved = (await up.json().catch(() => ({}))) as { storageId?: string };
+      if (!up.ok || !saved.storageId) return NextResponse.json({ error: `Video upload failed (${up.status}).` }, { status: 502 });
+      return NextResponse.json({ storageId: saved.storageId, ...meta });
+    }
+    return NextResponse.json({ mp4: mp4.toString("base64"), ...meta });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message.slice(0, 300) }, { status: 500 });
   } finally {

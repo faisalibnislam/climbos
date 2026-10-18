@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Select, toast } from "@/components/ui";
 import { CONTENT_LANGUAGES } from "../../../../shared/languages";
 import { errorMessage } from "../errors";
+import { RunDrafts } from "./RunDrafts";
 import { RunProgressCompact } from "./RunProgress";
 
 /** Translate a draft into another language: a new draft goes to review. */
@@ -26,7 +27,10 @@ export function TranslateDialog({ slug, artifactId }: { slug: string; artifactId
       </DialogTrigger>
       <DialogContent title="Translate" description="A new draft in the language you pick. Links and names stay as they are. About 1 credit.">
         {runId ? (
-          <RunProgressCompact slug={slug} runId={runId} />
+          <div className="flex flex-col gap-3">
+            <RunProgressCompact slug={slug} runId={runId} />
+            <RunDrafts slug={slug} runId={runId} onOpen={() => setOpen(false)} />
+          </div>
         ) : (
           <Field label="Language">
             <Select options={CONTENT_LANGUAGES.map((l) => ({ value: l, label: l }))} value={language} onValueChange={setLanguage} />

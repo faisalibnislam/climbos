@@ -4,6 +4,7 @@ import { featureAllowed, requirePaid } from "./lib/access";
 import {
   AUTOPILOT_CHANNELS,
   DEFAULT_HOURS,
+  DIRECT_PUBLISH_CHANNELS,
   clampCadence,
   localDate,
   nextWeekOf,
@@ -15,10 +16,11 @@ import {
 import type { SocialCalendar } from "../shared/agents/specs";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
+import { invalidateApprovals } from "./lib/approvals";
 import { audit } from "./lib/audit";
-import { applyTrustEvent, onPublishOutcome, routeSlotDraft, settingsFor, trustFor } from "./lib/autopilot";
+import { applyTrustEvent, autopilotLive, onPublishOutcome, routeSlotDraft, settingsFor, trustFor } from "./lib/autopilot";
 import { planJob } from "./lib/jobPlans";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -101,6 +103,10 @@ export const get = query({
       activeRuns,
       timezone: org.timezone,
       canManage: ["owner", "admin"].includes(role),
+      /** Skip, redraft and report on slots (approver roles). */
+      canApprove: ["owner", "admin", "reviewer"].includes(role),
+      /** Channels ClimbOS posts to directly (others go out from the export pack). */
+      directChannels: [...DIRECT_PUBLISH_CHANNELS],
       settings: settings
         ? {
             enabled: settings.enabled,
@@ -180,7 +186,7 @@ export const save = mutation({
   },
 });
 
-/** Free accounts: plan one week once to see what autopilot would do (nothing is drafted or posted on its own). */
+/** Free accounts: plan one week once to see what autopilot would do (ideas only: nothing is drafted or posted). */
 export const previewWeek = mutation({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
@@ -208,13 +214,32 @@ export const skipSlot = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const slot = assertSameOrg(await ctx.db.get(slotId), org._id, "slot");
     if (slot.status === "published") throw appError("INVALID", "This one has already been posted.");
+    const a = slot.artifactId ? await ctx.db.get(slot.artifactId) : null;
+    if (a && ["publishing", "uncertain"].includes(a.status)) throw appError("INVALID", "It's being posted right now. Open the post to see what happened.");
     await ctx.db.patch(slot._id, { status: "skipped", updatedAt: Date.now() });
-    if (slot.artifactId) {
-      const a = await ctx.db.get(slot.artifactId);
+    if (a) {
+      // Skipped means it won't go out: the approval goes too (it'd need a fresh one to post later).
+      await invalidateApprovals(ctx, a._id, "Skipped on the autopilot calendar");
       // Unscheduling flips status, which makes any pending publish timer stale.
-      if (a && (a.status === "scheduled" || a.status === "approved")) await ctx.db.patch(a._id, { status: "in_review", scheduledFor: undefined, updatedAt: Date.now() });
+      if (a.status === "scheduled" || a.status === "approved") await ctx.db.patch(a._id, { status: "in_review", scheduledFor: undefined, updatedAt: Date.now() });
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "autopilot.skipped", subjectType: "slot", subjectId: slot._id, summary: `Skipped the ${slot.channel} post planned for ${new Date(slot.slotAt).toISOString()}.` });
+  },
+});
+
+/** A slot whose drafting didn't finish: draft it again (the week's other planned slots go with it). */
+export const redraftSlot = mutation({
+  args: { slug: v.string(), slotId: v.id("calendarSlots") },
+  handler: async (ctx, { slug, slotId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const slot = assertSameOrg(await ctx.db.get(slotId), org._id, "slot");
+    if (slot.status !== "failed" || slot.artifactId) throw appError("INVALID", "Only posts that didn't finish drafting can be drafted again.");
+    const settings = await settingsFor(ctx, org._id);
+    if (!(await autopilotLive(ctx, org, settings))) throw appError("INVALID", "Turn on autopilot first.");
+    if (slot.slotAt < Date.now() + 30 * 60_000) throw appError("INVALID", "Its planned time has passed. Skip it, or write a post from Content.");
+    await ctx.db.patch(slot._id, { status: "planned", draftRunId: undefined, updatedAt: Date.now() });
+    await ctx.scheduler.runAfter(0, internal.autopilot.startDrafts, { orgId: org._id, weekOf: slot.weekOf, createdBy: user._id });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "autopilot.redraft", subjectType: "slot", subjectId: slot._id, summary: `Drafting the ${slot.channel} post again.` });
   },
 });
 
@@ -232,6 +257,36 @@ export const reportProblem = mutation({
 
 /* ---------------- Planning ---------------- */
 
+/**
+ * Posts still to plan per channel for a week: the cadence (pro-rated when
+ * planning mid-week) minus slots already drafted, scheduled or posted, so
+ * planning again never doubles the week.
+ */
+async function remainingCadence(ctx: QueryCtx, orgId: Id<"organizations">, settings: Doc<"autopilotSettings">, weekOf: string, fromDay: number) {
+  const existing = await ctx.db
+    .query("calendarSlots")
+    .withIndex("by_org_week", (q) => q.eq("orgId", orgId).eq("weekOf", weekOf))
+    .collect();
+  const taken = new Map<string, number>();
+  for (const s of existing) if (s.status !== "planned" && s.status !== "skipped") taken.set(s.channel, (taken.get(s.channel) ?? 0) + 1);
+  const daysLeft = 8 - fromDay;
+  const cadence: Record<string, number> = {};
+  for (const c of settings.channels) {
+    const prorated = fromDay === 1 ? c.postsPerWeek : Math.ceil((c.postsPerWeek * daysLeft) / 7);
+    const n = Math.min(MAX_PER_CHANNEL, prorated, c.postsPerWeek - (taken.get(c.channel) ?? 0));
+    if (n > 0) cadence[c.channel] = n;
+  }
+  return cadence;
+}
+
+function runInput(run: Doc<"workflowRuns">): Record<string, unknown> {
+  try {
+    return JSON.parse(run.input) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 async function startPlanning(
   ctx: MutationCtx,
   org: Doc<"organizations">,
@@ -248,6 +303,11 @@ async function startPlanning(
   const weekOf = opts.weekOf ?? (useThisWeek ? thisWeek : nextWeekOf(now, org.timezone));
   const fromDay = weekOf === thisWeek ? Math.min(7, today.weekday + 1) : 1;
   if (!opts.force && settings.lastPlannedWeek === weekOf) return null;
+  if (Object.keys(await remainingCadence(ctx, org._id, settings, weekOf, fromDay)).length === 0) {
+    if (opts.force) throw appError("INVALID", "This week is already planned. Skip a post to make room, or wait for next week's plan.");
+    await ctx.db.patch(settings._id, { lastPlannedWeek: weekOf, updatedAt: now });
+    return null;
+  }
   // Autopilot runs unattended: its saved mode (Expert only while paid), else the workspace default.
   const saved = settings.aiMode === "expert" && !(await expertUnlocked(ctx, org)) ? "basic" : settings.aiMode;
   const aiMode = await resolveAiMode(ctx, org, "social_calendar", saved);
@@ -259,7 +319,7 @@ async function startPlanning(
       kind: plan.kind,
       title: plan.title,
       roles: plan.roles,
-      input: { weekOf, fromDay },
+      input: { weekOf, fromDay, ...(opts.preview ? { preview: true } : {}) },
       steps: plan.steps,
       meters: plan.meters,
       createdBy,
@@ -288,6 +348,11 @@ export const tick = internalMutation({
     for (const s of enabled) {
       const org = await ctx.db.get(s.orgId);
       if (!org || org.emergencyStop?.active) continue;
+      // The package lapsed: don't plan (or spend) until it's back.
+      if (!(await featureAllowed(ctx, org, "autopilot"))) {
+        if (!s.pausedReason) await ctx.db.patch(s._id, { pausedReason: "Autopilot comes with a package. Choose one in Settings → Billing to keep planning.", updatedAt: now });
+        continue;
+      }
       const local = localDate(now, org.timezone);
       const hour = new Date(now + tzOffsetMinutes(now, org.timezone) * 60_000).getUTCHours();
       const weekOf = nextWeekOf(now, org.timezone);
@@ -309,12 +374,7 @@ export const planningContext = internalQuery({
       .withIndex("by_org", (q) => q.eq("orgId", run.orgId))
       .first();
     if (!org || !settings) return null;
-    const daysLeft = 8 - fromDay;
-    const cadence: Record<string, number> = {};
-    for (const c of settings.channels) {
-      const n = fromDay === 1 ? c.postsPerWeek : Math.ceil((c.postsPerWeek * daysLeft) / 7);
-      if (n > 0) cadence[c.channel] = Math.min(MAX_PER_CHANNEL, n);
-    }
+    const cadence = await remainingCadence(ctx, org._id, settings, weekOf, fromDay);
     // History: the last four weeks of slots with outcomes, edits and rejections.
     const since = Date.now() - 28 * DAY;
     const recent = await ctx.db
@@ -378,6 +438,9 @@ export const saveWeekPlan = internalMutation({
     if (!org || !settings) return;
     const plan = raw as SocialCalendar;
     const now = Date.now();
+    const preview = runInput(run).preview === true;
+    // Room left per channel (before this plan's old not-yet-drafted slots are replaced below).
+    const room = await remainingCadence(ctx, org._id, settings, weekOf, fromDay);
     await ctx.db.insert("weekPlans", {
       orgId: org._id,
       weekOf,
@@ -394,10 +457,15 @@ export const saveWeekPlan = internalMutation({
       .collect();
     for (const s of old) if (s.status === "planned") await ctx.db.delete(s._id);
 
-    const allowed = new Set(settings.channels.map((c) => c.channel));
     const perDay = new Map<string, number>();
+    const kept = new Map<string, number>();
     const slots = plan.slots
-      .filter((s) => allowed.has(s.channel))
+      .filter((s) => {
+        const n = kept.get(s.channel) ?? 0;
+        if (n >= (room[s.channel] ?? 0)) return false;
+        kept.set(s.channel, n + 1);
+        return true;
+      })
       .map((s) => ({ ...s, day: Math.min(7, Math.max(fromDay, Math.round(s.day))) }))
       .sort((a, b) => a.day - b.day);
     for (const s of slots) {
@@ -426,8 +494,9 @@ export const saveWeekPlan = internalMutation({
         updatedAt: now,
       });
     }
-    await audit(ctx, { orgId: org._id, actorType: "agent", action: "autopilot.planned", subjectType: "run", subjectId: runId, summary: `Planned ${slots.length} post${slots.length === 1 ? "" : "s"} for the week of ${weekOf}: ${plan.weekTheme.slice(0, 160)}` });
-    await ctx.scheduler.runAfter(0, internal.autopilot.startDrafts, { orgId: org._id, weekOf, createdBy: run.createdBy ?? settings.updatedBy });
+    await audit(ctx, { orgId: org._id, actorType: "agent", action: "autopilot.planned", subjectType: "run", subjectId: runId, summary: `Planned ${slots.length} post${slots.length === 1 ? "" : "s"} for the week of ${weekOf}${preview ? " (preview: ideas only)" : ""}: ${plan.weekTheme.slice(0, 160)}` });
+    // A free preview shows the plan only: nothing is drafted (or charged) beyond planning.
+    if (!preview) await ctx.scheduler.runAfter(0, internal.autopilot.startDrafts, { orgId: org._id, weekOf, createdBy: run.createdBy ?? settings.updatedBy });
   },
 });
 
@@ -437,6 +506,8 @@ export const startDrafts = internalMutation({
     const org = await ctx.db.get(orgId);
     const settings = await settingsFor(ctx, orgId);
     if (!org || !settings) return;
+    // Switched off or the package lapsed since planning: draft nothing (and charge nothing).
+    if (!(await autopilotLive(ctx, org, settings))) return;
     const planned = (
       await ctx.db
         .query("calendarSlots")

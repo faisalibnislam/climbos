@@ -6,10 +6,11 @@ import { getRateVersion } from "../shared/economics";
 import { cleanLanding, LandingContent, landingSlug } from "../shared/landing";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { recordAb, runningTest } from "./abtests";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed, isPaid } from "./lib/access";
+import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
@@ -36,11 +37,21 @@ function view(p: Doc<"landingPages">) {
 export const list = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const pages = await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(50);
-    return { pages: pages.map(view), liveLimit: (await isPaid(ctx, org)) ? LIVE_LIMIT.paid : LIVE_LIMIT.free };
+    return {
+      pages: pages.map(view),
+      liveLimit: (await isPaid(ctx, org)) ? LIVE_LIMIT.paid : LIVE_LIMIT.free,
+      canEdit: ["owner", "admin", "editor"].includes(role),
+      /** Putting a page live or offline (approver roles). */
+      canPublish: ["owner", "admin", "reviewer"].includes(role),
+    };
   },
 });
+
+async function startWriting(ctx: MutationCtx, org: Doc<"organizations">, userId: Doc<"users">["_id"], text: string) {
+  return createRunWithReservation(ctx, { org, kind: "landing_page", title: `Landing page: ${text.slice(0, 50)}`, roles: ["cmo"], input: { brief: text }, steps: [{ kind: "model", role: "cmo", modelKey: MODEL, inputBudget: 10_000, outputBudget: 2_500 }], meters: {}, createdBy: userId, isFixture: org.kind === "demo" });
+}
 
 export const create = mutation({
   args: { slug: v.string(), brief: v.string() },
@@ -52,13 +63,26 @@ export const create = mutation({
     if (count >= 50) throw appError("LIMIT_REACHED", "You have 50 pages. Delete some first.");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
-    const runId = await createRunWithReservation(ctx, { org, kind: "landing_page", title: `Landing page: ${text.slice(0, 50)}`, roles: ["cmo"], input: { brief: text }, steps: [{ kind: "model", role: "cmo", modelKey: MODEL, inputBudget: 10_000, outputBudget: 2_500 }], meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
+    const runId = await startWriting(ctx, org, user._id, text);
     let pageSlug = landingSlug(text, suffix());
     while (await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", pageSlug)).first()) pageSlug = landingSlug(text, suffix());
     const now = Date.now();
     const id = await ctx.db.insert("landingPages", { orgId: org._id, slug: pageSlug, title: text.slice(0, 80), brief: text, status: "drafting", color: brand?.colors?.[0] ?? "#0b5d46", runId, views: 0, leads: 0, createdAt: now, updatedAt: now });
     await ctx.scheduler.runAfter(0, internal.landing.write, { pageId: id, runId });
     return id;
+  },
+});
+
+/** Write a page again after it didn't finish (a new job, same cost as the first). */
+export const retry = mutation({
+  args: { slug: v.string(), id: v.id("landingPages") },
+  handler: async (ctx, { slug, id }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const p = assertSameOrg(await ctx.db.get(id), org._id, "page");
+    if (p.status !== "failed") throw appError("INVALID", "Only a page that didn't finish can be written again.");
+    const runId = await startWriting(ctx, org, user._id, p.brief);
+    await ctx.db.patch(p._id, { status: "drafting", runId, updatedAt: Date.now() });
+    await ctx.scheduler.runAfter(0, internal.landing.write, { pageId: p._id, runId });
   },
 });
 
@@ -103,18 +127,25 @@ export const write = internalAction({
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Activity is paused." });
       return;
     }
-    const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
-    const r = await call({ modelKey: MODEL, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
-    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
-    if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
-    const parsed = r.ok ? LandingContent.safeParse(r.output) : null;
-    if (!parsed?.success) {
+    try {
+      const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
+      const r = await call({ modelKey: MODEL, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
+      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+      if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
+      const parsed = r.ok ? LandingContent.safeParse(r.output) : null;
+      if (!parsed?.success) {
+        await ctx.runMutation(internal.landing.saveWritten, { pageId });
+        await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Couldn't write the page. Try again." });
+        return;
+      }
+      await ctx.runMutation(internal.landing.saveWritten, { pageId, content: JSON.stringify(cleanLanding(parsed.data)) });
+      await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified" });
+    } catch (e) {
+      // Network or provider error: never leave the page "Writing" forever.
+      if (step.stepId) await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId, error: (e as Error).message?.slice(0, 300) ?? "write failed" }).catch(() => undefined);
       await ctx.runMutation(internal.landing.saveWritten, { pageId });
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Couldn't write the page. Try again." });
-      return;
     }
-    await ctx.runMutation(internal.landing.saveWritten, { pageId, content: JSON.stringify(cleanLanding(parsed.data)) });
-    await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified" });
   },
 });
 
@@ -161,9 +192,13 @@ export const setLive = mutation({
 export const remove = mutation({
   args: { slug: v.string(), id: v.id("landingPages") },
   handler: async (ctx, { slug, id }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
-    assertSameOrg(await ctx.db.get(id), org._id, "page");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const p = assertSameOrg(await ctx.db.get(id), org._id, "page");
+    // A running headline test ends with the page (it can't collect results any more).
+    const test = await runningTest(ctx, p._id);
+    if (test) await ctx.db.patch(test._id, { status: "stopped", winner: "A", note: "Stopped: the page was deleted.", endedAt: Date.now() });
     await ctx.db.delete(id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.deleted", subjectType: "landingPage", subjectId: p._id, summary: `Deleted the landing page "${p.title}" (${p.views} views, ${p.leads} leads).` });
   },
 });
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup, type T, makePaid } from "./helpers";
@@ -199,5 +199,142 @@ describe("social autopilot", () => {
     expect(tokens.some((x) => x.kind === "stop_post")).toBe(true);
     const log = await t.run(async (ctx) => ctx.db.query("emailLog").collect());
     expect(log.some((l) => l.template === "autopilot_heads_up")).toBe(true);
+  });
+});
+
+describe("autopilot guards", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.setSystemTime(new Date("2026-10-19T08:00:00Z")); // Monday
+    process.env.CLIMBOS_ENGINE = "v2";
+    process.env.CLIMBOS_FAKE_LLM = "ship";
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete process.env.CLIMBOS_ENGINE;
+    delete process.env.CLIMBOS_FAKE_LLM;
+  });
+
+  const save = (w: Awaited<ReturnType<typeof workspace>>, enabled = true) =>
+    w.client.mutation(api.autopilot.save, { slug: w.slug, enabled, mode: "always_ask", channels: [{ channel: "facebook", postsPerWeek: 1 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+
+  it("a free preview week plans ideas only: nothing is drafted or charged for drafting", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ap-preview@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Free Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More", horizonDays: 90, monthlyAdBudget: 0 });
+    await owner.client.mutation(api.autopilot.save, { slug, enabled: false, mode: "always_ask", channels: [{ channel: "facebook", postsPerWeek: 2 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+    await owner.client.mutation(api.autopilot.previewWeek, { slug });
+    await run(t);
+    const s = await slots(t, orgId as Id<"organizations">);
+    expect(s.length).toBeGreaterThan(0);
+    expect(s.every((x) => x.status === "planned" && !x.artifactId)).toBe(true);
+    const runs = await t.run(async (ctx) => ctx.db.query("workflowRuns").collect());
+    expect(runs.filter((r) => r.kind === "content_social")).toHaveLength(0);
+    const view = await owner.client.query(api.autopilot.get, { slug });
+    expect(view.weeks[0].slots.length).toBe(s.length);
+    expect(view.directChannels).toEqual(expect.arrayContaining(["instagram", "facebook", "linkedin", "x"]));
+  });
+
+  it("Plan now mid-week doesn't double the week", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-double@example.com");
+    await save(w);
+    await run(t);
+    expect(await slots(t, w.orgId)).toHaveLength(1);
+    await expect(w.client.mutation(api.autopilot.planNow, { slug: w.slug })).rejects.toThrow(/already planned/);
+    expect(await slots(t, w.orgId)).toHaveLength(1);
+  });
+
+  it("skipping invalidates the approval, and approving a skipped post doesn't revive the slot", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-skip2@example.com");
+    await save(w);
+    await run(t);
+    const [slot] = await slots(t, w.orgId);
+    await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
+    await w.client.mutation(api.autopilot.skipSlot, { slug: w.slug, slotId: slot._id });
+    const approvals = await t.run(async (ctx) => ctx.db.query("approvals").collect());
+    expect(approvals.some((a) => a.status === "approved")).toBe(false);
+    await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
+    expect((await slots(t, w.orgId))[0].status).toBe("skipped");
+    expect((await t.run(async (ctx) => ctx.db.get(slot.artifactId!)))?.status).toBe("approved");
+    await run(t);
+    expect(await t.run(async (ctx) => ctx.db.query("actionReceipts").collect())).toHaveLength(0);
+  });
+
+  it("approving after the planned time asks for a new time instead of posting late", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-late@example.com");
+    await save(w);
+    await run(t);
+    const [slot] = await slots(t, w.orgId);
+    vi.setSystemTime(new Date(slot.slotAt + 3_600_000));
+    const res = await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
+    expect(res.slot).toBe("needs_time");
+    expect((await t.run(async (ctx) => ctx.db.get(slot.artifactId!)))?.status).toBe("approved");
+    expect((await slots(t, w.orgId))[0].routing?.reasons[0]).toMatch(/pick a new time/);
+  });
+
+  it("with autopilot off, approving a planned post doesn't schedule it and drafting stops", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-off@example.com");
+    await save(w);
+    await run(t);
+    const [slot] = await slots(t, w.orgId);
+    await save(w, false);
+    await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
+    expect((await slots(t, w.orgId))[0].status).toBe("ready_to_post");
+    const before = (await t.run(async (ctx) => ctx.db.query("workflowRuns").collect())).length;
+    await t.mutation(internal.autopilot.startDrafts, { orgId: w.orgId, weekOf: slot.weekOf, createdBy: w.userId });
+    expect((await t.run(async (ctx) => ctx.db.query("workflowRuns").collect())).length).toBe(before);
+  });
+
+  it("a slot that didn't finish drafting can be drafted again", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-redraft@example.com");
+    await save(w);
+    await run(t);
+    const slotId = await t.run(async (ctx) => {
+      const s = (await ctx.db.query("calendarSlots").first())!;
+      return ctx.db.insert("calendarSlots", {
+        orgId: s.orgId,
+        weekOf: s.weekOf,
+        channel: s.channel,
+        day: s.day,
+        slotAt: s.slotAt + 3_600_000,
+        pillar: s.pillar,
+        purpose: s.purpose,
+        format: s.format,
+        idea: s.idea,
+        angle: s.angle,
+        hookDraft: s.hookDraft,
+        callToAction: s.callToAction,
+        needsOwner: false,
+        status: "failed",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+    await w.client.mutation(api.autopilot.redraftSlot, { slug: w.slug, slotId });
+    await run(t);
+    const redone = await t.run(async (ctx) => ctx.db.get(slotId));
+    expect(redone?.artifactId).toBeTruthy();
+    expect(redone?.status).toBe("needs_approval");
+  });
+
+  it("the hourly tick doesn't plan for a workspace whose package lapsed", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-lapsed@example.com");
+    await save(w);
+    await run(t);
+    await t.run(async (ctx) => {
+      for (const s of await ctx.db.query("subscriptions").collect()) await ctx.db.patch(s._id, { status: "canceled", currentPeriodEnd: Date.now() - 1000 });
+    });
+    vi.setSystemTime(new Date("2026-10-22T12:00:00Z")); // Thursday noon
+    await t.mutation(internal.autopilot.tick, {});
+    const settings = await t.run(async (ctx) => ctx.db.query("autopilotSettings").first());
+    expect(settings?.lastPlannedWeek).toBe("2026-10-19");
+    expect(settings?.pausedReason).toMatch(/package/);
   });
 });

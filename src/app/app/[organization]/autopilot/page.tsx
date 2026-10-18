@@ -4,7 +4,7 @@ import { AiModePicker, useAiMode, type AiMode } from "@/components/app/AiModePic
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarClock, CircleCheck, Hand, Loader2, Minus, MoreHorizontal, Plus, ShieldCheck, SkipForward, Sparkles, TriangleAlert, Upload } from "lucide-react";
+import { CalendarClock, CircleCheck, Hand, Loader2, Minus, MoreHorizontal, Plus, RotateCcw, ShieldCheck, SkipForward, Sparkles, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -44,7 +44,6 @@ import { useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
 
 const CHANNELS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest"] as const;
-const DIRECT = new Set(["instagram", "facebook"]);
 const HOURS = [
   { h: 8, label: "8 am" },
   { h: 10, label: "10 am" },
@@ -74,13 +73,15 @@ export default function AutopilotPage() {
   const [editing, setEditing] = useState(false);
   if (data === undefined) return <LoadingBlock label="Loading autopilot" lines={4} />;
   const on = Boolean(data.settings?.enabled);
+  // A free preview week shows its plan (ideas only) even while autopilot is off.
+  const previewing = !on && data.weeks.some((w) => w.slots.length > 0);
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <PageHeader
         eyebrow="Social media"
         title="Autopilot"
         intro="Your social media manager plans each week, writes and designs the posts, and publishes within the rules you set here."
-        actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canManage} /> : undefined}
+        actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canApprove} /> : undefined}
       />
       {data.activeRuns?.length ? (
         <section aria-label="Your team is working" className="rounded-xl border border-brand-200 bg-surface p-4">
@@ -96,13 +97,15 @@ export default function AutopilotPage() {
         </section>
       ) : null}
       {data.settings?.pausedReason ? <Callout tone="warning" title="Autopilot is waiting">{data.settings.pausedReason}</Callout> : null}
-      {!on || editing ? <SetupCard slug={slug} data={data} onDone={() => setEditing(false)} /> : null}
-      {on ? (
-        <>
-          <TrustLadder data={data} />
-          <WeekView slug={slug} data={data} />
-        </>
+      {(!on || editing) && data.canApprove ? <SetupCard slug={slug} data={data} onDone={() => setEditing(false)} /> : null}
+      {!on && !data.canApprove ? <Callout tone="info" title="Autopilot is off">Ask an owner, admin or reviewer to set it up.</Callout> : null}
+      {on ? <TrustLadder data={data} /> : null}
+      {previewing ? (
+        <Callout tone="info" title="Preview week">
+          Ideas only: nothing was drafted or posted. Choose a package to have your team write and post them.
+        </Callout>
       ) : null}
+      {on || previewing ? <WeekView slug={slug} data={data} /> : null}
     </div>
   );
 }
@@ -142,6 +145,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
   const save = useMutation(api.autopilot.save);
   const s = data.settings;
   const connected = new Set(data.connected);
+  const direct = new Set(data.directChannels);
   const [mode, setMode] = useState<Mode>((s?.mode as Mode) ?? "trust_ladder");
   const [cadence, setCadence] = useState<Record<string, number>>(() => {
     if (s) return Object.fromEntries(s.channels.map((c) => [c.channel, c.postsPerWeek]));
@@ -223,7 +227,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
                   <SocialIcon network={c} variant="tile" size="md" />
                   <div className="min-w-0 flex-1">
                     <p className="text-ui font-medium text-ink">{networkName(c)}</p>
-                    <p className="truncate text-xs text-ink-3">{DIRECT.has(c) ? (connected.has(c) ? "Posts for you" : "Connect to post for you") : "You post it from the export pack"}</p>
+                    <p className="truncate text-xs text-ink-3">{direct.has(c) ? (connected.has(c) ? "Posts for you" : "Connect to post for you") : "You post it from the export pack"}</p>
                   </div>
                   <div className="flex items-center gap-1" role="group" aria-label={`${networkName(c)} posts per week`}>
                     <IconButton size="sm" variant="secondary" aria-label={`Fewer ${networkName(c)} posts`} icon={<Minus />} disabled={n === 0} onClick={() => setCadence((x) => ({ ...x, [c]: Math.max(0, n - 1) }))} />
@@ -428,7 +432,7 @@ function WeekView({ slug, data }: { slug: string; data: Data }) {
                   {isToday ? " · Today" : ""}
                 </p>
                 {slots.map((s) => (
-                  <SlotCard key={s.id} slug={slug} slot={s} tz={tz} />
+                  <SlotCard key={s.id} slug={slug} slot={s} tz={tz} canAct={data.canApprove && Boolean(data.settings?.enabled)} />
                 ))}
               </div>
             );
@@ -469,9 +473,11 @@ function WeekSummary({ counts, total }: { counts: Record<string, number>; total:
   );
 }
 
-function SlotCard({ slug, slot, tz }: { slug: string; slot: Slot; tz: string }) {
+function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: string; canAct: boolean }) {
   const skip = useMutation(api.autopilot.skipSlot);
   const report = useMutation(api.autopilot.reportProblem);
+  const redraft = useMutation(api.autopilot.redraftSlot);
+  const sending = slot.artifact ? ["publishing", "uncertain"].includes(slot.artifact.status) : false;
   const st = STATUS[slot.status] ?? STATUS.planned;
   const time = new Date(slot.slotAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
   const reasons = slot.routing?.reasons ?? [];
@@ -481,34 +487,44 @@ function SlotCard({ slug, slot, tz }: { slug: string; slot: Slot; tz: string }) 
         <SocialIcon network={slot.channel} size="sm" labelled />
         <span className="text-xs tabular-nums text-ink-3">{time}</span>
         <span className="ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton size="sm" variant="ghost" aria-label="Post options" icon={<MoreHorizontal />} tooltip={false} className="-my-1 size-6" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {slot.artifact ? (
-                <DropdownMenuItem asChild>
-                  <Link href={`/app/${slug}/content/${slot.artifact.id}`}>Open the post</Link>
-                </DropdownMenuItem>
-              ) : null}
-              {slot.status !== "published" ? (
-                <DropdownMenuItem
-                  icon={<SkipForward />}
-                  onSelect={() => skip({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Skipped. Nothing will post in this slot." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
-                >
-                  Skip this post
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  danger
-                  icon={<TriangleAlert />}
-                  onSelect={() => report({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Thanks. This channel will ask you first from now on." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
-                >
-                  Report a problem
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {slot.artifact || canAct ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton size="sm" variant="ghost" aria-label="Post options" icon={<MoreHorizontal />} tooltip={false} className="-my-1 size-6" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {slot.artifact ? (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/app/${slug}/content/${slot.artifact.id}`}>Open the post</Link>
+                  </DropdownMenuItem>
+                ) : null}
+                {canAct && slot.status === "failed" && !slot.artifact ? (
+                  <DropdownMenuItem
+                    icon={<RotateCcw />}
+                    onSelect={() => redraft({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Drafting it again." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                  >
+                    Draft it again
+                  </DropdownMenuItem>
+                ) : null}
+                {!canAct || sending ? null : slot.status !== "published" ? (
+                  <DropdownMenuItem
+                    icon={<SkipForward />}
+                    onSelect={() => skip({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Skipped. Nothing will post in this slot." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                  >
+                    Skip this post
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    danger
+                    icon={<TriangleAlert />}
+                    onSelect={() => report({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Thanks. This channel will ask you first from now on." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                  >
+                    Report a problem
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </span>
       </div>
       {slot.artifact ? (

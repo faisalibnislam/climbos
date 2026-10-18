@@ -1242,6 +1242,10 @@ export default defineSchema({
     createdByRole: v.optional(agentRoleValidator),
     createdBy: v.optional(v.id("users")),
     runId: v.optional(v.id("workflowRuns")),
+    /** Why the last publish attempt didn't go out (cleared on the next approval or success). */
+    lastPublishError: v.optional(v.object({ message: v.string(), at: v.number() })),
+    /** Reel posts: the video this post carries. */
+    reelId: v.optional(v.id("reels")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1441,6 +1445,10 @@ export default defineSchema({
     /** AI video clips requested (paid; Veo). */
     clips: v.optional(v.number()),
     error: v.optional(v.string()),
+    /** The post (content item) that carries this reel through approval and export. */
+    artifactId: v.optional(v.id("artifacts")),
+    /** Rendered without the video worker (demo/dev): no real video. */
+    isDemo: v.optional(v.boolean()),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -1767,7 +1775,8 @@ export default defineSchema({
     verifiedAt: v.optional(v.number()),
   })
     .index("by_org_created", ["orgId", "createdAt"])
-    .index("by_idempotency", ["idempotencyKey"]),
+    .index("by_idempotency", ["idempotencyKey"])
+    .index("by_artifact", ["artifactId", "createdAt"]),
 
   /* ---------------- Usage and cost ledger ---------------- */
   usagePeriods: defineTable({

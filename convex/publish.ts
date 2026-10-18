@@ -17,10 +17,11 @@ import { publishTweet, PUBLISH_X_ACTION, reconcileTweet, xApprovalValue } from "
 import { checkApprovalForExecution } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { emitEvent } from "./webhooks";
 import { audit } from "./lib/audit";
-import { onPublishOutcome } from "./lib/autopilot";
+import { onPublishBlocked, onPublishOutcome } from "./lib/autopilot";
+import { notifyOwners } from "./lib/notify";
 import { fleetStopped } from "./lib/access";
 import { imageUrlFor } from "./lib/media";
 
@@ -82,11 +83,17 @@ export const publishContext = internalQuery({
           .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", provider))
           .first()
       : null;
-    const idempotencyKey = `${org._id}:publish:${a._id}:v${a.currentVersion}`;
-    const receipt = await ctx.db
-      .query("actionReceipts")
-      .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
-      .first();
+    // One attempt per version AND approval: a deliberate re-approval after a
+    // failed attempt is a new attempt; repeating the same approval never is.
+    const legacyKey = `${org._id}:publish:${a._id}:v${a.currentVersion}`;
+    const idempotencyKey = approval ? `${legacyKey}:${approval._id}` : legacyKey;
+    const byKey = (key: string) =>
+      ctx.db
+        .query("actionReceipts")
+        .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", key))
+        .first();
+    const legacy = idempotencyKey === legacyKey ? null : await byKey(legacyKey);
+    const receipt = (await byKey(idempotencyKey)) ?? (legacy && legacy.status !== "failed" ? legacy : null);
     const imageUrl = ver ? await imageUrlFor(ctx, ver) : null;
     return {
       artifact: a,
@@ -147,12 +154,33 @@ export const finishReceipt = internalMutation({
     });
     const a = await ctx.db.get(args.artifactId);
     if (!a) return;
-    const status = args.status === "verified" || args.status === "fixture_verified" ? "published" : args.status === "uncertain" ? "uncertain" : "failed";
-    await ctx.db.patch(a._id, { status, updatedAt: now });
-    if (status === "published" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
-    if (status === "published") await emitEvent(ctx, a.orgId, "post.published", { title: a.title, channel: a.channel, externalId: args.externalId ?? null });
-    await onPublishOutcome(ctx, a._id, status);
-    await audit(ctx, { orgId: a.orgId, actorType: "system", action: `publish.${args.status}`, subjectType: "artifact", subjectId: a._id, summary: `${a.title}: ${args.summary}` });
+    await settleArtifact(ctx, a, args.status, args.summary, args.externalId);
+  },
+});
+
+/** Mirror a receipt outcome on its artifact and calendar slot, and tell approvers when it didn't go out. */
+async function settleArtifact(ctx: MutationCtx, a: Doc<"artifacts">, outcome: Doc<"actionReceipts">["status"], summary: string, externalId?: string) {
+  const now = Date.now();
+  const status = outcome === "verified" || outcome === "fixture_verified" ? "published" : outcome === "uncertain" ? "uncertain" : "failed";
+  await ctx.db.patch(a._id, { status, updatedAt: now, lastPublishError: status === "failed" ? { message: summary.slice(0, 400), at: now } : undefined });
+  if (status === "published" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
+  if (status === "published") await emitEvent(ctx, a.orgId, "post.published", { title: a.title, channel: a.channel, externalId: externalId ?? null });
+  await onPublishOutcome(ctx, a._id, status);
+  if (status !== "published") await notifyOwners(ctx, a.orgId, `"${a.title}" ${status === "failed" ? "wasn't posted" : "may not have posted"}: ${summary}`, `content/${a._id}`, APPROVERS);
+  await audit(ctx, { orgId: a.orgId, actorType: "system", action: `publish.${outcome}`, subjectType: "artifact", subjectId: a._id, summary: `${a.title}: ${summary}` });
+}
+
+const APPROVERS = ["owner", "admin", "reviewer"];
+const SENDABLE: string[] = ["approved", "publishing", "scheduled"];
+
+/** A repeat call found an earlier attempt for this approval: make sure the artifact isn't left "Sending…". */
+export const settleFromReceipt = internalMutation({
+  args: { artifactId: v.id("artifacts"), receiptId: v.id("actionReceipts") },
+  handler: async (ctx, { artifactId, receiptId }) => {
+    const a = await ctx.db.get(artifactId);
+    const r = await ctx.db.get(receiptId);
+    if (!a || !r || !SENDABLE.includes(a.status)) return;
+    await settleArtifact(ctx, a, r.status, r.summary, r.externalId);
   },
 });
 
@@ -161,7 +189,10 @@ export const blockPublish = internalMutation({
   handler: async (ctx, { artifactId, reason, backTo }) => {
     const a = await ctx.db.get(artifactId);
     if (!a) return;
-    await ctx.db.patch(a._id, { status: backTo, updatedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(a._id, { status: backTo, scheduledFor: undefined, lastPublishError: { message: reason.slice(0, 400), at: now }, updatedAt: now });
+    await onPublishBlocked(ctx, a._id, reason);
+    await notifyOwners(ctx, a.orgId, `"${a.title}" wasn't posted: ${reason}`, `content/${a._id}`, APPROVERS);
     await audit(ctx, { orgId: a.orgId, actorType: "system", action: "publish.blocked", subjectType: "artifact", subjectId: a._id, summary: `Not published: ${reason}` });
   },
 });
@@ -180,12 +211,18 @@ export const publishArtifact = internalAction({
   args: { artifactId: v.id("artifacts"), requestedBy: v.optional(v.id("users")) },
   handler: async (ctx, { artifactId }) => {
     const c = await ctx.runQuery(internal.publish.publishContext, { artifactId });
-    if (!c || !c.version) return;
+    // Only an approved post on its way out is sent (published, archived or edited ones are left alone).
+    if (!c || !SENDABLE.includes(c.artifact.status)) return;
+    if (!c.version) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "There's nothing to post yet.", backTo: "in_review" });
+      return;
+    }
     const { artifact, version, approval } = c;
 
     if (c.existingReceipt) {
-      // Same version already attempted: never duplicate. Uncertain outcomes go to reconciliation.
+      // This approval was already attempted: never duplicate. Uncertain outcomes go to reconciliation.
       if (c.existingReceipt.status === "uncertain") await ctx.runAction(internal.publish.reconcile, { receiptId: c.existingReceipt._id });
+      await ctx.runMutation(internal.publish.settleFromReceipt, { artifactId, receiptId: c.existingReceipt._id });
       return;
     }
     if (!c.provider || !c.connection || c.connection.status !== "connected") {
@@ -233,7 +270,10 @@ export const publishArtifact = internalAction({
 
     const action = ACTION_FOR[c.provider];
     const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
-    if (begin.existingStatus) return;
+    if (begin.existingStatus) {
+      await ctx.runMutation(internal.publish.settleFromReceipt, { artifactId, receiptId: begin.receiptId });
+      return;
+    }
 
     if (c.connection.isFixture) {
       await ctx.runMutation(internal.publish.finishReceipt, {
@@ -253,7 +293,9 @@ export const publishArtifact = internalAction({
     }
     const { accessToken } = JSON.parse(secret.value) as { accessToken: string };
     const caption = [version.body, version.hashtags.join(" ")].filter(Boolean).join("\n\n");
-    const approvedAt = approval.decidedAt ?? approval.createdAt;
+    // The stored approval (status, expiry, content and scope hash) was re-verified just above, so the
+    // adapters' freshness guard measures that check. Posts scheduled days ahead would otherwise be refused.
+    const approvedAt = Date.now();
     const approvedBy = approval.decidedBy ?? "owner";
     try {
       if (c.provider === "instagram") {

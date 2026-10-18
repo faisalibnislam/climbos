@@ -7,6 +7,7 @@ import { Repeat2 } from "lucide-react";
 import { useState } from "react";
 import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Input, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
+import { RunDrafts } from "./RunDrafts";
 import { RunProgressCompact } from "./RunProgress";
 
 const FORMATS = [
@@ -47,7 +48,8 @@ export function RepurposeDialog({ slug, artifactId, trigger }: { slug: string; a
         {runId ? (
           <div className="flex flex-col gap-3">
             <RunProgressCompact slug={slug} runId={runId} />
-            <p className="text-sm text-ink-3">The drafts appear in Content → In review.</p>
+            <RunDrafts slug={slug} runId={runId} onOpen={() => setOpen(false)} />
+            <p className="text-sm text-ink-3">The drafts also appear in Content → Needs approval.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4">

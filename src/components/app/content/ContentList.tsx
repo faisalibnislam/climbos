@@ -33,6 +33,8 @@ export const FILTERS: { key: string; label: string; statuses: ArtifactStatusValu
   { key: "published", label: "Published", statuses: ["published"] },
   { key: "problems", label: "Uncertain / Failed", statuses: ["uncertain", "failed"] },
   { key: "draft", label: "Drafts", statuses: ["draft"] },
+  { key: "exported", label: "Exported", statuses: ["exported"] },
+  { key: "archived", label: "Archived", statuses: ["archived"] },
 ];
 
 /** Map a ?status= value to a filter chip key. */
