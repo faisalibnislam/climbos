@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Home, Images, Inbox, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Target, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Home, Images, Inbox, Link2, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Target, Users, type LucideIcon } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -52,6 +52,7 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "reels", label: "Reels", icon: Clapperboard, group: "Grow" },
   { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
   { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
+  { key: "links", label: "Links", icon: Link2, group: "Measure" },
   { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
 ];
 const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];

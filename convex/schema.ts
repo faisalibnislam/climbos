@@ -297,6 +297,8 @@ export default defineSchema({
     monthlyCreditCap: v.optional(v.number()),
     /** Set by ClimbOS staff: no new work until lifted. */
     suspendedAt: v.optional(v.number()),
+    /** Tracked links in drafts (default on). */
+    linkTracking: v.optional(v.boolean()),
     /** "First win": drafts started automatically after the first plan (3 posts + 1 email). */
     firstWinRunIds: v.optional(v.array(v.id("workflowRuns"))),
     /** Team rules: jobs above this many credits need an owner or admin to start them. */
@@ -677,6 +679,33 @@ export default defineSchema({
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
+
+  /** Tracked links: our own short links (climbos.app/l/CODE) with UTM tags. */
+  links: defineTable({
+    orgId: v.id("organizations"),
+    code: v.string(),
+    url: v.string(),
+    label: v.string(),
+    channel: v.optional(v.string()),
+    campaign: v.optional(v.string()),
+    artifactId: v.optional(v.id("artifacts")),
+    source: v.union(v.literal("auto"), v.literal("manual")),
+    clicks: v.number(),
+    lastClickAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_artifact", ["artifactId"]),
+
+  linkClickDays: defineTable({
+    orgId: v.id("organizations"),
+    linkId: v.id("links"),
+    day: v.string(),
+    clicks: v.number(),
+  })
+    .index("by_link_day", ["linkId", "day"])
+    .index("by_org_day", ["orgId", "day"]),
 
   /** Mini-CRM: one row per person or company the owner is working with. */
   deals: defineTable({

@@ -8,6 +8,7 @@ import { creditBalance } from "./lib/credits";
 import { weeklyReportEmail } from "./lib/emailTemplates";
 import { currentPeriod } from "./lib/periods";
 import { requireOrgAccess } from "./lib/tenancy";
+import { linkClicksBetween } from "./links";
 
 /** Weekly CEO report: in the app (Results → This week) and by email on Mondays. */
 
@@ -46,7 +47,8 @@ async function countsFor(ctx: QueryCtx, orgId: Id<"organizations">, from: number
     callsBooked: bookings.filter((b) => b.status === "confirmed" && inWin(b.createdAt)).length,
     newProspects,
     reach: [...latest.values()].reduce((s, m) => s + (m.reach ?? m.impressions ?? 0), 0),
-    clicks: [...latest.values()].reduce((s, m) => s + (m.clicks ?? 0), 0),
+    // Platform-reported clicks or our own short-link clicks, whichever saw more (they overlap).
+    clicks: Math.max([...latest.values()].reduce((s, m) => s + (m.clicks ?? 0), 0), await linkClicksBetween(ctx, orgId, from, to)),
     creditsUsed: Math.round(runs.reduce((s, r) => s + microsToCredits(r.actualMicros), 0)),
     jobsDone: runs.filter((r) => r.status === "verified").length,
   };

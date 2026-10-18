@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { shortenable, utmFor, withUtm } from "../shared/links";
+import { createLink } from "./links";
 import type {
   AdDraftsOutput,
   BusinessInsights,
@@ -393,12 +395,29 @@ type ArtifactInput = {
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
 };
 
+async function linkTrackingOn(ctx: MutationCtx, orgId: Id<"organizations">): Promise<boolean> {
+  return (await ctx.db.get(orgId))?.linkTracking !== false;
+}
+
 export async function insertArtifact(
   ctx: MutationCtx,
   params: { orgId: Id<"organizations">; businessId: Id<"businesses">; runId?: Id<"workflowRuns">; factIds: Id<"businessFacts">[]; item: ArtifactInput; createdBy?: Id<"users"> },
 ) {
-  const { item } = params;
+  const { item: raw } = params;
   const now = Date.now();
+  // Tracked links: ads keep the real URL with UTM tags; everything else gets a short link.
+  let item = raw;
+  let linkId: Id<"links"> | null = null;
+  if (raw.destinationUrl && (await linkTrackingOn(ctx, params.orgId))) {
+    if (!shortenable(raw.kind)) item = { ...raw, destinationUrl: withUtm(raw.destinationUrl, utmFor(raw.channel)) ?? raw.destinationUrl };
+    else {
+      const made = await createLink(ctx, { orgId: params.orgId, url: raw.destinationUrl, label: raw.title, channel: raw.channel, source: "auto" });
+      if (made) {
+        linkId = made.id;
+        item = { ...raw, destinationUrl: made.shortUrl, body: raw.body.split(raw.destinationUrl).join(made.shortUrl) };
+      }
+    }
+  }
   const { valid, invalid } = validateFactIndexes(item.factIndexes, params.factIds.length);
   const risky = findRiskyClaims(`${item.headline ?? ""} ${item.body}`);
   const unsupported = [...risky.map((r) => `Check claim: "${r}"`), ...(invalid.length ? ["References a fact that doesn't exist"] : [])];
@@ -448,6 +467,7 @@ export async function insertArtifact(
     createdAt: now,
   });
   await ctx.db.patch(artifactId, { currentVersionId: versionId });
+  if (linkId) await ctx.db.patch(linkId, { artifactId });
   return artifactId;
 }
 

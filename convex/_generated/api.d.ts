@@ -57,6 +57,7 @@ import type * as lib_r2 from "../lib/r2.js";
 import type * as lib_staff from "../lib/staff.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_usage from "../lib/usage.js";
+import type * as links from "../links.js";
 import type * as mailbox from "../mailbox.js";
 import type * as maintenance from "../maintenance.js";
 import type * as marketing from "../marketing.js";
@@ -134,6 +135,7 @@ declare const fullApi: ApiFromModules<{
   "lib/staff": typeof lib_staff;
   "lib/tenancy": typeof lib_tenancy;
   "lib/usage": typeof lib_usage;
+  links: typeof links;
   mailbox: typeof mailbox;
   maintenance: typeof maintenance;
   marketing: typeof marketing;
