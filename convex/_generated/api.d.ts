@@ -75,6 +75,7 @@ import type * as publish from "../publish.js";
 import type * as reels from "../reels.js";
 import type * as referrals from "../referrals.js";
 import type * as reports from "../reports.js";
+import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
 import type * as team from "../team.js";
 import type * as workspace from "../workspace.js";
@@ -153,6 +154,7 @@ declare const fullApi: ApiFromModules<{
   reels: typeof reels;
   referrals: typeof referrals;
   reports: typeof reports;
+  reviews: typeof reviews;
   settings: typeof settings;
   team: typeof team;
   workspace: typeof workspace;

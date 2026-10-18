@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, Inbox, Mail, MessageCircle, Send, Sparkles, Undo2 } from "lucide-react";
+import { CalendarCheck, Check, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
@@ -17,7 +17,7 @@ const BOXES = [
   { value: "open" as const, label: "Open" },
   { value: "done" as const, label: "Done" },
 ];
-const ICONS = { email: Mail, booking: CalendarCheck, chat: MessageCircle } as Record<string, typeof Mail>;
+const ICONS = { email: Mail, booking: CalendarCheck, chat: MessageCircle, review: Star } as Record<string, typeof Mail>;
 
 /** Unified inbox: replies, bookings and chats in one place, with drafted answers. */
 export default function InboxPage() {
@@ -120,7 +120,7 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         {!done && m.kind !== "booking" ? (
           <div className="flex flex-col gap-2">
             {drafting && m.draftRunId ? <RunProgressCompact slug={slug} runId={m.draftRunId} /> : null}
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write your reply, or let Climb AI draft it." : "Draft your answer here, then post it on the platform."} />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write your reply, or let Climb AI draft it." : m.kind === "review" ? "Draft your reply here, then post it under the review." : "Draft your answer here, then post it on the platform."} />
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" loading={busy === "draft"} disabled={drafting} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
                 <Sparkles aria-hidden /> {m.suggestedReply ? "Redraft" : "Draft with AI"}

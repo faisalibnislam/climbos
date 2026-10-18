@@ -347,6 +347,8 @@ export default defineSchema({
       v.literal("other"),
     ),
     summary: v.optional(v.string()),
+    /** Where happy customers leave a review (e.g. the Google review link). */
+    reviewUrl: v.optional(v.string()),
     currency: v.string(),
     timezone: v.string(),
     researchStatus: v.union(
@@ -679,6 +681,23 @@ export default defineSchema({
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
+
+  /** Review requests sent to the owner's customers (from their own mailbox). */
+  reviewRequests: defineTable({
+    orgId: v.id("organizations"),
+    dealId: v.optional(v.id("deals")),
+    name: v.string(),
+    email: v.string(),
+    token: v.string(),
+    status: v.union(v.literal("queued"), v.literal("sent"), v.literal("failed")),
+    error: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    clickedAt: v.optional(v.number()),
+    feedbackAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_org_created", ["orgId", "createdAt"]),
 
   /** Tracked links: our own short links (climbos.app/l/CODE) with UTM tags. */
   links: defineTable({

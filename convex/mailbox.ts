@@ -178,3 +178,34 @@ export const reply = action({
     return { ok: true, message: `Sent to ${job.to}.` };
   },
 });
+
+/** Send queued review requests from the owner's mailbox, a few seconds apart. */
+export const sendReviewRequests = internalAction({
+  args: { ids: v.array(v.id("reviewRequests")) },
+  handler: async (ctx, { ids }) => {
+    for (const id of ids) {
+      const job = await ctx.runQuery(internal.reviews.prepareRequest, { id });
+      if (!job) {
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Mailbox disconnected" });
+        continue;
+      }
+      if (process.env.CLIMBOS_FAKE_MAILBOX) {
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: true });
+        continue;
+      }
+      const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId });
+      if (!raw) {
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Mailbox disconnected" });
+        continue;
+      }
+      const secret = JSON.parse(raw.value) as MailboxSecret;
+      try {
+        await transport(secret).sendMail({ from: secret.email, to: job.to, subject: job.subject, text: job.text });
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: true });
+      } catch (e) {
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: (e as Error).message });
+      }
+      await new Promise((r) => setTimeout(r, 4_000));
+    }
+  },
+});

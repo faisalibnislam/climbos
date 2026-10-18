@@ -38,7 +38,7 @@ function view(m: Doc<"communityMessages">) {
     finalReply: m.finalReply ?? null,
     draftRunId: m.draftRunId ?? null,
     prospectId: m.prospectId ?? null,
-    canReply: m.kind === "email" && Boolean(m.fromEmail),
+    canReply: (m.kind === "email" || (m.kind === "review" && m.channel === "feedback")) && Boolean(m.fromEmail),
   };
 }
 
@@ -149,7 +149,8 @@ export const writeReply = internalAction({
       c.business.summary ? `WHAT WE DO: ${c.business.summary.slice(0, 800)}` : "",
       c.business.voice ? `VOICE: ${c.business.voice.slice(0, 300)}` : "",
       c.prospect ? `WE EMAILED THEM BECAUSE: ${c.prospect.why.slice(0, 300)}` : "",
-      c.bookingUrl ? `BOOKING LINK: ${c.bookingUrl}` : "",
+      c.bookingUrl && c.message.kind !== "review" ? `BOOKING LINK: ${c.bookingUrl}` : "",
+      c.message.kind === "review" ? "THIS IS A REVIEW. Reply publicly: thank them, mention one specific thing they said, 25-70 words. If unhappy, apologise once, no excuses, invite them to get in touch. Never offer incentives or ask them to change the review." : "",
       `<untrusted_content source="${c.message.kind}">\nFROM: ${c.message.from}\n${c.message.subject ? `SUBJECT: ${c.message.subject}\n` : ""}${c.message.text.slice(0, 3000)}\n</untrusted_content>`,
     ]
       .filter(Boolean)
@@ -171,7 +172,7 @@ export const prepareReply = internalQuery({
   args: { slug: v.string(), id: v.id("communityMessages") },
   handler: async (ctx, { slug, id }) => {
     const { org, user, m } = await own(ctx, slug, id, "edit");
-    if (m.kind !== "email" || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
+    if (!(m.kind === "email" || (m.kind === "review" && m.channel === "feedback")) || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
     if (org.kind === "demo") throw appError("INVALID", "Demo workspaces can't send email.");
     await requirePaid(ctx, org, "sending");
     const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_mailbox")).first();
