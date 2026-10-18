@@ -202,7 +202,7 @@ export async function claudeTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
   if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Claude isn't configured on this server.", usage, costMicros: 0, appended };
   const spec = MODEL_SPECS[req.modelKey];
   if (spec.provider !== "anthropic") throw new Error(`${req.modelKey} is not a Claude model`);
-  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: req.timeoutMs ?? 240_000 });
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: req.timeoutMs ?? 240_000, defaultHeaders: anthropicWorkspaceHeaders() });
   const isOpus = spec.apiModelId.startsWith("claude-opus");
   const tools = buildTools(req);
   const system: Anthropic.TextBlockParam[] = req.system.map((b) => ({ type: "text", text: b.text, ...(b.cache ? { cache_control: { type: "ephemeral" as const } } : {}) }));
@@ -292,4 +292,10 @@ export async function claudeTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
     }
     return { ok: false, kind: "provider_error", message: "Claude could not be reached.", usage, costMicros: cost(), appended };
   }
+}
+
+/** Organization-scoped keys must name a workspace on every call (ANTHROPIC_WORKSPACE_ID). */
+export function anthropicWorkspaceHeaders(): Record<string, string> | undefined {
+  const id = process.env.ANTHROPIC_WORKSPACE_ID?.trim();
+  return id ? { "anthropic-workspace-id": id } : undefined;
 }

@@ -32,7 +32,7 @@ import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 
 // ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
-  const m = line.match(/^\s*(ANTHROPIC_API_KEY|GEMINI_API_KEY)\s*=\s*"?([^"#]*)"?/);
+  const m = line.match(/^\s*(ANTHROPIC_API_KEY|ANTHROPIC_WORKSPACE_ID|GEMINI_API_KEY)\s*=\s*"?([^"#]*)"?/);
   if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
 }
 const rates = currentRateVersion();

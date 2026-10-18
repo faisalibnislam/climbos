@@ -6,6 +6,7 @@ import { z } from "zod";
 import { type ModelKey, type RateVersion } from "../../shared/economics/rates";
 import { actualStepMicros, IMAGE_ROUTES, MODEL_SPECS } from "../../shared/ai/models";
 import { usdToMicrosCeil } from "../../shared/economics/money";
+import { anthropicWorkspaceHeaders } from "../../shared/ai/claude";
 
 /**
  * Server-only provider adapters behind one typed interface. Secrets are read
@@ -97,7 +98,7 @@ async function callAnthropic(req: ModelRequest, rates: RateVersion): Promise<Mod
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Claude isn't configured on this server.", costMicros: 0 };
   const spec = MODEL_SPECS[req.modelKey];
-  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: req.deadlineMs ?? 90_000 });
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: req.deadlineMs ?? 90_000, defaultHeaders: anthropicWorkspaceHeaders() });
   try {
     const res = await client.messages.create({
       model: spec.apiModelId,
