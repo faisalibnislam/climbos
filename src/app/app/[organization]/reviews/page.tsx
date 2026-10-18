@@ -101,7 +101,7 @@ export default function ReviewsPage() {
           <Field label="Or add people" hint="One per line: Name <email@example.com>">
             <Textarea value={extra} onChange={(e) => setExtra(e.target.value)} rows={3} autosize />
           </Field>
-          <Button className="self-start" loading={busy === "ask"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("ask", async () => { const r = await request({ slug, people: people() }); setPicked(new Set()); setExtra(""); toast({ tone: "success", title: `Asking ${r.queued} ${r.queued === 1 ? "person" : "people"}` }); })}>
+          <Button className="self-start" loading={busy === "ask"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("ask", async () => { const r = await request({ slug, people: people() }); setPicked(new Set()); setExtra(""); toast({ tone: "success", title: `Asking ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.recentlyAsked ? `Skipped ${r.recentlyAsked} asked in the last 90 days.` : undefined }); })}>
             <Send aria-hidden /> Ask for reviews
           </Button>
           {data.recent.length ? (

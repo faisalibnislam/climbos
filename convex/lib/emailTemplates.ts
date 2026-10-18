@@ -223,6 +223,20 @@ export function noShowEmail(p: { withName: string; rebookUrl: string }) {
   };
 }
 
+/** Sent to the guest when the owner cancels their call: one link to pick another time. */
+export function bookingCancelledEmail(p: { title: string; when: string; withName: string; rebookUrl: string }) {
+  return {
+    subject: `Cancelled: ${p.title}, ${p.when}`,
+    text: `${p.withName} had to cancel your call (${p.when}). Sorry about that. Pick another time: ${p.rebookUrl}`,
+    html: layout(
+      "Call cancelled",
+      `<h1 style="margin:0 0 8px;font-size:22px">Your call was cancelled</h1>
+<p style="margin:0 0 16px;color:#454a44">${escapeHtml(p.withName)} had to cancel <strong>${escapeHtml(p.when)}</strong>. Sorry about that.</p>
+<p style="margin:0">${button(p.rebookUrl, "Pick another time")}</p>`,
+    ),
+  };
+}
+
 export function bookingEmail(params: { title: string; when: string; minutes: number; withName: string; startAt: number; endAt: number; note: string | null; manageUrl?: string }) {
   const { title, when, minutes, withName, startAt, endAt, note, manageUrl } = params;
   const fmt = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");

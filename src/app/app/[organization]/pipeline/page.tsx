@@ -9,7 +9,12 @@ import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Badge, Button, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
+import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
+
+/** "1200" or "1200.50" → 1200.5; anything else ("1.2.3") → NaN. */
+function parseMoney(s: string): number {
+  return /^\d+(\.\d{0,2})?$/.test(s.trim()) ? Number(s.trim()) : NaN;
+}
 
 const STAGES = [
   { value: "lead", label: "Lead" },
@@ -106,7 +111,10 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
       <Field label={`Deal value (${d.currency})`} hint="Won deals with a value count as revenue in Results.">
-        <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => save({ slug, id: d.id, value: value ? Number(value) : null })} />
+        <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => {
+            if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Enter the value as a number, like 1200 or 1200.50." });
+            void save({ slug, id: d.id, value: value ? parseMoney(value) : null });
+          }} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Next step">
@@ -133,17 +141,25 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
           Add note
         </Button>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="self-start text-red-800"
-        onClick={async () => {
-          await remove({ slug, id: d.id });
-          onDeleted();
+      <ConfirmDialog
+        title={`Remove ${d.name}?`}
+        description="Their notes and history in the pipeline go too. This can't be undone."
+        confirmLabel="Remove from pipeline"
+        tone="danger"
+        onConfirm={async () => {
+          try {
+            await remove({ slug, id: d.id });
+            onDeleted();
+          } catch (e) {
+            toast({ tone: "danger", title: errorMessage(e) });
+          }
         }}
-      >
-        <Trash2 aria-hidden /> Remove from pipeline
-      </Button>
+        trigger={
+          <Button variant="ghost" size="sm" className="self-start text-red-800">
+            <Trash2 aria-hidden /> Remove from pipeline
+          </Button>
+        }
+      />
       {d.stage === "won" ? <Badge tone="green">Won {d.value ? money(d.value, d.currency) : ""}</Badge> : null}
     </div>
   );
@@ -169,9 +185,10 @@ function AddDeal({ slug }: { slug: string }) {
         className="flex flex-col gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (f.value && !Number.isFinite(parseMoney(f.value))) return void toast({ tone: "danger", title: "Enter the value as a number, like 1200 or 1200.50." });
           setBusy(true);
           try {
-            await create({ slug, name: f.name, company: f.company || undefined, email: f.email || undefined, value: f.value ? Number(f.value) : undefined });
+            await create({ slug, name: f.name, company: f.company || undefined, email: f.email || undefined, value: f.value ? parseMoney(f.value) : undefined });
             setF({ name: "", company: "", email: "", value: "" });
             setOpen(false);
           } catch (err) {

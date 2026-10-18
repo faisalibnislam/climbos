@@ -14,6 +14,7 @@ crons.daily("renew complimentary packages", { hourUTC: 4, minuteUTC: 20 }, inter
 // Retention: raw scrape payloads 30 days; previews 30 days; demo workspaces 7 days.
 crons.daily("purge raw research", { hourUTC: 5, minuteUTC: 0 }, internal.maintenance.purgeExpiredSources, {});
 crons.daily("purge previews", { hourUTC: 5, minuteUTC: 15 }, internal.preview.purgeExpired, {});
+crons.daily("purge link click dedupe", { hourUTC: 5, minuteUTC: 20 }, internal.links.pruneClickIps, {});
 crons.daily("expire demos", { hourUTC: 5, minuteUTC: 30 }, internal.demo.expireDemos, {});
 crons.daily("retention: detailed activity", { hourUTC: 5, minuteUTC: 45 }, internal.maintenance.purgeOldActivity, {});
 // Sync connected analytics/revenue sources.

@@ -9,6 +9,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed } from "./lib/access";
+import { fromServer } from "./lib/crypto";
+import { bookingLive } from "./outbound";
 import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
@@ -23,7 +25,11 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 const MODEL = CALL_ROUTES.chat_intent;
 const MAX_AI_PER_THREAD = 15;
-const MAX_AI_PER_DAY = 300;
+/** AI answers per workspace per day (each a fraction of a credit): caps what one bad day can cost. */
+const MAX_AI_PER_DAY = 120;
+const MAX_AI_PER_IP_PER_DAY = 20;
+const THREADS_PER_IP_PER_DAY = 10;
+const PER_IP_PER_HOUR = 60;
 const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
 const EMAIL = /[^\s@<>()]+@[^\s@<>()]+\.[a-z]{2,}/i;
 
@@ -84,8 +90,8 @@ export const widget = query({
       badge: !(org ? await featureAllowed(ctx, org, "no_badge") : false),
       hasEmail: Boolean(t?.email),
       messages: messages.reverse().map((m) => ({ id: m._id, role: m.role, text: m.text, at: m.at })),
-      // "Typing…" only while Climb AI is actually answering (it gives up after a minute).
-      waiting: aiOn && lastIsVisitor && messages[0].at > Date.now() - 60_000,
+      // "Typing…" only while Climb AI is actually answering: the widget shows it for a minute after this time.
+      waitingSince: aiOn && lastIsVisitor ? messages[0].at : null,
       // No AI: tell them a person will reply, and ask for an email if we don't have one.
       handOff: !aiOn && lastIsVisitor,
     };
@@ -106,26 +112,38 @@ async function upsertInbox(ctx: MutationCtx, t: Doc<"chatThreads">, text: string
   return id;
 }
 
+/**
+ * A visitor's message. Called only by the /api/chat route, which adds the
+ * server secret and a salted hash of the visitor's IP: visitor ids are made
+ * up by the browser, so limits also count per IP.
+ */
 export const send = mutation({
-  args: { key: v.string(), visitorId: v.string(), text: v.string(), page: v.optional(v.string()) },
+  args: { serverSecret: v.string(), ipHash: v.string(), key: v.string(), visitorId: v.string(), text: v.string(), page: v.optional(v.string()) },
   handler: async (ctx, a) => {
+    if (!fromServer(a.serverSecret)) throw appError("FORBIDDEN", "Not allowed.");
+    if (!/^[0-9a-f]{16,128}$/.test(a.ipHash)) throw appError("INVALID", "Please reload the page.");
     const w = await ctx.db.query("chatWidgets").withIndex("by_key", (q) => q.eq("key", a.key)).first();
     if (!w || !w.enabled) throw appError("NOT_FOUND", "Chat is offline.");
     if (!/^[a-z0-9-]{8,64}$/i.test(a.visitorId)) throw appError("INVALID", "Please reload the page.");
     const text = a.text.trim().slice(0, 1500);
     if (!text) return;
     const now = Date.now();
+    // Per IP: a few messages a minute and a cap per hour, across every chat and visitor id.
+    const fromIp = await ctx.db.query("widgetMessages").withIndex("by_ip_at", (q) => q.eq("ipHash", a.ipHash).gte("at", now - 3_600_000)).take(PER_IP_PER_HOUR + 1);
+    if (fromIp.filter((m) => m.at > now - 60_000).length >= 8 || fromIp.length >= PER_IP_PER_HOUR) throw appError("RATE_LIMITED", "Slow down a little, please.");
     let t = await ctx.db.query("chatThreads").withIndex("by_widget_visitor", (q) => q.eq("widgetId", w._id).eq("visitorId", a.visitorId)).first();
     if (t) {
       const recent = await ctx.db.query("widgetMessages").withIndex("by_thread", (q) => q.eq("threadId", t!._id).gte("at", now - 60_000)).take(20);
       if (recent.filter((m) => m.role === "visitor").length >= 6) throw appError("RATE_LIMITED", "Slow down a little, please.");
     } else {
+      const ipThreads = await ctx.db.query("chatThreads").withIndex("by_ip_created", (q) => q.eq("ipHash", a.ipHash).gte("createdAt", now - 86_400_000)).take(THREADS_PER_IP_PER_DAY + 1);
+      if (ipThreads.length >= THREADS_PER_IP_PER_DAY) throw appError("RATE_LIMITED", "Chat is busy. Please try again later.");
       const today = await ctx.db.query("chatThreads").withIndex("by_org_last", (q) => q.eq("orgId", w.orgId).gte("lastAt", now - 86_400_000)).take(1001);
       if (today.length > 1000) throw appError("RATE_LIMITED", "Chat is busy. Please try again later.");
-      const id = await ctx.db.insert("chatThreads", { orgId: w.orgId, widgetId: w._id, visitorId: a.visitorId, page: a.page?.slice(0, 300), humanTookOver: false, aiAnswers: 0, lastAt: now, createdAt: now });
+      const id = await ctx.db.insert("chatThreads", { orgId: w.orgId, widgetId: w._id, visitorId: a.visitorId, page: a.page?.slice(0, 300), humanTookOver: false, aiAnswers: 0, ipHash: a.ipHash, lastAt: now, createdAt: now });
       t = (await ctx.db.get(id))!;
     }
-    await ctx.db.insert("widgetMessages", { orgId: w.orgId, threadId: t._id, role: "visitor", text, at: now });
+    await ctx.db.insert("widgetMessages", { orgId: w.orgId, threadId: t._id, role: "visitor", text, ipHash: a.ipHash, at: now });
     const email = EMAIL.exec(text)?.[0].toLowerCase();
     if (email && !t.email) {
       await ctx.db.patch(t._id, { email });
@@ -141,6 +159,9 @@ export const send = mutation({
     if (!org || t.humanTookOver || t.aiAnswers >= MAX_AI_PER_THREAD || !(await featureAllowed(ctx, org, "chat_ai"))) return;
     const aiToday = (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", org._id).gte("createdAt", now - 86_400_000)).take(2000)).filter((r) => r.kind === "chat_answer").length;
     if (aiToday >= MAX_AI_PER_DAY) return;
+    // One visitor (by IP) can't spend more than a few credits a day, however many chats they open.
+    const ipAi = (await ctx.db.query("chatThreads").withIndex("by_ip_created", (q) => q.eq("ipHash", a.ipHash).gte("createdAt", now - 86_400_000)).take(THREADS_PER_IP_PER_DAY + 1)).reduce((s, x) => s + x.aiAnswers, 0);
+    if (ipAi >= MAX_AI_PER_IP_PER_DAY) return;
     try {
       const runId = await createRunWithReservation(ctx, { org, kind: "chat_answer", title: "Website chat answer", roles: ["customer_success_manager"], input: { threadId: t._id }, steps: [{ kind: "model", role: "customer_success_manager", modelKey: MODEL, inputBudget: 8_000, outputBudget: 600 }], meters: {}, isFixture: org.kind === "demo" });
       await ctx.db.patch(t._id, { aiAnswers: t.aiAnswers + 1 });
@@ -169,7 +190,7 @@ export const answerContext = internalQuery({
       hasEmail: Boolean(t.email),
       business: { name: business?.name ?? "", summary: business?.summary ?? "", website: business?.website ?? "" },
       facts: facts.map((f) => `- [${f.category}] ${f.statement}`).join("\n").slice(0, 6000),
-      bookingUrl: page?.active ? `${SITE()}/book/${page.slug}` : null,
+      bookingUrl: page && (await bookingLive(ctx, page)) ? `${SITE()}/book/${page.slug}` : null,
       messages: messages.reverse().map((m) => ({ role: m.role, text: m.text })),
     };
   },

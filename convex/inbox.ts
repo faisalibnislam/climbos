@@ -11,7 +11,9 @@ import { requirePaid } from "./lib/access";
 import { audit } from "./lib/audit";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
-import { sha256Hex } from "../shared/policy";
+import { sha256Hex, TERMINAL_STATUSES } from "../shared/policy";
+import { bookingLinkFor } from "../shared/outbound/sending";
+import { bookingLive } from "./outbound";
 
 /**
  * Unified inbox: email replies to outreach, new bookings and (soon) website
@@ -20,9 +22,15 @@ import { sha256Hex } from "../shared/policy";
  */
 
 const OPEN = ["new", "suggested", "escalated"] as const;
+const DONE = ["replied", "dismissed"] as const;
 const MODEL = CALL_ROUTES.chat_intent;
 
-function view(m: Doc<"communityMessages">) {
+/** Answerable by email from the owner's mailbox (website chats too, once the visitor left an email). */
+function emailable(m: Doc<"communityMessages">): boolean {
+  return (m.kind === "email" || m.kind === "form" || m.kind === "chat" || (m.kind === "review" && m.channel === "feedback")) && Boolean(m.fromEmail);
+}
+
+function view(m: Doc<"communityMessages">, drafting = false) {
   return {
     id: m._id,
     kind: m.kind,
@@ -37,8 +45,10 @@ function view(m: Doc<"communityMessages">) {
     suggestedReply: m.suggestedReply ?? null,
     finalReply: m.finalReply ?? null,
     draftRunId: m.draftRunId ?? null,
+    /** A draft is being written right now (a failed or finished run doesn't block the button). */
+    drafting,
     prospectId: m.prospectId ?? null,
-    canReply: (m.kind === "email" || m.kind === "form" || (m.kind === "review" && m.channel === "feedback")) && Boolean(m.fromEmail),
+    canReply: emailable(m),
   };
 }
 
@@ -46,8 +56,15 @@ export const list = query({
   args: { slug: v.string(), box: v.union(v.literal("open"), v.literal("done")) },
   handler: async (ctx, { slug, box }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const rows = await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", org._id)).order("desc").take(300);
-    return rows.filter((m) => (OPEN as readonly string[]).includes(m.status) === (box === "open")).slice(0, 150).map(view);
+    const rows: Doc<"communityMessages">[] = [];
+    for (const status of box === "open" ? OPEN : DONE) rows.push(...(await ctx.db.query("communityMessages").withIndex("by_org_status_received", (q) => q.eq("orgId", org._id).eq("status", status)).order("desc").take(150)));
+    const shown = rows.sort((a, b) => b.receivedAt - a.receivedAt).slice(0, 150);
+    const out = [];
+    for (const m of shown) {
+      const run = m.draftRunId ? await ctx.db.get(m.draftRunId) : null;
+      out.push(view(m, Boolean(run && !TERMINAL_STATUSES.includes(run.status))));
+    }
+    return out;
   },
 });
 
@@ -112,7 +129,7 @@ export const replyContext = internalQuery({
       message: { kind: m.kind, from: m.authorName, subject: m.subject ?? "", text: m.text },
       business: { name: business?.name ?? org?.name ?? "", summary: business?.summary ?? "", voice: brand?.voice ?? "", website: business?.website ?? "" },
       prospect: prospect ? { company: prospect.company, why: prospect.why, firstLine: prospect.firstLine } : null,
-      bookingUrl: page?.active ? `${process.env.SITE_URL ?? "https://climbos.app"}/book/${page.slug}` : null,
+      bookingUrl: page && (await bookingLive(ctx, page)) ? (m.prospectId ? bookingLinkFor(`${process.env.SITE_URL ?? "https://climbos.app"}/book/${page.slug}`, m.prospectId) : `${process.env.SITE_URL ?? "https://climbos.app"}/book/${page.slug}`) : null,
     };
   },
 });
@@ -122,7 +139,16 @@ export const saveDraft = internalMutation({
   handler: async (ctx, { messageId, text }) => {
     const m = await ctx.db.get(messageId);
     if (!m) return;
-    await ctx.db.patch(messageId, { suggestedReply: text.slice(0, 4000), status: m.status === "new" ? "suggested" : m.status, updatedAt: Date.now() });
+    await ctx.db.patch(messageId, { suggestedReply: text.slice(0, 4000), status: m.status === "new" ? "suggested" : m.status, draftRunId: undefined, updatedAt: Date.now() });
+  },
+});
+
+/** The draft didn't come: free the button so the owner can try again. */
+export const clearDraft = internalMutation({
+  args: { messageId: v.id("communityMessages"), runId: v.id("workflowRuns") },
+  handler: async (ctx, { messageId, runId }) => {
+    const m = await ctx.db.get(messageId);
+    if (m?.draftRunId === runId) await ctx.db.patch(messageId, { draftRunId: undefined, updatedAt: Date.now() });
   },
 });
 
@@ -143,6 +169,7 @@ export const writeReply = internalAction({
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Draft the reply", role: "customer_success_manager" });
     if (!step.proceed && step.reason !== "checkpoint") {
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Activity is paused." });
+      await ctx.runMutation(internal.inbox.clearDraft, { messageId, runId });
       return;
     }
     const context = [
@@ -161,6 +188,7 @@ export const writeReply = internalAction({
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     if (!r.ok || !r.text.trim()) {
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Couldn't draft a reply. Try again." });
+      await ctx.runMutation(internal.inbox.clearDraft, { messageId, runId });
       return;
     }
     await ctx.runMutation(internal.inbox.saveDraft, { messageId, text: r.text.trim() });
@@ -173,14 +201,15 @@ export const prepareReply = internalQuery({
   args: { slug: v.string(), id: v.id("communityMessages") },
   handler: async (ctx, { slug, id }) => {
     const { org, user, m } = await own(ctx, slug, id, "edit");
-    if (!(m.kind === "email" || m.kind === "form" || (m.kind === "review" && m.channel === "feedback")) || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
+    if (!emailable(m) || !m.fromEmail) throw appError("INVALID", "Answer this one on its own platform, then mark it done.");
     if (org.kind === "demo") throw appError("INVALID", "Demo workspaces can't send email.");
     await requirePaid(ctx, org, "sending");
     const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_mailbox")).first();
     if (mailbox?.status !== "connected") throw appError("INVALID", "Connect your mailbox in Connections first.");
     const hash = await sha256Hex(m.fromEmail);
     if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", hash)).first()) throw appError("INVALID", "This person unsubscribed, so we won't email them.");
-    return { orgId: org._id, userId: user._id, connectionId: mailbox._id, to: m.fromEmail, subject: m.subject ? (m.subject.toLowerCase().startsWith("re:") ? m.subject : `Re: ${m.subject}`) : "Re: your reply", inReplyTo: m.messageRef ?? null };
+    const fallback = m.kind === "chat" ? `Your chat with ${org.name}` : "Re: your reply";
+    return { orgId: org._id, userId: user._id, connectionId: mailbox._id, to: m.fromEmail, subject: m.subject ? (m.subject.toLowerCase().startsWith("re:") ? m.subject : `Re: ${m.subject}`) : fallback, inReplyTo: m.messageRef ?? null };
   },
 });
 
@@ -189,7 +218,15 @@ export const recordReply = internalMutation({
   handler: async (ctx, { id, userId, text }) => {
     const m = await ctx.db.get(id);
     if (!m) return;
-    await ctx.db.patch(id, { finalReply: text.slice(0, 8000), status: "replied", readAt: m.readAt ?? Date.now(), updatedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(id, { finalReply: text.slice(0, 8000), status: "replied", readAt: m.readAt ?? now, updatedAt: now });
+    // A website chat answered by email: keep the conversation in one thread and stop the AI.
+    const threadId = m.kind === "chat" && m.externalId.startsWith("chat:") ? ctx.db.normalizeId("chatThreads", m.externalId.slice(5)) : null;
+    const t = threadId ? await ctx.db.get(threadId) : null;
+    if (t && t.orgId === m.orgId) {
+      await ctx.db.insert("widgetMessages", { orgId: m.orgId, threadId: t._id, role: "owner", text: `(by email) ${text.slice(0, 1480)}`, at: now });
+      await ctx.db.patch(t._id, { humanTookOver: true, lastAt: now });
+    }
     await audit(ctx, { orgId: m.orgId, actorType: "user", actorId: userId, action: "inbox.replied", summary: `Replied to ${m.authorName} by email.` });
   },
 });

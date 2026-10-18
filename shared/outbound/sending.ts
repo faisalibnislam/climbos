@@ -78,10 +78,30 @@ export function composeEmail(p: { step: { subject: string; body: string }; stepI
   return { subject: subject.slice(0, 160), text: `${greeting}${body}\n${footer.join("\n")}` };
 }
 
-/** "No", "not interested", "unsubscribe", "remove me": treat as an opt-out. */
+/**
+ * Opt-out: a whole short reply ("No.", "Stop", "No thanks") or an explicit
+ * phrase ("not interested", "unsubscribe", "remove me"). "No problem, Tuesday
+ * works" is a reply, not an opt-out; anything unclear counts as a reply.
+ */
 export function isOptOutReply(text: string): boolean {
-  const first = text.trim().split(/\n/)[0]?.toLowerCase() ?? "";
-  return /^(no\.?|nope|not interested|unsubscribe|remove me|stop|please remove)\b/.test(first);
+  const t = text.trim().toLowerCase();
+  const first = (t.split(/\n/)[0] ?? "").trim();
+  if (/^(no|nope|stop|unsubscribe|remove me|no thanks|no thank you|no,? thanks|no,? thank you)[.!]*$/.test(first)) return true;
+  return /\b(not interested|unsubscribe|remove me|take me off|stop emailing|stop contacting|do not (contact|email) me|don'?t (contact|email) me)\b/.test(t.slice(0, 600));
+}
+
+/** Out-of-office and other automatic replies (RFC 3834 headers or a typical subject): not a real reply. */
+export function isAutoReply(headers: string, subject = ""): boolean {
+  const h = headers.toLowerCase();
+  if (/^auto-submitted:\s*(?!no\b)\S/m.test(h)) return true;
+  if (/^(x-autoreply|x-autorespond|x-auto-reply):/m.test(h)) return true;
+  if (/^precedence:\s*(auto_reply|bulk|junk)/m.test(h)) return true;
+  return /^(auto(matic)?[ -]?(reply|response)|out of (the )?office|ooo\b|away from (the )?office|on (annual )?leave|abwesenheit|automatische antwort|réponse automatique|respuesta automática|risposta automatica)/i.test(subject.trim());
+}
+
+/** The booking link with the prospect attached, so a booking stops their sequence and joins their deal. */
+export function bookingLinkFor(url: string, prospectId: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}ref=${encodeURIComponent(prospectId)}`;
 }
 
 /** The new part of a reply: no quoted history, signature delimiter or MIME noise. */

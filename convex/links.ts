@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { newLinkCode, utmFor, withUtm } from "../shared/links";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { fromServer } from "./lib/crypto";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -21,22 +23,41 @@ export async function createLink(ctx: MutationCtx, p: { orgId: Id<"organizations
   return { id, code, shortUrl: `${SITE()}/l/${code}`, url: tagged };
 }
 
-/** Public: resolve a short link and count the click (bots excluded by the caller). */
+/**
+ * Resolve a short link and count the click. Called only by the /l route (server
+ * secret), which drops bots and passes a salted IP hash: one click per person
+ * per link per day.
+ */
 export const click = mutation({
-  args: { code: v.string(), human: v.boolean() },
-  handler: async (ctx, { code, human }) => {
+  args: { serverSecret: v.string(), code: v.string(), human: v.boolean(), ipHash: v.string() },
+  handler: async (ctx, { serverSecret, code, human, ipHash }) => {
+    if (!fromServer(serverSecret)) throw appError("FORBIDDEN", "Not allowed.");
     if (!/^[A-Za-z0-9]{4,12}$/.test(code)) return null;
     const link = await ctx.db.query("links").withIndex("by_code", (q) => q.eq("code", code)).first();
     if (!link) return null;
-    if (human) {
-      const now = Date.now();
+    const now = Date.now();
+    const day = dayKey(now);
+    const repeat = await ctx.db.query("linkClickIps").withIndex("by_link_day_ip", (q) => q.eq("linkId", link._id).eq("day", day).eq("ipHash", ipHash)).first();
+    if (human && !repeat && /^[0-9a-f]{16,128}$/.test(ipHash)) {
+      await ctx.db.insert("linkClickIps", { linkId: link._id, day, ipHash });
       await ctx.db.patch(link._id, { clicks: link.clicks + 1, lastClickAt: now });
-      const day = dayKey(now);
       const row = await ctx.db.query("linkClickDays").withIndex("by_link_day", (q) => q.eq("linkId", link._id).eq("day", day)).first();
       if (row) await ctx.db.patch(row._id, { clicks: row.clicks + 1 });
       else await ctx.db.insert("linkClickDays", { orgId: link.orgId, linkId: link._id, day, clicks: 1 });
     }
     return link.url;
+  },
+});
+
+/** Daily: forget yesterday's click dedupe rows (only today's are ever read). */
+export const pruneClickIps = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const today = dayKey(Date.now());
+    const old = await ctx.db.query("linkClickIps").withIndex("by_day", (q) => q.lt("day", today)).take(2000);
+    for (const r of old) await ctx.db.delete(r._id);
+    if (old.length === 2000) await ctx.scheduler.runAfter(0, internal.links.pruneClickIps, {});
+    return old.length;
   },
 });
 
@@ -84,6 +105,9 @@ export const remove = mutation({
   handler: async (ctx, { slug, id }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     assertSameOrg(await ctx.db.get(id), org._id, "link");
+    // Its clicks leave the totals too.
+    for (const d of await ctx.db.query("linkClickDays").withIndex("by_link_day", (q) => q.eq("linkId", id)).take(1000)) await ctx.db.delete(d._id);
+    for (const d of await ctx.db.query("linkClickIps").withIndex("by_link_day_ip", (q) => q.eq("linkId", id)).take(1000)) await ctx.db.delete(d._id);
     await ctx.db.delete(id);
   },
 });

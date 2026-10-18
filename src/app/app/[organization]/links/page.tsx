@@ -6,6 +6,7 @@ import { Copy, Link2, Trash2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
+import { QrButton } from "@/components/app/links/QrButton";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Card, CardContent, EmptyState, Field, Input, Select, Switch, toast } from "@/components/ui";
@@ -99,8 +100,9 @@ export default function LinksPage() {
               <Button size="sm" variant="secondary" aria-label="Copy link" onClick={() => copy(l.shortUrl)}>
                 <Copy aria-hidden />
               </Button>
+              <QrButton url={l.shortUrl} label={l.label} />
               {l.source === "manual" ? (
-                <Button size="sm" variant="ghost" aria-label="Delete link" onClick={() => remove({ slug, id: l.id })}>
+                <Button size="sm" variant="ghost" aria-label="Delete link" onClick={() => remove({ slug, id: l.id }).then(() => toast({ tone: "success", title: "Link removed" }), (e) => toast({ tone: "danger", title: errorMessage(e) }))}>
                   <Trash2 aria-hidden />
                 </Button>
               ) : null}

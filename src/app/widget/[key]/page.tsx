@@ -1,11 +1,10 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Send } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 
 function visitorId(): string {
@@ -27,8 +26,15 @@ export default function WidgetPage() {
   const page = useSearchParams().get("p") ?? undefined;
   const [vid] = useState(() => (typeof window === "undefined" ? "" : visitorId()));
   const data = useQuery(api.chat.widget, vid ? { key, visitorId: vid } : "skip");
-  const send = useMutation(api.chat.send);
   const [text, setText] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  // "Typing…" for up to a minute after the visitor's message (Climb AI gives up after that).
+  const waitingSince = data?.waitingSince ?? null;
+  useEffect(() => {
+    if (!waitingSince) return;
+    const tick = setInterval(() => setNow(Date.now()), 5_000);
+    return () => clearInterval(tick);
+  }, [waitingSince]);
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -48,7 +54,7 @@ export default function WidgetPage() {
             {m.text}
           </p>
         ))}
-        {data?.waiting ? <p className="text-xs text-ink-3">Typing…</p> : null}
+        {waitingSince && now - waitingSince < 60_000 ? <p className="text-xs text-ink-3">Typing…</p> : null}
         {data?.handOff ? <p className="max-w-[85%] rounded-2xl bg-surface-2 px-3 py-2 text-sm text-ink">{data.hasEmail ? "Thanks! The team will reply here soon." : "Thanks! The team will reply soon. What's your email, in case you leave the page?"}</p> : null}
         <div ref={end} />
       </div>
@@ -61,10 +67,16 @@ export default function WidgetPage() {
           if (!t) return;
           setText("");
           setError(null);
+          setNow(Date.now());
           try {
-            await send({ key, visitorId: vid, text: t, page });
-          } catch (err) {
-            setError(errorMessage(err));
+            const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, visitorId: vid, text: t, page }) });
+            const body = (await res.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+            if (!res.ok || !body?.ok) {
+              setError(body?.message ?? "We couldn't send that. Please try again.");
+              setText(t);
+            }
+          } catch {
+            setError("We couldn't reach the chat. Check your connection.");
             setText(t);
           }
         }}

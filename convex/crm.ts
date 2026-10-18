@@ -38,6 +38,17 @@ export async function dealFromBooking(ctx: MutationCtx, orgId: Id<"organizations
   await ctx.db.insert("deals", { orgId, name, company, stage: "booked", source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, createdAt: now, updatedAt: now });
 }
 
+/** A cancelled call: its deal goes back to "talking" and its prospect back to "replied". */
+export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, note: string) {
+  const now = Date.now();
+  const deal = b.prospectId
+    ? await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", b.prospectId)).first()
+    : (await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", b.orgId).eq("stage", "booked")).take(200)).find((d) => d.source === "booking" && d.name === b.name && d.nextStepAt === b.startAt);
+  if (deal?.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", nextStep: undefined, nextStepAt: undefined, notes: [...deal.notes, { text: note, at: now }], updatedAt: now });
+  const p = b.prospectId ? await ctx.db.get(b.prospectId) : null;
+  if (p?.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", updatedAt: now });
+}
+
 function view(d: Doc<"deals">) {
   return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: d.valueMinor ?? null, currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: d.nextStepAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
 }
@@ -63,6 +74,7 @@ export const create = mutation({
     if (!name) throw appError("INVALID", "Add a name.");
     const email = a.email?.trim().toLowerCase().slice(0, 200) || undefined;
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw appError("INVALID", "That email doesn't look right.");
+    if (a.value !== undefined && !Number.isFinite(a.value)) throw appError("INVALID", "Enter the value as a number, like 1200 or 1200.50.");
     const count = (await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(5001)).length;
     if (count >= 5000) throw appError("LIMIT_REACHED", "The pipeline holds up to 5,000 people. Archive some lost ones first.");
     const now = Date.now();
@@ -94,7 +106,12 @@ export const update = mutation({
     const patch: Partial<Doc<"deals">> = { updatedAt: now };
     if (a.name !== undefined && a.name.trim()) patch.name = a.name.trim().slice(0, 120);
     if (a.company !== undefined) patch.company = a.company.trim().slice(0, 120) || undefined;
-    if (a.email !== undefined) patch.email = a.email.trim().toLowerCase().slice(0, 200) || undefined;
+    if (a.email !== undefined) {
+      const email = a.email.trim().toLowerCase().slice(0, 200);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw appError("INVALID", "That email doesn't look right.");
+      patch.email = email || undefined;
+    }
+    if (a.value !== undefined && a.value !== null && !Number.isFinite(a.value)) throw appError("INVALID", "Enter the value as a number, like 1200 or 1200.50.");
     if (a.value !== undefined) patch.valueMinor = a.value === null ? undefined : Math.max(0, Math.round(a.value * 100));
     if (a.nextStep !== undefined) patch.nextStep = a.nextStep?.trim().slice(0, 200) || undefined;
     if (a.nextStepAt !== undefined) patch.nextStepAt = a.nextStepAt ?? undefined;

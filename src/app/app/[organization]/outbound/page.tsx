@@ -5,19 +5,25 @@ import { MailboxSending } from "@/components/app/outbound/MailboxSending";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, Search, Sparkles, Target, X } from "lucide-react";
+import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, MoreHorizontal, Search, Sparkles, Target, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FUNNEL_STAGES, STAGE_LABEL, mergeEmail, prospectScore, prospectsCsv, type ProspectStage } from "../../../../../shared/outbound";
+import { FUNNEL_STAGES, PROSPECT_STAGES, STAGE_LABEL, mergeEmail, prospectScore, prospectsCsv, type ProspectStage } from "../../../../../shared/outbound";
 import {
   Badge,
   Button,
   Callout,
   Checkbox,
   ChoiceChips,
+  ConfirmDialog,
   Dialog,
   DialogContent,
   DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
   EmptyState,
   Field,
   FilterChip,
@@ -158,8 +164,8 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         if (missing) return;
         setBusy(true);
         try {
-          await start({ slug, kind, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
-          toast({ tone: "success", title: "Your team is on it", description: "About 10–15 minutes. You can leave this page." });
+          const r = await start({ slug, kind, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
+          toast({ tone: "success", title: "Your team is on it", description: r.pausedSending ? "About 10–15 minutes. Sending for your last search is paused; resume it under Send." : "About 10–15 minutes. You can leave this page." });
           onDone?.();
         } catch (err) {
           toast({ tone: "danger", title: errorMessage(err) });
@@ -289,7 +295,7 @@ function Campaign({ slug, data }: { slug: string; data: Data }) {
             <TabsTrigger value="emails">Emails ({c.sequence.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="people">
-            <ProspectList slug={slug} prospects={data.prospects} counts={counts} canEdit={data.canEdit} excluded={c.excluded} />
+            <ProspectList slug={slug} prospects={data.prospects} counts={counts} canEdit={data.canEdit} canApprove={data.canApprove} excluded={c.excluded} />
           </TabsContent>
           <TabsContent value="emails">
             <Sequence slug={slug} campaignId={c.id} sequence={c.sequence} notes={c.ownerNotes} sample={data.prospects.find((p) => p.stage === "approved") ?? data.prospects[0]} canEdit={data.canEdit} />
@@ -316,7 +322,12 @@ function Campaign({ slug, data }: { slug: string; data: Data }) {
   );
 }
 
-function ProspectList({ slug, prospects, counts, canEdit, excluded }: { slug: string; prospects: Prospect[]; counts: Record<string, number>; canEdit: boolean; excluded: { company: string; reason: string }[] }) {
+/** Who may move a prospect to a stage: approving/skipping is an approval; the rest are pipeline edits. */
+function canMoveTo(stage: ProspectStage, canEdit: boolean, canApprove: boolean): boolean {
+  return stage === "approved" || stage === "skipped" ? canApprove : canEdit;
+}
+
+function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }: { slug: string; prospects: Prospect[]; counts: Record<string, number>; canEdit: boolean; canApprove: boolean; excluded: { company: string; reason: string }[] }) {
   const setStage = useMutation(api.outbound.setStage);
   const [view, setView] = useState<View>(counts.suggested ? "suggested" : "all");
   const [picked, setPicked] = useState<string[]>([]);
@@ -346,14 +357,14 @@ function ProspectList({ slug, prospects, counts, canEdit, excluded }: { slug: st
       ) : (
         <div className="rounded-xl border border-line bg-surface">
           <div className="flex min-h-12 flex-wrap items-center gap-3 border-b border-line px-4 py-2">
-            {canEdit ? (
+            {canApprove ? (
               <Checkbox
                 label={picked.length ? `${picked.length} selected` : "Select all"}
                 checked={allPicked ? true : picked.length ? "indeterminate" : false}
                 onCheckedChange={() => setPicked(allPicked ? [] : shown.map((p) => p.id))}
               />
             ) : null}
-            {canEdit && picked.length > 0 ? (
+            {canApprove && picked.length > 0 ? (
               <div className="ml-auto flex gap-2">
                 <Button size="sm" onClick={() => move(picked, "approved")}>
                   <Check aria-hidden /> Approve
@@ -368,7 +379,7 @@ function ProspectList({ slug, prospects, counts, canEdit, excluded }: { slug: st
             {shown.map((p) => (
               <li key={p.id} {...climbTarget("prospect", p.id, `${p.company}: ${p.why}`)}>
                 <div className="flex items-start gap-3 px-4 py-3">
-                  {canEdit ? (
+                  {canApprove ? (
                     <Checkbox
                       aria-label={`Select ${p.company}`}
                       checked={picked.includes(p.id)}
@@ -399,6 +410,23 @@ function ProspectList({ slug, prospects, counts, canEdit, excluded }: { slug: st
                     </button>
                     {open === p.id ? <ProspectDetail slug={slug} p={p} canEdit={canEdit} /> : null}
                   </div>
+                  {canEdit || canApprove ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" aria-label={`Change stage for ${p.company}`}>
+                          <MoreHorizontal aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                        {PROSPECT_STAGES.filter((st) => st !== p.stage && canMoveTo(st, canEdit, canApprove)).map((st) => (
+                          <DropdownMenuItem key={st} onSelect={() => move([p.id], st)}>
+                            {STAGE_LABEL[st]}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                   <Tooltip content={`Score ${prospectScore(p)}: fit ${p.fit}, timing ${p.timing}`}>
                     <span tabIndex={0} className="rounded-full">
                       <ProgressRing value={prospectScore(p) / 100} size={36} label={`${p.company} score`}>
@@ -585,8 +613,7 @@ function SendPanel({ data }: { data: Data }) {
           campaignId={data.campaign!.id as Id<"outboundCampaigns">}
           approvedWithEmail={approved.filter((p) => p.publicEmail).length}
           defaultCompany={data.businessName ?? ""}
-          bookingUrl={data.page ? bookingUrl(data.page.slug) : undefined}
-          canApprove={data.canApprove}
+          bookingUrl={data.page?.live ? bookingUrl(data.page.slug) : undefined}
         />
       </div>
       {data.campaign?.sequence[0] && data.campaign.kind !== "creators" ? (
@@ -594,12 +621,16 @@ function SendPanel({ data }: { data: Data }) {
           <AbTestPanel slug={data.slug} kind="email_subject" targetId={data.campaign.id as Id<"outboundCampaigns">} current={data.campaign.sequence[0].subject} canEdit={data.canEdit} />
         </div>
       ) : null}
-      <p className="mt-4 text-xs text-ink-3">Or export and send from any tool:</p>
+      {data.canExport ? (
+        <>
+          <p className="mt-4 text-xs text-ink-3">Or export and send from any tool:</p>
+          <Button className="mt-2 w-full" onClick={download} disabled={!approved.length}>
+            <Download aria-hidden /> Export {approved.length || ""} approved (CSV)
+          </Button>
+        </>
+      ) : null}
       <div className="mt-2 flex flex-col gap-2">
-        <Button onClick={download} disabled={!approved.length}>
-          <Download aria-hidden /> Export {approved.length || ""} approved (CSV)
-        </Button>
-        {data.page ? (
+        {data.page?.live ? (
           <Button
             variant="secondary"
             onClick={async () => {
@@ -611,7 +642,7 @@ function SendPanel({ data }: { data: Data }) {
           </Button>
         ) : null}
       </div>
-      {!approved.length ? <p className="mt-2 text-xs text-ink-3">Approve people first.</p> : null}
+      {!approved.length && data.canExport ? <p className="mt-2 text-xs text-ink-3">Approve people first.</p> : null}
     </section>
   );
 }
@@ -628,6 +659,7 @@ const DAY_OPTIONS = [
 
 function BookingCard({ slug, data }: { slug: string; data: Data }) {
   const save = useMutation(api.outbound.saveBookingPage);
+  const cancel = useMutation(api.outbound.cancelBooking);
   const page = data.page;
   const [edit, setEdit] = useState(false);
   if (!page) return null;
@@ -648,6 +680,7 @@ function BookingCard({ slug, data }: { slug: string; data: Data }) {
           </Button>
         ) : null}
       </div>
+      {!page.live ? <p className="mt-2 text-xs text-amber-800">{page.active ? "Off: the booking page comes with a package." : "Off: switch it on in Edit."}</p> : null}
       <p className="mt-2 text-xs text-ink-3">
         {page.durationMin} min · {DAY_OPTIONS.filter((d) => page.days.includes(d.value)).map((d) => d.label).join(", ")} · {String(page.startHour).padStart(2, "0")}:00–{String(page.endHour).padStart(2, "0")}:00 ({page.timezone})
       </p>
@@ -662,6 +695,28 @@ function BookingCard({ slug, data }: { slug: string; data: Data }) {
                 {b.company ? <span className="text-ink-3"> · {b.company}</span> : null}
               </span>
               <span className="shrink-0 text-xs text-ink-3">{new Date(b.startAt).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}</span>
+              {data.canEdit && b.upcoming ? (
+                <ConfirmDialog
+                  title={`Cancel the call with ${b.name}?`}
+                  description="We email them that it's cancelled, with a link to pick another time."
+                  confirmLabel="Cancel the call"
+                  cancelLabel="Keep it"
+                  tone="danger"
+                  onConfirm={async () => {
+                    try {
+                      await cancel({ slug, bookingId: b.id as Id<"bookings"> });
+                      toast({ tone: "success", title: "Call cancelled", description: "They've been told." });
+                    } catch (e) {
+                      toast({ tone: "danger", title: errorMessage(e) });
+                    }
+                  }}
+                  trigger={
+                    <Button size="sm" variant="ghost" aria-label={`Cancel the call with ${b.name}`}>
+                      <X aria-hidden />
+                    </Button>
+                  }
+                />
+              ) : null}
             </li>
           ))}
         </ul>

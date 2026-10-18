@@ -13,7 +13,7 @@ describe("push notifications", () => {
     expect(await owner.client.query(api.push.mine, {})).toHaveLength(1);
     // A new chat on their website notifies the owner.
     const key = await owner.client.mutation(api.chat.setup, { slug });
-    await t.mutation(api.chat.send, { key, visitorId: "visitor-push-0001", text: "Hello, are you open Sunday?" });
+    await t.mutation(api.chat.send, { serverSecret: "test-server-secret", ipHash: "c".repeat(64), key, visitorId: "visitor-push-0001", text: "Hello, are you open Sunday?" });
     await t.mutation(internal.push.fanout, {});
     const items = await t.mutation(internal.push.pull, { endpoint });
     expect(items[0].body).toContain("New website chat");

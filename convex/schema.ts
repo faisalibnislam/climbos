@@ -657,7 +657,9 @@ export default defineSchema({
         lastReplyCheckAt: v.optional(v.number()),
         /** Fingerprint of the emails and sender details the owner approved (spec §23); any change pauses sending. */
         contentHash: v.optional(v.string()),
-        pausedReason: v.optional(v.literal("content_changed")),
+        pausedReason: v.optional(v.union(v.literal("content_changed"), v.literal("archived"))),
+        /** Last email sent (the 21-day reply watch runs from here). */
+        lastSentAt: v.optional(v.number()),
       }),
     ),
     createdBy: v.id("users"),
@@ -684,7 +686,8 @@ export default defineSchema({
   })
     .index("by_status_scheduled", ["status", "scheduledFor"])
     .index("by_campaign", ["campaignId", "createdAt"])
-    .index("by_prospect", ["prospectId", "step"]),
+    .index("by_prospect", ["prospectId", "step"])
+    .index("by_org_sent", ["orgId", "sentAt"]),
 
   prospects: defineTable({
     orgId: v.id("organizations"),
@@ -720,7 +723,8 @@ export default defineSchema({
   })
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
-    .index("by_org_domain", ["orgId", "domain"]),
+    .index("by_org_domain", ["orgId", "domain"])
+    .index("by_org_email", ["orgId", "publicEmail"]),
 
   /** Engine lab (self-improvement loop 3): playbook rules proposed from reviews, A/B tested, approved in /ops. */
   engineProposals: defineTable({
@@ -946,19 +950,25 @@ export default defineSchema({
     aiAnswers: v.number(),
     inboxMessageId: v.optional(v.id("communityMessages")),
     dealId: v.optional(v.id("deals")),
+    /** Salted hash of the visitor's IP (rate limits only). */
+    ipHash: v.optional(v.string()),
     lastAt: v.number(),
     createdAt: v.number(),
   })
     .index("by_widget_visitor", ["widgetId", "visitorId"])
-    .index("by_org_last", ["orgId", "lastAt"]),
+    .index("by_org_last", ["orgId", "lastAt"])
+    .index("by_ip_created", ["ipHash", "createdAt"]),
 
   widgetMessages: defineTable({
     orgId: v.id("organizations"),
     threadId: v.id("chatThreads"),
     role: v.union(v.literal("visitor"), v.literal("ai"), v.literal("owner")),
     text: v.string(),
+    ipHash: v.optional(v.string()),
     at: v.number(),
-  }).index("by_thread", ["threadId", "at"]),
+  })
+    .index("by_thread", ["threadId", "at"])
+    .index("by_ip_at", ["ipHash", "at"]),
 
   /** Competitor watch: pages we check weekly, and what changed. */
   competitorWatches: defineTable({
@@ -1001,7 +1011,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_token", ["token"])
-    .index("by_org_created", ["orgId", "createdAt"]),
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_org_email", ["orgId", "email", "createdAt"]),
 
   /** Tracked links: our own short links (climbos.app/l/CODE) with UTM tags. */
   links: defineTable({
@@ -1029,6 +1040,15 @@ export default defineSchema({
   })
     .index("by_link_day", ["linkId", "day"])
     .index("by_org_day", ["orgId", "day"]),
+
+  /** Who already clicked a link today (salted IP hash), so repeat clicks count once. */
+  linkClickIps: defineTable({
+    linkId: v.id("links"),
+    day: v.string(),
+    ipHash: v.string(),
+  })
+    .index("by_link_day_ip", ["linkId", "day", "ipHash"])
+    .index("by_day", ["day"]),
 
   /** Mini-CRM: one row per person or company the owner is working with. */
   deals: defineTable({
@@ -1598,6 +1618,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org_status", ["orgId", "status"])
+    .index("by_org_status_received", ["orgId", "status", "receivedAt"])
     .index("by_org_external", ["orgId", "externalId"])
     .index("by_org_received", ["orgId", "receivedAt"])
     .index("by_draft_run", ["draftRunId"]),
