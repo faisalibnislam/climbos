@@ -22,7 +22,9 @@ import { z } from "zod";
 import { type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
 import { modelTurn } from "../shared/ai/turn";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
-import { adsSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ProspectsOutput } from "../shared/agents/specs";
+import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
+import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
+import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
 import { OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
@@ -307,7 +309,12 @@ const PLAYS_TASK =
 const planTask = (plays: unknown) =>
   `Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}`;
 
-/** Strategy is two stages in production (plays agent, then plan agent); both arms get the same two stages. */
+/** Previous Claude-only routes, for "classic" arms (overrides the live route table). */
+const CLASSIC_EXPERT = { research: "claude-sonnet-5.5", draft: "claude-opus-5.5", critic: "claude-opus-5.5" } as const;
+const CLASSIC_LEAN = { research: "claude-sonnet-5.5", draft: "claude-opus-5.5", critic: "claude-sonnet-5.5" } as const;
+const CLASSIC_FIT = { research: "claude-sonnet-5.5", draft: "claude-sonnet-5.5", critic: "claude-sonnet-5.5" } as const;
+
+/** Strategy as in production: channel scoring, then the plays agent, then the plan agent; both arms get the same stages. */
 async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   let cost = 0;
   const deps: AgentDeps = {
@@ -321,9 +328,28 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   const t0 = Date.now();
   try {
     const base = inputFor(p, "strategy");
-    const plays = await runAgent(growthPlaysSpec({}, playCatalogsFor(p.c.type)), { ...base, task: PLAYS_TASK, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
-    const plan = await runAgent(strategySpec({}), { ...base, task: planTask(plays.output) }, deps);
-    return { arm, ok: true, output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote }, costMicros: cost, ms: Date.now() - t0 };
+    const classic = arm === "classic";
+    // 0. Channel scoring (Acquisition Intelligence), exactly as the plan job runs it.
+    let profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []) });
+    const candidates = candidatesFor(profile);
+    const fit = await runAgent(
+      channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, classic ? { models: CLASSIC_FIT } : {}),
+      { ...base, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },
+      deps,
+    );
+    const f = fit.output as ChannelFit;
+    profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
+    const scored = scoreChannels(profile, adjustmentsFrom(f));
+    const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
+    const plays = await runAgent(growthPlaysSpec(classic ? { models: CLASSIC_EXPERT } : {}, playCatalogsFor(p.c.type)), { ...base, task: PLAYS_TASK + scorecard, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const plan = await runAgent(strategySpec(classic ? { models: CLASSIC_EXPERT } : {}), { ...base, task: planTask(plays.output) + scorecard }, deps);
+    return {
+      arm,
+      ok: true,
+      output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
+      costMicros: cost,
+      ms: Date.now() - t0,
+    };
   } catch (e) {
     return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
   }
@@ -412,6 +438,10 @@ async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult>
 
 function runArm(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   if (arm === "v1") return runV1(p, t);
+  if (arm === "classic") {
+    if (t === "strategy") return runStrategyV2(p, arm);
+    return runV2(p, t, arm);
+  }
   if (arm === "v0f") return t === "strategy" ? runStrategyFrontier(p) : runFrontier(p, t);
   return runV2(p, t, arm);
 }

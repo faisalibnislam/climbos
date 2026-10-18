@@ -100,19 +100,21 @@ type ResponseBody = {
   status?: string;
   incomplete_details?: { reason?: string } | null;
   output?: ResponseItem[];
-  usage?: { input_tokens?: number; output_tokens?: number; input_tokens_details?: { cached_tokens?: number }; output_tokens_details?: { reasoning_tokens?: number } };
+  usage?: { input_tokens?: number; output_tokens?: number; input_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number }; output_tokens_details?: { reasoning_tokens?: number } };
   error?: { message?: string; type?: string; code?: string } | null;
 };
 
 export function usageOf(body: ResponseBody): ClaudeUsage {
   const u = body.usage ?? {};
   const cached = u.input_tokens_details?.cached_tokens ?? 0;
+  const written = u.input_tokens_details?.cache_write_tokens ?? 0;
   const searches = (body.output ?? []).filter((i) => i.type === "web_search_call" && (i.action?.type ?? "search") === "search").length;
   return {
     ...ZERO_CLAUDE_USAGE,
-    // Input includes cached tokens: bill them separately at the cached rate.
-    inputTokens: Math.max(0, (u.input_tokens ?? 0) - cached),
+    // Input includes cache reads and writes: bill each at its own rate.
+    inputTokens: Math.max(0, (u.input_tokens ?? 0) - cached - written),
     cacheReadTokens: cached,
+    cacheWriteTokens: written,
     // Output already includes reasoning tokens (billed as output).
     outputTokens: u.output_tokens ?? 0,
     thinkingTokens: u.output_tokens_details?.reasoning_tokens ?? 0,

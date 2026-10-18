@@ -40,8 +40,8 @@ describe("OpenAI adapter", () => {
   });
 
   it("meters cached input separately, reasoning inside output, and search calls", () => {
-    const u = usageOf({ usage: { input_tokens: 10_000, output_tokens: 2_000, input_tokens_details: { cached_tokens: 4_000 }, output_tokens_details: { reasoning_tokens: 1_500 } }, output: [{ type: "web_search_call", action: { type: "search" } }, { type: "web_search_call", action: { type: "open_page" } }] });
-    expect(u).toMatchObject({ inputTokens: 6_000, cacheReadTokens: 4_000, outputTokens: 2_000, thinkingTokens: 1_500, webSearches: 1 });
+    const u = usageOf({ usage: { input_tokens: 10_000, output_tokens: 2_000, input_tokens_details: { cached_tokens: 3_000, cache_write_tokens: 1_000 }, output_tokens_details: { reasoning_tokens: 1_500 } }, output: [{ type: "web_search_call", action: { type: "search" } }, { type: "web_search_call", action: { type: "open_page" } }] });
+    expect(u).toMatchObject({ inputTokens: 6_000, cacheReadTokens: 3_000, cacheWriteTokens: 1_000, outputTokens: 2_000, thinkingTokens: 1_500, webSearches: 1 });
   });
 
   it("runs a structured, web-searching turn and prices it from the Sol rates", async () => {
