@@ -331,6 +331,11 @@ interface SpecOptions {
  */
 type Profile = "expert" | "lean";
 
+const TOKEN_FLOORS = { research: 16_000, draft: 24_000, critic: 12_000 };
+function withFloors(m: { research: number; draft: number; critic: number }) {
+  return { research: Math.max(m.research, TOKEN_FLOORS.research), draft: Math.max(m.draft, TOKEN_FLOORS.draft), critic: Math.max(m.critic, TOKEN_FLOORS.critic) };
+}
+
 function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxRevisions" | "shipOn"> & Partial<Pick<AgentSpec<T>, "maxTokens">>, o: SpecOptions, profile: Profile): AgentSpec<T> {
   const lean = profile === "lean";
   return {
@@ -338,8 +343,8 @@ function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxR
     // Basic routes; runAgentTask applies the run's mode. Explicit overrides (benchmark arms, tests) win.
     models: { ...routeModels(s.id), ...o.models },
     effort: { research: "medium", draft: "high", critic: lean ? "low" : "medium", ...o.effort },
-    // Reasoning counts against max output tokens, so leave generous headroom.
-    maxTokens: s.maxTokens ?? { research: 24_000, draft: 32_000, critic: lean ? 8_000 : 16_000 },
+    // OpenAI reasoning tokens count against max output tokens: keep floors so thinking never crowds out the answer.
+    maxTokens: withFloors(s.maxTokens ?? { research: 24_000, draft: 32_000, critic: 16_000 }),
     maxRevisions: o.maxRevisions ?? 1,
     shipOn: o.shipOn ?? (lean ? "gates" : "rubric"),
   };

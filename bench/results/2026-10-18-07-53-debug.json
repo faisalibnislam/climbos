@@ -1,0 +1,18 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": false,
+    "error": "The answer was cut off at the length limit.",
+    "costMicros": 92130,
+    "ms": 117711
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ }
+]

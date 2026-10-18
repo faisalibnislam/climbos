@@ -78,6 +78,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Model call with retries for transient errors (rate limits, overload, network). */
 async function turnWithRetry(req: TurnRequest): Promise<TurnResult> {
   let r = await modelTurn(req, rates);
+  if (process.env.BENCH_DEBUG) console.log(`[turn] ${req.modelKey} max=${req.maxTokens} search=${req.webSearch?.maxUses ?? 0} schema=${Boolean(req.schema)} → ${r.ok ? "ok" : r.kind} out=${r.usage.outputTokens} reasoning=${r.usage.thinkingTokens} searches=${r.usage.webSearches}`);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
     await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);
     r = await modelTurn(req, rates);
@@ -334,7 +335,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode) });
     const fit = await runAgent(
       withMode(channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, {})),
-      { ...base, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },
+      { ...base, research: undefined, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },
       deps,
     );
     const f = fit.output as ChannelFit;
