@@ -45,7 +45,10 @@ export function PushSettings() {
       const pull = `${process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? ""}/push/pull`;
       const reg = await navigator.serviceWorker.register(`/sw.js?pull=${encodeURIComponent(pull)}`, { scope: "/" });
       const perm = await Notification.requestPermission();
-      if (perm !== "granted") throw new Error("Notifications are blocked for ClimbOS in this browser's settings.");
+      if (perm !== "granted") {
+        toast({ tone: "info", title: "Notifications are blocked", description: "Allow notifications for ClimbOS in this browser's site settings, then try again." });
+        return;
+      }
       const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pub) }));
       await subscribe({ endpoint: sub.endpoint, label: deviceLabel() });
       await test({});
