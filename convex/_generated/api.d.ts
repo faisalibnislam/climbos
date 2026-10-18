@@ -19,6 +19,8 @@ import type * as ai_prospectCheck from "../ai/prospectCheck.js";
 import type * as ai_providers from "../ai/providers.js";
 import type * as ai_research from "../ai/research.js";
 import type * as ai_veo from "../ai/veo.js";
+import type * as airly from "../airly.js";
+import type * as airlyActions from "../airlyActions.js";
 import type * as analytics from "../analytics.js";
 import type * as assetEdits from "../assetEdits.js";
 import type * as assets from "../assets.js";
@@ -115,6 +117,8 @@ declare const fullApi: ApiFromModules<{
   "ai/providers": typeof ai_providers;
   "ai/research": typeof ai_research;
   "ai/veo": typeof ai_veo;
+  airly: typeof airly;
+  airlyActions: typeof airlyActions;
   analytics: typeof analytics;
   assetEdits: typeof assetEdits;
   assets: typeof assets;

@@ -12,6 +12,7 @@ import { Badge, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsCont
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
+import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
 import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunProgress";
@@ -114,7 +115,12 @@ function PlanScreen({ slug }: { slug: string }) {
           )
         }
         actions={
-          s && plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} /> : null
+          s && plan.canEdit ? (
+            <div className="flex flex-wrap items-start gap-2">
+              <PlanToAirly slug={slug} />
+              <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} />
+            </div>
+          ) : null
         }
       />
 

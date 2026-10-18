@@ -764,6 +764,30 @@ export default defineSchema({
     .index("by_target", ["targetId", "status"])
     .index("by_org", ["orgId", "startedAt"]),
 
+  /** Airly apps (Formkit, Meetrao, Taskeni, Folevi): the owner's token for each, encrypted, plus sync state. */
+  airlyLinks: defineTable({
+    orgId: v.id("organizations"),
+    app: v.union(v.literal("formkit"), v.literal("meetrao"), v.literal("taskeni"), v.literal("folevi"), v.literal("involets")),
+    tokenCiphertext: v.string(),
+    tokenIv: v.string(),
+    tokenKeyId: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("connected"), v.literal("error")),
+    error: v.optional(v.string()),
+    /** App-specific choices, e.g. the Taskeni board for new tasks or the Folevi place for notes (JSON). */
+    settings: v.optional(v.string()),
+    /** Incremental sync position (e.g. last response or booking time seen). */
+    cursor: v.optional(v.string()),
+    lastSyncAt: v.optional(v.number()),
+    imported: v.number(),
+    /** Incoming webhook: token in our URL and the app's signing secret (encrypted), when set up. */
+    inboundToken: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_inbound", ["inboundToken"]),
+
   /** Outgoing webhooks (Zapier, Make or your own server): signed events, retried with backoff. */
   webhookEndpoints: defineTable({
     orgId: v.id("organizations"),
