@@ -23,6 +23,7 @@ import {
   IconTile,
   Input,
   ProgressRing,
+  RadioCards,
   Select,
   Tabs,
   TabsContent,
@@ -104,7 +105,6 @@ function StartPanel({ slug, businessType, canEdit }: { slug: string; businessTyp
     <section className="grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
       <div>
         <h2 className="heading-section">Who should we find?</h2>
-        <p className="mt-0.5 text-sm text-ink-3">Optional. Leave it blank and we use your plan and website.</p>
         <div className="mt-4">{canEdit ? <StartForm slug={slug} businessType={businessType} /> : <p className="text-sm text-ink-3">Ask an owner or admin to start a search.</p>}</div>
       </div>
       <ol className="flex flex-col gap-3" aria-label="How it works">
@@ -130,19 +130,23 @@ function StartPanel({ slug, businessType, canEdit }: { slug: string; businessTyp
 
 function StartForm({ slug, businessType, onDone }: { slug: string; businessType: string | null; onDone?: () => void }) {
   const start = useMutation(api.outbound.start);
+  const [whoMode, setWhoMode] = useState<"auto" | "pick">("auto");
+  const [whereMode, setWhereMode] = useState<"auto" | "pick">("auto");
   const [who, setWho] = useState("");
   const [where, setWhere] = useState("");
   const [count, setCount] = useState("15");
   const [busy, setBusy] = useState(false);
   const ideas = WHO_IDEAS[businessType ?? ""] ?? WHO_IDEAS.services;
+  const missing = (whoMode === "pick" && !who.trim()) || (whereMode === "pick" && !where.trim());
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-5"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (missing) return;
         setBusy(true);
         try {
-          await start({ slug, who, where, count: Number(count) });
+          await start({ slug, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
           toast({ tone: "success", title: "Your team is on it", description: "Usually ready in 3–6 minutes." });
           onDone?.();
         } catch (err) {
@@ -152,19 +156,43 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         }
       }}
     >
-      <Field label="Who" hint="Tap an idea or write your own.">
-        <Input value={who} onChange={(e) => setWho(e.target.value)} placeholder="e.g. Dental clinics with 2–10 dentists" maxLength={300} />
-      </Field>
-      <div className="-mt-2 flex flex-wrap gap-2">
-        {ideas.map((i) => (
-          <FilterChip key={i} pressed={who === i} onPressedChange={() => setWho(who === i ? "" : i)}>
-            {i}
-          </FilterChip>
-        ))}
-      </div>
-      <Field label="Where" hint="City, region or country. Blank = your market.">
-        <Input value={where} onChange={(e) => setWhere(e.target.value)} placeholder="e.g. Greater Manchester" maxLength={120} />
-      </Field>
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-ui font-medium text-ink">Who</legend>
+        <RadioCards
+          columns={2}
+          value={whoMode}
+          onValueChange={(v) => setWhoMode(v as "auto" | "pick")}
+          options={[
+            { value: "auto", title: "We find the customer", description: "From your plan and website." },
+            { value: "pick", title: "Select your customer", description: "Pick an idea or describe them." },
+          ]}
+        />
+        {whoMode === "pick" ? (
+          <>
+            <Input aria-label="Your customer" autoFocus value={who} onChange={(e) => setWho(e.target.value)} placeholder="e.g. Dental clinics with 2–10 dentists" maxLength={300} />
+            <div className="flex flex-wrap gap-2">
+              {ideas.map((i) => (
+                <FilterChip key={i} pressed={who === i} onPressedChange={() => setWho(who === i ? "" : i)}>
+                  {i}
+                </FilterChip>
+              ))}
+            </div>
+          </>
+        ) : null}
+      </fieldset>
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-ui font-medium text-ink">Where</legend>
+        <RadioCards
+          columns={2}
+          value={whereMode}
+          onValueChange={(v) => setWhereMode(v as "auto" | "pick")}
+          options={[
+            { value: "auto", title: "We find the area", description: "Where you already sell." },
+            { value: "pick", title: "Select your area", description: "A city, region or country." },
+          ]}
+        />
+        {whereMode === "pick" ? <Input aria-label="Your area" autoFocus value={where} onChange={(e) => setWhere(e.target.value)} placeholder="e.g. Greater Manchester" maxLength={120} /> : null}
+      </fieldset>
       <div>
         <p className="mb-2 text-ui font-medium text-ink" aria-hidden>
           How many
@@ -181,7 +209,7 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" loading={busy}>
+        <Button type="submit" loading={busy} disabled={missing}>
           <Sparkles aria-hidden /> Find customers
         </Button>
         <span className="text-xs text-ink-3">Uses AI allowance. Nothing is sent.</span>
