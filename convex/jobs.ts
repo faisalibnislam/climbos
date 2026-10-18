@@ -1,5 +1,6 @@
 "use node";
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { checkProspects } from "./ai/prospectCheck";
 import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
 import type { FunctionArgs, FunctionReference } from "convex/server";
@@ -296,7 +297,8 @@ async function runAgentTask<T>(
   // Climb AI Basic: best of two drafts for the strategy agents.
   else if (draftsFor(spec.id, "basic") > 1) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };
   const rates = getRateVersion(job.run.rateVersionId);
-  let currentStep: Id<"workflowSteps"> | null = null;
+  // Each phase runs in its own async context, so parallel phases (best-of-two) meter to their own step.
+  const stepScope = new AsyncLocalStorage<Id<"workflowSteps">>();
   // Shared across every agent in this action: yield only after real progress.
   const tracker = ((job as unknown as { __progress?: { did: boolean } }).__progress ??= { did: false });
   const deps: AgentDeps = {
@@ -322,7 +324,7 @@ async function runAgentTask<T>(
         }
         // Long OpenAI turns (Sol drafts, big outputs) run in background mode: if this action's time runs out,
         // the job yields and the next action keeps polling the same answer (no rerun, no double charge).
-        const stepId = currentStep;
+        const stepId = stepScope.getStore() ?? null;
         const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);
         const ref = background && stepId ? await ctx.runQuery(internal.engine.stepProviderRef, { stepId }) : null;
         const q = {
@@ -348,8 +350,8 @@ async function runAgentTask<T>(
           await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
           r = await call(q, rates);
         }
-        if (currentStep && (r.usage.calls > 0 || r.costMicros > 0)) {
-          await ctx.runMutation(internal.engine.recordUsage, { stepId: currentStep, records: claudeUsageRecords(modelKey, r, rates) });
+        if (stepId && (r.usage.calls > 0 || r.costMicros > 0)) {
+          await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates) });
         }
         const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
         if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
@@ -363,19 +365,19 @@ async function runAgentTask<T>(
     phase: async (key, label, fn) => {
       const step = await begin(ctx, job.run._id, baseIndex + key.index, "model", label, spec.role);
       if (step.checkpoint !== undefined) return step.checkpoint as never;
-      currentStep = step.stepId!;
+      const stepId = step.stepId!;
       tracker.did = true;
-      try {
-        const { value } = await fn();
-        await ctx.runMutation(internal.engine.completeStep, { stepId: currentStep, output: JSON.stringify(value) });
-        return value;
-      } catch (e) {
-        // Yielding mid-turn keeps the step running; the next action resumes it.
-        if (!(e instanceof AgentYield)) await ctx.runMutation(internal.engine.failStep, { stepId: currentStep, error: (e as Error).message.slice(0, 400) });
-        throw e;
-      } finally {
-        currentStep = null;
-      }
+      return stepScope.run(stepId, async () => {
+        try {
+          const { value } = await fn();
+          await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(value) });
+          return value;
+        } catch (e) {
+          // Yielding mid-turn keeps the step running; the next action resumes it.
+          if (!(e instanceof AgentYield)) await ctx.runMutation(internal.engine.failStep, { stepId, error: (e as Error).message.slice(0, 400) });
+          throw e;
+        }
+      });
     },
   };
   try {

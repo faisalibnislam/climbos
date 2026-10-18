@@ -168,6 +168,14 @@ function checkDeadline(deps: AgentDeps) {
   if (deps.deadline && Date.now() > deps.deadline && (deps.progressed?.() ?? true)) throw new AgentYield();
 }
 
+
+/** Await two phases side by side; if either fails (or pauses to resume later), wait for the other to settle first so its checkpoint is saved. */
+async function both<A, B>(a: Promise<A>, b: Promise<B>): Promise<[A, B]> {
+  const [ra, rb] = await Promise.allSettled([a, b]);
+  if (ra.status === "rejected") throw ra.reason;
+  if (rb.status === "rejected") throw rb.reason;
+  return [ra.value, rb.value];
+}
 export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: AgentDeps): Promise<AgentRunResult<T>> {
   // 1. Research (optional): free-form notes plus sources collected from tool results.
   let research: AgentRunResult<T>["research"] = null;
@@ -270,12 +278,15 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   // "rubric": every criterion must also clear the ship rule (strategy, insights).
   // Numbers may trace to this job's research as well as the brief and facts.
   const lintOf = (o: T) => (spec.lint ? spec.lint(o, { ...input, untrustedContext: [input.untrustedContext ?? "", research?.notes ?? ""].join("\n") }) : []);
-  let current = await draftOnce(0, null);
   // Best of two (cheap models): a second first draft from a bolder angle; the reviewer's scores pick the stronger one.
+  // Both drafts (and then both reviews) run at the same time; each phase checkpoints on its own.
+  const bestOfTwo = (spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0;
   let firstReview: { c: CritiqueResult; lint: LintIssue[] } | null = null;
-  if ((spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0) {
+  let current: T;
+  if (!bestOfTwo) current = await draftOnce(0, null);
+  else {
     checkDeadline(deps);
-    const alt = await deps.phase({ phase: "draft", round: 0, index: 50 }, `${spec.label}: draft B`, async () => {
+    const altDraft = () => deps.phase({ phase: "draft", round: 0, index: 50 }, `${spec.label}: draft B`, async () => {
       const result = await deps.turn({
         modelKey: spec.models.draft,
         system,
@@ -287,10 +298,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       if (!result.ok) failure(result);
       return { value: stripFactMarkers(result.output) as T, record: { phase: "draft", round: 0, modelKey: spec.models.draft, result } };
     });
+    const [draftA, alt] = await both(draftOnce(0, null), altDraft());
+    current = draftA;
     const lintA = lintOf(current);
-    const cA = await critique(0, current, lintA);
     const lintB = lintOf(alt);
-    const cB = await critique(0, alt, lintB, true);
+    const [cA, cB] = await both(critique(0, current, lintA), critique(0, alt, lintB, true));
     const aA = assess(cA, lintA, spec.rubric);
     const aB = assess(cB, lintB, spec.rubric);
     if (rank(aB) > rank(aA)) {
