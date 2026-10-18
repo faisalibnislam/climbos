@@ -234,3 +234,19 @@ export const savePlanToFolevi = action({
     return { url: r.url ?? null };
   },
 });
+
+/** Mondays: the weekly report also goes to Folevi as a note, when Folevi is connected. */
+export const saveReportToFolevi = internalAction({
+  args: { orgId: v.id("organizations"), title: v.string(), markdown: v.string(), key: v.string() },
+  handler: async (ctx, { orgId, title, markdown, key }): Promise<void> => {
+    const l: Doc<"airlyLinks"> | null = await ctx.runQuery(internal.airly.linkFor, { orgId, app: "folevi" });
+    if (!l || l.status !== "connected") return;
+    try {
+      const token = await decryptSecret({ keyId: l.tokenKeyId, iv: l.tokenIv, ciphertext: l.tokenCiphertext }, AAD(orgId));
+      const settings = l.settings ? (JSON.parse(l.settings) as Record<string, string>) : {};
+      await call(AIRLY_APPS.folevi.base!, token, "/notes", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ title: title.slice(0, 200), markdown: markdown.slice(0, 95_000), ...(settings.place ? { place: settings.place } : {}) }) });
+    } catch (e) {
+      await ctx.runMutation(internal.airly.markSync, { id: l._id, error: `Couldn't save the weekly report: ${(e as Error).message}` });
+    }
+  },
+});

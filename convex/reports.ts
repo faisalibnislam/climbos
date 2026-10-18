@@ -101,7 +101,8 @@ export const weeklyForOrg = internalQuery({
   handler: async (ctx, { orgId }) => {
     const org = await ctx.db.get(orgId);
     if (!org || org.deletedAt || org.kind !== "customer") return null;
-    return { slug: org.slug, report: await reportFor(ctx, org, 1) };
+    const folevi = (await ctx.db.query("airlyLinks").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(10)).some((l) => l.app === "folevi" && l.status === "connected");
+    return { slug: org.slug, report: await reportFor(ctx, org, 1), folevi };
   },
 });
 
@@ -122,8 +123,11 @@ export const sendWeeklyReports = internalAction({
       const data = await ctx.runQuery(internal.reports.weeklyForOrg, { orgId });
       if (!data) continue;
       const { orgName, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId, purpose: "digest", cadence: "weekly" });
-      if (!emails.length) continue;
       const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${data.slug}/results/week`;
+      const r = data.report;
+      const md = [r.headline, "", ...r.lines.map((l) => `- **${l.label}:** ${l.value}${l.change ? ` (${l.change > 0 ? "+" : ""}${l.change})` : ""}`), ...(r.competitors?.length ? ["", "## Competitors", ...r.competitors.map((c) => `- **${c.name}:** ${c.summary}`)] : []), ...(r.next.length ? ["", "## Next week", ...r.next.map((n) => `- [ ] ${n}`)] : []), "", `[Open in ClimbOS](${url})`].join("\n");
+      if (data.folevi) await ctx.runAction(internal.airlyActions.saveReportToFolevi, { orgId, title: `${orgName}: week of ${new Date(r.weekStart).toISOString().slice(0, 10)}`, markdown: md, key: `climbos-week-${orgId}-${r.weekStart}` });
+      if (!emails.length) continue;
       const mail = weeklyReportEmail({ orgName, report: data.report, url });
       for (const to of emails) await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId, to, template: "digest", ...mail });
       sent++;
