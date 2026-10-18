@@ -104,3 +104,87 @@ export function formatEta(seconds: number | null): string {
   const m = Math.round(seconds / 60);
   return `About ${m} minute${m === 1 ? "" : "s"} left`;
 }
+
+/* ---------------- planned steps per job (for "what's next" and ETA) ---------------- */
+
+/** The step labels a job is expected to run (engine v2 agent phases), before any revision. */
+export function plannedSteps(kind: string, engine: string | null | undefined, opts: { website?: boolean } = {}): string[] {
+  if (engine !== "v2") return [];
+  const agent = (name: string, research: boolean, review = true) => [...(research ? [`${name}: research`] : []), `${name}: draft`, ...(review ? [`${name}: review 1`] : [])];
+  switch (kind) {
+    case "onboarding_research":
+      return [...(opts.website !== false ? ["Read your website"] : []), "Understand the business", ...agent("Business insights", true)];
+    case "strategy":
+      return [...agent("Channel scoring", false, false), ...agent("Growth plays", true), ...agent("Growth plan", false)];
+    case "outbound":
+      return [...agent("Find customers", true), ...agent("Write the emails", false)];
+    default:
+      return [];
+  }
+}
+
+/** Progress over planned labels plus whatever actually ran (revisions add steps). */
+export function progressOfRun(steps: RunStep[], planned: string[], now: number, finished: boolean): ProgressView {
+  const seen = new Set(steps.map((s) => s.label));
+  const futurePhases = planned.filter((l) => !seen.has(l)).map(phaseOf);
+  return progressOf(steps, [...steps.map((s) => phaseOf(s.label)), ...futurePhases], now, finished);
+}
+
+/* ---------------- findings: what each step found or decided ---------------- */
+
+type Obj = Record<string, unknown>;
+const arr = (v: unknown): Obj[] => (Array.isArray(v) ? (v as Obj[]) : []);
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+const host = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
+const clip = (s: string, n = 140) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** One or two short lines describing a finished step's result, for the owner to follow along. */
+export function findingsFor(label: string, output: unknown): string[] {
+  if (!output || typeof output !== "object") return [];
+  const o = output as Obj;
+  const ph = phaseOf(label);
+  if (ph === "research") {
+    const sources = arr(o.sources);
+    const domains = [...new Set(sources.map((s) => host(str(s.url))).filter(Boolean))];
+    const first = str(o.notes)
+      .split("\n")
+      .map((l) => l.replace(/^[#\-*\s]+/, "").trim())
+      .find((l) => l.length > 30 && !/^sources?/i.test(l));
+    return [`Read ${sources.length} source${sources.length === 1 ? "" : "s"}${domains.length ? `: ${domains.slice(0, 5).join(", ")}${domains.length > 5 ? ` +${domains.length - 5} more` : ""}` : ""}`, ...(first ? [clip(first)] : [])];
+  }
+  if (ph === "review") {
+    const fixes = arr(o.fixes).map(String).filter(Boolean);
+    const strengths = arr(o.strengths).map(String).filter(Boolean);
+    const failedGates = arr(o.gates).filter((g) => g.pass === false).length;
+    if (!fixes.length && !failedGates) return [`Passed review${strengths[0] ? `: ${clip(strengths[0], 110)}` : ""}`];
+    return [`Reviewer asked for ${fixes.length || failedGates} fix${(fixes.length || failedGates) === 1 ? "" : "es"}${fixes[0] ? `: ${clip(fixes[0], 120)}` : ""}`];
+  }
+  if (Array.isArray(o.plays)) {
+    const names = arr(o.plays).map((p) => str(p.name)).filter(Boolean);
+    return [`${names.length} growth play${names.length === 1 ? "" : "s"}: ${clip(names.join(" · "), 200)}`];
+  }
+  if (o.northStar && typeof o.northStar === "object") {
+    const ns = o.northStar as Obj;
+    return [`North Star: ${clip(`${str(ns.metric)} → ${str(ns.target)}`, 160)}`, ...(str(o.diagnosis) ? [clip(str(o.diagnosis))] : [])];
+  }
+  if (Array.isArray(o.types) && Array.isArray(o.channels)) {
+    return [...arr(o.summary).map(String).slice(0, 2).map((s) => clip(s))];
+  }
+  if (Array.isArray(o.prospects)) return [`Found ${arr(o.prospects).length} companies${o.icp && typeof o.icp === "object" ? `: ${clip(str((o.icp as Obj).summary), 120)}` : ""}`];
+  if (Array.isArray(o.sequence)) return [`Wrote a ${arr(o.sequence).length}-email sequence`];
+  if (Array.isArray(o.posts)) return [`${arr(o.posts).length} post${arr(o.posts).length === 1 ? "" : "s"}: ${clip(arr(o.posts).map((p) => str(p.title)).filter(Boolean).join(" · "), 180)}`];
+  if (str(o.positioningStatement) || Array.isArray(o.alternatives)) {
+    const alts = arr(o.alternatives).map((a) => str(a.name)).filter(Boolean);
+    return [...(alts.length ? [`Competitors and alternatives: ${clip(alts.join(", "), 160)}`] : []), ...(str(o.positioningStatement) ? [clip(str(o.positioningStatement))] : [])];
+  }
+  if (Array.isArray(o.findings)) return [`${arr(o.findings).length} findings on your site`];
+  if (Array.isArray(o.facts)) return [`Found ${arr(o.facts).length} facts about your business`];
+  if (Array.isArray(o)) return [`Read ${(o as unknown[]).length} pages`];
+  return [];
+}

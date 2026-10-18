@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
 import { contentHash } from "../shared/policy";
 import { internal } from "./_generated/api";
@@ -420,16 +421,38 @@ export const runStatus = query({
       .query("workflowSteps")
       .withIndex("by_run", (q) => q.eq("runId", run._id))
       .take(30);
+    const parse = (o?: string) => {
+      if (!o) return null;
+      try {
+        return JSON.parse(o) as unknown;
+      } catch {
+        return null;
+      }
+    };
     return {
       id: run._id,
       title: run.title,
+      kind: run.kind,
+      engine: run.engine ?? null,
       status: run.status,
       roles: run.roles,
       userMessage: run.userMessage ?? null,
       estimateMicros: run.estimateMicros,
       actualMicros: run.actualMicros,
       isFixture: run.isFixture,
-      steps: steps.map((s) => ({ label: s.label, status: s.status, role: s.role ?? null, kind: s.kind })),
+      createdAt: run.createdAt,
+      finishedAt: run.finishedAt ?? null,
+      planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website") }),
+      steps: steps.map((s) => ({
+        label: s.label,
+        status: s.status,
+        role: s.role ?? null,
+        kind: s.kind,
+        startedAt: s.startedAt ?? null,
+        finishedAt: s.finishedAt ?? null,
+        model: s.model ?? null,
+        findings: s.status === "succeeded" ? findingsFor(s.label, parse(s.output)) : [],
+      })),
     };
   },
 });

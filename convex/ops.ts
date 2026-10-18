@@ -320,13 +320,21 @@ export const auditLog = query({
 });
 
 /** Add AI capacity to a workspace's current period (support credits, testing). Audited. */
-async function grant(ctx: MutationCtx, orgId: Id<"organizations">, usd: number, reason: string, actorId?: string) {
-  if (!(usd > 0 && usd <= 500)) throw appError("INVALID", "Grant between $0 and $500 at a time.");
+async function grant(ctx: MutationCtx, orgId: Id<"organizations">, usd: number, reason: string, actorId?: string, meters: Record<string, number> = {}) {
+  if (!(usd >= 0 && usd <= 500)) throw appError("INVALID", "Grant between $0 and $500 at a time.");
   const period = await currentPeriod(ctx, orgId);
   if (!period) throw appError("INVALID", "This workspace has no active usage period.");
   const micros = Math.round(usd * 1_000_000);
-  await ctx.db.patch(period._id, { walletCapMicros: period.walletCapMicros + micros });
-  await audit(ctx, { orgId, actorType: "operator", actorId, action: "ops.grant_capacity", summary: `Granted $${usd.toFixed(2)} of AI capacity: ${reason.slice(0, 200)}` });
+  // Optional meter top-ups (e.g. web searches), each capped to keep grants deliberate.
+  const meterCaps = { ...period.meterCaps } as Record<string, number>;
+  const added: string[] = [];
+  for (const [k, n] of Object.entries(meters)) {
+    if (!(k in meterCaps) || !(n > 0 && n <= 5000)) continue;
+    meterCaps[k] = meterCaps[k] + Math.round(n);
+    added.push(`${Math.round(n)} ${k}`);
+  }
+  await ctx.db.patch(period._id, { walletCapMicros: period.walletCapMicros + micros, ...(added.length ? { meterCaps: meterCaps as typeof period.meterCaps } : {}) });
+  await audit(ctx, { orgId, actorType: "operator", actorId, action: "ops.grant_capacity", summary: `Granted $${usd.toFixed(2)} of AI capacity${added.length ? ` and ${added.join(", ")}` : ""}: ${reason.slice(0, 200)}` });
 }
 
 export const grantCapacity = mutation({
@@ -344,13 +352,13 @@ export const grantCapacity = mutation({
 
 /** CLI-only twin (npx convex run ops:grantCapacityInternal) for operators without the console. */
 export const grantCapacityInternal = internalMutation({
-  args: { slug: v.string(), usd: v.number(), reason: v.string() },
-  handler: async (ctx, { slug, usd, reason }) => {
+  args: { slug: v.string(), usd: v.number(), reason: v.string(), meters: v.optional(v.record(v.string(), v.number())) },
+  handler: async (ctx, { slug, usd, reason, meters }) => {
     const org = await ctx.db
       .query("organizations")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .unique();
     if (!org) throw appError("NOT_FOUND", "No workspace with that address.");
-    await grant(ctx, org._id, usd, reason);
+    await grant(ctx, org._id, usd, reason, undefined, meters ?? {});
   },
 });

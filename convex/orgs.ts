@@ -280,6 +280,7 @@ export const onboardingState = query({
         })),
       research: researchRun
         ? {
+            id: researchRun._id,
             status: researchRun.status,
             userMessage: researchRun.userMessage ?? null,
             // Why it failed, so the UI can offer the right way forward.
@@ -295,7 +296,7 @@ export const onboardingState = query({
             steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status, kind: s.kind, startedAt: s.startedAt ?? null, finishedAt: s.finishedAt ?? null })),
           }
         : null,
-      strategyRun: strategyRun ? { status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
       goal: goal
         ? { kind: goal.kind, statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
