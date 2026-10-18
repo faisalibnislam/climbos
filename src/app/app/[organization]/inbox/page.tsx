@@ -84,7 +84,7 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
     setSeenDraft(m.suggestedReply);
     if (m.suggestedReply && !text.trim()) setText(m.suggestedReply);
   }
-  const drafting = Boolean(m.draftRunId) && !m.suggestedReply;
+  const drafting = m.drafting;
   const done = m.status === "replied" || m.status === "dismissed";
   async function run(key: string, fn: () => Promise<unknown>) {
     setBusy(key);
@@ -168,6 +168,7 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
 function ChatDetail({ slug, m }: { slug: string; m: Item }) {
   const thread = useQuery(api.chat.thread, { slug, inboxId: m.id });
   const reply = useMutation(api.chat.ownerReply);
+  const emailReply = useAction(api.mailbox.reply);
   const draft = useMutation(api.inbox.draftReply);
   const setStatus = useMutation(api.inbox.setStatus);
   const [text, setText] = useState("");
@@ -205,22 +206,42 @@ function ChatDetail({ slug, m }: { slug: string; m: Item }) {
             </p>
           ))}
         </div>
-        {thread ? (
+        {thread === undefined ? (
+          <LoadingBlock label="Loading the chat…" lines={2} />
+        ) : thread === null ? (
+          <p className="text-sm text-ink-3">This chat is no longer available.</p>
+        ) : (
           <>
             <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} autosize aria-label="Your reply" placeholder="Reply in the chat. Climb AI steps back once you answer." />
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" loading={busy === "draft"} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
+              <Button variant="secondary" loading={busy === "draft"} disabled={m.drafting} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
                 <Sparkles aria-hidden /> Draft with AI
               </Button>
               <Button loading={busy === "send"} disabled={!text.trim()} onClick={() => run("send", async () => { await reply({ slug, threadId: thread.threadId, text }); setText(""); })}>
                 <Send aria-hidden /> Send in chat
               </Button>
+              {m.canReply ? (
+                <Button
+                  variant="secondary"
+                  loading={busy === "email"}
+                  disabled={text.trim().length < 2}
+                  onClick={() =>
+                    run("email", async () => {
+                      const r = await emailReply({ slug, id: m.id, text });
+                      toast({ tone: r.ok ? "success" : "danger", title: r.message });
+                      if (r.ok) setText("");
+                    })
+                  }
+                >
+                  <Mail aria-hidden /> Send by email
+                </Button>
+              ) : null}
               <Button variant="ghost" onClick={() => run("done", () => setStatus({ slug, id: m.id, status: "dismissed" }))}>
                 <Check aria-hidden /> Done
               </Button>
             </div>
           </>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   );

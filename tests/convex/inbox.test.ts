@@ -68,6 +68,33 @@ describe("unified inbox", () => {
     expect(done[0]).toMatchObject({ status: "replied" });
   });
 
+  it("a failed AI draft frees the button to try again", async () => {
+    const t = setup();
+    const w = await ready(t);
+    await t.mutation(internal.outboundSending.applyInbox, { campaignId: w.campaignId, replies: [{ from: "jane@agency.example", optOut: false, messageId: "<m3@x>", text: "What does it cost?" }], bounced: [], checkedAt: Date.now() });
+    let [m] = await w.owner.client.query(api.inbox.list, { slug: w.slug, box: "open" });
+    process.env.CLIMBOS_FAKE_LLM = "fail";
+    await w.owner.client.mutation(api.inbox.draftReply, { slug: w.slug, id: m.id });
+    [m] = await w.owner.client.query(api.inbox.list, { slug: w.slug, box: "open" });
+    expect(m.drafting).toBe(true);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    [m] = await w.owner.client.query(api.inbox.list, { slug: w.slug, box: "open" });
+    expect(m).toMatchObject({ drafting: false, draftRunId: null, suggestedReply: null });
+  });
+
+  it("website chats with an email can be answered by email, kept in the chat thread", async () => {
+    const t = setup();
+    const w = await ready(t);
+    const key = await w.owner.client.mutation(api.chat.setup, { slug: w.slug });
+    await t.mutation(api.chat.send, { serverSecret: "test-server-secret", ipHash: "d".repeat(64), key, visitorId: "visitor-mail-0001", text: "Can you call me? ana@shop.example" });
+    const chat = (await w.owner.client.query(api.inbox.list, { slug: w.slug, box: "open" })).find((x) => x.kind === "chat")!;
+    expect(chat.canReply).toBe(true);
+    expect(await w.owner.client.action(api.mailbox.reply, { slug: w.slug, id: chat.id, text: "Sure, what time suits you?" })).toMatchObject({ ok: true });
+    const thread = (await w.owner.client.query(api.chat.thread, { slug: w.slug, inboxId: chat.id }))!;
+    expect(thread.humanTookOver).toBe(true);
+    expect(thread.messages.at(-1)).toMatchObject({ role: "owner", text: "(by email) Sure, what time suits you?" });
+  });
+
   it("won't email people who unsubscribed", async () => {
     const t = setup();
     const w = await ready(t);
