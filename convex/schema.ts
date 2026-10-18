@@ -1004,6 +1004,8 @@ export default defineSchema({
     videoStorageId: v.optional(v.id("_storage")),
     seconds: v.optional(v.number()),
     badge: v.boolean(),
+    /** AI video clips requested (paid; Veo). */
+    clips: v.optional(v.number()),
     error: v.optional(v.string()),
     createdBy: v.id("users"),
     createdAt: v.number(),

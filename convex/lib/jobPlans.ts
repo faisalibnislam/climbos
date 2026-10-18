@@ -1,7 +1,7 @@
 import { CURRENT_ROUTING, currentRateVersion } from "../../shared/economics";
 import type { PartialMeters } from "../../shared/economics/ledger";
 import type { RoleKey } from "../../shared/economics/roles";
-import { MODEL_SPECS, runtimeModel } from "../../shared/ai/models";
+import { MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
@@ -171,7 +171,7 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   };
 }
 
-export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
+export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
   // The weekly planner exists only as an agent: real workspaces always get it.
   if ((engineV2() || kind === "social_calendar" || kind === "outbound") && !opts.fixture) {
     const v2 = v2Plan(kind, params, opts.mode ?? "basic");
@@ -180,7 +180,7 @@ export function planJob(kind: JobKind, params: { quantity?: number; images?: num
   return { ...v1Plan(kind, params), aiMode: "basic" };
 }
 
-function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }): Omit<JobPlan, "aiMode"> {
+function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number }): Omit<JobPlan, "aiMode"> {
   switch (kind) {
     case "onboarding_research": {
       const pages = Math.min(params.pages ?? 3, 3);
@@ -246,7 +246,20 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "reel": {
       // Script (Luna) + up to 2 generated images (2 tries each); rendering runs on our own worker (not charged).
       const images = Math.max(0, Math.min(params.images ?? 2, 2));
-      return { kind, title: "Make a reel", roles: ["creative_director", "social_media_manager"], tasks: [], steps: [{ kind: "model", role: "social_media_manager", modelKey: CALL_ROUTES.chat_intent, inputBudget: 12_000, outputBudget: 4_000 }, ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))], meters: { imageAttempts: images * 2 } };
+      // AI video clips (paid): Veo, priced per second; one retry allowed per clip.
+      const clips = Math.max(0, Math.min(params.clips ?? 0, 2));
+      return {
+        kind,
+        title: "Make a reel",
+        roles: ["creative_director", "social_media_manager"],
+        tasks: [],
+        steps: [
+          { kind: "model", role: "social_media_manager", modelKey: CALL_ROUTES.chat_intent, inputBudget: 12_000, outputBudget: 4_000 },
+          ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 })),
+          ...Array.from({ length: clips }, (): PlannedStep => ({ kind: "compute", role: "creative_director", videoSeconds: VIDEO_ROUTE.clipSeconds })),
+        ],
+        meters: { imageAttempts: images * 2 },
+      };
     }
     case "outbound":
       // Demo: deterministic example prospects (no model call).

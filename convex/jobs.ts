@@ -1,12 +1,13 @@
 "use node";
 
 import { checkProspects } from "./ai/prospectCheck";
+import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
 import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
-import { estimateTokens, MODEL_SPECS, runtimeModel } from "../shared/ai/models";
+import { estimateTokens, MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../shared/ai/models";
 import {
   type AdDraftsOutput,
   type BusinessInsights,
@@ -1184,11 +1185,14 @@ const ReelScriptSchema = z.object({
   caption: z.string(),
   scenes: z.array(z.object({ caption: z.string(), sub: z.string(), assetId: z.string(), imagePrompt: z.string() })),
   cta: z.string(),
+  /** A cinematic 4-second shot for the opening scene (used when AI clips are on). */
+  clipPrompt: z.string(),
 });
 
 export const makeReel = internalAction({
   args: { runId: v.id("workflowRuns"), reelId: v.id("reels"), assetIds: v.array(v.id("assets")) },
   handler: async (ctx, args) => {
+    const startedAt = Date.now();
     const job = await loadContext(ctx, args.runId);
     if (!job) return;
     const failReel = async (msg: string) => ctx.runMutation(internal.reels.save, { reelId: args.reelId, patch: { status: "failed", error: msg } });
@@ -1204,7 +1208,7 @@ export const makeReel = internalAction({
         let script: z.infer<typeof ReelScriptSchema>;
         if (s1.checkpoint !== undefined) script = s1.checkpoint as typeof script;
         else if (job.run.isFixture || process.env.CLIMBOS_FAKE_LLM) {
-          script = { caption: `${brief} #smallbusiness`, scenes: [{ caption: brief.slice(0, 60), sub: "", assetId: reel[0]?.id ?? "", imagePrompt: "" }, { caption: "Here's how it works", sub: "", assetId: reel[1]?.id ?? "", imagePrompt: "" }], cta: "Try it today" };
+          script = { caption: `${brief} #smallbusiness`, scenes: [{ caption: brief.slice(0, 60), sub: "", assetId: reel[0]?.id ?? "", imagePrompt: "" }, { caption: "Here's how it works", sub: "", assetId: reel[1]?.id ?? "", imagePrompt: "" }], cta: "Try it today", clipPrompt: "" };
           await ctx.runMutation(internal.engine.completeStep, { stepId: s1.stepId!, output: JSON.stringify(script) });
         } else {
           const r = await modelTurn(
@@ -1214,7 +1218,7 @@ export const makeReel = internalAction({
               messages: [
                 {
                   role: "user",
-                  content: `${businessBrief(job)}${planContext(job)}\n\nREEL BRIEF: ${untrusted("owner request", brief, 600)}\n\nAVAILABLE IMAGES (use their id in assetId; prefer real screenshots and product photos):\n${reel.map((a) => `- ${a.id}: ${a.kind} · ${a.label}`).join("\n") || "(none)"}\n\nReturn JSON: caption (the post caption, 1-3 short lines + up to 5 hashtags), scenes (3-5; each with caption, sub (optional short line or ""), assetId (an id above or ""), imagePrompt (only when no image fits: a short photo prompt, no text or logos; else "")), and cta (the last card, 2-5 words).`,
+                  content: `${businessBrief(job)}${planContext(job)}\n\nREEL BRIEF: ${untrusted("owner request", brief, 600)}\n\nAVAILABLE IMAGES (use their id in assetId; prefer real screenshots and product photos):\n${reel.map((a) => `- ${a.id}: ${a.kind} · ${a.label}`).join("\n") || "(none)"}\n\nReturn JSON: caption (the post caption, 1-3 short lines + up to 5 hashtags), scenes (3-5; each with caption, sub (optional short line or ""), assetId (an id above or ""), imagePrompt (only when no image fits: a short photo prompt, no text or logos; else "")), cta (the last card, 2-5 words), and clipPrompt (a vivid 4-second vertical video shot for the opening scene: subject, action, setting, light and camera move; no text, logos or real brands).`,
                 },
               ],
               schema: ReelScriptSchema,
@@ -1265,11 +1269,52 @@ export const makeReel = internalAction({
           await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify(null) });
           sceneImages.push(dataUrl ?? reel[i % Math.max(1, reel.length)]?.url);
         }
+        // 2b. AI video clips (paid, Veo): the opening scene(s) become real video. Long-running: the
+        // operation id is checkpointed so a fresh action keeps polling instead of paying again.
+        const reelInfo = await ctx.runQuery(internal.reels.get, { reelId: args.reelId });
+        const clipUrls: (string | undefined)[] = [];
+        for (let k = 0; k < Math.min(reelInfo?.clips ?? 0, scenes.length) && !job.run.isFixture && !process.env.CLIMBOS_FAKE_LLM; k++) {
+          const cs = await begin(ctx, job.run._id, 20 + k, "compute", `Reel: AI video clip ${k + 1}`, "creative_director");
+          if (cs.checkpoint !== undefined) {
+            const id = cs.checkpoint as Id<"_storage"> | null;
+            clipUrls.push(id ? ((await ctx.runQuery(internal.reels.videoUrl, { storageId: id })) ?? undefined) : undefined);
+            continue;
+          }
+          let op = await ctx.runQuery(internal.engine.stepProviderRef, { stepId: cs.stepId! });
+          if (!op) {
+            const prompt = k === 0 ? script.clipPrompt || `${scenes[0].caption}, vertical cinematic shot` : `${scenes[k].caption}, vertical cinematic b-roll`;
+            const started = await startVeo(prompt);
+            if (!started.ok) {
+              await ctx.runMutation(internal.engine.completeStep, { stepId: cs.stepId!, output: JSON.stringify(null) });
+              clipUrls.push(undefined);
+              continue;
+            }
+            op = started.operation;
+            await ctx.runMutation(internal.engine.setStepProviderRef, { stepId: cs.stepId!, ref: op });
+          }
+          let result: Awaited<ReturnType<typeof pollVeo>> = { done: false };
+          while (!result.done) {
+            if (Date.now() - startedAt > 7 * 60_000) throw new AgentYield(); // resume polling in a fresh action
+            await sleep(10_000);
+            result = await pollVeo(op);
+          }
+          let storageId: Id<"_storage"> | null = null;
+          if ("uri" in result) {
+            const bytes = await downloadVeo(result.uri);
+            if (bytes) {
+              storageId = await ctx.storage.store(new Blob([bytes as BlobPart], { type: "video/mp4" }));
+              await ctx.runMutation(internal.engine.recordUsage, { stepId: cs.stepId!, records: [{ type: "image_attempt", provider: "google", model: VIDEO_ROUTE.apiModelId, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: Math.ceil(VIDEO_ROUTE.clipSeconds * VIDEO_ROUTE.perSecondUsd * 1_000_000), estimated: true }] });
+            }
+          }
+          await ctx.runMutation(internal.engine.completeStep, { stepId: cs.stepId!, output: JSON.stringify(storageId) });
+          clipUrls.push(storageId ? ((await ctx.runQuery(internal.reels.videoUrl, { storageId })) ?? undefined) : undefined);
+        }
+
         // 3. Render on our worker (not charged) and save the MP4.
         const st = await begin(ctx, job.run._id, 10, "compute", "Reel: render video", "creative_director");
         const reelDoc = await ctx.runQuery(internal.reels.get, { reelId: args.reelId });
         const brand = { name: job.business?.name ?? job.org.name, color: job.brand?.colors?.[0] ?? "#0b5d46", website: job.business?.website ?? undefined };
-        const renderScenes: { caption: string; sub?: string; imageUrl?: string; cta?: boolean }[] = [...scenes.map((s, i) => ({ caption: s.caption, sub: s.sub || undefined, imageUrl: sceneImages[i] })), { caption: script.cta, cta: true }];
+        const renderScenes: { caption: string; sub?: string; imageUrl?: string; videoUrl?: string; cta?: boolean }[] = [...scenes.map((s, i) => ({ caption: s.caption, sub: s.sub || undefined, imageUrl: sceneImages[i], videoUrl: clipUrls[i] })), { caption: script.cta, cta: true }];
         const secret = process.env.CLIMBOS_SERVER_SECRET;
         let storageId: Id<"_storage"> | undefined;
         let seconds: number | undefined;

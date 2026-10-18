@@ -105,6 +105,13 @@ export const IMAGE_ROUTES: Record<"standard" | "premium", ImageRoute> = {
   },
 };
 
+/**
+ * AI video clips for reels (paid accounts): Google Veo 3.1 Lite via the Gemini
+ * API, 9:16, 720p, audio muted in the reel. Price per second from published
+ * third-party rate cards (Oct 2026), to re-check against Google's pricing page.
+ */
+export const VIDEO_ROUTE = { apiModelId: "veo-3.1-lite-generate-preview", perSecondUsd: 0.05, resolution: "720p", aspectRatio: "9:16", clipSeconds: 4 } as const;
+
 /** Worst-case cost of one model step: full input budget + full output cap (incl. reasoning). */
 export function worstCaseStepMicros(
   modelKey: ModelKey,

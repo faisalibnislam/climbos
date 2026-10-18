@@ -10,7 +10,7 @@ import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Badge, Button, Callout, Card, CardContent, EmptyState, Field, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, EmptyState, Field, Switch, Textarea, toast } from "@/components/ui";
 
 /** Reels: short vertical videos from your own screenshots and photos, rendered by ClimbOS. */
 export default function ReelsPage() {
@@ -20,6 +20,7 @@ export default function ReelsPage() {
   const create = useMutation(api.reels.create);
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
+  const [clip, setClip] = useState(false);
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageHeader section="reels" title="Reels" intro="Short vertical videos for Instagram Reels, TikTok and YouTube Shorts, made from your own screenshots and photos." />
@@ -28,6 +29,13 @@ export default function ReelsPage() {
           <Field label="What's the reel about?" hint="E.g. “Show how fast a form goes live” or “Our autumn menu”. Your team picks images from your library and adds a couple only if needed.">
             <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 600))} rows={2} autosize />
           </Field>
+          <Switch
+            label="Open with an AI video clip"
+            description={est?.clipsUnlocked ? "A 4-second AI-made shot for the hook (Veo). Rendering stays free." : "Comes with a package."}
+            checked={clip && Boolean(est?.clipsUnlocked)}
+            disabled={!est?.clipsUnlocked}
+            onCheckedChange={setClip}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <Button
               loading={busy}
@@ -35,7 +43,7 @@ export default function ReelsPage() {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await create({ slug, brief });
+                  await create({ slug, brief, clips: clip && est?.clipsUnlocked ? 1 : 0 });
                   setBrief("");
                   toast({ tone: "success", title: "Making your reel", description: "About a minute." });
                 } catch (e) {
@@ -47,7 +55,7 @@ export default function ReelsPage() {
             >
               <Clapperboard aria-hidden /> Make a reel
             </Button>
-            {est ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(est.maxCostMicros)}. Rendering is free.</span> : null}
+            {est ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(clip && est.clipsUnlocked ? est.withClipsMicros : est.maxCostMicros)}. Rendering is free.</span> : null}
           </div>
         </CardContent>
       </Card>

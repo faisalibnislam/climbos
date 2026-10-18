@@ -10,7 +10,7 @@ import {
   usdToMicrosCeil,
 } from "../shared/economics";
 import type { PartialMeters } from "../shared/economics/ledger";
-import { worstCaseStepMicros } from "../shared/ai/models";
+import { VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import { assertTransition, type RunStatus } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -63,6 +63,8 @@ export interface PlannedStep {
   webSearches?: number;
   scrapeCredits?: number;
   imageAttempts?: number;
+  /** AI video seconds (Veo), priced per second. */
+  videoSeconds?: number;
 }
 
 /**
@@ -87,6 +89,7 @@ export function estimateRun(steps: PlannedStep[], rateVersionId: string, opts: {
     if (s.webSearches) research += usdToMicrosCeil(s.webSearches * rates.services.searchCall);
     if (s.scrapeCredits) research += usdToMicrosCeil(s.scrapeCredits * rates.services.scrapeCredit);
     if (s.imageAttempts) image += usdToMicrosCeil(s.imageAttempts * rates.services.imageAttempt);
+    if (s.videoSeconds) image += usdToMicrosCeil(s.videoSeconds * VIDEO_ROUTE.perSecondUsd);
   }
   const repair = opts.repair === false ? 0 : maxModelStep;
   const costMicros = ai + repair + image + research;
