@@ -1,3 +1,4 @@
+import type { WeeklyReport } from "../../shared/report/weekly";
 /**
  * Plain, accessible transactional email templates for ClimbOS platform mail.
  * Inline styles only; every email has a text alternative.
@@ -87,6 +88,32 @@ export function creditAlertEmail(params: { orgName: string; percent: number; lef
 <p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">${paid ? "Top up" : "See packages"}</a></p>`,
     ),
   };
+}
+
+/** Weekly CEO report email. */
+export function weeklyReportEmail(params: { orgName: string; report: WeeklyReport; url: string }) {
+  const { orgName, report, url } = params;
+  const range = `${fmtDay(report.weekStart)}–${fmtDay(report.weekEnd - 1)}`;
+  const delta = (c: number | null) => (c === null || c === 0 ? "" : c > 0 ? ` (+${c.toLocaleString("en-US")})` : ` (${c.toLocaleString("en-US")})`);
+  const rows = report.lines.map((l) => `${l.label}: ${l.value.toLocaleString("en-US")}${delta(l.change)}`);
+  return {
+    subject: `${orgName} this week: ${report.headline.replace(/\.$/, "")}`,
+    text: `${report.headline}\n\n${rows.join("\n")}\n\nNext week:\n${report.next.map((n) => `- ${n}`).join("\n")}\n\n${url}`,
+    html: layout(
+      `Week of ${range}`,
+      `<h1 style="margin:0 0 6px;font-size:22px">${escapeHtml(report.headline)}</h1>
+<p style="margin:0 0 16px;color:#6b7068;font-size:13px">${escapeHtml(orgName)} · ${escapeHtml(range)}</p>
+<table style="width:100%;border-collapse:collapse;margin:0 0 20px">${report.lines
+        .map((l) => `<tr><td style="padding:6px 0;border-bottom:1px solid #ecebe6;color:#454a44">${escapeHtml(l.label)}</td><td style="padding:6px 0;border-bottom:1px solid #ecebe6;text-align:right;font-weight:600">${l.value.toLocaleString("en-US")}<span style="color:${(l.change ?? 0) >= 0 ? GREEN : "#b42318"};font-weight:500">${escapeHtml(delta(l.change))}</span></td></tr>`)
+        .join("")}</table>
+${report.next.length ? `<p style="margin:0 0 6px;font-weight:600">Next week</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.next.map((n) => `<li style="margin-bottom:4px">${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
+<p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">Open the full report</a></p>`,
+    ),
+  };
+}
+
+function fmtDay(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export function digestEmail(params: { orgName: string; lines: string[]; url: string; cadence: string }) {

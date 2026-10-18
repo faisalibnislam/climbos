@@ -46,7 +46,14 @@ export function ResultsView({ slug }: { slug: string }) {
           section="results"
           title="Results"
           intro="What happened in your business, where it came from, and what might come next. Every number says where it came from and how fresh it is."
-          actions={<Segmented label="Time period" options={[...PERIODS]} value={days} onChange={(v) => setDays(v)} />}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={`/app/${slug}/results/week`} className="text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
+                Weekly report
+              </Link>
+              <Segmented label="Time period" options={[...PERIODS]} value={days} onChange={(v) => setDays(v)} />
+            </div>
+          }
         />
         {data ? (
           <p className="-mt-3 text-xs text-ink-3">

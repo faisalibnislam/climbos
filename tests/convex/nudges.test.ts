@@ -38,3 +38,14 @@ describe("Low-credit nudges", () => {
     expect((await o2.client.query(api.team.myNotices, {})).items).toHaveLength(0);
   });
 });
+
+describe("Weekly report", () => {
+  it("counts the week for a workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ceo@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "CEO Co" });
+    const r = await owner.client.query(api.reports.weekly, { slug });
+    expect(r.next).toContain("Make your growth plan.");
+    expect(typeof r.headline).toBe("string");
+  });
+});

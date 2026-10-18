@@ -114,10 +114,14 @@ export const digestCandidates = internalQuery({
 export const sendDigests = internalAction({
   args: {},
   handler: async (ctx) => {
-    const weekly = new Date().getUTCDay() === 1;
+    // Mondays: everyone who gets digests gets the weekly CEO report instead.
+    if (new Date().getUTCDay() === 1) {
+      await ctx.runAction(internal.reports.sendWeeklyReports, {});
+      return;
+    }
     for (const c of await ctx.runQuery(internal.maintenance.digestCandidates, {})) {
-      // Daily recipients get every day; weekly recipients only on Mondays (recipientsFor filters "off").
-      await ctx.runAction(internal.notifications.sendDigest, { orgId: c.orgId, cadence: weekly ? "weekly" : "daily", lines: c.lines });
+      // Daily recipients only (recipientsFor filters weekly and "off").
+      await ctx.runAction(internal.notifications.sendDigest, { orgId: c.orgId, cadence: "daily", lines: c.lines });
     }
   },
 });
