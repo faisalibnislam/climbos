@@ -2,6 +2,7 @@
 
 import { NotificationBell } from "./NotificationBell";
 import { Presence } from "./Presence";
+import { LowCreditBanner } from "./LowCreditBanner";
 import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
@@ -191,6 +192,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               <AccountMenu />
             </div>
           </header>
+          <LowCreditBanner slug={slug} />
           <main id="main" className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
             {children}
           </main>

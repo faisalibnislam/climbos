@@ -5,7 +5,9 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { sha256Hex } from "../shared/policy";
-import { digestEmail, invitationEmail, usageAlertEmail } from "./lib/emailTemplates";
+import { creditAlertEmail, digestEmail, invitationEmail, usageAlertEmail } from "./lib/emailTemplates";
+import { isPaid } from "./lib/access";
+import { creditBalance } from "./lib/credits";
 import { currentPeriod, ledgerOf } from "./lib/periods";
 
 const THRESHOLDS = [0.7, 0.9, 1] as const;
@@ -26,7 +28,7 @@ export const checkUsageAlerts = internalMutation({
         if (fraction >= t && !period.alertsSent.includes(tag)) crossed.push({ key: tag, label, percent: Math.round(t * 100) });
       }
     };
-    check("wallet", "AI work capacity", f.wallet);
+    check("wallet", "Credits", f.wallet);
     for (const [k, frac] of Object.entries(f.meters)) {
       if (period.meterCaps[k as MeterKey] > 0) check(k, METER_LABELS[k as MeterKey], frac);
     }
@@ -41,6 +43,19 @@ export const checkUsageAlerts = internalMutation({
       summary: `${top.label} reached ${top.percent}% of this month's limit.`,
       createdAt: Date.now(),
     });
+    if (top.key.startsWith("wallet:")) {
+      const [balance, paid] = await Promise.all([creditBalance(ctx, org, period), isPaid(ctx, org)]);
+      // Top-ups still cover work: only nudge when what's left overall is low.
+      if (top.percent < 100 && balance.available > Math.max(20, balance.monthly.total * 0.3)) return;
+      const text = balance.available <= 0 ? "You're out of credits. Top up or upgrade to keep going." : `${balance.available} credits left (${top.percent}% of this month used).`;
+      for (const m of await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)) {
+        if (m.status === "active" && m.userId && ["owner", "admin"].includes(m.role)) {
+          await ctx.db.insert("notices", { userId: m.userId, orgId: org._id, kind: "system", text, href: `/app/${org.slug}/settings/billing`, createdAt: Date.now() });
+        }
+      }
+      await ctx.scheduler.runAfter(0, internal.notifications.sendCreditAlert, { orgId: org._id, percent: top.percent, left: balance.available, paid });
+      return;
+    }
     await ctx.scheduler.runAfter(0, internal.notifications.sendUsageAlert, {
       orgId: org._id,
       meterLabel: top.label,
@@ -85,6 +100,18 @@ export const sendUsageAlert = internalAction({
     const { orgName, slug, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId: args.orgId, purpose: "usage" });
     const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${slug}/settings/billing`;
     const mail = usageAlertEmail({ orgName, percent: args.percent, meter: args.meterLabel, url });
+    for (const to of emails) {
+      await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: args.orgId, to, template: "usage_alert", ...mail });
+    }
+  },
+});
+
+export const sendCreditAlert = internalAction({
+  args: { orgId: v.id("organizations"), percent: v.number(), left: v.number(), paid: v.boolean() },
+  handler: async (ctx, args) => {
+    const { orgName, slug, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId: args.orgId, purpose: "usage" });
+    const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${slug}/settings/billing`;
+    const mail = creditAlertEmail({ orgName, percent: args.percent, left: args.left, paid: args.paid, url });
     for (const to of emails) {
       await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: args.orgId, to, template: "usage_alert", ...mail });
     }

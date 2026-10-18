@@ -1,0 +1,792 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Primary: build the freelancer client-intake switch kit and validate it with a tightly capped search test. Secondary: run the payment-intent email only if audience and tracking gates pass. Keep the Claude directory route as an eligibility-first moonshot. Hold paid spend until actual gross profit sets a CAC ceiling; the remaining ad budget stays uncommitted.",
+     "positioning": "For freelancers preparing client-facing intake forms: compare the trade-offs, then use Formkit to build and publish a form through Claude or ChatGPT. Keep the pitch practical and the comparison current; do not claim the free plan alone makes Formkit unique.",
+     "audiences": [
+      {
+       "name": "Freelancers and small studios preparing client-intake forms",
+       "hypothesis": "A practical switch kit tied to a client-intake workflow will attract more qualified sign-ups than a general form-builder pitch.",
+       "evidence": "Research found one Google Forms alternatives discussion asking for an easy alternative without a high price. This is one discussion, not proof of broad demand. https://www.reddit.com/r/degoogle/comments/1nqa29a/what_are_the_best_alternatives_to_google_forms/"
+      },
+      {
+       "name": "Opted-in free-tier users with payment intent",
+       "hypothesis": "A relevant explanation of Pro’s payment feature may prompt upgrades, but paid conversion is unproven.",
+       "evidence": "The selected play requires at least 500 eligible opted-in users and an identifiable payment-intent event; neither is confirmed."
+      },
+      {
+       "name": "Claude users seeking to build and publish forms in chat",
+       "hypothesis": "If eligible and accepted, a directory listing could introduce Formkit to relevant users; approval and customer yield remain unknown.",
+       "evidence": "Formkit supports building and publishing forms inside Claude and ChatGPT. Research found a directory submission route but no confirmed Formkit listing or eligibility. https://formkit.app/ https://claude.com/marketplace/plugins"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Competitor alternative pages",
+       "score": 83,
+       "status": "primary",
+       "why": "Specific high-intent switcher angle with a small stated build effort; verify every comparison claim before publishing."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "in_plan",
+       "why": "Good search intent and reusable asset; keep competitor claims factual and current."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 80,
+       "status": "in_plan",
+       "why": "Could capture integration-led intent, but no current listings or marketplace eligibility are confirmed."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 79,
+       "status": "later",
+       "why": "Strong fit for converting product use into paid plans; depends on an existing free-user base."
+      },
+      {
+       "name": "Content SEO",
+       "score": 76,
+       "status": "later",
+       "why": "Longer feedback loop than focused comparison pages for this 90-day goal."
+      },
+      {
+       "name": "Templates",
+       "score": 76,
+       "status": "later",
+       "why": "Templates can shorten the path to a working form and serve several named audiences."
+      },
+      {
+       "name": "Google organic search",
+       "score": 75,
+       "status": "later",
+       "why": "Potentially scalable, but existing visibility and 90-day search volume are unknown."
+      },
+      {
+       "name": "AI search visibility (ChatGPT, Perplexity, Gemini)",
+       "score": 75,
+       "status": "later",
+       "why": "Distinctive feature, but audience size and attribution remain uncertain."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Payment-intent upgrade email",
+       "hypothesis": "A consent-based email connecting payment intent to Pro’s Stripe payment support will produce paid upgrades from relevant free users.",
+       "population": "Opted-in free-tier users with identifiable payment intent; run only if at least 500 eligible users can be reached.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid upgrades per eligible delivered email",
+       "guardrails": [
+        "Do not send without valid consent and unsubscribe handling.",
+        "Record unsubscribes and complaints against Formkit’s own baseline; pause if the send creates a material deterioration.",
+        "Do not increase volume until paid-account CAC is checked against verified 12-month gross profit."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Skip if fewer than 500 eligible opted-in users exist or payment intent cannot be tracked. Review paid upgrades after the three-week window. No paid accounts: stop and investigate before another send. At least one paid account: continue only if fully loaded CAC is below the verified ceiling. This is directional evidence, not a reliable conversion-rate estimate."
+      },
+      {
+       "name": "Client-intake switch kit search test",
+       "hypothesis": "A freelancer-specific switch kit will attract more qualified sign-ups than a general form-builder message.",
+       "population": "Freelancers searching for a Google Forms alternative and landing on the client-intake switch kit.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Free sign-ups from paid-search clicks",
+       "guardrails": [
+        "Maximum $60 media spend; stop at the spend cap or the supplied CPC assumption’s planned click ceiling, whichever comes first.",
+        "Do not scale on clicks or free sign-ups alone.",
+        "Recheck competitor claims before publication and keep the page factual."
+       ],
+       "durationDays": 30,
+       "stoppingRule": "Stop at the $60 cap or the planned click ceiling, whichever comes first, within the test window. The play’s scale gate is at least three free sign-ups and one paid account; then verify fully loaded CAC against gross profit. No sign-ups means do not buy more traffic. Treat results as directional because the sample is small."
+      },
+      {
+       "name": "Claude directory discovery test",
+       "hypothesis": "If Formkit qualifies for and receives a directory listing, Claude users seeking a form-building workflow may visit and start using Formkit.",
+       "population": "Claude users referred from an approved Formkit directory listing, if accepted.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Attributed paid accounts",
+       "guardrails": [
+        "Do not submit unless current requirements show Formkit is eligible.",
+        "Keep total test cost at or below $60, including any fees and the selected play’s owner-time valuation.",
+        "Do not treat approval or visits as proof of paid demand."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Stop if ineligible or if no application can be submitted by Oct 31. If accepted but no referral visits arrive by the end of the first month, stop further work. Continue only if at least one paid account is attributed in the test window and total cost stays within the cap; check CAC against verified gross profit before any expansion."
+      }
+     ],
+     "constraints": [
+      "Ad budget: $600/month, from the brief. Cap the first search test at $60 after the unit-economics gate; keep the rest uncommitted.",
+      "Owner capacity: not supplied. Planning assumption: maximum 4 owner hours/week; confirm in week one and reduce scope if unavailable.",
+      "Owner time allocation, planning assumption: switch kit up to 2 hours/week during build and 1 hour/week during testing; email qualification and send up to 2 hours total; directory eligibility and submission up to 1 hour total; scorecard up to 0.5 hour/week. Peak planned work stays within the assumed 4-hour weekly cap.",
+      "Pricing: Pro is $6/seat/month and Business is $19/seat/month; yearly billing offers two months free. Gross margin, seat mix and retention are unknown.",
+      "Current paid-account baseline, acquisition-source mix, site traffic, eligible email audience and event tracking were not supplied. Existing assets include the comparison page, free tier, Stripe payment support and Claude/ChatGPT workflow.",
+      "Resource limits: search media is capped at $60 pending CAC verification; email and directory use no ad-platform budget. No additional paid channel is authorized."
+     ],
+     "measurementPlan": "In week one, record trailing 90-day paid accounts, plan mix and known source mix. Add UTMs to every campaign, connect landing-page and sign-up events to billing upgrades, and add a “How did you hear about us?” field. Track consent and referral sources. Report weekly on eligible audience, visits, sign-ups, paid accounts, plan mix, cash CAC and fully loaded CAC. Fully loaded CAC includes media, fees and owner time. Compare CAC with the verified plan-level ceiling, not platform attribution alone. Check monthly whether relevant ChatGPT, Claude, Perplexity and Gemini prompts mention Formkit; record the prompt and result without treating visibility as revenue.",
+     "firstActions": [
+      {
+       "title": "Record paid accounts, plan mix and known acquisition sources for the trailing 90 days.",
+       "why": "This establishes what is working now and gives the 90-day goal a real baseline.",
+       "role": "Owner"
+      },
+      {
+       "title": "Verify 12-month gross profit by plan and seat mix, using actual margin and retention.",
+       "why": "Without actual plan-level gross profit, no affordable CAC ceiling can be set.",
+       "role": "Owner"
+      },
+      {
+       "title": "Check the opted-in free-user count and payment-intent event tracking.",
+       "why": "The email test depends on consent, sufficient audience and usable event data.",
+       "role": "ClimbOS checks eligibility and drafts; owner approves and sends."
+      },
+      {
+       "title": "Review the comparison matrix and outline the freelancer client-intake switch kit.",
+       "why": "The primary play needs an accurate, useful landing asset before search traffic is bought.",
+       "role": "ClimbOS audits and drafts; owner approves."
+      },
+      {
+       "title": "Review Anthropic’s directory requirements against Formkit’s existing integration.",
+       "why": "Eligibility and approval are unknown, so confirm fit before investing time.",
+       "role": "ClimbOS checks current requirements; owner confirms eligibility and submits."
+      }
+     ],
+     "diagnosis": "The biggest constraint is unmeasured paid-conversion economics. Plan prices are known, but gross profit, paid-account baseline, conversion history and CAC are not. This diagnosis would be disproved by billing and attribution data showing repeatable paid acquisition below verified 12-month gross profit.",
+     "affordableCac": "Not calculable from the supplied facts. [NEEDS FACT: What is verified 12-month gross profit per paid account, by plan and seat mix?] Use actual gross profit after variable costs and actual retention. Planning policy: cap CAC at the lower of three months’ gross profit (the SMB SaaS payback target) or 12-month gross profit. Fully loaded CAC includes media, fees and owner time; value owner time at the supplied play assumption of $50/hour. No search spend or expansion until this ceiling is calculated and the test is judged against it.",
+     "notDoing": [
+      {
+       "channel": "Broad blog SEO",
+       "why": "Use the high-intent switch kit instead; broad informational content has a longer feedback loop for this 90-day goal."
+      },
+      {
+       "channel": "Meta ads",
+       "why": "Paid-conversion economics and creative performance are not established; do not add another paid channel."
+      },
+      {
+       "channel": "Sales outreach",
+       "why": "The low-priced plans and unknown CAC do not justify cold-outreach effort now."
+      },
+      {
+       "channel": "Promotional Reddit posting",
+       "why": "Use Reddit for listening only. Research notes identify promotion restrictions in relevant communities; check live rules and avoid unsolicited pitches."
+      }
+     ],
+     "northStar": {
+      "metric": "Incremental paid accounts attributable to the three selected plays.",
+      "baseline": "Trailing 90-day paid accounts and source mix are unknown; record them in week one.",
+      "target": "Planning assumption: at least one incremental paid account by Jan 16, 2027, with fully loaded CAC below the verified plan-level ceiling. Confirm the numeric goal after establishing the baseline and gross profit."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Paid accounts by source and plan",
+       "weeklyTarget": "Record the trailing 90-day weekly baseline in week one; by Oct 25 set a weekly target from observed rates. Do not invent a lift target before seeing the baseline.",
+       "source": "Billing events, UTMs and a “How did you hear about us?” field."
+      },
+      {
+       "metric": "Eligible opted-in users and payment-intent event coverage",
+       "weeklyTarget": "Before sending, verify at least 500 eligible users and a trackable event; otherwise the send target is zero.",
+       "source": "Email platform and product analytics."
+      },
+      {
+       "metric": "Switch-kit visits, free sign-ups and paid accounts",
+       "weeklyTarget": "Use the selected play’s test gate: at least three free sign-ups and one paid account before considering continuation; do not treat clicks as a success target.",
+       "source": "Web analytics with campaign UTMs and product sign-up and billing events."
+      },
+      {
+       "metric": "Directory referral visits, sign-ups and paid accounts",
+       "weeklyTarget": "Check weekly after acceptance; if no referral visits arrive by the end of the first month, stop further work.",
+       "source": "Referral UTMs and billing events."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Oct 18–31, 2026",
+       "focus": "Verify the paid-account baseline, acquisition sources, plan-level gross profit, owner capacity, email eligibility and tracking. Audit the comparison matrix and Claude directory eligibility; prepare the switch kit."
+      },
+      {
+       "name": "Test",
+       "days": "Nov 1–Dec 2, 2026",
+       "focus": "Run the capped search test only after the CAC gate passes. Send the payment-intent email only if consent, audience and tracking gates pass. Submit a directory listing only if eligible. Review evidence weekly; make the primary-channel decision by Dec 2."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Dec 3, 2026–Jan 16, 2027",
+       "focus": "Allocate effort according to observed paid-account CAC and qualified signup evidence, not a preset percentage. If no play meets the unit-economics gate, pause paid expansion and improve the switch kit from actual search and user feedback."
+      }
+     ],
+     "weekOneChecklist": [
+      "Record trailing 90-day paid accounts, plan mix and known acquisition sources; check the last 20 customer records if available.",
+      "Calculate actual plan-level 12-month gross profit and seat mix; hold paid expansion until the CAC ceiling is set.",
+      "Confirm owner capacity; check opted-in free-user count and payment-intent tracking. Do not send unless at least 500 eligible users and tracking are verified.",
+      "Audit the comparison matrix and draft the client-intake switch kit; verify every comparison claim before publication. https://formkit.app/compare",
+      "Check current Claude directory requirements and set up UTMs and paid-account source tracking for all three plays."
+     ],
+     "risks": [
+      {
+       "risk": "Gross margin, retention and seat mix are unknown, so no CAC ceiling can yet be calculated.",
+       "mitigation": "Obtain actual plan-level gross profit, seat mix and retention before authorizing the search spend or expanding any play. Compare fully loaded CAC with the resulting ceiling."
+      },
+      {
+       "risk": "The opted-in audience may be too small, or payment intent may not be trackable.",
+       "mitigation": "Verify consent, eligible audience size and event tracking before drafting a send. Skip the test if any gate fails."
+      },
+      {
+       "risk": "Claude directory eligibility, approval and referral volume are uncertain.",
+       "mitigation": "Check current requirements by Oct 31; submit only if eligible. If accepted but no referral visits arrive by the end of the first month, stop further work."
+      },
+      {
+       "risk": "The small search sample may not establish paid conversion or scalable CAC.",
+       "mitigation": "Cap search spend at $60, treat the result as directional, and do not scale on clicks or free sign-ups alone."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Payment-intent upgrade email",
+       "oneLiner": "Existing-user email is the closest low-cost revenue test, but paid conversion is unproven; treat it as provisional, not validated.",
+       "kind": "bankable",
+       "audience": "Formkit free-tier users who have opted in to email; audience size and event tracking are unconfirmed.",
+       "trigger": "A user views payment setup or paid-plan information, if Formkit can identify that event. Otherwise, send a general feature email only to opted-in users and label the result separately.",
+       "hook": "Need a form that takes payment? Formkit Pro is $6 per seat per month. Payments go to your own Stripe account, and Formkit takes no cut.",
+       "mechanic": "Send a consent-based, feature-triggered email that connects payment intent to the paid plan; measure paid upgrades, not opens.",
+       "assetUsed": "Formkit's free plan, Pro at $6 per seat per month, and confirmed Stripe payment support. The site says payments go to the user's Stripe account without Formkit taking a cut: https://formkit.app/",
+       "funnel": [
+        "500 delivered emails → clicks: low 1%, likely 2.09%, high 3%. The 2.09% likely rate is MailerLite's email-campaign click benchmark (grade A); low and high are planning assumptions (grade D). https://www.mailerlite.com/blog/email-marketing-benchmarks",
+        "Clicks → paid accounts: low 1%, likely 5%, high 10%; assumptions, grade D. Formkit has no supplied free-to-paid conversion history.",
+        "Arithmetic at likely rates: 500 × 2.09% × 5% = 0.52 expected paid accounts. Scenario range from low/high inputs: 0.05–1.5. These are modeled expectations, not a promise or a statistical confidence interval."
+       ],
+       "unit": "paid accounts per 500 delivered emails",
+       "p10": 0.05,
+       "p50": 0.52,
+       "p90": 1.5,
+       "horizonDays": 21,
+       "confidence": "low",
+       "biggestUnknown": "Whether enough opted-in users have payment intent, and what share of email clicks become paid accounts.",
+       "test": "Verify the opted-in audience first; send only if at least 500 eligible free users can be reached. Track clicks and paid upgrades for 21 days; cap owner time at 2 hours, valued at an assumed $50/hour ($100).",
+       "killIf": "Do not send if there are fewer than 500 eligible opted-in users or if the relevant event cannot be tracked. After the test, stop if there are no paid accounts; investigate the message or segment before another send.",
+       "scaleIf": "Continue only if the test produces a paid account and the owner confirms its acquisition cost is below 12-month gross profit. Do not increase volume before that check.",
+       "scores": [
+        4,
+        2,
+        5,
+        5,
+        4,
+        5,
+        5,
+        3
+       ],
+       "firstActionToday": "Check the opted-in free-user count and whether payment-intent events are tracked. Do not send until both are verified.",
+       "climbosCanDo": "Check audience eligibility, draft the email, set up tracking, and report clicks and paid upgrades. Owner approves and sends."
+      },
+      {
+       "name": "Client-intake switch kit for freelancers",
+       "oneLiner": "A freelancer-specific switch kit combines a comparison-page mechanic with Formkit's in-chat form-building asset; paid conversion remains unproven.",
+       "kind": "creative",
+       "audience": "Freelancers searching for a Google Forms alternative, with r/freelance as a listening and feedback venue. A third-party tracker estimates roughly 700,000 members; treat this as a rough, non-Reddit count. Do not post promotional links where community rules prohibit them. https://gummysearch.com/r/freelance/ and https://www.reddit.com/r/smallbusiness/comments/1mo6dso/how_to_build_leadgen_forms_without_coding/",
+       "trigger": "A freelancer or small studio is preparing a client-facing intake form and wants it to feel more like part of its business than a basic form.",
+       "hook": "Building a client intake form? Compare the trade-offs, then use this prompt to build and publish one through Claude or ChatGPT with Formkit.",
+       "mechanic": "Pair a high-intent alternative page with a practical switch kit, then test whether a small paid-search audience signs up. The prompt gives the comparison a concrete freelancer workflow rather than making it a generic SEO page.",
+       "assetUsed": "Formkit's dated comparison matrix and its confirmed ability to build and publish forms inside Claude and ChatGPT. Recheck the comparison before publishing: https://formkit.app/",
+       "funnel": [
+        "Ad spend → visits: $60 ÷ assumed $2 per click = about 30 visits; CPC is an assumption, grade D, not a sourced benchmark.",
+        "Visits → free signups: low 1%, likely 3%, high 5%. The Formkit SaaS playbook gives 1–5% as a practitioner estimate for niche comparison pages (grade D): https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+        "Free signups → paid accounts: low 1%, likely 5%, high 10%; assumptions, grade D. No Formkit free-to-paid rate was supplied.",
+        "Arithmetic at likely rates: 30 × 3% × 5% = 0.045 expected paid accounts. Low/high scenario inputs give 0.003–0.15. This test is too small to establish paid conversion; signups are the leading signal."
+       ],
+       "unit": "paid accounts per $60 test",
+       "p10": 0.003,
+       "p50": 0.045,
+       "p90": 0.15,
+       "horizonDays": 30,
+       "confidence": "low",
+       "biggestUnknown": "Whether the page attracts enough qualified search clicks and whether signups become paid accounts.",
+       "test": "Build a client-intake switch kit: a dated, fair comparison page plus a ready-to-use prompt for building a client intake form inside Claude or ChatGPT. Test with up to $60 in search ads, capped at 10% of the $600 monthly ad budget; at an assumed $2 CPC (grade D), that buys about 30 clicks. Run for 30 days. Owner time cap: 4 hours, valued at an assumed $50/hour ($200).",
+       "killIf": "Stop at $60 or 30 clicks, whichever comes first. If there are no free signups, do not buy more traffic; if signups occur but no paid account, wait for the 30-day check and do not scale without positive unit economics.",
+       "scaleIf": "At least 3 free signups from 30 paid-search clicks and at least 1 paid account; then check actual CAC against 12-month gross profit before increasing spend.",
+       "scores": [
+        5,
+        1,
+        4,
+        3,
+        4,
+        4,
+        5,
+        4
+       ],
+       "firstActionToday": "Spend 20 minutes reviewing the existing comparison page and drafting the client-intake prompt; verify each comparison claim before publication.",
+       "climbosCanDo": "Audit the comparison claims, draft the prompt and page, and track ad clicks, free signups, and paid accounts. Owner approves the page and ad."
+      },
+      {
+       "name": "Claude directory discovery test",
+       "oneLiner": "A capped, eligibility-first directory test uses a Formkit-specific in-chat workflow; approval and customer yield are unknown.",
+       "kind": "moonshot",
+       "audience": "People using Claude who seek a form-building workflow through Anthropic's directory. Formkit's eligibility and listing status are unconfirmed; directory audience size was not found. https://support.anthropic.com/en/articles/11697096-anthropic-mcp-directory-policy",
+       "trigger": "A Claude user wants to create and publish a form without leaving the assistant.",
+       "hook": "Build and publish a form from Claude or ChatGPT with Formkit. Start on the free plan.",
+       "mechanic": "Test an assistant-directory listing as a borrowed-audience route; do not assume approval or traffic.",
+       "assetUsed": "Formkit supports building and publishing forms inside Claude and ChatGPT. https://formkit.app/",
+       "funnel": [
+        "Application → accepted listing: low 5%, likely 20%, high 40%; assumption, grade D. No reliable acceptance benchmark was supplied.",
+        "Accepted listing → qualified visits in 90 days: low 50, likely 250, high 1,000; assumption, grade D. No reliable directory-traffic benchmark was supplied.",
+        "Qualified visits → free signups: low 1%, likely 3%, high 5%; assumption, grade D.",
+        "Free signups → paid accounts: low 1%, likely 5%, high 10%; assumption, grade D.",
+        "Arithmetic at likely rates: 20% × 250 × 3% × 5% = 0.75 expected paid accounts. Low/high scenario inputs give 0.003–20; the high case is an uncertain assumption, not a forecast promise."
+       ],
+       "unit": "paid accounts in 90 days",
+       "p10": 0.003,
+       "p50": 0.75,
+       "p90": 2.25,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether Formkit qualifies for a listing and whether directory visitors become paid accounts.",
+       "test": "Check Anthropic's current directory rules and Formkit's eligibility. If eligible, prepare and submit one factual listing; cap any fees and owner time at $60 total. Track approval, referral visits, free signups, and paid accounts for 90 days.",
+       "killIf": "Stop if Formkit is ineligible, if no application can be submitted within 14 days, or when the $60 cap is reached. If accepted but there are no referral visits by day 30, stop further work on this route.",
+       "scaleIf": "Continue only if the listing is approved and produces at least one paid account within the 90-day test, with total test cost at or below $60. Check CAC against 12-month gross profit first.",
+       "scores": [
+        4,
+        1,
+        4,
+        2,
+        3,
+        5,
+        4,
+        5
+       ],
+       "firstActionToday": "Spend 20 minutes checking Anthropic's current directory requirements against Formkit's existing integration.",
+       "climbosCanDo": "Check eligibility, prepare the listing draft, and track referral traffic and paid accounts. Owner confirms eligibility and submits."
+      }
+     ],
+     "portfolioNote": "The email test is provisional, not yet predictably bankable: verify audience size and tracking before sending. Neither creative play has a sourced Formkit paid-conversion rate, so keep tests capped; do not scale without actual CAC and 12-month gross profit. [NEEDS FACT: What is the gross profit per paid account over 12 months, by plan?]"
+    },
+    "costMicros": 235336,
+    "ms": 1408127
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": true,
+    "output": {
+     "summary": "Approve three capped validation tests; spend $0 on ads. Check directory feasibility first, publish one shared graduation guide, and run payment-intent follow-up only with verified eligible recipients; all roles remain provisional.",
+     "positioning": "Formkit helps freelancers move from simple sign-ups to client intake that supports their business. Lead with the verified assistant-built workflow and relevant paid features—not unlimited free usage alone.",
+     "audiences": [
+      {
+       "name": "Freelancers and small studios already using Claude",
+       "hypothesis": "A verified client-intake demonstration can attract users while they are choosing tools inside an existing workflow.",
+       "evidence": "The brief confirms assistant compatibility, not distribution access; competing form builders appear in Claude discovery: https://claude.com/marketplace."
+      },
+      {
+       "name": "Freelancers evaluating Google Forms alternatives",
+       "hypothesis": "A fair guide explaining when simple sign-ups become paid client intake can attract better-qualified prospects than a broad free-form-builder pitch.",
+       "evidence": "Supplied audience insights identify branded intake and payments as relevant needs. This discussion supplies problem language, not measured current demand: https://www.reddit.com/r/Entrepreneur/comments/1d11f7a/free_typeform_alternative/."
+      },
+      {
+       "name": "Published free workspaces expressing payment intent",
+       "hypothesis": "One relevant upgrade message can convert an expressed payment need without purchasing another visit.",
+       "evidence": "The chosen play defines this product-record cohort, but neither its event availability nor its size has been measured."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Integration marketplaces",
+       "score": 82,
+       "status": "primary",
+       "why": "The assistant workflow provides a specific discovery angle, but integration support does not establish marketplace access."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Comparison intent fits the product, but a new brand cannot assume meaningful organic traffic within 90 days."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 81,
+       "status": "in_plan",
+       "why": "A focused switching page is more useful than a broad competitor-page library at this stage."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 81,
+       "status": "later",
+       "why": "Contextual upgrades connect a demonstrated need to revenue without buying another visit."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 77,
+       "status": "later",
+       "why": "This is a focused fallback if assistant-directory distribution is unavailable."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 75,
+       "status": "later",
+       "why": "Freemium is the existing entry offer and activation mechanism, not a differentiated traffic source by itself."
+      },
+      {
+       "name": "Templates",
+       "score": 74,
+       "status": "later",
+       "why": "A concrete starting point can support activation, but a template does not supply its own audience."
+      },
+      {
+       "name": "Integration partnerships",
+       "score": 74,
+       "status": "later",
+       "why": "Product compatibility creates a conversation starter, not evidence of partner distribution."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Claude client-intake connector probe",
+       "hypothesis": "Decision: whether to invest further in assistant discovery. Competitor presence makes the surface plausible, but Formkit access and conversion are unknown; the supplied central rates—5% signup, 60% publication, 40% checkout and 50% payment—are grade-D assumptions.",
+       "population": "First verify eligibility; after acceptance, conditional sample is 200 tagged visits, calculated as 10 expected signups ÷ 5% assumed signup rate. Neither acceptance nor traffic is forecast.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Fully loaded test cost per credited first-paying workspace; leading measures are eligibility, tagged visits and signup rate.",
+       "guardrails": [
+        "Hard cap: one owner-hour, $50 assumed opportunity cost and $0 incremental cash.",
+        "Stop for development, fees or requirements beyond the cap.",
+        "Use only an existing compliant implementation and owner-approved claims.",
+        "Attribute shared-guide visitors to the directory once; count only first Formkit subscription payments."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Resolve feasibility by day 7; if blocked, check AlternativeTo only within remaining cap, without transferring Claude traffic assumptions. If pending on day 21, wait without more work; after publication, freeze investment if observed pace cannot reach 200 visits by day 90. At 200 visits, ≤14 signups means stop expansion; ≥29 signups plus ≥4 credited first-paying workspaces qualifies for another approved capped batch; intermediate results permit one revision only within the original cap. These are assumed business thresholds, not significance tests."
+      },
+      {
+       "name": "The paid-intake graduation guide",
+       "hypothesis": "Decision: whether the graduation-guide mechanic deserves more page work. Supplied freelancer insights support the intake-to-payments angle; the central funnel rates—3% signup, 60% publication, 40% checkout and 50% payment—are grade-D assumptions, not Formkit baselines.",
+       "population": "Conditional sample: 334 qualified non-directory visits, calculated as ceil(10 expected signups ÷ 3% assumed signup rate). Record actual traffic; exclude bots, internal visits and directory-referred cohorts.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Fully loaded test cost per credited first-paying workspace; leading metric is account creations per qualified non-directory visit.",
+       "guardrails": [
+        "Hard cap: one owner-hour, $50 assumed opportunity cost and $0 incremental cash.",
+        "Publish one shared guide by day 14; no paid traffic or page-library expansion.",
+        "Verify comparison claims and plan boundaries; retain a dated pre-change snapshot.",
+        "Track refunds, cancellations and actual costs; do not expand if measured economics fail."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "On day 21, project day-90 volume from observed visits per live day; label that straight-line projection an assumption. If pace cannot reach 334 visits, freeze further page work and retain the guide for help/product links. At 334 visits, ≤14 signups means stop expansion; ≥29 signups plus ≥4 credited first-paying workspaces qualifies for another approved capped batch; intermediate results permit one within-cap revision. Close on day 90 even if under volume; report directional evidence only."
+      },
+      {
+       "name": "Payment-intent follow-up",
+       "hypothesis": "Decision: whether payment-specific follow-up merits another batch. Recorded payment intent would support relevance, but the cohort is unverified; central rates of 2% clicks, 40% checkout and 70% payment are grade-D assumptions.",
+       "population": "Conditional sample: 500 delivered messages to 500 distinct eligible workspaces, calculated as 10 expected clicks ÷ 2% assumed click rate. If fewer qualify, run only a descriptive pilot; do not broaden eligibility.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Fully loaded test cost per credited first-paying workspace; leading metric is qualified clicks per delivered email.",
+       "guardrails": [
+        "Hard cap: one owner-hour, $50 assumed opportunity cost and $0 incremental cash.",
+        "Require verified payment intent, lawful contact, suppression and unsubscribe; one recipient per workspace.",
+        "Pause for suppression failures, bounce rate above 2%, or spam complaints at or above 0.1%; small counts require manual review.",
+        "Exclude paying accounts and acquisition-test cohorts; remove identified security-scanner clicks from qualified clicks."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Inspect clicks on day 21 and close payment observation on day 45. At 500 deliveries, ≤6 qualified clicks or zero first payments means stop expansion; ≥13 clicks plus ≥4 credited first-paying workspaces qualifies for another approved capped batch. Intermediate results permit one revision only within the remaining cap; under-volume results remain descriptive. No early success stop; stop early only for guardrail breaches."
+      }
+     ],
+     "constraints": [
+      "Budget — Owner brief: $600/month for platform advertising. Proposed spend: $0 ads and $0 incremental cash; any tool or submission fee requires separate approval.",
+      "Time — Planning assumption: three owner-hours total at $50/hour, or $150 opportunity cost. Directory, guide and lifecycle each receive a hard one-hour/$50 cap; ClimbOS drafting uses existing capacity.",
+      "Economics — Confirmed pricing: Pro $6/seat/month; Business $19/seat/month. Planning assumptions: one monthly Pro seat, 80% gross margin and six paid months within twelve; validate before expansion.",
+      "Baseline and assets — Source: brief and supplied insights. Website: https://formkit.app; current source shares, traffic, eligible email volume, conversion, retention and sales cycle are unmeasured. Audit existing sources before adding work.",
+      "Delivery — Planning assumption: existing tools support the demonstration, publication and measurement without development. Geography, owner skills and spare service capacity are unspecified; retain current availability and pause anything requiring unsupported work."
+     ],
+     "measurementPlan": "ClimbOS prepares one weekly scorecard from approved existing exports; the owner approves every publication, submission, send and new expense. Record UTMs, first known acquisition source, workspace ID, account creation, first publication, payment intent, actual subscription checkout and first successful Formkit subscription payment—not money collected through customers' forms; use existing server-side billing records where available, and keep unknown attribution unknown. Ask recent paying customers how they found Formkit and record source shares without inventing missing percentages. Directory traffic keeps its source when visiting the shared guide; the independent guide cohort excludes it, while the frozen lifecycle cohort excludes new acquisition-test workspaces. Credit each workspace once, record lifecycle assists separately, and never add conditional funnel scenarios into a portfolio forecast. Track actual owner minutes and fees against the three-hour/$150 assumed portfolio cap; missing instrumentation or incremental technical work triggers a pause, not an overrun. All three tests are observational and directional: no causal lift, measured median or calibrated percentile claims; changes in traffic mix, holidays, pricing and product releases belong in the readout.",
+     "firstActions": [
+      {
+       "title": "Check Claude feasibility before submission work",
+       "why": "Avoid building around distribution Formkit cannot access; record the eligibility decision by day 7.",
+       "role": "Owner verifies; ClimbOS prepares the requirements checklist."
+      },
+      {
+       "title": "Verify the shared client-intake demonstration",
+       "why": "One verified example supports the directory submission and the existing comparison guide without creating competing assets.",
+       "role": "Owner tests the workflow; ClimbOS drafts the guide."
+      },
+      {
+       "title": "Count the lawful payment-intent cohort",
+       "why": "This play depends on expressed payment intent, not a general mailing list; approve no send until the cohort passes review.",
+       "role": "Owner approves eligibility and sending; ClimbOS prepares segmentation and suppression rules."
+      }
+     ],
+     "diagnosis": "Working constraint: an unvalidated free-to-paid path, not proven lack of traffic; source shares, intent-cohort size, conversion, margin and retention are missing from the supplied evidence. This is disproved if existing billing and cohort records show a repeatable funnel within measured affordable acquisition cost—protect and amplify that source first.",
+     "affordableCac": "Assumptions: $6 × 80% = $4.80 monthly gross profit; $4.80 × six paid months = $28.80 contribution within twelve months. Expansion ceiling: 50% × $28.80 = $14.40, also three months of assumed gross profit; a $50 test needs ceil($50/$14.40) = four credited customers, costing $12.50 each. Supplied conditional central-scenario costs are $17.86 for lifecycle, $41.58 for the guide and $41.67 for Claude—none clears the expansion ceiling. These are assumption-based calculations, not measured returns; recalculate with actual retention, margin, labor and fees.",
+     "notDoing": [
+      {
+       "channel": "Google, Meta, LinkedIn and ChatGPT advertising",
+       "why": "All three central scenarios miss the assumed expansion ceiling; retain the full $600/month allowance until measured economics pass."
+      },
+      {
+       "channel": "Blog-first SEO, separate alternative-page projects and template libraries",
+       "why": "One expanded comparison guide serves both switching intent and directory referrals; additional pages would split limited time and traffic."
+      },
+      {
+       "channel": "Founder social, Reddit campaigns, Indie Hackers, creators, PR and launch campaigns",
+       "why": "No verified audience or capacity supports another distribution engine within three owner-hours."
+      },
+      {
+       "channel": "Bulk directory submissions, Zapier, G2, Product Hunt and additional assistant directories",
+       "why": "Eligibility and distribution are unverified. AlternativeTo is only a same-cap fallback; ChatGPT directory work waits for a successful Claude test."
+      },
+      {
+       "channel": "Cold outreach, formal partnerships, webinars and events",
+       "why": "The entry price cannot yet justify sales labor, and compatibility is not evidence of co-marketing access."
+      },
+      {
+       "channel": "Separate HR, education, sales and event campaigns; unsupported case studies",
+       "why": "Keep the selected freelancer workflow focused; use product demonstrations until genuine customer evidence is available."
+      }
+     ],
+     "northStar": {
+      "metric": "Distinct workspaces completing their first Formkit subscription payment; separate newly acquired workspaces from existing free workspaces upgraded through lifecycle.",
+      "baseline": "Current paying-workspace count and conversion baseline were not supplied. Start a separate day-0 test counter; establish prior-30-day new paying workspaces and cancellations by day 7.",
+      "target": "Planning hurdle, not forecast: at least four first-paying workspaces from one qualifying $50 test by day 90, with that play's expansion gates passed. Report the deduplicated portfolio total separately."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Verified payment-intent cohort and delivery",
+       "weeklyTarget": "Measure the actual eligible count in week 1; cap the conditional pilot at 500 distinct delivered workspaces. Report sends and deliveries separately every week.",
+       "source": "Existing product records and email delivery/suppression exports; availability checked in week 1."
+      },
+      {
+       "metric": "Qualified visits by acquisition test",
+       "weeklyTarget": "From measured traffic, recalculate required weekly pace as remaining visits ÷ remaining weeks: 200 directory visits and 334 non-directory guide visits by day 90 are sample hurdles, not traffic forecasts.",
+       "source": "Tagged links and existing analytics, joined to workspace creation."
+      },
+      {
+       "metric": "Qualified clicks and account creations",
+       "weeklyTarget": "Report cumulative denominators weekly; assumed expansion hurdles are 13 clicks/500 deliveries for lifecycle and 29 signups at each acquisition test's full sample. Decide only at the registered endpoint.",
+       "source": "Email click records and account-created events, deduplicated by workspace."
+      },
+      {
+       "metric": "First publication and subscription checkout",
+       "weeklyTarget": "Show counts and rates by source each week; replace the supplied 60% publication and 40% checkout assumptions with observations. Do not equate pricing-page visits with checkout starts.",
+       "source": "Existing form-publication and actual subscription-checkout events; verify event definitions before launch."
+      },
+      {
+       "metric": "Credited first payments and fully loaded cost",
+       "weeklyTarget": "Track progress toward four unique first-paying workspaces per qualifying $50 test; verify paid status, refunds and cancellations. Expansion requires all play-specific gates and revised economics to pass.",
+       "source": "Formkit subscription billing, approved time log and incremental-fee ledger."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation and capped launches",
+       "days": "0–14",
+       "focus": "Audit current customer sources and economics; resolve directory feasibility by day 7. Verify the shared demonstration, approve the guide by day 14, and launch lifecycle only if intent records, recipients and tracking pass review."
+      },
+      {
+       "name": "Validate demand and economics",
+       "days": "15–45",
+       "focus": "ClimbOS prepares weekly scorecards; inspect traffic and clicks on day 21 and close lifecycle payments on day 45. Confirm or park the provisional directory primary; do not replace blocked distribution with another unapproved channel."
+      },
+      {
+       "name": "Commit only after evidence",
+       "days": "46–90",
+       "focus": "Finish the directory and guide observations without exceeding their original caps. If a play qualifies and receives fresh approval, allocate 75% of additional effort to it and 25% to its shared guide; otherwise retain useful assets and stop expansion."
+      }
+     ],
+     "weekOneChecklist": [
+      "Review sources for the last 20 first-paying workspaces, or all available; protect the strongest source and check costs. Owner cap: 15 minutes.",
+      "Check Claude requirements and existing listing status; record eligible, already listed or blocked. Owner cap: 25 minutes.",
+      "Test the supplied client-intake prompt in a supported assistant; save only the verified demonstration. Owner cap: 20 minutes.",
+      "Count published free workspaces with recorded payment intent; verify lawful contact and suppress paying or unsubscribed accounts. Owner cap: 20 minutes.",
+      "Approve existing-event mapping, tagged links, attribution rules and the scorecard; pause unsupported tracking rather than commission development. Owner cap: 20 minutes."
+     ],
+     "risks": [
+      {
+       "risk": "Claude compatibility does not establish marketplace eligibility, acceptance or discovery.",
+       "mitigation": "By day 7, check the official submission requirements and existing listing status. Stop if development, fees or work exceed the cap; check AlternativeTo only within remaining time."
+      },
+      {
+       "risk": "The payment-intent cohort may be absent or too small.",
+       "mitigation": "Verify the payment-intent event, cohort count and lawful contact basis before sending. If unavailable, pause rather than substitute general activity or cold contacts."
+      },
+      {
+       "risk": "Assumed customer contribution may overstate affordable acquisition cost.",
+       "mitigation": "Replace the 80% margin and six-paid-month assumptions with billing and cost records before expansion. Include AI usage, infrastructure, support and billing costs; recalculate for annual discounts and actual seats."
+      },
+      {
+       "risk": "The guide and directory may never reach their conditional sample sizes.",
+       "mitigation": "Apply the day-21 traffic-pace checks and day-90 deadlines. Under-volume results stay descriptive; do not buy traffic to manufacture the sample."
+      },
+      {
+       "risk": "One successful test can hide an unprofitable portfolio.",
+       "mitigation": "Report portfolio and play-level costs at days 45 and 90. At the full $150 assumed portfolio cost and only four customers, portfolio cost is $37.50 each—above assumed contribution—even if one play qualifies."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Payment-intent follow-up",
+       "oneLiner": "Monetize expressed payment intent before buying another visitor.",
+       "kind": "bankable",
+       "audience": "Published free workspaces in Formkit's product records that requested payments and can lawfully receive relevant lifecycle email. Available cohort size has not been measured.",
+       "trigger": "A published free workspace shows payment-feature intent. First verify that Formkit records this event; do not substitute general activity or a purchased contact list.",
+       "hook": "Need to take payments through your form? Formkit Pro is $6 per seat per month. Payments go directly to your Stripe account, and Formkit takes no cut.",
+       "mechanic": "Send one payment-specific upgrade message after verified intent, rather than a general newsletter. Use one recipient per workspace, exclude paying accounts, and enforce applicable consent, suppression and unsubscribe requirements.",
+       "assetUsed": "Formkit's own payment-intent records, if available, connect the message to an expressed need. The offer uses its Pro plan and direct-to-Stripe payment workflow; product source: https://formkit.app/",
+       "funnel": [
+        "Starting volume: 500 delivered messages to 500 distinct eligible workspaces is a conditional test scenario, assumption, grade D—not a claim about Formkit's existing audience. Measure sent and delivered counts; do not assume delivery.",
+        "Delivered → clicked: low 1% / likely 2% / high 3%, all assumption, grade D. The supplied MailerLite campaign-click benchmark informs the planning rate, but its transfer to Formkit is unvalidated; underlying benchmark source grade A: https://www.mailerlite.com/",
+        "Clicked → checkout started: low 20% / likely 40% / high 60%; assumption, grade D. Track an actual checkout event, not a pricing-page visit.",
+        "Checkout started → first payment completed: low 40% / likely 70% / high 85%; assumption, grade D.",
+        "Conditional central scenario: 500 × 2% × 40% × 70% = 2.80 new paying workspaces; assumption, grade D. Numeric fields represent downside 0, central 2.80, upside 9; upside = ceiling of 3 × central, an assumption, grade D—not calibrated percentiles."
+       ],
+       "unit": "new paying workspaces, each with at least one paid seat",
+       "p10": 0,
+       "p50": 2.8,
+       "p90": 9,
+       "horizonDays": 45,
+       "confidence": "low",
+       "biggestUnknown": "Whether a sufficiently large, contactable payment-intent cohort exists. If the event or cohort is unavailable, pause this play rather than broadening it into cold outreach.",
+       "test": "Conditional sample: 500 eligible delivered emails, derived as 10 expected clicks ÷ 2% assumed click rate. Planned cap: $0 incremental cash and one owner-hour ($50 assumed cost); inspect clicks by day 21 and payments by day 45. Primary metric: acquisition cost per new paying workspace; leading metric: clicks per delivered email. If the cohort is smaller, report a descriptive pilot without claiming the sample target was met.",
+       "killIf": "At 500 deliveries, stop expansion with six or fewer clicks, or no first payments by day 45. Calculated click break-even is 1.24%: ($50 ÷ 500) ÷ (40% × 70% × $28.80); this exceeds 40% of the assumed 2% base rate. All economic inputs are assumptions, grade D; zero clicks would also imply a rule-of-three upper bound of approximately 0.6%.",
+       "scaleIf": "At 500 deliveries, require at least 13 clicks and four new paying workspaces before approving another capped batch. These calculated operating gates exceed 2 × assumed break-even click rate and keep the $50 test cost below $14.40 per customer; they are not statistical proof.",
+       "scores": [
+        4,
+        2,
+        5,
+        4,
+        5,
+        4,
+        5,
+        3
+       ],
+       "firstActionToday": "Check whether published free workspaces with payment intent can be identified and lawfully contacted. Task estimate: 20 minutes; record the actual cohort count before approving any send.",
+       "climbosCanDo": "Define the eligible segment, draft the complete email, prepare tagged links and suppression rules, and connect clicks to first payments. The owner approves the cohort and sends."
+      },
+      {
+       "name": "The paid-intake graduation guide",
+       "oneLiner": "Help freelancers decide when simple sign-ups should become branded, paid client intake.",
+       "kind": "creative",
+       "audience": "Freelancers and small studios evaluating Google Forms alternatives through search or Formkit's existing comparison surface. An older discussion supplies problem language, not current demand or traffic: https://www.reddit.com/r/Entrepreneur/comments/1d11f7a/free_typeform_alternative/",
+       "trigger": "A freelancer's basic enquiry form becomes branded client intake or a paid booking workflow.",
+       "hook": "Keep Google Forms for simple sign-ups. When client intake needs your own domain or payments, see how Formkit fits.",
+       "mechanic": "Transplant a buying-guide-and-starter-kit mechanic to the moment a freelancer starts charging through intake. Publish one dated, fair guide with the tested prompt, demonstration and free-versus-Pro boundaries; expand the existing comparison, not a competing page library.",
+       "assetUsed": "The guide combines Formkit's assistant-based form creation with its branded-intake and payment use cases, rather than competing on unlimited free usage alone. Verify plan boundaries against the current site before publication: https://formkit.app/",
+       "funnel": [
+        "Starting volume: 334 qualified visits within the 90-day horizon is a conditional test scenario, assumption, grade D—not an organic traffic forecast. Exclude assistant-directory referrals from this cohort to avoid counting the same acquisition twice.",
+        "Guide visited → account created: low 1% / likely 3% / high 5%; assumption, grade D. Vendor comparison-page conversion evidence supports testing the mechanic, not these Formkit rates or traffic volume; underlying source grade C: https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+        "Account created → first form published: low 40% / likely 60% / high 80%; assumption, grade D.",
+        "First form published → checkout started: low 25% / likely 40% / high 60%; assumption, grade D.",
+        "Checkout started → first payment completed: low 30% / likely 50% / high 70%; assumption, grade D.",
+        "Conditional central scenario: 334 × 3% × 60% × 40% × 50% = 1.2024 new paying workspaces, rounded to 1.20; assumption, grade D. Downside 0 and upside 4 are planning bounds; upside = ceiling of 3 × central, assumption, grade D—not calibrated percentiles."
+       ],
+       "unit": "new paying workspaces, each with at least one paid seat",
+       "p10": 0,
+       "p50": 1.2,
+       "p90": 4,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether qualified traffic will arrive within the horizon. At the assumed central conversion rates, the $50 test would cost approximately $41.58 per customer—above assumed break-even—so this is capped learning, not a justified ad destination yet.",
+       "test": "Conditional sample: 334 qualified, non-directory visits, derived as ceiling of 10 expected signups ÷ 3% assumed signup rate. Planned cap: $0 incremental cash and one owner-hour ($50 assumed cost), with ClimbOS preparing the draft; approve publication by day 14, inspect traffic on day 21, and close measurement on day 90. Primary metric: acquisition cost per paying workspace; leading metric: signup rate.",
+       "killIf": "On day 21, project day-90 volume using observed visits per live day; this straight-line projection is an assumption, grade D. If it cannot reach 334 visits, freeze additional page production and retain the guide for product/help links. At 334 visits, stop expansion with 14 or fewer signups: calculated signup break-even is 4.34%, using ($50 ÷ 334) ÷ (60% × 40% × 50% × $28.80), all economic assumptions, grade D.",
+       "scaleIf": "At 334 qualified visits, require at least 29 signups and four new paying workspaces before approving more page work. Calculated signup threshold: 8.67%, approximately 2 × assumed break-even; the four-payment condition keeps the $50 test below the assumed $14.40 acquisition-cost ceiling. Validate with another capped batch before buying traffic.",
+       "scores": [
+        4,
+        2,
+        5,
+        3,
+        5,
+        4,
+        5,
+        4
+       ],
+       "firstActionToday": "Test this prompt in a supported assistant workflow: “Create a client-intake form with name, work email, project type, budget range and project description. Ask me to review it before publishing.” Task estimate: 20 minutes; save only the verified demonstration.",
+       "climbosCanDo": "Draft the complete guide and prompt kit, verify comparison claims, prepare internal links, and measure visits through publication and payment. The owner verifies the demonstration and approves the page."
+      },
+      {
+       "name": "Claude client-intake connector probe",
+       "oneLiner": "Test assistant-directory access before investing in it as the primary acquisition channel.",
+       "kind": "moonshot",
+       "audience": "Freelancers and small studios browsing Claude's connector marketplace. Submission paths exist, but Formkit eligibility, listing status and relevant audience size remain unverified: https://claude.com/marketplace/connectors-plugins",
+       "trigger": "A Claude user looks for a connector while already building a client workflow, rather than shopping for a standalone form builder.",
+       "hook": "Already working in Claude? Build and publish a client-intake form without leaving chat. Formkit Pro adds payments when you need them.",
+       "mechanic": "Put a working client-intake demonstration where assistant users choose tools, then route visitors to the shared guide. Submit only an existing compliant implementation; compatibility alone does not justify connector development.",
+       "assetUsed": "An owner-verified demonstration of Formkit building and publishing client intake inside Claude. Assistant compatibility is confirmed, but exclusive distribution and marketplace access are not; product source: https://formkit.app/",
+       "funnel": [
+        "Eligibility verified → listing accepted: no reliable acceptance benchmark or probability is available; assumption, grade D. Verify the official requirements first: https://claude.com/marketplace/connectors-plugins",
+        "Accepted listing → tagged website visits: low 0 / central 200 / high 400 visits by day 90; assumption, grade D. These are discovery scenarios, not estimated marketplace reach; rejection or no discovery can produce zero.",
+        "Tagged visit → account created: low 2% / likely 5% / high 10%; assumption, grade D. The conversion calculation below is conditional on 200 visits actually arriving.",
+        "Account created → first form published: low 40% / likely 60% / high 80%; assumption, grade D.",
+        "First form published → checkout started: low 25% / likely 40% / high 60%; assumption, grade D.",
+        "Checkout started → first payment completed: low 30% / likely 50% / high 70%; assumption, grade D.",
+        "Conditional central scenario: 200 × 5% × 60% × 40% × 50% = 1.20 new paying workspaces; assumption, grade D. Downside 0 and upside 6 are planning bounds; upside = ceiling of 5 × central to reflect additional discovery uncertainty, assumption, grade D—not calibrated percentiles."
+       ],
+       "unit": "new paying workspaces, each with at least one paid seat",
+       "p10": 0,
+       "p50": 1.2,
+       "p90": 6,
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the current implementation qualifies and receives discovery traffic. Jotform's presence establishes a real surface, not Formkit's access: https://claude.com/marketplace/connectors-plugins?categories=education",
+       "test": "Planned feasibility decision by day 7; total cap is $0 incremental cash and one owner-hour ($50 assumed cost), below the $60 experiment ceiling. If accepted, the conditional conversion sample is 200 tagged visits, derived as 10 expected signups ÷ 5% assumed signup rate. Check referrals on day 21 after publication and first payments through day 90; acceptance and traffic are measured gates, not forecast promises.",
+       "killIf": "Stop if submission requires development, fees or time beyond the cap. If blocked by day 7, check AlternativeTo eligibility within the same remaining cap; otherwise park discovery. If pending on day 21, wait without more work. After publication, freeze investment if observed traffic pace cannot reach 200 visits by day 90; at 200 visits, stop expansion with 14 or fewer signups, below the calculated 7.24% break-even rate. All thresholds are assumption, grade D; the Claude forecast does not apply to a fallback listing.",
+       "scaleIf": "After acceptance and 200 tagged visits, require at least 29 signups and four paying workspaces before approving further discovery work. The calculated signup threshold is 14.47%, approximately 2 × assumed break-even; four payments keep the $50 test below the assumed $14.40 acquisition-cost ceiling. Only then assess ChatGPT eligibility separately.",
+       "scores": [
+        4,
+        1,
+        4,
+        3,
+        4,
+        4,
+        4,
+        4
+       ],
+       "firstActionToday": "Check Claude's submission requirements against Formkit's current implementation and search for an existing listing. Task estimate: 25 minutes; record eligible, already listed or blocked without starting development.",
+       "climbosCanDo": "Check requirements and existing listings, identify the official submission route, draft accurate listing copy, and prepare the demonstration checklist and referral report. The owner approves and submits."
+      }
+     ],
+     "portfolioNote": "Approve three capped validation tests; leave the $600/month ad allowance unspent until economics pass. Day 0 is owner approval; directory feasibility comes first, the shared guide follows, and lifecycle runs only with verified eligible recipients. Planning assumptions, grade D: three owner-hours total, $50/hour, existing tools and ClimbOS drafting capacity; include any incremental fee before approval. Economics assume one monthly Pro seat, 80% gross margin and six paid months within twelve: $28.80 contribution per customer; expansion ceiling is half that, $14.40. Each $50 test therefore needs four customers to clear the ceiling. Replace these assumptions with measured margin, retention and costs before expanding. The portfolio roles are provisional: current evidence does not establish a fully bankable Formkit funnel or creative-proven returns. All three remain capped experiments. P50 fields are conditional funnel calculations, not measured medians; P10/P90 are explicitly uncalibrated planning bounds. Do not add forecasts without deduplicating workspaces and separating acquisition from lifecycle assistance. Scores, in order: fit, predictability, reach per owner-hour, speed, compounding, cost, safety, distinctiveness."
+    },
+    "costMicros": 738729,
+    "ms": 1934852
+   }
+  },
+  "comparisons": {
+   "expert>basic": {
+    "sol": {
+     "result": "win",
+     "reasons": [
+      "A makes the better economic decision: preserve the ad budget until there is evidence of an affordable paid-conversion path. B proposes a search test whose own central scenario yields just 0.045 paid accounts for $60 media plus $200 owner time—an extremely weak primary growth bet.",
+      "A handles marketplace access more honestly. It separates verified assistant compatibility from unverified listing eligibility and avoids assigning an arbitrary probability of acceptance.",
+      "A has stronger measurement discipline: it deduplicates workspaces, distinguishes acquisition from lifecycle assistance, and explicitly separates Formkit subscription payments from payments collected through customers’ forms.",
+      "Neither is owner-ready enough. A is buried in repetitive thresholds and an implausibly tight three-hour delivery cap; B is easier to scan but has inconsistent economics gates. A wins on judgment and evidential care, not length."
+     ],
+     "truthX": [
+      "Calls several funnel rates and scenario costs 'supplied' even though they are not present in the provided brief. It labels them assumptions elsewhere, but their provenance is misleading."
+     ],
+     "truthY": [
+      "Invents an October 18, 2026 start date and calendar deadlines without an owner-supplied start date.",
+      "The Claude directory funnel’s stated low/high range is mathematically wrong: its inputs produce 0.00025–2 expected paid accounts, not 0.003–20. The separate p90 value of 2.25 is also unexplained."
+     ]
+    }
+   }
+  },
+  "scores": {
+   "basic": {
+    "truth": 6,
+    "specificity": 7,
+    "strategy": 3,
+    "craft": 4,
+    "usefulness": 4,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "The primary test forecasts only 0.045 paid customers, while restrictive gates can block the other plays, leaving no credible path to meaningful paid-customer growth within 90 days."
+   },
+   "expert": {
+    "truth": 7,
+    "specificity": 8,
+    "strategy": 4,
+    "craft": 3,
+    "usefulness": 4,
+    "creativity": 4,
+    "overall": 4,
+    "topIssue": "The plan has no credible way to generate its required traffic or eligible email volume within 90 days, making it a cautious validation framework rather than an executable customer-growth strategy."
+   }
+  }
+ }
+]

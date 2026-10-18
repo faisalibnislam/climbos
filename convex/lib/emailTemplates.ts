@@ -72,6 +72,23 @@ export function usageAlertEmail(params: { orgName: string; percent: number; mete
   };
 }
 
+/** Credits running low (or out): top up on a package, upgrade on free. */
+export function creditAlertEmail(params: { orgName: string; percent: number; left: number; paid: boolean; url: string }) {
+  const { orgName, percent, left, paid, url } = params;
+  const out = percent >= 100 || left <= 0;
+  const next = paid ? "Add a top-up (lasts 12 months) or wait for your monthly credits to renew." : "Pick a package to keep going: Starter gives 1,100 credits a month.";
+  return {
+    subject: out ? `${orgName}: you're out of credits` : `${orgName}: ${left.toLocaleString("en-US")} credits left`,
+    text: `${orgName} has used ${percent}% of its credits (${left} left). ${next} Nothing is charged automatically. ${url}`,
+    html: layout(
+      "Credits update",
+      `<h1 style="margin:0 0 8px;font-size:22px">${out ? "Out of credits" : `${left.toLocaleString("en-US")} credits left`}</h1>
+<p style="margin:0 0 20px;color:#454a44">${escapeHtml(orgName)} has used ${percent}% of its credits. ${escapeHtml(next)} Nothing is charged automatically.</p>
+<p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">${paid ? "Top up" : "See packages"}</a></p>`,
+    ),
+  };
+}
+
 export function digestEmail(params: { orgName: string; lines: string[]; url: string; cadence: string }) {
   const { orgName, lines, url, cadence } = params;
   return {
