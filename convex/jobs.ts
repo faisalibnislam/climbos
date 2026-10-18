@@ -2,6 +2,7 @@
 
 import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
+import { z } from "zod";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { estimateTokens, MODEL_SPECS, runtimeModel } from "../shared/ai/models";
@@ -33,7 +34,7 @@ import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } f
 import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
-import { CALL_ROUTES, routeModels } from "../shared/agents/routes";
+import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import {
   adsSpec,
   conversionAuditSpec,
@@ -288,6 +289,8 @@ async function runAgentTask<T>(
   }
   // Climb AI Expert (paid): Sol drafts this agent's work when it's one of the expert agents.
   if (job.run.aiMode === "expert") spec = { ...spec, models: routeModels(spec.id, "expert") };
+  // Climb AI Basic: best of two drafts for the strategy agents.
+  else if (draftsFor(spec.id, "basic") > 1) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };
   const rates = getRateVersion(job.run.rateVersionId);
   let currentStep: Id<"workflowSteps"> | null = null;
   // Shared across every agent in this action: yield only after real progress.
@@ -471,6 +474,49 @@ async function guarded(
 }
 
 /* ------------------------------------------------------------------ */
+/* Quick first take (speed): a fast Luna answer while the full job works  */
+/* ------------------------------------------------------------------ */
+
+const QuickTakeSchema = z.object({ headline: z.string(), points: z.array(z.string()) });
+
+/**
+ * One fast, cheap model call (Luna, low effort, no research) that gives the
+ * owner a useful first take within about a minute. Checkpointed and metered
+ * like any step; failures are ignored (the full job still runs).
+ */
+async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: string, task: string) {
+  if (job.run.isFixture || job.run.engine !== "v2" || process.env.CLIMBOS_FAKE_LLM) return;
+  try {
+    const step = await begin(ctx, job.run._id, index, "model", label, "ceo");
+    if (step.checkpoint !== undefined) return;
+    const rates = getRateVersion(job.run.rateVersionId);
+    const r = await modelTurn(
+      {
+        modelKey: CALL_ROUTES.chat_intent,
+        system: [{ text: "You are a senior growth advisor writing a fast first take for a small-business owner. Be specific to this business, plain and brief. No invented numbers; say 'assumption' where you estimate." }],
+        messages: [{ role: "user", content: `${businessBrief(job)}\n\n${task}\n\nReturn JSON: headline (one sentence) and 3-5 points (each one short sentence).` }],
+        schema: QuickTakeSchema,
+        maxTokens: 3_000,
+        effort: "low",
+        thinkingOff: true,
+        timeoutMs: 60_000,
+      },
+      rates,
+    );
+    if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
+    if (r.ok) {
+      const out = r.output as z.infer<typeof QuickTakeSchema>;
+      await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify({ headline: out.headline, points: out.points.slice(0, 5) }) });
+      await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(out) });
+    } else {
+      await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId!, error: r.message.slice(0, 200) });
+    }
+  } catch {
+    // A first take is a nice-to-have; never block the real job on it.
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Jobs                                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -532,6 +578,9 @@ export const onboardingResearch = internalAction({
         profile: JSON.stringify(profile),
       });
 
+      // Speed: a first take on what we see while the deep research runs (5-10 minutes).
+      await quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 5000)}`);
+
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
       const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}`;
       const insights = await runAgentTask<BusinessInsights>(
@@ -567,6 +616,8 @@ export const buildStrategy = internalAction({
       const insights = job.business?.insights;
       const insightsBrief = insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)";
       const v2 = !job.run.isFixture && job.run.engine === "v2";
+      // Speed: a first take in about a minute while the full plan is researched and reviewed.
+      await quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insightsBrief.slice(0, 6000)}`);
       // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
       let profile = profileFrom({
         saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null,

@@ -22,7 +22,7 @@ import { z } from "zod";
 import { type TurnRequest, type TurnResult } from "../shared/ai/types";
 import { modelTurn } from "../shared/ai/turn";
 import { runtimeModel } from "../shared/ai/models";
-import { routeModels, type AiMode } from "../shared/agents/routes";
+import { draftsFor, routeModels, type AiMode } from "../shared/agents/routes";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
@@ -334,7 +334,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const candidates = candidatesFor(profile);
     // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
     const mode: AiMode = arm === "expert" ? "expert" : "basic";
-    const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode) });
+    const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode), drafts: draftsFor(spec.id, mode) });
     const fit = await runAgent(
       withMode(channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, {})),
       { ...base, research: undefined, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },

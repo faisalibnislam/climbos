@@ -238,9 +238,10 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     });
   };
 
-  const critique = async (round: number, output: T, lint: LintIssue[]): Promise<CritiqueResult> => {
+  const critique = async (round: number, output: T, lint: LintIssue[], alt = false): Promise<CritiqueResult> => {
     checkDeadline(deps);
-    return deps.phase({ phase: "critique", round, index: 2 + round * 2 }, `${spec.label}: review ${round + 1}`, async () => {
+    const key: PhaseKey = alt ? { phase: "critique", round: 0, index: 51 } : { phase: "critique", round, index: 2 + round * 2 };
+    return deps.phase(key, alt ? `${spec.label}: review B` : `${spec.label}: review ${round + 1}`, async () => {
       const rubricExtra = (spec.criticSkills ?? spec.skills).map((id) => skillRubricText(id)).filter(Boolean).join("\n\n");
       const result = await deps.turn({
         modelKey: spec.models.critic,
@@ -267,14 +268,42 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   // 2-5. Draft, then critique/revise up to maxRevisions, keeping the best version.
   // shipOn "gates": the review only blocks on hard gates and lint (lean mode for content);
   // "rubric": every criterion must also clear the ship rule (strategy, insights).
+  // Numbers may trace to this job's research as well as the brief and facts.
+  const lintOf = (o: T) => (spec.lint ? spec.lint(o, { ...input, untrustedContext: [input.untrustedContext ?? "", research?.notes ?? ""].join("\n") }) : []);
   let current = await draftOnce(0, null);
+  // Best of two (cheap models): a second first draft from a bolder angle; the reviewer's scores pick the stronger one.
+  let firstReview: { c: CritiqueResult; lint: LintIssue[] } | null = null;
+  if ((spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0) {
+    checkDeadline(deps);
+    const alt = await deps.phase({ phase: "draft", round: 0, index: 50 }, `${spec.label}: draft B`, async () => {
+      const result = await deps.turn({
+        modelKey: spec.models.draft,
+        system,
+        messages: [{ role: "user", content: `${baseUser}\n\nANGLE FOR THIS VERSION: be bolder and more concrete than a cautious first pass. Size every idea to move the goal materially within the horizon (named audiences in the thousands, specific volumes per week, numbers that add up to the goal), while staying truthful and within budget.` }],
+        schema: spec.schema,
+        maxTokens: spec.maxTokens.draft,
+        effort: spec.effort.draft,
+      });
+      if (!result.ok) failure(result);
+      return { value: stripFactMarkers(result.output) as T, record: { phase: "draft", round: 0, modelKey: spec.models.draft, result } };
+    });
+    const lintA = lintOf(current);
+    const cA = await critique(0, current, lintA);
+    const lintB = lintOf(alt);
+    const cB = await critique(0, alt, lintB, true);
+    const aA = assess(cA, lintA, spec.rubric);
+    const aB = assess(cB, lintB, spec.rubric);
+    if (rank(aB) > rank(aA)) {
+      current = alt;
+      firstReview = { c: cB, lint: lintB };
+    } else firstReview = { c: cA, lint: lintA };
+  }
   let best: { output: T; assessment: Assessment | null; round: number } = { output: current, assessment: null, round: 0 };
   const history: AgentRunResult<T>["history"] = [];
   const reviews = spec.maxRevisions >= 0 ? spec.maxRevisions + 1 : 0;
   for (let round = 0; round < reviews; round++) {
-    // Numbers may trace to this job's research as well as the brief and facts.
-    const lint = spec.lint ? spec.lint(current, { ...input, untrustedContext: [input.untrustedContext ?? "", research?.notes ?? ""].join("\n") }) : [];
-    const c = await critique(round, current, lint);
+    const lint = round === 0 && firstReview ? firstReview.lint : lintOf(current);
+    const c = round === 0 && firstReview ? firstReview.c : await critique(round, current, lint);
     const a = assess(c, lint, spec.rubric);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: lint.filter((l) => l.severity === "error").length });
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };

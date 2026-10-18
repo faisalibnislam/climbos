@@ -110,6 +110,8 @@ const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)
 const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;
 
 /** Deterministic portfolio checks (growth-plays §3–4). */
+const CUSTOMER_UNIT = /customer|client|account|member|order|booking|job|sale|subscriber|patient|student|deal|sign-?up/i;
+
 export function lintPlays(plays: Play[]): LintIssue[] {
   const issues: LintIssue[] = [];
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
@@ -120,6 +122,11 @@ export function lintPlays(plays: Play[]): LintIssue[] {
   if (bankable[0] && bankable[0].s.predictability < 4) err("The bankable play needs predictability ≥ 4.");
   if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
   if (plays.filter((p) => p.kind === "moonshot").length > 1) err("At most one moonshot.");
+  // Ambition: the portfolio must credibly move the goal, not run a cautious measurement exercise.
+  const customerLike = plays.filter((p) => CUSTOMER_UNIT.test(p.unit));
+  const combined = customerLike.reduce((s, p) => s + p.p50, 0);
+  if (customerLike.length && combined < 1) err(`The plays add up to ${Math.round(combined * 10) / 10} ${customerLike[0].unit} at P50 — too small to move the goal. Add a bankable demand-generation play that reaches enough of the right people (with a weekly volume), or raise the volume of the existing ones.`);
+  else if (customerLike.length && combined < 3) issues.push({ severity: "warn", rule: "portfolio", message: `Combined P50 is only ${Math.round(combined * 10) / 10} ${customerLike[0].unit}; check the volumes are big enough to matter.`, path: "plays" });
   scored.forEach(({ p, s }, i) => {
     const path = `plays[${i}]`;
     if (p.scores.length !== 8) err("scores needs 8 numbers in order: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness.", `${path}.scores`);

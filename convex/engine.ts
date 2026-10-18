@@ -610,6 +610,14 @@ export const recoverStuckRuns = internalMutation({
   },
 });
 
+/** Save a run's quick first take (shown in the progress panel until the full result lands). */
+export const setRunPreview = internalMutation({
+  args: { runId: v.id("workflowRuns"), preview: v.string() },
+  handler: async (ctx, { runId, preview }) => {
+    await ctx.db.patch(runId, { preview: preview.slice(0, 4000) });
+  },
+});
+
 /** Background response id for a long model turn (so a resumed action polls it instead of paying again). */
 export const stepProviderRef = internalQuery({
   args: { stepId: v.id("workflowSteps") },

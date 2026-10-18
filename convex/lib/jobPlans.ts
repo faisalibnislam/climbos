@@ -5,7 +5,7 @@ import { MODEL_SPECS, runtimeModel } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
-import { CALL_ROUTES, routeModels, type AiMode } from "../../shared/agents/routes";
+import { CALL_ROUTES, draftsFor, routeModels, type AiMode } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -40,7 +40,8 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
   if (research) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.research, inputBudget: 80_000, outputBudget: spec.maxTokens.research, webSearches: research.maxSearches });
   }
-  for (let r = 0; r < rounds; r++) {
+  // Best-of-two agents write (and review) a second first draft.
+  for (let r = 0; r < rounds + ((spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0 ? 1 : 0); r++) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft });
     // maxRevisions < 0 means a single draft with no review.
     if (spec.maxRevisions >= 0) steps.push({ kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic });
@@ -56,17 +57,20 @@ export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
   ];
 }
 
+/** The fast "first take" step long jobs show while they work (Luna, small). */
+const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
+
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
   // Priced with the models this mode runs (Expert: Sol drafts the expert agents).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : s) as AgentSpec<unknown>;
+  const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
   const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode });
   const searches = (t: Parameters<typeof researchFor>[0]) => researchFor(t, { businessName: "", website: "" })?.maxSearches ?? 0;
   switch (kind) {
     case "onboarding_research": {
       const pages = Math.min(params.pages ?? 3, 3);
       const r = { maxSearches: searches("business_insights") };
-      return plan("Understand your business", ["data_analyst", "cmo"], ["business_profile", "business_insights"], [{ kind: "research", scrapeCredits: pages }, modelStep("business_profile"), ...agentSteps(any(insightsSpec()), r)], {
+      return plan("Understand your business", ["data_analyst", "cmo"], ["business_profile", "business_insights"], [{ kind: "research", scrapeCredits: pages }, modelStep("business_profile"), QUICK_TAKE, ...agentSteps(any(insightsSpec()), r)], {
         scrapeCredits: pages,
         searchCalls: r.maxSearches,
       });
@@ -74,7 +78,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "strategy": {
       const r = { maxSearches: searches("growth_strategy") };
       const fit = channelFitSpec({ candidateIds: [], typeKeys: [], dims: {} });
-      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
+      return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [QUICK_TAKE, ...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec()))], { searchCalls: r.maxSearches });
     }
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));

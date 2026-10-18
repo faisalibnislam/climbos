@@ -35,6 +35,13 @@ export function routeModels(id: string, mode: AiMode = "basic"): PhaseModels {
   return { research: LUNA, draft: sol ? SOL : LUNA, critic: LUNA, revise: sol ? SOL : LUNA };
 }
 
+/** Basic strategy work: Luna writes two first drafts and the reviewer keeps the stronger (still far cheaper than Sol). */
+const BEST_OF_TWO: ReadonlySet<string> = new Set(["business_insights", "growth_plays", "growth_strategy"]);
+
+export function draftsFor(id: string, mode: AiMode = "basic"): number {
+  return mode === "basic" && BEST_OF_TWO.has(id) ? 2 : 1;
+}
+
 /** Single-call tasks outside the agent loop. */
 export const CALL_ROUTES = {
   /** Understanding a wish. */

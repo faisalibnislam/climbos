@@ -57,6 +57,8 @@ describe("Engine v2 wiring", () => {
     expect(d.run?.status).toBe("verified");
     const labels = d.steps.map((s) => s.label);
     expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft", "Growth plan: review 1"]));
+    // Climb AI Basic writes a second version of each strategy agent's draft and keeps the better one.
+    expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft B", "Growth plan: review B", "Growth plays: draft B"]));
     expect(labels.some((l) => l.includes("revision"))).toBe(false); // shipped first time
     expect(d.steps.every((s) => s.status === "succeeded")).toBe(true);
     expect(d.usage.length).toBeGreaterThanOrEqual(2);

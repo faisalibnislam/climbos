@@ -1189,6 +1189,8 @@ export default defineSchema({
     finishedAt: v.optional(v.number()),
     /** Climb AI Basic (Luna) or Expert (Sol drafts; paid only). Absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
+    preview: v.optional(v.string()),
     /** The job action and args that continue this run from its checkpoints. */
     resumeWith: v.optional(v.object({ fn: v.string(), args: v.string() })),
     /** Automatic resumes after an interrupted action (reset by an owner retry). */

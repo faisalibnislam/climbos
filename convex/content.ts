@@ -456,6 +456,14 @@ export const runStatus = query({
       isFixture: run.isFixture,
       createdAt: run.createdAt,
       finishedAt: run.finishedAt ?? null,
+      /** Quick first take while the full job works. */
+      preview: (() => {
+        try {
+          return run.preview ? (JSON.parse(run.preview) as { headline: string; points: string[] }) : null;
+        } catch {
+          return null;
+        }
+      })(),
       /** A stopped run can continue from its last finished step. */
       canRetry: run.status === "failed" && Boolean(run.resumeWith) && (run.retries ?? 0) < MAX_RETRIES && !steps.some((s) => s.status === "uncertain"),
       planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website") }),

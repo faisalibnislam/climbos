@@ -56,6 +56,8 @@ export interface AgentSpec<T> {
   maxTokens: { research: number; draft: number; critic: number };
   /** Revise rounds after the first critique (0 disables critique-driven revision). */
   maxRevisions: number;
+  /** Write this many first drafts (different angles) and keep the one the reviewer rates higher. Default 1. */
+  drafts?: number;
   /** What must pass to stop revising: hard gates + lint only ("gates", lean) or the full rubric ("rubric", default). */
   shipOn?: "gates" | "rubric";
 }

@@ -32,8 +32,8 @@ export function phaseOf(label: string): Phase {
   if (/understand the business/.test(l)) return "profile";
   if (/: research$/.test(l)) return "research";
   if (/: revision \d+$/.test(l)) return "revise";
-  if (/: review \d+$/.test(l)) return "review";
-  if (/: draft$/.test(l)) return "draft";
+  if (/: review (\d+|b)$/.test(l)) return "review";
+  if (/: draft( b)?$/.test(l)) return "draft";
   return "other";
 }
 

@@ -70,9 +70,9 @@ function phaseName(label: string): string {
   const ph = phaseOf(label);
   const round = label.match(/(\d+)$/)?.[1];
   if (ph === "research") return "Researching the web";
-  if (ph === "draft") return "Writing";
+  if (ph === "draft") return /draft B$/.test(label) ? "Writing a second version" : "Writing";
   if (ph === "revise") return `Improving after review${round && round !== "1" ? ` (round ${round})` : ""}`;
-  if (ph === "review") return round && round !== "1" ? `Expert review (round ${round})` : "Expert review";
+  if (ph === "review") return /review B$/.test(label) ? "Reviewing the second version" : round && round !== "1" ? `Expert review (round ${round})` : "Expert review";
   return label;
 }
 
@@ -84,6 +84,7 @@ const AGENT_WHO: Record<string, string> = {
   "Growth plays": "AI CMO: choosing growth plays",
   "Growth plan": "AI CEO: the 90-day plan",
   "Find customers": "AI Sales: finding companies that need you",
+  "First take": "AI CEO: a quick first take",
   "Write the emails": "AI Sales: writing the emails",
 };
 
@@ -200,6 +201,17 @@ export function RunProgress({
             <span className="tabular-nums text-ink-3">{formatDuration(progress.elapsedSeconds)} {finished ? "total" : "elapsed"}</span>
           </div>
         </div>
+      ) : null}
+      {run.preview && !finished ? (
+        <section aria-label="First take" className="rounded-lg border border-brand-200 bg-brand-50/60 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">First take · the full version is on its way</p>
+          <p className="mt-1 text-sm font-medium text-ink">{run.preview.headline}</p>
+          <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
+            {run.preview.points.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       {groups.length ? (
         <ol className="flex flex-col gap-4">
