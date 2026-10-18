@@ -1,5 +1,6 @@
 "use node";
 
+import { checkProspects } from "./ai/prospectCheck";
 import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
@@ -927,6 +928,37 @@ export const planSocialWeek = internalAction({
   },
 });
 
+/** Check each prospect's website and published emails; checkpointed and metered as page reads. */
+async function verifyProspects(ctx: ActionCtx, job: JobCtx, found: ProspectsOutput): Promise<ProspectsOutput> {
+  if (process.env.CLIMBOS_FAKE_LLM) return found; // tests never fetch real sites
+  const step = await begin(ctx, job.run._id, 300, "research", "Check websites and emails", "cso");
+  if (step.checkpoint !== undefined) return step.checkpoint as ProspectsOutput;
+  const checks = await checkProspects(found.prospects.map((p) => p.website), 150_000);
+  const now = Date.now();
+  const prospects = found.prospects
+    .map((p) => {
+      const c = checks.get(p.website);
+      if (!c) return p; // not checked in time: keep as found
+      const best = c.mxOk === false ? undefined : c.emails[0];
+      return {
+        ...p,
+        publicEmail: best?.email ?? (p.publicEmail && c.emails.some((e) => e.email === p.publicEmail.toLowerCase()) ? p.publicEmail : ""),
+        check: { siteLive: c.live, emailSource: best?.url, emailKind: best?.kind, mxOk: c.mxOk ?? undefined, checkedAt: now },
+      };
+    })
+    .filter((p) => (p as { check?: { siteLive: boolean } }).check?.siteLive !== false);
+  const pages = [...checks.values()].reduce((s, c) => s + c.pagesFetched, 0);
+  if (pages > 0) {
+    await ctx.runMutation(internal.engine.recordUsage, {
+      stepId: step.stepId!,
+      records: [{ type: "scrape_credit", provider: "climbos", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pages, costMicros: 0, estimated: false }],
+    });
+  }
+  const out = { ...found, prospects };
+  await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(out) });
+  return out;
+}
+
 /** Outbound: find evidenced prospects, then write the sequence and openers. Nothing is sent. */
 export const findCustomers = internalAction({
   args: { runId: v.id("workflowRuns"), campaignId: v.id("outboundCampaigns"), cardId: v.optional(v.id("actionCards")) },
@@ -963,6 +995,8 @@ export const findCustomers = internalAction({
             startedAt,
             { task: "sales_sequence", text: "", context: "", ctx: fixtureCtx(job) },
           );
+          // Our own checks (no data vendor): drop companies whose site isn't live; attach emails each site publishes.
+          found = await verifyProspects(ctx, job, found);
           outreach = await runAgentTask<OutreachOutput>(
             ctx,
             job,

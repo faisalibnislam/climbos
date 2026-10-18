@@ -14,6 +14,7 @@ import type * as admin from "../admin.js";
 import type * as ads from "../ads.js";
 import type * as agentTokens from "../agentTokens.js";
 import type * as ai_fixtures from "../ai/fixtures.js";
+import type * as ai_prospectCheck from "../ai/prospectCheck.js";
 import type * as ai_providers from "../ai/providers.js";
 import type * as ai_research from "../ai/research.js";
 import type * as analytics from "../analytics.js";
@@ -82,6 +83,7 @@ declare const fullApi: ApiFromModules<{
   ads: typeof ads;
   agentTokens: typeof agentTokens;
   "ai/fixtures": typeof ai_fixtures;
+  "ai/prospectCheck": typeof ai_prospectCheck;
   "ai/providers": typeof ai_providers;
   "ai/research": typeof ai_research;
   analytics: typeof analytics;

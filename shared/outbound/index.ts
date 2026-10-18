@@ -171,3 +171,41 @@ export function fixtureOutbound(p: { businessName: string; who: string; where: s
     },
   };
 }
+
+/* ---------------- published emails (our own finder: only what a site publishes) ---------------- */
+
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24}/gi;
+const NEVER = /^(no-?reply|donotreply|privacy|legal|abuse|postmaster|hostmaster|webmaster|dmarc|bounce|mailer-daemon|jobs|careers|recruit|hr|unsubscribe|gdpr|dpo)\b/i;
+const ROLE = /^(hello|hi|contact|info|team|sales|partners|partnerships|business|enquiries|inquiries|office|founders?|ceo)\b/i;
+const SUPPORT = /^(support|help|care|service|billing)\b/i;
+
+export interface FoundEmail {
+  email: string;
+  url: string;
+  kind: "person" | "role" | "support";
+}
+
+/**
+ * Emails a prospect publishes on its own pages (never guessed). Same-domain
+ * only, junk and do-not-contact boxes dropped, ranked person > role > support.
+ */
+export function publishedEmails(pages: { url: string; text: string }[], domain: string): FoundEmail[] {
+  const base = domain.replace(/^www\./, "").toLowerCase();
+  const seen = new Map<string, FoundEmail>();
+  for (const p of pages) {
+    const decoded = p.text.replace(/\s*\[at\]\s*|\s*\(at\)\s*/gi, "@").replace(/\s*\[dot\]\s*|\s*\(dot\)\s*/gi, ".");
+    for (const raw of decoded.match(EMAIL_RE) ?? []) {
+      const email = raw.toLowerCase().replace(/^mailto:/, "").replace(/[.,;:]+$/, "");
+      const [local, host] = email.split("@");
+      if (!local || !host) continue;
+      if (!(host === base || host.endsWith(`.${base}`))) continue;
+      if (/\.(png|jpe?g|gif|svg|webp)$/.test(email) || NEVER.test(local)) continue;
+      if (!seen.has(email)) seen.set(email, { email, url: p.url, kind: ROLE.test(local) ? "role" : SUPPORT.test(local) ? "support" : "person" });
+    }
+  }
+  const rank = { person: 0, role: 1, support: 2 } as const;
+  return [...seen.values()].sort((a, b) => rank[a.kind] - rank[b.kind]);
+}
+
+/** Same-site pages likely to list contact details. */
+export const CONTACT_PATH = /(contact|about|team|people|company|imprint|impressum|leadership|founders?)/i;

@@ -116,6 +116,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 }))), {});
     case "outbound": {
       const r = { maxSearches: searches("prospecting") };
+      // Our own website and email checks (up to 3 pages per prospect) use our fetcher: counted, not charged.
       return plan("Find customers and write the emails", ["cso"], [], [...agentSteps(any(prospectingSpec()), r), ...agentSteps(any(outreachSpec()))], { searchCalls: r.maxSearches });
     }
     default:

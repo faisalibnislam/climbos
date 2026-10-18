@@ -600,6 +600,8 @@ export default defineSchema({
     contact: v.string(),
     /** Only an address published verbatim on the prospect's own site. */
     publicEmail: v.optional(v.string()),
+    /** Our checks: the site is live, where the email was published, and the domain receives mail. */
+    check: v.optional(v.object({ siteLive: v.boolean(), emailSource: v.optional(v.string()), emailKind: v.optional(v.string()), mxOk: v.optional(v.boolean()), checkedAt: v.number() })),
     firstLine: v.string(),
     stage: v.union(
       v.literal("suggested"),

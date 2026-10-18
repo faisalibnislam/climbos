@@ -439,6 +439,13 @@ function ProspectDetail({ slug, p, canEdit }: { slug: string; p: Prospect; canEd
           </>
         ) : null}
       </p>
+      {p.check ? (
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
+          <span>{p.check.siteLive ? "✓ Website live" : "Website didn't load"}</span>
+          {p.check.emailSource ? <span>✓ Email found on {new URL(p.check.emailSource).pathname === "/" ? "their homepage" : new URL(p.check.emailSource).pathname}</span> : <span>No email published</span>}
+          {p.check.mxOk === true ? <span>✓ Domain receives email</span> : p.check.mxOk === false ? <span>Domain can&apos;t receive email</span> : null}
+        </p>
+      ) : null}
       <Field label="First line">
         <Textarea value={line} onChange={(e) => setLine(e.target.value)} rows={2} disabled={!canEdit} maxLength={400} />
       </Field>
