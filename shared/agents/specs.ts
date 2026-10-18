@@ -407,6 +407,10 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
         const issues = lintGeneric(out, input);
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
+        // Owner-ready: a number to aim at, and a summary that says what to expect.
+        if (!/\d/.test(out.northStar?.target ?? "")) issues.push({ severity: "error", rule: "ambition", message: "The North Star target needs a number and a date (e.g. \"20 new paying customers by day 90\"). Use the plays' P50; say it's an estimate.", path: "northStar.target" });
+        if (!/\d/.test(out.summary ?? "")) issues.push({ severity: "warn", rule: "ambition", message: "The summary should say what to expect in numbers (the plays' combined P50 over 90 days).", path: "summary" });
+        if (/not a forecast|do not scale until|until (actual|verified) (cac|economics)/i.test(out.summary ?? "")) issues.push({ severity: "warn", rule: "ambition", message: "The summary reads as a validation exercise. Lead with the expected outcome and the engine; keep caveats in kill rules.", path: "summary" });
         return issues;
       },
     },
