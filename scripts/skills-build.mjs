@@ -1,7 +1,6 @@
 // Compiles skills/<id>/{SKILL.md, examples.md, rubric.md, reference/*.md} into
 // shared/skills/generated.ts so agents can load playbooks inline (cached
 // system blocks). Run after editing any skill: pnpm skills:build
-// The same folders are published to the Anthropic Skills API by skills-publish.mjs.
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

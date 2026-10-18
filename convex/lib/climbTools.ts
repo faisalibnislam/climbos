@@ -390,8 +390,8 @@ export function toolByName(name: string) {
   return CLIMB_TOOLS.find((t) => t.name === name);
 }
 
-/** Anthropic tool definitions (optionally without UI tools, e.g. for MCP). */
-export function anthropicTools(opts: { ui: boolean }) {
+/** Client tool definitions for the model (optionally without UI tools, e.g. for MCP). */
+export function climbToolDefs(opts: { ui: boolean }) {
   return CLIMB_TOOLS.filter((t) => opts.ui || t.risk !== "ui").map((t) => {
     const schema = z.toJSONSchema(t.input) as Record<string, unknown>;
     delete schema.$schema;

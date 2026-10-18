@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { Effort } from "../ai/claude";
+import type { Effort } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
 import type { RoleKey } from "../economics/roles";
 

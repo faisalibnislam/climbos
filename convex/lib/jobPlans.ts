@@ -1,11 +1,11 @@
 import { CURRENT_ROUTING, currentRateVersion } from "../../shared/economics";
 import type { PartialMeters } from "../../shared/economics/ledger";
 import type { RoleKey } from "../../shared/economics/roles";
-import { MODEL_SPECS } from "../../shared/ai/models";
+import { MODEL_SPECS, runtimeModel } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
-import { CALL_ROUTES } from "../../shared/agents/routes";
+import { CALL_ROUTES, routeModels, type AiMode } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -56,10 +56,11 @@ export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
   ];
 }
 
-function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }): JobPlan | null {
+function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
+  // Priced with the models this mode runs (Expert: Sol drafts the expert agents).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const any = (s: AgentSpec<any>) => s as AgentSpec<unknown>;
-  const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters });
+  const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : s) as AgentSpec<unknown>;
+  const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode });
   const searches = (t: Parameters<typeof researchFor>[0]) => researchFor(t, { businessName: "", website: "" })?.maxSearches ?? 0;
   switch (kind) {
     case "onboarding_research": {
@@ -146,12 +147,14 @@ export interface JobPlan {
   tasks: TaskType[];
   steps: PlannedStep[];
   meters: PartialMeters;
+  /** Climb AI mode the plan was priced for. */
+  aiMode: AiMode;
 }
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   const contract = TASKS[task];
-  const modelKey = (task === "chat_intent" ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? CURRENT_ROUTING.routes[contract.role].primary;
-  const searches = MODEL_SPECS[modelKey].provider === "anthropic" ? webSearches : 0;
+  const modelKey = (task === "chat_intent" ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? runtimeModel(CURRENT_ROUTING.routes[contract.role].primary);
+  const searches = MODEL_SPECS[modelKey].provider === "openai" ? webSearches : 0;
   return {
     kind: "model",
     role: contract.role,
@@ -162,12 +165,16 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   };
 }
 
-export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string } = {}, opts: { fixture?: boolean } = {}): JobPlan {
+export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
   // The weekly planner exists only as an agent: real workspaces always get it.
   if ((engineV2() || kind === "social_calendar" || kind === "outbound") && !opts.fixture) {
-    const v2 = v2Plan(kind, params);
+    const v2 = v2Plan(kind, params, opts.mode ?? "basic");
     if (v2) return v2;
   }
+  return { ...v1Plan(kind, params), aiMode: "basic" };
+}
+
+function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }): Omit<JobPlan, "aiMode"> {
   switch (kind) {
     case "onboarding_research": {
       const pages = Math.min(params.pages ?? 3, 3);

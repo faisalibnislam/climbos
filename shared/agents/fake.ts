@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { claudeCostMicros, ZERO_CLAUDE_USAGE, type ClaudeTurnRequest, type ClaudeTurnResult } from "../ai/claude";
+import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
 import type { RateVersion } from "../economics/rates";
 
 /**
@@ -50,10 +50,10 @@ function rubricIds(system: string): { gates: string[]; criteria: string[] } {
   };
 }
 
-export async function fakeTurn(req: ClaudeTurnRequest, rates: RateVersion): Promise<ClaudeTurnResult> {
+export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<TurnResult> {
   const mode = process.env.CLIMBOS_FAKE_LLM ?? "ship";
-  const usage = { ...ZERO_CLAUDE_USAGE, inputTokens: 1000, outputTokens: 500, calls: 1, webSearches: req.webSearch ? 1 : 0 };
-  const costMicros = claudeCostMicros(req.modelKey, usage, rates);
+  const usage = { ...ZERO_USAGE, inputTokens: 1000, outputTokens: 500, calls: 1, webSearches: req.webSearch ? 1 : 0 };
+  const costMicros = turnCostMicros(req.modelKey, usage, rates);
   if (mode === "fail") return { ok: false, kind: "provider_error", message: "Fake provider error", usage, costMicros, appended: [] };
 
   const system = req.system.map((b) => b.text).join("\n");

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { expertUnlocked, resolveAiMode } from "./lib/aiMode";
 import {
   AUTOPILOT_CHANNELS,
   DEFAULT_HOURS,
@@ -107,6 +108,7 @@ export const get = query({
             postingHours: settings.postingHours,
             alwaysAskTopics: settings.alwaysAskTopics,
             imagesPerWeek: settings.imagesPerWeek,
+            aiMode: settings.aiMode ?? null,
             pausedReason: settings.pausedReason ?? null,
             lastPlannedWeek: settings.lastPlannedWeek ?? null,
           }
@@ -128,9 +130,11 @@ export const save = mutation({
     postingHours: v.array(v.number()),
     alwaysAskTopics: v.array(v.string()),
     imagesPerWeek: v.number(),
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
+    if (args.aiMode === "expert" && !(await expertUnlocked(ctx, org))) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
     const channels = args.channels
       .filter((c) => (AUTOPILOT_CHANNELS as readonly string[]).includes(c.channel))
       .map((c) => ({ channel: c.channel, postsPerWeek: Math.min(MAX_PER_CHANNEL, clampCadence(c.postsPerWeek)) }))
@@ -144,6 +148,7 @@ export const save = mutation({
       postingHours: [...new Set(args.postingHours.map((h) => Math.round(h)).filter((h) => h >= 0 && h <= 23))].sort((a, b) => a - b).slice(0, 4),
       alwaysAskTopics: args.alwaysAskTopics.map((t) => t.trim().slice(0, 60)).filter(Boolean).slice(0, 20),
       imagesPerWeek: Math.max(0, Math.min(2, Math.round(args.imagesPerWeek))),
+      ...(args.aiMode ? { aiMode: args.aiMode } : {}),
       updatedBy: user._id,
       updatedAt: Date.now(),
       pausedReason: undefined,
@@ -229,7 +234,10 @@ async function startPlanning(
   const weekOf = opts.weekOf ?? (useThisWeek ? thisWeek : nextWeekOf(now, org.timezone));
   const fromDay = weekOf === thisWeek ? Math.min(7, today.weekday + 1) : 1;
   if (!opts.force && settings.lastPlannedWeek === weekOf) return null;
-  const plan = planJob("social_calendar", {}, { fixture: org.kind === "demo" });
+  // Autopilot runs unattended: its saved mode (Expert only while paid), else the workspace default.
+  const saved = settings.aiMode === "expert" && !(await expertUnlocked(ctx, org)) ? "basic" : settings.aiMode;
+  const aiMode = await resolveAiMode(ctx, org, "social_calendar", saved);
+  const plan = planJob("social_calendar", {}, { fixture: org.kind === "demo", mode: aiMode });
   let runId: Id<"workflowRuns">;
   try {
     runId = await createRunWithReservation(ctx, {
@@ -242,6 +250,7 @@ async function startPlanning(
       meters: plan.meters,
       createdBy,
       isFixture: org.kind === "demo",
+      aiMode,
     });
   } catch (e) {
     const message = (e as { data?: { message?: string } }).data?.message ?? "Autopilot couldn't start planning.";

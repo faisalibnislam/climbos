@@ -1,5 +1,6 @@
 "use client";
 
+import { RoleExplainer } from "@/components/app/RoleExplainer";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -89,11 +90,9 @@ export default function WorkPage() {
             <CardHeader>
               <CardTitle as="h2">Who worked on it</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2 pt-3">
+            <CardContent className="flex flex-col gap-1 pt-3">
               {run.roles.map((r) => (
-                <span key={r} className="flex items-center gap-2 text-ui text-ink-2">
-                  <RoleAvatar role={r} size="xs" /> {roleTitle(r)}
-                </span>
+                <RoleExplainer key={r} role={r} />
               ))}
             </CardContent>
           </Card>

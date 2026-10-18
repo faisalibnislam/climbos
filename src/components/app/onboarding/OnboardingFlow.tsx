@@ -32,7 +32,8 @@ import { errorInfo, errorMessage } from "../errors";
 import { ROLE_META } from "../roles";
 import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
-import { RunProgress } from "../content/RunProgress";
+import { RetryRunIfPossible, RunProgress } from "../content/RunProgress";
+import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
 
 
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
@@ -373,6 +374,10 @@ function BusinessStep({
           </CardContent>
         </Card>
       )}
+      {/* New workspaces start free: Basic runs everything; Expert unlocks with a paid plan. */}
+      <div className="mt-6">
+        <AiModeChoice unlocked={false} value="basic" onChange={() => undefined} label="Your team" />
+      </div>
       <p className="mt-6 text-sm text-ink-3">
         Want to look around first? <Link href="/demo" className={buttonClasses({ variant: "link" })}>Open the Formkit demo</Link>
       </p>
@@ -457,6 +462,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
           <Callout tone="warning" className="mt-4" title="Our AI team is temporarily unavailable">
             Nothing was lost, and you weren’t charged for work that didn’t happen. Try again in a moment, or add the key facts yourself now and refresh the research later.
           </Callout>
+          {research ? <RetryRunIfPossible slug={slug} runId={research.id} className="mt-4" /> : null}
           <div className="mt-6 flex flex-wrap gap-3">
             <Button
               loading={busy}
@@ -481,6 +487,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
       ) : (
         <>
           <Callout tone="warning" className="mt-4">{research?.userMessage ?? "We couldn’t finish reading your website."}</Callout>
+          {research ? <RetryRunIfPossible slug={slug} runId={research.id} className="mt-4" /> : null}
           <Card className="mt-6">
             <CardContent className="space-y-4">
               <Field label="Describe your business in a few sentences" hint="What you sell, who buys it, prices if you’re happy to share, and what makes you different. We’ll label these facts as supplied by you.">
@@ -866,20 +873,35 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
   const running = run && ["cost_reserved", "preparing", "executing"].includes(run.status);
   const ready = state.strategy && (state.strategy.status === "needs_approval" || state.strategy.status === "approved");
 
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current || state.strategy || state.strategyRun || !state.canRunAi) return;
-    started.current = true;
+  const ai = useAiMode(slug);
+  const start = async () => {
     setBusy(true);
-    generate({ slug })
-      .catch((e) => setError(errorMessage(e)))
-      .finally(() => setBusy(false));
-  }, [state.strategy, state.strategyRun, generate, slug, state.canRunAi]);
+    setError(null);
+    try {
+      await generate({ slug, aiMode: ai.mode });
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const choosing = !state.strategy && !state.strategyRun && state.canRunAi;
 
   return (
     <div>
-      <h1 className="heading-page">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : "Building your growth plan…"}</h1>
+      <h1 className="heading-page">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : choosing && !busy ? "Build your growth plan" : "Building your growth plan…"}</h1>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
+      {choosing && !busy ? (
+        <Card className="mt-6">
+          <CardContent className="flex flex-col gap-5">
+            <p className="text-sm text-ink-3">Your CMO ranks channels and picks growth plays; your CEO turns them into a 90-day plan. You review it before anything starts.</p>
+            <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+            <Button size="lg" className="self-start" onClick={start}>
+              <Sparkles aria-hidden /> Build my plan
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       {!state.canRunAi && !ready && state.accessMessage && (
         <Callout tone="warning" className="mt-4" title="Your free starter allowance is used up">
           {state.accessMessage}
@@ -908,7 +930,8 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
         <Callout tone="danger" className="mt-6" title="The plan didn't finish">
           {run.userMessage ?? "Something went wrong."}
           <div className="mt-3 flex flex-wrap gap-3">
-            <Button onClick={() => generate({ slug }).catch((e) => setError(errorMessage(e)))}>Try again</Button>
+            {run.id ? <RetryRunIfPossible slug={slug} runId={run.id} /> : null}
+            <Button variant="secondary" onClick={() => generate({ slug, aiMode: ai.mode }).catch((e) => setError(errorMessage(e)))}>Start over</Button>
             <Button
               variant="secondary"
               onClick={async () => {

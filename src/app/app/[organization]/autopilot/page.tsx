@@ -1,5 +1,6 @@
 "use client";
 
+import { AiModePicker, useAiMode, type AiMode } from "@/components/app/AiModePicker";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -153,6 +154,9 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
   const [topics, setTopics] = useState((s?.alwaysAskTopics ?? []).join(", "));
   const [images, setImages] = useState(s?.imagesPerWeek ?? 1);
   const [enabled, setEnabled] = useState(s ? s.enabled : true);
+  const ai = useAiMode(slug);
+  const [planMode, setPlanMode] = useState<AiMode | null>((s?.aiMode as AiMode | null) ?? null);
+  const effectiveMode: AiMode = ai.data?.expertUnlocked ? (planMode ?? ai.mode) : "basic";
   const [busy, setBusy] = useState(false);
   const total = Object.values(cadence).reduce((a, b) => a + b, 0);
 
@@ -170,6 +174,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
           .map((t) => t.trim())
           .filter(Boolean),
         imagesPerWeek: images,
+        aiMode: effectiveMode,
       });
       toast({ tone: "success", title: enabled ? (s?.enabled ? "Autopilot updated" : "Autopilot is on") : "Autopilot is off", description: enabled && !s?.enabled ? "Your team is planning the first week now." : undefined });
       onDone();
@@ -187,6 +192,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
         <CardDescription>Choose how much your team may do on its own. You can change this any time, and Pause stops everything at once.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        <AiModePicker slug={slug} kind="social_calendar" value={effectiveMode} onChange={setPlanMode} label="Who plans each week?" />
         <fieldset className="flex flex-col gap-2">
           <legend className="text-ui font-medium text-ink">How should posts go out?</legend>
           <RadioCards

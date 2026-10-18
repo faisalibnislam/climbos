@@ -1,6 +1,5 @@
 import { z } from "zod";
-import type Anthropic from "@anthropic-ai/sdk";
-import type { ClaudeTurnRequest, ClaudeTurnResult, SystemBlock } from "../ai/claude";
+import type { MessageParam, SystemBlock, TurnRequest, TurnResult } from "../ai/types";
 import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
@@ -34,11 +33,11 @@ export interface PhaseRecord {
   phase: "research" | "draft" | "critique" | "revise";
   round: number;
   modelKey: ModelKey;
-  result: ClaudeTurnResult;
+  result: TurnResult;
 }
 
 export interface AgentDeps {
-  turn: (req: ClaudeTurnRequest) => Promise<ClaudeTurnResult>;
+  turn: (req: TurnRequest) => Promise<TurnResult>;
   /**
    * Checkpointed execution of one phase. Must return the saved value when the
    * phase already ran (resume), otherwise run `fn`, persist its value, meter
@@ -159,7 +158,7 @@ function inputBlock(input: AgentInput, researchNotes: string | null): string {
     .join("\n\n");
 }
 
-function failure(result: ClaudeTurnResult): never {
+function failure(result: TurnResult): never {
   if (result.ok) throw new Error("unreachable");
   throw new AgentFailure(result.kind, result.message);
 }
@@ -176,7 +175,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     checkDeadline(deps);
     const r = input.research;
     research = await deps.phase({ phase: "research", round: 0, index: 0 }, `${spec.label}: research`, async () => {
-      const req: ClaudeTurnRequest = {
+      const req: TurnRequest = {
         modelKey: spec.models.research,
         system: [
           { text: OPERATING_RULES },
@@ -195,7 +194,6 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         effort: spec.effort.research,
         webSearch: { maxUses: r.maxSearches, allowedDomains: r.allowedDomains, userLocation: r.userLocation },
         webFetch: r.maxFetches > 0 ? { maxUses: r.maxFetches } : undefined,
-        maxContinuations: 6,
       };
       const result = await deps.turn(req);
       if (!result.ok) failure(result);
@@ -208,13 +206,13 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
 
   const system = draftSystem(spec);
   const baseUser = `${inputBlock(input, research?.notes ?? null)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
-  const baseMessages: Anthropic.MessageParam[] = [{ role: "user", content: baseUser }];
+  const baseMessages: MessageParam[] = [{ role: "user", content: baseUser }];
 
   const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[] } | null): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     return deps.phase(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
-      const messages: Anthropic.MessageParam[] = feedback
+      const messages: MessageParam[] = feedback
         ? [
             ...baseMessages,
             { role: "assistant", content: JSON.stringify(feedback.previous) },

@@ -1,4 +1,4 @@
-import type { ModelKey } from "./rates";
+import type { RateModelKey } from "./rates";
 
 /**
  * The ten coordinated ClimbOS roles and their Growth-base monthly design
@@ -130,9 +130,9 @@ export function getRoleBudget(key: RoleKey): RoleBudget {
 }
 
 export interface RoleRoute {
-  primary: ModelKey;
+  primary: RateModelKey;
   /** Fallback route. Requires a fresh cost reservation before use. */
-  fallback: ModelKey;
+  fallback: RateModelKey;
 }
 
 export interface RoutingVersion {
@@ -188,9 +188,38 @@ export const ROUTING_CLIMBOS_2026_10_17: RoutingVersion = Object.freeze<RoutingV
   ],
 });
 
+/**
+ * Production routing from 18 Oct 2026 (owner decision): Anthropic dropped.
+ * Luna does nearly everything (Climb AI Basic); Sol writes drafts for the
+ * strategy roles in Climb AI Expert (paid). No fallback model: an OpenAI
+ * outage pauses jobs, which resume from their checkpoints. The fallback
+ * column prices the Expert route so the margin guard covers the worst case.
+ */
+export const ROUTING_OPENAI_2026_10_18: RoutingVersion = Object.freeze<RoutingVersion>({
+  id: "routing-openai-2026-10-18",
+  label: "ClimbOS production routing (Luna + Sol)",
+  routes: {
+    ceo: { primary: "gpt-6-luna", fallback: "gpt-6.1-sol" },
+    coo: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+    cmo: { primary: "gpt-6-luna", fallback: "gpt-6.1-sol" },
+    cso: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+    creative_director: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+    social_media_manager: { primary: "gpt-6-luna", fallback: "gpt-6.1-sol" },
+    ads_manager: { primary: "gpt-6-luna", fallback: "gpt-6.1-sol" },
+    seo_specialist: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+    data_analyst: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+    customer_success_manager: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
+  },
+  notes: [
+    "Anthropic is not used. Basic: Luna for every phase. Expert (paid): Sol drafts the growth plan, insights, ads and weekly autopilot plan; Luna researches and reviews.",
+    "No fallback model: when OpenAI is unavailable, jobs pause and resume from checkpoints.",
+  ],
+});
+
 export const ROUTING_VERSIONS: readonly RoutingVersion[] = [
   ROUTING_RESEARCH_2026_10_17,
   ROUTING_CLIMBOS_2026_10_17,
+  ROUTING_OPENAI_2026_10_18,
 ];
 
 export function getRoutingVersion(id: string): RoutingVersion {
@@ -199,4 +228,4 @@ export function getRoutingVersion(id: string): RoutingVersion {
   return v;
 }
 
-export const CURRENT_ROUTING = ROUTING_CLIMBOS_2026_10_17;
+export const CURRENT_ROUTING = ROUTING_OPENAI_2026_10_18;

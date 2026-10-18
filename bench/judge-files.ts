@@ -8,7 +8,8 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
-import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
+import { modelTurn } from "../shared/ai/turn";
+import type { TurnRequest, TurnResult } from "../shared/ai/types";
 import { currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 
@@ -35,7 +36,7 @@ const PAIRS: [string, string][] = [
   ["climbos", "sol"],
   ["sol", "luna"],
 ];
-const JUDGES: Record<string, ModelKey> = { opus: "claude-opus-5.5", sonnet: "claude-sonnet-5.5" };
+const JUDGES: Record<string, ModelKey> = { sol: "gpt-6.1-sol" };
 
 /** Strip source-revealing lines (titles, cost/score lines, model notes). */
 function load(path: string): string {
@@ -78,14 +79,14 @@ const SCORE_SYSTEM = `You are a strict senior marketing expert. Score one piece 
 Ignore formatting style.`;
 
 let spent = 0;
-async function turn(req: ClaudeTurnRequest): Promise<ClaudeTurnResult> {
+async function turn(req: TurnRequest): Promise<TurnResult> {
   for (let i = 0; i < 4; i++) {
-    const r = await claudeTurn(req, rates);
+    const r = await modelTurn(req, rates);
     spent += r.costMicros;
     if (r.ok || !["rate_limited", "timeout", "provider_error"].includes(r.kind)) return r;
     await new Promise((res) => setTimeout(res, 4000 * (i + 1)));
   }
-  return claudeTurn(req, rates);
+  return modelTurn(req, rates);
 }
 
 async function judgeOnce(judge: string, focus: string, a: string, b: string) {
@@ -110,7 +111,7 @@ async function pairwise(judge: string, focus: string, x: string, y: string) {
 
 async function score(focus: string, work: string) {
   const r = await turn({
-    modelKey: "claude-opus-5.5",
+    modelKey: "gpt-6.1-sol",
     system: [{ text: SCORE_SYSTEM, cache: true }],
     messages: [{ role: "user", content: `THE OWNER'S BUSINESS:\n${BRIEF}\n\nTHE JOB: ${focus}.\n\nTHE WORK:\n${work.slice(0, 45_000)}` }],
     schema: ScoreSchema,

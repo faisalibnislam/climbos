@@ -1,9 +1,10 @@
 "use node";
 
+import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
-import { estimateTokens, MODEL_SPECS, worstCaseStepMicros } from "../shared/ai/models";
+import { estimateTokens, MODEL_SPECS, runtimeModel, worstCaseStepMicros } from "../shared/ai/models";
 import {
   type AdDraftsOutput,
   type BusinessInsights,
@@ -30,9 +31,9 @@ import { researchWebsite } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
-import { type ClaudeTurnResult } from "../shared/ai/claude";
+import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
-import { CALL_ROUTES } from "../shared/agents/routes";
+import { CALL_ROUTES, routeModels } from "../shared/agents/routes";
 import {
   adsSpec,
   conversionAuditSpec,
@@ -173,11 +174,10 @@ async function runModelTask<T>(
 
   const rates = getRateVersion(run.rateVersionId);
   const roleRoute = CURRENT_ROUTING.routes[task.role];
-  const primary = task.type === "chat_intent" ? CALL_ROUTES.chat_intent : task.primaryModel;
-  const route = primary ? { ...roleRoute, primary } : roleRoute;
+  const route = { primary: (task.type === "chat_intent" ? CALL_ROUTES.chat_intent : task.primaryModel) ?? runtimeModel(roleRoute.primary) };
   const system = systemPrompt(task.role);
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
-  const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "anthropic" ? 2 : 0);
+  const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "openai" ? 2 : 0);
 
   const attempt = async (modelKey: ModelKey, extra = "", usageStepId: Id<"workflowSteps"> = stepId): Promise<ModelResult> => {
     const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: MODEL_SPECS[modelKey].provider });
@@ -210,7 +210,7 @@ async function runModelTask<T>(
       // Repair already finished before a restart: reuse its saved answer (its cost was recorded then).
       res = {
         ok: true,
-        provider: MODEL_SPECS[route.primary].provider as "anthropic" | "google",
+        provider: MODEL_SPECS[route.primary].provider,
         actualModelId: MODEL_SPECS[route.primary].apiModelId,
         output: repair.checkpoint,
         rawText: "",
@@ -230,16 +230,11 @@ async function runModelTask<T>(
       else await ctx.runMutation(internal.engine.failStep, { stepId: repair.stepId!, error: `${res.kind}: ${res.message}` });
     }
   }
-  if (!res.ok && ["provider_unavailable", "provider_error", "timeout", "rate_limited", "spend_limit"].includes(res.kind)) {
-    const fallbackCost = worstCaseStepMicros(route.fallback, task.inputBudget, task.outputBudget, rates);
-    const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: run._id, costMicros: fallbackCost });
-    if (reserved.ok) res = await attempt(route.fallback);
-  }
   if (!res.ok) {
     await ctx.runMutation(internal.engine.failStep, { stepId, error: `${res.kind}: ${res.message}` });
     const message =
       res.kind === "provider_unavailable" || res.kind === "spend_limit"
-        ? "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later."
+        ? "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue."
         : res.kind === "refused"
           ? "The AI declined this request. Try rephrasing it."
           : res.kind === "invalid_output"
@@ -257,15 +252,16 @@ async function runModelTask<T>(
 /* ------------------------------------------------------------------ */
 
 /** Each action stops starting new agent phases after this long and resumes in a fresh action. */
-const ACTION_SOFT_LIMIT_MS = 6.5 * 60_000;
+// Low enough that a step started just before it (≤4 min turn timeout) still ends inside Convex's 10-minute action limit.
+const ACTION_SOFT_LIMIT_MS = 4.5 * 60_000;
 function softLimitMs(): number {
   const override = Number(process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS);
   return Number.isFinite(override) && override > 0 ? override : ACTION_SOFT_LIMIT_MS;
 }
 
 const AGENT_FAILURES: Record<string, string> = {
-  provider_unavailable: "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later.",
-  spend_limit: "Our AI providers aren't available right now. Nothing was charged beyond what was used; please try again later.",
+  provider_unavailable: "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue.",
+  spend_limit: "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue.",
   refused: "The AI declined this request. Try rephrasing it.",
   invalid_output: "The AI's answer didn't pass our quality checks. Nothing was saved.",
 };
@@ -290,6 +286,8 @@ async function runAgentTask<T>(
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
   }
+  // Climb AI Expert (paid): Sol drafts this agent's work when it's one of the expert agents.
+  if (job.run.aiMode === "expert") spec = { ...spec, models: routeModels(spec.id, "expert") };
   const rates = getRateVersion(job.run.rateVersionId);
   let currentStep: Id<"workflowSteps"> | null = null;
   // Shared across every agent in this action: yield only after real progress.
@@ -313,7 +311,7 @@ async function runAgentTask<T>(
         const provider = providerOf(modelKey);
         const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider });
         if (circuit === "open") {
-          return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as ClaudeTurnResult;
+          return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as TurnResult;
         }
         const q = { ...req, modelKey };
         let r = await call(q, rates);
@@ -330,14 +328,8 @@ async function runAgentTask<T>(
         }
         return r;
       };
-      const r = await attemptOn(req.modelKey);
-      // Cross-provider fallback when a provider is down, out of credit or not configured.
-      if (!r.ok && ["provider_unavailable", "spend_limit", "provider_error"].includes(r.kind) && !process.env.CLIMBOS_FAKE_LLM) {
-        const fallback: ModelKey = providerOf(req.modelKey) === "openai" ? "claude-sonnet-5.5" : CALL_ROUTES.fallback;
-        const f = await attemptOn(fallback);
-        if (f.ok || !["provider_unavailable", "spend_limit"].includes(f.kind)) return f;
-      }
-      return r;
+      // No fallback model: an outage stops the job with its progress saved (Retry continues it).
+      return attemptOn(req.modelKey);
     },
     phase: async (key, label, fn) => {
       const step = await begin(ctx, job.run._id, baseIndex + key.index, "model", label, spec.role);
@@ -419,20 +411,34 @@ async function finish(
   });
 }
 
+type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob";
+interface Resume {
+  fn: ResumableJob;
+  args: Record<string, unknown>;
+  run: () => Promise<unknown>;
+}
+
+/** How to continue a run in a fresh action (after a yield, an interruption or an owner retry). */
+function resumeAs<F extends ResumableJob>(ctx: ActionCtx, fn: F, args: FunctionArgs<(typeof internal.jobs)[F]>): Resume {
+  const ref = internal.jobs[fn] as unknown as FunctionReference<"action", "internal">;
+  return { fn, args: args as Record<string, unknown>, run: () => ctx.scheduler.runAfter(0, ref, args as Record<string, unknown>) };
+}
+
 async function guarded(
   ctx: ActionCtx,
   runId: Id<"workflowRuns">,
   body: () => Promise<void>,
   onFail?: (msg: string) => Promise<void>,
-  resume?: () => Promise<unknown>,
+  resume?: Resume,
 ) {
+  if (resume) await ctx.runMutation(internal.engine.noteResume, { runId, fn: resume.fn, args: JSON.stringify(resume.args) });
   try {
     await body();
   } catch (e) {
     // Engine v2: an agent stopped before the action time limit. Completed phases
     // are checkpoints, so a fresh action picks up where this one left off.
     if (e instanceof AgentYield && resume) {
-      await resume();
+      await resume.run();
       return;
     }
     const msg = e instanceof JobStop ? e.userMessage : "Something went wrong. Nothing was published; you can try again.";
@@ -524,7 +530,7 @@ export const onboardingResearch = internalAction({
       );
       await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
-    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.onboardingResearch, { runId, ownerText }));
+    }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));
   },
 });
 
@@ -622,7 +628,7 @@ export const buildStrategy = internalAction({
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
-    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId }));
+    }, undefined, resumeAs(ctx, "buildStrategy", { runId }));
   },
 });
 
@@ -791,7 +797,7 @@ export const createContent = internalAction({
         if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
         await ctx.runMutation(internal.autopilot.draftingFailed, { runId: args.runId });
       },
-      () => ctx.scheduler.runAfter(0, internal.jobs.createContent, args),
+      resumeAs(ctx, "createContent", args),
     );
   },
 });
@@ -842,7 +848,7 @@ export const planSocialWeek = internalAction({
         await finish(ctx, args.runId, "verified", { output: { slots: plan.slots.length } });
       },
       undefined,
-      () => ctx.scheduler.runAfter(0, internal.jobs.planSocialWeek, args),
+      resumeAs(ctx, "planSocialWeek", args),
     );
   },
 });
@@ -904,7 +910,7 @@ export const findCustomers = internalAction({
         await ctx.runMutation(internal.outbound.markFailed, { campaignId: args.campaignId });
         if (args.cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId: args.cardId, status: "failed" });
       },
-      () => ctx.scheduler.runAfter(0, internal.jobs.findCustomers, args),
+      resumeAs(ctx, "findCustomers", args),
     );
   },
 });
@@ -1032,7 +1038,7 @@ export const conversionAudit = internalAction({
       );
       await finish(ctx, runId, "verified", { output: out, meters: { scrapeCredits: text ? 2 : 0 } });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
-    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.conversionAudit, { runId, cardId }));
+    }, undefined, resumeAs(ctx, "conversionAudit", { runId, cardId }));
   },
 });
 
@@ -1058,6 +1064,6 @@ export const simplePlanJob = internalAction({
       );
       await finish(ctx, runId, "verified", { output: out });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
-    }, undefined, () => ctx.scheduler.runAfter(0, internal.jobs.simplePlanJob, { runId, task, cardId }));
+    }, undefined, resumeAs(ctx, "simplePlanJob", { runId, task, cardId }));
   },
 });

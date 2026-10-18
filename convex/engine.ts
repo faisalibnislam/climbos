@@ -1,3 +1,4 @@
+import type { FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import {
   CURRENT_ENTITLEMENTS,
@@ -123,6 +124,8 @@ export async function createRunWithReservation(
     meters: PartialMeters;
     createdBy?: Id<"users">;
     isFixture: boolean;
+    /** Climb AI mode (resolve with resolveAiMode). Absent = basic. */
+    aiMode?: "basic" | "expert";
   },
 ): Promise<Id<"workflowRuns">> {
   const { org } = params;
@@ -173,6 +176,7 @@ export async function createRunWithReservation(
     orgId: org._id,
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
+    ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
     title: params.title,
     status: "cost_reserved",
     input: JSON.stringify(params.input),
@@ -439,7 +443,9 @@ export async function finishRunImpl(
     }
     const period = await ctx.db.get(reservation.periodId);
     if (!period) return;
-    const actualCost = fresh.actualMicros;
+    // A retried run settles only what it used since its last finish.
+    const settled = fresh.settled ?? { micros: 0, searchCalls: 0, imageAttempts: 0, scrapeCredits: 0 };
+    const actualCost = Math.max(0, fresh.actualMicros - settled.micros);
     // Metered quantities come from recorded usage events, not from the caller.
     const events = await ctx.db
       .query("usageEvents")
@@ -447,9 +453,10 @@ export async function finishRunImpl(
       .take(500);
     const derived: PartialMeters = { ...(args.meters ?? {}) };
     const sumOf = (type: string) => events.filter((e) => e.type === type).reduce((s, e) => s + e.quantity, 0);
-    derived.searchCalls = sumOf("search_call");
-    derived.imageAttempts = sumOf("image_attempt");
-    derived.scrapeCredits = sumOf("scrape_credit");
+    const totals = { micros: fresh.actualMicros, searchCalls: sumOf("search_call"), imageAttempts: sumOf("image_attempt"), scrapeCredits: sumOf("scrape_credit") };
+    derived.searchCalls = Math.max(0, totals.searchCalls - settled.searchCalls);
+    derived.imageAttempts = Math.max(0, totals.imageAttempts - settled.imageAttempts);
+    derived.scrapeCredits = Math.max(0, totals.scrapeCredits - settled.scrapeCredits);
     const actualTopup = reservation.topupMicros > 0
       ? stressedDeliveryCostMicros({ aiMicros: actualCost, imageMicros: 0, researchMicros: 0, modelSteps: fresh.used.modelSteps })
       : 0;
@@ -460,19 +467,123 @@ export async function finishRunImpl(
     );
     await ctx.db.patch(period._id, ledgerPatch(next));
     await ctx.db.patch(reservation._id, { status: "reconciled", actualMicros: actualCost, reconciledAt: Date.now() });
+    await ctx.db.patch(run._id, { settled: totals });
     if (overageMicros > 0) {
       await audit(ctx, { orgId: run.orgId, actorType: "system", action: "cost.overage", subjectType: "run", subjectId: run._id, summary: `Actual cost exceeded reservation by ${overageMicros} µUSD.` });
     }
     await ctx.scheduler.runAfter(0, internal.notifications.checkUsageAlerts, { periodId: period._id });
 }
 
-/** Cron: recover runs whose action died. Model steps fail; provider writes become uncertain. */
+/* ---------------- resume from checkpoints ---------------- */
+
+/** Job actions that continue a run from its checkpoints (finished steps are skipped). */
+const RESUMABLE = new Set(["onboardingResearch", "buildStrategy", "createContent", "planSocialWeek", "findCustomers", "conversionAudit", "simplePlanJob"]);
+/** Automatic resumes after an interrupted action before the run fails. */
+export const MAX_AUTO_RESUMES = 2;
+/** Owner retries of one run. */
+export const MAX_RETRIES = 3;
+
+export async function scheduleResume(ctx: MutationCtx, run: Doc<"workflowRuns">): Promise<boolean> {
+  const r = run.resumeWith;
+  if (!r || !RESUMABLE.has(r.fn)) return false;
+  const ref = (internal.jobs as unknown as Record<string, FunctionReference<"action", "internal">>)[r.fn];
+  if (!ref) return false;
+  await ctx.scheduler.runAfter(0, ref, JSON.parse(r.args) as Record<string, unknown>);
+  return true;
+}
+
+/** Remember how to continue a run (set by the job action the first time it runs). */
+export const noteResume = internalMutation({
+  args: { runId: v.id("workflowRuns"), fn: v.string(), args: v.string() },
+  handler: async (ctx, { runId, fn, args }) => {
+    const run = await ctx.db.get(runId);
+    if (!run || (run.resumeWith?.fn === fn && run.resumeWith.args === args)) return;
+    await ctx.db.patch(runId, { resumeWith: { fn, args } });
+  },
+});
+
+/**
+ * Reopen a failed run so it continues from its last finished step: reserve
+ * what's left of the estimate, put the run back in progress and restart its
+ * job action. Interrupted or failed steps run again; finished ones are reused.
+ */
+export async function reopenFailedRun(ctx: MutationCtx, run: Doc<"workflowRuns">, org: Doc<"organizations">): Promise<void> {
+  if (run.status !== "failed") throw appError("INVALID", "Only a stopped job can be retried.");
+  if (!run.resumeWith || !RESUMABLE.has(run.resumeWith.fn)) throw appError("INVALID", "This job can't continue. Start it again.");
+  if ((run.retries ?? 0) >= MAX_RETRIES) throw appError("LIMIT_REACHED", "This job has been retried several times. Start it again or contact us.");
+  const steps = await ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).take(60);
+  if (steps.some((s) => s.status === "uncertain")) throw appError("INVALID", "We can't confirm whether the last action finished, so we won't repeat it.");
+  const access = await chargeableAccess(ctx, org);
+  if (!access.allowed) {
+    throw appError(access.code === "PAUSED" || access.code === "FLEET_STOP" ? "PAUSED" : "PAYMENT_REQUIRED", access.message, { reason: access.code });
+  }
+  let active = 0;
+  for (const status of ACTIVE) {
+    const rows = await ctx.db.query("workflowRuns").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status)).take(MAX_ACTIVE_RUNS + 1);
+    active += rows.length;
+  }
+  if (active >= MAX_ACTIVE_RUNS) throw appError("RATE_LIMITED", "Your team is busy with several jobs. Retry as soon as one finishes.");
+
+  // Reserve the rest of the estimate (at least a third of it: the unfinished step runs again).
+  const remaining = Math.max(run.estimateMicros - run.actualMicros, Math.ceil(run.estimateMicros / 3));
+  const old = run.reservationId ? await ctx.db.get(run.reservationId) : null;
+  const settled = run.settled ?? { micros: 0, searchCalls: 0, imageAttempts: 0, scrapeCredits: 0 };
+  const meters: PartialMeters = {};
+  for (const [k, n] of Object.entries(old?.meters ?? {})) {
+    const used = k === "searchCalls" || k === "imageAttempts" || k === "scrapeCredits" ? settled[k] : 0;
+    const left = Math.max(0, (n ?? 0) - used);
+    if (left > 0) meters[k as keyof PartialMeters] = left;
+  }
+  const period = access.period;
+  const decision = decideReservation(ledgerOf(period), {
+    costMicros: remaining,
+    topupCostMicros: stressedDeliveryCostMicros({ aiMicros: remaining, imageMicros: 0, researchMicros: 0, modelSteps: 4 }),
+    meters,
+  });
+  if (!decision.ok) throw appError("LIMIT_REACHED", decision.message, { reason: decision.reason, meter: decision.meter ?? "" });
+  await ctx.db.patch(period._id, ledgerPatch(decision.next));
+  const now = Date.now();
+  const reservationId = await ctx.db.insert("usageReservations", {
+    orgId: org._id,
+    periodId: period._id,
+    runId: run._id,
+    purpose: run.kind,
+    walletMicros: decision.walletMicros,
+    topupMicros: decision.topupMicros,
+    meters,
+    status: "held",
+    createdAt: now,
+  });
+  // A deliberate exception to "failed is terminal": the owner chose to continue this run.
+  await ctx.db.patch(run._id, {
+    status: "preparing",
+    reservationId,
+    error: undefined,
+    userMessage: undefined,
+    finishedAt: undefined,
+    resumes: 0,
+    retries: (run.retries ?? 0) + 1,
+    // Room for the steps that run again.
+    budget: { ...run.budget, modelSteps: run.budget.modelSteps + 6, researchTools: run.budget.researchTools + 4 },
+    updatedAt: now,
+  });
+  await audit(ctx, { orgId: org._id, actorType: "user", action: "run.retried", subjectType: "run", subjectId: run._id, summary: `Retried "${run.title}" from its last finished step.` });
+  await scheduleResume(ctx, (await ctx.db.get(run._id))!);
+}
+
+/**
+ * Cron: recover runs whose action died. A resumable run continues from its
+ * checkpoints (up to MAX_AUTO_RESUMES times); otherwise model steps fail and
+ * provider writes become uncertain.
+ */
 export const recoverStuckRuns = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const cutoff = Date.now() - 15 * 60_000;
+    const now = Date.now();
     let recovered = 0;
     for (const status of ["cost_reserved", "preparing", "executing"] as const) {
+      // An action runs at most 10 minutes, so a running job silent for 11 is dead.
+      const cutoff = now - (status === "cost_reserved" ? 15 : 11) * 60_000;
       const runs = await ctx.db
         .query("workflowRuns")
         .withIndex("by_status_updated", (q) => q.eq("status", status).lt("updatedAt", cutoff))
@@ -481,7 +592,7 @@ export const recoverStuckRuns = internalMutation({
         const steps = await ctx.db
           .query("workflowSteps")
           .withIndex("by_run", (q) => q.eq("runId", run._id))
-          .take(50);
+          .take(60);
         let uncertain = false;
         for (const s of steps) {
           if (s.status !== "running") continue;
@@ -489,8 +600,14 @@ export const recoverStuckRuns = internalMutation({
             uncertain = true;
             await ctx.db.patch(s._id, { status: "uncertain", error: "Interrupted; outcome must be checked with the provider" });
           } else {
-            await ctx.db.patch(s._id, { status: "failed", error: "Interrupted" });
+            await ctx.db.patch(s._id, { status: "failed", error: "Interrupted", finishedAt: now });
           }
+        }
+        if (!uncertain && status !== "cost_reserved" && (run.resumes ?? 0) < MAX_AUTO_RESUMES && (await scheduleResume(ctx, run))) {
+          await ctx.db.patch(run._id, { resumes: (run.resumes ?? 0) + 1, updatedAt: now });
+          await audit(ctx, { orgId: run.orgId, actorType: "system", action: "run.resumed", subjectType: "run", subjectId: run._id, summary: `"${run.title}" was interrupted and continued from its last finished step.` });
+          recovered++;
+          continue;
         }
         await finishRunImpl(ctx, {
           runId: run._id,
@@ -498,7 +615,7 @@ export const recoverStuckRuns = internalMutation({
           error: "The job was interrupted.",
           userMessage: uncertain
             ? "We couldn't confirm whether the last action completed. We won't repeat it until it's checked."
-            : "This job was interrupted. Nothing was published. You can try again.",
+            : "This job was interrupted. Nothing was published. Retry continues from where it stopped.",
         });
         recovered++;
       }

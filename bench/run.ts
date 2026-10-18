@@ -19,8 +19,10 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
-import { type ClaudeTurnRequest, type ClaudeTurnResult } from "../shared/ai/claude";
+import { type TurnRequest, type TurnResult } from "../shared/ai/types";
 import { modelTurn } from "../shared/ai/turn";
+import { runtimeModel } from "../shared/ai/models";
+import { routeModels, type AiMode } from "../shared/agents/routes";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
@@ -49,12 +51,13 @@ const label = arg("label") ?? "run";
 const concurrency = Number(arg("concurrency") ?? 6);
 const arms = (arg("arms") ?? "v1,v0f,v2s").split(",");
 const compare = (arg("compare") ?? "v2s:v1,v2s:v0f").split(",").map((c) => c.split(":") as [string, string]);
-const judges = (arg("judges") ?? "opus,sonnet").split(",");
+const judges = (arg("judges") ?? "sol").split(",");
 const pointwise = arg("pointwise") !== "off";
 mkdirSync("bench/cache", { recursive: true });
 mkdirSync("bench/results", { recursive: true });
 
-const JUDGE_MODELS: Record<string, ModelKey> = { opus: "claude-opus-5.5", sonnet: "claude-sonnet-5.5", fable: "claude-fable-5.1" };
+/** Judges: Sol only (Anthropic was dropped 18 Oct 2026). Positions are swapped to cancel order bias. */
+const JUDGE_MODELS: Record<string, ModelKey> = { sol: "gpt-6.1-sol" };
 
 async function pool<T, R>(items: T[], n: number, fn: (t: T, i: number) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
@@ -72,8 +75,8 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T, i: number) => Promis
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Claude call with retries for transient errors (rate limits, overload, network). */
-async function turnWithRetry(req: ClaudeTurnRequest): Promise<ClaudeTurnResult> {
+/** Model call with retries for transient errors (rate limits, overload, network). */
+async function turnWithRetry(req: TurnRequest): Promise<TurnResult> {
   let r = await modelTurn(req, rates);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
     await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);
@@ -104,7 +107,7 @@ async function prepare(c: BenchCase): Promise<Prepared | null> {
     const pt = TASKS.business_profile;
     const prof = await callModel(
       {
-        modelKey: CURRENT_ROUTING.routes[pt.role].primary,
+        modelKey: runtimeModel(CURRENT_ROUTING.routes[pt.role].primary),
         system: systemPrompt(pt.role),
         user: `TASK: Build a concise, factual business profile from the website content below. Every fact must come from the content and cite the page URL it came from in sourceUrl. Mark anything uncertain as low confidence. Business name given by the owner: "${c.name}". Suggest 2-4 success events.\n\n${pagesText}`,
         schema: pt.schema,
@@ -118,7 +121,7 @@ async function prepare(c: BenchCase): Promise<Prepared | null> {
     const it = TASKS.business_insights;
     const ins = await callModel(
       {
-        modelKey: CURRENT_ROUTING.routes[it.role].primary,
+        modelKey: runtimeModel(CURRENT_ROUTING.routes[it.role].primary),
         system: systemPrompt(it.role),
         user: `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}\n\n${pagesText}`,
         schema: it.schema,
@@ -262,7 +265,7 @@ async function runV1(p: Prepared, t: BenchTask): Promise<ArmResult> {
   const contract = TASKS[d.task];
   const t0 = Date.now();
   const res = await callModel(
-    { modelKey: CURRENT_ROUTING.routes[contract.role].primary, system: systemPrompt(contract.role), user: d.prompt(p), schema: contract.schema, inputBudget: contract.inputBudget, outputBudget: contract.outputBudget, webSearches: d.webSearches },
+    { modelKey: runtimeModel(CURRENT_ROUTING.routes[contract.role].primary), system: systemPrompt(contract.role), user: d.prompt(p), schema: contract.schema, inputBudget: contract.inputBudget, outputBudget: contract.outputBudget, webSearches: d.webSearches },
     rates,
   );
   return res.ok
@@ -287,7 +290,7 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
   const input = inputFor(p, t);
   const t0 = Date.now();
   const r = await turnWithRetry({
-    modelKey: "claude-opus-5.5",
+    modelKey: "gpt-6.1-sol",
     system: [{ text: OPERATING_RULES }, { text: `${ROLE_CHARTERS[spec.role]} You are a world-class expert at this work.` }],
     messages: [
       {
@@ -326,8 +329,11 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     // 0. Channel scoring (Acquisition Intelligence), exactly as the plan job runs it.
     let profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []) });
     const candidates = candidatesFor(profile);
+    // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
+    const mode: AiMode = arm === "expert" ? "expert" : "basic";
+    const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode) });
     const fit = await runAgent(
-      channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, {}),
+      withMode(channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, {})),
       { ...base, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },
       deps,
     );
@@ -335,8 +341,8 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
     const scored = scoreChannels(profile, adjustmentsFrom(f));
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
-    const plays = await runAgent(growthPlaysSpec({}, playCatalogsFor(p.c.type)), { ...base, task: PLAYS_TASK + scorecard, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
-    const plan = await runAgent(strategySpec({}), { ...base, task: planTask(plays.output) + scorecard }, deps);
+    const plays = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: PLAYS_TASK + scorecard, research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const plan = await runAgent(withMode(strategySpec({})), { ...base, task: planTask(plays.output) + scorecard }, deps);
     return {
       arm,
       ok: true,
@@ -354,7 +360,7 @@ async function runStrategyFrontier(p: Prepared): Promise<ArmResult> {
   const base = inputFor(p, "strategy");
   const call = (task: string, schema: z.ZodType, research?: { maxSearches: number; maxFetches?: number }) =>
     turnWithRetry({
-      modelKey: "claude-opus-5.5",
+      modelKey: "gpt-6.1-sol",
       system: [{ text: OPERATING_RULES }, { text: `${ROLE_CHARTERS.ceo} You are a world-class expert at this work.` }],
       messages: [{ role: "user", content: `BUSINESS BRIEF:\n${base.brief}\n\nYOUR TASK:\n${task}\n\nRespond only with JSON matching the schema.` }],
       schema,
@@ -408,7 +414,7 @@ async function runOutboundV2(p: Prepared, arm: string): Promise<ArmResult> {
 async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
   if (t === "strategy") return runStrategyV2(p, arm);
   if (t === "outbound") return runOutboundV2(p, arm);
-  const draft: ModelKey = arm.startsWith("v2o") ? "claude-opus-5.5" : "claude-sonnet-5.5";
+  const draft: ModelKey = arm.startsWith("v2o") ? "gpt-6.1-sol" : "gpt-6-luna";
   const maxRevisions = arm.endsWith("1") ? 1 : 2;
   // v22: the production configuration exactly as shipped (expert/lean profiles).
   const spec = arm === "v22" ? DEFS[t].spec({}, p) : DEFS[t].spec({ models: { draft }, maxRevisions }, p);
@@ -497,7 +503,7 @@ type Score = z.infer<typeof ScoreSchema>;
 
 async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | null> {
   const r = await turnWithRetry({
-    modelKey: "claude-opus-5.5",
+    modelKey: "gpt-6.1-sol",
     system: [
       {
         text: `You are a strict senior marketing expert. Score one piece of work for a small business from 1 to 10 on each dimension, where 10 means the best work a top specialist anywhere would produce, 7 means solid professional work, 5 means usable after real edits and 3 or below means it should be redone.

@@ -9,6 +9,7 @@ import { Button, Card, CardContent, ConfirmDialog, Field, Textarea, toast } from
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { microsToDisplay } from "../money";
+import { AiModePicker, useAiMode } from "../AiModePicker";
 
 /** "Build my plan" / "Refresh plan": confirm with the capacity note, then start the strategy job. */
 export function GeneratePlanButton({
@@ -27,8 +28,10 @@ export function GeneratePlanButton({
 }) {
   const generate = useMutation(api.orgs.generatePlan);
   const [error, setError] = useState<unknown>(null);
+  const ai = useAiMode(slug);
   const build = mode === "build";
-  const cost = `Uses up to ${microsToDisplay(estimateMicros)} of this month's AI capacity; anything unused is returned.`;
+  const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
+  const cost = `Uses up to ${microsToDisplay(max)} of this month's AI capacity; anything unused is returned.`;
   return (
     <div className="flex flex-col gap-2">
       <ConfirmDialog
@@ -48,14 +51,16 @@ export function GeneratePlanButton({
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await generate({ slug });
+            const res = await generate({ slug, aiMode: ai.mode });
             onStarted(res.runId);
           } catch (e) {
             setError(e);
           }
         }}
-      />
-      <p className="text-xs text-ink-3">Up to {microsToDisplay(estimateMicros)} of AI capacity</p>
+      >
+        <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+      </ConfirmDialog>
+      <p className="text-xs text-ink-3">Up to {microsToDisplay(max)} of AI capacity</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );

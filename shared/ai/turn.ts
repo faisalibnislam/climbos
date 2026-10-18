@@ -1,13 +1,13 @@
 import type { RateVersion } from "../economics/rates";
-import { claudeTurn, type ClaudeTurnRequest, type ClaudeTurnResult } from "./claude";
 import { MODEL_SPECS } from "./models";
 import { openaiTurn } from "./openai";
+import type { TurnRequest, TurnResult } from "./types";
 
-/** One model turn on whichever provider serves `req.modelKey`. */
-export function modelTurn(req: ClaudeTurnRequest, rates: RateVersion): Promise<ClaudeTurnResult> {
-  return MODEL_SPECS[req.modelKey].provider === "openai" ? openaiTurn(req, rates) : claudeTurn(req, rates);
+/** One model turn. Every agent and Climb AI model is OpenAI (Luna or Sol). */
+export function modelTurn(req: TurnRequest, rates: RateVersion): Promise<TurnResult> {
+  return openaiTurn(req, rates);
 }
 
-export function providerOf(modelKey: ClaudeTurnRequest["modelKey"]): "anthropic" | "google" | "openai" {
+export function providerOf(modelKey: TurnRequest["modelKey"]): "google" | "openai" {
   return MODEL_SPECS[modelKey].provider;
 }

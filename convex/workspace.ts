@@ -1,13 +1,15 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalQuery, mutation, query } from "./_generated/server";
-import { createRunWithReservation, finishRunImpl } from "./engine";
+import { createRunWithReservation, finishRunImpl, reopenFailedRun } from "./engine";
 import { jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
+import { can } from "../shared/policy";
 import { startCardRun } from "./lib/cards";
 import { chargeableAccess } from "./lib/access";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -539,5 +541,69 @@ export const runDetail = query({
       steps: steps.map((s) => ({ label: s.label, status: s.status, role: s.role ?? null, kind: s.kind })),
       artifacts: artifacts.map((a) => ({ id: a._id, title: a.title, channel: a.channel, status: a.status, kind: a.kind })),
     };
+  },
+});
+
+/**
+ * Retry a stopped job from where it stopped: finished steps are reused, only
+ * the unfinished ones run again (and only those are charged).
+ */
+export const retryRun = mutation({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    await reopenFailedRun(ctx, run, org);
+    // Undo what the failure marked on related work.
+    const args = (() => {
+      try {
+        return JSON.parse(run.resumeWith?.args ?? "{}") as { campaignId?: Id<"outboundCampaigns">; cardId?: Id<"actionCards"> };
+      } catch {
+        return {};
+      }
+    })();
+    const now = Date.now();
+    if (args.campaignId) {
+      const c = await ctx.db.get(args.campaignId);
+      if (c && c.orgId === org._id && c.status === "failed") await ctx.db.patch(c._id, { status: "researching", updatedAt: now });
+    }
+    if (args.cardId) {
+      const card = await ctx.db.get(args.cardId);
+      if (card && card.orgId === org._id && card.status === "failed") await ctx.db.patch(card._id, { status: "running", updatedAt: now });
+    }
+    const slots = await ctx.db.query("calendarSlots").withIndex("by_draft_run", (q) => q.eq("draftRunId", runId)).take(50);
+    for (const sl of slots) if (sl.status === "failed") await ctx.db.patch(sl._id, { status: "drafting", updatedAt: now });
+    return { ok: true };
+  },
+});
+
+/** The Basic/Expert picker: default mode, whether Expert is unlocked, and what each mode costs at most for the key jobs. */
+export const aiMode = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const view = await aiModeView(ctx, org);
+    const fixture = org.kind === "demo";
+    const estimates = (kind: "onboarding_research" | "strategy" | "content_ads" | "social_calendar") => ({
+      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" })),
+      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" })),
+    });
+    return {
+      ...view,
+      saved: org.aiMode ?? null,
+      canEdit: can(role, "manage_policies"),
+      estimates: { onboarding_research: estimates("onboarding_research"), strategy: estimates("strategy"), content_ads: estimates("content_ads"), social_calendar: estimates("social_calendar") },
+    };
+  },
+});
+
+/** Save the workspace's default Climb AI mode (Expert needs a paid plan). */
+export const setAiMode = mutation({
+  args: { slug: v.string(), mode: v.union(v.literal("basic"), v.literal("expert")) },
+  handler: async (ctx, { slug, mode }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_policies");
+    if (mode === "expert" && !(await aiModeView(ctx, org)).expertUnlocked) throw appError("PAYMENT_REQUIRED", "Climb AI Expert comes with a paid plan.");
+    await ctx.db.patch(org._id, { aiMode: mode });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "settings.ai_mode", subjectType: "organization", subjectId: org._id, summary: `Default Climb AI mode set to ${mode === "expert" ? "Expert" : "Basic"}.` });
   },
 });

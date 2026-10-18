@@ -153,6 +153,8 @@ export default defineSchema({
     kind: v.union(v.literal("customer"), v.literal("demo")),
     createdBy: v.id("users"),
     timezone: v.string(),
+    /** Default Climb AI mode for new jobs (Expert needs a paid plan). Absent = expert when paid, else basic. */
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     currency: v.string(),
     onboardingStep: v.union(
       v.literal("business"),
@@ -887,6 +889,8 @@ export default defineSchema({
     alwaysAskTopics: v.array(v.string()),
     /** Images for the first posts of each week (0-2), metered like manual jobs. */
     imagesPerWeek: v.number(),
+    /** Climb AI mode for the weekly plan (Expert needs a paid plan). Absent = workspace default. */
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     trust: v.array(v.object({ channel: v.string(), streak: v.number(), unlocked: v.boolean(), updatedAt: v.number() })),
     lastPlannedWeek: v.optional(v.string()),
     lastPlanRunId: v.optional(v.id("workflowRuns")),
@@ -1070,6 +1074,16 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     finishedAt: v.optional(v.number()),
+    /** Climb AI Basic (Luna) or Expert (Sol drafts; paid only). Absent = basic. */
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** The job action and args that continue this run from its checkpoints. */
+    resumeWith: v.optional(v.object({ fn: v.string(), args: v.string() })),
+    /** Automatic resumes after an interrupted action (reset by an owner retry). */
+    resumes: v.optional(v.number()),
+    /** Owner retries of a failed run. */
+    retries: v.optional(v.number()),
+    /** Cost and meters already reconciled by an earlier finish (a retried run settles only the rest). */
+    settled: v.optional(v.object({ micros: v.number(), searchCalls: v.number(), imageAttempts: v.number(), scrapeCredits: v.number() })),
   })
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_status", ["orgId", "status"])

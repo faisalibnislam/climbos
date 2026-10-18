@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { resolveAiMode } from "./lib/aiMode";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
@@ -152,7 +153,7 @@ export const createWorkspace = mutation({
 
 /** Start (or restart) business research. Owner-pasted text works when the site can't be read. */
 export const startResearch = mutation({
-  args: { slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()) },
+  args: { slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
@@ -185,7 +186,8 @@ export const startResearch = mutation({
       });
       void sourceId;
     }
-    const plan = planJob("onboarding_research", { pages: website ? 3 : 0 }, { fixture: org.kind === "demo" });
+    const aiMode = await resolveAiMode(ctx, org, "onboarding_research", args.aiMode);
+    const plan = planJob("onboarding_research", { pages: website ? 3 : 0 }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
@@ -196,6 +198,7 @@ export const startResearch = mutation({
       meters: website ? plan.meters : { searchCalls: 2 },
       createdBy: user._id,
       isFixture: org.kind === "demo",
+      aiMode,
     });
     await ctx.db.patch(org._id, { onboardingStep: "research" });
     await ctx.scheduler.runAfter(0, internal.jobs.onboardingResearch, { runId, ownerText });
@@ -512,15 +515,16 @@ export const setAutonomy = mutation({
 });
 
 export const generatePlan = mutation({
-  args: { slug: v.string() },
-  handler: async (ctx, { slug }) => {
+  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
+  handler: async (ctx, { slug, aiMode: requested }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
     if (!goal) throw appError("INVALID", "Set a goal first.");
-    const plan = planJob("strategy", {}, { fixture: org.kind === "demo" });
+    const aiMode = await resolveAiMode(ctx, org, "strategy", requested);
+    const plan = planJob("strategy", {}, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
@@ -531,6 +535,7 @@ export const generatePlan = mutation({
       meters: plan.meters,
       createdBy: user._id,
       isFixture: org.kind === "demo",
+      aiMode,
     });
     await ctx.db.patch(org._id, { onboardingStep: "plan" });
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });

@@ -1,4 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
+import { aiModeView, resolveAiMode } from "./lib/aiMode";
+import { EXPERT_KINDS } from "../shared/agents/routes";
 import { v } from "convex/values";
 import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
@@ -7,7 +9,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
-import { createRunWithReservation } from "./engine";
+import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
 import { DIRECT_PUBLISH, invalidateApprovals, recordArtifactDecision } from "./lib/approvals";
 import { onOwnerDecision } from "./lib/autopilot";
@@ -370,10 +372,12 @@ export const generate = mutation({
     quantity: v.optional(v.number()),
     images: v.optional(v.number()),
     brief: v.optional(v.string()),
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
-    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo" });
+    const aiMode = await resolveAiMode(ctx, org, args.job, args.aiMode);
+    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
@@ -384,6 +388,7 @@ export const generate = mutation({
       meters: plan.meters,
       createdBy: user._id,
       isFixture: org.kind === "demo",
+      aiMode,
     });
     await ctx.scheduler.runAfter(0, internal.jobs.createContent, {
       runId,
@@ -404,11 +409,14 @@ export const estimate = query({
     quantity: v.optional(v.number()),
     images: v.optional(v.number()),
     channel: v.optional(channelValidator),
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
   },
   handler: async (ctx, args) => {
     const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
-    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo" });
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan), meters: plan.meters };
+    const view = await aiModeView(ctx, org);
+    const mode = EXPERT_KINDS.has(args.job) && view.expertUnlocked ? (args.aiMode ?? view.mode) : "basic";
+    const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
+    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 
@@ -442,6 +450,8 @@ export const runStatus = query({
       isFixture: run.isFixture,
       createdAt: run.createdAt,
       finishedAt: run.finishedAt ?? null,
+      /** A stopped run can continue from its last finished step. */
+      canRetry: run.status === "failed" && Boolean(run.resumeWith) && (run.retries ?? 0) < MAX_RETRIES && !steps.some((s) => s.status === "uncertain"),
       planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website") }),
       steps: steps.map((s) => ({
         label: s.label,

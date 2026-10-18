@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { currentRateVersion } from "../../shared/economics";
 import { dropNulls, openaiTurn, strictSchema, toInput, usageOf } from "../../shared/ai/openai";
-import { jsonSchemaFor } from "../../shared/ai/claude";
+import { jsonSchemaFor } from "../../shared/ai/types";
 import { modelTurn } from "../../shared/ai/turn";
 import { routeModels } from "../../shared/agents/routes";
 
@@ -88,10 +88,12 @@ describe("OpenAI adapter", () => {
     expect(!n.ok && n.kind).toBe("provider_unavailable");
   });
 
-  it("routes follow the owner's table", () => {
-    const base = { research: "claude-sonnet-5.5" as const, draft: "claude-opus-5.5" as const, critic: "claude-opus-5.5" as const };
-    expect(routeModels("business_insights", base)).toMatchObject({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "claude-sonnet-5.5" });
-    expect(routeModels("growth_strategy", base)).toMatchObject({ draft: "claude-sonnet-5.5", revise: "claude-opus-5.5" });
-    expect(routeModels("social_posts", base)).toMatchObject({ draft: "claude-sonnet-5.5", critic: "claude-haiku-5.5" });
+  it("routes: Basic is all Luna; Expert has Sol draft only the expert agents", () => {
+    const luna = { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna", revise: "gpt-6-luna" };
+    for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id)).toEqual(luna);
+    for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"]) {
+      expect(routeModels(id, "expert")).toEqual({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "gpt-6-luna", revise: "gpt-6.1-sol" });
+    }
+    for (const id of ["social_posts", "email_sequence", "seo_brief", "prospecting", "cold_outreach", "conversion_audit"]) expect(routeModels(id, "expert")).toEqual(luna);
   });
 });

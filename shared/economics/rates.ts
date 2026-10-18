@@ -10,20 +10,16 @@
  * Rates are USD. Token rates are per 1M tokens.
  */
 
-export type ModelKey =
-  | "claude-fable-5.1"
-  | "claude-opus-5.5"
-  | "claude-sonnet-5.5"
-  | "claude-haiku-5.5"
-  | "gpt-6-luna"
-  | "gpt-6.1-sol"
-  | "gemini-3.8-flash"
-  | "gemini-3.1-flash-lite";
+/** Models ClimbOS can call: OpenAI (text) and Google (text fallback for old routes, images). Anthropic was dropped on 18 Oct 2026. */
+export type ModelKey = "gpt-6-luna" | "gpt-6.1-sol" | "gemini-3.8-flash" | "gemini-3.1-flash-lite";
+
+/** Every priced model, including retired Claude models kept only in frozen rate and routing fixtures. */
+export type RateModelKey = ModelKey | "claude-fable-5.1" | "claude-opus-5.5" | "claude-sonnet-5.5" | "claude-haiku-5.5";
 
 export type Provider = "anthropic" | "google" | "openai";
 
 export interface ModelRate {
-  key: ModelKey;
+  key: RateModelKey;
   displayName: string;
   provider: Provider;
   inputPerM: number;
@@ -79,7 +75,7 @@ export interface RateVersion {
   /** Inclusive ISO date (UTC) from which this version applies. */
   effectiveFrom: string;
   researchedAt: string;
-  models: Record<ModelKey, ModelRate>;
+  models: Record<RateModelKey, ModelRate>;
   services: ServiceRates;
   payments: PaymentRates;
   notes: readonly string[];
@@ -90,7 +86,7 @@ const OPENAI_PRICING = "https://developers.openai.com/api/docs/pricing";
 const GEMINI_PRICING = "https://ai.google.dev/gemini-api/docs/pricing";
 const POLAR_FEES = "https://polar.sh/docs/merchant-of-record/fees";
 
-const RESEARCH_MODELS: Record<ModelKey, ModelRate> = {
+const RESEARCH_MODELS: Record<RateModelKey, ModelRate> = {
   // Added for Engine v2 (17 Oct 2026). No workbook row routes to Opus or
   // Fable (Fable is used only as an independent benchmark judge), so the
   // fixture's calculations are unchanged.

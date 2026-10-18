@@ -1,4 +1,5 @@
 import { internal } from "../_generated/api";
+import { resolveAiMode } from "./aiMode";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { createRunWithReservation } from "../engine";
@@ -50,8 +51,9 @@ export async function startCardRun(
     return fresh?.runId ?? null;
   }
   const images = job === "content_social" ? 1 : 0;
-  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo" });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo" });
+  const aiMode = await resolveAiMode(ctx, org, job);
+  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo", mode: aiMode });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode });
   await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
   const brief = payload.brief?.slice(0, 1500) || undefined;
   if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {

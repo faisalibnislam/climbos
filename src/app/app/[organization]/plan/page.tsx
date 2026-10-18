@@ -13,7 +13,7 @@ import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
-import { RUN_FINISHED } from "@/components/app/content/RunProgress";
+import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunProgress";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { PERMISSION_WHO, SectionBoundary, majorToDisplay, useNow } from "@/components/app/content/shared";
 
@@ -142,6 +142,7 @@ function PlanScreen({ slug }: { slug: string }) {
           {plan.strategyRun?.status === "failed" && plan.strategyRun.userMessage ? (
             <Callout tone="danger" live="none" title="The last attempt didn't finish">
               {plan.strategyRun.userMessage}
+              {plan.canEdit ? <RetryRunIfPossible slug={slug} runId={plan.strategyRun.id} className="mt-3" /> : null}
             </Callout>
           ) : null}
           <EmptyState

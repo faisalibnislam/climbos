@@ -1,7 +1,6 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import type { RateVersion } from "../economics/rates";
-import { claudeCostMicros, jsonSchemaFor, parseJsonText, ZERO_CLAUDE_USAGE, type ClaudeTurnRequest, type ClaudeTurnResult, type ClaudeUsage, type Source } from "./claude";
+import { turnCostMicros, jsonSchemaFor, parseJsonText, ZERO_USAGE, type ContentBlock, type MessageParam, type Source, type ToolUseBlock, type TurnRequest, type TurnResult, type TurnUsage } from "./types";
 import { MODEL_SPECS } from "./models";
 
 /**
@@ -51,7 +50,7 @@ export function dropNulls(v: unknown): unknown {
   return v;
 }
 
-function textOf(content: Anthropic.MessageParam["content"]): string {
+function textOf(content: MessageParam["content"]): string {
   if (typeof content === "string") return content;
   return content
     .map((b) => (b.type === "text" ? b.text : ""))
@@ -60,7 +59,7 @@ function textOf(content: Anthropic.MessageParam["content"]): string {
 }
 
 /** Anthropic-shaped history → Responses API input items. */
-export function toInput(messages: Anthropic.MessageParam[]): Json[] {
+export function toInput(messages: MessageParam[]): Json[] {
   const items: Json[] = [];
   for (const m of messages) {
     if (typeof m.content === "string") {
@@ -80,7 +79,7 @@ export function toInput(messages: Anthropic.MessageParam[]): Json[] {
   return items;
 }
 
-function effortFor(req: ClaudeTurnRequest, modelId: string): string | undefined {
+function effortFor(req: TurnRequest, modelId: string): string | undefined {
   if (req.thinkingOff) return modelId.includes("luna") ? "none" : "low";
   return req.effort;
 }
@@ -104,13 +103,13 @@ type ResponseBody = {
   error?: { message?: string; type?: string; code?: string } | null;
 };
 
-export function usageOf(body: ResponseBody): ClaudeUsage {
+export function usageOf(body: ResponseBody): TurnUsage {
   const u = body.usage ?? {};
   const cached = u.input_tokens_details?.cached_tokens ?? 0;
   const written = u.input_tokens_details?.cache_write_tokens ?? 0;
   const searches = (body.output ?? []).filter((i) => i.type === "web_search_call" && (i.action?.type ?? "search") === "search").length;
   return {
-    ...ZERO_CLAUDE_USAGE,
+    ...ZERO_USAGE,
     // Input includes cache reads and writes: bill each at its own rate.
     inputTokens: Math.max(0, (u.input_tokens ?? 0) - cached - written),
     cacheReadTokens: cached,
@@ -124,8 +123,8 @@ export function usageOf(body: ResponseBody): ClaudeUsage {
 }
 
 /** Run one OpenAI Responses turn and validate the final answer. */
-export async function openaiTurn(req: ClaudeTurnRequest, rates: RateVersion): Promise<ClaudeTurnResult> {
-  const usage0 = { ...ZERO_CLAUDE_USAGE };
+export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<TurnResult> {
+  const usage0 = { ...ZERO_USAGE };
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "OpenAI isn't configured on this server.", usage: usage0, costMicros: 0, appended: [] };
   const spec = MODEL_SPECS[req.modelKey];
@@ -180,7 +179,7 @@ export async function openaiTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
   }
 
   const usage = usageOf(json);
-  const costMicros = claudeCostMicros(req.modelKey, usage, rates);
+  const costMicros = turnCostMicros(req.modelKey, usage, rates);
   const output = json.output ?? [];
   const sources = new Map<string, Source>();
   let text = "";
@@ -199,7 +198,7 @@ export async function openaiTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
   }
   const calls = output.filter((i) => i.type === "function_call");
   // Keep history in the Anthropic shape the runtime appends to.
-  const blocks: Anthropic.ContentBlockParam[] = [];
+  const blocks: ContentBlock[] = [];
   if (text) blocks.push({ type: "text", text });
   for (const c of calls) {
     let input: unknown = {};
@@ -210,12 +209,12 @@ export async function openaiTurn(req: ClaudeTurnRequest, rates: RateVersion): Pr
     }
     blocks.push({ type: "tool_use", id: c.call_id!, name: c.name!, input });
   }
-  const appended: Anthropic.MessageParam[] = blocks.length ? [{ role: "assistant", content: blocks }] : [];
+  const appended: MessageParam[] = blocks.length ? [{ role: "assistant", content: blocks }] : [];
   const base = { usage, costMicros, appended };
 
   if (refusal) return { ok: false, kind: "refused", message: "The model declined this request.", ...base, text };
   if (calls.length && req.customTools?.length) {
-    const toolUses = blocks.filter((b): b is Anthropic.ToolUseBlockParam => b.type === "tool_use").map((b) => ({ id: b.id, name: b.name, input: b.input }));
+    const toolUses = blocks.filter((b): b is ToolUseBlock => b.type === "tool_use").map((b) => ({ id: b.id, name: b.name, input: b.input }));
     return { ok: true, output: text, text, ...base, sources: [...sources.values()].slice(0, 60), actualModelId: json.model ?? spec.apiModelId, stopReason: "tool_use", toolUses };
   }
   if (json.status === "incomplete") {

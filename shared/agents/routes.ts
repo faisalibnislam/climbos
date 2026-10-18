@@ -2,49 +2,43 @@ import type { ModelKey } from "../economics/rates";
 import type { PhaseModels } from "./types";
 
 /**
- * Model routes per agent (owner decision, 2026-10-18). research → draft →
- * review; `revise` is the conditional escalation used only when a review
- * fails (e.g. Opus for the growth plan). These are the only routes; a provider
- * outage is handled by the cross-provider fallback, not by a separate mode.
+ * Model routes (owner decision, 18 Oct 2026): OpenAI only, Anthropic dropped.
+ * - Climb AI Basic (free, and paid by choice): Luna for every phase.
+ * - Climb AI Expert (paid only): Sol writes the draft (and any revision) for
+ *   the growth plan, business insights, ads and the weekly autopilot plan;
+ *   Luna researches and reviews. Every other job stays on Luna.
+ * No fallback model: when OpenAI is unavailable a job pauses and resumes
+ * from its checkpoints (Retry).
  */
 
 const LUNA: ModelKey = "gpt-6-luna";
 const SOL: ModelKey = "gpt-6.1-sol";
-const SONNET: ModelKey = "claude-sonnet-5.5";
-const HAIKU: ModelKey = "claude-haiku-5.5";
-const OPUS: ModelKey = "claude-opus-5.5";
 
-export const ROUTE_VERSION = "owner-2026-10-18";
+export const ROUTE_VERSION = "openai-2026-10-18";
 
-export const ROUTES: Record<string, Partial<PhaseModels>> = {
-  business_insights: { research: LUNA, draft: SOL, critic: SONNET },
-  growth_plays: { research: SOL, draft: SONNET, critic: SONNET, revise: OPUS },
-  growth_strategy: { research: SOL, draft: SONNET, critic: SONNET, revise: OPUS },
-  channel_fit: { research: SOL, draft: SONNET, critic: SONNET },
-  social_posts: { research: LUNA, draft: SONNET, critic: HAIKU },
-  email_sequence: { research: LUNA, draft: SONNET, critic: HAIKU },
-  retention_plan: { research: LUNA, draft: SONNET, critic: HAIKU },
-  sales_sequence: { research: LUNA, draft: SONNET, critic: HAIKU },
-  ad_drafts: { research: SOL, draft: SONNET, critic: HAIKU },
-  seo_brief: { research: LUNA, draft: SONNET, critic: LUNA },
-  conversion_audit: { research: LUNA, draft: SOL, critic: HAIKU },
-  prospecting: { research: LUNA, draft: SOL, critic: SONNET },
-  cold_outreach: { research: LUNA, draft: SONNET, critic: SONNET },
-  social_calendar: { research: SOL, draft: SOL, critic: HAIKU },
+export type AiMode = "basic" | "expert";
+
+export const AI_MODES: Record<AiMode, { label: string; short: string }> = {
+  basic: { label: "Climb AI Basic", short: "Fast and low-cost. Good for most work." },
+  expert: { label: "Climb AI Expert", short: "Deeper analysis for plans, insights, ads and the weekly plan." },
 };
+
+/** Agents whose draft Sol writes in Expert mode. */
+export const EXPERT_AGENTS: ReadonlySet<string> = new Set(["business_insights", "channel_fit", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"]);
+
+/** Job kinds where the Basic/Expert choice changes anything. */
+export const EXPERT_KINDS: ReadonlySet<string> = new Set(["onboarding_research", "strategy", "content_ads", "social_calendar"]);
+
+/** Models for an agent in a mode. Basic is all Luna; Expert swaps in Sol for the draft on EXPERT_AGENTS. */
+export function routeModels(id: string, mode: AiMode = "basic"): PhaseModels {
+  const sol = mode === "expert" && EXPERT_AGENTS.has(id);
+  return { research: LUNA, draft: sol ? SOL : LUNA, critic: LUNA, revise: sol ? SOL : LUNA };
+}
 
 /** Single-call tasks outside the agent loop. */
 export const CALL_ROUTES = {
   /** Understanding a wish. */
   chat_intent: LUNA,
-  /** Climb AI: routine turns; analysis escalates to Sol. */
+  /** Climb AI chat: always Luna. */
   climb: LUNA,
-  climbEscalated: SOL,
-  /** Text fallback when Claude is unavailable. */
-  fallback: SOL,
 } as const;
-
-/** Apply the route for an agent id over its base models. */
-export function routeModels(id: string, base: PhaseModels): PhaseModels {
-  return { ...base, ...(ROUTES[id] ?? {}) };
-}

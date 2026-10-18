@@ -34,6 +34,7 @@ import type * as http from "../http.js";
 import type * as jobWrites from "../jobWrites.js";
 import type * as jobs from "../jobs.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_aiMode from "../lib/aiMode.js";
 import type * as lib_approvals from "../lib/approvals.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_autopilot from "../lib/autopilot.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   jobWrites: typeof jobWrites;
   jobs: typeof jobs;
   "lib/access": typeof lib_access;
+  "lib/aiMode": typeof lib_aiMode;
   "lib/approvals": typeof lib_approvals;
   "lib/audit": typeof lib_audit;
   "lib/autopilot": typeof lib_autopilot;

@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useState, type ReactNode } from "react";
-import { Badge, Callout, Progress, Skeleton, type StepItem, type StepStatus } from "@/components/ui";
+import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepStatus } from "@/components/ui";
+import { errorMessage } from "../errors";
 import { cn } from "@/lib/utils";
 import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
 import { microsToDisplay } from "../money";
@@ -173,10 +174,12 @@ export function RunProgress({
   const finished = RUN_FINISHED.has(run.status);
   const groups = groupSteps(run);
   const running = groups.flatMap((g) => g.phases).find((p) => p.status === "running");
-  const progress = now ? progressOfRun(run.steps.filter((x) => x.kind !== "compute"), run.planned, now, finished) : null;
+  // A finished run's clock stops when it finished.
+  const clock = finished && run.finishedAt ? run.finishedAt : now;
+  const progress = clock ? progressOfRun(run.steps.filter((x) => x.kind !== "compute"), run.planned, clock, finished) : null;
   const announce = finished ? `${run.title}: ${label}.` : `${run.title}: ${label}${running ? `, ${running.name}` : ""}.`;
   const timer = (p: { startedAt: number | null; finishedAt: number | null; status: StepStatus }) =>
-    p.startedAt && now ? formatDuration(((p.status === "running" ? now : (p.finishedAt ?? now)) - p.startedAt) / 1000) : null;
+    p.startedAt && clock ? formatDuration(((p.status === "running" && !finished ? clock : (p.finishedAt ?? clock)) - p.startedAt) / 1000) : null;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -240,12 +243,55 @@ export function RunProgress({
       {run.status === "failed" || run.status === "canceled" || run.status === "uncertain" ? (
         <Callout tone={run.status === "failed" ? "danger" : "warning"} live="none" title={label}>
           {run.userMessage ?? (run.status === "canceled" ? "This job was canceled before it finished." : "The team couldn't finish this. Unused capacity was returned.")}
+          {run.canRetry ? <RetryRun slug={slug} runId={runId} className="mt-3" /> : null}
         </Callout>
       ) : run.userMessage && run.status !== "verified" ? (
         <p className="text-sm text-ink-2">{run.userMessage}</p>
       ) : null}
     </div>
   );
+}
+
+/** Continue a stopped job from its last finished step (finished steps aren't redone or recharged). */
+export function RetryRun({ slug, runId, className }: { slug: string; runId: Id<"workflowRuns">; className?: string }) {
+  const retry = useMutation(api.workspace.retryRun);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <Button
+        size="sm"
+        className="self-start"
+        loading={busy}
+        loadingText="Continuing…"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await retry({ slug, runId });
+          } catch (e) {
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Retry from where it stopped
+      </Button>
+      <span className="text-xs text-ink-3">Finished steps are kept. Only the rest runs again.</span>
+      {error ? (
+        <span role="alert" className="text-xs text-red-800">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** The Retry button for a run shown outside RunProgress, only when it can continue. */
+export function RetryRunIfPossible({ slug, runId, className }: { slug: string; runId: Id<"workflowRuns">; className?: string }) {
+  const run = useQuery(api.content.runStatus, { slug, runId });
+  return run?.canRetry ? <RetryRun slug={slug} runId={runId} className={className} /> : null;
 }
 
 /**
@@ -274,6 +320,7 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
         {progress && !finished ? <span className="shrink-0 tabular-nums text-ink-3">{progress.percent}% · {formatEta(progress.etaSeconds).replace("About ", "~")}</span> : null}
       </p>
       {latest ? <p className="truncate text-xs text-ink-3">Latest: {latest}</p> : null}
+      {run.canRetry ? <RetryRun slug={slug} runId={runId} /> : null}
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="self-start text-xs font-medium text-brand-800 hover:underline">
         {open ? "Hide steps" : "Show all steps"}
       </button>

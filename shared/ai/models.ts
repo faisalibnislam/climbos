@@ -1,15 +1,15 @@
-import { type ModelKey, type RateVersion, modelCallCostUsd } from "../economics/rates";
+import { type ModelKey, type RateModelKey, type RateVersion, modelCallCostUsd } from "../economics/rates";
 import { usdToMicrosCeil } from "../economics/money";
 
 /**
  * Model registry: real API identifiers verified against provider docs on
- * 2026-10-17. A public model name is not proof of account access: the
+ * 2026-10-17/18 (Anthropic dropped 18 Oct 2026). A public model name is not proof of account access: the
  * provider adapter records the model id the API actually reports, and a
  * missing key yields an explicit "provider unavailable" result.
  */
 export interface ModelSpec {
   key: ModelKey;
-  provider: "anthropic" | "google" | "openai";
+  provider: "google" | "openai";
   apiModelId: string;
   /** "enabled" = usable when the key is configured; "disabled" = owner decision. */
   availability: "enabled" | "disabled";
@@ -23,51 +23,6 @@ export interface ModelSpec {
 }
 
 export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
-  "claude-fable-5.1": {
-    key: "claude-fable-5.1",
-    provider: "anthropic",
-    apiModelId: "claude-fable-5-1",
-    availability: "enabled",
-    contextWindow: 1_000_000,
-    maxOutputTokens: 128_000,
-    structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
-  },
-  "claude-opus-5.5": {
-    key: "claude-opus-5.5",
-    provider: "anthropic",
-    apiModelId: "claude-opus-5-5",
-    availability: "enabled",
-    contextWindow: 1_000_000,
-    maxOutputTokens: 128_000,
-    structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
-  },
-  "claude-sonnet-5.5": {
-    key: "claude-sonnet-5.5",
-    provider: "anthropic",
-    apiModelId: "claude-sonnet-5-5",
-    availability: "enabled",
-    contextWindow: 1_000_000,
-    maxOutputTokens: 128_000,
-    structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
-  },
-  "claude-haiku-5.5": {
-    key: "claude-haiku-5.5",
-    provider: "anthropic",
-    apiModelId: "claude-haiku-5-5",
-    availability: "enabled",
-    contextWindow: 1_000_000,
-    maxOutputTokens: 128_000,
-    longContextThreshold: 100_000,
-    structuredOutput: "json_schema",
-    verifiedAt: "2026-10-17",
-    docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
-  },
   "gemini-3.8-flash": {
     key: "gemini-3.8-flash",
     provider: "google",
@@ -173,4 +128,10 @@ export function actualStepMicros(
 /** Rough token estimate for budgeting before a call (≈4 chars/token, rounded up, +10% margin). */
 export function estimateTokens(text: string): number {
   return Math.ceil((text.length / 4) * 1.1);
+}
+
+/** A routing-table model as a callable model (retired Claude models throw). */
+export function runtimeModel(key: RateModelKey): ModelKey {
+  if (key in MODEL_SPECS) return key as ModelKey;
+  throw new Error(`${key} is retired and can't be called`);
 }

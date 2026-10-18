@@ -46,7 +46,7 @@ describe("cost reservations under concurrency", () => {
     expect(step.proceed).toBe(true);
     await t.mutation(internal.engine.recordUsage, {
       stepId: step.stepId!,
-      records: [{ type: "model_call", provider: "anthropic", model: "claude-haiku-5-5", inputTokens: 1000, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 120, estimated: false }],
+      records: [{ type: "model_call", provider: "openai", model: "gpt-6-luna", inputTokens: 1000, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 120, estimated: false }],
     });
     await t.mutation(internal.engine.failStep, { stepId: step.stepId!, error: "provider_error" });
     await t.mutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "failed" });

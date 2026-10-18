@@ -35,7 +35,7 @@ import {
 } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { RunProgress } from "@/components/app/content/RunProgress";
+import { RetryRunIfPossible, RunProgress } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
 
@@ -90,8 +90,9 @@ export default function OutboundPage() {
         <Callout tone="danger" title="This search didn't finish">
           {c.run?.message ?? "Nothing was charged beyond what was used."}{" "}
           <Button size="sm" variant="secondary" className="ml-2" onClick={() => setStartOpen(true)}>
-            Try again
+            Start over
           </Button>
+          {c.run ? <RetryRunIfPossible slug={slug} runId={c.run.id} className="mt-3" /> : null}
         </Callout>
       ) : (
         <Campaign slug={slug} data={data} />

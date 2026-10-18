@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Effort } from "../ai/claude";
+import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
   BusinessInsightsSchema,
@@ -26,8 +26,6 @@ import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubri
 
 import { routeModels } from "./routes";
 
-const SONNET: ModelKey = "claude-sonnet-5.5";
-const OPUS: ModelKey = "claude-opus-5.5";
 
 /* ---------------- Schemas (v1 + expert fields) ---------------- */
 
@@ -337,10 +335,10 @@ function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxR
   const lean = profile === "lean";
   return {
     ...s,
-    // Explicit overrides (benchmark arms, tests) beat the route; the route beats the base models.
-    models: { ...routeModels(s.id, { research: SONNET, draft: OPUS, critic: lean ? SONNET : OPUS }), ...o.models },
+    // Basic routes; runAgentTask applies the run's mode. Explicit overrides (benchmark arms, tests) win.
+    models: { ...routeModels(s.id), ...o.models },
     effort: { research: "medium", draft: "high", critic: lean ? "low" : "medium", ...o.effort },
-    // Thinking counts against max_tokens (Opus always thinks), so leave generous headroom.
+    // Reasoning counts against max output tokens, so leave generous headroom.
     maxTokens: s.maxTokens ?? { research: 24_000, draft: 32_000, critic: lean ? 8_000 : 16_000 },
     maxRevisions: o.maxRevisions ?? 1,
     shipOn: o.shipOn ?? (lean ? "gates" : "rubric"),

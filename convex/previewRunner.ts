@@ -56,7 +56,7 @@ export const run = internalAction({
     const content = untrusted(page.url, page.text, 10_000);
     const profileRes = await callModel(
       {
-        modelKey: process.env.GEMINI_API_KEY ? "gemini-3.1-flash-lite" : "claude-haiku-5.5",
+        modelKey: "gpt-6-luna",
         system: systemPrompt("data_analyst"),
         user: `TASK: From this single public web page, write a short factual profile: name, one-line summary, audience, category and up to 6 facts with sourceUrl set to "${page.url}". Only use what the page says.\n\n${content}`,
         schema: BusinessProfileSchema,
@@ -87,7 +87,7 @@ export const run = internalAction({
 
     const ideasRes = await callModel(
       {
-        modelKey: process.env.ANTHROPIC_API_KEY ? "claude-haiku-5.5" : "gemini-3.1-flash-lite",
+        modelKey: "gpt-6-luna",
         system: systemPrompt("cmo"),
         user: `TASK: Suggest exactly 3 concrete, low-risk growth ideas for this business and goal. Each idea names the channel, why it fits (grounded in the facts), a first step, and which role would own it. No made-up numbers or promises.\n\nGOAL: ${p.goal}\nBUSINESS: ${JSON.stringify({ name: profile.name, summary: profile.oneLineSummary, audience: profile.audience, facts: profile.facts.map((f) => f.statement) }).slice(0, 3000)}`,
         schema: PreviewIdeasSchema,
