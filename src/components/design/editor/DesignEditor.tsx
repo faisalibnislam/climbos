@@ -114,7 +114,7 @@ export function DesignEditor({
   const zoomPct = state.zoom ? Math.round(state.zoom * 100) : null;
 
   return (
-    <div className="flex h-dvh flex-col bg-surface-2 text-ink">
+    <div className="flex h-full min-h-[32rem] flex-col bg-surface-2 text-ink">
       {/* Top bar */}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
         <Button asChild variant="ghost" size="sm" className="text-ink-2 hover:text-ink">
@@ -168,7 +168,7 @@ export function DesignEditor({
           </aside>
         ) : null}
 
-        <main className="flex min-w-0 flex-1 flex-col" id="main">
+        <section className="flex min-w-0 flex-1 flex-col" aria-label="Canvas">
           <div className="border-b border-line bg-surface">
             <Toolbar editor={editor} />
           </div>
@@ -230,7 +230,7 @@ export function DesignEditor({
               Page {pageIndex + 1} of {doc.pages.length} · {doc.width}×{doc.height}
             </span>
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export function NewDesignStudio({ slug }: { slug: string }) {
   const doc = useMemo(() => (format ? newDesign(format, "bold_statement", undefined, carousel ? 3 : 0) : null), [format, carousel]);
   if (doc) return <DesignEditor initial={doc} title="Untitled design" backHref={`/app/${slug}/content`} />;
   return (
-    <main id="main" className="mx-auto max-w-4xl px-6 py-10 lg:px-8">
+    <div className="mx-auto max-w-4xl px-6 py-10 lg:px-8">
       <PageHeader title="Create a design" intro="Choose a size. You can change everything inside the editor." />
       <Checkbox checked={carousel} onCheckedChange={(v) => setCarousel(v === true)} label="Make it a carousel (cover, 3 points, ending)" />
       <ul className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -34,6 +34,6 @@ export function NewDesignStudio({ slug }: { slug: string }) {
           </li>
         ))}
       </ul>
-    </main>
+    </div>
   );
 }

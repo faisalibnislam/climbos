@@ -18,6 +18,8 @@ import {
   Plane,
   Target,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Sparkles,
   Bell,
   Palette,
@@ -45,6 +47,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Kbd,
+  Tooltip,
   Sheet,
   SheetClose,
   Skeleton,
@@ -75,61 +78,87 @@ const MOBILE_PRIMARY = ["today", "plan", "content", "results"];
  * works on mobile. Permission and existence checks happen in Convex; this
  * component only renders what the backend returns.
  */
-export function AppShell({ slug, children }: { slug: string; children: ReactNode }) {
+export function AppShell({ slug, children, workspace = false }: { slug: string; children: ReactNode; workspace?: boolean }) {
   return (
     <ClimbProvider>
-      <Shell slug={slug}>{children}</Shell>
+      <Shell slug={slug} workspace={workspace}>
+        {children}
+      </Shell>
     </ClimbProvider>
   );
 }
 
-function Shell({ slug, children }: { slug: string; children: ReactNode }) {
+/**
+ * `workspace` is for full-canvas tools (the design studio): the sidebar starts
+ * as an icon rail, the page fills the space under the top bar, and the phone
+ * bottom bar steps aside.
+ */
+function Shell({ slug, children, workspace }: { slug: string; children: ReactNode; workspace: boolean }) {
   const climb = useClimb();
   const me = useQuery(api.orgs.me);
   const pause = useQuery(api.workspace.pauseStatus, { slug });
   const pathname = usePathname();
   const current = me?.orgs.find((o) => o.slug === slug);
   const isDemo = current?.kind === "demo";
-  const section = pathname.split("/")[3] ?? "today";
+  const section = pathname.startsWith("/studio/") ? "studio" : (pathname.split("/")[3] ?? "today");
+  const [rail, setRail] = useState(workspace);
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className={cn("bg-bg", workspace ? "flex h-dvh flex-col" : "min-h-dvh")}>
       <Toaster />
       <CommandPalette slug={slug} />
       <ClimbPanel slug={slug} />
       <PointOverlay />
       {isDemo && <DemoBanner slug={slug} />}
       {pause?.paused && <PausedBanner slug={slug} canResume={current?.role === "owner" || current?.role === "admin"} />}
-      <div className="flex w-full">
-        {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-2 pb-3 pt-3 lg:flex" aria-label="Main">
-          <Link href={`/app/${slug}/today`} className="mb-3 px-2" aria-label="ClimbOS home">
-            <Logo markClassName="size-6" className="[&>span:last-child]:text-base" />
-          </Link>
-          <WorkspaceSwitcher slug={slug} />
-          <nav className="mt-3 flex flex-col gap-2" aria-label="Primary">
+      <div className={cn("flex w-full", workspace && "min-h-0 flex-1")}>
+        {/* Desktop sidebar (an icon rail when collapsed) */}
+        <aside
+          className={cn(
+            "sticky top-0 hidden shrink-0 flex-col overflow-y-auto border-r border-line bg-surface pb-3 pt-3 lg:flex",
+            workspace ? "h-full" : "h-dvh",
+            rail ? "w-14 items-center px-1.5" : "w-60 px-2",
+          )}
+          aria-label="Main"
+        >
+          <div className={cn("mb-3 flex items-center", rail ? "flex-col gap-2" : "justify-between px-2")}>
+            <Link href={`/app/${slug}/today`} aria-label="ClimbOS home">
+              <Logo markClassName="size-6" className={cn("[&>span:last-child]:text-base", rail && "[&>span:last-child]:hidden")} />
+            </Link>
+            {workspace ? (
+              <Tooltip content={rail ? "Expand sidebar" : "Collapse sidebar"}>
+                <button type="button" onClick={() => setRail((r) => !r)} aria-label={rail ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!rail} className={buttonClasses({ variant: "ghost", size: "sm", className: "w-8 px-0 text-ink-3" })}>
+                  {rail ? <PanelLeftOpen className="size-4" aria-hidden /> : <PanelLeftClose className="size-4" aria-hidden />}
+                </button>
+              </Tooltip>
+            ) : null}
+          </div>
+          {rail ? null : <WorkspaceSwitcher slug={slug} />}
+          <nav className={cn("mt-3 flex flex-col gap-2", rail && "items-center")} aria-label="Primary">
             {NAV_GROUPS.map((group) => (
-              <NavGroup key={group || "home"} label={group}>
+              <NavGroup key={group || "home"} label={rail ? "" : group}>
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />}>
+                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />}>
                     {item.label}
                   </NavLink>
                 ))}
               </NavGroup>
             ))}
           </nav>
-          <div className="mt-auto flex flex-col gap-1 pt-4">
-            <Link href={`/app/${slug}/settings/billing`} className={buttonClasses({ variant: "accent", size: "sm", className: "mb-1 w-full" })}>
-              Plans and usage
-            </Link>
-            <NavLink href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
+          <div className={cn("mt-auto flex flex-col gap-1 pt-4", rail && "items-center")}>
+            {rail ? null : (
+              <Link href={`/app/${slug}/settings/billing`} className={buttonClasses({ variant: "accent", size: "sm", className: "mb-1 w-full" })}>
+                Plans and usage
+              </Link>
+            )}
+            <NavLink compact={rail} href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
               Settings
             </NavLink>
-            <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />
+            {rail ? null : <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />}
           </div>
         </aside>
 
-        <div className={cn("flex min-w-0 flex-1 flex-col transition-[margin] duration-200", climb.open && "sm:mr-[400px]")}>
+        <div className={cn("flex min-w-0 flex-1 flex-col transition-[margin] duration-200", climb.open && "sm:mr-[400px]", workspace && "min-h-0")}>
           {/* Top bar: make a wish or search (⌘K), team activity, pause, account */}
           <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
             <Link href={`/app/${slug}/today`} aria-label="ClimbOS home" className="lg:hidden">
@@ -162,14 +191,14 @@ function Shell({ slug, children }: { slug: string; children: ReactNode }) {
               <AccountMenu />
             </div>
           </header>
-          <main id="main" className="flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
+          <main id="main" className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
             {children}
           </main>
         </div>
       </div>
 
       {/* Mobile bottom navigation: four destinations and More */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
+      <nav hidden={workspace} className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
         <ul className="grid grid-cols-5">
           {NAV.filter((n) => MOBILE_PRIMARY.includes(n.key)).map((item) => {
             const active = section === item.key;
@@ -250,19 +279,28 @@ function NavGroup({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function NavLink({ href, active, icon, children }: { href: string; active: boolean; icon: ReactNode; children: ReactNode }) {
-  return (
+function NavLink({ href, active, icon, children, compact = false }: { href: string; active: boolean; icon: ReactNode; children: ReactNode; compact?: boolean }) {
+  const link = (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      aria-label={compact && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui transition-colors",
+        "relative flex h-8 items-center gap-2.5 rounded-lg text-ui transition-colors",
+        compact ? "w-9 justify-center px-0" : "px-2",
         active ? "bg-surface-3/70 font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       {icon}
-      {children}
+      {compact ? null : children}
     </Link>
+  );
+  return compact ? (
+    <Tooltip content={children} side="right">
+      {link}
+    </Tooltip>
+  ) : (
+    link
   );
 }
 
