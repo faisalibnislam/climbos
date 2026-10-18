@@ -79,8 +79,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Model call with retries for transient errors (rate limits, overload, network). */
 async function turnWithRetry(input: TurnRequest): Promise<TurnResult> {
   // Long Sol/large turns run in background mode, as in production.
-  const req = input.modelKey === "gpt-6.1-sol" || input.maxTokens >= 24_000 ? { ...input, background: { pollUntil: Date.now() + 20 * 60_000 } } : input;
+  // As in production, a pending background answer is resumed (polled again by its id), never restarted.
+  let responseId: string | undefined;
+  const bg = input.modelKey === "gpt-6.1-sol" || input.maxTokens >= 24_000;
+  const reqFor = () => (bg ? { ...input, background: { pollUntil: Date.now() + 15 * 60_000, resumeResponseId: responseId, onStarted: async (id: string) => { responseId = id; } } } : input);
+  const req = reqFor();
   let r = await modelTurn(req, rates);
+  for (let i = 0; i < 3 && !r.ok && r.kind === "pending" && responseId; i++) r = await modelTurn(reqFor(), rates);
   if (process.env.BENCH_DEBUG) console.log(`[turn] ${req.modelKey} max=${req.maxTokens} search=${req.webSearch?.maxUses ?? 0} schema=${Boolean(req.schema)} → ${r.ok ? "ok" : r.kind} out=${r.usage.outputTokens} reasoning=${r.usage.thinkingTokens} searches=${r.usage.webSearches}`);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
     await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);

@@ -1,0 +1,28 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": false,
+    "error": "Still working; continuing in a fresh step.",
+    "costMicros": 0,
+    "ms": 3595377
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": false,
+    "error": "Still working; continuing in a fresh step.",
+    "costMicros": 0,
+    "ms": 3595366
+   }
+  },
+  "comparisons": {},
+  "scores": {
+   "basic": null,
+   "expert": null
+  }
+ }
+]
