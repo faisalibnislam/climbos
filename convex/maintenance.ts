@@ -67,18 +67,36 @@ export const syncAll = internalAction({
   },
 });
 
+/**
+ * Providers whose tokens really run out and need the owner to reconnect. Google, LinkedIn and X
+ * tokens are short-lived but renewed with a refresh token before use, so they're not flagged here
+ * (a failed renewal marks them expired).
+ */
+const RECONNECT_PROVIDERS = ["instagram", "facebook_pages", "meta_ads"] as const;
+
 export const checkExpiry = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const rows = await ctx.db
-      .query("connections")
-      .withIndex("by_expires", (q) => q.gt("expiresAt", 0).lt("expiresAt", Date.now() + 3 * DAY))
-      .take(200);
-    for (const c of rows) {
-      if (c.status !== "connected" || c.isFixture) continue;
-      if ((c.expiresAt ?? 0) < Date.now()) await ctx.db.patch(c._id, { status: "expired", updatedAt: Date.now() });
-      await ctx.db.insert("auditEvents", { orgId: c.orgId, actorType: "system", action: "connection.expiring", summary: `${c.provider} access ${c.expiresAt && c.expiresAt < Date.now() ? "expired" : "expires soon"}. Reconnect it in Connections.`, createdAt: Date.now() });
+    const now = Date.now();
+    let flagged = 0;
+    for (const provider of RECONNECT_PROVIDERS) {
+      // Only live connections, by expiry: past expiries of already-expired rows never crowd out new ones.
+      const rows = await ctx.db
+        .query("connections")
+        .withIndex("by_provider_status_expires", (q) => q.eq("provider", provider).eq("status", "connected").gt("expiresAt", 0).lt("expiresAt", now + 3 * DAY))
+        .take(200);
+      for (const c of rows) {
+        if (c.isFixture) continue;
+        const expired = (c.expiresAt ?? 0) < now;
+        if (expired) await ctx.db.patch(c._id, { status: "expired", updatedAt: now });
+        // One notice per token (and one more when it actually expires).
+        else if (c.expiryNoticeFor === c.expiresAt) continue;
+        else await ctx.db.patch(c._id, { expiryNoticeFor: c.expiresAt });
+        await ctx.db.insert("auditEvents", { orgId: c.orgId, actorType: "system", action: "connection.expiring", summary: `${c.provider} access ${expired ? "expired" : "expires soon"}. Reconnect it in Connections.`, createdAt: now });
+        flagged++;
+      }
     }
+    return flagged;
   },
 });
 

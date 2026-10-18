@@ -29,8 +29,11 @@ export async function accountWorkspaces(ctx: Ctx, accountId: Id<"accounts">): Pr
   return rows.filter((o) => !o.deletedAt);
 }
 
-/** People on the account: distinct active members plus pending invites, across all its workspaces. */
-export async function accountSeats(ctx: Ctx, accountId: Id<"accounts">): Promise<{ users: Set<string>; invites: Set<string> }> {
+/**
+ * People on the account: distinct active members plus pending (unexpired) invites, across all its
+ * workspaces. Invites are distinct by email, so one person invited to two workspaces is one seat.
+ */
+export async function accountSeats(ctx: Ctx, accountId: Id<"accounts">, now = Date.now()): Promise<{ users: Set<string>; invites: Set<string> }> {
   const users = new Set<string>();
   const invites = new Set<string>();
   for (const org of await accountWorkspaces(ctx, accountId)) {
@@ -40,7 +43,7 @@ export async function accountSeats(ctx: Ctx, accountId: Id<"accounts">): Promise
       .take(200);
     for (const m of members) {
       if (m.status === "active" && m.userId) users.add(m.userId);
-      if (m.status === "invited" && m.invitedEmail) invites.add(m.invitedEmail.toLowerCase());
+      if (m.status === "invited" && m.invitedEmail && (m.inviteExpiresAt ?? 0) > now) invites.add(m.invitedEmail.toLowerCase());
     }
   }
   return { users, invites };
@@ -53,10 +56,14 @@ export async function seatState(ctx: Ctx, org: Doc<"organizations">) {
   const limit = org.kind === "demo" ? 10 : sub ? config.seats[packageOf(sub.planKey)] : config.seats.free;
   if (!org.accountId) return { limit, used: 0, emails: new Set<string>(), userIds: new Set<string>() };
   const { users, invites } = await accountSeats(ctx, org.accountId);
-  const emails = new Set(invites);
+  const memberEmails = new Set<string>();
+  let membersWithoutEmail = 0;
   for (const id of users) {
     const u = await ctx.db.get(id as Id<"users">);
-    if (u?.email) emails.add(u.email.toLowerCase());
+    if (u?.email) memberEmails.add(u.email.toLowerCase());
+    else membersWithoutEmail++;
   }
-  return { limit, used: users.size + invites.size, emails, userIds: users };
+  // An invite to someone who's already a member elsewhere on the account takes no extra seat.
+  const emails = new Set([...memberEmails, ...invites]);
+  return { limit, used: emails.size + membersWithoutEmail, emails, userIds: users };
 }

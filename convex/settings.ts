@@ -3,11 +3,13 @@ import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS } from "../shared/economics";
 import { ROLE_DESCRIPTIONS, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { action, internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";
 import { latestSubscription } from "./lib/access";
-import { seatState } from "./lib/accounts";
+import { accountWorkspaces, seatState } from "./lib/accounts";
+import { subscriptionAccess } from "../shared/billing";
 import { acceptInviteLink } from "./team";
 import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess, requireUser } from "./lib/tenancy";
@@ -69,7 +71,10 @@ export const invite = mutation({
     if (!seats.emails.has(clean) && seats.used >= seats.limit) {
       throw appError(seats.limit <= 1 ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", seats.limit <= 1 ? "Free accounts are for one person. Choose a package to invite your team." : `Your package includes ${seats.limit} people. Upgrade to add more.`);
     }
-    if (active.some((m) => m.invitedEmail === clean)) throw appError("INVALID", "That person already has an invitation.");
+    const now = Date.now();
+    if (active.some((m) => m.invitedEmail === clean && (m.status === "active" || (m.inviteExpiresAt ?? 0) > now))) throw appError("INVALID", "That person already has an invitation.");
+    // An expired invitation is replaced by the new one.
+    for (const m of active) if (m.status === "invited" && m.invitedEmail === clean) await ctx.db.patch(m._id, { status: "removed", inviteTokenHash: undefined });
     const tokenBytes = crypto.getRandomValues(new Uint8Array(24));
     const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
     await ctx.db.insert("memberships", {
@@ -197,7 +202,8 @@ export const updatePolicy = mutation({
   args: {
     slug: v.string(),
     mode: v.union(v.literal("copilot"), v.literal("review"), v.literal("bounded_autopilot")),
-    allowRecurringPostsUnderCalendar: v.boolean(),
+    /** Not used by any executor yet (autopilot has its own settings); kept for older clients and ignored. */
+    allowRecurringPostsUnderCalendar: v.optional(v.boolean()),
     allowAdPauseRules: v.boolean(),
     maxMonthlyAdSpend: v.number(),
     approvalTtlHours: v.number(),
@@ -216,15 +222,25 @@ export const updatePolicy = mutation({
     }
     if (!(args.maxMonthlyAdSpend >= 0) || args.maxMonthlyAdSpend > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000.");
     const ttl = Math.max(1, Math.min(24 * 14, Math.round(args.approvalTtlHours)));
+    const spendMinor = Math.round(args.maxMonthlyAdSpend * 100);
+    // Only rules that decide what an approval authorizes start a new version (which voids existing approvals).
+    // The expiry window applies to approvals given from now on, so changing it alone keeps them.
+    const relevant = args.mode !== p.mode || args.allowAdPauseRules !== p.allowAdPauseRules || spendMinor !== p.maxMonthlyAdSpendMinor;
+    if (!relevant) {
+      if (ttl !== p.approvalTtlHours) {
+        await ctx.db.patch(p._id, { approvalTtlHours: ttl });
+        await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "policy.updated", summary: `New approvals now expire after ${ttl} hours.` });
+      }
+      return { invalidated: false };
+    }
     await ctx.db.patch(p._id, { active: false });
     const { _id: _omit, _creationTime: _ct, ...rest } = p;
     await ctx.db.insert("autonomyPolicies", {
       ...rest,
       version: p.version + 1,
       mode: args.mode,
-      allowRecurringPostsUnderCalendar: args.allowRecurringPostsUnderCalendar,
       allowAdPauseRules: args.allowAdPauseRules,
-      maxMonthlyAdSpendMinor: Math.round(args.maxMonthlyAdSpend * 100),
+      maxMonthlyAdSpendMinor: spendMinor,
       approvalTtlHours: ttl,
       createdBy: user._id,
       createdAt: Date.now(),
@@ -237,6 +253,7 @@ export const updatePolicy = mutation({
       .take(300);
     for (const a of approved) if (a.subjectType !== "strategy") await ctx.db.patch(a._id, { status: "invalidated", invalidatedReason: "Approval rules changed" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "policy.updated", summary: `Approval rules updated to v${p.version + 1} (${args.mode}). Existing approvals need to be renewed.` });
+    return { invalidated: true };
   },
 });
 
@@ -255,34 +272,76 @@ export const activity = query({
   },
 });
 
-export const usage = query({
-  args: { slug: v.string() },
-  handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const events = await ctx.db
+type UsageTotals = {
+  byRole: { role: string; calls: number; inputTokens: number; outputTokens: number; costMicros: number }[];
+  byModel: { model: string; calls: number; costMicros: number }[];
+  totalCostMicros: number;
+  events: number;
+};
+
+/** One page of the last 31 days of usage, already summed (so the action never holds raw events). */
+export const usagePage = internalQuery({
+  args: { orgId: v.id("organizations"), since: v.number(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { orgId, since, cursor }): Promise<UsageTotals & { cursor: string | null }> => {
+    const p = await ctx.db
       .query("usageEvents")
-      .withIndex("by_org_created", (q) => q.eq("orgId", org._id).gt("createdAt", Date.now() - 31 * 86_400_000))
-      .take(3000);
-    const byRole = new Map<string, { calls: number; inputTokens: number; outputTokens: number; costMicros: number }>();
-    const byModel = new Map<string, { calls: number; costMicros: number }>();
-    for (const e of events) {
-      const r = byRole.get(e.role ?? "system") ?? { calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
-      r.calls += e.type === "model_call" ? 1 : 0;
-      r.inputTokens += e.inputTokens;
-      r.outputTokens += e.outputTokens;
-      r.costMicros += e.costMicros;
-      byRole.set(e.role ?? "system", r);
-      const m = byModel.get(e.model ?? e.provider) ?? { calls: 0, costMicros: 0 };
-      m.calls += 1;
-      m.costMicros += e.costMicros;
-      byModel.set(e.model ?? e.provider, m);
+      .withIndex("by_org_created", (q) => q.eq("orgId", orgId).gt("createdAt", since))
+      .paginate({ numItems: 4000, cursor });
+    const t = sumUsage(p.page);
+    return { ...t, cursor: p.isDone ? null : p.continueCursor };
+  },
+});
+
+function sumUsage(events: { role?: string; type: string; inputTokens: number; outputTokens: number; costMicros: number; model?: string; provider: string }[]): UsageTotals {
+  const byRole = new Map<string, { calls: number; inputTokens: number; outputTokens: number; costMicros: number }>();
+  const byModel = new Map<string, { calls: number; costMicros: number }>();
+  for (const e of events) {
+    const r = byRole.get(e.role ?? "system") ?? { calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
+    r.calls += e.type === "model_call" ? 1 : 0;
+    r.inputTokens += e.inputTokens;
+    r.outputTokens += e.outputTokens;
+    r.costMicros += e.costMicros;
+    byRole.set(e.role ?? "system", r);
+    const m = byModel.get(e.model ?? e.provider) ?? { calls: 0, costMicros: 0 };
+    m.calls += 1;
+    m.costMicros += e.costMicros;
+    byModel.set(e.model ?? e.provider, m);
+  }
+  return {
+    byRole: [...byRole.entries()].map(([role, x]) => ({ role, ...x })),
+    byModel: [...byModel.entries()].map(([model, x]) => ({ model, ...x })),
+    totalCostMicros: events.reduce((s, e) => s + e.costMicros, 0),
+    events: events.length,
+  };
+}
+
+/** The last 31 days of usage, summed across every event (read in pages, no cap). */
+export const usage = action({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }): Promise<UsageTotals> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "view" });
+    const since = Date.now() - 31 * 86_400_000;
+    const role = new Map<string, UsageTotals["byRole"][number]>();
+    const model = new Map<string, UsageTotals["byModel"][number]>();
+    let total = 0;
+    let count = 0;
+    let cursor: string | null = null;
+    for (let i = 0; i < 250; i++) {
+      const page: UsageTotals & { cursor: string | null } = await ctx.runQuery(internal.settings.usagePage, { orgId: access.orgId, since, cursor });
+      for (const r of page.byRole) {
+        const x = role.get(r.role) ?? { role: r.role, calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
+        role.set(r.role, { role: r.role, calls: x.calls + r.calls, inputTokens: x.inputTokens + r.inputTokens, outputTokens: x.outputTokens + r.outputTokens, costMicros: x.costMicros + r.costMicros });
+      }
+      for (const m of page.byModel) {
+        const x = model.get(m.model) ?? { model: m.model, calls: 0, costMicros: 0 };
+        model.set(m.model, { model: m.model, calls: x.calls + m.calls, costMicros: x.costMicros + m.costMicros });
+      }
+      total += page.totalCostMicros;
+      count += page.events;
+      cursor = page.cursor;
+      if (!cursor) break;
     }
-    return {
-      byRole: [...byRole.entries()].map(([role, v]) => ({ role, ...v })),
-      byModel: [...byModel.entries()].map(([model, v]) => ({ model, ...v })),
-      totalCostMicros: events.reduce((s, e) => s + e.costMicros, 0),
-      events: events.length,
-    };
+    return { byRole: [...role.values()], byModel: [...model.values()], totalCostMicros: total, events: count };
   },
 });
 
@@ -370,14 +429,19 @@ export const runExport = internalAction({
     const req = await ctx.runQuery(internal.settings.getPrivacyRequest, { requestId });
     if (!req) return;
     await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "running" });
-    const json = await ctx.runQuery(internal.settings.exportData, { orgId: req.orgId });
-    if (r2Configured()) {
-      const key = r2Key(req.orgId, "exports", "json");
-      await r2Put(key, json, "application/json");
-      await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultR2Key: key });
-    } else {
-      const storageId = await ctx.storage.store(new Blob([json], { type: "application/json" }));
-      await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultStorageId: storageId });
+    try {
+      const json = await ctx.runQuery(internal.settings.exportData, { orgId: req.orgId });
+      if (r2Configured()) {
+        const key = r2Key(req.orgId, "exports", "json");
+        await r2Put(key, json, "application/json");
+        await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultR2Key: key });
+      } else {
+        const storageId = await ctx.storage.store(new Blob([json], { type: "application/json" }));
+        await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "done", resultStorageId: storageId });
+      }
+    } catch {
+      // Never leave the request "running": the owner sees it failed and can ask again.
+      await ctx.runMutation(internal.settings.setPrivacyStatus, { requestId, status: "failed", note: "The export couldn't be built. Please try again." });
     }
   },
 });
@@ -459,9 +523,37 @@ export const deleteWorkspace = mutation({
     await ctx.db.patch(org._id, { deletedAt: Date.now(), emergencyStop: { active: true, at: Date.now(), by: user._id, reason: "Workspace deleted" } });
     await ctx.db.insert("privacyRequests", { orgId: org._id, kind: "delete_workspace", status: "running", requestedBy: user._id, createdAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.settings.purgeWorkspaceBatch, { orgId: org._id });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.deleted", summary: "Workspace deletion started." });
+    const billing = await endBillingIfLastWorkspace(ctx, org);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.deleted", summary: `Workspace deletion started.${billing === "canceling" ? " The package was set to end at the end of this billing period." : ""}` });
+    return { billing };
   },
 });
+
+/** What a workspace deletion means for billing, shown before the owner confirms. */
+export const deletionImpact = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "delete_workspace");
+    const others = org.accountId ? (await accountWorkspaces(ctx, org.accountId)).filter((w) => w._id !== org._id && w.kind !== "demo") : [];
+    const sub = await latestSubscription(ctx, org);
+    const paid = Boolean(sub && !sub.comp && subscriptionAccess(sub, Date.now()) === "full" && !sub.cancelAtPeriodEnd);
+    return { lastWorkspace: others.length === 0, packageEnds: paid && others.length === 0, sharedPackage: paid && others.length > 0 };
+  },
+});
+
+/**
+ * Deleting the account's last workspace ends its Polar package at the end of the period
+ * (nothing left to use it on). With other workspaces left, the package keeps serving them.
+ */
+export async function endBillingIfLastWorkspace(ctx: MutationCtx, org: Doc<"organizations">): Promise<"none" | "shared" | "canceling"> {
+  if (!org.accountId || org.kind === "demo") return "none";
+  const sub = await latestSubscription(ctx, org);
+  if (!sub || sub.comp || subscriptionAccess(sub, Date.now()) !== "full" || sub.cancelAtPeriodEnd) return "none";
+  const others = (await accountWorkspaces(ctx, org.accountId)).filter((w) => w._id !== org._id && w.kind !== "demo");
+  if (others.length) return "shared";
+  await ctx.scheduler.runAfter(0, internal.billing.cancelAtPeriodEnd, { polarSubscriptionId: sub.polarSubscriptionId });
+  return "canceling";
+}
 
 /** Tables purged by an index whose first field is orgId (children are removed with their parents). */
 const PURGE_BY_ORG: { table: string; index: string }[] = [
@@ -483,8 +575,42 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "goals", index: "by_org_status" },
   { table: "businesses", index: "by_org" },
   { table: "workflowRuns", index: "by_org_created" },
+  // Integrations and keys first, so nothing keeps acting for a deleted workspace.
+  { table: "airlyLinks", index: "by_org" },
+  { table: "webhookEndpoints", index: "by_org" },
+  { table: "agentTokens", index: "by_org" },
+  { table: "inviteLinks", index: "by_org" },
+  { table: "reportShares", index: "by_org" },
+  // Sales, outreach and lead capture.
+  { table: "prospects", index: "by_org_stage" },
+  { table: "outboundCampaigns", index: "by_org_created" },
+  { table: "deals", index: "by_org_updated" },
+  { table: "bookings", index: "by_org_start" },
+  { table: "bookingPages", index: "by_org" },
+  { table: "landingPages", index: "by_org" },
+  { table: "bioPages", index: "by_org" },
+  { table: "chatWidgets", index: "by_org" },
+  { table: "chatThreads", index: "by_org_last" },
+  { table: "communityMessages", index: "by_org_status" },
+  { table: "reviewRequests", index: "by_org_created" },
+  { table: "competitorWatches", index: "by_org" },
+  { table: "competitorChanges", index: "by_org_at" },
+  // Media and drafts (designs are assets).
+  { table: "assets", index: "by_org_created" },
+  { table: "reels", index: "by_org_created" },
+  { table: "assetJobs", index: "by_org_created" },
+  { table: "calendarSlots", index: "by_org_week" },
+  { table: "weekPlans", index: "by_org_week" },
+  { table: "autopilotSettings", index: "by_org" },
+  { table: "climbMessages", index: "by_org_user_created" },
+  { table: "comments", index: "by_subject" },
+  { table: "assignments", index: "by_subject" },
+  { table: "presence", index: "by_org_path" },
+  { table: "voiceSamples", index: "by_org_used" },
   { table: "memberships", index: "by_org" },
 ];
+
+const CHILD_SLICE = 100;
 
 export const purgeWorkspaceBatch = internalMutation({
   args: { orgId: v.id("organizations") },
@@ -496,6 +622,7 @@ export const purgeWorkspaceBatch = internalMutation({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows: any[] = await (ctx.db.query(table as never) as any).withIndex(index, (q: any) => q.eq("orgId", orgId)).take(BATCH - removed);
       for (const r of rows) {
+        if (removed >= BATCH * 4) break;
         if (table === "artifacts") {
           const versions = await ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", r._id)).take(100);
           for (const ver of versions) {
@@ -522,6 +649,23 @@ export const purgeWorkspaceBatch = internalMutation({
           // Step outputs contain generated content; run cost records stay in usageEvents for accounting.
           for (const st of await ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", r._id)).take(100)) await ctx.db.delete(st._id);
         }
+        // Large child sets go a slice per batch; the parent is deleted once its children are gone.
+        const children =
+          table === "webhookEndpoints"
+            ? await ctx.db.query("webhookDeliveries").withIndex("by_endpoint", (q) => q.eq("endpointId", r._id)).take(CHILD_SLICE)
+            : table === "outboundCampaigns"
+              ? await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", r._id)).take(CHILD_SLICE)
+              : table === "chatThreads"
+                ? await ctx.db.query("widgetMessages").withIndex("by_thread", (q) => q.eq("threadId", r._id)).take(CHILD_SLICE)
+                : [];
+        for (const d of children) await ctx.db.delete(d._id);
+        removed += children.length;
+        if (children.length === CHILD_SLICE) continue;
+        if (table === "assets") {
+          if (r.storageId) await ctx.storage.delete(r.storageId).catch(() => undefined);
+          if (r.r2Key) await ctx.scheduler.runAfter(0, internal.settings.deleteR2Object, { key: r.r2Key });
+        }
+        if (table === "reels" && r.videoStorageId) await ctx.storage.delete(r.videoStorageId).catch(() => undefined);
         await ctx.db.delete(r._id);
         removed++;
       }

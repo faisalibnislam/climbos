@@ -1,3 +1,4 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
@@ -48,8 +49,9 @@ const CLIENT_ENV = {
   x: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
 } as const;
 
-/** Providers whose access tokens we refresh with a stored refresh token before use. */
-export const REFRESHABLE = new Set(["linkedin", "x"]);
+/** Providers whose access tokens we refresh with a stored refresh token before use (Google's last about an hour). */
+export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "google_ads"]);
+const REFRESH_MARGIN_MS = 5 * 60_000;
 
 /** Scopes we ask for, used when the token response doesn't echo them back. */
 const REQUESTED_SCOPES: Record<string, string[]> = {
@@ -73,6 +75,9 @@ export const completeOAuth = action({
     if (!expected || !timingSafeEqual(args.serverSecret, expected)) throw appError("FORBIDDEN", "Not allowed.");
     const st = await ctx.runMutation(internal.connections.consumeOAuthState, { state: args.state });
     if (!st) return { ok: false, slug: "", provider: "", message: "This connection link expired. Please try connecting again." };
+    // Bound to the browser that started it: the signed-in caller must be the user who started the flow.
+    const callerId = await getAuthUserId(ctx);
+    if (!callerId || callerId !== st.userId) return { ok: false, slug: "", provider: st.provider, message: "Start connecting again from ClimbOS while signed in." };
     const group = GROUP_FOR[st.provider];
     const [idEnv, secretEnv] = CLIENT_ENV[group];
     const clientId = process.env[idEnv]!;
@@ -183,10 +188,13 @@ export const connectApiKey = action({
 });
 
 export const revokeProviderToken = internalAction({
-  args: { connectionId: v.id("connections") },
-  handler: async (ctx, { connectionId }) => {
-    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId, forRevocation: true }).catch(() => null);
-    if (secret) {
+  args: { connectionId: v.id("connections"), secretIds: v.optional(v.array(v.id("connectionSecrets"))) },
+  handler: async (ctx, { connectionId, secretIds }) => {
+    // Revoke exactly the secrets that were live at disconnect (older scheduled jobs: whatever is stored).
+    const secrets = secretIds
+      ? await ctx.runQuery(internal.connections.secretsForRevocation, { connectionId, secretIds }).catch(() => [])
+      : [await ctx.runQuery(internal.connections.getSecret, { connectionId, forRevocation: true }).catch(() => null)].filter((s) => s !== null);
+    for (const secret of secrets) {
       const group = GROUP_FOR[secret.provider];
       if (group) {
         try {
@@ -202,7 +210,7 @@ export const revokeProviderToken = internalAction({
         }
       }
     }
-    await ctx.runMutation(internal.connections.deleteSecrets, { connectionId });
+    await ctx.runMutation(internal.connections.deleteSecrets, { connectionId, secretIds });
   },
 });
 
@@ -229,7 +237,8 @@ export const refreshAccessToken = internalAction({
       return { ok: false, message: "Couldn't reach the provider to renew access." };
     }
     if (!parsed.ok) {
-      await ctx.runMutation(internal.connections.markSync, { connectionId, ok: false, error: "Sign-in expired. Reconnect this account." });
+      // The provider refused the refresh token (revoked or expired): the owner has to reconnect.
+      await ctx.runMutation(internal.connections.markSync, { connectionId, ok: false, error: "Sign-in expired. Reconnect this account.", expired: true });
       return { ok: false, message: parsed.description ?? parsed.error };
     }
     const t = parsed.token;
@@ -251,6 +260,14 @@ export const syncGa4 = internalAction({
   handler: async (ctx, { orgId }) => {
     const conn = await ctx.runQuery(internal.connections.connectionFor, { orgId, provider: "ga4" });
     if (!conn || conn.status !== "connected" || conn.isFixture || !conn.externalAccountId) return;
+    // Google access tokens expire after about an hour: renew with the stored refresh token first.
+    if (conn.expiresAt && conn.expiresAt < Date.now() + REFRESH_MARGIN_MS) {
+      const r = await ctx.runAction(internal.connectionActions.refreshAccessToken, { connectionId: conn._id });
+      if (!r.ok) {
+        await ctx.runMutation(internal.connections.markSync, { connectionId: conn._id, ok: false, error: r.message ?? "Couldn't renew Google access." });
+        return;
+      }
+    }
     const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: conn._id });
     if (!secret) return;
     const { accessToken } = JSON.parse(secret.value) as { accessToken: string };

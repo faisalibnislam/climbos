@@ -1,17 +1,26 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { AreaChart, BarList, FunnelChart, Skeleton, Stat, StatGroup } from "@/components/ui";
+import { AreaChart, BarList, Button, FunnelChart, Skeleton, Stat, StatGroup, toast } from "@/components/ui";
 import { formatNumber, formatUsd } from "@/lib/utils";
 
 /** Business dashboard: growth, revenue, AI cost and the onboarding → paid funnel. */
 export function AdminDashboard() {
   const d = useQuery(api.admin.dashboard, {});
+  const refresh = useMutation(api.admin.refreshDashboardNow);
   if (!d) return <Skeleton className="h-64 w-full" />;
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="heading-page">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="heading-page">Dashboard</h1>
+        <span className="flex items-center gap-2 text-sm text-ink-3">
+          {d.updatedAt ? `Updated ${new Date(d.updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Not built yet"}
+          <Button size="sm" variant="secondary" onClick={() => refresh({}).then(() => toast({ tone: "success", title: "Refreshing" }), () => undefined)}>
+            Refresh
+          </Button>
+        </span>
+      </div>
       <StatGroup>
         <Stat label="MRR" value={formatUsd(d.mrrUsd)} sublabel={`${formatNumber(d.paying)} paying · ${formatNumber(d.comps)} comped`} />
         <Stat label="Revenue, 30 days" value={formatUsd(d.revenue30dUsd)} sublabel="Paid orders, after tax and refunds" />

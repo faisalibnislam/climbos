@@ -215,8 +215,10 @@ function linksFrom(slug: string, result: unknown): { label: string; href: string
 export const respond = action({
   args: { slug: v.string(), messageId: v.id("climbMessages"), runId: v.id("workflowRuns"), screenSummary: v.optional(v.string()), entities: v.optional(v.array(entityArg)) },
   handler: async (ctx, { slug, messageId, runId, screenSummary, entities }) => {
+    // Public action: only the member who sent the message, in that workspace, can make Climb answer it.
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "chat" });
     const c = await ctx.runQuery(internal.climb.context, { messageId, runId });
-    if (!c) return;
+    if (!c || c.message.orgId !== access.orgId || c.message.userId !== access.userId || c.message.role !== "user") return;
     const { message: m, run } = c;
     const caller = callerFor(ctx);
     const rates = getRateVersion(run.rateVersionId);

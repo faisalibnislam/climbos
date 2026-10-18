@@ -53,10 +53,17 @@ export function polarConfigured(): boolean {
 async function polarFetch<T>(path: string, init: RequestInit = {}): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string }> {
   const token = process.env.POLAR_ACCESS_TOKEN;
   if (!token) return { ok: false, status: 0, message: "Billing isn't configured yet." };
-  const res = await fetch(`${polarBase()}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json", ...(init.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${polarBase()}${path}`, {
+      ...init,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json", ...(init.headers ?? {}) },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    // Network errors and timeouts are a failed call, never an uncaught throw (callers mark the event for retry).
+    return { ok: false, status: 0, message: "Couldn't reach Polar." };
+  }
   const json = (await res.json().catch(() => null)) as T | null;
   if (!res.ok || json === null) return { ok: false, status: res.status, message: `Polar responded with ${res.status}` };
   return { ok: true, data: json };
@@ -84,7 +91,8 @@ export const overview = query({
     const account = org.accountId ? await ctx.db.get(org.accountId) : null;
     const config = await getLiveConfig(ctx);
     return {
-      canManage: ["owner", "admin"].includes(role),
+      // Packages, top-ups and the Polar portal are account-level: only the account owner manages them.
+      canManage: ["owner", "admin"].includes(role) && Boolean(account && account.ownerUserId === user._id),
       isDemo: org.kind === "demo",
       billingConfigured: polarConfigured(),
       environment: process.env.POLAR_SERVER === "production" ? "production" : "sandbox",
@@ -104,6 +112,7 @@ export const overview = query({
             access: subscriptionAccess(sub, Date.now()),
             cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
             currentPeriodEnd: sub.currentPeriodEnd,
+            comp: Boolean(sub.comp),
           }
         : null,
       balance: await creditBalance(ctx, org, period),
@@ -132,19 +141,64 @@ export const recordCheckout = internalMutation({
   },
 });
 
+/** Who is asking, for billing actions: workspace access plus account ownership and the account's package. */
+export const billingActor = internalQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_billing");
+    const account = org.accountId ? await ctx.db.get(org.accountId) : null;
+    const sub = await latestSubscription(ctx, org);
+    const mapping = org.accountId
+      ? await ctx.db
+          .query("polarCustomers")
+          .withIndex("by_account", (q) => q.eq("accountId", org.accountId))
+          .first()
+      : null;
+    return {
+      orgId: org._id,
+      kind: org.kind,
+      userId: user._id,
+      email: user.email ?? null,
+      accountId: org.accountId ?? null,
+      isAccountOwner: Boolean(account && account.ownerUserId === user._id),
+      polarCustomerId: mapping?.polarCustomerId ?? null,
+      subscription: sub ? { polarSubscriptionId: sub.polarSubscriptionId, planKey: sub.planKey, access: subscriptionAccess(sub, Date.now()), comp: Boolean(sub.comp) } : null,
+    };
+  },
+});
+
+type BillingActor = {
+  orgId: Id<"organizations">;
+  kind: Doc<"organizations">["kind"];
+  userId: Id<"users">;
+  email: string | null;
+  accountId: Id<"accounts"> | null;
+  isAccountOwner: boolean;
+  polarCustomerId: string | null;
+  subscription: { polarSubscriptionId: string; planKey: PlanKey; access: ReturnType<typeof subscriptionAccess>; comp: boolean } | null;
+};
+
+/** Billing is account-level: an agency client's admin can't buy or change the agency's package. */
+function ownerAccount(actor: BillingActor): Id<"accounts"> {
+  if (actor.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't buy packages. Create your own workspace first.");
+  if (!actor.accountId) throw appError("INVALID", "This workspace has no billing account yet.");
+  if (!actor.isAccountOwner) throw appError("FORBIDDEN", "Only the account owner can manage billing.");
+  return actor.accountId;
+}
+
 export const createCheckout = action({
   args: { slug: v.string(), productKey: v.union(v.literal("starter"), v.literal("pro"), v.literal("credits_10"), v.literal("credits_25"), v.literal("credits_50")) },
   handler: async (ctx, { slug, productKey }): Promise<{ url: string }> => {
-    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_billing" });
-    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
-    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't buy packages. Create your own workspace first.");
-    const accountId = await ctx.runQuery(internal.billing.accountOf, { orgId: access.orgId });
-    if (!accountId) throw appError("INVALID", "This workspace has no billing account yet.");
+    const actor: BillingActor = await ctx.runQuery(internal.billing.billingActor, { slug });
+    const accountId = ownerAccount(actor);
     const productId = process.env[PRODUCT_ENV[productKey]];
     if (!productId || !polarConfigured()) throw appError("UNAVAILABLE", "Billing isn't set up yet. Please try again soon.");
+    const state = actor.subscription?.access ?? "none";
     if (isTopupKey(productKey)) {
-      const state = await ctx.runQuery(internal.billing.subscriptionState, { orgId: access.orgId });
       if (state !== "full") throw appError("INVALID", "Top-ups add to a monthly package. Choose a package first.");
+    } else if (state === "full" || state === "grace_read_only" || state === "pending") {
+      // A second checkout would start a second subscription (double charge). Switching goes through changePlan.
+      throw appError("INVALID", "You already have a package. Use Switch to change it.", { reason: "has_subscription" });
     }
     const site = process.env.SITE_URL ?? "http://localhost:3000";
     const res = await polarFetch<{ id: string; url: string }>("/v1/checkouts/", {
@@ -153,27 +207,75 @@ export const createCheckout = action({
         products: [productId],
         // Binds the purchase to this account server-side (never trusted from the browser).
         external_customer_id: accountId,
-        customer_email: access.email ?? undefined,
-        metadata: { accountId, orgId: access.orgId, productKey, requestedBy: access.userId },
+        customer_email: actor.email ?? undefined,
+        metadata: { accountId, orgId: actor.orgId, productKey, requestedBy: actor.userId },
         success_url: `${site}/app/${slug}/settings/billing?checkout=returned&checkout_id={CHECKOUT_ID}`,
         return_url: `${site}/app/${slug}/settings/billing`,
       }),
     });
     if (!res.ok) throw appError("UNAVAILABLE", "We couldn't open checkout right now. Please try again in a minute.");
-    await ctx.runMutation(internal.billing.recordCheckout, { orgId: access.orgId, accountId, userId: access.userId, polarCheckoutId: res.data.id, productKey });
+    await ctx.runMutation(internal.billing.recordCheckout, { orgId: actor.orgId, accountId, userId: actor.userId, polarCheckoutId: res.data.id, productKey });
     return { url: res.data.url };
+  },
+});
+
+/** Switch the account's existing Polar subscription to another package (never a second subscription; Polar prorates). */
+export const changePlan = action({
+  args: { slug: v.string(), planKey: v.union(v.literal("starter"), v.literal("pro")) },
+  handler: async (ctx, { slug, planKey }): Promise<{ ok: true }> => {
+    const actor: BillingActor = await ctx.runQuery(internal.billing.billingActor, { slug });
+    ownerAccount(actor);
+    const sub = actor.subscription;
+    if (!sub || sub.access !== "full") throw appError("INVALID", "Choose a package first.");
+    if (sub.comp) throw appError("INVALID", "Your package was given by ClimbOS. Contact support to change it.");
+    if (sub.planKey === planKey) return { ok: true };
+    const productId = process.env[PRODUCT_ENV[planKey]];
+    if (!productId || !polarConfigured()) throw appError("UNAVAILABLE", "Billing isn't set up yet. Please try again soon.");
+    const res = await polarFetch<PolarSubscription>(`/v1/subscriptions/${encodeURIComponent(sub.polarSubscriptionId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ product_id: productId, proration_behavior: "prorate" }),
+    });
+    if (!res.ok) throw appError("UNAVAILABLE", "We couldn't change your package right now. Please try again in a minute.");
+    // Polar's answer is authoritative; the paid order webhook grants the new month's credits.
+    await ctx.runMutation(internal.billing.applyReconciledSubscription, { subscription: toSub(res.data) });
+    await ctx.runMutation(internal.billing.auditPlanChange, { orgId: actor.orgId, userId: actor.userId, planKey });
+    return { ok: true };
+  },
+});
+
+/** The account's last workspace was deleted: end the Polar package at the end of the period (retried if Polar is down). */
+export const cancelAtPeriodEnd = internalAction({
+  args: { polarSubscriptionId: v.string(), attempt: v.optional(v.number()) },
+  handler: async (ctx, { polarSubscriptionId, attempt = 0 }) => {
+    if (!polarConfigured() || polarSubscriptionId.startsWith("comp:")) return { ok: false };
+    const res = await polarFetch<PolarSubscription>(`/v1/subscriptions/${encodeURIComponent(polarSubscriptionId)}`, { method: "PATCH", body: JSON.stringify({ cancel_at_period_end: true }) });
+    if (res.ok) {
+      await ctx.runMutation(internal.billing.applyReconciledSubscription, { subscription: toSub(res.data) });
+      return { ok: true };
+    }
+    if (attempt < 5) await ctx.scheduler.runAfter(3_600_000 * (attempt + 1), internal.billing.cancelAtPeriodEnd, { polarSubscriptionId, attempt: attempt + 1 });
+    return { ok: false };
+  },
+});
+
+export const auditPlanChange = internalMutation({
+  args: { orgId: v.id("organizations"), userId: v.id("users"), planKey: v.string() },
+  handler: async (ctx, { orgId, userId, planKey }) => {
+    await audit(ctx, { orgId, actorType: "user", actorId: userId, action: "billing.plan_change_requested", summary: `Package switch to ${planKey} requested.` });
   },
 });
 
 export const customerPortal = action({
   args: { slug: v.string() },
   handler: async (ctx, { slug }): Promise<{ url: string }> => {
-    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_billing" });
-    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
-    const accountId = await ctx.runQuery(internal.billing.accountOf, { orgId: access.orgId });
+    const actor: BillingActor = await ctx.runQuery(internal.billing.billingActor, { slug });
+    const accountId = ownerAccount(actor);
     const res = await polarFetch<{ customer_portal_url: string }>("/v1/customer-sessions/", {
       method: "POST",
-      body: JSON.stringify({ external_customer_id: accountId ?? access.orgId, return_url: `${process.env.SITE_URL ?? "http://localhost:3000"}/app/${slug}/settings/billing` }),
+      body: JSON.stringify({
+        ...(actor.polarCustomerId ? { customer_id: actor.polarCustomerId } : { external_customer_id: accountId }),
+        return_url: `${process.env.SITE_URL ?? "http://localhost:3000"}/app/${slug}/settings/billing`,
+      }),
     });
     if (!res.ok) throw appError("UNAVAILABLE", "We couldn't open the billing portal. If you haven't subscribed yet, choose a plan first.");
     return { url: res.data.customer_portal_url };
@@ -377,7 +479,7 @@ export const applyPolarEvent = internalMutation({
     const payload = JSON.parse(ev.payload) as { type: string; data: Record<string, unknown> };
     const type = payload.type;
     const now = Date.now();
-    const finish = async (status: "processed" | "ignored", error?: string) => {
+    const finish = async (status: "processed" | "ignored" | "failed", error?: string) => {
       await ctx.db.patch(webhookId, { status, error, attempts: ev.attempts + 1, processedAt: now });
       return { status };
     };
@@ -465,16 +567,16 @@ export const applyPolarEvent = internalMutation({
         return finish("processed");
       }
 
-      // Subscription period grant needs authoritative subscription state (fetched by the action).
-      if (subscription) await applySubscription(ctx, "subscription.updated", subscription);
-      const sub = o.subscription_id
-        ? await ctx.db
-            .query("subscriptions")
-            .withIndex("by_polar", (q) => q.eq("polarSubscriptionId", o.subscription_id!))
-            .first()
-        : null;
-      if (!sub) return finish("ignored", "subscription state unavailable; will reconcile");
       if (isTopupKey(productKey) || productKey === "boost_29") return finish("ignored", "not a package");
+      // Subscription period grant needs fresh, authoritative subscription state (fetched by the action).
+      // Without it we'd grant the stored (possibly previous) period's dates, so fail and retry instead.
+      if (!subscription || !o.subscription_id || subscription.id !== o.subscription_id) return finish("failed", "subscription state unavailable; will retry");
+      await applySubscription(ctx, "subscription.updated", subscription);
+      const sub = await ctx.db
+        .query("subscriptions")
+        .withIndex("by_polar", (q) => q.eq("polarSubscriptionId", o.subscription_id!))
+        .first();
+      if (!sub) return finish("ignored", "subscription not bound to an account");
       const planKey: PlanKey = productKey;
       await grantSubscriptionPeriod(ctx, {
         orgId,
@@ -511,17 +613,24 @@ export const applyPolarEvent = internalMutation({
 export const processPolarEvent = internalAction({
   args: { webhookId: v.id("webhookEvents") },
   handler: async (ctx, { webhookId }) => {
-    const ev = await ctx.runQuery(internal.billing.getWebhookEvent, { id: webhookId });
-    if (!ev || ev.status === "processed") return;
-    const payload = JSON.parse(ev.payload) as { type: string; data: Record<string, unknown> };
-    let subscription: ReturnType<typeof toSub> | undefined;
-    const subId =
-      payload.type.startsWith("order.") ? (payload.data.subscription_id as string | null | undefined) : payload.type.startsWith("subscription.") ? (payload.data.id as string) : undefined;
-    if (subId && polarConfigured()) {
-      const res = await polarFetch<PolarSubscription>(`/v1/subscriptions/${encodeURIComponent(subId)}`);
-      if (res.ok) subscription = toSub(res.data);
-    }
+    // Any throw here (network, bad payload) marks the event failed so the retry cron picks it up;
+    // Polar's own redelivery is deduped by webhook id, so we must never leave an event "received".
     try {
+      const ev = await ctx.runQuery(internal.billing.getWebhookEvent, { id: webhookId });
+      if (!ev || ev.status === "processed") return;
+      const payload = JSON.parse(ev.payload) as { type: string; data: Record<string, unknown> };
+      let subscription: ReturnType<typeof toSub> | undefined;
+      const isOrder = payload.type.startsWith("order.");
+      const subId = isOrder ? (payload.data.subscription_id as string | null | undefined) : payload.type.startsWith("subscription.") ? (payload.data.id as string) : undefined;
+      if (subId) {
+        const res = polarConfigured() ? await polarFetch<PolarSubscription>(`/v1/subscriptions/${encodeURIComponent(subId)}`) : null;
+        if (res?.ok) subscription = toSub(res.data);
+        else if (isOrder) {
+          // A package order can't be granted without fresh period dates: retry later.
+          await ctx.runMutation(internal.billing.markWebhook, { id: webhookId, status: "failed", error: `subscription fetch failed: ${res ? res.message : "billing not configured"}` });
+          return;
+        }
+      }
       await ctx.runMutation(internal.billing.applyPolarEvent, { webhookId, subscription });
     } catch (e) {
       await ctx.runMutation(internal.billing.markWebhook, { id: webhookId, status: "failed", error: (e as Error).message });
@@ -529,15 +638,17 @@ export const processPolarEvent = internalAction({
   },
 });
 
-/** Daily (and on demand): reconcile subscriptions with Polar's authoritative state. */
+/** Daily (and on demand): reconcile subscriptions with Polar's authoritative state, by the customer each checkout bound. */
 export const reconcileAll = internalAction({
   args: {},
   handler: async (ctx) => {
     if (!polarConfigured()) return { reconciled: 0 };
-    const orgIds = await ctx.runQuery(internal.billing.billedOrgs, {});
+    const customers = await ctx.runQuery(internal.billing.billedCustomers, {});
     let reconciled = 0;
-    for (const orgId of orgIds) {
-      const res = await polarFetch<{ items: PolarSubscription[] }>(`/v1/subscriptions/?external_customer_id=${encodeURIComponent(orgId)}&limit=10`);
+    for (const c of customers) {
+      // Polar's customer id when we know it; otherwise the external id the checkout bound (account id; older ones a workspace id).
+      const filter = c.polarCustomerId ? `customer_id=${encodeURIComponent(c.polarCustomerId)}` : `external_customer_id=${encodeURIComponent(c.accountId ?? c.orgId)}`;
+      const res = await polarFetch<{ items: PolarSubscription[] }>(`/v1/subscriptions/?${filter}&limit=10`);
       if (!res.ok) continue;
       for (const s of res.data.items) {
         await ctx.runMutation(internal.billing.applyReconciledSubscription, { subscription: toSub(s) });
@@ -548,9 +659,10 @@ export const reconcileAll = internalAction({
   },
 });
 
-export const billedOrgs = internalQuery({
+export const billedCustomers = internalQuery({
   args: {},
-  handler: async (ctx) => (await ctx.db.query("polarCustomers").take(1000)).map((p) => p.orgId),
+  handler: async (ctx) =>
+    (await ctx.db.query("polarCustomers").take(2000)).map((p) => ({ orgId: p.orgId, accountId: p.accountId ?? null, polarCustomerId: p.polarCustomerId ?? null })),
 });
 
 export const applyReconciledSubscription = internalMutation({
@@ -558,20 +670,63 @@ export const applyReconciledSubscription = internalMutation({
   handler: async (ctx, { subscription }) => {
     const type = subscription.status === "canceled" && !subscription.cancelAtPeriodEnd ? "subscription.revoked" : "subscription.updated";
     await applySubscription(ctx, type, subscription);
+    await grantMissingPeriod(ctx, subscription.id);
   },
 });
 
+/**
+ * Reconciliation safety net: a paid package order whose grant never happened (for
+ * example its webhook ran out of retries) gets the subscription's current period.
+ * Idempotent: periods are keyed by subscription + period start and never summed.
+ */
+async function grantMissingPeriod(ctx: MutationCtx, polarSubscriptionId: string) {
+  const sub = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_polar", (q) => q.eq("polarSubscriptionId", polarSubscriptionId))
+    .first();
+  if (!sub || sub.comp || subscriptionAccess(sub, Date.now()) !== "full") return;
+  const orders = await ctx.db
+    .query("orders")
+    .withIndex("by_subscription", (q) => q.eq("polarSubscriptionId", polarSubscriptionId))
+    .take(50);
+  const ungranted = orders.filter((o) => o.status === "paid" && !o.grantedAt && !isTopupKey(o.productKey) && o.productKey !== "boost_29").sort((a, b) => b.createdAt - a.createdAt);
+  if (!ungranted.length) return;
+  const now = Date.now();
+  await grantSubscriptionPeriod(ctx, {
+    orgId: sub.orgId,
+    accountId: sub.accountId,
+    planKey: sub.planKey,
+    entitlementVersionId: sub.entitlementVersionId,
+    periodStart: sub.currentPeriodStart,
+    periodEnd: sub.currentPeriodEnd,
+    polarOrderId: ungranted[0].polarOrderId,
+    polarSubscriptionId,
+  });
+  for (const o of ungranted) await ctx.db.patch(o._id, { grantedAt: now, periodStart: sub.currentPeriodStart, periodEnd: sub.currentPeriodEnd });
+  await audit(ctx, { orgId: sub.orgId, actorType: "system", action: "billing.period_reconciled", summary: `${CURRENT_ENTITLEMENTS.plans[sub.planKey].name}: this month's credits granted by reconciliation.` });
+}
+
+/** Every 15 minutes: retry failed events and events stuck in "received" (the processor died), bounded attempts. */
 export const retryFailedWebhooks = internalMutation({
   args: {},
   handler: async (ctx) => {
+    const now = Date.now();
     const failed = await ctx.db
       .query("webhookEvents")
-      .withIndex("by_status_received", (q) => q.eq("status", "failed").gt("receivedAt", Date.now() - 3 * 86_400_000))
+      .withIndex("by_status_received", (q) => q.eq("status", "failed").gt("receivedAt", now - 3 * 86_400_000))
       .take(50);
-    for (const e of failed) {
-      if (e.attempts >= 5 || e.source !== "polar") continue;
-      await ctx.scheduler.runAfter(0, internal.billing.processPolarEvent, { webhookId: e._id });
+    const stale = await ctx.db
+      .query("webhookEvents")
+      .withIndex("by_status_received", (q) => q.eq("status", "received").gt("receivedAt", now - 3 * 86_400_000).lt("receivedAt", now - 10 * 60_000))
+      .take(50);
+    let scheduled = 0;
+    for (const e of [...failed, ...stale]) {
+      if (e.attempts >= 5) continue;
+      if (e.source === "polar") await ctx.scheduler.runAfter(0, internal.billing.processPolarEvent, { webhookId: e._id });
+      else if (e.source === "resend") await ctx.scheduler.runAfter(0, internal.notifications.reprocessResendEvent, { webhookId: e._id });
+      else continue;
+      scheduled++;
     }
-    return failed.length;
+    return scheduled;
   },
 });

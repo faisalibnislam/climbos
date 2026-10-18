@@ -1,3 +1,4 @@
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse, type NextRequest } from "next/server";
 import { api } from "@convex/_generated/api";
@@ -19,8 +20,13 @@ export async function GET(req: NextRequest) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const secret = process.env.CLIMBOS_SERVER_SECRET;
   if (!convexUrl || !secret) return NextResponse.redirect(new URL(`/app?connection=unavailable`, site));
+  // The callback must come from the browser session that started the flow (OAuth CSRF):
+  // Convex checks the signed-in user against the user bound to the state.
+  const session = await convexAuthNextjsToken().catch(() => undefined);
+  if (!session) return NextResponse.redirect(new URL(`/app?connection=failed`, site));
   try {
     const client = new ConvexHttpClient(convexUrl);
+    client.setAuth(session);
     const res = await client.action(api.connectionActions.completeOAuth, { serverSecret: secret, state, code });
     const dest = res.slug ? `/app/${res.slug}/connections?${res.ok ? `connected=${res.provider}` : "connection=failed"}` : "/app?connection=expired";
     return NextResponse.redirect(new URL(dest, site));

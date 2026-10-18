@@ -332,7 +332,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_org_user", ["orgId", "userId"])
     .index("by_org_email", ["orgId", "invitedEmail"])
-    .index("by_invite_token", ["inviteTokenHash"]),
+    .index("by_invite_token", ["inviteTokenHash"])
+    .index("by_status_expires", ["status", "inviteExpiresAt"]),
 
   userPreferences: defineTable({
     userId: v.id("users"),
@@ -535,6 +536,8 @@ export default defineSchema({
     expiresAt: v.optional(v.number()),
     lastSyncAt: v.optional(v.number()),
     lastSyncError: v.optional(v.string()),
+    /** The expiry we already warned the owner about (one notice per token). */
+    expiryNoticeFor: v.optional(v.number()),
     isFixture: v.boolean(),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -543,7 +546,8 @@ export default defineSchema({
     .index("by_org", ["orgId"])
     .index("by_org_provider", ["orgId", "provider"])
     .index("by_provider_status", ["provider", "status"])
-    .index("by_expires", ["expiresAt"]),
+    .index("by_expires", ["expiresAt"])
+    .index("by_provider_status_expires", ["provider", "status", "expiresAt"]),
 
   connectionSecrets: defineTable({
     orgId: v.id("organizations"),
@@ -850,6 +854,9 @@ export default defineSchema({
     cursor: v.optional(v.string()),
     lastSyncAt: v.optional(v.number()),
     imported: v.number(),
+    /** Consecutive transient sync failures and when to try again (backoff). */
+    failures: v.optional(v.number()),
+    retryAt: v.optional(v.number()),
     /** Incoming webhook: token in our URL and the app's signing secret (encrypted), when set up. */
     inboundToken: v.optional(v.string()),
     createdBy: v.id("users"),
@@ -878,7 +885,8 @@ export default defineSchema({
     endpointId: v.id("webhookEndpoints"),
     event: v.string(),
     payload: v.string(),
-    status: v.union(v.literal("pending"), v.literal("delivered"), v.literal("failed")),
+    /** "sending": claimed by one deliverer until nextAt (a lease), so rows are never POSTed twice. */
+    status: v.union(v.literal("pending"), v.literal("sending"), v.literal("delivered"), v.literal("failed")),
     attempts: v.number(),
     nextAt: v.number(),
     responseCode: v.optional(v.number()),
@@ -1932,6 +1940,7 @@ export default defineSchema({
   })
     .index("by_account", ["accountId"])
     .index("by_polar", ["polarOrderId"])
+    .index("by_subscription", ["polarSubscriptionId"])
     .index("by_org", ["orgId"]),
 
   creditPurchases: defineTable({
@@ -2127,6 +2136,13 @@ export default defineSchema({
   })
     .index("by_org", ["orgId"])
     .index("by_status", ["status"]),
+
+  /** Precomputed staff dashboards (refreshed by a cron in pages; never one huge read). */
+  opsSnapshots: defineTable({
+    key: v.string(),
+    value: v.string(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 
   fleetControls: defineTable({
     key: v.literal("global"),

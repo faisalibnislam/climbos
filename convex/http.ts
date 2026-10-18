@@ -74,12 +74,23 @@ http.route({
     } catch {
       return new Response("Invalid signature", { status: 403 });
     }
-    const event = JSON.parse(body) as { type: string; data?: { email_id?: string; to?: string[] } };
-    const stored = await ctx.runMutation(internal.billing.storeWebhookEvent, { source: "resend", eventId: id!, type: event.type, payload: "{}" });
-    if (stored.duplicate) return new Response(null, { status: 200 });
+    let event: { type: string; data?: { email_id?: string; to?: string[] } };
+    try {
+      event = JSON.parse(body) as typeof event;
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+    // Only hashed addresses are stored, enough to re-apply the event if processing fails.
     const toHashes = await Promise.all((event.data?.to ?? []).slice(0, 50).map((t) => sha256Hex(t.trim().toLowerCase())));
-    await ctx.runMutation(internal.notifications.applyResendEvent, { type: event.type, resendId: event.data?.email_id, toHashes });
-    await ctx.runMutation(internal.billing.markWebhook, { id: stored.id, status: "processed" });
+    const stored = await ctx.runMutation(internal.billing.storeWebhookEvent, { source: "resend", eventId: id!, type: event.type, payload: JSON.stringify({ type: event.type, resendId: event.data?.email_id, toHashes }) });
+    if (stored.duplicate) return new Response(null, { status: 200 });
+    try {
+      await ctx.runMutation(internal.notifications.applyResendEvent, { type: event.type, resendId: event.data?.email_id, toHashes });
+      await ctx.runMutation(internal.billing.markWebhook, { id: stored.id, status: "processed" });
+    } catch (e) {
+      // Resend's redelivery is deduped by id, so mark it for our own retry instead of dropping it.
+      await ctx.runMutation(internal.billing.markWebhook, { id: stored.id, status: "failed", error: (e as Error).message });
+    }
     return new Response(null, { status: 200 });
   }),
 });

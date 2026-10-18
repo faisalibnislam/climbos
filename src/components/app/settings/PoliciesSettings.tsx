@@ -80,7 +80,6 @@ export function PoliciesSettings({ slug }: { slug: string }) {
 function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; policy: Policy; allowedModes: string[]; canManage: boolean }) {
   const update = useMutation(api.settings.updatePolicy);
   const [mode, setMode] = useState<Mode>(policy.mode as Mode);
-  const [recurring, setRecurring] = useState(policy.allowRecurringPostsUnderCalendar);
   const [adPause, setAdPause] = useState(policy.allowAdPauseRules);
   const [budget, setBudget] = useState(String(policy.maxMonthlyAdSpend));
   const [ttl, setTtl] = useState(String(policy.approvalTtlHours));
@@ -90,10 +89,11 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
 
   const dirty =
     mode !== policy.mode ||
-    recurring !== policy.allowRecurringPostsUnderCalendar ||
     adPause !== policy.allowAdPauseRules ||
     Number(budget) !== policy.maxMonthlyAdSpend ||
     Number(ttl) !== policy.approvalTtlHours;
+
+  const voidsApprovals = mode !== policy.mode || adPause !== policy.allowAdPauseRules || Number(budget) !== policy.maxMonthlyAdSpend;
 
   function validate(): boolean {
     const fe: { budget?: string; ttl?: string } = {};
@@ -108,20 +108,22 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (validate()) setConfirm(true);
+    if (!validate()) return;
+    // Only rule changes cancel approvals; a new expiry window applies to new approvals and saves directly.
+    if (voidsApprovals) setConfirm(true);
+    else void save();
   }
 
   async function save() {
     try {
-      await update({
+      const res = await update({
         slug,
         mode,
-        allowRecurringPostsUnderCalendar: recurring,
         allowAdPauseRules: adPause,
         maxMonthlyAdSpend: Number(budget),
         approvalTtlHours: Math.round(Number(ttl)),
       });
-      toast({ tone: "success", title: "Approval rules saved", description: "Earlier approvals were cancelled and need to be approved again." });
+      toast({ tone: "success", title: "Approval rules saved", description: res?.invalidated ? "Earlier approvals were cancelled and need to be approved again." : undefined });
     } catch (err) {
       const info = errorInfo(err);
       setError(info.code === "PAYMENT_REQUIRED" ? `${info.message}` : info.message);
@@ -166,13 +168,6 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
             Limits and standing permissions
           </h2>
           <Switch
-            label="Let approved content calendars post on schedule"
-            description="Once you approve a calendar, its recurring posts go out without asking each time. New channels still need approval."
-            checked={recurring}
-            onCheckedChange={setRecurring}
-            disabled={!canManage}
-          />
-          <Switch
             label="Let ClimbOS pause ads that break your rules"
             description="For example, an ad spending faster than your budget allows. Pausing can only reduce spend; it never starts or raises anything."
             checked={adPause}
@@ -211,7 +206,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
         open={confirm}
         onOpenChange={setConfirm}
         title="Save new approval rules?"
-        description="Changing the rules cancels every existing approval, so anything already approved but not yet live will need to be approved again under the new rules."
+        description="Changing the mode, ad pausing or the ad budget cancels every existing approval. Anything approved but not yet live will need approving again."
         confirmLabel="Save and cancel existing approvals"
         onConfirm={save}
       />

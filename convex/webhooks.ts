@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { isWebhookEvent, RETRY_MS, signWebhook, WEBHOOK_EVENTS, type WebhookEvent } from "../shared/webhooks";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { safePublicUrl } from "../shared/net/safeUrl";
 import { decryptSecret, encryptSecret } from "./lib/crypto";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -43,7 +44,7 @@ export const create = mutation({
   handler: async (ctx, a) => {
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "manage_connections");
     const url = a.url.trim();
-    if (!/^https:\/\/[^\s/]+\.[^\s]+$/i.test(url) || /localhost|127\.0\.0\.1|\.local\b|\.internal\b/i.test(url)) throw appError("INVALID", "Use a public https:// address.");
+    if (!publicHttpsUrl(url)) throw appError("INVALID", "Use a public https:// address.");
     const events = [...new Set(a.events.filter(isWebhookEvent))];
     if (!events.length) throw appError("INVALID", "Pick at least one event.");
     const count = (await ctx.db.query("webhookEndpoints").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(11)).length;
@@ -62,6 +63,7 @@ export const setActive = mutation({
     const { org } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     assertSameOrg(await ctx.db.get(id), org._id, "webhook");
     await ctx.db.patch(id, { active, ...(active ? { failures: 0 } : {}) });
+    if (!active) await dropPending(ctx, id);
   },
 });
 
@@ -87,14 +89,41 @@ export const test = mutation({
   },
 });
 
-export const due = internalQuery({
+/** A public https URL with a real hostname (no private or IPv6-literal hosts, localhost or internal names). */
+export function publicHttpsUrl(raw: string): boolean {
+  const u = safePublicUrl(raw);
+  return Boolean(u && u.protocol === "https:" && u.hostname.includes(".") && !u.hostname.startsWith("[") && !/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(u.hostname));
+}
+
+/** Pending rows of a switched-off endpoint are closed so they never clog the queue. */
+async function dropPending(ctx: MutationCtx, endpointId: Id<"webhookEndpoints">) {
+  const rows = await ctx.db.query("webhookDeliveries").withIndex("by_endpoint", (q) => q.eq("endpointId", endpointId)).order("desc").take(500);
+  for (const d of rows) if (d.status === "pending" || d.status === "sending") await ctx.db.patch(d._id, { status: "failed" });
+}
+
+/** Lease on a claimed delivery: if the deliverer dies, the row is due again after this. */
+const CLAIM_MS = 2 * 60_000;
+
+/**
+ * Claim what's due in one mutation (pending, or a sending lease that ran out) so the cron and
+ * per-event runs never POST the same row twice. Rows of missing or inactive endpoints are closed.
+ */
+export const claimDue = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const rows = await ctx.db.query("webhookDeliveries").withIndex("by_status_next", (q) => q.eq("status", "pending").lte("nextAt", Date.now())).take(50);
+    const now = Date.now();
+    const rows = [
+      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", (q) => q.eq("status", "pending").lte("nextAt", now)).take(25)),
+      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", (q) => q.eq("status", "sending").lte("nextAt", now)).take(10)),
+    ];
     const out = [];
     for (const d of rows) {
       const e = await ctx.db.get(d.endpointId);
-      if (!e || !e.active) continue;
+      if (!e || !e.active) {
+        await ctx.db.patch(d._id, { status: "failed" });
+        continue;
+      }
+      await ctx.db.patch(d._id, { status: "sending", nextAt: now + CLAIM_MS });
       out.push({ id: d._id, orgId: d.orgId, url: e.url, payload: d.payload, secret: { keyId: e.secretKeyId, iv: e.secretIv, ciphertext: e.secretCiphertext } });
     }
     return out;
@@ -105,16 +134,17 @@ export const record = internalMutation({
   args: { id: v.id("webhookDeliveries"), code: v.optional(v.number()), ok: v.boolean() },
   handler: async (ctx, { id, code, ok }) => {
     const d = await ctx.db.get(id);
-    if (!d) return;
+    if (!d || d.status !== "sending") return;
     const e = await ctx.db.get(d.endpointId);
     const attempts = d.attempts + 1;
     if (ok) await ctx.db.patch(id, { status: "delivered", attempts, responseCode: code });
     else if (attempts > RETRY_MS.length) await ctx.db.patch(id, { status: "failed", attempts, responseCode: code });
-    else await ctx.db.patch(id, { attempts, responseCode: code, nextAt: Date.now() + RETRY_MS[attempts - 1] });
+    else await ctx.db.patch(id, { status: "pending", attempts, responseCode: code, nextAt: Date.now() + RETRY_MS[attempts - 1] });
     if (e) {
       const failures = ok ? 0 : e.failures + 1;
       // 20 failures in a row: switch it off and keep the owner informed in the Activity log.
       await ctx.db.patch(e._id, { failures, lastStatus: code, lastAt: Date.now(), ...(failures >= 20 ? { active: false } : {}) });
+      if (failures >= 20 && e.active) await dropPending(ctx, e._id);
     }
   },
 });
@@ -124,7 +154,7 @@ export const deliverDue = internalAction({
   args: {},
   handler: async (ctx) => {
     let n = 0;
-    for (const d of await ctx.runQuery(internal.webhooks.due, {})) {
+    for (const d of await ctx.runMutation(internal.webhooks.claimDue, {})) {
       let code: number | undefined;
       let ok = false;
       try {

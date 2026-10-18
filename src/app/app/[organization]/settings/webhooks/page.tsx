@@ -7,12 +7,21 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
-import { LoadingBlock } from "@/components/app/results/QueryBoundary";
+import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { Badge, Button, Callout, Card, CardContent, Checkbox, Field, Input, Switch, toast } from "@/components/ui";
 
 /** Webhooks: send ClimbOS events to Zapier, Make or your own server. */
+/** Query errors (e.g. a role without access) show the shared error state, not a crash. */
 export default function WebhooksPage() {
+  return (
+    <QueryBoundary>
+      <Webhooks />
+    </QueryBoundary>
+  );
+}
+
+function Webhooks() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.webhooks.list, { slug });
   const create = useMutation(api.webhooks.create);

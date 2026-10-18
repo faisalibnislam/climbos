@@ -41,7 +41,7 @@ export const saveLink = internalMutation({
   handler: async (ctx, a) => {
     if (!isAirlyApp(a.app)) return;
     const existing = (await ctx.db.query("airlyLinks").withIndex("by_org", (q) => q.eq("orgId", a.orgId)).take(10)).find((l) => l.app === a.app);
-    const fields = { tokenCiphertext: a.sealed.ciphertext, tokenIv: a.sealed.iv, tokenKeyId: a.sealed.keyId, label: a.label, settings: a.settings, status: "connected" as const, error: undefined };
+    const fields = { tokenCiphertext: a.sealed.ciphertext, tokenIv: a.sealed.iv, tokenKeyId: a.sealed.keyId, label: a.label, settings: a.settings, status: "connected" as const, error: undefined, failures: 0, retryAt: undefined };
     if (existing) await ctx.db.patch(existing._id, fields);
     else await ctx.db.insert("airlyLinks", { orgId: a.orgId, app: a.app, ...fields, imported: 0, createdBy: a.userId, createdAt: Date.now() });
   },
@@ -54,12 +54,28 @@ export const setSettings = internalMutation({
   },
 });
 
+/** Backoff after a transient failure: 15 min doubling, at most 12 hours. */
+export function airlyBackoffMs(failures: number): number {
+  return Math.min(12 * 3_600_000, 15 * 60_000 * 2 ** Math.max(0, failures - 1));
+}
+
+/**
+ * Record a sync. A rejected token (fatal: 401/403) stops syncing until the owner reconnects;
+ * anything else (timeouts, 5xx) keeps the link connected and retries with backoff.
+ */
 export const markSync = internalMutation({
-  args: { id: v.id("airlyLinks"), cursor: v.optional(v.string()), error: v.optional(v.string()), added: v.optional(v.number()) },
-  handler: async (ctx, { id, cursor, error, added }) => {
+  args: { id: v.id("airlyLinks"), cursor: v.optional(v.string()), error: v.optional(v.string()), fatal: v.optional(v.boolean()), added: v.optional(v.number()) },
+  handler: async (ctx, { id, cursor, error, fatal, added }) => {
     const l = await ctx.db.get(id);
     if (!l) return;
-    await ctx.db.patch(id, { lastSyncAt: Date.now(), ...(cursor !== undefined ? { cursor } : {}), status: error ? "error" : "connected", error: error?.slice(0, 200), imported: l.imported + (added ?? 0) });
+    const now = Date.now();
+    const base = { lastSyncAt: now, ...(cursor !== undefined ? { cursor } : {}), imported: l.imported + (added ?? 0) };
+    if (!error) await ctx.db.patch(id, { ...base, status: "connected", error: undefined, failures: 0, retryAt: undefined });
+    else if (fatal) await ctx.db.patch(id, { ...base, status: "error", error: error.slice(0, 200), retryAt: undefined });
+    else {
+      const failures = (l.failures ?? 0) + 1;
+      await ctx.db.patch(id, { ...base, status: l.status, error: error.slice(0, 200), failures, retryAt: now + airlyBackoffMs(failures) });
+    }
   },
 });
 
@@ -76,9 +92,10 @@ export const syncTargets = internalQuery({
   args: {},
   handler: async (ctx) => {
     const out: { id: Id<"airlyLinks">; app: string }[] = [];
-    for (const app of ["formkit", "meetrao"] as const) {
-      // Small table: scan is fine (one row per workspace per app).
-      for (const l of await ctx.db.query("airlyLinks").take(5000)) if (l.app === app && l.status !== "error") out.push({ id: l._id, app });
+    const now = Date.now();
+    // Small table: scan is fine (one row per workspace per app). Links in backoff wait their turn.
+    for (const l of await ctx.db.query("airlyLinks").take(5000)) {
+      if ((l.app === "formkit" || l.app === "meetrao") && l.status !== "error" && !(l.retryAt && l.retryAt > now)) out.push({ id: l._id, app: l.app });
     }
     return out;
   },

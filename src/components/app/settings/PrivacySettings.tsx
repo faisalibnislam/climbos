@@ -188,6 +188,8 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const org = me?.orgs.find((o) => o.slug === slug);
   const canDelete = org?.role === "owner";
+  const impact = useQuery(api.settings.deletionImpact, canDelete ? { slug } : "skip");
+  const billingNote = impact?.packageEnds ? " Your package will end at the end of this billing period." : impact?.sharedPackage ? " Your package stays active for your other workspaces." : "";
   const matches = org ? typed.trim() === org.name : false;
 
   return (
@@ -227,7 +229,7 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
           onOpenChange={setConfirm}
           tone="danger"
           title={`Delete ${org.name}?`}
-          description="All activity stops now and the workspace's content is permanently deleted. This can't be undone."
+          description={`All activity stops now and the workspace's content is permanently deleted. This can't be undone.${billingNote}`}
           confirmLabel={`Delete ${org.name}`}
           onConfirm={async () => {
             try {

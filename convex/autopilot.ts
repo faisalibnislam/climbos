@@ -287,7 +287,7 @@ export const tick = internalMutation({
     const now = Date.now();
     for (const s of enabled) {
       const org = await ctx.db.get(s.orgId);
-      if (!org || org.emergencyStop?.active) continue;
+      if (!org || org.emergencyStop?.active || org.suspendedAt || org.deletedAt) continue;
       const local = localDate(now, org.timezone);
       const hour = new Date(now + tzOffsetMinutes(now, org.timezone) * 60_000).getUTCHours();
       const weekOf = nextWeekOf(now, org.timezone);
