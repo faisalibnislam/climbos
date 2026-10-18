@@ -124,7 +124,7 @@ async function prepare(c: BenchCase): Promise<Prepared | null> {
   if (existsSync(file)) return { c, ...JSON.parse(readFileSync(file, "utf8")) };
   try {
     console.log(`[prepare] ${c.id}: reading website`);
-    const res = await researchWebsite(c.website, 2);
+    const res = await researchWebsite(c.website, 4);
     const pagesText = res.pages
       .filter((p) => p.status === "ok")
       .map((p) => untrusted(p.url, `${p.text}\n${p.prices.join("\n")}`, 12_000))

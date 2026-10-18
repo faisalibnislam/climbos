@@ -66,3 +66,14 @@ describe("plan number tracing", () => {
     expect(flagged("BUSINESS INTELLIGENCE: competitor pricing $49/month")).toHaveLength(0);
   });
 });
+
+describe("funnel citations", () => {
+  it("accepts only sources the writer actually had", async () => {
+    const { lintCitations } = await import("../../shared/agents/specs");
+    const plays = [{ funnel: ["500 emails → replies: 1–4% [instantly.ai, B]", "replies → paid: 20% [assumption, grade D]", "visits → trials: 3% [Formkit pricing page, A]"] }];
+    expect(lintCitations(plays, "Sources:\nhttps://www.instantly.ai/cold-email-benchmark")).toEqual([]);
+    const issues = lintCitations(plays, "no sources");
+    expect(issues).toHaveLength(1);
+    expect(issues[0].path).toBe("plays[0].funnel[0]");
+  });
+});

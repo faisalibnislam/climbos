@@ -358,6 +358,16 @@ export default defineSchema({
     /** Where happy customers leave a review (e.g. the Google review link). */
     reviewUrl: v.optional(v.string()),
     /** Self-improvement loop 1: last weekly read of the business's own site (normalised text, for the diff). */
+    /** Unit economics the owner confirmed; they replace the planner's assumptions. */
+    unitEconomics: v.optional(
+      v.object({
+        revenuePerCustomerMonthUsd: v.optional(v.number()),
+        grossMargin: v.optional(v.number()),
+        monthlyChurn: v.optional(v.number()),
+        ownerHourUsd: v.optional(v.number()),
+        updatedAt: v.number(),
+      }),
+    ),
     siteHash: v.optional(v.string()),
     siteText: v.optional(v.string()),
     siteCheckedAt: v.optional(v.number()),
@@ -1113,6 +1123,8 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
+        /** Web pages the research phases actually read (spec §07): what the plan's citations can point to. */
+        webSources: v.optional(v.array(v.object({ url: v.string(), title: v.optional(v.string()) }))),
       }),
     ),
     /** Acquisition Intelligence: the profile used and the agent's evidence-backed adjustments (scores are recomputed on read). */

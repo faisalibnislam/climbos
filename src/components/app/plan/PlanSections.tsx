@@ -463,9 +463,9 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources }: { sources: PlanView["sources"] }) {
+export function Sources({ sources, web = [] }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[] }) {
   return (
-    <PlanSection id="sources-heading" title="Sources" intro="Facts about your business this plan is based on.">
+    <PlanSection id="sources-heading" title="Sources" intro="Facts about your business and the pages your team read for this plan.">
       {sources.length === 0 ? (
         <p className="text-ink-3">No facts were linked to this plan.</p>
       ) : (
@@ -478,6 +478,29 @@ export function Sources({ sources }: { sources: PlanView["sources"] }) {
           ))}
         </ul>
       )}
+      {web.length ? (
+        <div className="mt-5 flex flex-col gap-2">
+          <p className="text-overline">Pages read ({web.length})</p>
+          <ul className="flex flex-col gap-1.5">
+            {web.map((w) => {
+              let host = w.url;
+              try {
+                host = new URL(w.url).hostname.replace(/^www\./, "");
+              } catch {
+                // keep the raw URL
+              }
+              return (
+                <li key={w.url} className="min-w-0 text-sm">
+                  <a href={w.url} target="_blank" rel="noopener noreferrer nofollow" className="break-words text-ink underline decoration-line underline-offset-2 hover:decoration-ink-3">
+                    {w.title || host}
+                  </a>
+                  <span className="text-ink-3"> · {host}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
     </PlanSection>
   );
 }

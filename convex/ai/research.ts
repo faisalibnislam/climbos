@@ -75,6 +75,17 @@ async function fetchOne(url: string): Promise<ResearchedPage> {
 }
 
 /** Homepage plus up to `extraPages` same-origin pages likely to describe the product. */
+/** What a planner most needs from a site, in order: price, offer, who it's for, rivals, story. */
+const PAGE_PRIORITY = [/pricing|price|plans/i, /features?|product/i, /\/(for|solutions|use-cases|industries|customers)(\/|$)/i, /compare|vs[-/]|alternative/i, /about|how-it-works|story/i];
+function sameSite(a: string, b: string): boolean {
+  const bare = (h: string) => h.toLowerCase().replace(/^www\./, "");
+  return bare(a) === bare(b);
+}
+function pageRank(path: string): number {
+  const i = PAGE_PRIORITY.findIndex((re) => re.test(path));
+  return i < 0 ? PAGE_PRIORITY.length : i;
+}
+
 export async function researchWebsite(website: string, extraPages: number): Promise<{ pages: ResearchedPage[]; pagesFetched: number }> {
   const url = normalizeWebsite(website);
   if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0 };
@@ -94,20 +105,26 @@ export async function researchWebsite(website: string, extraPages: number): Prom
 
   // Find candidate pages from the homepage's same-origin links.
   const htmlRes = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 10_000 }).catch(() => null);
-  const links = htmlRes?.ok ? extractPageContent(htmlRes.body, htmlRes.finalUrl, { maxLinks: 50 }).links : [];
-  const wanted = /(pricing|price|plans|features|product|about|solutions|how-it-works)/i;
-  const seen = new Set([url.replace(/\/$/, "")]);
-  const candidates = links
-    .map((l) => l.url)
-    .filter((u) => {
+  const links = htmlRes?.ok ? extractPageContent(htmlRes.body, htmlRes.finalUrl, { maxLinks: 300 }).links : [];
+  const seen = new Set([url.replace(/\/$/, ""), (htmlRes?.ok ? htmlRes.finalUrl : url).replace(/\/$/, "")]);
+  // The site may redirect (involets.com → www.involets.com): links count as the same site either way.
+  const siteHost = new URL(htmlRes?.ok ? htmlRes.finalUrl : url).hostname;
+  const unique = [...new Set(links.map((l) => l.url.split("#")[0].replace(/\/$/, "")))];
+  const ranked = unique
+    .map((u) => {
       try {
         const parsed = new URL(u);
-        return parsed.origin === origin && wanted.test(parsed.pathname) && !seen.has(u.replace(/\/$/, ""));
+        return sameSite(parsed.hostname, siteHost) && !seen.has(u) ? { u, rank: pageRank(parsed.pathname) } : null;
       } catch {
-        return false;
+        return null;
       }
     })
-    .slice(0, extraPages);
+    .filter((c): c is { u: string; rank: number } => c !== null && c.rank < PAGE_PRIORITY.length)
+    // Most useful kind first; within a kind, the shortest (top-level) path.
+    .sort((a, b) => a.rank - b.rank || a.u.length - b.u.length);
+  // One page of each kind before a second page of any kind.
+  const firsts = ranked.filter((c, i, all) => all.findIndex((x) => x.rank === c.rank) === i);
+  const candidates = [...firsts, ...ranked.filter((c) => !firsts.includes(c))].slice(0, extraPages).map((c) => c.u);
   for (const c of candidates) {
     seen.add(c.replace(/\/$/, ""));
     if (!allowed(c)) {

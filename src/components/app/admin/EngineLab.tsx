@@ -23,7 +23,7 @@ export function EngineLab() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="heading-page">Engine lab</h1>
-        <p className="text-sm text-ink-3">Every Tuesday the engine proposes rules from what reviewers flagged on real plans. Test, then approve to ship.</p>
+        <p className="text-sm text-ink-3">Every Tuesday the engine proposes rules from anonymized reviewer feedback; a rule needs the same weakness in 5+ businesses. Test, then approve to ship.</p>
       </div>
       <Card>
         <CardContent className="flex flex-col gap-2">

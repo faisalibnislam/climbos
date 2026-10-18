@@ -53,3 +53,34 @@ describe("growth maths in code", () => {
     expect(two).toContain("20% overlap");
   });
 });
+
+describe("owner numbers and decision questions", () => {
+  const marginal = play({ model: { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 2 } });
+
+  it("owner-confirmed numbers replace assumptions", async () => {
+    const { applyOwnerEconomics } = await import("../../shared/agents/economics");
+    const e = applyOwnerEconomics(econ, { revenuePerCustomerMonthUsd: 49, ownerHourUsd: 80 });
+    expect(e.revenuePerCustomerMonthUsd).toBe(49);
+    expect(e.ownerHourUsd).toBe(80);
+    expect(e.assumed).toEqual(["margin", "churn"]);
+    expect(e.basis).toMatch(/^Owner confirmed revenue, owner hour\./);
+  });
+
+  it("asks only about assumptions that would flip a verdict, at most 3", async () => {
+    const { decisionQuestions, playMaths } = await import("../../shared/agents/economics");
+    // 26 hours × $50 = $1,300 for ≈9.75 customers ≈ $133 each vs ≈ $109 value: close to break-even, so inputs matter.
+    expect(playMaths(marginal, econ).profitable).toBe(false);
+    const qs = decisionQuestions({ economics: econ, plays: [marginal] });
+    expect(qs.length).toBeGreaterThan(0);
+    expect(qs.length).toBeLessThanOrEqual(3);
+    expect(qs).toHaveLength(3); // four inputs would flip it; the three biggest swings are asked
+    // Once the owner confirms everything, nothing is left to ask.
+    expect(decisionQuestions({ economics: econ, plays: [marginal] }, { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthlyChurn: 0.1, ownerHourUsd: 50 })).toEqual([]);
+  });
+
+  it("doesn't ask when no plausible answer changes anything", async () => {
+    const { decisionQuestions } = await import("../../shared/agents/economics");
+    const cheap = play({ model: { weeklyReach: 5000, steps: [{ name: "paid", rate: 0.05 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 } });
+    expect(decisionQuestions({ economics: { ...econ, monthlyChurn: 0.02 }, plays: [cheap] })).toEqual([]);
+  });
+});

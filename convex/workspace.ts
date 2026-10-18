@@ -13,6 +13,7 @@ import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -375,9 +376,15 @@ export const plan = query({
             measurementPlan: strategy.measurementPlan,
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
-            expert: strategy.expert ?? null,
+            // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
+            expert: strategy.expert ? { ...strategy.expert, economics: strategy.expert.economics ? applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics) : undefined } : null,
           }
         : null,
+      /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
+      questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics) : [],
+      unitEconomics: business?.unitEconomics ?? null,
+      /** The owner answered after this plan was written: numbers are current, the text may not be. */
+      answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
       planEstimateMicros: estimateJobMicros(planJob("strategy")),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status })),
@@ -385,6 +392,39 @@ export const plan = query({
       sources: facts,
       currency: org.currency,
     };
+  },
+});
+
+/** The owner's unit economics: they replace the planner's assumptions in every number and future plan. */
+export const setUnitEconomics = mutation({
+  args: {
+    slug: v.string(),
+    revenuePerCustomerMonthUsd: v.optional(v.number()),
+    grossMargin: v.optional(v.number()),
+    monthlyChurn: v.optional(v.number()),
+    ownerHourUsd: v.optional(v.number()),
+  },
+  handler: async (ctx, { slug, ...vals }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Add your business first.");
+    const check = (x: number | undefined, lo: number, hi: number, what: string) => {
+      if (x !== undefined && !(x >= lo && x <= hi)) throw appError("INVALID", `${what} looks wrong.`);
+    };
+    check(vals.revenuePerCustomerMonthUsd, 0.01, 1_000_000, "Revenue per customer");
+    check(vals.grossMargin, 0.01, 1, "Margin");
+    check(vals.monthlyChurn, 0.001, 0.95, "Monthly churn");
+    check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
+    const prev = business.unitEconomics;
+    const next = {
+      revenuePerCustomerMonthUsd: vals.revenuePerCustomerMonthUsd ?? prev?.revenuePerCustomerMonthUsd,
+      grossMargin: vals.grossMargin ?? prev?.grossMargin,
+      monthlyChurn: vals.monthlyChurn ?? prev?.monthlyChurn,
+      ownerHourUsd: vals.ownerHourUsd ?? prev?.ownerHourUsd,
+      updatedAt: Date.now(),
+    };
+    await ctx.db.patch(business._id, { unitEconomics: next });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
   },
 });
 

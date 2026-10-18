@@ -39,7 +39,7 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
-import { lockedNumbers, withForecasts } from "../shared/agents/economics";
+import { applyOwnerEconomics, lockedNumbers, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
@@ -86,6 +86,10 @@ function fitMetrics(json: string): string {
     return reportDropped("results explainer", fitText(json, 12_000, "results"));
   }
 }
+
+/** A run may spend at most this multiple of its reservation (spec §24). */
+const RUN_COST_CAP = 1.5;
+const COST_CAP_MESSAGE = "This job needed more AI work than planned, so we stopped it to protect your credits. Progress is saved; retry to continue.";
 
 class JobStop extends Error {
   constructor(
@@ -300,7 +304,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
-  meta?: { shipped?: boolean | null },
+  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[] },
 ): Promise<T> {
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
@@ -343,6 +347,12 @@ async function runAgentTask<T>(
         const stepId = stepScope.getStore() ?? null;
         const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);
         const ref = background && stepId ? await ctx.runQuery(internal.engine.stepProviderRef, { stepId }) : null;
+        // Hard cost cap (spec §24): a new call never starts once the run has spent 1.5× what was reserved.
+        // Resuming an answer already paid for is always allowed.
+        if (!ref) {
+          const live = await ctx.runQuery(internal.engine.getRun, { runId: job.run._id });
+          if (live && live.run.estimateMicros > 0 && live.run.actualMicros >= live.run.estimateMicros * RUN_COST_CAP) throw new JobStop("cost_cap", COST_CAP_MESSAGE);
+        }
         const q = {
           ...req,
           modelKey,
@@ -398,7 +408,10 @@ async function runAgentTask<T>(
   };
   try {
     const result = await runAgent(spec, input, deps);
-    if (meta) meta.shipped = result.assessment?.ship ?? null;
+    if (meta) {
+      meta.shipped = result.assessment?.ship ?? null;
+      meta.sources = result.research?.sources ?? [];
+    }
     if (result.quality) {
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
       const q = await begin(ctx, job.run._id, baseIndex + 95, "compute", `${spec.label}: quality`, spec.role);
@@ -449,10 +462,28 @@ function businessBrief(job: JobCtx): string {
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
+    ownerEconomicsLine(b?.unitEconomics),
     factsBlock(job.facts),
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function uniqueSources(xs: { url: string; title?: string }[]): { url: string; title?: string }[] {
+  const seen = new Set<string>();
+  return xs.filter((x) => x.url && !seen.has(x.url) && seen.add(x.url));
+}
+
+/** Owner-confirmed unit economics, stated as facts in the brief. */
+function ownerEconomicsLine(u: OwnerEconomics | undefined): string {
+  if (!u) return "";
+  const parts = [
+    u.revenuePerCustomerMonthUsd ? `revenue per customer $${u.revenuePerCustomerMonthUsd}/month` : "",
+    u.grossMargin ? `contribution margin ${Math.round(u.grossMargin * 100)}%` : "",
+    u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
+    u.ownerHourUsd ? `owner's time $${u.ownerHourUsd}/hour` : "",
+  ].filter(Boolean);
+  return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
 }
 
 async function finish(
@@ -605,7 +636,7 @@ export const onboardingResearch = internalAction({
             ? [{ url: business.website, title: business.name, status: "ok", text: job.facts.map((f) => f.statement).join("\n") }]
             : [];
         } else {
-          const res = await researchWebsite(business.website, 2);
+          const res = await researchWebsite(business.website, 4);
           pagesFetched = res.pagesFetched;
           pages = res.pages.map((p) => ({ url: p.url, title: p.title, excerpt: p.text.slice(0, 600), status: p.status, text: `${p.text}\n${p.prices.join("\n")}` }));
           await ctx.runMutation(internal.engine.recordUsage, {
@@ -726,6 +757,8 @@ export const buildStrategy = internalAction({
       const scored = scoreChannels(profile, adjustments);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
+      const playsMeta: { sources?: { url: string; title?: string }[] } = {};
+      const planMeta: { sources?: { url: string; title?: string }[] } = {};
       const playsDraft = v2
         ? await runAgentTask<PlaysOutput>(
             ctx,
@@ -739,10 +772,12 @@ export const buildStrategy = internalAction({
             ),
             startedAt,
             { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },
+            playsMeta,
           )
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
-      const plays = playsDraft ? withForecasts(playsDraft) : null;
+      // The owner's confirmed unit economics always replace the planner's assumptions.
+      const plays = playsDraft ? withForecasts({ ...playsDraft, economics: applyOwnerEconomics(playsDraft.economics, job.business?.unitEconomics) }) : null;
       // 2. The 90-day plan, built around those plays.
       const locked = plays ? lockedNumbers(plays) : "";
       let strategy = await runAgentTask<StrategyOutput>(
@@ -762,12 +797,13 @@ export const buildStrategy = internalAction({
           text:
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? reportDropped("plan fallback insights", fitJson({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }, 6000, "insights")) : "(none yet)"}`,
         },
+        planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
       if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief })));
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]) } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });

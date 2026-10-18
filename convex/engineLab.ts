@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
 import { requireStaff } from "./lib/staff";
 import { appError } from "./lib/tenancy";
+import { redactFeedback } from "../shared/lab/redact";
 
 /**
  * Self-improvement loop 3 — the engine lab. Weekly, Luna reads what reviewers
@@ -152,25 +153,38 @@ export const recordArm = internalMutation({
   },
 });
 
-/** Recent reviewer feedback on real plans, for the weekly proposal. */
+/**
+ * Recent reviewer feedback on real plans, for the weekly proposal: scrubbed of
+ * names, sites, links and figures, at most 4 fixes per workspace, grouped by an
+ * anonymous label so a rule can be required to recur across ≥ 5 businesses.
+ */
 export const recentFeedback = internalQuery({
   args: { agentId: v.string() },
-  handler: async (ctx, { agentId }): Promise<string[]> => {
+  handler: async (ctx, { agentId }): Promise<{ business: string; fix: string }[]> => {
     const label = agentId === "growth_plays" ? "Growth plays" : "Growth plan";
     const runs = (await ctx.db.query("workflowRuns").withIndex("by_status_updated", (q) => q.eq("status", "verified").gte("updatedAt", Date.now() - 14 * DAY)).take(200)).filter((r) => r.kind === "strategy" && !r.isFixture);
-    const out: string[] = [];
-    for (const r of runs.slice(0, 40)) {
+    const perOrg = new Map<string, string[]>();
+    for (const r of runs.slice(0, 60)) {
+      const have = perOrg.get(r.orgId) ?? [];
+      if (have.length >= 4) continue;
+      const org = await ctx.db.get(r.orgId);
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", r.orgId)).first();
+      const names = [org?.name, business?.name, business?.website];
       for (const s of await ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", r._id)).take(80)) {
         if (!s.label.startsWith(`${label}: review`) || !s.output) continue;
         try {
           const c = JSON.parse(s.output) as { fixes?: string[] };
-          out.push(...(c.fixes ?? []).slice(0, 4));
+          for (const f of c.fixes ?? []) if (have.length < 4) have.push(redactFeedback(f, names));
         } catch {
           // skip
         }
       }
+      perOrg.set(r.orgId, have);
     }
-    return out.slice(0, 120);
+    // Anonymous labels (B1, B2…) in a stable but meaningless order.
+    const out: { business: string; fix: string }[] = [];
+    [...perOrg.values()].filter((f) => f.length).forEach((fixes, i) => fixes.forEach((fix) => out.push({ business: `B${i + 1}`, fix })));
+    return out.slice(0, 160);
   },
 });
 

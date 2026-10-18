@@ -112,7 +112,7 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"] };
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[] };
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -254,6 +254,21 @@ export function ownNumbers(v: unknown, out: string[] = []): string[] {
   } else if (Array.isArray(v)) v.forEach((x) => ownNumbers(x, out));
   else if (v && typeof v === "object") Object.values(v).forEach((x) => ownNumbers(x, out));
   return out;
+}
+
+/** Domains named in "[source, grade]" funnel citations must be in what the writer was given (research notes, brief, facts). */
+export function lintCitations(plays: { funnel: string[] }[], evidence: string): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) =>
+    p.funnel.forEach((line, j) => {
+      const src = line.match(/\[([^\]]+?),\s*[ABCD]\]\s*$/)?.[1]?.trim().toLowerCase();
+      const domain = src?.match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0]?.replace(/^www\./, "");
+      if (domain && !ev.includes(domain))
+        issues.push({ severity: "error", rule: "citation", message: `"${domain}" isn't in your research notes or the brief. Cite a source you actually read, or mark the rate "assumption, grade D".`, path: `plays[${i}].funnel[${j}]` });
+    }),
+  );
+  return issues;
 }
 
 /** Plans and plays: numbers trace to any input or the output's own model; labelled assumptions and targets pass. */
@@ -432,7 +447,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

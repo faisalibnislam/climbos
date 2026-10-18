@@ -36,6 +36,16 @@ export interface Economics {
   basis: string;
   /** Which of revenue / margin / churn are assumptions rather than facts. */
   assumed?: string[];
+  /** Value of an owner hour; $50 when unknown. */
+  ownerHourUsd?: number;
+}
+
+/** Numbers the owner confirmed (businesses.unitEconomics); they always beat the model's assumptions. */
+export interface OwnerEconomics {
+  revenuePerCustomerMonthUsd?: number;
+  grossMargin?: number;
+  monthlyChurn?: number;
+  ownerHourUsd?: number;
 }
 export interface PlayLike {
   name: string;
@@ -138,8 +148,9 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
   const spend = Math.max(0, p.model.monthlySpendUsd) * (weeks / 4.33);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
-  const costUsd = spend + hours * OWNER_HOUR_USD;
-  const cacUsd = cacFull(spend, hours, OWNER_HOUR_USD, 0, customers);
+  const hourUsd = e.ownerHourUsd && e.ownerHourUsd > 0 ? e.ownerHourUsd : OWNER_HOUR_USD;
+  const costUsd = spend + hours * hourUsd;
+  const cacUsd = cacFull(spend, hours, hourUsd, 0, customers);
   const cm = monthlyContribution(e);
   const churn = churnOf(e) ?? 0;
   const valueUsd = contributionOver(cm, churn, PAYBACK_HORIZON_MONTHS) ?? 0;
@@ -194,7 +205,7 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
     if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
     const m = playMaths(p, e);
     if (!m.profitable && p.kind !== "moonshot")
-      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
+      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${e.ownerHourUsd || OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
   });
   return issues;
 }
@@ -216,4 +227,90 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }):
     `- TOTAL: ≈${roundCount(total)} customers in 90 days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     `- North Star target = ≈${Math.round(total)} customers by day 90 (an estimate from these plays).`,
   ].join("\n");
+}
+
+const KEY_OF = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" } as const;
+
+/** The owner's confirmed numbers replace the model's; they stop being assumptions. */
+export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null | undefined): Economics {
+  if (!owner) return e;
+  const out: Economics = { ...e, assumed: [...(e.assumed ?? [])] };
+  const confirmed: string[] = [];
+  for (const k of ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn"] as const) {
+    const v = owner[k];
+    if (typeof v === "number" && v > 0) {
+      out[k] = v;
+      out.assumed = out.assumed!.filter((a) => a !== KEY_OF[k]);
+      confirmed.push(KEY_OF[k]);
+    }
+  }
+  if (typeof owner.ownerHourUsd === "number" && owner.ownerHourUsd > 0) {
+    out.ownerHourUsd = owner.ownerHourUsd;
+    confirmed.push("owner hour");
+  }
+  if (confirmed.length) out.basis = `Owner confirmed ${confirmed.join(", ")}.${e.basis ? ` ${e.basis}` : ""}`.slice(0, 400);
+  return out;
+}
+
+export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd";
+export interface OwnerQuestion {
+  key: QuestionKey;
+  question: string;
+  /** The value the plan assumed, for the input's placeholder. */
+  assumed: number;
+  unit: "usd_month" | "share" | "share_month" | "usd_hour";
+  /** Why it matters: which plays' verdicts flip across a plausible range. */
+  why: string;
+}
+
+const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> = {
+  revenuePerCustomerMonthUsd: { q: "What does an average customer pay you per month?", unit: "usd_month" },
+  grossMargin: { q: "What share of that do you keep after delivery costs?", unit: "share" },
+  monthlyChurn: { q: "What share of customers leave each month?", unit: "share_month" },
+  ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
+};
+
+/**
+ * Up to three questions whose answers would change the plan (spec §10): each assumed
+ * input is moved across a plausible range; it is asked only if some play's
+ * pays-back verdict flips or the main play's payback moves by half or more.
+ */
+export function decisionQuestions(out: { economics: Economics; plays: PlayLike[] }, owner?: OwnerEconomics | null, max = 3): OwnerQuestion[] {
+  const e = applyOwnerEconomics(out.economics, owner);
+  const plays = out.plays.filter((p) => p.model?.steps?.length);
+  if (!plays.length) return [];
+  const verdicts = (x: Economics) => plays.map((p) => playMaths(p, x));
+  const base = verdicts(e);
+  const main = Math.max(0, plays.findIndex((p) => p.kind === "bankable"));
+  const assumed = new Set(e.assumed ?? ["revenue", "margin", "churn"]);
+  const candidates: { key: QuestionKey; value: number; low: number; high: number }[] = [];
+  if (assumed.has("revenue")) candidates.push({ key: "revenuePerCustomerMonthUsd", value: e.revenuePerCustomerMonthUsd, low: e.revenuePerCustomerMonthUsd * 0.5, high: e.revenuePerCustomerMonthUsd * 1.5 });
+  if (assumed.has("margin")) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
+  const churn = churnOf(e) ?? 0.05;
+  if (assumed.has("churn")) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
+  if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: OWNER_HOUR_USD, low: 20, high: 150 });
+  const scored = candidates.map((c) => {
+    let flips = 0;
+    let paybackSwing = 0;
+    for (const v of [c.low, c.high]) {
+      const alt = verdicts({ ...e, [c.key]: v, ...(c.key === "monthlyChurn" ? { monthsRetained: undefined } : {}) });
+      flips += alt.filter((m, i) => m.profitable !== base[i].profitable && plays[i].kind !== "moonshot").length;
+      const a = alt[main].paybackMonths;
+      const b = base[main].paybackMonths;
+      if (a === null || b === null) paybackSwing = Math.max(paybackSwing, a === b ? 0 : 1);
+      else if (b > 0) paybackSwing = Math.max(paybackSwing, Math.abs(a - b) / b);
+    }
+    return { c, flips, paybackSwing };
+  });
+  return scored
+    .filter((x) => x.flips > 0 || x.paybackSwing >= 0.5)
+    .sort((a, b) => b.flips - a.flips || b.paybackSwing - a.paybackSwing)
+    .slice(0, max)
+    .map(({ c, flips }) => ({
+      key: c.key,
+      question: QUESTION[c.key].q,
+      assumed: Math.round(c.value * 1000) / 1000,
+      unit: QUESTION[c.key].unit,
+      why: flips > 0 ? `Decides whether ${flips === 1 ? "a play pays back" : `${flips} plays pay back`}.` : "Changes how fast your main play pays back.",
+    }));
 }
