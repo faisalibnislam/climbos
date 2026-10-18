@@ -42,4 +42,39 @@ describe("reels", () => {
     await t.finishAllScheduledFunctions(() => undefined);
     expect((await owner.client.query(api.reels.list, { slug }))[0].badge).toBe(false);
   });
+
+  it("a finished reel becomes a post for approval and export, and can be deleted", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "reel-post@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Reel Co" });
+    await owner.client.mutation(api.reels.create, { slug, brief: "Our autumn menu" });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const [r] = await owner.client.query(api.reels.list, { slug });
+    expect(r.isDemo).toBe(true); // no worker in tests: labelled, not passed off as a video
+    expect(r.artifactId).toBeTruthy();
+    const post = await owner.client.query(api.content.get, { slug, artifactId: r.artifactId! });
+    expect(post).toMatchObject({ kind: "video_script", status: "in_review", publishTarget: null });
+    expect(post.reel?.id).toBe(r.id);
+    await owner.client.mutation(api.content.decide, { slug, artifactId: r.artifactId!, decision: "approve" });
+    const pack = await owner.client.query(api.content.exportPack, { slug, artifactId: r.artifactId! });
+    expect(pack?.pack.items.map((i) => i.platform).sort()).toEqual(["instagram", "tiktok", "youtube"]);
+
+    await owner.client.mutation(api.reels.remove, { slug, reelId: r.id });
+    expect(await owner.client.query(api.reels.list, { slug })).toHaveLength(0);
+    expect((await owner.client.query(api.content.get, { slug, artifactId: r.artifactId! })).status).toBe("archived");
+  });
+
+  it("without the render worker a real reel fails clearly before spending", async () => {
+    delete process.env.CLIMBOS_FAKE_LLM;
+    const t = setup();
+    delete process.env.CLIMBOS_SERVER_SECRET;
+    const owner = await asNewUser(t, "reel-nosecret@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Reel Co" });
+    await owner.client.mutation(api.reels.create, { slug, brief: "No worker here" });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const [r] = await owner.client.query(api.reels.list, { slug });
+    expect(r.status).toBe("failed");
+    expect(r.error).toMatch(/isn't set up/);
+    expect(r.artifactId).toBeNull();
+  });
 });

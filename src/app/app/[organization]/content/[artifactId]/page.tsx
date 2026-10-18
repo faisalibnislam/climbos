@@ -146,6 +146,11 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
 
           <Section id="preview-heading" title="Preview">
             <p className="-mt-2 text-ui text-ink-3">An approximation of how it will look. Each platform displays text slightly differently.</p>
+            {artifact.reel?.videoUrl ? (
+              <video src={artifact.reel.videoUrl} controls playsInline className="aspect-[9/16] w-full max-w-xs rounded-lg bg-black" />
+            ) : artifact.reel ? (
+              <p className="text-sm text-ink-3">Demo reel: no video was rendered.</p>
+            ) : null}
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
             {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check whether it was posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>

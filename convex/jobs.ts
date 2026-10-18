@@ -1339,6 +1339,9 @@ export const makeReel = internalAction({
       ctx,
       args.runId,
       async () => {
+        // Without the render worker no video can be made: stop before spending anything.
+        const simulated = job.run.isFixture || Boolean(process.env.CLIMBOS_FAKE_LLM);
+        if (!simulated && !process.env.CLIMBOS_SERVER_SECRET) throw new JobStop("render_unavailable", "Video rendering isn't set up on this server yet, so no reel was made. Nothing was charged.");
         const reel = (await ctx.runQuery(internal.reels.assetsFor, { orgId: job.org._id, assetIds: args.assetIds })) ?? [];
         const brief = JSON.parse(job.run.input || "{}").brief as string;
         const rates = getRateVersion(job.run.rateVersionId);
@@ -1394,19 +1397,21 @@ export const makeReel = internalAction({
           const st = await begin(ctx, job.run._id, 1 + generated, "image", `Reel: image ${generated + 1}`, "creative_director");
           generated++;
           if (st.checkpoint !== undefined) {
-            sceneImages.push((st.checkpoint as string | null) ?? undefined);
+            const saved = st.checkpoint as Id<"_storage"> | null;
+            sceneImages.push((saved ? await ctx.runQuery(internal.reels.videoUrl, { storageId: saved }) : null) ?? reel[i % Math.max(1, reel.length)]?.url);
             continue;
           }
-          let dataUrl: string | null = null;
-          for (let a = 0; a < 2 && !dataUrl; a++) {
+          // Generated images go to storage and the worker loads them by URL (data: URLs would bloat the request).
+          let imageId: Id<"_storage"> | null = null;
+          for (let a = 0; a < 2 && !imageId; a++) {
             attempts++;
             const img = await generateImage(`Vertical 9:16 photo for ${job.business?.name ?? "a small business"}: ${scenes[i].imagePrompt}. Natural light, modern, no text, no logos, no real people's faces.`, rates);
             await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }] });
-            if (img.ok) dataUrl = `data:${img.mimeType};base64,${Buffer.from(img.bytes).toString("base64")}`;
+            if (img.ok) imageId = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
             else if (img.kind === "provider_unavailable") break;
           }
-          await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify(null) });
-          sceneImages.push(dataUrl ?? reel[i % Math.max(1, reel.length)]?.url);
+          await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify(imageId) });
+          sceneImages.push((imageId ? await ctx.runQuery(internal.reels.videoUrl, { storageId: imageId }) : null) ?? reel[i % Math.max(1, reel.length)]?.url);
         }
         // 2b. AI video clips (paid, Veo): the opening scene(s) become real video. Long-running: the
         // operation id is checkpointed so a fresh action keeps polling instead of paying again.
@@ -1457,27 +1462,37 @@ export const makeReel = internalAction({
         const secret = process.env.CLIMBOS_SERVER_SECRET;
         let storageId: Id<"_storage"> | undefined;
         let seconds: number | undefined;
-        if (job.run.isFixture || process.env.CLIMBOS_FAKE_LLM || !secret) {
+        if (simulated || !secret) {
+          // Demo / tests: no worker, so no real video. The reel is labelled as a demo.
           seconds = renderScenes.length * 3;
         } else {
+          // The worker uploads the MP4 straight to storage: an MP4 in the response would pass the
+          // hosting platform's ~4.5 MB body limit.
+          const uploadUrl = await ctx.storage.generateUploadUrl();
           const res = await fetch(`${(process.env.RENDER_WORKER_URL ?? process.env.SITE_URL ?? "https://climbos.app").replace(/\/$/, "")}/api/render/reel`, {
             method: "POST",
             headers: { "content-type": "application/json", "x-climbos-secret": secret },
-            body: JSON.stringify({ scenes: renderScenes, brand, secondsEach: 3, badge: reelDoc?.badge ?? true }),
+            body: JSON.stringify({ scenes: renderScenes, brand, secondsEach: 3, badge: reelDoc?.badge ?? true, uploadUrl }),
           });
-          const json = (await res.json().catch(() => ({}))) as { mp4?: string; seconds?: number; error?: string };
-          if (!res.ok || !json.mp4) {
+          const json = (await res.json().catch(() => ({}))) as { storageId?: string; mp4?: string; seconds?: number; error?: string };
+          if (!res.ok || (!json.storageId && !json.mp4)) {
             await ctx.runMutation(internal.engine.failStep, { stepId: st.stepId!, error: json.error ?? `Render failed (${res.status})` });
             throw new JobStop("render_failed", "We couldn't render the video. Try again in a minute.");
           }
-          storageId = await ctx.storage.store(new Blob([Buffer.from(json.mp4, "base64")], { type: "video/mp4" }));
+          storageId = json.storageId ? (json.storageId as Id<"_storage">) : await ctx.storage.store(new Blob([Buffer.from(json.mp4!, "base64")], { type: "video/mp4" }));
+          if (!(await ctx.runQuery(internal.reels.videoUrl, { storageId }).catch(() => null))) {
+            await ctx.runMutation(internal.engine.failStep, { stepId: st.stepId!, error: "uploaded video not found" });
+            throw new JobStop("render_failed", "We couldn't save the video. Try again in a minute.");
+          }
           seconds = json.seconds;
         }
         await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify({ seconds }) });
         await ctx.runMutation(internal.reels.save, {
           reelId: args.reelId,
-          patch: { status: "ready", scenes: renderScenes.map((s, i) => ({ caption: s.caption, ...(s.sub ? { sub: s.sub } : {}), ...(scenes[i] && urlFor.has(scenes[i].assetId) ? { assetId: scenes[i].assetId } : {}), ...(s.cta ? { cta: true } : {}) })), caption: script.caption.slice(0, 2200), ...(storageId ? { videoStorageId: storageId } : {}), seconds },
+          patch: { status: "ready", scenes: renderScenes.map((s, i) => ({ caption: s.caption, ...(s.sub ? { sub: s.sub } : {}), ...(scenes[i] && urlFor.has(scenes[i].assetId) ? { assetId: scenes[i].assetId } : {}), ...(s.cta ? { cta: true } : {}) })), caption: script.caption.slice(0, 2200), ...(storageId ? { videoStorageId: storageId } : { isDemo: true }), seconds },
         });
+        // The reel becomes a post: approve, schedule or export it like any other.
+        await ctx.runMutation(internal.reels.createPost, { reelId: args.reelId });
         await finish(ctx, args.runId, "verified", { output: { scenes: renderScenes.length, seconds }, meters: { imageAttempts: attempts } });
       },
       async (msg) => {
