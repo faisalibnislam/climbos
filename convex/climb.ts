@@ -33,6 +33,24 @@ export function climbModelFor(text: string): ModelKey {
 }
 const MAX_TURNS = 8;
 
+/** A short, plain line about what a tool returned, shown under the step in the panel. */
+export function summarizeToolResult(out: unknown): string {
+  if (out === null || out === undefined) return "Done";
+  if (Array.isArray(out)) return `Found ${out.length} item${out.length === 1 ? "" : "s"}`;
+  if (typeof out !== "object") return String(out).slice(0, 120);
+  const o = out as Record<string, unknown>;
+  const label = (k: string) => k.replace(/([A-Z])/g, " $1").toLowerCase();
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(o)) {
+    if (Array.isArray(v)) parts.push(`${v.length} ${label(k)}`);
+    if (parts.length >= 3) break;
+  }
+  if (typeof o.title === "string") parts.unshift(o.title.slice(0, 60));
+  if (typeof o.status === "string") parts.push(String(o.status).replace(/_/g, " "));
+  if (o.campaignId || o.runId) parts.push("started");
+  return parts.length ? parts.join(" · ").slice(0, 200) : "Done";
+}
+
 const RULES = `You are Climb AI, the assistant inside ClimbOS, an AI growth team for small businesses. You sit in a side panel next to whatever screen the owner is looking at.
 
 How you work:
@@ -67,6 +85,8 @@ export const thread = query({
       ui: m.ui ?? [],
       links: m.links ?? [],
       status: m.status,
+      detail: m.detail ?? null,
+      finishedAt: m.finishedAt ?? null,
       createdAt: m.createdAt,
     }));
   },
@@ -166,12 +186,14 @@ export const write = internalMutation({
 });
 
 export const patch = internalMutation({
-  args: { messageId: v.id("climbMessages"), status: v.optional(v.union(v.literal("done"), v.literal("working"), v.literal("failed"))), text: v.optional(v.string()), actionStatus: v.optional(v.union(v.literal("done"), v.literal("failed"))), actionResult: v.optional(v.string()) },
+  args: { messageId: v.id("climbMessages"), status: v.optional(v.union(v.literal("done"), v.literal("working"), v.literal("failed"))), text: v.optional(v.string()), detail: v.optional(v.string()), actionStatus: v.optional(v.union(v.literal("done"), v.literal("failed"))), actionResult: v.optional(v.string()) },
   handler: async (ctx, a) => {
     const m = await ctx.db.get(a.messageId);
     if (!m) return;
     await ctx.db.patch(m._id, {
       ...(a.status ? { status: a.status } : {}),
+      ...(a.status && a.status !== "working" ? { finishedAt: Date.now() } : {}),
+      ...(a.detail !== undefined ? { detail: a.detail.slice(0, 240) } : {}),
       ...(a.text !== undefined ? { text: a.text.slice(0, 6000) } : {}),
       ...(a.actionStatus && m.action ? { action: { ...m.action, status: a.actionStatus, result: a.actionResult?.slice(0, 500) } } : {}),
     });
@@ -312,7 +334,7 @@ export const respond = action({
         try {
           const out = await tool.run!(caller, slug, input as never);
           links.push(...linksFrom(slug, out));
-          await ctx.runMutation(internal.climb.patch, { messageId: stepMsg, status: "done" });
+          await ctx.runMutation(internal.climb.patch, { messageId: stepMsg, status: "done", detail: summarizeToolResult(out) });
           results.push({ type: "tool_result", tool_use_id: tu.id, content: `<untrusted_content source="${tool.name}">\n${JSON.stringify(out ?? { ok: true }).slice(0, 8000)}\n</untrusted_content>` });
         } catch (e) {
           const msg = ((e as { data?: { message?: string } }).data?.message ?? (e as Error).message ?? "failed").slice(0, 300);

@@ -247,3 +247,41 @@ export function RunProgress({
     </div>
   );
 }
+
+/**
+ * Compact live progress for tight spaces (wish cards, popovers, rows): a slim
+ * bar with % and time left, the current agent and phase, the latest finding,
+ * and "Show all steps" to open the full panel inline.
+ */
+export function RunProgressCompact({ slug, runId, className }: { slug: string; runId: Id<"workflowRuns">; className?: string }) {
+  const run = useQuery(api.content.runStatus, { slug, runId });
+  const now = useTicker();
+  const [open, setOpen] = useState(false);
+  if (run === undefined) return <Skeleton className={cn("h-8 w-full", className)} />;
+  const finished = RUN_FINISHED.has(run.status);
+  const groups = groupSteps(run);
+  const current = groups.find((g) => g.status === "running") ?? groups.find((g) => g.status === "pending");
+  const phase = current?.phases.find((p) => p.status === "running") ?? current?.phases.find((p) => p.status === "pending");
+  const latest = [...run.steps].reverse().find((s) => s.findings.length)?.findings[0];
+  const progress = now ? progressOfRun(run.steps.filter((x) => x.kind !== "compute"), run.planned, now, finished) : null;
+  return (
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
+      {progress ? <Progress value={progress.percent} label={`${run.title} progress`} /> : <Skeleton className="h-2 w-full" />}
+      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs">
+        <span className="min-w-0 truncate font-medium text-brand-800">
+          {finished ? (RUN_STATUS_LABEL[run.status] ?? run.status) : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Getting the team ready…"}
+        </span>
+        {progress && !finished ? <span className="shrink-0 tabular-nums text-ink-3">{progress.percent}% · {formatEta(progress.etaSeconds).replace("About ", "~")}</span> : null}
+      </p>
+      {latest ? <p className="truncate text-xs text-ink-3">Latest: {latest}</p> : null}
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="self-start text-xs font-medium text-brand-800 hover:underline">
+        {open ? "Hide steps" : "Show all steps"}
+      </button>
+      {open ? (
+        <div className="mt-1 rounded-lg border border-line bg-surface p-3">
+          <RunProgress slug={slug} runId={runId} headingLevel="h4" />
+        </div>
+      ) : null}
+    </div>
+  );
+}

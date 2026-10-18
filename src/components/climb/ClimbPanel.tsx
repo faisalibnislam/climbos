@@ -7,7 +7,7 @@ import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, Mouse
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Button, IconButton, Kbd, Popover, PopoverContent, PopoverTrigger, toast } from "@/components/ui";
+import { Button, IconButton, Kbd, Popover, PopoverContent, PopoverTrigger, Progress, toast } from "@/components/ui";
 import { errorInfo } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { screenEntities, screenSummary, useClimb, type ClimbEntity } from "./context";
@@ -135,18 +135,24 @@ export function ClimbPanel({ slug }: { slug: string }) {
             </div>
           </li>
         ) : (
-          thread.map((m) => (
-            <li key={m.id}>
-              <Message m={m} onConfirm={async () => {
-                const r = await confirm({ slug, messageId: m.id as Id<"climbMessages"> });
-                if (!r.ok) toast({ tone: "danger", title: r.message });
-              }} onCancel={() => cancel({ slug, messageId: m.id as Id<"climbMessages"> })} />
-            </li>
-          ))
+          groupThread(thread).map((item) =>
+            item.kind === "work" ? (
+              <li key={item.key}>
+                <WorkBlock steps={item.steps} startedAt={item.startedAt} answered={item.answered} />
+              </li>
+            ) : (
+              <li key={item.m.id}>
+                <Message m={item.m} onConfirm={async () => {
+                  const r = await confirm({ slug, messageId: item.m.id as Id<"climbMessages"> });
+                  if (!r.ok) toast({ tone: "danger", title: r.message });
+                }} onCancel={() => cancel({ slug, messageId: item.m.id as Id<"climbMessages"> })} />
+              </li>
+            ),
+          )
         )}
-        {busy && thread?.at(-1)?.role !== "assistant" ? (
-          <li className="flex items-center gap-2 text-ui text-ink-3">
-            <Loader2 aria-hidden className="size-3.5 animate-spin text-brand-800" /> Thinking…
+        {busy && thread?.at(-1)?.role === "user" ? (
+          <li>
+            <WorkBlock steps={[]} startedAt={thread.at(-1)!.createdAt} answered={false} />
           </li>
         ) : null}
       </ol>
@@ -375,6 +381,96 @@ function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<
             </Button>
           ))}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+
+type ThreadMsg = NonNullable<ReturnType<typeof useQuery<typeof api.climb.thread>>>[number];
+type ThreadItem = { kind: "msg"; m: ThreadMsg } | { kind: "work"; key: string; steps: ThreadMsg[]; startedAt: number; answered: boolean };
+
+/** Consecutive tool steps after a question become one work block for that turn. */
+function groupThread(thread: ThreadMsg[]): ThreadItem[] {
+  const out: ThreadItem[] = [];
+  let lastUserAt = 0;
+  for (const m of thread) {
+    if (m.role === "user") lastUserAt = m.createdAt;
+    if (m.role === "step") {
+      const prev = out[out.length - 1];
+      if (prev?.kind === "work") prev.steps.push(m);
+      else out.push({ kind: "work", key: `work-${m.id}`, steps: [m], startedAt: lastUserAt || m.createdAt, answered: false });
+      continue;
+    }
+    const prev = out[out.length - 1];
+    if (prev?.kind === "work" && m.role === "assistant") prev.answered = true;
+    out.push({ kind: "msg", m });
+  }
+  return out;
+}
+
+/** Re-render every second (null during the server render). */
+function useNowTick(active: boolean): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    if (!active) return () => clearTimeout(first);
+    const id = setInterval(tick, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [active]);
+  return now;
+}
+
+const secs = (ms: number) => (ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))}s` : `${Math.floor(ms / 60_000)}m ${String(Math.round((ms % 60_000) / 1000)).padStart(2, "0")}s`);
+
+/** What Climb AI did for one question: progress, each step with what it found, and timings. */
+function WorkBlock({ steps, startedAt, answered }: { steps: ThreadMsg[]; startedAt: number; answered: boolean }) {
+  const now = useNowTick(!answered);
+  const [open, setOpen] = useState(false);
+  const done = steps.filter((x) => x.status !== "working").length;
+  const end = answered ? Math.max(startedAt, ...steps.map((x) => x.finishedAt ?? x.createdAt)) : now ?? startedAt;
+  const elapsed = end - startedAt;
+  if (answered && !open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} aria-expanded={false} className="flex items-center gap-1.5 text-xs text-ink-3 hover:text-ink">
+        <CircleCheck aria-hidden className="size-3.5 text-brand-800" />
+        Worked for {secs(elapsed)} · {steps.length} step{steps.length === 1 ? "" : "s"}
+        <span className="text-brand-800 underline-offset-2 hover:underline">Show</span>
+      </button>
+    );
+  }
+  // Steps are open-ended: count the answer as the last step so the bar never claims 100% early.
+  const percent = answered ? 100 : Math.max(8, Math.round(((done + 0.5) / (steps.length + 1.5)) * 100));
+  const current = steps.find((x) => x.status === "working");
+  return (
+    <div className="rounded-lg border border-line bg-surface-2 p-2.5">
+      <Progress value={percent} label="Climb AI progress" />
+      <p className="mt-1.5 flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-brand-800">{answered ? "Done" : current ? current.text : steps.length ? "Writing the answer" : "Understanding your question"}</span>
+        <span className="tabular-nums text-ink-3">{secs(elapsed)}</span>
+      </p>
+      {steps.length ? (
+        <ol className="mt-2 flex flex-col gap-1.5">
+          {steps.map((x) => (
+            <li key={x.id} className="text-xs">
+              <span className="flex items-center gap-1.5">
+                {x.status === "working" ? <Loader2 aria-hidden className="size-3.5 animate-spin text-brand-800" /> : x.status === "failed" ? <CircleX aria-hidden className="size-3.5 text-red-800" /> : <CircleCheck aria-hidden className="size-3.5 text-brand-800" />}
+                <span className={x.status === "working" ? "font-medium text-ink" : "text-ink-2"}>{x.text}</span>
+                {x.finishedAt ? <span className="ml-auto tabular-nums text-ink-3">{secs(x.finishedAt - x.createdAt)}</span> : null}
+              </span>
+              {x.detail ? <span className="ml-5 block text-ink-3">{x.detail}</span> : null}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {answered ? (
+        <button type="button" onClick={() => setOpen(false)} className="mt-2 text-xs font-medium text-brand-800 hover:underline" aria-expanded>
+          Hide steps
+        </button>
       ) : null}
     </div>
   );

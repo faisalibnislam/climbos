@@ -12,6 +12,7 @@ import { Callout, Skeleton } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/field";
 import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";
 import { StepList, type StepItem } from "@/components/ui/stepper";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { normalizeWebsite } from "./website";
 
@@ -325,7 +326,18 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
           {data.status === "queued" ? (
             <p className="mt-5 text-sm text-ink-3 animate-soft-pulse">You&apos;re in line — starting in a moment…</p>
           ) : null}
-          {data.status !== "done" ? <StepList steps={steps} className={data.status === "queued" ? "mt-4" : "mt-6"} /> : null}
+          {data.status !== "done" && data.status !== "failed" ? (
+            <div className={data.status === "queued" ? "mt-4" : "mt-6"}>
+              <Progress value={Math.min(97, Math.round(((steps.filter((x) => x.status === "done").length + (running ? 0.5 : 0)) / steps.length) * 100))} label="Preview progress" />
+              <p className="mt-1.5 flex justify-between text-xs text-ink-3">
+                <span>{running ? String(running.label) : "Getting started…"}</span>
+                <span className="tabular-nums">
+                  {seconds}s{seconds < 45 ? ` · about ${Math.max(5, 45 - seconds)}s left` : ""}
+                </span>
+              </p>
+            </div>
+          ) : null}
+          {data.status !== "done" ? <StepList steps={steps} className="mt-4" /> : null}
 
           {slow ? (
             <Callout

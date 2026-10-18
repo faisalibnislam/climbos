@@ -33,6 +33,8 @@ import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary
 import { cn } from "@/lib/utils";
 import { useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
+import { StagedProgress } from "@/components/app/StagedProgress";
+import { RunProgressCompact } from "@/components/app/content/RunProgress";
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.assets.list>>>;
 type Asset = Data["assets"][number];
@@ -74,11 +76,20 @@ export default function ImagesPage() {
       {data.canEdit ? <Sources slug={slug} data={data} /> : null}
 
       {running.map((j) => (
-        <Callout key={j.id} tone="info" title={j.kind === "capture" ? "Taking screenshots of your site" : "Collecting your product photos"} live="status">
-          <span className="inline-flex items-center gap-1.5">
-            <Loader2 aria-hidden className="size-3.5 animate-spin" /> This takes about a minute. New images appear below as they arrive.
-          </span>
-        </Callout>
+        <section key={j.id} className="rounded-xl border border-brand-200 bg-surface p-4" aria-live="polite">
+          <StagedProgress
+            title={j.kind === "capture" ? "Taking screenshots of your site" : "Collecting your product photos"}
+            stages={j.stages}
+            expected={{ shoot: 25, save: 6, find: 15, download: 25 }}
+          />
+          <p className="mt-2 text-xs text-ink-3">New images appear below as they arrive. You can leave this page.</p>
+        </section>
+      ))}
+      {data.activeEdits.map((r) => (
+        <section key={r.id} className="rounded-xl border border-brand-200 bg-surface p-4">
+          <p className="text-ui font-medium text-ink">{r.title}</p>
+          <RunProgressCompact slug={slug} runId={r.id as Id<"workflowRuns">} className="mt-1.5" />
+        </section>
       ))}
       {lastFailed && !running.length ? <Callout tone="warning" title="That didn't work this time">{lastFailed.message ?? "Try again in a moment."}</Callout> : null}
 

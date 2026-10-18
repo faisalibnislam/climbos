@@ -12,6 +12,7 @@ import { microsToDisplay, relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
+import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
@@ -85,11 +86,14 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
       </header>
       <div className="flex flex-col gap-3 px-4 py-3">
         {thinking ? (
-          <div className="flex flex-col gap-2" aria-busy="true">
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
-          </div>
+          ask.runId ? (
+            <RunProgressCompact slug={slug} runId={ask.runId as Id<"workflowRuns">} />
+          ) : (
+            <div className="flex flex-col gap-2" aria-busy="true">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-9" />
+            </div>
+          )
         ) : failed ? (
           <p className="text-sm text-red-800">{answer?.text ?? "That didn't work. Try again in a moment."}</p>
         ) : answer ? (
@@ -145,7 +149,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
         {network ? <SocialIcon network={network} size="sm" /> : card.kind === "note" ? <Lightbulb aria-hidden className="size-4 text-amber-800" /> : null}
         <div className="min-w-0 flex-1">
           <p className="truncate text-ui font-medium text-ink">{card.title}</p>
-          {card.status === "running" && card.runId ? <LiveStep slug={slug} runId={card.runId} /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" ? card.blockedReason : card.description}</p>}
+          {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" ? card.blockedReason : card.description}</p>}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
@@ -215,18 +219,6 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
 }
 
 /** The step the specialist is on right now, live. */
-function LiveStep({ slug, runId }: { slug: string; runId: string }) {
-  const status = useQuery(api.content.runStatus, { slug, runId: runId as Id<"workflowRuns"> });
-  const current = status?.steps.filter((s) => s.status === "running").pop();
-  const done = status?.steps.filter((s) => s.status === "succeeded").length ?? 0;
-  return (
-    <p className="flex items-center gap-1.5 truncate text-xs text-brand-800">
-      <span className="truncate">{current?.label ?? "Getting started"}</span>
-      {done > 0 ? <span className="text-ink-3">· {done} step{done === 1 ? "" : "s"} done</span> : null}
-    </p>
-  );
-}
-
 export function WishFeedSkeleton() {
   return <Skeleton className="h-40 rounded-xl" />;
 }

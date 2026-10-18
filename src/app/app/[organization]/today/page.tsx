@@ -30,6 +30,7 @@ import { useNow } from "@/components/app/content/shared";
 import { ASK_KEY } from "@/components/app/CommandPalette";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
+import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { climbTarget } from "@/components/climb/context";
 
@@ -259,11 +260,15 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
     <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-ink">{card.title}</p>
-        <Tooltip content={card.proposedEffect}>
-          <p tabIndex={0} className="truncate text-xs text-ink-3">
-            {card.description}
-          </p>
-        </Tooltip>
+        {status === "running" && card.runId ? (
+          <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
+        ) : (
+          <Tooltip content={card.proposedEffect}>
+            <p tabIndex={0} className="truncate text-xs text-ink-3">
+              {card.description}
+            </p>
+          </Tooltip>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {status === "running" ? (

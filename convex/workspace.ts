@@ -115,7 +115,7 @@ export const today = query({
       recent: runs.map((r) => ({ id: r._id, kind: r.kind, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
       chat: messages
         .reverse()
-        .map((m) => ({ id: m._id, author: m.author, text: m.text, understood: m.understood ?? null, status: m.status, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
+        .map((m) => ({ id: m._id, author: m.author, text: m.text, understood: m.understood ?? null, status: m.status, runId: m.runId ?? null, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
       usage: period
         ? {
             source: period.source,
@@ -179,6 +179,7 @@ export const sendChat = mutation({
       await ctx.db.patch(messageId, { status: "failed" });
       throw e;
     }
+    await ctx.db.patch(messageId, { runId });
     await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
     return { messageId };
   },

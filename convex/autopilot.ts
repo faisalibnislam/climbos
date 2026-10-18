@@ -87,7 +87,16 @@ export const get = query({
       .withIndex("by_org_provider", (q) => q.eq("orgId", org._id))
       .collect();
     const connected = new Set(connections.filter((c) => c.status === "connected").map((c) => (c.provider === "facebook_pages" ? "facebook" : c.provider)));
+    const recentRuns = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(20);
+    const activeRuns = recentRuns
+      .filter((r) => ["social_calendar", "content_social"].includes(r.kind) && ["cost_reserved", "preparing", "executing"].includes(r.status))
+      .map((r) => ({ id: r._id, title: r.title }));
     return {
+      activeRuns,
       timezone: org.timezone,
       canManage: ["owner", "admin"].includes(role),
       settings: settings

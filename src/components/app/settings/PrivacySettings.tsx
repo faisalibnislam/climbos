@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Badge, Button, Callout, ConfirmDialog, DataTable, Field, Input, buttonClasses, toast } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, DataTable, Field, Input, Progress, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
@@ -64,6 +64,12 @@ function ExportSection({ slug }: { slug: string }) {
         <Button onClick={onExport} loading={busy} loadingText="Requesting…" disabled={pending}>
           {pending ? "Export in progress…" : "Request an export"}
         </Button>
+        {pending ? (
+          <div className="flex flex-col gap-1.5">
+            <Progress label="Preparing your export" />
+            <p className="text-xs text-ink-3">Collecting your workspace data into one file. Usually under a minute; the download link appears below.</p>
+          </div>
+        ) : null}
       </div>
       <div aria-live="polite">
         {error ? (

@@ -38,6 +38,7 @@ import {
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { cn } from "@/lib/utils";
+import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
 
@@ -80,6 +81,19 @@ export default function AutopilotPage() {
         intro="Your social media manager plans each week, writes and designs the posts, and publishes within the rules you set here."
         actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canManage} /> : undefined}
       />
+      {data.activeRuns?.length ? (
+        <section aria-label="Your team is working" className="rounded-xl border border-brand-200 bg-surface p-4">
+          <p className="text-overline">Your team is working</p>
+          <ul className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {data.activeRuns.map((r) => (
+              <li key={r.id} className="min-w-0">
+                <p className="truncate text-ui font-medium text-ink">{r.title}</p>
+                <RunProgressCompact slug={slug} runId={r.id as Id<"workflowRuns">} className="mt-1.5" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {data.settings?.pausedReason ? <Callout tone="warning" title="Autopilot is waiting">{data.settings.pausedReason}</Callout> : null}
       {!on || editing ? <SetupCard slug={slug} data={data} onDone={() => setEditing(false)} /> : null}
       {on ? (

@@ -787,6 +787,9 @@ export default defineSchema({
     /** Links to things the agent made (drafts, jobs). */
     links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
     status: v.union(v.literal("done"), v.literal("working"), v.literal("failed")),
+    /** For tool steps: what the step found, and when it finished. */
+    detail: v.optional(v.string()),
+    finishedAt: v.optional(v.number()),
     runId: v.optional(v.id("workflowRuns")),
     createdAt: v.number(),
   }).index("by_org_user_created", ["orgId", "userId", "createdAt"]),
@@ -841,6 +844,19 @@ export default defineSchema({
     target: v.optional(v.string()),
     count: v.number(),
     message: v.optional(v.string()),
+    /** Live stages for the progress panel. */
+    stages: v.optional(
+      v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          status: v.union(v.literal("pending"), v.literal("running"), v.literal("done"), v.literal("failed")),
+          startedAt: v.optional(v.number()),
+          finishedAt: v.optional(v.number()),
+          detail: v.optional(v.string()),
+        }),
+      ),
+    ),
     createdAt: v.number(),
     finishedAt: v.optional(v.number()),
   }).index("by_org_created", ["orgId", "createdAt"]),
@@ -985,6 +1001,8 @@ export default defineSchema({
     roles: v.array(agentRoleValidator),
     actionCardIds: v.array(v.id("actionCards")),
     status: v.union(v.literal("done"), v.literal("thinking"), v.literal("failed")),
+    /** The job that is understanding this wish (for live progress). */
+    runId: v.optional(v.id("workflowRuns")),
     createdAt: v.number(),
   }).index("by_org_created", ["orgId", "createdAt"]),
 

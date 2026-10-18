@@ -2,12 +2,14 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { CircleCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { cn } from "@/lib/utils";
+import { RunProgressCompact } from "@/components/app/content/RunProgress";
 
 /**
  * Top-bar pulse of the AI team: how many jobs are running right now (with the
@@ -37,15 +39,12 @@ export function TeamActivity({ slug }: { slug: string }) {
             <p className="px-2 pb-1 pt-1 text-overline">Working now</p>
             <ul className="flex flex-col">
               {work.active.map((r) => (
-                <li key={r.id}>
-                  <Link href={`/app/${slug}/work/${r.id}`} className="flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-surface-2">
+                <li key={r.id} className="rounded-md px-2 py-2">
+                  <Link href={`/app/${slug}/work/${r.id}`} className="flex items-center gap-2.5 hover:underline">
                     <RoleAvatar role={r.roles[0] ?? "coo"} size="xs" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-ui font-medium text-ink">{r.title}</span>
-                      <span className="block truncate text-xs text-brand-800">{r.step}</span>
-                    </span>
-                    <Loader2 aria-hidden className="size-3.5 animate-spin text-ink-3" />
+                    <span className="min-w-0 flex-1 truncate text-ui font-medium text-ink">{r.title}</span>
                   </Link>
+                  <RunProgressCompact slug={slug} runId={r.id as Id<"workflowRuns">} className="mt-2" />
                 </li>
               ))}
             </ul>

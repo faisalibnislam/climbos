@@ -75,7 +75,17 @@ export const list = query({
       website: business?.website ?? null,
       businessType: business?.businessType ?? null,
       assets: await Promise.all(live.map(async (a) => assetView(a, await urlOf(ctx, a)))),
-      jobs: jobs.map((j) => ({ id: j._id, kind: j.kind, status: j.status, count: j.count, message: j.message ?? null, target: j.target ?? null, createdAt: j.createdAt })),
+      jobs: jobs.map((j) => ({ id: j._id, kind: j.kind, status: j.status, count: j.count, message: j.message ?? null, target: j.target ?? null, createdAt: j.createdAt, stages: j.stages ?? [] })),
+      // AI image edits run as engine jobs; the page shows their live progress too.
+      activeEdits: (
+        await ctx.db
+          .query("workflowRuns")
+          .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+          .order("desc")
+          .take(15)
+      )
+        .filter((r) => r.kind === "image_edit" && ["cost_reserved", "preparing", "executing"].includes(r.status))
+        .map((r) => ({ id: r._id, title: r.title })),
     };
   },
 });
@@ -135,8 +145,41 @@ async function startJob(ctx: Parameters<typeof requireOrgAccess>[0] & { db: impo
     .take(DAILY_JOBS + 1);
   if (recent.length >= DAILY_JOBS) throw appError("RATE_LIMITED", "That's enough image collecting for today. Try again tomorrow.");
   if (recent.some((j) => j.status === "running" && j.kind === kind)) throw appError("INVALID", "Already working on it. New images appear here in a minute.");
-  return ctx.db.insert("assetJobs", { orgId, kind, status: "running", target, count: 0, createdAt: Date.now() });
+  const now = Date.now();
+  const labels = JOB_STAGES[kind];
+  const stages = labels.map((x, i) => ({ key: x.key, label: x.label, status: i === 0 ? ("running" as const) : ("pending" as const), ...(i === 0 ? { startedAt: now } : {}) }));
+  return ctx.db.insert("assetJobs", { orgId, kind, status: "running", target, count: 0, stages, createdAt: now });
 }
+
+/** Named stages per image job, shown live with timers on the Images page. */
+const JOB_STAGES: Record<"capture" | "products", { key: string; label: string }[]> = {
+  capture: [
+    { key: "shoot", label: "Opening your site and taking screenshots" },
+    { key: "save", label: "Saving them to your library" },
+  ],
+  products: [
+    { key: "find", label: "Finding products on your site" },
+    { key: "download", label: "Downloading product photos" },
+  ],
+};
+
+/** Move a job stage forward (start the next one when a stage finishes). */
+export const stage = internalMutation({
+  args: { jobId: v.id("assetJobs"), key: v.string(), status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")), detail: v.optional(v.string()) },
+  handler: async (ctx, { jobId, key, status, detail }) => {
+    const job = await ctx.db.get(jobId);
+    if (!job?.stages) return;
+    const now = Date.now();
+    const i = job.stages.findIndex((x) => x.key === key);
+    if (i < 0) return;
+    const stages = job.stages.map((x, j) => {
+      if (j === i) return { ...x, status, ...(detail !== undefined ? { detail: detail.slice(0, 200) } : {}), ...(status === "running" && !x.startedAt ? { startedAt: now } : {}), ...(status !== "running" ? { finishedAt: now } : {}) };
+      if (j === i + 1 && status === "done" && x.status === "pending") return { ...x, status: "running" as const, startedAt: now };
+      return x;
+    });
+    await ctx.db.patch(jobId, { stages });
+  },
+});
 
 /** Capture real screenshots of the business's site (home page, or a specific public page). */
 export const captureWebsite = mutation({
@@ -197,7 +240,10 @@ export const insertAsset = internalMutation({
 export const finishJob = internalMutation({
   args: { jobId: v.id("assetJobs"), status: v.union(v.literal("done"), v.literal("failed")), count: v.number(), message: v.optional(v.string()) },
   handler: async (ctx, { jobId, status, count, message }) => {
-    await ctx.db.patch(jobId, { status, count, message: message?.slice(0, 300), finishedAt: Date.now() });
+    const job = await ctx.db.get(jobId);
+    const now = Date.now();
+    const stages = job?.stages?.map((x) => (x.status === "running" || x.status === "pending" ? { ...x, status: status === "done" ? ("done" as const) : x.status === "running" ? ("failed" as const) : x.status, finishedAt: x.status === "running" || status === "done" ? now : x.finishedAt } : x));
+    await ctx.db.patch(jobId, { status, count, message: message?.slice(0, 300), finishedAt: now, ...(stages ? { stages } : {}) });
   },
 });
 
@@ -230,12 +276,15 @@ export const runCapture = internalAction({
       });
       const json = (await res.json()) as { error?: string; shots?: { kind: "desktop" | "mobile" | "section"; label: string; width: number; height: number; png: string }[] };
       if (!res.ok || !json.shots) throw new Error(json.error ?? `Capture failed (${res.status}).`);
+      const kinds = json.shots.map((x) => x.kind);
+      await ctx.runMutation(internal.assets.stage, { jobId, key: "shoot", status: "done", detail: `${kinds.filter((k) => k === "desktop").length} desktop, ${kinds.filter((k) => k === "mobile").length} mobile, ${kinds.filter((k) => k === "section").length} feature sections` });
       let count = 0;
       for (const s of json.shots) {
         const bytes = Uint8Array.from(atob(s.png), (c) => c.charCodeAt(0));
         const stored = await storeBytes(ctx, orgId, bytes, "image/png");
         await ctx.runMutation(internal.assets.insertAsset, { orgId, kind: "screenshot", source: "website", view: s.kind, ...stored, mime: "image/png", width: s.width, height: s.height, label: s.label, sourceUrl: url, createdBy: userId });
         count++;
+        await ctx.runMutation(internal.assets.stage, { jobId, key: "save", status: "running", detail: `Saved ${count} of ${json.shots.length}` });
       }
       await ctx.runMutation(internal.assets.finishJob, { jobId, status: "done", count });
     } catch (e) {
@@ -279,6 +328,7 @@ export const runProducts = internalAction({
           }
         }
       }
+      await ctx.runMutation(internal.assets.stage, { jobId, key: "find", status: "done", detail: found.length ? `Found ${found.length} product${found.length === 1 ? "" : "s"}${found[0] ? `: ${found.slice(0, 3).map((p) => p.name).join(", ")}` : ""}` : "No products found" });
       const seen = new Set<string>();
       let count = 0;
       for (const p of found) {
@@ -306,6 +356,7 @@ export const runProducts = internalAction({
             createdBy: userId,
           });
           count++;
+          await ctx.runMutation(internal.assets.stage, { jobId, key: "download", status: "running", detail: `Saved ${count} photo${count === 1 ? "" : "s"}` });
         }
       }
       await ctx.runMutation(internal.assets.finishJob, {
