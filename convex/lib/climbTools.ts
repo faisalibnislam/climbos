@@ -190,6 +190,68 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     },
   }),
 
+  tool({
+    name: "get_inbox",
+    title: "Inbox",
+    description: "Open messages that need the owner: email replies to outreach, website chats, landing-page and link-in-bio leads, bookings and reviews (id, from, kind, text, status).",
+    risk: "read",
+    doing: "Checking your inbox",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const items = await c.query(api.inbox.list, { slug, box: "open" });
+      return { open: items.length, items: items.slice(0, 25).map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
+    },
+  }),
+
+  tool({
+    name: "get_pipeline",
+    title: "Pipeline",
+    description: "Everyone the business is talking to, by stage (lead, talking, booked, won, lost), with deal values, next steps and totals.",
+    risk: "read",
+    doing: "Checking your pipeline",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const p = await c.query(api.crm.list, { slug });
+      return { totals: p.totals, deals: p.deals.slice(0, 40).map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
+    },
+  }),
+
+  tool({
+    name: "get_weekly_report",
+    title: "Weekly report",
+    description: "This week's (or a past week's) outcomes vs the week before, competitor changes and what needs the owner.",
+    risk: "read",
+    doing: "Reading the weekly report",
+    input: z.object({ weeksAgo: z.number().optional() }),
+    run: async (c, slug, i) => c.query(api.reports.weekly, { slug, weeksAgo: i.weeksAgo }),
+  }),
+
+  tool({
+    name: "get_competitors",
+    title: "Competitor watch",
+    description: "Competitors being watched and the latest real changes on their sites (prices, offers, features) with what to do about them.",
+    risk: "read",
+    doing: "Checking your competitors",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const o = await c.query(api.competitors.overview, { slug });
+      return { watching: o.watches.map((w) => ({ name: w.name, url: w.url })), changes: o.changes.slice(0, 10) };
+    },
+  }),
+
+  tool({
+    name: "get_links",
+    title: "Tracked links",
+    description: "Tracked short links and their human clicks (total and this week).",
+    risk: "read",
+    doing: "Checking your link clicks",
+    input: z.object({}),
+    run: async (c, slug) => {
+      const l = await c.query(api.links.list, { slug });
+      return { weekTotal: l.weekTotal, links: l.links.slice(0, 30).map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
+    },
+  }),
+
   /* ---------------- draft (prepares work, nothing goes live) ---------------- */
   tool({
     name: "find_customers",
@@ -406,5 +468,5 @@ export function climbToolDefs(opts: { ui: boolean }) {
 /** Paths go_to may open (relative to /app/<slug>/). */
 export function safeAppPath(path: string): string | null {
   const p = path.replace(/^\/+/, "").replace(/^app\/[^/]+\//, "");
-  return /^(today|plan|content(\/[a-z0-9]+)?|autopilot|images|results(\/[a-z0-9-]+)?|connections|settings\/(billing|team|activity|notifications)|work\/[a-z0-9]+)(\?[a-z=&_0-9-]*)?$/i.test(p) ? p : null;
+  return /^(today|inbox|plan|content(\/[a-z0-9]+)?|autopilot|outbound|pipeline|reviews|pages|images|reels|results(\/[a-z0-9-]+)?|links|competitors|connections|chat|settings\/(billing|team|activity|notifications|brand|ai|webhooks|profile)|work\/[a-z0-9]+)(\?[a-z=&_0-9-]*)?$/i.test(p) ? p : null;
 }
