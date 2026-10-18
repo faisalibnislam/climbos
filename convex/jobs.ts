@@ -37,6 +37,7 @@ import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/ag
 import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
+import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
 import {
   adsSpec,
   conversionAuditSpec,
@@ -674,7 +675,7 @@ export const buildStrategy = internalAction({
             growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
             agentInput(
               job,
-              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.${scorecard}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+              `Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today. Be ambitious: together the plays must credibly move the goal within 90 days (a real volume engine with weekly numbers), not just validate assumptions. Keep each play card short and plain.${scorecard}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
               { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
             ),
             startedAt,
@@ -689,7 +690,7 @@ export const buildStrategy = internalAction({
         strategySpec(),
         agentInput(
           job,
-          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason.\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+          `Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason. Write for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used.\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
         ),
         startedAt,
         {

@@ -93,6 +93,18 @@ Score each play 1–5 on:
 - **No more than 4 active plays** for a business with fewer than 10 people, and no two plays in the same channel unless one follows on from the other.
 - **No generic fallback:** if nothing reaches distinctiveness ≥ 4 with predictability ≥ 3, recombine and transplant again before accepting a generic plan.
 
+## Ambition (a plan, not a validation exercise)
+
+- The portfolio's combined P50 must **credibly move the goal in 90 days**. Small tests are how a play starts, not the plan itself. A plan whose main bet forecasts under one customer fails.
+- Give at least one play a **volume engine**: a weekly number of the right people reached (e.g. "250 outreach emails a week to 40-person agencies via your mailbox", "3 creator collabs a month", "every past customer asked for a review in week 1"). Name who runs it; prefer what ClimbOS runs for the owner (outreach, creator finder, social autopilot, landing pages, chat, review requests), because it adds volume without owner hours.
+- Size tests so they can **graduate**: say what happens at day 21 if the leading metric clears the bar (the scaled weekly volume and the P50 it implies).
+- Caution belongs in kill rules, not in tiny volumes. Don't hold the whole budget back "until CAC is known"; spend a capped test budget now so CAC becomes known.
+
+## Write it short
+
+- Each play card fits on one phone screen: one-line summary, who/where, hook, engine and weekly volume, forecast (one line), test (one line), first action.
+- State each threshold once, where it's used. No repeated caveats. Assumptions go in one line at the end.
+
 ## Every play card contains
 
 **Contents:**

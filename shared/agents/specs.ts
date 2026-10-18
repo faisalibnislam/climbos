@@ -125,8 +125,8 @@ export function lintPlays(plays: Play[]): LintIssue[] {
   // Ambition: the portfolio must credibly move the goal, not run a cautious measurement exercise.
   const customerLike = plays.filter((p) => CUSTOMER_UNIT.test(p.unit));
   const combined = customerLike.reduce((s, p) => s + p.p50, 0);
-  if (customerLike.length && combined < 1) err(`The plays add up to ${Math.round(combined * 10) / 10} ${customerLike[0].unit} at P50 — too small to move the goal. Add a bankable demand-generation play that reaches enough of the right people (with a weekly volume), or raise the volume of the existing ones.`);
-  else if (customerLike.length && combined < 3) issues.push({ severity: "warn", rule: "portfolio", message: `Combined P50 is only ${Math.round(combined * 10) / 10} ${customerLike[0].unit}; check the volumes are big enough to matter.`, path: "plays" });
+  if (customerLike.length && combined < 2) err(`The plays add up to ${Math.round(combined * 10) / 10} ${customerLike[0].unit} at P50 — too small to move the goal. Add a bankable demand-generation play that reaches enough of the right people (with a weekly volume), or raise the volume of the existing ones.`);
+  else if (customerLike.length && combined < 5) issues.push({ severity: "warn", rule: "portfolio", message: `Combined P50 is only ${Math.round(combined * 10) / 10} ${customerLike[0].unit}; check the volumes are big enough to matter.`, path: "plays" });
   scored.forEach(({ p, s }, i) => {
     const path = `plays[${i}]`;
     if (p.scores.length !== 8) err("scores needs 8 numbers in order: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness.", `${path}.scores`);

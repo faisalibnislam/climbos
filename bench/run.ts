@@ -24,6 +24,7 @@ import { modelTurn } from "../shared/ai/turn";
 import { runtimeModel } from "../shared/ai/models";
 import { draftsFor, routeModels, type AiMode } from "../shared/agents/routes";
 import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type BusinessInsights, type BusinessProfile } from "../shared/ai/tasks";
+import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
@@ -311,9 +312,9 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
 }
 
 const PLAYS_TASK =
-  "Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today.";
+  "Choose this business's growth-plays portfolio for the goal, within the stated budget and the owner's time: one bankable play, one or two creative-but-proven plays (a proven mechanic on a non-obvious audience, asset or moment for THIS business), and at most one capped moonshot. Go beyond social posts and email whenever something else would move the goal more. Forecast every play from cited base rates with ranges, and give each a test with kill and scale rules and a first action for today. Be ambitious: together the plays must credibly move the goal within 90 days (a real volume engine with weekly numbers), not just validate assumptions. Keep each play card short and plain.\n\n" + CLIMBOS_ENGINES;
 const planTask = (plays: unknown) =>
-  `Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}`;
+  `Create the 90-day growth plan for the goal, within the stated budget and a small business owner's time. Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}\nWrite for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used.\n\n${CLIMBOS_ENGINES}`;
 
 /** Strategy as in production: channel scoring, then the plays agent, then the plan agent; both arms get the same stages. */
 async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {

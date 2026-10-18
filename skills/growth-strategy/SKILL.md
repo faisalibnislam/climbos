@@ -105,3 +105,9 @@ When something is missing:
 - [ ] Each test has volume, run time and a decision rule.
 - [ ] Risks with mitigations and validation dates.
 - [ ] Week-1 checklist of 5 items or fewer; no unsourced numbers.
+
+## Ambition and readability
+
+- The plan must credibly move the goal in 90 days. Build phases around the plays' volume engines (weekly numbers, who runs them; ClimbOS runs outreach, creator finding, social autopilot, landing pages, chat and review requests).
+- Caution goes into kill rules and capped test budgets, not into a plan that only measures.
+- Owner-ready: short sentences, each number once where it's used, no repeated caveats.
