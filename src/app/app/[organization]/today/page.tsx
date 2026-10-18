@@ -240,8 +240,8 @@ export default function TodayPage() {
         <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} hint="Nothing goes live without you" />
         <StatCard icon={Zap} tone="blue" label="Working now" value={running} hint={running ? "Jobs in progress" : "Your team is ready"} />
         <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} hint="Finished jobs" />
-
       </section>
+      <AttentionStrip slug={slug} />
 
       <RecentWork slug={slug} data={data} />
       <div className="md:hidden">
@@ -402,6 +402,32 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
           </CardContent>
         </Card>
       )}
+    </section>
+  );
+}
+
+/** Customers waiting on you: unanswered messages, the next call and open deals. Hidden when there's nothing. */
+function AttentionStrip({ slug }: { slug: string }) {
+  const a = useQuery(api.inbox.attention, { slug });
+  if (!a || (!a.inboxOpen && !a.nextCall && !a.openDeals)) return null;
+  const money = (minor: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: a.currency, maximumFractionDigits: 0 }).format(minor / 100);
+  return (
+    <section aria-label="Customers waiting" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+      {a.inboxOpen ? (
+        <Link href={`/app/${slug}/inbox`} className="font-medium text-brand-800 underline-offset-2 hover:underline">
+          {a.inboxOpen} message{a.inboxOpen === 1 ? "" : "s"} to answer{a.inboxUnread ? ` (${a.inboxUnread} new)` : ""}
+        </Link>
+      ) : null}
+      {a.nextCall ? (
+        <span className="text-ink-2">
+          Next call: <span className="font-medium text-ink">{a.nextCall.name}</span>, {new Date(a.nextCall.startAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}
+        </span>
+      ) : null}
+      {a.openDeals ? (
+        <Link href={`/app/${slug}/pipeline`} className="text-ink-2 underline-offset-2 hover:underline">
+          {a.openDeals} open deal{a.openDeals === 1 ? "" : "s"}{a.pipelineValue ? ` · ${money(a.pipelineValue)} in play` : ""}
+        </Link>
+      ) : null}
     </section>
   );
 }

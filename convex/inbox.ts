@@ -193,3 +193,24 @@ export const recordReply = internalMutation({
     await audit(ctx, { orgId: m.orgId, actorType: "user", actorId: userId, action: "inbox.replied", summary: `Replied to ${m.authorName} by email.` });
   },
 });
+
+/** For Today: what's waiting on people (unanswered messages, the next call, open deals). */
+export const attention = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const open = (await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", org._id)).order("desc").take(200)).filter((m) => (OPEN as readonly string[]).includes(m.status));
+    const now = Date.now();
+    const next = (await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", org._id).gte("startAt", now)).take(10)).find((b) => b.status === "confirmed");
+    const deals = await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(500);
+    const openDeals = deals.filter((d) => d.stage !== "won" && d.stage !== "lost");
+    return {
+      inboxOpen: open.length,
+      inboxUnread: open.filter((m) => !m.readAt).length,
+      nextCall: next ? { name: next.company ? `${next.name} (${next.company})` : next.name, startAt: next.startAt } : null,
+      openDeals: openDeals.length,
+      pipelineValue: openDeals.reduce((s, d) => s + (d.valueMinor ?? 0), 0),
+      currency: deals[0]?.currency ?? "USD",
+    };
+  },
+});
