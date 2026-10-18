@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, Target, type LucideIcon } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -66,6 +66,7 @@ export function CommandPalette({ slug }: { slug: string }) {
       { id: "studio", label: "Design studio", hint: "Create an image post or carousel", icon: Palette, run: go(`/studio/${slug}/new`) },
       { id: "results", label: "Results", icon: BarChart3, run: go(`/app/${slug}/results`) },
       { id: "connections", label: "Connections", icon: Plug, run: go(`/app/${slug}/connections`) },
+      { id: "business", label: "Business & goal", hint: "Change your goal, budget or refresh research", icon: Target, run: go(`/app/${slug}/settings/business`) },
       { id: "billing", label: "Plans and usage", icon: CreditCard, run: go(`/app/${slug}/settings/billing`) },
       { id: "settings", label: "Settings", icon: Settings, run: go(`/app/${slug}/settings/team`) },
     ];
@@ -91,7 +92,8 @@ export function CommandPalette({ slug }: { slug: string }) {
         });
       },
     };
-    return [ask, ...matches];
+    // Jumping somewhere is free; a wish spends credits. Enter picks a matching screen first.
+    return matches.length ? [...matches, ask] : [ask];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, slug]);
 

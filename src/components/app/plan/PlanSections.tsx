@@ -11,6 +11,7 @@ import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
+import { approvedToast } from "./PlanActions";
 
 export type PlanView = FunctionReturnType<typeof api.workspace.plan>;
 export type Strategy = NonNullable<PlanView["strategy"]>;
@@ -104,7 +105,7 @@ const CHANNEL_STATUS: Record<string, { label: string; tone: Tone }> = {
   parked: { label: "Parked — on hold", tone: "neutral" },
 };
 
-function ChannelToggle({ slug, strategyId, channelKey, status, name }: { slug: string; strategyId: Id<"strategies">; channelKey: string; status: string; name: string }) {
+function ChannelToggle({ slug, strategyId, channelKey, status, name, approved }: { slug: string; strategyId: Id<"strategies">; channelKey: string; status: string; name: string; approved: boolean }) {
   const setStatus = useMutation(api.workspace.setChannelStatus);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -112,15 +113,24 @@ function ChannelToggle({ slug, strategyId, channelKey, status, name }: { slug: s
     <div className="flex flex-col gap-2">
       <Switch
         label={`Work on ${name}`}
-        description={pending ? "Saving…" : status === "proposed" ? "Proposed. Turn on to make it active, or leave it until you approve the plan." : "Turn off to park it; the team stops new work here."}
+        description={
+          pending
+            ? "Saving…"
+            : status === "proposed"
+              ? "Proposed. Turn on to make it active, or leave it until you approve the plan."
+              : status === "parked" && approved
+                ? "Parked. Turn on to start its first drafts (uses credits)."
+                : "Turn off to park it; nothing new starts here."
+        }
         checked={status === "active"}
         disabled={pending}
         onCheckedChange={async (on) => {
           setPending(true);
           setError(null);
           try {
-            await setStatus({ slug, strategyId, key: channelKey, status: on ? "active" : "parked" });
-            toast({ tone: "success", title: on ? `${name} is active.` : `${name} is parked.` });
+            const work = await setStatus({ slug, strategyId, key: channelKey, status: on ? "active" : "parked" });
+            if (on && work) toast({ ...approvedToast(work), title: `${name} is active.` });
+            else toast({ tone: "success", title: on ? `${name} is active.` : `${name} is parked.` });
           } catch (e) {
             setError(e);
           } finally {
@@ -185,7 +195,7 @@ export function Channels({ slug, strategy, canEdit, currency }: { slug: string; 
                   </Callout>
                 ) : null}
                 {editable ? (
-                  <ChannelToggle slug={slug} strategyId={strategy.id} channelKey={c.key} status={c.status} name={c.name} />
+                  <ChannelToggle slug={slug} strategyId={strategy.id} channelKey={c.key} status={c.status} name={c.name} approved={strategy.status === "approved"} />
                 ) : !canEdit ? (
                   <p className="text-sm text-ink-3">Turning channels on or off needs {PERMISSION_WHO.edit}.</p>
                 ) : null}

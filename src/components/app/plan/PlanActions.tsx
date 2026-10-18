@@ -18,6 +18,7 @@ export function GeneratePlanButton({
   nextVersion,
   estimateMicros,
   onStarted,
+  building = false,
 }: {
   slug: string;
   mode: "build" | "refresh";
@@ -25,6 +26,8 @@ export function GeneratePlanButton({
   /** Max cost of the plan job (µUSD). */
   estimateMicros: number;
   onStarted: (runId: Id<"workflowRuns">) => void;
+  /** A plan job is already running: one at a time. */
+  building?: boolean;
 }) {
   const generate = useMutation(api.orgs.generatePlan);
   const [error, setError] = useState<unknown>(null);
@@ -32,6 +35,13 @@ export function GeneratePlanButton({
   const build = mode === "build";
   const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
   const cost = `Uses up to ${microsToCreditsLabel(max)}; anything unused is returned.`;
+  if (building) {
+    return (
+      <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"} disabled>
+        <RefreshCw aria-hidden className="animate-spin" /> Building your plan…
+      </Button>
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
       <ConfirmDialog
@@ -96,17 +106,32 @@ export function StrategyRunWatcher({
   );
 }
 
+type PlanWork = { started: string[]; waiting: { title: string; reason: string }[]; covered: string[]; busy: boolean } | null;
+
+/** What approving started, in a line or two. */
+export function approvedToast(work: PlanWork): { tone: "success" | "info"; title: string; description?: string } {
+  if (!work || (!work.started.length && !work.waiting.length)) {
+    return { tone: "success", title: "Plan approved.", description: work?.covered.length ? "Your first drafts are already on the way." : undefined };
+  }
+  const lines = [
+    work.started.length ? `Started: ${work.started.join("; ")}.` : "",
+    work.waiting.length ? `Waiting: ${work.waiting.map((w) => `${w.title} (${w.reason.toLowerCase()})`).join("; ")}.` : "",
+  ].filter(Boolean);
+  return { tone: work.started.length ? "success" : "info", title: work.started.length ? "Plan approved. Drafts are on the way." : "Plan approved.", description: lines.join(" ") };
+}
+
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean }) {
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void }) {
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
   const [error, setError] = useState<unknown>(null);
   const run = async (decision: "approve" | "reject") => {
     setError(null);
     try {
-      await decide({ slug, strategyId, decision, note: decision === "reject" && note.trim() ? note.trim() : undefined });
-      toast({ tone: "success", title: decision === "approve" ? "Plan approved." : "Plan sent back." });
+      const work = await decide({ slug, strategyId, decision, note: decision === "reject" && note.trim() ? note.trim() : undefined });
+      toast(decision === "approve" ? approvedToast(work) : { tone: "success", title: "Plan sent back." });
       setNote("");
+      onDecided?.();
     } catch (e) {
       setError(e);
     }

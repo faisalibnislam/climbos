@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Webhook } from "lucide-react";
+import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "../results/QueryBoundary";
 
 export const SETTINGS_SECTIONS = [
+  { key: "business", label: "Business & goal", icon: Target, tone: "brand" },
   { key: "team", label: "Team", icon: Users, tone: "brand" },
   { key: "workspaces", label: "Workspaces", icon: LayoutGrid, tone: "teal" },
   { key: "billing", label: "Billing", icon: CreditCard, tone: "violet" },

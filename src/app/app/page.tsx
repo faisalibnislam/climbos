@@ -19,7 +19,8 @@ export default function AppIndex() {
     const real = me.orgs.find((o) => o.kind === "customer");
     const target = real ?? me.orgs[0];
     if (!target) router.replace("/onboarding");
-    else if (target.kind === "customer" && target.onboardingStep !== "done") router.replace(`/onboarding?workspace=${target.slug}`);
+    // Only owners and admins finish setup; invited teammates go straight to the workspace.
+    else if (target.kind === "customer" && target.onboardingStep !== "done" && (target.role === "owner" || target.role === "admin")) router.replace(`/onboarding?workspace=${target.slug}`);
     else router.replace(`/app/${target.slug}/today`);
   }, [me, router]);
   return (

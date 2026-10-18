@@ -12,8 +12,9 @@ import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
-import { RunProgressCompact } from "@/components/app/content/RunProgress";
+import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
+import { wishesFrom } from "./pairing";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -22,18 +23,6 @@ type CardView = ChatMessage["cards"][number];
 interface Wish {
   ask: ChatMessage;
   answer: ChatMessage | null;
-}
-
-/** Pair each owner wish with the team's answer (newest first). */
-export function wishesFrom(chat: ChatMessage[]): Wish[] {
-  const out: Wish[] = [];
-  for (let i = 0; i < chat.length; i++) {
-    const m = chat[i];
-    if (m.author !== "user") continue;
-    const next = chat[i + 1];
-    out.push({ ask: m, answer: next && next.author === "climbos" ? next : null });
-  }
-  return out.reverse();
 }
 
 export function WishFeed({ slug, chat }: { slug: string; chat: ChatMessage[] }) {
@@ -95,7 +84,10 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
             </div>
           )
         ) : failed ? (
-          <p className="text-sm text-red-800">{answer?.text ?? "That didn't work. Try again in a moment."}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-red-800">{answer?.text ?? "That didn't work. Try again in a moment."}</p>
+            <TryWishAgain slug={slug} text={ask.text} />
+          </div>
         ) : answer ? (
           <>
             {answer.understood ? (
@@ -124,6 +116,31 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
   );
 }
 
+/** Send the same wish again (a new job; the failed one stays in the history). */
+function TryWishAgain({ slug, text }: { slug: string; text: string }) {
+  const send = useMutation(api.workspace.sendChat);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      loading={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await send({ slug, text });
+        } catch (e) {
+          toast({ tone: "danger", title: errorMessage(e) });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      Try again
+    </Button>
+  );
+}
+
 function resultHref(slug: string, card: CardView): string | null {
   if (card.job === "strategy") return `/app/${slug}/plan`;
   if (card.job === "outbound") return `/app/${slug}/outbound`;
@@ -149,7 +166,8 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
         {network ? <SocialIcon network={network} size="sm" /> : card.kind === "note" ? <Lightbulb aria-hidden className="size-4 text-amber-800" /> : null}
         <div className="min-w-0 flex-1">
           <p className="truncate text-ui font-medium text-ink">{card.title}</p>
-          {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" ? card.blockedReason : card.description}</p>}
+          {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? card.blockedReason : card.description}</p>}
+          {card.status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
@@ -170,9 +188,17 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
             </Badge>
           )
         ) : card.status === "failed" ? (
-          <Badge tone="red" icon={<CircleX />}>
-            Didn’t finish
-          </Badge>
+          card.runId ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/app/${slug}/work/${card.runId}`}>
+                <CircleX aria-hidden className="text-red-800" /> Didn’t finish: see why
+              </Link>
+            </Button>
+          ) : (
+            <Badge tone="red" icon={<CircleX />}>
+              Didn’t finish
+            </Badge>
+          )
         ) : card.status === "rejected" ? (
           <Badge tone="neutral">Skipped</Badge>
         ) : card.kind === "set_up_autopilot" && card.status === "proposed" ? (

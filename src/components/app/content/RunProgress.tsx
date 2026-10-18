@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
 import { microsToCreditsLabel } from "../money";
 import { roleTitle } from "../roles";
+import { useWorkspaceMember } from "./shared";
+import { can } from "@shared/policy";
 
 export type RunStatusView = FunctionReturnType<typeof api.content.runStatus>;
 
@@ -268,8 +270,11 @@ export function RunProgress({
 /** Continue a stopped job from its last finished step (finished steps aren't redone or recharged). */
 export function RetryRun({ slug, runId, className }: { slug: string; runId: Id<"workflowRuns">; className?: string }) {
   const retry = useMutation(api.workspace.retryRun);
+  const member = useWorkspaceMember(slug);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Retrying spends credits: only people who can edit see it.
+  if (!member?.role || !can(member.role, "edit")) return null;
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <Button

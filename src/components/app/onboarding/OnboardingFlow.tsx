@@ -20,20 +20,18 @@ import {
   RadioCards,
   Select,
   Skeleton,
-  StepList,
   Textarea,
-  type StepItem,
   buttonClasses,
   toast,
   Toaster,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { errorInfo, errorMessage } from "../errors";
-import { ROLE_META } from "../roles";
 import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
 import { RetryRunIfPossible, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
+import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults } from "./options";
 
 
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
@@ -91,7 +89,8 @@ export function OnboardingFlow() {
     if (!me) return null;
     if (workspaceParam && me.orgs.some((o) => o.slug === workspaceParam)) return workspaceParam;
     if (wantNew) return null;
-    const unfinished = me.orgs.find((o) => o.kind === "customer" && o.onboardingStep !== "done");
+    // Only a workspace you own or run: an invited teammate never lands in someone else's setup.
+    const unfinished = me.orgs.find((o) => o.kind === "customer" && o.onboardingStep !== "done" && (o.role === "owner" || o.role === "admin"));
     return unfinished?.slug ?? null;
   }, [me, workspaceParam, wantNew]);
 
@@ -246,7 +245,12 @@ function BusinessStep({
         } catch {}
       }
       if (previewToken) await claim({ token: previewToken, orgId: orgId as Id<"organizations"> }).catch(() => undefined);
-      await startResearch({ slug, website: fields.website, ownerText: fields.ownerText });
+      try {
+        await startResearch({ slug, website: fields.website, ownerText: fields.ownerText });
+      } catch (e) {
+        // The workspace exists: carry on to it, where research can be started again.
+        toast({ tone: "danger", title: errorMessage(e) });
+      }
       onCreated(slug);
     } catch (e) {
       setError(errorMessage(e));
@@ -403,12 +407,13 @@ function WorkspaceOnboarding({ slug }: { slug: string }) {
   const state = useQuery(api.orgs.onboardingState, { slug });
   if (state === undefined) return <Shell step="research" slug={slug}><Skeleton className="h-72 w-full" /></Shell>;
   const research = state.research;
+  const stopped = research && ["failed", "canceled", "uncertain"].includes(research.status);
   const step: Step =
     state.org.onboardingStep === "done"
       ? "done"
-      : !research || ["cost_reserved", "preparing", "executing"].includes(research.status)
+      : (!research && state.org.onboardingStep === "research") || (research && ["cost_reserved", "preparing", "executing"].includes(research.status))
         ? "research"
-        : research.status === "failed" && state.facts.length === 0 && state.org.onboardingStep === "research"
+        : stopped && state.facts.length === 0 && state.org.onboardingStep === "research"
           ? "research"
           : state.org.onboardingStep === "research" || state.org.onboardingStep === "facts" || state.org.onboardingStep === "business"
             ? "facts"
@@ -431,16 +436,49 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
   const startResearch = useMutation(api.orgs.startResearch);
   const skipResearch = useMutation(api.orgs.skipResearch);
   const [ownerText, setOwnerText] = useState("");
+  const [website, setWebsite] = useState(state.business?.website ?? "");
   const [busy, setBusy] = useState(false);
   const research = state.research;
-  const failed = research?.status === "failed";
+  const failed = research ? ["failed", "canceled", "uncertain"].includes(research.status) : false;
   const v2 = research?.engine === "v2";
-  // Shown only until the research job exists; then RunProgress takes over with live detail.
-  const steps: StepItem[] = [
-    { key: "read", label: "Reading your website", status: "pending" },
-    { key: "profile", label: `${ROLE_META.data_analyst.emoji} ${ROLE_META.data_analyst.title} is pulling out the facts`, status: "pending" },
-    { key: "insights", label: `${ROLE_META.cmo.emoji} ${ROLE_META.cmo.title} is studying your customers and competitors`, status: "pending" },
-  ];
+  if (!research) {
+    // Research never started (e.g. the website was wrong or credits ran out): start it from here.
+    const start = async () => {
+      setBusy(true);
+      try {
+        await startResearch({ slug, website: website.trim() || undefined, ownerText: ownerText.trim() || undefined });
+      } catch (e) {
+        toast({ tone: "danger", title: errorMessage(e) });
+      } finally {
+        setBusy(false);
+      }
+    };
+    return (
+      <div>
+        <h1 className="heading-page">Let’s get to know {state.business?.name ?? "your business"}</h1>
+        <p className="mt-1 text-sm text-ink-3">Add your website, or describe your business. You check every fact before it’s used.</p>
+        {!state.canRunAi && state.accessMessage ? <Callout tone="warning" className="mt-4">{state.accessMessage}</Callout> : null}
+        <Card className="mt-6">
+          <CardContent className="space-y-4">
+            <Field label="Website" hint="We read a few public pages, like your homepage and pricing.">
+              <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="yourbusiness.com" inputMode="url" autoComplete="url" />
+            </Field>
+            <Field label="Or describe your business" optional hint="What you sell, who buys it and what makes you different.">
+              <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={4} autosize />
+            </Field>
+            <div className="flex flex-wrap gap-3">
+              <Button loading={busy} loadingText="Starting…" disabled={!website.trim() && !ownerText.trim()} onClick={start}>
+                Start research
+              </Button>
+              <Button variant="ghost" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+                Skip — I’ll add facts myself
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   return (
     <div>
       <h1 className="heading-page">
@@ -453,7 +491,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
           </p>
           <Card className="mt-6">
             <CardContent>
-              {research ? <RunProgress slug={slug} runId={research.id} headingLevel="h2" /> : <StepList steps={steps} />}
+              <RunProgress slug={slug} runId={research.id} headingLevel="h2" />
             </CardContent>
           </Card>
           {!state.canRunAi && state.accessMessage && <Callout tone="warning" className="mt-4">{state.accessMessage}</Callout>}
@@ -520,22 +558,6 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
       )}
     </div>
   );
-}
-
-/** Sensible starting success events per business type (owner confirms before use). */
-function defaultEvents(type: string) {
-  const ev = (key: string, label: string, definition: string) => ({ key, label, definition, confirmed: true });
-  switch (type) {
-    case "saas":
-      return [ev("signup", "Sign-up", "A new account is created"), ev("activation", "First success", "A new account completes its first key action"), ev("paid_conversion", "Upgrade to paid", "An account starts a paid plan")];
-    case "ecommerce":
-    case "physical_products":
-      return [ev("add_to_cart", "Add to cart", "A visitor adds a product to the cart"), ev("purchase", "Purchase", "A paid order is placed"), ev("repeat_purchase", "Repeat purchase", "A customer places a second order")];
-    case "services":
-      return [ev("inquiry", "Qualified inquiry", "Someone asks about a service and fits your criteria"), ev("booking", "Booking", "A call or appointment is booked"), ev("closed", "Closed deal", "A client signs or pays")];
-    default:
-      return [ev("lead", "New lead", "Someone gets in touch or signs up"), ev("customer", "New customer", "Someone pays for the first time")];
-  }
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -672,17 +694,11 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
             <Select
               value={businessType}
               onValueChange={(v) => setBusinessType(v as typeof businessType)}
-              options={[
-                { value: "saas", label: "Software / app (subscriptions)" },
-                { value: "ecommerce", label: "Online store" },
-                { value: "services", label: "Services (bookings, clients)" },
-                { value: "physical_products", label: "Physical products" },
-                { value: "other", label: "Something else" },
-              ]}
+              options={BUSINESS_TYPE_OPTIONS}
             />
           </Field>
           <Field label="Currency" hint="Used for budgets and results.">
-            <Select value={currency} onValueChange={setCurrency} options={["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD", "AED"].map((c) => ({ value: c, label: c }))} />
+            <Select value={currency} onValueChange={setCurrency} options={CURRENCY_OPTIONS} />
           </Field>
           <div className="sm:col-span-2">
             <p className="text-ui font-medium text-ink">What counts as a valuable customer action?</p>
@@ -755,12 +771,7 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const name = state.business?.name ?? "your business";
-  const defaults: Record<string, string> = {
-    more_customers: `Help ${name} get more paying customers.`,
-    more_sales: `Help ${name} sell more to the right people.`,
-    more_reach: `Help more of the right people discover ${name}.`,
-    custom: "",
-  };
+  const defaults: Record<string, string> = goalDefaults(name);
   return (
     <div>
       <h1 className="heading-page">What would you like to achieve?</h1>
@@ -774,12 +785,7 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
           setKind(v as typeof kind);
           if (!statement || Object.values(defaults).includes(statement)) setStatement(defaults[v] ?? "");
         }}
-        options={[
-          { value: "more_customers", title: "More customers", description: "New people signing up or buying", icon: "🙋" },
-          { value: "more_sales", title: "More sales", description: "More revenue, including from existing customers", icon: "💰" },
-          { value: "more_reach", title: "More reach", description: "More of the right people knowing you exist", icon: "📣" },
-          { value: "custom", title: "Something else", description: "Describe it in your own words", icon: "✏️" },
-        ]}
+        options={GOAL_KIND_OPTIONS}
       />
       <Card className="mt-6">
         <CardContent className="grid gap-5 sm:grid-cols-2">
@@ -787,13 +793,13 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
             <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
           </Field>
           <Field label="Time frame">
-            <Select value={horizon} onValueChange={setHorizon} options={[{ value: "30", label: "30 days" }, { value: "60", label: "60 days" }, { value: "90", label: "90 days" }, { value: "180", label: "6 months" }, { value: "365", label: "1 year" }]} />
+            <Select value={horizon} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
           </Field>
           <Field label={`Monthly ad budget (${state.business?.currency ?? "USD"})`} hint="Paid directly to Google or Meta, never to ClimbOS. 0 means no ads. Ads always need your approval.">
             <Input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
           </Field>
           <Field label="When do you like to review work?" hint="We'll have drafts ready before then.">
-            <Select value={reviewDay} onValueChange={setReviewDay} options={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => ({ value: d, label: d }))} />
+            <Select value={reviewDay} onValueChange={setReviewDay} options={REVIEW_DAY_OPTIONS} />
           </Field>
         </CardContent>
       </Card>
@@ -836,7 +842,7 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
         options={[
           { value: "review", title: "Review before anything goes live (recommended)", description: "Your team drafts everything. You approve each post, email and ad before it goes out.", icon: "✅" },
           { value: "copilot", title: "Copilot", description: "Your team drafts and suggests. You publish and send everything yourself.", icon: "🧭" },
-          { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Only work you've pre-approved (for example a weekly post calendar) runs within the accounts, times and budget you set. New channels, audiences, ads and budget increases still come to you. Available on Growth and above.", icon: "🛟" },
+          { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Only work you've pre-approved (for example a weekly post calendar) runs within the accounts, times and budget you set. New channels, audiences, ads and budget increases still come to you. Available on paid plans; owners and admins choose it.", icon: "🛟" },
         ]}
       />
       <Callout tone="info" className="mt-6" title="Always your call">
@@ -869,10 +875,16 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
   const finish = useMutation(api.orgs.finishOnboarding);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = state.strategyRun;
-  const running = run && ["cost_reserved", "preparing", "executing"].includes(run.status);
+  const running = Boolean(run && ["cost_reserved", "preparing", "executing"].includes(run.status));
   const ready = state.strategy && (state.strategy.status === "needs_approval" || state.strategy.status === "approved");
+  // The last attempt ended without a plan to review: failed, canceled or unconfirmed.
+  const stopped = Boolean(run && ["failed", "canceled", "uncertain"].includes(run.status) && !ready && !running);
+  // The newest plan was sent back (or replaced) and nothing is building.
+  const sentBack = Boolean(!ready && !running && !stopped && state.strategy && (state.strategy.status === "draft" || state.strategy.status === "superseded"));
+  const canEdit = state.role === "owner" || state.role === "admin" || state.role === "editor";
 
   const ai = useAiMode(slug);
   const start = async () => {
@@ -886,20 +898,46 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       setBusy(false);
     }
   };
-  const choosing = !state.strategy && !state.strategyRun && state.canRunAi;
+  /** Finish setup, then open a screen. */
+  const leave = async (path: string) => {
+    setLeaving(true);
+    try {
+      if (canEdit) await finish({ slug });
+      router.push(`/app/${slug}/${path}`);
+    } catch (e) {
+      setError(errorMessage(e));
+      setLeaving(false);
+    }
+  };
+  const choosing = !state.strategy && !run && state.canRunAi;
+  const heading = ready
+    ? "Your growth plan is ready"
+    : running || busy
+      ? "Building your growth plan…"
+      : stopped
+        ? "Your plan isn’t ready yet"
+        : sentBack
+          ? "Your plan was sent back"
+          : "Build your growth plan";
 
   return (
     <div>
-      <h1 className="heading-page">{ready ? "Your growth plan is ready" : run?.status === "failed" ? "Your plan isn’t ready yet" : choosing && !busy ? "Build your growth plan" : "Building your growth plan…"}</h1>
+      <h1 className="heading-page">{heading}</h1>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
-      {choosing && !busy ? (
+      {(choosing || (!ready && !running && !stopped && !sentBack)) && !busy ? (
         <Card className="mt-6">
           <CardContent className="flex flex-col gap-5">
             <p className="text-sm text-ink-3">Your CMO ranks channels and picks growth plays; your CEO turns them into a 90-day plan. You review it before anything starts.</p>
-            <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
-            <Button size="lg" className="self-start" onClick={start}>
-              <Sparkles aria-hidden /> Build my plan
-            </Button>
+            {canEdit ? (
+              <>
+                <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+                <Button size="lg" className="self-start" disabled={!state.canRunAi} onClick={start}>
+                  <Sparkles aria-hidden /> Build my plan
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-ink-2">Building a plan needs an Owner, Admin or Editor.</p>
+            )}
           </CardContent>
         </Card>
       ) : null}
@@ -916,8 +954,8 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
           <p className="mt-1 text-sm text-ink-3">Your CMO ranks channels and picks growth plays, then your CEO turns them into a 90-day plan. About 10–15 minutes; you can leave this page.</p>
           <Card className="mt-6">
             <CardContent>
-              {state.strategyRun?.id ? (
-                <RunProgress slug={slug} runId={state.strategyRun.id} headingLevel="h2" />
+              {run?.id && running ? (
+                <RunProgress slug={slug} runId={run.id} headingLevel="h2" />
               ) : (
                 <p className="text-sm text-ink-3" aria-live="polite">
                   Getting the team ready…
@@ -938,19 +976,17 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
           </CardContent>
         </Card>
       ) : null}
-      {run?.status === "failed" && !ready && (
-        <Callout tone="danger" className="mt-6" title="The plan didn't finish">
-          {run.userMessage ?? "Something went wrong."}
+      {(stopped || sentBack) && !busy && (
+        <Callout tone={stopped ? "danger" : "warning"} className="mt-6" title={stopped ? "The plan didn't finish" : "No work starts from a sent-back plan"}>
+          {stopped ? (run?.userMessage ?? (run?.status === "canceled" ? "The plan was canceled before it finished." : "Something went wrong.")) : "Build a new version from your latest goal and facts."}
           <div className="mt-3 flex flex-wrap gap-3">
-            {run.id ? <RetryRunIfPossible slug={slug} runId={run.id} /> : null}
-            <Button variant="secondary" onClick={() => generate({ slug, aiMode: ai.mode }).catch((e) => setError(errorMessage(e)))}>Start over</Button>
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                await finish({ slug });
-                router.push(`/app/${slug}/today`);
-              }}
-            >
+            {stopped && run?.id ? <RetryRunIfPossible slug={slug} runId={run.id} /> : null}
+            {canEdit ? (
+              <Button variant="secondary" loading={busy} loadingText="Starting…" disabled={!state.canRunAi} onClick={start}>
+                {stopped ? "Start over" : "Build again"}
+              </Button>
+            ) : null}
+            <Button variant="secondary" loading={leaving} onClick={() => leave("today")}>
               Go to Today for now
             </Button>
           </div>
@@ -960,23 +996,10 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
         <>
           <p className="mt-1 text-sm text-ink-3">Review it, approve it, and your team gets to work. Nothing goes live without you.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              onClick={async () => {
-                await finish({ slug });
-                router.push(`/app/${slug}/plan`);
-              }}
-            >
+            <Button size="lg" loading={leaving} onClick={() => leave("plan")}>
               See my plan
             </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={async () => {
-                await finish({ slug });
-                router.push(`/app/${slug}/today`);
-              }}
-            >
+            <Button size="lg" variant="secondary" disabled={leaving} onClick={() => leave("today")}>
               Go to Today
             </Button>
           </div>
