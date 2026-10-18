@@ -8,6 +8,7 @@ import { useState } from "react";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Button, Card, CardContent } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { ClientReportCard } from "@/components/app/results/ClientReportCard";
 
 const fmt = (ms: number) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -88,6 +89,7 @@ export default function WeekReportPage() {
           ) : null}
         </>
       )}
+      <ClientReportCard slug={slug} />
     </div>
   );
 }

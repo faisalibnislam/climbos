@@ -252,6 +252,10 @@ export default defineSchema({
     freeCreditsGrantedAt: v.optional(v.number()),
     /** Share link code (climbos.app/r/CODE). */
     referralCode: v.optional(v.string()),
+    /** White-label client reports: the agency's name, colour and logo. */
+    brandName: v.optional(v.string()),
+    brandColor: v.optional(v.string()),
+    brandLogoUrl: v.optional(v.string()),
     suspendedAt: v.optional(v.number()),
     suspendedReason: v.optional(v.string()),
     createdAt: v.number(),
@@ -695,6 +699,18 @@ export default defineSchema({
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
+
+  /** Client report links (white-label for agencies). */
+  reportShares: defineTable({
+    orgId: v.id("organizations"),
+    token: v.string(),
+    revokedAt: v.optional(v.number()),
+    views: v.number(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_org", ["orgId"]),
 
   /** Web push: a user's devices, and messages waiting for the service worker to pull. */
   pushSubscriptions: defineTable({

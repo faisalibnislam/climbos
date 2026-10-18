@@ -58,8 +58,12 @@ async function reportFor(ctx: QueryCtx, org: Doc<"organizations">, weeksAgo: num
   const thisWeek = weekStartUtc(now);
   // weeksAgo 0 = the week so far; the Monday email reports the full week before (weeksAgo 1).
   const weekStart = thisWeek - weeksAgo * WEEK;
-  const weekEnd = Math.min(weekStart + WEEK, now + 1);
-  const [current, before] = await Promise.all([countsFor(ctx, org._id, weekStart, weekEnd), countsFor(ctx, org._id, weekStart - WEEK, weekStart)]);
+  return reportBetween(ctx, org, weekStart, Math.min(weekStart + WEEK, now + 1), WEEK, now);
+}
+
+/** A report for any window, compared with the window of the same length before it. */
+export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, weekStart: number, weekEnd: number, span: number, now = Date.now()) {
+  const [current, before] = await Promise.all([countsFor(ctx, org._id, weekStart, weekEnd), countsFor(ctx, org._id, weekStart - span, weekStart)]);
   const pending = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).take(100);
   const upcoming = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", org._id).gte("startAt", now).lt("startAt", now + WEEK)).take(20);
   const slots = await ctx.db.query("calendarSlots").withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", now).lt("slotAt", now + WEEK)).take(50);

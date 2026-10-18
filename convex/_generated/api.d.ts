@@ -28,6 +28,7 @@ import type * as billing from "../billing.js";
 import type * as brand from "../brand.js";
 import type * as chat from "../chat.js";
 import type * as circuits from "../circuits.js";
+import type * as clientReports from "../clientReports.js";
 import type * as climb from "../climb.js";
 import type * as competitorActions from "../competitorActions.js";
 import type * as competitors from "../competitors.js";
@@ -118,6 +119,7 @@ declare const fullApi: ApiFromModules<{
   brand: typeof brand;
   chat: typeof chat;
   circuits: typeof circuits;
+  clientReports: typeof clientReports;
   climb: typeof climb;
   competitorActions: typeof competitorActions;
   competitors: typeof competitors;

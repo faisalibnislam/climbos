@@ -16,7 +16,7 @@ import { NextResponse } from "next/server";
 const isProtected = createRouteMatcher(["/app(.*)", "/onboarding(.*)", "/ops(.*)", "/studio(.*)"]);
 const isSignIn = createRouteMatcher(["/sign-in"]);
 
-function contentSecurityPolicy(nonce: string, embeddable = false): string {
+function contentSecurityPolicy(nonce: string, embeddable = false, anyImages = false): string {
   const isDev = process.env.NODE_ENV === "development";
   const convex = [process.env.NEXT_PUBLIC_CONVEX_URL, process.env.NEXT_PUBLIC_CONVEX_SITE_URL]
     .filter(Boolean)
@@ -30,7 +30,8 @@ function contentSecurityPolicy(nonce: string, embeddable = false): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     // Inline style attributes are used by React components and charts.
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' blob: data: https://*.convex.cloud https://*.r2.cloudflarestorage.com`,
+    // Client reports show the agency's own logo from wherever it's hosted.
+    `img-src 'self' blob: data: https://*.convex.cloud https://*.r2.cloudflarestorage.com${anyImages ? " https:" : ""}`,
     "font-src 'self' data:",
     `connect-src 'self' ${[...convex, ...convexWs, ...posthog].join(" ")}${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
     "object-src 'none'",
@@ -55,7 +56,7 @@ export const proxy = convexAuthNextjsMiddleware(
     if (request.nextUrl.pathname.startsWith("/api/")) return;
 
     const nonce = btoa(crypto.randomUUID());
-    const csp = contentSecurityPolicy(nonce, request.nextUrl.pathname.startsWith("/widget/"));
+    const csp = contentSecurityPolicy(nonce, request.nextUrl.pathname.startsWith("/widget/"), request.nextUrl.pathname.startsWith("/report/"));
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-nonce", nonce);
     requestHeaders.set("Content-Security-Policy", csp);
