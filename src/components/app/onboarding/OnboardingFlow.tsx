@@ -927,7 +927,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
           </Card>
         </>
       )}
-      {ready && state.firstWinRunIds.length ? (
+      {ready && state.firstWinRunIds?.length ? (
         <Card className="mt-6">
           <CardContent className="flex flex-col gap-3">
             <p className="heading-card">Your first posts and a welcome email are on the way</p>
