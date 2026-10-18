@@ -655,6 +655,9 @@ export default defineSchema({
         address: v.string(),
         bookingUrl: v.optional(v.string()),
         lastReplyCheckAt: v.optional(v.number()),
+        /** Fingerprint of the emails and sender details the owner approved (spec §23); any change pauses sending. */
+        contentHash: v.optional(v.string()),
+        pausedReason: v.optional(v.literal("content_changed")),
       }),
     ),
     createdBy: v.id("users"),
@@ -730,6 +733,23 @@ export default defineSchema({
     decidedAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_agent_status", ["agentId", "status"]),
+
+  /** What a growth play actually did, logged weekly by the owner (spec §28). */
+  playResults: defineTable({
+    orgId: v.id("organizations"),
+    strategyId: v.id("strategies"),
+    playName: v.string(),
+    weekStart: v.number(),
+    reach: v.number(),
+    /** People passing each funnel step of the play's model, in order. */
+    steps: v.array(v.number()),
+    spendUsd: v.number(),
+    ownerHours: v.number(),
+    enteredBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_strategy", ["strategyId", "playName", "weekStart"])
+    .index("by_org", ["orgId", "updatedAt"]),
 
   /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
   engineQuality: defineTable({

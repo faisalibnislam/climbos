@@ -188,7 +188,7 @@ function PlanScreen({ slug }: { slug: string }) {
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} /> : null}
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} /> : null}
-          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} /> : null}
+          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} strategyId={s.status === "approved" ? s.id : undefined} canEdit={plan.canEdit} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} />
           <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} />

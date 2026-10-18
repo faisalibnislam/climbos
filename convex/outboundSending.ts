@@ -10,6 +10,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { requirePaid } from "./lib/access";
 import { audit } from "./lib/audit";
+import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -61,6 +62,11 @@ export const status = query({
   },
 });
 
+/** What the owner approves when sending starts: every email in the sequence and the sender details. */
+export async function sendingHash(c: Pick<Doc<"outboundCampaigns">, "sequence">, sender: { senderName: string; company: string; address: string; bookingUrl?: string }): Promise<string> {
+  return sha256Hex(JSON.stringify({ sequence: c.sequence.map((s) => ({ day: s.day, subject: s.subject, body: s.body })), sender: [sender.senderName, sender.company, sender.address, sender.bookingUrl ?? ""] }));
+}
+
 /** Start sending to the approved prospects that publish an email. The owner confirms the sender details first. */
 export const start = mutation({
   args: { slug: v.string(), campaignId: v.id("outboundCampaigns"), senderName: v.string(), company: v.string(), address: v.string(), bookingUrl: v.optional(v.string()) },
@@ -86,7 +92,10 @@ export const start = mutation({
     }
     if (!queued) throw appError("INVALID", "No approved prospects with a published email to send to.");
     await ctx.db.patch(c._id, {
-      sending: { status: "on", startedAt: c.sending?.startedAt ?? Date.now(), startedBy: user._id, firstSentAt: c.sending?.firstSentAt, senderName: a.senderName.trim().slice(0, 80), company: a.company.trim().slice(0, 80), address: a.address.trim().slice(0, 200), bookingUrl: a.bookingUrl?.trim().slice(0, 300) || undefined },
+      sending: await (async () => {
+        const sender = { senderName: a.senderName.trim().slice(0, 80), company: a.company.trim().slice(0, 80), address: a.address.trim().slice(0, 200), bookingUrl: a.bookingUrl?.trim().slice(0, 300) || undefined };
+        return { status: "on" as const, startedAt: c.sending?.startedAt ?? Date.now(), startedBy: user._id, firstSentAt: c.sending?.firstSentAt, ...sender, contentHash: await sendingHash(c, sender) };
+      })(),
       updatedAt: Date.now(),
     });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.sending_started", subjectType: "campaign", subjectId: c._id, summary: `Started sending to ${queued} prospect${queued === 1 ? "" : "s"} from your mailbox (warm-up limits apply).` });
@@ -100,7 +109,9 @@ export const setPaused = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const c = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
     if (!c.sending) return;
-    await ctx.db.patch(c._id, { sending: { ...c.sending, status: paused ? "paused" : "on" }, updatedAt: Date.now() });
+    // Resuming approves the emails as they are now.
+    const resumed = paused ? {} : { contentHash: await sendingHash(c, c.sending), pausedReason: undefined };
+    await ctx.db.patch(c._id, { sending: { ...c.sending, status: paused ? "paused" : "on", ...resumed }, updatedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: paused ? "outbound.sending_paused" : "outbound.sending_resumed", subjectType: "campaign", subjectId: c._id, summary: paused ? "Paused sending." : "Resumed sending." });
   },
 });
@@ -117,6 +128,15 @@ export const dispatch = internalMutation({
       const org = await ctx.db.get(c.orgId);
       if (!org || org.emergencyStop?.active || org.suspendedAt) continue;
       if (!inSendWindow(now, org.timezone)) continue;
+      // Approval is bound to the exact emails: an edit after approval pauses sending until the owner resumes.
+      const hash = await sendingHash(c, c.sending!);
+      if (!c.sending!.contentHash) await ctx.db.patch(c._id, { sending: { ...c.sending!, contentHash: hash } });
+      else if (c.sending!.contentHash !== hash) {
+        await ctx.db.patch(c._id, { sending: { ...c.sending!, status: "paused", pausedReason: "content_changed" }, updatedAt: now });
+        await audit(ctx, { orgId: org._id, actorType: "system", action: "outbound.sending_paused", subjectType: "campaign", subjectId: c._id, summary: "Paused: the emails changed after sending was approved. Review them and resume." });
+        await notifyOwners(ctx, org._id, `Outbound “${c.title}” paused: the emails changed after you approved them. Review and resume.`, "outbound");
+        continue;
+      }
       const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).order("desc").take(500);
       const today = localDayKey(now, org.timezone);
       const sentToday = sends.filter((s) => (s.status === "sent" || s.status === "sending") && localDayKey(s.sentAt ?? s.scheduledFor, org.timezone) === today).length;
@@ -151,6 +171,8 @@ export const prepareSend = internalQuery({
     if (p.stage === "replied" || p.stage === "skipped" || p.stage === "lost" || p.stage === "won" || p.stage === "booked") return null;
     const step = c.sequence[s.step];
     if (!step) return null;
+    // Never send content that differs from what was approved.
+    if (c.sending.contentHash && c.sending.contentHash !== (await sendingHash(c, c.sending))) return null;
     const previous = s.step > 0 ? await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id).eq("step", 0)).first() : null;
     const token = await unsubscribeToken(p._id, SECRET());
     const unsub = `${SITE()}/u/${token}`;

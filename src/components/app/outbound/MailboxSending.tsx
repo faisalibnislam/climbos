@@ -106,6 +106,9 @@ export function MailboxSending({ slug, campaignId, approvedWithEmail, defaultCom
             <Badge tone={sending.status === "on" ? "green" : sending.status === "paused" ? "amber" : "neutral"}>{sending.status === "on" ? "Sending" : sending.status === "paused" ? "Paused" : "Done"}</Badge>
             <span className="text-ink-2">from {s.mailbox.label}</span>
           </p>
+          {sending.status === "paused" && sending.pausedReason === "content_changed" ? (
+            <p className="text-sm text-amber-800">The emails changed after you started sending. Check them, then resume to approve this version.</p>
+          ) : null}
           <p className="text-sm text-ink-2">
             Today {s.sentToday}/{s.capToday} · sent {s.counts.sent} · waiting {s.counts.queued}
             {s.counts.bounced ? ` · bounced ${s.counts.bounced}` : ""}

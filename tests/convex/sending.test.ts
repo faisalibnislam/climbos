@@ -68,6 +68,28 @@ describe("mailbox sending", () => {
     expect((await w.owner.client.query(api.team.myNotices, {})).items[0].text).toMatch(/replied/);
   });
 
+  it("an edit to the emails after approval pauses sending; resuming approves the new version", async () => {
+    const t = setup();
+    const w = await ready(t);
+    await w.owner.client.action(api.mailbox.connect, { slug: w.slug, preset: "gmail", email: "sam@seller.example", password: "pw" });
+    await w.owner.client.mutation(api.outboundSending.start, { slug: w.slug, campaignId: w.campaignId, senderName: "Sam", company: "Seller Co", address: "1 High St, London E1 1AA" });
+    await t.run(async (ctx) => {
+      const c = (await ctx.db.get(w.campaignId))!;
+      await ctx.db.patch(c._id, { sequence: c.sequence.map((x, i) => (i === 0 ? { ...x, body: `${x.body}\nP.S. unapproved line` } : x)) });
+    });
+    vi.setSystemTime(new Date("2026-10-20T09:05:00Z"));
+    expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(0);
+    let s = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
+    expect(s.sending).toMatchObject({ status: "paused", pausedReason: "content_changed" });
+    expect(s.counts.sent ?? 0).toBe(0);
+    expect((await w.owner.client.query(api.team.myNotices, {})).items[0].text).toMatch(/changed after you approved/);
+    await w.owner.client.mutation(api.outboundSending.setPaused, { slug: w.slug, campaignId: w.campaignId, paused: false });
+    expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(1);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    s = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
+    expect(s.counts.sent).toBe(1);
+  });
+
   it("the unsubscribe link stops the sequence and suppresses the address", async () => {
     const t = setup();
     const w = await ready(t);

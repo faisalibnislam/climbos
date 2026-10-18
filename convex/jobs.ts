@@ -474,6 +474,7 @@ function businessBrief(job: JobCtx): string {
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     ownerEconomicsLine(b?.unitEconomics),
+    job.resultsText ?? "",
     factsBlock(job.facts),
   ]
     .filter(Boolean)

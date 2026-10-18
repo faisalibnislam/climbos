@@ -83,6 +83,7 @@ import type * as ops from "../ops.js";
 import type * as orgs from "../orgs.js";
 import type * as outbound from "../outbound.js";
 import type * as outboundSending from "../outboundSending.js";
+import type * as playResults from "../playResults.js";
 import type * as preview from "../preview.js";
 import type * as previewRunner from "../previewRunner.js";
 import type * as publicConfig from "../publicConfig.js";
@@ -186,6 +187,7 @@ declare const fullApi: ApiFromModules<{
   orgs: typeof orgs;
   outbound: typeof outbound;
   outboundSending: typeof outboundSending;
+  playResults: typeof playResults;
   preview: typeof preview;
   previewRunner: typeof previewRunner;
   publicConfig: typeof publicConfig;

@@ -1,7 +1,10 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import type { PlayActuals } from "../../../../shared/growth/actuals";
+import { PlayResults } from "./PlayResults";
 import { CircleCheck, Crosshair, FlaskConical, Gem, Info, Rocket, ShieldCheck, Sparkles, Target, TriangleAlert, X, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -169,7 +172,13 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
   );
 }
 
-function PlayCard({ play, slug, economics }: { play: PlayView; slug: string; economics?: Economics }) {
+interface ResultsCtx {
+  strategyId: Id<"strategies">;
+  canEdit: boolean;
+  byPlay: Record<string, PlayActuals | undefined>;
+}
+
+function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx }) {
   const k = KIND[play.kind] ?? KIND.creative;
   const send = useMutation(api.workspace.sendChat);
   const router = useRouter();
@@ -226,6 +235,7 @@ function PlayCard({ play, slug, economics }: { play: PlayView; slug: string; eco
 
         <ForecastBar f={play} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
+        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} canEdit={results.canEdit} /> : null}
 
         {open ? (
           <div className="flex flex-col gap-4">
@@ -338,8 +348,10 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-export function GrowthPlays({ plays, slug, economics }: { plays: PlayView[]; slug: string; economics?: Economics }) {
+export function GrowthPlays({ plays, slug, economics, strategyId, canEdit = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; canEdit?: boolean }) {
+  const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
   if (!plays.length) return null;
+  const results = strategyId ? { strategyId, canEdit, byPlay: (byPlay ?? {}) as Record<string, PlayActuals | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
   return (
@@ -347,7 +359,7 @@ export function GrowthPlays({ plays, slug, economics }: { plays: PlayView[]; slu
       {economics ? <EconomicsLine economics={economics} /> : null}
       <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
-          <PlayCard key={p.name} play={p} slug={slug} economics={economics} />
+          <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} />
         ))}
       </div>
     </PlanSection>

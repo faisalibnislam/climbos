@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { resultsBrief } from "./playResults";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import type {
@@ -61,6 +62,8 @@ export const jobContext = internalQuery({
       run,
       org,
       business,
+      /** Plans start from what earlier plays actually did. */
+      resultsText: run.kind === "strategy" ? await resultsBrief(ctx, org._id) : "",
       facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
