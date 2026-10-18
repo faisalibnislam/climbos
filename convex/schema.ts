@@ -678,6 +678,28 @@ export default defineSchema({
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"]),
 
+  /** Mini-CRM: one row per person or company the owner is working with. */
+  deals: defineTable({
+    orgId: v.id("organizations"),
+    name: v.string(),
+    company: v.optional(v.string()),
+    email: v.optional(v.string()),
+    stage: v.union(v.literal("lead"), v.literal("talking"), v.literal("booked"), v.literal("won"), v.literal("lost")),
+    source: v.union(v.literal("outbound"), v.literal("booking"), v.literal("inbox"), v.literal("manual")),
+    prospectId: v.optional(v.id("prospects")),
+    valueMinor: v.optional(v.number()),
+    currency: v.string(),
+    notes: v.array(v.object({ text: v.string(), at: v.number(), userId: v.optional(v.id("users")) })),
+    nextStep: v.optional(v.string()),
+    nextStepAt: v.optional(v.number()),
+    wonAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org_updated", ["orgId", "updatedAt"])
+    .index("by_org_stage", ["orgId", "stage"])
+    .index("by_prospect", ["prospectId"]),
+
   bookingPages: defineTable({
     orgId: v.id("organizations"),
     slug: v.string(),

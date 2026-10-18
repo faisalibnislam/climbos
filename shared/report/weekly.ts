@@ -4,6 +4,7 @@
  */
 
 export interface WeekCounts {
+  dealsWon: number;
   postsPublished: number;
   emailsSent: number;
   replies: number;
@@ -41,6 +42,7 @@ export interface WeeklyReport {
 }
 
 const LABELS: Record<keyof WeekCounts, string> = {
+  dealsWon: "Deals won",
   callsBooked: "Calls booked",
   replies: "Replies",
   emailsSent: "Emails sent",
@@ -60,7 +62,9 @@ export function buildWeeklyReport(p: { weekStart: number; weekEnd: number; now: 
     .filter((l) => l.value > 0 || (l.change ?? 0) !== 0);
   const n = p.now;
   const headline =
-    n.callsBooked > 0
+    n.dealsWon > 0
+      ? `${n.dealsWon} deal${n.dealsWon === 1 ? "" : "s"} won this week.`
+      : n.callsBooked > 0
       ? `${n.callsBooked} call${n.callsBooked === 1 ? "" : "s"} booked this week.`
       : n.replies > 0
         ? `${n.replies} ${n.replies === 1 ? "person" : "people"} replied this week.`

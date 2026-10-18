@@ -29,6 +29,7 @@ import type * as climb from "../climb.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
+import type * as crm from "../crm.js";
 import type * as crons from "../crons.js";
 import type * as demo from "../demo.js";
 import type * as emailActions from "../emailActions.js";
@@ -105,6 +106,7 @@ declare const fullApi: ApiFromModules<{
   connectionActions: typeof connectionActions;
   connections: typeof connections;
   content: typeof content;
+  crm: typeof crm;
   crons: typeof crons;
   demo: typeof demo;
   emailActions: typeof emailActions;

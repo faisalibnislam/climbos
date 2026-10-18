@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { syncDealFromProspect } from "./crm";
 import { sha256Hex } from "../shared/policy";
 import { composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
@@ -204,6 +205,7 @@ export const applyInbox = internalMutation({
       if (r.text && !(await ctx.db.query("communityMessages").withIndex("by_org_external", (q) => q.eq("orgId", c.orgId).eq("externalId", externalId)).first())) {
         await ctx.db.insert("communityMessages", { orgId: c.orgId, channel: "email", kind: "email", externalId, prospectId: p._id, campaignId, fromEmail: r.from.toLowerCase(), subject: r.subject, messageRef: r.messageId, authorName: p.company, text: r.text, receivedAt: r.at ?? now, status: r.optOut ? "dismissed" : "new", createdAt: now, updatedAt: now });
       }
+      if (!r.optOut) await syncDealFromProspect(ctx, p, "talking", "outbound", r.text ? `Replied: “${r.text.slice(0, 160)}”` : "Replied to your email.");
       if (p.stage === "replied" || p.stage === "booked" || p.stage === "won" || p.stage === "lost") continue;
       await ctx.db.patch(p._id, { stage: r.optOut ? "lost" : "replied", updatedAt: now });
       await cancelQueued(ctx, p._id);

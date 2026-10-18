@@ -36,8 +36,10 @@ async function countsFor(ctx: QueryCtx, orgId: Id<"organizations">, from: number
   // Latest snapshot per post, so repeated captures aren't double counted.
   const latest = new Map<string, Doc<"postMetrics">>();
   for (const m of metrics) if ((latest.get(m.artifactId)?.capturedAt ?? 0) < m.capturedAt) latest.set(m.artifactId, m);
+  const won = await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", "won")).take(1000);
   const runs = await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId).gte("createdAt", from).lt("createdAt", to)).take(1000);
   return {
+    dealsWon: won.filter((d) => inWin(d.wonAt)).length,
     postsPublished: published.filter((a) => inWin(a.updatedAt)).length,
     emailsSent,
     replies,

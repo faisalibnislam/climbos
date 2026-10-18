@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildWeeklyReport, weekStartUtc, type WeekCounts } from "../../shared/report/weekly";
 
-const zero: WeekCounts = { postsPublished: 0, emailsSent: 0, replies: 0, callsBooked: 0, newProspects: 0, reach: 0, clicks: 0, creditsUsed: 0, jobsDone: 0 };
+const zero: WeekCounts = { dealsWon: 0, postsPublished: 0, emailsSent: 0, replies: 0, callsBooked: 0, newProspects: 0, reach: 0, clicks: 0, creditsUsed: 0, jobsDone: 0 };
 const ctx = { pendingApprovals: 0, upcomingCalls: [], scheduledPosts: 3, outboundOn: true, hasPlan: true, creditsLeft: 500 };
 
 describe("weekly CEO report", () => {

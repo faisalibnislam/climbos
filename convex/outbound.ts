@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { dealFromBooking, syncDealFromProspect } from "./crm";
 import { requirePaid } from "./lib/access";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { sha256Hex } from "../shared/policy";
@@ -197,6 +198,9 @@ export const setStage = mutation({
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
       await ctx.db.patch(p._id, { stage, updatedAt: now });
+      // Conversations move into the pipeline (CRM) automatically.
+      const dealStage = stage === "replied" ? "talking" : stage === "booked" || stage === "won" || stage === "lost" ? stage : null;
+      if (dealStage) await syncDealFromProspect(ctx, p, dealStage, "outbound");
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.stage", subjectType: "prospects", subjectId: String(prospectIds.length), summary: `${prospectIds.length} prospect${prospectIds.length === 1 ? "" : "s"} → ${stage}` });
   },
@@ -331,7 +335,10 @@ export const book = mutation({
       status: "confirmed",
       createdAt: now,
     });
-    if (prospect?.orgId === page.orgId) await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+    if (prospect?.orgId === page.orgId) {
+      await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+      await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
+    } else await dealFromBooking(ctx, page.orgId, name, a.company?.trim().slice(0, 120) || undefined, a.startAt);
     const when = new Date(a.startAt).toLocaleString("en-US", { timeZone: page.timezone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     await ctx.db.insert("communityMessages", { orgId: page.orgId, channel: "booking", kind: "booking", externalId: `booking:${id}`, prospectId: prospect?.orgId === page.orgId ? prospect._id : undefined, authorName: a.company ? `${name} (${a.company.trim().slice(0, 60)})` : name, text: `Booked a ${page.durationMin}-minute call for ${when}.${a.note ? `\n\n“${a.note.trim().slice(0, 500)}”` : ""}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: page.orgId, actorType: "system", action: "booking.created", subjectType: "booking", subjectId: id, summary: `${name}${a.company ? ` (${a.company.trim().slice(0, 60)})` : ""} booked a call` });

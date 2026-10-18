@@ -50,6 +50,10 @@ describe("unified inbox", () => {
     expect(open).toHaveLength(1);
     expect(open[0]).toMatchObject({ kind: "email", fromEmail: "jane@agency.example", canReply: true });
     expect(await w.owner.client.query(api.inbox.unread, { slug: w.slug })).toBe(1);
+    // The reply also put them in the pipeline (CRM) as "talking".
+    const pipe = await w.owner.client.query(api.crm.list, { slug: w.slug });
+    expect(pipe.deals).toHaveLength(1);
+    expect(pipe.deals[0]).toMatchObject({ stage: "talking", source: "outbound" });
 
     await w.owner.client.mutation(api.inbox.draftReply, { slug: w.slug, id: open[0].id });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
