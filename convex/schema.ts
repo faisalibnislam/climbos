@@ -571,6 +571,8 @@ export default defineSchema({
   outboundCampaigns: defineTable({
     orgId: v.id("organizations"),
     title: v.string(),
+    /** Who to find: customers (companies) or creators (influencers to partner with). Absent = customers. */
+    kind: v.optional(v.union(v.literal("customers"), v.literal("creators"))),
     /** Owner's optional steer: who, where, how many. */
     brief: v.object({ who: v.string(), where: v.string(), count: v.number() }),
     status: v.union(v.literal("researching"), v.literal("review"), v.literal("failed"), v.literal("archived")),

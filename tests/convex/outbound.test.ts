@@ -88,4 +88,16 @@ describe("outbound", () => {
     await expect(other.client.mutation(api.outbound.setStage, { slug: other.slug, prospectIds: [view.prospects[0].id], stage: "skipped" })).rejects.toThrow();
     await expect(other.client.query(api.outbound.get, { slug: w.slug })).rejects.toThrow();
   });
+
+  it("creators mode finds creators (keyed by profile, not platform domain) and writes a collab pitch", async () => {
+    const t = setup();
+    const w = await workspace(t, "creators@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "creators", count: 5 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const view = await w.client.query(api.outbound.get, { slug: w.slug });
+    expect(view.campaign).toMatchObject({ kind: "creators", status: "review", title: "Find creators" });
+    expect(view.prospects.length).toBeGreaterThan(0);
+    const run = await t.run(async (ctx) => ctx.db.query("workflowSteps").collect());
+    expect(run.some((s) => s.label.startsWith("Find creators"))).toBe(true);
+  });
 });

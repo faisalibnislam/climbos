@@ -738,6 +738,44 @@ export function prospectingSpec(o: SpecOptions = {}): AgentSpec<ProspectsOutput>
   );
 }
 
+function lintCreators(out: ProspectsOutput, input: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = lintCopy({ icp: out.icp.summary }, { evidence: evidenceOf(input) });
+  if (out.prospects.length < 3) issues.push({ severity: "error", rule: "count", message: "Find at least 3 verified creators, or explain in excluded why the niche is thin.", path: "prospects" });
+  const seen = new Set<string>();
+  out.prospects.forEach((p, i) => {
+    const path = `prospects[${i}]`;
+    if (!/^https?:\/\//.test(p.website)) issues.push({ severity: "error", rule: "source", message: `${p.company}: needs their real profile URL.`, path: `${path}.website` });
+    const key = p.website.toLowerCase().replace(/\/$/, "");
+    if (seen.has(key)) issues.push({ severity: "error", rule: "duplicate", message: `${p.company} is listed twice.`, path });
+    seen.add(key);
+    if (!p.evidence.some((e) => /^https?:\/\//.test(e.url))) issues.push({ severity: "error", rule: "evidence", message: `${p.company}: cite the profile or a recent post.`, path: `${path}.evidence` });
+    if (p.publicEmail && !p.evidence.some((e) => e.observation.toLowerCase().includes(p.publicEmail.toLowerCase()))) {
+      issues.push({ severity: "error", rule: "invented_email", message: `${p.company}: only use an email copied verbatim from a cited page (quote it in evidence).`, path: `${path}.publicEmail` });
+    }
+    if (!/\d|unknown/i.test(p.sizeBand)) issues.push({ severity: "warn", rule: "audience", message: `${p.company}: state the audience as shown (e.g. "~12k Instagram followers") or "unknown".`, path: `${path}.sizeBand` });
+  });
+  return issues;
+}
+
+/** Finds real creators whose audience matches the buyers (public profiles only), with contact routes. */
+export function creatorScoutSpec(o: SpecOptions = {}): AgentSpec<ProspectsOutput> {
+  return base(
+    {
+      id: "creator_scout",
+      role: "cmo",
+      label: "Find creators",
+      skills: ["owner-brevity", "creator-scouting", "positioning"],
+      schema: ProspectsOutputSchema,
+      rubric: rubricOf("creator-scouting"),
+      criticSkills: ["creator-scouting"],
+      lint: lintCreators,
+      maxTokens: { research: 32_000, draft: 32_000, critic: 12_000 },
+    },
+    o,
+    "lean",
+  );
+}
+
 /** Writes the cold sequence and one sourced opener per prospect. */
 export function outreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
   return base(
@@ -758,7 +796,7 @@ export function outreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
 }
 
 /** Research briefs per job (what the research phase should find). */
-export function researchFor(task: TaskType | "business_insights" | "prospecting", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
+export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
   switch (task) {
     case "growth_strategy":
@@ -803,6 +841,16 @@ Only report what you actually found, with URLs.`,
 2. Skip competitors, and partners/resellers/certified agencies of a direct competitor (they are invested in the rival).
 3. Gather about 1.5x the companies needed, then open EACH candidate's own website (one fetch each) to confirm it exists, what it does, where it is, and any published contact email (copy verbatim).
 4. Note for each: name, website, location, size clues, a dated or observable trigger, the decision-maker role (a name only if on their own team page). Record the URL for every observation. Skip anything you can't verify.`,
+      };
+    case "creator_scout":
+      return {
+        maxSearches: 12,
+        maxFetches: 25,
+        brief: `Find real creators and influencers whose audience matches the buyers of ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}, from public pages only.
+1. Work out 3-5 audience niches from the positioning, then search the platforms that fit (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts), creator lists and directories.
+2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, location if stated, recent activity, and one recent post that shows fit (URL + what it's about).
+3. Find the contact route: a business email published in bio/link-in-bio/site/media kit (copy verbatim), else the DM or form route. Never guess an email.
+4. Skip inactive accounts, bought-looking audiences, off-niche creators and anyone promoting a direct competitor. Gather ~1.5x what's needed; record a URL for every observation.`,
       };
     case "conversion_audit":
       return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };

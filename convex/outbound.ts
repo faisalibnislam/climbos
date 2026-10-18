@@ -98,6 +98,7 @@ export const get = query({
         ? {
             id: campaign._id,
             title: campaign.title,
+            kind: campaign.kind ?? "customers",
             status: campaign.status,
             brief: campaign.brief,
             icp: campaign.icp ?? null,
@@ -140,11 +141,11 @@ export const get = query({
 
 /** "Find customers": research prospects and write the emails (nothing is sent). */
 export const start = mutation({
-  args: { slug: v.string(), who: v.optional(v.string()), where: v.optional(v.string()), count: v.optional(v.number()) },
+  args: { slug: v.string(), who: v.optional(v.string()), where: v.optional(v.string()), count: v.optional(v.number()), kind: v.optional(v.union(v.literal("customers"), v.literal("creators"))) },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const brief = { who: (args.who ?? "").trim().slice(0, 300), where: (args.where ?? "").trim().slice(0, 120), count: Math.max(5, Math.min(Math.round(args.count ?? 15), 30)) };
-    const id = await startCampaign(ctx, { org, userId: user._id, brief, auto: false });
+    const id = await startCampaign(ctx, { org, userId: user._id, brief, auto: false, kind: args.kind });
     return { campaignId: id };
   },
 });
@@ -152,7 +153,7 @@ export const start = mutation({
 /** Create a campaign and its research run (also used by wishes). */
 export async function startCampaign(
   ctx: MutationCtx,
-  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards"> },
+  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators" },
 ): Promise<Id<"outboundCampaigns">> {
   const { org, brief } = p;
   const busy = await ctx.db
@@ -160,7 +161,8 @@ export async function startCampaign(
     .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
     .order("desc")
     .first();
-  if (busy?.status === "researching") throw appError("INVALID", "Your team is already finding customers. It'll be ready in a few minutes.");
+  if (busy?.status === "researching") throw appError("INVALID", "Your team is already searching. It'll be ready in a few minutes.");
+  const creators = p.kind === "creators";
   const plan = planJob("outbound", { quantity: brief.count }, { fixture: org.kind === "demo" });
   const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo" });
   const now = Date.now();
@@ -168,7 +170,8 @@ export async function startCampaign(
   if (busy && busy.status !== "archived") await ctx.db.patch(busy._id, { status: "archived", updatedAt: now });
   const campaignId = await ctx.db.insert("outboundCampaigns", {
     orgId: org._id,
-    title: brief.who ? `Find: ${brief.who}` : "Find customers",
+    title: brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
+    ...(creators ? { kind: "creators" as const } : {}),
     brief,
     status: "researching",
     sequence: [],
@@ -382,9 +385,18 @@ export const campaignContext = internalQuery({
       .query("prospects")
       .withIndex("by_org_stage", (q) => q.eq("orgId", c.orgId))
       .take(500);
-    return { brief: c.brief, knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200) };
+    return { brief: c.brief, kind: c.kind ?? "customers", knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200) };
   },
 });
+
+function profileKey(url: string): string {
+  try {
+    const u = new URL(/^https?:\/\//.test(url) ? url : `https://${url}`);
+    return `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/$/, "")}`.toLowerCase();
+  } catch {
+    return "";
+  }
+}
 
 export const saveResult = internalMutation({
   args: { campaignId: v.id("outboundCampaigns"), prospects: v.any(), outreach: v.any() },
@@ -405,7 +417,8 @@ export const saveResult = internalMutation({
     );
     let added = 0;
     for (const p of found.prospects) {
-      const domain = domainOf(p.website);
+      // Creators share platform domains (instagram.com/…): key them by profile path instead.
+      const domain = c.kind === "creators" ? profileKey(p.website) : domainOf(p.website);
       if (!domain || seen.has(domain)) continue;
       seen.add(domain);
       await ctx.db.insert("prospects", {

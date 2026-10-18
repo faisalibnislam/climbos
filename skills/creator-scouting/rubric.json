@@ -1,0 +1,100 @@
+{
+  "id": "creator-scouting",
+  "title": "Creator shortlist",
+  "gates": [
+    {
+      "id": "G1",
+      "text": "Truth and grounding: no company, person, title, email, headcount, trigger or other prospect fact that is not backed by a cited public source URL in the output or the confirmed facts. Unknowns are marked unknown or [NEEDS FACT: ...], never guessed."
+    },
+    {
+      "id": "G2",
+      "text": "Compliance: no Germany/Austria companies, no UK sole traders or non-Scottish partnerships (UK legal form verified or the company is held), no pattern-inferred addresses for Canada/Australia, other EU countries only where the rules table allows, no existing customers, competitors or suppressed contacts."
+    },
+    {
+      "id": "G3",
+      "text": "Data sourcing: public web only. No LinkedIn scraping or restricted pages; no personal phone numbers, home addresses, personal social profiles or private-life or sensitive data anywhere in the output."
+    },
+    {
+      "id": "G4",
+      "text": "List hygiene: no disposable, noreply/postmaster/abuse/webmaster addresses; role addresses only for 1-10-person companies with no published personal address, at most 10% of the list and flagged for no first-name greeting; no more than 3 inferred email candidates per person."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "name": "ICP derivation",
+      "anchors": {
+        "1": "Generic ICP ('small businesses that want growth') with no link to the sender's positioning or best customers.",
+        "3": "ICP names an industry, size and place, but traits are not tied to why those customers value the sender, or best-customer evidence is ignored.",
+        "5": "One-sentence ICP derived from positioning and best customers; each must-have, nice-to-have and disqualifier states where it is observed and why it predicts fit; confidence labelled where it is a hypothesis."
+      }
+    },
+    {
+      "id": "C2",
+      "name": "Observable filters",
+      "anchors": {
+        "1": "Filters cannot be checked on the public web (e.g. 'ambitious owners', 'values quality').",
+        "3": "Most filters observable but at least one is vague or has no stated place to check it.",
+        "5": "Every filter (industry, size band, geography, legal form, tech/signals, trigger) maps to a named public source type and can be marked met / not met / unknown."
+      }
+    },
+    {
+      "id": "C3",
+      "name": "Evidence per prospect",
+      "anchors": {
+        "1": "Prospects listed with no sources, or sources that do not show the claimed trait.",
+        "3": "Sources given for most must-haves, but some are missing dates or snippets, or one must-have is asserted without a link.",
+        "5": "Every must-have on every included company has a URL, a date seen and a short snippet or observation that a reviewer can verify by opening the link."
+      }
+    },
+    {
+      "id": "C4",
+      "name": "Scoring discipline",
+      "anchors": {
+        "1": "No scores, or scores with no reasons; unknowns treated as passes.",
+        "3": "Fit and timing scored but anchors applied loosely (e.g. fit 4 with an unknown must-have, undated trigger scored 3).",
+        "5": "Fit 1-5 and timing 0-3 follow the anchors exactly; priority A/B/C is consistent; fit-3 holds are clearly marked as not ready for outreach."
+      }
+    },
+    {
+      "id": "C5",
+      "name": "Why-fit and why-now reasoning",
+      "anchors": {
+        "1": "Reasons are boilerplate that would fit any company on the list.",
+        "3": "Reasons mention the company's evidence or the sender's value, but not both, or the why-now is generic.",
+        "5": "Each why-fit ties this company's specific evidence to the sender's named value theme; each why-now cites a dated trigger and the problem it creates."
+      }
+    },
+    {
+      "id": "C6",
+      "name": "Opener candidates",
+      "anchors": {
+        "1": "No opener, or an opener that is flattering, personal, unsourced or invented.",
+        "3": "Opener is true and sourced but generic (industry or location only).",
+        "5": "One specific, sourced observation about the business per prospect that the owner would recognise as true and that connects to the sender's offer."
+      }
+    },
+    {
+      "id": "C7",
+      "name": "Disqualification and exclusions",
+      "anchors": {
+        "1": "Nothing excluded, or exclusions not explained.",
+        "3": "Exclusions made but reasons or counts are missing for some.",
+        "5": "Every excluded or held company has a stated reason; exclusion counts by reason are summarised; holds say exactly what fact would qualify them."
+      }
+    },
+    {
+      "id": "C8",
+      "name": "Focus and usefulness",
+      "anchors": {
+        "1": "A long unranked list padded to hit a number, with weak fits mixed in.",
+        "3": "Ranked list but tiers are muddled or weak fits remain in tier A.",
+        "5": "Short ranked list where tier A is unmistakably the place to start; shortfalls reported honestly; next 2-3 enrichment steps named."
+      }
+    }
+  ],
+  "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+  }
+}

@@ -448,6 +448,112 @@ export const SKILLS: Record<string, { name: string; description: string; playboo
   },
   "hash": "efdbb99e9842"
  },
+ "creator-scouting": {
+  "name": "creator-scouting",
+  "description": "Find real creators and influencers whose audience matches a small business's ideal customer, verify each one from public pages (profile, recent posts, audience size), note how to reach them, and rank them on audience fit, engagement and affordability. Use when a growth plan includes influencer or creator partnerships, UGC, affiliates or podcast/newsletter sponsorships.",
+  "playbook": "## Purpose\n\nYou build creator shortlists a partnerships manager would sign off on: real people with a public profile, an audience that matches the business's buyers, recent activity, and a realistic route to contact them. For small businesses, micro and mid-size creators (roughly 2k–100k followers) with a tight niche and real engagement beat big names: they are affordable, reply, and convert. Every creator on the list is there for a reason you can show (a profile URL and an observation from a recent post); you never invent a creator, follower count, rate or email.\n\n## Procedure\n\n1. **Translate the ideal customer into audiences.** Who does the business sell to, where, and what do they read, watch or listen to? Name 3-5 niches (e.g. \"UK freelance designers on Instagram\", \"SaaS founders' podcasts\", \"Austin food TikTok\").\n2. **Search each niche on the platforms that fit** (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts). Use public search results, creator directories, \"top creators in X\" lists, podcast directories and newsletter platforms. Prefer creators who already post about the problem the business solves, its category, or adjacent tools.\n3. **Verify each candidate from public pages.** Open the profile or the creator's own site. Record: display name and handle, platform, profile URL, approximate audience size as shown publicly (say \"~12k followers on Instagram (profile, Oct 2026)\"; if not visible, \"unknown\"), where they're based if stated, and one recent post that shows fit (URL + what it is about). Skip anyone you can't verify, anyone inactive for 3+ months, accounts that look bought (huge followers, no engagement), and creators who promote a direct competitor.\n4. **Find the contact route.** Business email published in their bio, link-in-bio page, website or media kit (copy verbatim); otherwise \"DM on Instagram\" or \"contact form on site\". Never guess an email.\n5. **Score and rank.** fit (0-100): how closely their audience matches the buyers and how naturally the business fits their content. timing (0-100): recent posts on the topic, a relevant series, a season or launch. Note an affordability band from size alone (micro / mid / large) — never quote a rate as fact.\n6. **Exclude with reasons.** List notable creators you skipped and why (competitor deal, off-niche audience, inactive, unverifiable).\n\n## Output rules\n\n- Use the prospect fields this way: company = creator's name; website = profile URL (or their site); location = where they're based or \"unknown\"; sizeBand = audience as found, e.g. \"~12k Instagram followers\"; why = the audience fit in one line; evidence = profile and recent post URLs with observations; trigger = a recent relevant post or \"\"; contact = the handle and platform, e.g. \"@janedesigns (Instagram)\"; publicEmail = a business email copied verbatim from a cited page, else \"\".\n- At least 5 creators unless the niche is genuinely thin (then say why in excluded).\n- Disclosure: any paid or gifted collaboration must be disclosed by the creator (FTC/ASA rules). Mention it in ownerNotes if relevant.",
+  "rubric": {
+   "id": "creator-scouting",
+   "title": "ICP definition and qualified prospect list",
+   "gates": [
+    {
+     "id": "G1",
+     "text": "Truth and grounding: no company, person, title, email, headcount, trigger or other prospect fact that is not backed by a cited public source URL in the output or the confirmed facts. Unknowns are marked unknown or [NEEDS FACT: ...], never guessed."
+    },
+    {
+     "id": "G2",
+     "text": "Compliance: no Germany/Austria companies, no UK sole traders or non-Scottish partnerships (UK legal form verified or the company is held), no pattern-inferred addresses for Canada/Australia, other EU countries only where the rules table allows, no existing customers, competitors or suppressed contacts."
+    },
+    {
+     "id": "G3",
+     "text": "Data sourcing: public web only. No LinkedIn scraping or restricted pages; no personal phone numbers, home addresses, personal social profiles or private-life or sensitive data anywhere in the output."
+    },
+    {
+     "id": "G4",
+     "text": "List hygiene: no disposable, noreply/postmaster/abuse/webmaster addresses; role addresses only for 1-10-person companies with no published personal address, at most 10% of the list and flagged for no first-name greeting; no more than 3 inferred email candidates per person."
+    }
+   ],
+   "criteria": [
+    {
+     "id": "C1",
+     "name": "ICP derivation",
+     "anchors": {
+      "1": "Generic ICP ('small businesses that want growth') with no link to the sender's positioning or best customers.",
+      "3": "ICP names an industry, size and place, but traits are not tied to why those customers value the sender, or best-customer evidence is ignored.",
+      "5": "One-sentence ICP derived from positioning and best customers; each must-have, nice-to-have and disqualifier states where it is observed and why it predicts fit; confidence labelled where it is a hypothesis."
+     }
+    },
+    {
+     "id": "C2",
+     "name": "Observable filters",
+     "anchors": {
+      "1": "Filters cannot be checked on the public web (e.g. 'ambitious owners', 'values quality').",
+      "3": "Most filters observable but at least one is vague or has no stated place to check it.",
+      "5": "Every filter (industry, size band, geography, legal form, tech/signals, trigger) maps to a named public source type and can be marked met / not met / unknown."
+     }
+    },
+    {
+     "id": "C3",
+     "name": "Evidence per prospect",
+     "anchors": {
+      "1": "Prospects listed with no sources, or sources that do not show the claimed trait.",
+      "3": "Sources given for most must-haves, but some are missing dates or snippets, or one must-have is asserted without a link.",
+      "5": "Every must-have on every included company has a URL, a date seen and a short snippet or observation that a reviewer can verify by opening the link."
+     }
+    },
+    {
+     "id": "C4",
+     "name": "Scoring discipline",
+     "anchors": {
+      "1": "No scores, or scores with no reasons; unknowns treated as passes.",
+      "3": "Fit and timing scored but anchors applied loosely (e.g. fit 4 with an unknown must-have, undated trigger scored 3).",
+      "5": "Fit 1-5 and timing 0-3 follow the anchors exactly; priority A/B/C is consistent; fit-3 holds are clearly marked as not ready for outreach."
+     }
+    },
+    {
+     "id": "C5",
+     "name": "Why-fit and why-now reasoning",
+     "anchors": {
+      "1": "Reasons are boilerplate that would fit any company on the list.",
+      "3": "Reasons mention the company's evidence or the sender's value, but not both, or the why-now is generic.",
+      "5": "Each why-fit ties this company's specific evidence to the sender's named value theme; each why-now cites a dated trigger and the problem it creates."
+     }
+    },
+    {
+     "id": "C6",
+     "name": "Opener candidates",
+     "anchors": {
+      "1": "No opener, or an opener that is flattering, personal, unsourced or invented.",
+      "3": "Opener is true and sourced but generic (industry or location only).",
+      "5": "One specific, sourced observation about the business per prospect that the owner would recognise as true and that connects to the sender's offer."
+     }
+    },
+    {
+     "id": "C7",
+     "name": "Disqualification and exclusions",
+     "anchors": {
+      "1": "Nothing excluded, or exclusions not explained.",
+      "3": "Exclusions made but reasons or counts are missing for some.",
+      "5": "Every excluded or held company has a stated reason; exclusion counts by reason are summarised; holds say exactly what fact would qualify them."
+     }
+    },
+    {
+     "id": "C8",
+     "name": "Focus and usefulness",
+     "anchors": {
+      "1": "A long unranked list padded to hit a number, with weak fits mixed in.",
+      "3": "Ranked list but tiers are muddled or weak fits remain in tier A.",
+      "5": "Short ranked list where tier A is unmistakably the place to start; shortfalls reported honestly; next 2-3 enrichment steps named."
+     }
+    }
+   ],
+   "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+   }
+  },
+  "hash": "1f6fc7a81dd2"
+ },
  "experiment-design": {
   "name": "experiment-design",
   "description": "Design and read out marketing experiments that work at small-business volumes. Use when a plan, positioning or channel choice needs validating, when an owner wants to A/B test something, or when a test has finished and needs a readout. Covers choosing the right test type (message lab, smoke test, sequential before/after, cold-email reply test, customer conversations, holdout), volume maths, testing big swings high in the funnel, a pre-registration card with guardrails and scale/kill/iterate thresholds set in advance, and honest readouts labelled directional or strong.",

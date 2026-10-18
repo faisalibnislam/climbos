@@ -84,6 +84,7 @@ const AGENT_WHO: Record<string, string> = {
   "Growth plays": "AI CMO: choosing growth plays",
   "Growth plan": "AI CEO: the 90-day plan",
   "Find customers": "AI Sales: finding companies that need you",
+  "Find creators": "AI CMO: finding creators who reach your buyers",
   "First take": "AI CEO: a quick first take",
   "Write the emails": "AI Sales: writing the emails",
 };

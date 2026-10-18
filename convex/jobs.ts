@@ -44,6 +44,7 @@ import {
   insightsSpec,
   channelFitSpec,
   outreachSpec,
+  creatorScoutSpec,
   prospectingSpec,
   researchFor,
   retentionSpec,
@@ -983,12 +984,19 @@ export const findCustomers = internalAction({
             cc.brief.who ? `Owner's steer on who to find: ${untrusted("owner request", cc.brief.who, 300)}` : "No steer on who: derive the ideal customer from the positioning and facts.",
             cc.brief.where ? `Where: ${untrusted("owner request", cc.brief.where, 120)}` : "Where: the business's own market (from its site, currency and time zone).",
           ].join("\n");
+          const creators = cc.kind === "creators";
           found = await runAgentTask<ProspectsOutput>(
             ctx,
             job,
             0,
-            prospectingSpec(),
-            agentInput(
+            creators ? creatorScoutSpec() : prospectingSpec(),
+            creators
+              ? agentInput(
+                  job,
+                  `Find ${cc.brief.count} real creators or influencers whose audience matches the buyers of ${name}, from public pages only: each with profile URL, audience size as shown, a recent post that shows fit, fit and timing scores, and the contact route. Write the ideal-customer summary first (icp).\n${steer}\nNever invent a creator, follower count, rate or email; only copy an email published verbatim on a cited page.${cc.knownDomains.length ? `\nAlready found (skip): ${cc.knownDomains.join(", ").slice(0, 3000)}` : ""}${planContext(job)}`,
+                  { research: researchFor("creator_scout", { website: job.business?.website, businessName: name }) },
+                )
+              : agentInput(
               job,
               `Find ${cc.brief.count} real companies that need ${name} now, from public web sources only, each with evidence URLs, a trigger if one exists, fit and timing scores, and the decision-maker role. Write the ICP first.\n${steer}\nApply the jurisdiction rules from the playbook (exclude anyone you may not cold-email). Never invent a company, person or email; only copy an email that is published verbatim on a cited page.${cc.knownDomains.length ? `\nAlready in the pipeline (skip): ${cc.knownDomains.join(", ").slice(0, 3000)}` : ""}${planContext(job)}`,
               { research: researchFor("prospecting", { website: job.business?.website, businessName: name }) },
@@ -997,7 +1005,8 @@ export const findCustomers = internalAction({
             { task: "sales_sequence", text: "", context: "", ctx: fixtureCtx(job) },
           );
           // Our own checks (no data vendor): drop companies whose site isn't live; attach emails each site publishes.
-          found = await verifyProspects(ctx, job, found);
+          // Creators live on social platforms that block automated visits, so their research evidence stands.
+          if (!creators) found = await verifyProspects(ctx, job, found);
           outreach = await runAgentTask<OutreachOutput>(
             ctx,
             job,
@@ -1005,7 +1014,7 @@ export const findCustomers = internalAction({
             outreachSpec(),
             agentInput(
               job,
-              `Write the cold email sequence for these prospects (one template for all, 3-4 steps on business days 0, 3, 7 and 14) and one opener per prospect for {{firstLine}}, built only on that prospect's cited evidence. Sender: ${name}. The system adds the greeting name, footer, opt-out line and booking link, so don't write them. CTA: an interest question or a short call.\n\nICP: ${JSON.stringify(found.icp)}\n\nPROSPECTS:\n${JSON.stringify(found.prospects.map((p) => ({ company: p.company, why: p.why, trigger: p.trigger, evidence: p.evidence, contact: p.contact }))).slice(0, 16_000)}${planContext(job)}`,
+              `${creators ? `Write a short collaboration pitch to these creators (one template, 2-3 steps on business days 0, 4 and 10): what ${name} offers them (a paid post, gifted product, affiliate commission or a co-created piece — say which the owner should confirm), why their audience fits, and a simple next step. One opener per creator for {{firstLine}}, built only on their cited recent post. Mention that paid or gifted posts must be disclosed. Sender: ${name}.` : `Write the cold email sequence for these prospects (one template for all, 3-4 steps on business days 0, 3, 7 and 14) and one opener per prospect for {{firstLine}}, built only on that prospect's cited evidence. Sender: ${name}.`} The system adds the greeting name, footer, opt-out line and booking link, so don't write them. CTA: an interest question or a short call.\n\nICP: ${JSON.stringify(found.icp)}\n\nPROSPECTS:\n${JSON.stringify(found.prospects.map((p) => ({ company: p.company, why: p.why, trigger: p.trigger, evidence: p.evidence, contact: p.contact }))).slice(0, 16_000)}${planContext(job)}`,
             ),
             startedAt,
             { task: "sales_sequence", text: "", context: "", ctx: fixtureCtx(job) },

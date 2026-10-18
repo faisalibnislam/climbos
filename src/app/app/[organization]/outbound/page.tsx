@@ -33,6 +33,7 @@ import {
   Textarea,
   Tooltip,
   toast,
+  Segmented,
 } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
@@ -139,6 +140,7 @@ function StartPanel({ slug, businessType, canEdit }: { slug: string; businessTyp
 
 function StartForm({ slug, businessType, onDone }: { slug: string; businessType: string | null; onDone?: () => void }) {
   const start = useMutation(api.outbound.start);
+  const [kind, setKind] = useState<"customers" | "creators">("customers");
   const [whoMode, setWhoMode] = useState<"auto" | "pick">("auto");
   const [whereMode, setWhereMode] = useState<"auto" | "pick">("auto");
   const [who, setWho] = useState("");
@@ -155,7 +157,7 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         if (missing) return;
         setBusy(true);
         try {
-          await start({ slug, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
+          await start({ slug, kind, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
           toast({ tone: "success", title: "Your team is on it", description: "About 10–15 minutes. You can leave this page." });
           onDone?.();
         } catch (err) {
@@ -165,8 +167,17 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         }
       }}
     >
+      <Segmented
+        label="Find"
+        options={[
+          { value: "customers", label: "Customers" },
+          { value: "creators", label: "Creators & influencers" },
+        ]}
+        value={kind}
+        onChange={(v) => setKind(v as "customers" | "creators")}
+      />
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-ui font-medium text-ink">Who</legend>
+        <legend className="mb-2 text-ui font-medium text-ink">{kind === "creators" ? "Whose audience" : "Who"}</legend>
         <RadioCards
           columns={2}
           value={whoMode}
