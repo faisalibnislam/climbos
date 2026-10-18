@@ -17,7 +17,7 @@ export const AUTOPILOT_MODES: readonly AutopilotMode[] = ["always_ask", "trust_l
 export const TRUST_THRESHOLD = 5;
 
 /** Channels ClimbOS can publish to directly today (others go out via the export pack). */
-export const DIRECT_PUBLISH_CHANNELS = new Set(["instagram", "facebook"]);
+export const DIRECT_PUBLISH_CHANNELS = new Set(["instagram", "facebook", "linkedin", "x"]);
 
 export const AUTOPILOT_CHANNELS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest"] as const;
 export type AutopilotChannel = (typeof AUTOPILOT_CHANNELS)[number];

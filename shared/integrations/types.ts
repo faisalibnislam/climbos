@@ -17,6 +17,8 @@ export type ProviderId =
   | "meta_ads"
   | "facebook_pages"
   | "instagram"
+  | "linkedin"
+  | "x"
   | "resend_marketing"
   | "stripe"
   | "csv_revenue"

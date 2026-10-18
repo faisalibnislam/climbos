@@ -49,7 +49,7 @@ export type ConnectionItem = ConnectionsData["items"][number];
 type Provider = ConnectionItem["provider"];
 
 function isOAuth(m: ConnectionItem["connectMethod"]) {
-  return m === "oauth_google" || m === "oauth_meta" || m === "oauth_instagram";
+  return m === "oauth_google" || m === "oauth_meta" || m === "oauth_instagram" || m === "oauth_linkedin" || m === "oauth_x";
 }
 
 export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string; item: ConnectionItem; canManage: boolean; isDemo: boolean }) {

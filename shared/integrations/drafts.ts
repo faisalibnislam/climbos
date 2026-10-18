@@ -21,9 +21,9 @@ export interface PlatformLimits {
   note?: string;
 }
 
-/** Limits checked 2026-10-17. verified:false = not confirmed from first-party docs that day. */
+/** Limits checked 2026-10-17 (X re-checked 2026-10-18). verified:false = not confirmed from first-party docs. */
 export const PLATFORM_LIMITS: Record<DraftPlatform, PlatformLimits> = {
-  x: { label: "X", textMax: 280, countMode: "x_weighted", altTextMax: 1000, verified: false, docsUrl: "https://docs.x.com/resources/fundamentals/counting-characters", note: "Weighted count: URLs = 23, CJK/emoji = 2. Premium long posts not assumed." },
+  x: { label: "X", textMax: 280, countMode: "x_weighted", altTextMax: 1000, verified: true, docsUrl: "https://docs.x.com/resources/fundamentals/counting-characters", note: "Weighted count: URLs = 23, CJK/emoji = 2. Premium long posts not assumed." },
   linkedin: { label: "LinkedIn", textMax: 3000, countMode: "codepoints", altTextMax: 4086, verified: false, docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api" },
   tiktok: { label: "TikTok", textMax: 2200, countMode: "utf16", verified: true, docsUrl: "https://developers.tiktok.com/doc/content-posting-api-reference-direct-post", note: "Video caption (title) max 2200 UTF-16 runes incl. hashtags." },
   pinterest: { label: "Pinterest", textMax: 500, countMode: "codepoints", titleMax: 100, altTextMax: 500, verified: false, docsUrl: "https://developers.pinterest.com/docs/api/v5/pins-create/", note: "Sources disagree (500 vs 800) on description; 500 used to be safe." },
@@ -211,14 +211,14 @@ export function manualExportToJson(pack: ManualExportPack): string {
   return JSON.stringify(pack, null, 2);
 }
 
-const PROVIDER_TO_PLATFORM: Partial<Record<ProviderId, DraftPlatform>> = { instagram: "instagram", facebook_pages: "facebook" };
+const PROVIDER_TO_PLATFORM: Partial<Record<ProviderId, DraftPlatform>> = { instagram: "instagram", facebook_pages: "facebook", linkedin: "linkedin", x: "x" };
 
 /**
  * Platforms that need a manual export: always the unsupported networks, plus
- * Instagram/Facebook when their publish capability is not "ready".
+ * Instagram/Facebook/LinkedIn/X when their publish capability is not "ready".
  */
 export function platformsNeedingManualExport(evaluations: Partial<Record<ProviderId, CapabilityEvaluation[]>>): DraftPlatform[] {
-  const out: DraftPlatform[] = ["linkedin", "x", "tiktok", "pinterest", "youtube"];
+  const out: DraftPlatform[] = ["tiktok", "pinterest", "youtube"];
   for (const [provider, platform] of Object.entries(PROVIDER_TO_PLATFORM) as Array<[ProviderId, DraftPlatform]>) {
     const evals = evaluations[provider];
     const publish = evals?.find((e) => e.kind === "write");

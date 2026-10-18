@@ -30,6 +30,8 @@ export const ADAPTER_ID: Partial<Record<OurProvider, ProviderId>> = {
   meta_ads: "meta_ads",
   facebook_pages: "facebook_pages",
   instagram: "instagram",
+  linkedin: "linkedin",
+  x: "x",
   email_resend: "resend_marketing",
   stripe_revenue: "stripe",
   csv_revenue: "csv_revenue",
@@ -42,6 +44,8 @@ const OAUTH_GROUP: Partial<Record<OurProvider, keyof typeof OAUTH_PROVIDERS>> = 
   meta_ads: "meta",
   facebook_pages: "meta",
   instagram: "instagram",
+  linkedin: "linkedin",
+  x: "x",
 };
 
 const OAUTH_CAPABILITIES: Partial<Record<OurProvider, ScopedCapability[]>> = {
@@ -51,14 +55,27 @@ const OAUTH_CAPABILITIES: Partial<Record<OurProvider, ScopedCapability[]>> = {
   meta_ads: ["meta_ads.read_insights", "meta_ads.create_paused_campaign", "meta_ads.set_campaign_status"],
   facebook_pages: ["facebook_pages.publish_post", "facebook_pages.read_insights"],
   instagram: ["instagram.publish_media"],
+  linkedin: ["linkedin.read_profile", "linkedin.publish_post"],
+  x: ["x.read_profile", "x.publish_post"],
 };
 
 const CLIENT_ENV: Record<keyof typeof OAUTH_PROVIDERS, [string, string]> = {
   google: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
   meta: ["META_APP_ID", "META_APP_SECRET"],
   instagram: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],
+  linkedin: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+  x: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
 };
 
+/** True when ClimbOS has the OAuth app keys for this provider. */
+function oauthConfigured(provider: OurProvider): boolean {
+  const group = OAUTH_GROUP[provider];
+  if (!group) return false;
+  const [idEnv, secretEnv] = CLIENT_ENV[group];
+  return Boolean(process.env[idEnv] && process.env[secretEnv]);
+}
+
+/** Drafts and export only (LinkedIn and X until their app keys are set). */
 const MANUAL_ONLY: Partial<Record<OurProvider, string>> = {
   linkedin: "LinkedIn",
   x: "X (Twitter)",
@@ -99,6 +116,10 @@ function envSnapshot(): Record<string, string | undefined> {
     "META_ADS_ACCESS_TIER",
     "INSTAGRAM_APP_ID",
     "INSTAGRAM_APP_SECRET",
+    "LINKEDIN_CLIENT_ID",
+    "LINKEDIN_CLIENT_SECRET",
+    "X_CLIENT_ID",
+    "X_CLIENT_SECRET",
     "FIRECRAWL_API_KEY",
   ];
   // Presence only: values never leave the server.
@@ -125,7 +146,7 @@ export const list = query({
       isDemo: org.kind === "demo",
       items: CATALOG.map(({ provider, group }) => {
         const conn = rows.find((r) => r.provider === provider && r.status !== "revoked");
-        if (MANUAL_ONLY[provider]) {
+        if (MANUAL_ONLY[provider] && !oauthConfigured(provider)) {
           return {
             provider,
             group,
@@ -372,12 +393,32 @@ export const storeConnection = internalMutation({
   },
 });
 
+/** Replace a connection's OAuth secret after a token refresh (refresh tokens may rotate). */
+export const rotateSecret = internalMutation({
+  args: { connectionId: v.id("connections"), secret: v.string(), expiresAt: v.optional(v.number()) },
+  handler: async (ctx, { connectionId, secret, expiresAt }) => {
+    const conn = await ctx.db.get(connectionId);
+    if (!conn || conn.status !== "connected") return false;
+    const now = Date.now();
+    const old = await ctx.db
+      .query("connectionSecrets")
+      .withIndex("by_connection", (q) => q.eq("connectionId", connectionId))
+      .take(5);
+    for (const s of old) await ctx.db.delete(s._id);
+    const enc = await encryptSecret(secret, secretAad(conn.orgId, connectionId));
+    await ctx.db.insert("connectionSecrets", { orgId: conn.orgId, connectionId, kind: "oauth", keyId: enc.keyId, iv: enc.iv, ciphertext: enc.ciphertext, createdAt: now });
+    await ctx.db.patch(connectionId, { expiresAt, lastSyncError: undefined, updatedAt: now });
+    return true;
+  },
+});
+
 /** Internal only: decrypt a connection's secret for an action. Verifies tenant binding via AAD. */
 export const getSecret = internalQuery({
-  args: { connectionId: v.id("connections") },
-  handler: async (ctx, { connectionId }) => {
+  /** forRevocation: disconnect marks the row revoked before the revoke action runs. */
+  args: { connectionId: v.id("connections"), forRevocation: v.optional(v.boolean()) },
+  handler: async (ctx, { connectionId, forRevocation }) => {
     const conn = await ctx.db.get(connectionId);
-    if (!conn || conn.status !== "connected") return null;
+    if (!conn || (conn.status !== "connected" && !(forRevocation && conn.status === "revoked"))) return null;
     const secret = await ctx.db
       .query("connectionSecrets")
       .withIndex("by_connection", (q) => q.eq("connectionId", connectionId))

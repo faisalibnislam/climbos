@@ -2,12 +2,16 @@ import { v } from "convex/values";
 import { runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
 import { listManagedPages } from "../shared/integrations/facebookPages";
+import { getMember as getLinkedInMember } from "../shared/integrations/linkedin";
+import { getMe as getXUser } from "../shared/integrations/x";
 import {
   buildCodeExchangeRequest,
   buildInstagramLongLivedExchangeRequest,
+  buildRefreshRequest,
   buildRevocationRequest,
   OAUTH_PROVIDERS,
   parseTokenResponse,
+  scopesFor,
 } from "../shared/integrations/oauth";
 import { parseRevenueCsv } from "../shared/integrations/csvRevenue";
 import { classifyStripeKey, importStripeRevenue } from "../shared/integrations/stripeRevenue";
@@ -25,20 +29,38 @@ function timingSafeEqual(a: string, b: string): boolean {
   return d === 0;
 }
 
-const GROUP_FOR: Record<string, "google" | "meta" | "instagram"> = {
+const GROUP_FOR: Record<string, keyof typeof OAUTH_PROVIDERS> = {
   ga4: "google",
   search_console: "google",
   google_ads: "google",
   meta_ads: "meta",
   facebook_pages: "meta",
   instagram: "instagram",
+  linkedin: "linkedin",
+  x: "x",
 };
 
 const CLIENT_ENV = {
   google: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
   meta: ["META_APP_ID", "META_APP_SECRET"],
   instagram: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],
+  linkedin: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+  x: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
 } as const;
+
+/** Providers whose access tokens we refresh with a stored refresh token before use. */
+export const REFRESHABLE = new Set(["linkedin", "x"]);
+
+/** Scopes we ask for, used when the token response doesn't echo them back. */
+const REQUESTED_SCOPES: Record<string, string[]> = {
+  linkedin: scopesFor(["linkedin.read_profile", "linkedin.publish_post"]),
+  x: scopesFor(["x.read_profile", "x.publish_post"]),
+};
+
+function clientCreds(group: keyof typeof OAUTH_PROVIDERS): { clientId?: string; clientSecret?: string } {
+  const [idEnv, secretEnv] = CLIENT_ENV[group];
+  return { clientId: process.env[idEnv], clientSecret: process.env[secretEnv] };
+}
 
 /**
  * Called only by the Next.js OAuth callback route (server secret required).
@@ -84,6 +106,21 @@ export const completeOAuth = action({
         externalAccountId = page.id;
         // Publishing uses the Page access token, not the user token.
         if (page.pageAccessToken) token = { ...token, accessToken: page.pageAccessToken };
+      }
+    } else if (group === "linkedin" || group === "x") {
+      // Posts need the author id, so a failed profile probe means no connection.
+      if (token.scopes.length === 0) token = { ...token, scopes: REQUESTED_SCOPES[group] ?? [] };
+      const name = group === "linkedin" ? "LinkedIn" : "X";
+      if (group === "linkedin") {
+        const me = await getLinkedInMember({ accessToken: token.accessToken });
+        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: `We couldn't read your ${name} profile. Please try again.` };
+        accountLabel = me.data.name;
+        externalAccountId = me.data.personUrn;
+      } else {
+        const me = await getXUser({ accessToken: token.accessToken });
+        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: `We couldn't read your ${name} account. Please try again.` };
+        accountLabel = me.data.username ? `@${me.data.username}` : me.data.name;
+        externalAccountId = me.data.id;
       }
     } else if (st.provider === "ga4") {
       const props = await listAccessibleProperties({ accessToken: token.accessToken, maxPages: 2 });
@@ -148,20 +185,60 @@ export const connectApiKey = action({
 export const revokeProviderToken = internalAction({
   args: { connectionId: v.id("connections") },
   handler: async (ctx, { connectionId }) => {
-    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId }).catch(() => null);
+    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId, forRevocation: true }).catch(() => null);
     if (secret) {
       const group = GROUP_FOR[secret.provider];
       if (group) {
         try {
-          const { accessToken } = JSON.parse(secret.value) as { accessToken: string };
-          const req = buildRevocationRequest({ provider: OAUTH_PROVIDERS[group], token: accessToken });
-          if (req) await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
+          const { accessToken, refreshToken } = JSON.parse(secret.value) as { accessToken: string; refreshToken?: string };
+          // X keeps refresh tokens alive separately, so revoke both.
+          const tokens = group === "x" && refreshToken ? [accessToken, refreshToken] : [accessToken];
+          for (const token of tokens) {
+            const req = buildRevocationRequest({ provider: OAUTH_PROVIDERS[group], token, ...clientCreds(group) });
+            if (req) await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
+          }
         } catch {
           // Revocation is best effort; the local secret is deleted regardless.
         }
       }
     }
     await ctx.runMutation(internal.connections.deleteSecrets, { connectionId });
+  },
+});
+
+/**
+ * Refresh a LinkedIn/X access token with the stored refresh token and store
+ * the result (X rotates refresh tokens, so the new one replaces the old).
+ */
+export const refreshAccessToken = internalAction({
+  args: { connectionId: v.id("connections") },
+  handler: async (ctx, { connectionId }): Promise<{ ok: boolean; message?: string }> => {
+    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId });
+    if (!secret || !REFRESHABLE.has(secret.provider)) return { ok: false, message: "Nothing to refresh." };
+    const group = GROUP_FOR[secret.provider];
+    const { clientId, clientSecret } = clientCreds(group);
+    const stored = JSON.parse(secret.value) as { accessToken: string; refreshToken?: string };
+    if (!stored.refreshToken) return { ok: false, message: "No refresh token; reconnect the account." };
+    if (!clientId || !clientSecret) return { ok: false, message: "Integration keys aren't set." };
+    const req = buildRefreshRequest({ provider: OAUTH_PROVIDERS[group], clientId, clientSecret, refreshToken: stored.refreshToken });
+    let parsed: ReturnType<typeof parseTokenResponse>;
+    try {
+      const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
+      parsed = parseTokenResponse(await res.json().catch(() => null));
+    } catch {
+      return { ok: false, message: "Couldn't reach the provider to renew access." };
+    }
+    if (!parsed.ok) {
+      await ctx.runMutation(internal.connections.markSync, { connectionId, ok: false, error: "Sign-in expired. Reconnect this account." });
+      return { ok: false, message: parsed.description ?? parsed.error };
+    }
+    const t = parsed.token;
+    await ctx.runMutation(internal.connections.rotateSecret, {
+      connectionId,
+      secret: JSON.stringify({ accessToken: t.accessToken, refreshToken: t.refreshToken ?? stored.refreshToken }),
+      expiresAt: t.expiresAt,
+    });
+    return { ok: true };
   },
 });
 

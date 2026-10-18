@@ -7,6 +7,8 @@ import { activePolicyVersion } from "../jobWrites";
 export const DIRECT_PUBLISH: Partial<Record<Doc<"artifacts">["channel"], Doc<"connections">["provider"]>> = {
   instagram: "instagram",
   facebook: "facebook_pages",
+  linkedin: "linkedin",
+  x: "x",
 };
 
 export async function invalidateApprovals(ctx: MutationCtx, artifactId: Id<"artifacts">, reason: string) {

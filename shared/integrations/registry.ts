@@ -22,6 +22,12 @@ export const SEARCH_CONSOLE_API_PATH = "webmasters/v3";
 /** Stripe "current version" per the versioning page on the verification date. */
 export const STRIPE_API_VERSION = "2026-09-30.endive";
 export const FIRECRAWL_API_VERSION = "v2";
+/**
+ * LinkedIn versioned REST API, sent as the LinkedIn-Version header. Each
+ * monthly version lives about a year (202511 sunsets 2026-11-16 per the Posts
+ * API page, checked 2026-10-18), so bump this at least yearly.
+ */
+export const LINKEDIN_API_VERSION = "202609";
 
 export const GOOGLE_ADS_BASE = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}`;
 export const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -32,6 +38,9 @@ export const SEARCH_CONSOLE_BASE = `https://www.googleapis.com/${SEARCH_CONSOLE_
 export const RESEND_BASE = "https://api.resend.com";
 export const STRIPE_BASE = "https://api.stripe.com/v1";
 export const FIRECRAWL_SCRAPE_URL = `https://api.firecrawl.dev/${FIRECRAWL_API_VERSION}/scrape`;
+export const LINKEDIN_REST_BASE = "https://api.linkedin.com/rest";
+export const LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
+export const X_API_BASE = "https://api.x.com/2";
 
 export interface VerifiedFact {
   fact: string;
@@ -56,7 +65,7 @@ export interface ProviderMetadata {
   id: ProviderId;
   displayName: string;
   description: string;
-  connection: "oauth_google" | "oauth_meta" | "oauth_instagram" | "api_key" | "file_upload" | "none";
+  connection: "oauth_google" | "oauth_meta" | "oauth_instagram" | "oauth_linkedin" | "oauth_x" | "api_key" | "file_upload" | "none";
   apiVersion: string;
   verified: boolean;
   verifiedAt: typeof VERIFIED_AT;
@@ -201,6 +210,49 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
       fact({ fact: "Caption/image limits", value: "caption ≤ 2,200 chars, ≤ 30 hashtags, ≤ 20 @mentions; JPEG only, ≤ 8 MB; alt_text ≤ 1,000 chars", docsUrl: "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media", verified: true }),
       fact({ fact: "account_type", value: "Business | Media_Creator via GET /me?fields=user_id,username,account_type", docsUrl: "https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/get-started", verified: true }),
       fact({ fact: "Publishing limit", value: "Read live from content_publishing_limit (docs state both 100 and 50 per 24h; not hardcoded)", docsUrl: "https://developers.facebook.com/docs/instagram-platform/content-publishing", verified: true }),
+    ],
+  },
+  linkedin: {
+    id: "linkedin",
+    displayName: "LinkedIn",
+    description: "Publishes approved posts, with an optional image, to your personal LinkedIn profile.",
+    connection: "oauth_linkedin",
+    apiVersion: LINKEDIN_API_VERSION,
+    verified: true,
+    verifiedAt: VERIFIED_AT,
+    capabilities: [
+      { id: "linkedin.read_profile", kind: "read", label: "Check your LinkedIn profile", description: "Reads your name and member id so posts go to the right profile." },
+      { id: "linkedin.publish_post", kind: "write", label: "Publish LinkedIn posts", description: "Publishes approved text and image posts to your profile." },
+    ],
+    requiredEnv: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+    requiredReviewSteps: ['Add the "Sign In with LinkedIn using OpenID Connect" and "Share on LinkedIn" products to the LinkedIn app'],
+    docs: [
+      fact({ fact: "Create post", value: "POST https://api.linkedin.com/rest/posts (author, commentary, visibility, distribution, lifecycleState PUBLISHED) → 201, id in x-restli-id; headers LinkedIn-Version YYYYMM + X-Restli-Protocol-Version 2.0.0", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api", verified: true, note: "Checked 2026-10-18." }),
+      fact({ fact: "Read post", value: "GET /rest/posts/{encoded urn}; reading member posts needs r_member_social, which LinkedIn restricts to approved apps", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api", verified: true, note: "Without r_member_social, read-back is refused and publishes stay uncertain." }),
+      fact({ fact: "Commentary format", value: "little text: escape \\ | { } @ [ ] ( ) < > # * _ ~ with a backslash; #word is a hashtag", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/little-text-format", verified: true }),
+      fact({ fact: "Images", value: "POST /rest/images?action=initializeUpload {initializeUploadRequest:{owner}} → value.uploadUrl, value.image; PUT bytes; content.media {id, altText ≤ 4086}; JPG/GIF/PNG", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api", verified: true }),
+      fact({ fact: "OAuth + OIDC", value: "authorize https://www.linkedin.com/oauth/v2/authorization; token https://www.linkedin.com/oauth/v2/accessToken; GET https://api.linkedin.com/v2/userinfo → sub; scopes openid profile w_member_social", docsUrl: "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2", verified: false, note: "Long-standing; not re-fetched. Refresh tokens are only issued to approved partners (access tokens last ~60 days)." }),
+    ],
+  },
+  x: {
+    id: "x",
+    displayName: "X",
+    description: "Publishes approved text posts to your X account. Images aren't attached yet.",
+    connection: "oauth_x",
+    apiVersion: "2",
+    verified: true,
+    verifiedAt: VERIFIED_AT,
+    capabilities: [
+      { id: "x.read_profile", kind: "read", label: "Check your X account", description: "Reads your @handle so posts go to the right account." },
+      { id: "x.publish_post", kind: "write", label: "Publish X posts", description: "Publishes approved posts up to 280 characters." },
+    ],
+    requiredEnv: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
+    requiredReviewSteps: ["X app with OAuth 2.0 on, type Web App (confidential client), Read and write permissions", "An X API plan that allows posting and reading posts"],
+    docs: [
+      fact({ fact: "OAuth 2.0 PKCE", value: "authorize https://x.com/i/oauth2/authorize; token/refresh POST https://api.x.com/2/oauth2/token; revoke POST https://api.x.com/2/oauth2/revoke; confidential clients use HTTP Basic", docsUrl: "https://docs.x.com/resources/fundamentals/authentication/oauth-2-0/user-access-token", verified: true, note: "Checked 2026-10-18. Docs don't state token lifetime (~2h) or refresh-token rotation; both handled defensively." }),
+      fact({ fact: "Create post", value: "POST https://api.x.com/2/tweets {text} → 201 {data:{id,text}}; scopes tweet.read tweet.write users.read", docsUrl: "https://docs.x.com/x-api/posts/create-post", verified: true, note: "Checked 2026-10-18." }),
+      fact({ fact: "Character counting", value: "280 weighted; URLs = 23; CJK/emoji = 2; NFC first", docsUrl: "https://docs.x.com/resources/fundamentals/counting-characters", verified: true, note: "Checked 2026-10-18." }),
+      fact({ fact: "Read post / user", value: "GET /2/tweets/{id}; GET /2/users/me; GET /2/users/{id}/tweets", docsUrl: "https://docs.x.com/x-api/posts/get-post-by-id", verified: false, note: "Not re-fetched; read access depends on the X API plan." }),
     ],
   },
   resend_marketing: {
