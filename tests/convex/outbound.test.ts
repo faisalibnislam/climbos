@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /**
  * Outbound end to end on the deterministic model: find customers → evidenced
@@ -45,6 +45,15 @@ describe("outbound", () => {
 
     // A second run skips companies already in the pipeline.
     await w.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [view.prospects[0].id], stage: "approved" });
+
+    // Free accounts: the booking page is off (a paid feature); with a package the owner switches it on.
+    expect(view.page).toMatchObject({ active: false, live: false });
+    expect(await t.query(api.outbound.publicPage, { slug: view.page!.slug })).toBeNull();
+    const pageEdit = { slug: w.slug, title: "Intro call", durationMin: 30, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 17 };
+    await expect(w.client.mutation(api.outbound.saveBookingPage, { ...pageEdit, active: true })).rejects.toThrow(/package/);
+    await w.client.mutation(api.outbound.saveBookingPage, { ...pageEdit, active: false }); // editing an off page is fine
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.outbound.saveBookingPage, { ...pageEdit, active: true });
 
     const page = await t.query(api.outbound.publicPage, { slug: view.page!.slug });
     expect(page?.slots.length).toBeGreaterThan(10);

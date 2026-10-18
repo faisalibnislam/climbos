@@ -105,6 +105,17 @@ http.route({
   }),
 });
 
+/** A person opening the one-click link in a browser: show the unsubscribe page (GET never unsubscribes; link scanners open URLs). */
+http.route({
+  path: "/unsubscribe",
+  method: "GET",
+  handler: httpAction(async (_ctx, req) => {
+    const token = new URL(req.url).searchParams.get("token") ?? "";
+    const site = process.env.SITE_URL ?? "https://climbos.app";
+    return new Response(null, { status: 302, headers: { Location: `${site}/u/${encodeURIComponent(token)}`, "Cache-Control": "no-store" } });
+  }),
+});
+
 /** The service worker pulls its notification text here (the endpoint identifies the device). */
 http.route({
   path: "/push/pull",

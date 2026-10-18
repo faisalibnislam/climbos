@@ -9,6 +9,7 @@ import { MAILBOX_PRESETS, type MailboxPreset } from "@shared/outbound/sending";
 import { Badge, Button, Callout, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Input, Select, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
+import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
 
 /** Connect the owner's mailbox (app password; SMTP to send, IMAP to see replies). */
 export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug: string; label?: string }) {
@@ -82,23 +83,52 @@ export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug:
 
 const STATUS_TEXT: Record<string, string> = { sent: "Sent", failed: "Didn't send", bounced: "Bounced", canceled: "Stopped" };
 
+type PanelProps = { slug: string; campaignId: Id<"outboundCampaigns">; approvedWithEmail: number; defaultCompany: string; bookingUrl?: string };
+
 /** Sending panel on Find customers: mailbox, sender details, start/pause and what went out. */
-export function MailboxSending({ slug, campaignId, approvedWithEmail, defaultCompany, bookingUrl, canApprove }: { slug: string; campaignId: Id<"outboundCampaigns">; approvedWithEmail: number; defaultCompany: string; bookingUrl?: string; canApprove: boolean }) {
+export function MailboxSending(props: PanelProps) {
+  return (
+    <QueryBoundary headingLevel="h3">
+      <SendingPanel {...props} />
+    </QueryBoundary>
+  );
+}
+
+function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, bookingUrl }: PanelProps) {
   const s = useQuery(api.outboundSending.status, { slug, campaignId });
   const start = useMutation(api.outboundSending.start);
+  const addApproved = useMutation(api.outboundSending.addApproved);
   const pause = useMutation(api.outboundSending.setPaused);
   const [senderName, setSenderName] = useState("");
   const [company, setCompany] = useState(defaultCompany);
   const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState(false);
-  if (!s) return null;
+  const [busy, setBusy] = useState<string | null>(null);
+  if (s === undefined) return <LoadingBlock label="Loading sending…" lines={2} />;
   const sending = s.sending;
+  const run = async (key: string, fn: () => Promise<unknown>, done?: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      if (done) toast({ tone: "success", title: done });
+    } catch (e) {
+      toast({ tone: "danger", title: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+  // Anyone who can pause may stop sending; resuming approves the emails, so it needs approval rights.
+  const toggle = (id: Id<"outboundCampaigns">, status: "on" | "paused" | "done") => {
+    if (status === "on") return s.can.pause ? () => run(`t:${id}`, () => pause({ slug, campaignId: id, paused: true }), "Sending paused") : null;
+    if (status === "paused") return s.can.approve ? () => run(`t:${id}`, () => pause({ slug, campaignId: id, paused: false }), "Sending resumed") : null;
+    return null;
+  };
+  const own = sending ? toggle(campaignId, sending.status) : null;
   return (
     <div className="flex flex-col gap-3">
       {!s.mailbox ? (
         <>
           <p className="text-sm text-ink-3">Send from your own address. Warm-up limits keep your mailbox healthy (10 a day at first, up to 50).</p>
-          {canApprove ? <ConnectMailbox slug={slug} /> : null}
+          {s.can.connect ? <ConnectMailbox slug={slug} /> : <p className="text-xs text-ink-3">Ask an owner or admin to connect a mailbox.</p>}
         </>
       ) : sending ? (
         <>
@@ -106,19 +136,33 @@ export function MailboxSending({ slug, campaignId, approvedWithEmail, defaultCom
             <Badge tone={sending.status === "on" ? "green" : sending.status === "paused" ? "amber" : "neutral"}>{sending.status === "on" ? "Sending" : sending.status === "paused" ? "Paused" : "Done"}</Badge>
             <span className="text-ink-2">from {s.mailbox.label}</span>
           </p>
-          {sending.status === "paused" && sending.pausedReason === "content_changed" ? (
-            <p className="text-sm text-amber-800">The emails changed after you started sending. Check them, then resume to approve this version.</p>
-          ) : null}
+          {sending.status === "paused" && sending.pausedReason === "content_changed" ? <p className="text-sm text-amber-800">The emails changed after you started sending. Check them, then resume to approve this version.</p> : null}
           <p className="text-sm text-ink-2">
-            Today {s.sentToday}/{s.capToday} · sent {s.counts.sent} · waiting {s.counts.queued}
+            Mailbox today {s.sentToday}/{s.capToday} · sent {s.counts.sent} · waiting {s.counts.queued}
             {s.counts.bounced ? ` · bounced ${s.counts.bounced}` : ""}
           </p>
           {s.next && sending.status === "on" ? <p className="text-xs text-ink-3">Next email {relativeTime(s.next)}. Weekdays 8:00–17:00 your time.</p> : null}
-          {canApprove && sending.status !== "done" ? (
-            <Button size="sm" variant="secondary" className="self-start" onClick={() => pause({ slug, campaignId, paused: sending.status === "on" })}>
-              {sending.status === "on" ? <Pause aria-hidden /> : <Play aria-hidden />} {sending.status === "on" ? "Pause" : "Resume"}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {own ? (
+              <Button size="sm" variant="secondary" loading={busy === `t:${campaignId}`} onClick={own}>
+                {sending.status === "on" ? <Pause aria-hidden /> : <Play aria-hidden />} {sending.status === "on" ? "Pause" : "Resume"}
+              </Button>
+            ) : null}
+            {s.can.approve && s.newlyApproved > 0 && sending.pausedReason !== "content_changed" ? (
+              <Button
+                size="sm"
+                loading={busy === "add"}
+                onClick={() =>
+                  run("add", async () => {
+                    const r = await addApproved({ slug, campaignId });
+                    toast({ tone: "success", title: `Added ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.paused ? "They'll go out when you resume." : "Same emails, a few at a time." });
+                  })
+                }
+              >
+                <Mail aria-hidden /> Send to {s.newlyApproved} newly approved
+              </Button>
+            ) : null}
+          </div>
           {s.recent.length ? (
             <ul className="flex flex-col gap-1 text-xs text-ink-3">
               {s.recent.slice(0, 6).map((r) => (
@@ -129,7 +173,7 @@ export function MailboxSending({ slug, campaignId, approvedWithEmail, defaultCom
             </ul>
           ) : null}
         </>
-      ) : canApprove ? (
+      ) : s.can.approve ? (
         <>
           <p className="text-sm text-ink-3">
             Ready to email {approvedWithEmail} approved {approvedWithEmail === 1 ? "person" : "people"} with a published address, from {s.mailbox.label}. Replies stop their sequence.
@@ -144,23 +188,43 @@ export function MailboxSending({ slug, campaignId, approvedWithEmail, defaultCom
             <Input value={address} onChange={(e) => setAddress(e.target.value)} />
           </Field>
           <Button
-            loading={busy}
+            loading={busy === "start"}
             disabled={!approvedWithEmail}
-            onClick={async () => {
-              setBusy(true);
-              try {
+            className="self-start"
+            onClick={() =>
+              run("start", async () => {
                 const r = await start({ slug, campaignId, senderName, company, address, bookingUrl });
                 toast({ tone: "success", title: `Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: "A few at a time, on weekdays." });
-              } catch (e) {
-                toast({ tone: "danger", title: errorMessage(e) });
-              } finally {
-                setBusy(false);
-              }
-            }}
+              })
+            }
           >
             Start sending
           </Button>
         </>
+      ) : (
+        <p className="text-sm text-ink-3">An owner, admin or reviewer starts sending.</p>
+      )}
+      {s.others.length ? (
+        <div className="border-t border-line pt-3">
+          <h3 className="text-overline">Earlier searches</h3>
+          <ul className="mt-2 flex flex-col gap-2">
+            {s.others.map((o) => {
+              const act = toggle(o.id, o.status);
+              return (
+                <li key={o.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <Badge tone={o.status === "on" ? "green" : "amber"}>{o.status === "on" ? "Sending" : "Paused"}</Badge>
+                  <span className="min-w-0 flex-1 truncate text-ink-2">{o.title}</span>
+                  {act ? (
+                    <Button size="sm" variant="ghost" loading={busy === `t:${o.id}`} onClick={act}>
+                      {o.status === "on" ? "Pause" : "Resume"}
+                    </Button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {s.others.some((o) => o.pausedReason === "archived") ? <p className="mt-1 text-xs text-ink-3">Paused when you started a new search. Resume to keep their follow-ups going.</p> : null}
+        </div>
       ) : null}
     </div>
   );

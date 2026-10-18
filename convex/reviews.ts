@@ -7,6 +7,8 @@ import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 import { sha256Hex } from "../shared/policy";
+import { unsubscribeToken } from "../shared/outbound/sending";
+import { serverSecret } from "./lib/crypto";
 
 /**
  * Reviews engine. Every customer is sent to the public review site (no
@@ -17,6 +19,7 @@ import { sha256Hex } from "../shared/policy";
 
 const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
 const DAILY_LIMIT = 50;
+const ASK_AGAIN_AFTER = 90 * 86_400_000;
 
 function token(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -67,17 +70,26 @@ export const request = mutation({
     const room = DAILY_LIMIT - today.length;
     if (room <= 0) throw appError("RATE_LIMITED", `You've asked ${DAILY_LIMIT} people today. Try again tomorrow.`);
     const ids: Id<"reviewRequests">[] = [];
+    const seen = new Set<string>();
+    let recentlyAsked = 0;
+    const now = Date.now();
     for (const p of people.slice(0, room)) {
       const email = p.email.trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || seen.has(email)) continue;
+      seen.add(email);
       const emailHash = await sha256Hex(email);
       if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash)).first()) continue;
-      ids.push(await ctx.db.insert("reviewRequests", { orgId: org._id, dealId: p.dealId, name: p.name.trim().slice(0, 80) || email, email, token: token(), status: "queued", createdAt: Date.now() }));
+      // Ask each customer at most once every 90 days.
+      if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", email).gte("createdAt", now - ASK_AGAIN_AFTER)).first()) {
+        recentlyAsked++;
+        continue;
+      }
+      ids.push(await ctx.db.insert("reviewRequests", { orgId: org._id, dealId: p.dealId, name: p.name.trim().slice(0, 80) || email, email, token: token(), status: "queued", createdAt: now }));
     }
-    if (!ids.length) throw appError("INVALID", "No valid emails to ask.");
+    if (!ids.length) throw appError("INVALID", recentlyAsked ? "Everyone here was asked in the last 90 days." : "No valid emails to ask.");
     await ctx.scheduler.runAfter(0, internal.mailbox.sendReviewRequests, { ids });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "reviews.requested", summary: `Asked ${ids.length} customer${ids.length === 1 ? "" : "s"} for a review.` });
-    return { queued: ids.length, skipped: people.length - ids.length };
+    return { queued: ids.length, skipped: people.length - ids.length, recentlyAsked };
   },
 });
 
@@ -90,13 +102,18 @@ export const prepareRequest = internalQuery({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", r.orgId)).first();
     const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", r.orgId).eq("provider", "email_mailbox")).first();
     if (!org || !business || mailbox?.status !== "connected") return null;
+    const hashOf = await sha256Hex(r.email);
+    // Unsubscribed since it was queued: don't send.
+    if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", r.orgId).eq("emailHash", hashOf)).first()) return null;
     const link = `${SITE()}/review/${org.slug}?t=${r.token}`;
     const first = r.name.split(/\s+/)[0];
+    const unsub = await unsubscribeToken(r._id, serverSecret());
     return {
       connectionId: mailbox._id,
       to: r.email,
       subject: `Quick favour from ${business.name}?`,
-      text: `Hi ${first},\n\nThanks for choosing ${business.name}. Would you share a quick review? It takes a minute and helps others find us:\n\n${link}\n\nThank you!\n${business.name}\n\nReply "stop" and we won't ask again.`,
+      text: `Hi ${first},\n\nThanks for choosing ${business.name}. Would you share a quick review? It takes a minute and helps others find us:\n\n${link}\n\nThank you!\n${business.name}\n\nDon't want these emails? Unsubscribe: ${SITE()}/u/${unsub}`,
+      unsubscribeUrl: process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/unsubscribe?token=${encodeURIComponent(unsub)}` : `${SITE()}/u/${unsub}`,
     };
   },
 });

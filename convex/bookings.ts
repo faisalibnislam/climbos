@@ -3,8 +3,9 @@ import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { decryptSecret } from "./lib/crypto";
-import { bookingReminderEmail, noShowEmail } from "./lib/emailTemplates";
+import { bookingCancelled } from "./crm";
+import { decryptSecret, serverSecret } from "./lib/crypto";
+import { bookingCancelledEmail, bookingReminderEmail, noShowEmail } from "./lib/emailTemplates";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -15,11 +16,9 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
 const HOUR = 3_600_000;
 
-const SECRET = () => process.env.CLIMBOS_SERVER_SECRET ?? "dev-secret";
-
 /** The guest's private manage link token: derived from the server secret, so every email shares one link; only its hash is stored. */
 export async function manageToken(bookingId: string): Promise<string> {
-  return (await sha256Hex(`${SECRET()}:manage:${bookingId}`)).slice(0, 32);
+  return (await sha256Hex(`${serverSecret()}:manage:${bookingId}`)).slice(0, 32);
 }
 
 /* ---------------- guest: manage via private link ---------------- */
@@ -48,6 +47,7 @@ export const cancelByGuest = mutation({
     if (b.status === "cancelled") return;
     if (b.startAt < Date.now()) throw appError("INVALID", "This call has already started.");
     await ctx.db.patch(b._id, { status: "cancelled" });
+    await bookingCancelled(ctx, b, "They cancelled the call.");
     const org = await ctx.db.get(b.orgId);
     const now = Date.now();
     await ctx.db.insert("communityMessages", { orgId: b.orgId, channel: "booking", kind: "booking", externalId: `booking-cancel:${b._id}`, authorName: b.company ? `${b.name} (${b.company})` : b.name, text: `Cancelled their call for ${new Date(b.startAt).toUTCString().slice(0, 22)} UTC. The time is free again.`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
@@ -135,6 +135,19 @@ export const sendReminders = internalAction({
       sent++;
     }
     return sent;
+  },
+});
+
+/** The owner cancelled: tell the guest, with a link to pick another time. */
+export const sendCancelled = internalAction({
+  args: { bookingId: v.id("bookings") },
+  handler: async (ctx, { bookingId }) => {
+    const c = await ctx.runQuery(internal.bookings.emailContext, { bookingId });
+    if (!c || c.org.kind === "demo" || c.b.status !== "cancelled") return;
+    const email = await decryptSecret({ keyId: c.b.emailKeyId, iv: c.b.emailIv, ciphertext: c.b.emailCiphertext }, `climbos:${c.org._id}:booking`);
+    const when = new Date(c.b.startAt).toLocaleString("en-US", { timeZone: c.page.timezone, weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+    const mail = bookingCancelledEmail({ title: c.page.title, when, withName: c.org.name, rebookUrl: `${SITE()}/book/${c.page.slug}` });
+    await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: c.org._id, to: email, template: "booking_cancelled", ...mail });
   },
 });
 

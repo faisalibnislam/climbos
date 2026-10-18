@@ -1,11 +1,12 @@
 import { v } from "convex/values";
-import { dealFromBooking, syncDealFromProspect } from "./crm";
+import { bookingCancelled, dealFromBooking, syncDealFromProspect } from "./crm";
 import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { manageToken } from "./bookings";
-import { requirePaid } from "./lib/access";
+import { featureAllowed, requirePaid } from "./lib/access";
+import { cancelQueued } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
-import { sha256Hex } from "../shared/policy";
+import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -52,8 +53,17 @@ async function ensurePage(ctx: MutationCtx, org: Doc<"organizations">): Promise<
   const now = Date.now();
   let slug = bookingSlug(org.name, org._id);
   if (await ctx.db.query("bookingPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first()) slug = bookingSlug(org.name, `${org._id}${now}`);
-  const id = await ctx.db.insert("bookingPages", { orgId: org._id, slug, title: `Call with ${org.name}`, ...DEFAULT_BOOKING, timezone: org.timezone, active: true, createdAt: now, updatedAt: now });
+  // Live only with a package (the booking page is a paid feature); free accounts can switch it on after upgrading.
+  const active = await featureAllowed(ctx, org, "booking_page");
+  const id = await ctx.db.insert("bookingPages", { orgId: org._id, slug, title: `Call with ${org.name}`, ...DEFAULT_BOOKING, timezone: org.timezone, active, createdAt: now, updatedAt: now });
   return (await ctx.db.get(id))!;
+}
+
+/** The public booking page answers only while it's on and the account still has the feature. */
+export async function bookingLive(ctx: QueryCtx, page: Doc<"bookingPages"> | null): Promise<boolean> {
+  if (!page?.active) return false;
+  const org = await ctx.db.get(page.orgId);
+  return Boolean(org && !org.deletedAt && (await featureAllowed(ctx, org, "booking_page")));
 }
 
 /* ---------------- Owner-facing API ---------------- */
@@ -94,8 +104,9 @@ export const get = query({
     return {
       slug: org.slug,
       businessName: (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first())?.name ?? org.name,
-      canApprove: ["owner", "admin", "reviewer"].includes(role),
-      canEdit: role !== "viewer",
+      canApprove: can(role, "approve"),
+      canEdit: can(role, "edit"),
+      canExport: can(role, "export"),
       website: business?.website ?? null,
       businessType: business?.businessType ?? null,
       campaign: campaign
@@ -134,11 +145,11 @@ export const get = query({
           stage: p.stage,
         })),
       funnel,
-      page: page ? { id: page._id, slug: page.slug, title: page.title, durationMin: page.durationMin, days: page.days, startHour: page.startHour, endHour: page.endHour, timezone: page.timezone, active: page.active } : null,
+      page: page ? { id: page._id, slug: page.slug, title: page.title, durationMin: page.durationMin, days: page.days, startHour: page.startHour, endHour: page.endHour, timezone: page.timezone, active: page.active, live: await bookingLive(ctx, page) } : null,
       bookings: bookings
         .filter((b) => b.status === "confirmed")
         .sort((a, b) => a.startAt - b.startAt)
-        .map((b) => ({ id: b._id, name: b.name, company: b.company ?? null, note: b.note ?? null, startAt: b.startAt, endAt: b.endAt })),
+        .map((b) => ({ id: b._id, name: b.name, company: b.company ?? null, note: b.note ?? null, startAt: b.startAt, endAt: b.endAt, upcoming: b.startAt > now })),
     };
   },
 });
@@ -149,8 +160,9 @@ export const start = mutation({
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const brief = { who: (args.who ?? "").trim().slice(0, 300), where: (args.where ?? "").trim().slice(0, 120), count: Math.max(5, Math.min(Math.round(args.count ?? 15), 30)) };
+    const prev = await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").first();
     const id = await startCampaign(ctx, { org, userId: user._id, brief, auto: false, kind: args.kind });
-    return { campaignId: id };
+    return { campaignId: id, pausedSending: Boolean(prev && prev.status !== "archived" && prev.sending?.status === "on") };
   },
 });
 
@@ -170,8 +182,12 @@ export async function startCampaign(
   const plan = planJob("outbound", { quantity: brief.count }, { fixture: org.kind === "demo" });
   const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo" });
   const now = Date.now();
-  // Older campaigns stay in the pipeline but leave the main view.
-  if (busy && busy.status !== "archived") await ctx.db.patch(busy._id, { status: "archived", updatedAt: now });
+  // Older campaigns stay in the pipeline but leave the main view. Their sending pauses (resume it from Send).
+  if (busy && busy.status !== "archived") {
+    const sending = busy.sending?.status === "on" ? { sending: { ...busy.sending, status: "paused" as const, pausedReason: "archived" as const } } : {};
+    await ctx.db.patch(busy._id, { status: "archived", ...sending, updatedAt: now });
+    if (sending.sending) await audit(ctx, { orgId: org._id, actorType: "system", action: "outbound.sending_paused", subjectType: "campaign", subjectId: busy._id, summary: "Paused sending: a new search started. Resume it from Send." });
+  }
   const campaignId = await ctx.db.insert("outboundCampaigns", {
     orgId: org._id,
     title: brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
@@ -196,11 +212,14 @@ export async function startCampaign(
 export const setStage = mutation({
   args: { slug: v.string(), prospectIds: v.array(v.id("prospects")), stage: stageValidator },
   handler: async (ctx, { slug, prospectIds, stage }) => {
-    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    // Approving or skipping who gets emailed is an approval; the other stages are pipeline edits.
+    const { org, user } = await requireOrgAccess(ctx, { slug }, stage === "approved" || stage === "skipped" ? "approve" : "edit");
     const now = Date.now();
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
       await ctx.db.patch(p._id, { stage, updatedAt: now });
+      // Leaving the sequence: nothing more goes out.
+      if (stage !== "approved" && stage !== "contacted") await cancelQueued(ctx, p._id);
       // Conversations move into the pipeline (CRM) automatically.
       const dealStage = stage === "replied" ? "talking" : stage === "booked" || stage === "won" || stage === "lost" ? stage : null;
       if (dealStage) await syncDealFromProspect(ctx, p, dealStage, "outbound");
@@ -241,8 +260,9 @@ export const saveBookingPage = mutation({
   },
   handler: async (ctx, a) => {
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
-    if (a.active) await requirePaid(ctx, org, "booking_page");
     const page = await ensurePage(ctx, org);
+    // Switching the page on needs a package; editing a page that's already on doesn't.
+    if (a.active && !page.active) await requirePaid(ctx, org, "booking_page");
     const days = [...new Set(a.days.filter((d) => Number.isInteger(d) && d >= 1 && d <= 7))].sort();
     const startHour = Math.max(0, Math.min(23, Math.round(a.startHour)));
     const endHour = Math.max(startHour + 1, Math.min(24, Math.round(a.endHour)));
@@ -264,7 +284,11 @@ export const cancelBooking = mutation({
   handler: async (ctx, { slug, bookingId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const b = assertSameOrg(await ctx.db.get(bookingId), org._id, "booking");
+    if (b.status === "cancelled") return;
     await ctx.db.patch(b._id, { status: "cancelled" });
+    await bookingCancelled(ctx, b, "You cancelled the call.");
+    // Tell the guest, with a link to pick another time.
+    if (b.startAt > Date.now()) await ctx.scheduler.runAfter(0, internal.bookings.sendCancelled, { bookingId: b._id });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "booking.cancelled", subjectType: "booking", subjectId: b._id, summary: `Cancelled the call with ${b.name}` });
   },
 });
@@ -278,9 +302,9 @@ export const publicPage = query({
       .query("bookingPages")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
-    if (!page || !page.active) return null;
+    if (!page || !(await bookingLive(ctx, page))) return null;
     const org = await ctx.db.get(page.orgId);
-    if (!org || org.deletedAt) return null;
+    if (!org) return null;
     const now = Date.now();
     const taken = await ctx.db
       .query("bookings")
@@ -303,7 +327,7 @@ export const book = mutation({
       .query("bookingPages")
       .withIndex("by_slug", (q) => q.eq("slug", a.slug))
       .first();
-    if (!page || !page.active) throw appError("NOT_FOUND", "This booking page isn't available.");
+    if (!page || !(await bookingLive(ctx, page))) throw appError("NOT_FOUND", "This booking page isn't available.");
     const name = a.name.trim().slice(0, 80);
     const email = a.email.trim().toLowerCase().slice(0, 200);
     if (!name) throw appError("INVALID", "Please add your name.");
@@ -320,12 +344,14 @@ export const book = mutation({
     if (live.filter((b) => b.emailHash === emailHash && b.startAt > now).length >= 2) throw appError("RATE_LIMITED", "You already have calls booked. Reply to the invite to change them.");
     if (taken.filter((b) => b.createdAt > now - 86_400_000).length >= 12) throw appError("RATE_LIMITED", "This page is fully booked today. Please try again tomorrow.");
     const sealed = await encryptSecret(email, `climbos:${page.orgId}:booking`);
+    // Link the booking to its prospect: the ?ref in their email's booking link, else their email address.
     const refId = a.ref ? ctx.db.normalizeId("prospects", a.ref) : null;
-    const prospect = refId ? await ctx.db.get(refId) : null;
+    const byRef = refId ? await ctx.db.get(refId) : null;
+    const prospect = byRef?.orgId === page.orgId ? byRef : await ctx.db.query("prospects").withIndex("by_org_email", (q) => q.eq("orgId", page.orgId).eq("publicEmail", email)).first();
     const id = await ctx.db.insert("bookings", {
       orgId: page.orgId,
       pageId: page._id,
-      prospectId: prospect?.orgId === page.orgId ? prospect._id : undefined,
+      prospectId: prospect?._id,
       name,
       emailHash,
       emailCiphertext: sealed.ciphertext,
@@ -339,12 +365,14 @@ export const book = mutation({
       createdAt: now,
     });
     await ctx.db.patch(id, { manageTokenHash: await sha256Hex(await manageToken(id)) });
-    if (prospect?.orgId === page.orgId) {
-      await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+    if (prospect) {
+      if (prospect.stage !== "won") await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+      // They booked: no more follow-ups.
+      await cancelQueued(ctx, prospect._id);
       await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
     } else await dealFromBooking(ctx, page.orgId, name, a.company?.trim().slice(0, 120) || undefined, a.startAt);
     const when = new Date(a.startAt).toLocaleString("en-US", { timeZone: page.timezone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-    await ctx.db.insert("communityMessages", { orgId: page.orgId, channel: "booking", kind: "booking", externalId: `booking:${id}`, prospectId: prospect?.orgId === page.orgId ? prospect._id : undefined, authorName: a.company ? `${name} (${a.company.trim().slice(0, 60)})` : name, text: `Booked a ${page.durationMin}-minute call for ${when}.${a.note ? `\n\n“${a.note.trim().slice(0, 500)}”` : ""}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
+    await ctx.db.insert("communityMessages", { orgId: page.orgId, channel: "booking", kind: "booking", externalId: `booking:${id}`, prospectId: prospect?._id, authorName: a.company ? `${name} (${a.company.trim().slice(0, 60)})` : name, text: `Booked a ${page.durationMin}-minute call for ${when}.${a.note ? `\n\n“${a.note.trim().slice(0, 500)}”` : ""}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: page.orgId, actorType: "system", action: "booking.created", subjectType: "booking", subjectId: id, summary: `${name}${a.company ? ` (${a.company.trim().slice(0, 60)})` : ""} booked a call` });
     await ctx.scheduler.runAfter(0, internal.outbound.notifyBooking, { bookingId: id });
     await notifyOwners(ctx, page.orgId, `${name} booked a call for ${when}.`, "inbox");
@@ -422,19 +450,14 @@ export const saveResult = internalMutation({
     const outreach = a.outreach as OutreachOutput;
     const now = Date.now();
     const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f.line]));
-    const seen = new Set(
-      (
-        await ctx.db
-          .query("prospects")
-          .withIndex("by_org_stage", (q) => q.eq("orgId", c.orgId))
-          .take(1000)
-      ).map((p) => p.domain),
-    );
+    const seen = new Set<string>();
     let added = 0;
     for (const p of found.prospects) {
       // Creators share platform domains (instagram.com/…): key them by profile path instead.
       const domain = c.kind === "creators" ? profileKey(p.website) : domainOf(p.website);
       if (!domain || seen.has(domain)) continue;
+      // Skip anyone already in the pipeline (any campaign).
+      if (await ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", domain)).first()) continue;
       seen.add(domain);
       await ctx.db.insert("prospects", {
         orgId: c.orgId,

@@ -66,3 +66,25 @@ export async function decryptSecret(record: { keyId: string; iv: string; ciphert
 export function secretAad(orgId: string, connectionId: string): string {
   return `climbos:${orgId}:${connectionId}`;
 }
+
+/** The server secret signing unsubscribe and booking links. Fails closed outside local development. */
+export function serverSecret(): string {
+  const s = process.env.CLIMBOS_SERVER_SECRET;
+  if (s) return s;
+  if (/localhost|127\.0\.0\.1/.test(process.env.SITE_URL ?? "")) return "dev-secret";
+  throw new Error("CLIMBOS_SERVER_SECRET is not set.");
+}
+
+/** Constant-time string compare for server secrets. */
+export function sameSecret(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Whether a call carries the server secret (Next.js routes calling public Convex functions). */
+export function fromServer(given: string): boolean {
+  const expected = process.env.CLIMBOS_SERVER_SECRET;
+  return Boolean(expected) && sameSecret(given, expected!);
+}

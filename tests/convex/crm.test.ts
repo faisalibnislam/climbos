@@ -10,6 +10,8 @@ describe("mini-CRM", () => {
     await expect(owner.client.mutation(api.crm.create, { slug, name: " " })).rejects.toThrow(/Add a name/);
     const id = await owner.client.mutation(api.crm.create, { slug, name: "Ana Lopez", company: "Lopez Dental", email: "ana@lopez.example", value: 1200 });
     await owner.client.mutation(api.crm.update, { slug, id, note: "Wants a quote by Friday" });
+    await expect(owner.client.mutation(api.crm.update, { slug, id, email: "not an email" })).rejects.toThrow(/doesn't look right/);
+    await expect(owner.client.mutation(api.crm.update, { slug, id, value: Number.NaN })).rejects.toThrow(/as a number/);
     await owner.client.mutation(api.crm.update, { slug, id, stage: "won" });
     const list = await owner.client.query(api.crm.list, { slug });
     expect(list.deals[0]).toMatchObject({ stage: "won", value: 120000 });

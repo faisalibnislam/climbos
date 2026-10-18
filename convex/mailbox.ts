@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { isOptOutReply, MAILBOX_PRESETS, replyText, type MailboxPreset } from "../shared/outbound/sending";
+import { isAutoReply, isOptOutReply, MAILBOX_PRESETS, replyText, type MailboxPreset } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction } from "./_generated/server";
@@ -86,6 +86,10 @@ export const sendOne = internalAction({
       await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, skip: true });
       return;
     }
+    if (job.hold) {
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, hold: true });
+      return;
+    }
     const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId as Id<"connections"> });
     if (!raw) {
       await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, error: "Mailbox disconnected" });
@@ -112,7 +116,11 @@ export const sendOne = internalAction({
   },
 });
 
-/** Every 15 minutes: read new mail since each campaign started; replies stop sequences, bounces suppress. */
+/**
+ * Every 15 minutes: read mail that arrived since the last check (headers
+ * first; full text only for prospects and bounces). Replies stop sequences,
+ * bounces suppress, out-of-office replies are ignored.
+ */
 export const checkReplies = internalAction({
   args: {},
   handler: async (ctx) => {
@@ -127,20 +135,32 @@ export const checkReplies = internalAction({
       const replies: { from: string; optOut: boolean; subject?: string; messageId?: string; text?: string; at?: number }[] = [];
       const bounced = new Set<string>();
       const client = imap(secret);
+      const isBounce = (from: string, subject: string) => /mailer-daemon|postmaster/i.test(from) || /delivery status notification|undeliverable|delivery failure|returned mail/i.test(subject);
       try {
         await client.connect();
         const lock = await client.getMailboxLock("INBOX");
         try {
-          const since = new Date(t.since - 86_400_000);
-          for await (const msg of client.fetch({ since }, { envelope: true, source: { start: 0, maxLength: 20_000 } })) {
+          // IMAP SINCE is day-granular: search a day back, then keep only mail received after the last check.
+          const relevant: number[] = [];
+          for await (const msg of client.fetch({ since: new Date(t.since - 86_400_000) }, { uid: true, envelope: true, internalDate: true })) {
+            const received = msg.internalDate ? new Date(msg.internalDate).getTime() : 0;
+            if (received && received < t.since) continue;
             const from = msg.envelope?.from?.[0]?.address?.toLowerCase() ?? "";
-            const text = msg.source ? msg.source.toString("utf8") : "";
-            if (wanted.has(from)) {
-              const body = text.split(/\r?\n\r?\n/).slice(1).join("\n\n");
-              const clean = replyText(body);
-              replies.push({ from, optOut: isOptOutReply(clean), subject: msg.envelope?.subject?.slice(0, 200), messageId: msg.envelope?.messageId ?? undefined, text: clean.slice(0, 4000), at: msg.envelope?.date ? new Date(msg.envelope.date).getTime() : undefined });
-            } else if (/mailer-daemon|postmaster/i.test(from) || /delivery status notification|undeliverable|delivery failure|returned mail/i.test(msg.envelope?.subject ?? "")) {
-              for (const e of wanted) if (text.toLowerCase().includes(e)) bounced.add(e);
+            if (wanted.has(from) || isBounce(from, msg.envelope?.subject ?? "")) relevant.push(msg.uid);
+          }
+          if (relevant.length) {
+            for await (const msg of client.fetch(relevant.slice(0, 500), { uid: true, envelope: true, source: { start: 0, maxLength: 20_000 } }, { uid: true })) {
+              const from = msg.envelope?.from?.[0]?.address?.toLowerCase() ?? "";
+              const subject = msg.envelope?.subject ?? "";
+              const text = msg.source ? msg.source.toString("utf8") : "";
+              const [head = "", ...rest] = text.split(/\r?\n\r?\n/);
+              if (wanted.has(from)) {
+                if (isAutoReply(head, subject)) continue;
+                const clean = replyText(rest.join("\n\n"));
+                replies.push({ from, optOut: isOptOutReply(clean), subject: subject.slice(0, 200), messageId: msg.envelope?.messageId ?? undefined, text: clean.slice(0, 4000), at: msg.envelope?.date ? new Date(msg.envelope.date).getTime() : undefined });
+              } else if (isBounce(from, subject)) {
+                for (const e of wanted) if (text.toLowerCase().includes(e)) bounced.add(e);
+              }
             }
           }
         } finally {
@@ -186,7 +206,7 @@ export const sendReviewRequests = internalAction({
     for (const id of ids) {
       const job = await ctx.runQuery(internal.reviews.prepareRequest, { id });
       if (!job) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Mailbox disconnected" });
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: mailbox disconnected or they unsubscribed" });
         continue;
       }
       if (process.env.CLIMBOS_FAKE_MAILBOX) {
@@ -200,7 +220,7 @@ export const sendReviewRequests = internalAction({
       }
       const secret = JSON.parse(raw.value) as MailboxSecret;
       try {
-        await transport(secret).sendMail({ from: secret.email, to: job.to, subject: job.subject, text: job.text });
+        await transport(secret).sendMail({ from: secret.email, to: job.to, subject: job.subject, text: job.text, headers: { "List-Unsubscribe": `<${job.unsubscribeUrl}>, <mailto:${secret.email}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } });
         await ctx.runMutation(internal.reviews.recordRequest, { id, ok: true });
       } catch (e) {
         await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: (e as Error).message });
