@@ -194,19 +194,49 @@ export function providerDownEmail(params: { provider: string; reason: string; ur
   };
 }
 
-export function bookingEmail(params: { title: string; when: string; minutes: number; withName: string; startAt: number; endAt: number; note: string | null }) {
-  const { title, when, minutes, withName, startAt, endAt, note } = params;
+/** Reminder the day before, with a link to cancel or pick another time. */
+export function bookingReminderEmail(p: { title: string; when: string; minutes: number; withName: string; manageUrl: string }) {
+  return {
+    subject: `Tomorrow: ${p.title}, ${p.when}`,
+    text: `A reminder: ${p.title}, ${p.when} (${p.minutes} min) with ${p.withName}.\nCan't make it? Cancel or pick another time: ${p.manageUrl}`,
+    html: layout(
+      "Call reminder",
+      `<h1 style="margin:0 0 8px;font-size:22px">See you tomorrow</h1>
+<p style="margin:0 0 4px;color:#454a44"><strong>${escapeHtml(p.when)}</strong> · ${p.minutes} min · with ${escapeHtml(p.withName)}</p>
+<p style="margin:16px 0 0">${button(p.manageUrl, "Cancel or pick another time")}</p>`,
+    ),
+  };
+}
+
+/** Sent when the owner marks a no-show: friendly, one link to rebook. */
+export function noShowEmail(p: { withName: string; rebookUrl: string }) {
+  return {
+    subject: `Sorry we missed you`,
+    text: `Hi, sorry we missed each other today. If you'd still like to talk, pick any time that suits you: ${p.rebookUrl}\n\n${p.withName}`,
+    html: layout(
+      "Missed call",
+      `<h1 style="margin:0 0 8px;font-size:22px">Sorry we missed you</h1>
+<p style="margin:0 0 16px;color:#454a44">If you'd still like to talk, pick any time that suits you.</p>
+<p style="margin:0">${button(p.rebookUrl, "Pick a new time")}</p>
+<p style="margin:16px 0 0;color:#6b7068;font-size:13px">${escapeHtml(p.withName)}</p>`,
+    ),
+  };
+}
+
+export function bookingEmail(params: { title: string; when: string; minutes: number; withName: string; startAt: number; endAt: number; note: string | null; manageUrl?: string }) {
+  const { title, when, minutes, withName, startAt, endAt, note, manageUrl } = params;
   const fmt = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(startAt)}/${fmt(endAt)}&details=${encodeURIComponent(`Call with ${withName}`)}`;
   return {
     subject: `Confirmed: ${title}, ${when}`,
-    text: `${title}\n${when} (${minutes} min) with ${withName}.${note ? `\nNote: ${note}` : ""}\nAdd to Google Calendar: ${gcal}`,
+    text: `${title}\n${when} (${minutes} min) with ${withName}.${note ? `\nNote: ${note}` : ""}\nAdd to Google Calendar: ${gcal}${manageUrl ? `\nCancel or pick another time: ${manageUrl}` : ""}`,
     html: layout(
       "Call confirmed",
       `<h1 style="margin:0 0 8px;font-size:22px">${escapeHtml(title)}</h1>
 <p style="margin:0 0 4px;color:#454a44"><strong>${escapeHtml(when)}</strong> · ${minutes} min · with ${escapeHtml(withName)}</p>
 ${note ? `<p style="margin:0 0 12px;color:#454a44">Note: ${escapeHtml(note)}</p>` : ""}
-<p style="margin:16px 0 0">${button(gcal, "Add to Google Calendar")}</p>`,
+<p style="margin:16px 0 0">${button(gcal, "Add to Google Calendar")}</p>
+${manageUrl ? `<p style="margin:12px 0 0;font-size:13px"><a href="${escapeHtml(manageUrl)}" style="color:#6b7068">Cancel or pick another time</a></p>` : ""}`,
     ),
   };
 }

@@ -945,10 +945,17 @@ export default defineSchema({
     startAt: v.number(),
     endAt: v.number(),
     status: v.union(v.literal("confirmed"), v.literal("cancelled")),
+    /** Guest's private link to cancel or rebook (sha256 of the token). */
+    manageTokenHash: v.optional(v.string()),
+    reminderSentAt: v.optional(v.number()),
+    outcome: v.optional(v.union(v.literal("attended"), v.literal("no_show"))),
+    followUpSentAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_page_start", ["pageId", "startAt"])
-    .index("by_org_start", ["orgId", "startAt"]),
+    .index("by_org_start", ["orgId", "startAt"])
+    .index("by_manage", ["manageTokenHash"])
+    .index("by_status_start", ["status", "startAt"]),
 
   /* ---------------- Strategy ---------------- */
   strategies: defineTable({

@@ -146,7 +146,8 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
             <p className="text-xs text-ink-3">AI drafts use about 1 credit.</p>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {m.kind === "booking" ? <BookingOutcome slug={slug} inboxId={m.id} /> : null}
             {done ? (
               <Button variant="ghost" size="sm" onClick={() => run("reopen", () => setStatus({ slug, id: m.id, status: "new" }))}>
                 <Undo2 aria-hidden /> Reopen
@@ -222,5 +223,24 @@ function ChatDetail({ slug, m }: { slug: string; m: Item }) {
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** After a booked call: "Did they show up?" A no-show gets a friendly rebooking email. */
+function BookingOutcome({ slug, inboxId }: { slug: string; inboxId: Id<"communityMessages"> }) {
+  const b = useQuery(api.bookings.forInbox, { slug, inboxId });
+  const setOutcome = useMutation(api.bookings.setOutcome);
+  if (!b || b.status === "cancelled" || !b.past) return null;
+  if (b.outcome) return <Badge tone={b.outcome === "attended" ? "green" : "orange"}>{b.outcome === "attended" ? "Showed up" : b.followUpSent ? "No-show · follow-up sent" : "No-show"}</Badge>;
+  const run = (outcome: "attended" | "no_show") => setOutcome({ slug, bookingId: b.id, outcome }).then(() => toast({ tone: "success", title: outcome === "no_show" ? "We sent them a link to rebook" : "Marked as attended" }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => run("attended")}>
+        Showed up
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => run("no_show")}>
+        No-show
+      </Button>
+    </>
   );
 }

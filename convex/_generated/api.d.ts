@@ -25,6 +25,7 @@ import type * as assets from "../assets.js";
 import type * as auth from "../auth.js";
 import type * as autopilot from "../autopilot.js";
 import type * as billing from "../billing.js";
+import type * as bookings from "../bookings.js";
 import type * as brand from "../brand.js";
 import type * as chat from "../chat.js";
 import type * as circuits from "../circuits.js";
@@ -118,6 +119,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   autopilot: typeof autopilot;
   billing: typeof billing;
+  bookings: typeof bookings;
   brand: typeof brand;
   chat: typeof chat;
   circuits: typeof circuits;

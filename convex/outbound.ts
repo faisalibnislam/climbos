@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { dealFromBooking, syncDealFromProspect } from "./crm";
 import { notifyOwners } from "./lib/notify";
+import { manageToken } from "./bookings";
 import { requirePaid } from "./lib/access";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { sha256Hex } from "../shared/policy";
@@ -336,6 +337,7 @@ export const book = mutation({
       status: "confirmed",
       createdAt: now,
     });
+    await ctx.db.patch(id, { manageTokenHash: await sha256Hex(await manageToken(id)) });
     if (prospect?.orgId === page.orgId) {
       await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
       await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
@@ -378,7 +380,7 @@ export const notifyBooking = internalAction({
     if (!c) return;
     const email = await decryptSecret({ keyId: c.booking.emailKeyId, iv: c.booking.emailIv, ciphertext: c.booking.emailCiphertext }, `climbos:${c.org._id}:booking`);
     const when = new Date(c.booking.startAt).toLocaleString("en-US", { timeZone: c.page.timezone, weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-    const toGuest = bookingEmail({ title: c.page.title, when, minutes: c.page.durationMin, withName: c.org.name, startAt: c.booking.startAt, endAt: c.booking.endAt, note: null });
+    const toGuest = bookingEmail({ title: c.page.title, when, minutes: c.page.durationMin, withName: c.org.name, startAt: c.booking.startAt, endAt: c.booking.endAt, note: null, manageUrl: `${process.env.SITE_URL ?? "https://climbos.app"}/book/manage/${await manageToken(c.booking._id)}` });
     await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: c.org._id, to: email, template: "booking_guest", ...toGuest });
     const toOwner = bookingEmail({ title: `${c.booking.name}${c.booking.company ? ` (${c.booking.company})` : ""} booked a call`, when, minutes: c.page.durationMin, withName: c.booking.name, startAt: c.booking.startAt, endAt: c.booking.endAt, note: c.booking.note ?? null });
     for (const to of c.owners) await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: c.org._id, to, template: "booking_owner", ...toOwner });

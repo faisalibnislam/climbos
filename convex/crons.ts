@@ -25,6 +25,7 @@ crons.interval("autopilot planning", { minutes: 60 }, internal.autopilot.tick, {
 crons.interval("outbound: send due emails", { minutes: 5 }, internal.outboundSending.dispatch, {});
 crons.interval("push notifications", { minutes: 2 }, internal.push.fanout, {});
 crons.interval("status sample", { minutes: 5 }, internal.status.sample, {});
+crons.interval("booking reminders", { minutes: 15 }, internal.bookings.sendReminders, {});
 crons.interval("outbound: read replies and bounces", { minutes: 15 }, internal.mailbox.checkReplies, {});
 // One-tap approvals: a daily email of drafts waiting for the owner.
 crons.daily("approvals waiting", { hourUTC: 14, minuteUTC: 0 }, internal.emailActions.sendApprovalEmails, {});
