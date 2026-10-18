@@ -14,10 +14,11 @@ import { VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import { assertTransition, type RunStatus } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { agentRoleValidator } from "./schema";
 import { chargeableAccess, fleetStopped } from "./lib/access";
 import { audit } from "./lib/audit";
+import { notifyOwners } from "./lib/notify";
 import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits";
 import { appError } from "./lib/tenancy";
 
@@ -52,6 +53,30 @@ const metersValidator = v.object({
 });
 
 const ACTIVE: RunStatus[] = ["cost_reserved", "preparing", "executing"];
+export const ACTIVE_RUN_STATUSES: readonly string[] = ACTIVE;
+
+/** The newest runs of one kind, by their own index (chat and wish runs never push them out). */
+export async function latestRunsOfKind(ctx: QueryCtx, orgId: Id<"organizations">, kind: string, n = 1): Promise<Doc<"workflowRuns">[]> {
+  return ctx.db
+    .query("workflowRuns")
+    .withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", kind))
+    .order("desc")
+    .take(n);
+}
+
+export async function latestRunOfKind(ctx: QueryCtx, orgId: Id<"organizations">, kind: string): Promise<Doc<"workflowRuns"> | null> {
+  return (await latestRunsOfKind(ctx, orgId, kind, 1))[0] ?? null;
+}
+
+/** One job of a kind at a time (a second "Build my plan" would pay twice). */
+export async function assertNoActiveRun(ctx: QueryCtx, orgId: Id<"organizations">, kind: string, message: string): Promise<void> {
+  const recent = await latestRunsOfKind(ctx, orgId, kind, 5);
+  if (recent.some((r) => ACTIVE.includes(r.status))) throw appError("INVALID", message, { reason: "already_running" });
+}
+
+/** Run kinds the owner watches in place (chat plumbing): no failure notice. */
+const QUIET_KINDS = new Set(["climb_chat", "chat_intent"]);
+
 const MAX_ACTIVE_RUNS = CURRENT_ENTITLEMENTS.limits.interactiveAiJobs + CURRENT_ENTITLEMENTS.limits.queuedBackgroundJobs;
 
 export interface PlannedStep {
@@ -431,6 +456,11 @@ export async function finishRunImpl(
       userMessage: args.userMessage,
       finishedAt: Date.now(),
     });
+    // Tell owners once per run (a retried run that fails again stays quiet).
+    if (args.status === "failed" && !fresh.failNoticeAt && !fresh.isFixture && !QUIET_KINDS.has(fresh.kind)) {
+      await ctx.db.patch(run._id, { failNoticeAt: Date.now() });
+      await notifyOwners(ctx, run.orgId, `"${run.title}" didn't finish. Open it to retry.`, `work/${run._id}`);
+    }
 
     const reservation = run.reservationId ? await ctx.db.get(run.reservationId) : null;
     if (!reservation || reservation.status !== "held") return;

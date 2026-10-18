@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Users, Webhook } from "lucide-react";
+import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { can, type MemberRole } from "@shared/policy";
@@ -12,6 +12,7 @@ import { PageHeader } from "../results/QueryBoundary";
 
 /** Each section shows only to roles that can use it (the server checks again on every call). */
 export const SETTINGS_SECTIONS = [
+  { key: "business", label: "Business & goal", icon: Target, tone: "brand", permission: "view" },
   { key: "team", label: "Team", icon: Users, tone: "brand", permission: "view" },
   { key: "workspaces", label: "Workspaces", icon: LayoutGrid, tone: "teal", permission: "manage_team" },
   { key: "billing", label: "Billing", icon: CreditCard, tone: "violet", permission: "view" },

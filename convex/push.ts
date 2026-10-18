@@ -102,16 +102,40 @@ export const markResult = internalMutation({
   },
 });
 
-/** The service worker's pull: undelivered messages for the user behind this endpoint (last 24h, at most 3). */
+/**
+ * The service worker's pull: messages this device hasn't shown yet (last 24h, newest 3).
+ * Each device gets every message once, so a phone and a laptop both see it.
+ */
 export const pull = internalMutation({
   args: { endpoint: v.string() },
   handler: async (ctx, { endpoint }) => {
     const endpointHash = await sha256Hex(endpoint);
     const sub = await ctx.db.query("pushSubscriptions").withIndex("by_hash", (q) => q.eq("endpointHash", endpointHash)).first();
     if (!sub) return [];
-    const rows = (await ctx.db.query("pushOutbox").withIndex("by_user_created", (q) => q.eq("userId", sub.userId).gt("createdAt", Date.now() - 86_400_000)).take(50)).filter((r) => !r.deliveredAt);
-    const items = rows.slice(-3);
-    for (const r of rows) await ctx.db.patch(r._id, { deliveredAt: Date.now() });
-    return items.map((r) => ({ title: r.title, body: r.body, url: r.url, tag: r.tag ?? null }));
+    const rows = (
+      await ctx.db
+        .query("pushOutbox")
+        .withIndex("by_user_created", (q) => q.eq("userId", sub.userId).gt("createdAt", Date.now() - 86_400_000))
+        .order("desc")
+        .take(50)
+    ).filter((r) => !(r.deliveredTo ?? []).includes(sub._id) && !(r.deliveredAt && r.deliveredTo === undefined));
+    const now = Date.now();
+    for (const r of rows) await ctx.db.patch(r._id, { deliveredAt: r.deliveredAt ?? now, deliveredTo: [...(r.deliveredTo ?? []), sub._id].slice(-10) });
+    // Unique tags: one notification never replaces another; same-kind ones still group.
+    return rows.slice(0, 3).map((r) => ({ title: r.title, body: r.body, url: r.url, tag: `${r.tag ?? "climbos"}-${r._id}` }));
+  },
+});
+
+/** Daily: drop push messages older than two days (each device pulls within 24h). */
+export const cleanupOutbox = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const old = await ctx.db
+      .query("pushOutbox")
+      .withIndex("by_created", (q) => q.lt("createdAt", Date.now() - 2 * 86_400_000))
+      .take(1000);
+    for (const r of old) await ctx.db.delete(r._id);
+    if (old.length === 1000) await ctx.scheduler.runAfter(0, internal.push.cleanupOutbox, {});
+    return old.length;
   },
 });

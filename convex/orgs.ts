@@ -8,12 +8,13 @@ import { resolveAiMode } from "./lib/aiMode";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
-import { createRunWithReservation } from "./engine";
+import { assertNoActiveRun, createRunWithReservation, latestRunOfKind } from "./engine";
 import { audit } from "./lib/audit";
 import { planJob } from "./lib/jobPlans";
 import { createOnboardingPeriod } from "./lib/periods";
 import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
-import { chargeableAccess } from "./lib/access";
+import { chargeableAccess, isPaid } from "./lib/access";
+import { can } from "../shared/policy";
 
 function slugify(name: string): string {
   const base = name
@@ -99,6 +100,10 @@ export const createWorkspace = mutation({
     if (user.isAnonymous) throw appError("FORBIDDEN", "Create a free account to save your own workspace.");
     const name = args.businessName.trim().slice(0, 80);
     if (!name) throw appError("INVALID", "Please enter your business name.");
+    // Check the website before anything is created, so a typo never leaves a half-made workspace.
+    if (args.website?.trim() && !normalizeWebsite(args.website)) {
+      throw appError("INVALID", "That doesn't look like a website address. Try something like example.com.");
+    }
     const name0 = args.businessName.trim().slice(0, 80);
     // Workspaces share the owner's account: free accounts have one, packages allow more.
     const accountId = await ensureAccountForOwner(ctx, user, name0 || "My account");
@@ -180,6 +185,7 @@ export const startResearch = mutation({
     }
     const ownerText = args.ownerText?.trim().slice(0, 6000);
     if (!website && !ownerText) throw appError("INVALID", "Add your website, or describe your business in a few sentences.");
+    await assertNoActiveRun(ctx, org._id, "onboarding_research", "Your team is already researching your business.");
     await ctx.db.patch(business._id, {
       website,
       researchStatus: ownerText && !website ? "owner_supplied" : "running",
@@ -213,7 +219,8 @@ export const startResearch = mutation({
       isFixture: org.kind === "demo",
       aiMode,
     });
-    await ctx.db.patch(org._id, { onboardingStep: "research" });
+    // A research refresh after setup doesn't send the owner back into onboarding.
+    if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "research" });
     await ctx.scheduler.runAfter(0, internal.jobs.onboardingResearch, { runId, ownerText });
     return { runId };
   },
@@ -239,13 +246,9 @@ export const onboardingState = query({
       const s = await ctx.db.get(id);
       if (s) sources.set(id, { url: s.url, title: s.title, kind: s.kind, fetchedAt: s.fetchedAt });
     }
-    const runs = await ctx.db
-      .query("workflowRuns")
-      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(10);
-    const researchRun = runs.find((r) => r.kind === "onboarding_research");
-    const strategyRun = runs.find((r) => r.kind === "strategy");
+    // By kind, so Climb AI and wish runs never push these out of view.
+    const researchRun = await latestRunOfKind(ctx, org._id, "onboarding_research");
+    const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
     const researchSteps = researchRun
       ? await ctx.db
           .query("workflowSteps")
@@ -281,6 +284,7 @@ export const onboardingState = query({
             currency: business.currency,
             timezone: business.timezone,
             hasInsights: Boolean(business.insights),
+            insightsAt: business.insights?.generatedAt ?? null,
           }
         : null,
       facts: facts
@@ -308,17 +312,20 @@ export const onboardingState = query({
                   ? ("site_unreadable" as const)
                   : ("other" as const),
             engine: researchRun.engine ?? null,
+            createdAt: researchRun.createdAt,
             finishedAt: researchRun.finishedAt ?? null,
             steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status, kind: s.kind, startedAt: s.startedAt ?? null, finishedAt: s.finishedAt ?? null })),
           }
         : null,
-      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null } : null,
+      strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
         ? { kind: goal.kind, statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
       autonomy: policy?.mode ?? "review",
-      strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version } : null,
+      /** The ad budget editors may set without an owner or admin (raising it needs one). */
+      adCap: (policy?.maxMonthlyAdSpendMinor ?? 0) / 100,
+      strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version, createdAt: strategy.createdAt } : null,
       canRunAi: access.allowed,
       accessMessage: access.allowed ? null : access.message,
     };
@@ -361,7 +368,7 @@ export const confirmAllFacts = mutation({
       .withIndex("by_org_state", (q) => q.eq("orgId", org._id).eq("reviewState", "needs_review"))
       .take(100);
     for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: Date.now() });
-    await ctx.db.patch(org._id, { onboardingStep: "goal" });
+    if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "goal" });
     return facts.length;
   },
 });
@@ -411,6 +418,8 @@ export const saveBusinessDetails = mutation({
   args: {
     slug: v.string(),
     name: v.optional(v.string()),
+    /** Empty string clears it. */
+    website: v.optional(v.string()),
     businessType: v.optional(
       v.union(v.literal("saas"), v.literal("ecommerce"), v.literal("services"), v.literal("physical_products"), v.literal("other")),
     ),
@@ -427,8 +436,11 @@ export const saveBusinessDetails = mutation({
     if (!business) throw appError("NOT_FOUND", "Business not found.");
     const currency = args.currency?.toUpperCase().slice(0, 3);
     if (currency && !/^[A-Z]{3}$/.test(currency)) throw appError("INVALID", "Currency must be a 3-letter code like USD.");
+    const website = args.website === undefined ? undefined : args.website.trim() ? normalizeWebsite(args.website) : "";
+    if (website === undefined && args.website?.trim()) throw appError("INVALID", "That doesn't look like a website address. Try something like example.com.");
     await ctx.db.patch(business._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
+      ...(website !== undefined ? { website: website || undefined } : {}),
       ...(args.businessType ? { businessType: args.businessType } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
@@ -453,7 +465,7 @@ export const setGoal = mutation({
     reviewDay: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const { org, user, role } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -465,12 +477,20 @@ export const setGoal = mutation({
     const horizonDays = Math.max(14, Math.min(365, Math.round(args.horizonDays)));
     const statement = args.statement.trim().slice(0, 300);
     if (!statement) throw appError("INVALID", "Tell us your goal in a sentence.");
+    const budgetMinor = Math.round(args.monthlyAdBudget * 100);
+    // The ad budget is also the spending cap: anyone who edits may lower it, only an owner or admin may raise it.
+    const policy = await ctx.db
+      .query("autonomyPolicies")
+      .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
+      .first();
+    if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) {
+      throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
+    }
     const active = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .take(5);
     for (const g of active) await ctx.db.patch(g._id, { status: "archived" });
-    const budgetMinor = Math.round(args.monthlyAdBudget * 100);
     await ctx.db.insert("goals", {
       orgId: org._id,
       businessId: business._id,
@@ -484,17 +504,13 @@ export const setGoal = mutation({
       createdBy: user._id,
       createdAt: Date.now(),
     });
-    // The ad envelope in the active policy follows the goal; raising it later always needs the owner.
-    const policy = await ctx.db
-      .query("autonomyPolicies")
-      .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
-      .first();
+    // The ad envelope in the active policy follows the goal.
     if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
       await ctx.db.patch(policy._id, { active: false });
       const { _id: _omit, _creationTime: _ct, ...rest } = policy;
       await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, createdBy: user._id, createdAt: Date.now(), active: true });
     }
-    await ctx.db.patch(org._id, { onboardingStep: "preferences" });
+    if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "preferences" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.set", summary: `Goal set: ${statement}` });
   },
 });
@@ -503,15 +519,17 @@ export const setAutonomy = mutation({
   args: { slug: v.string(), mode: v.union(v.literal("copilot"), v.literal("review"), v.literal("bounded_autopilot")) },
   handler: async (ctx, { slug, mode }) => {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
-    if (mode === "bounded_autopilot" && !["owner", "admin"].includes(role)) {
-      throw appError("FORBIDDEN", "Only an owner or admin can turn on Bounded Autopilot.");
-    }
     const policy = await ctx.db
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
     if (!policy) throw appError("NOT_FOUND", "Policy not found.");
     if (policy.mode !== mode) {
+      // Approval rules are policies: owners and admins only. Bounded Autopilot also needs a paid plan.
+      if (!can(role, "manage_policies")) throw appError("FORBIDDEN", "Only an owner or admin can change how work is approved.");
+      if (mode === "bounded_autopilot" && org.kind !== "demo" && !(await isPaid(ctx, org))) {
+        throw appError("PAYMENT_REQUIRED", "Bounded Autopilot comes with a paid plan.");
+      }
       await ctx.db.patch(policy._id, { active: false });
       const { _id: _omit, _creationTime: _ct, ...rest } = policy;
       await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, mode, createdBy: user._id, createdAt: Date.now(), active: true });
@@ -537,6 +555,7 @@ export const generatePlan = mutation({
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
     if (!goal) throw appError("INVALID", "Set a goal first.");
+    await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is already being built. It'll be ready soon.");
     const aiMode = await resolveAiMode(ctx, org, "strategy", requested);
     const plan = planJob("strategy", {}, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
@@ -551,7 +570,7 @@ export const generatePlan = mutation({
       isFixture: org.kind === "demo",
       aiMode,
     });
-    await ctx.db.patch(org._id, { onboardingStep: "plan" });
+    if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "plan" });
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
     return { runId };
   },
@@ -567,7 +586,7 @@ export const skipResearch = mutation({
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
     if (business) await ctx.db.patch(business._id, { researchStatus: "owner_supplied", updatedAt: Date.now() });
-    await ctx.db.patch(org._id, { onboardingStep: "facts" });
+    if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "facts" });
   },
 });
 

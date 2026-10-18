@@ -26,11 +26,10 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
-import { useNow } from "@/components/app/content/shared";
 import { ASK_KEY } from "@/components/app/CommandPalette";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
-import { RunProgressCompact } from "@/components/app/content/RunProgress";
+import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { climbTarget } from "@/components/climb/context";
 
@@ -78,7 +77,6 @@ function greeting(): string {
 export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
-  const now = useNow();
   const composer = useRef<WishComposerHandle>(null);
   useEffect(() => {
     // A wish typed in the ⌘K palette before Today loaded arrives ready to send.
@@ -110,8 +108,8 @@ export default function TodayPage() {
   const firstName = data.userName && !data.userName.includes("@") ? data.userName.split(" ")[0] : null;
 
   const suggested = data.cards.filter((c) => !data.chat.some((m) => m.cards.some((x) => x.id === c.id)));
-  const running = data.recent.filter((r) => ["cost_reserved", "preparing", "executing"].includes(r.status)).length;
-  const doneThisWeek = now ? data.recent.filter((r) => r.status === "verified" && r.createdAt > now - 7 * 86_400_000).length : 0;
+  const running = data.counts.workingNow;
+  const doneThisWeek = data.counts.doneThisWeek;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -143,7 +141,7 @@ export default function TodayPage() {
         </Callout>
       )}
 
-      {data.org.kind === "customer" && data.org.onboardingStep !== "done" && (
+      {data.org.kind === "customer" && data.org.onboardingStep !== "done" && (data.role === "owner" || data.role === "admin") && (
         <Callout tone="info" title="Finish setting up" action={<Button asChild size="sm"><Link href={`/onboarding?workspace=${slug}`}>Continue setup</Link></Button>}>
           A couple of steps are left before your team can plan properly.
         </Callout>
@@ -226,9 +224,16 @@ export default function TodayPage() {
                     </Badge>
                   </p>
                 ) : null}
-                <Link href={data.goal ? `/app/${slug}/plan` : `/onboarding?workspace=${slug}`} className={buttonClasses({ variant: "link", className: "mt-3" })}>
-                  {data.goal ? "See the plan" : "Set a goal"} <ArrowRight aria-hidden />
-                </Link>
+                <span className="mt-3 flex flex-wrap gap-x-4">
+                  <Link href={data.goal ? `/app/${slug}/plan` : `/app/${slug}/settings/business`} className={buttonClasses({ variant: "link" })}>
+                    {data.goal ? "See the plan" : "Set a goal"} <ArrowRight aria-hidden />
+                  </Link>
+                  {data.goal ? (
+                    <Link href={`/app/${slug}/settings/business`} className={buttonClasses({ variant: "link" })}>
+                      Change goal
+                    </Link>
+                  ) : null}
+                </span>
               </div>
             </div>
           </section>
@@ -265,10 +270,11 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         ) : (
           <Tooltip content={card.proposedEffect}>
             <p tabIndex={0} className="truncate text-xs text-ink-3">
-              {card.description}
+              {card.blockedReason && (status === "proposed" || status === "blocked") ? card.blockedReason : card.description}
             </p>
           </Tooltip>
         )}
+        {status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {status === "running" ? (
@@ -286,7 +292,13 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
             </Badge>
           )
         ) : status === "failed" ? (
-          <Badge tone="red">Didn’t finish</Badge>
+          card.runId ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/app/${slug}/work/${card.runId}`}>Didn’t finish: see why</Link>
+            </Button>
+          ) : (
+            <Badge tone="red">Didn’t finish</Badge>
+          )
         ) : status === "blocked" ? (
           <Badge tone="amber">Needs setup</Badge>
         ) : (
@@ -385,7 +397,7 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
                   <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <Link href={r.kind === "strategy" ? `/app/${slug}/plan` : `/app/${slug}/work/${r.id}`} className="block text-sm font-medium text-ink after:absolute after:inset-0">
+                      <Link href={`/app/${slug}/work/${r.id}`} className="block text-sm font-medium text-ink after:absolute after:inset-0">
                         {r.title}
                       </Link>
                       <span className="block text-xs text-ink-3">

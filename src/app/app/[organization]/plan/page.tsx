@@ -8,7 +8,7 @@ import { Compass, Target } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Badge, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
@@ -46,7 +46,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
         tone="info"
         title="Set a goal first"
         action={
-          <Link href={`/onboarding?workspace=${slug}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+          <Link href={`/app/${slug}/settings/business`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
             Set your goal
           </Link>
         }
@@ -59,9 +59,14 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
     <section aria-labelledby="goal-heading">
       <Card className="bg-brand-50">
         <CardContent className="flex flex-col gap-2">
-          <h2 id="goal-heading" className="text-overline flex items-center gap-1.5">
-            <Target aria-hidden="true" className="size-3.5 text-brand-800" /> Your goal
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="goal-heading" className="text-overline flex items-center gap-1.5">
+              <Target aria-hidden="true" className="size-3.5 text-brand-800" /> Your goal
+            </h2>
+            <Link href={`/app/${slug}/settings/business`} className={buttonClasses({ variant: "link", size: "sm" })}>
+              Change
+            </Link>
+          </div>
           <p className="heading-section">{goal.statement}</p>
           <p className="text-sm text-ink-2">
             Over the next {goal.horizonDays} days ·{" "}
@@ -74,7 +79,9 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
 }
 
 function PlanScreen({ slug }: { slug: string }) {
-  const plan = useQuery(api.workspace.plan, { slug });
+  // Which version is on screen: the approved one by default, or a newer one being reviewed.
+  const [viewId, setViewId] = useState<Id<"strategies"> | null>(null);
+  const plan = useQuery(api.workspace.plan, viewId ? { slug, strategyId: viewId } : { slug });
   const now = useNow();
   const [startedRunId, setStartedRunId] = useState<Id<"workflowRuns"> | null>(null);
 
@@ -94,6 +101,11 @@ function PlanScreen({ slug }: { slug: string }) {
 
   const s = plan.strategy;
   const status = s ? (STRATEGY_STATUS[s.status] ?? { label: s.status, tone: "neutral" as Tone }) : null;
+  const other = plan.otherVersion;
+  const building = Boolean(plan.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status));
+  // A refresh that stopped after the newest version was written (otherwise it vanishes after a reload).
+  const run = plan.strategyRun;
+  const refreshStopped = Boolean(s && run && ["failed", "canceled", "uncertain"].includes(run.status) && run.createdAt > (plan.latestVersionAt ?? 0) && run.id !== startedRunId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,7 +132,7 @@ function PlanScreen({ slug }: { slug: string }) {
           s && plan.canEdit ? (
             <div className="flex flex-wrap items-start gap-2">
               <PlanToAirly slug={slug} />
-              <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} />
+              <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
             </div>
           ) : null
         }
@@ -136,6 +148,42 @@ function PlanScreen({ slug }: { slug: string }) {
           onDismiss={() => setStartedRunId(null)}
         />
       </SectionBoundary>
+
+      {refreshStopped && run ? (
+        <Callout
+          tone="danger"
+          live="none"
+          title="The last plan refresh didn't finish"
+          action={
+            <Link href={`/app/${slug}/work/${run.id}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              See what happened
+            </Link>
+          }
+        >
+          {run.userMessage ?? "Your current plan still guides the team."}
+          {plan.canEdit ? <RetryRunIfPossible slug={slug} runId={run.id} className="mt-3" /> : null}
+        </Callout>
+      ) : null}
+
+      {s && other ? (
+        <Callout
+          tone={other.status === "needs_approval" || s.status === "needs_approval" ? "warning" : "info"}
+          title={
+            s.status === "approved"
+              ? other.status === "needs_approval"
+                ? `Version ${other.version} is waiting for approval`
+                : `Version ${other.version} was sent back`
+              : `You're viewing version ${s.version}. Version ${other.version} (approved) still guides the team.`
+          }
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
+              {s.status === "approved" ? `See version ${other.version}` : "Back to the approved plan"}
+            </Button>
+          }
+        >
+          {s.status === "approved" ? "The approved plan below keeps guiding the team until a new version is approved." : "Approving this version replaces it."}
+        </Callout>
+      ) : null}
 
       <Tabs defaultValue="plan">
         <TabsList>
@@ -162,7 +210,7 @@ function PlanScreen({ slug }: { slug: string }) {
             action={
               plan.canEdit ? (
                 plan.goal ? (
-                  <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} />
+                  <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
                 ) : (
                   <p className="text-sm text-ink-2">Set a goal first, then build your plan.</p>
                 )
@@ -174,7 +222,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} /> : null}
+          {s.status === "needs_approval" ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="This plan was sent back">
               No work starts from it. {plan.canEdit ? "Use “Refresh plan” to get a new version." : `Ask ${PERMISSION_WHO.edit} to refresh it.`}

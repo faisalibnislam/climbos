@@ -6,6 +6,8 @@ import { Copy, Link2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button, Card, CardContent, ColorPicker, Field, Input, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
+import { PERMISSION_WHO, useWorkspaceMember } from "../content/shared";
+import { can } from "@shared/policy";
 
 /** Share a branded, read-only results report with a client (white-label on packages). */
 export function ClientReportCard({ slug }: { slug: string }) {
@@ -14,7 +16,10 @@ export function ClientReportCard({ slug }: { slug: string }) {
   const create = useMutation(api.clientReports.createLink);
   const revoke = useMutation(api.clientReports.revoke);
   const [form, setForm] = useState<{ name: string; color: string; logo: string } | null>(null);
+  const member = useWorkspaceMember(slug);
   if (!b) return null;
+  // Branding needs manage_team and share links need export: both owner or admin.
+  const canShare = Boolean(member?.role && can(member.role, "export") && can(member.role, "manage_team"));
   const f = form ?? { name: b.brandName, color: b.brandColor, logo: b.brandLogoUrl };
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     try {
@@ -30,6 +35,8 @@ export function ClientReportCard({ slug }: { slug: string }) {
       <CardContent className="flex flex-col gap-3">
         <p className="heading-card">Share with a client</p>
         <p className="text-sm text-ink-3">A read-only results page in your agency&apos;s name. Outcomes only: no credits, drafts or settings. {b.whiteLabel ? "No ClimbOS branding." : "Packages remove the “Powered by ClimbOS” line."}</p>
+        {canShare ? (
+        <>
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end">
           <Field label="Agency name" optional>
             <Input value={f.name} onChange={(e) => setForm({ ...f, name: e.target.value })} />
@@ -49,6 +56,10 @@ export function ClientReportCard({ slug }: { slug: string }) {
             <Link2 aria-hidden /> Create report link
           </Button>
         </div>
+        </>
+        ) : (
+          <p className="text-xs text-ink-3">Sharing reports needs {PERMISSION_WHO.manage_team}.</p>
+        )}
         {b.links.length ? (
           <ul className="flex flex-col divide-y divide-line text-sm">
             {b.links.map((l) => (
@@ -60,9 +71,11 @@ export function ClientReportCard({ slug }: { slug: string }) {
                   <Button size="sm" variant="ghost" aria-label="Copy link" onClick={() => copy(l.url)}>
                     <Copy aria-hidden />
                   </Button>
-                  <Button size="sm" variant="ghost" aria-label="Turn off link" onClick={() => run(() => revoke({ slug, id: l.id }), "Link turned off")}>
-                    <Trash2 aria-hidden />
-                  </Button>
+                  {canShare ? (
+                    <Button size="sm" variant="ghost" aria-label="Turn off link" onClick={() => run(() => revoke({ slug, id: l.id }), "Link turned off")}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  ) : null}
                 </span>
               </li>
             ))}

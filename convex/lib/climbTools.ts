@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { FunctionReference } from "convex/server";
 import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import { microsToCredits } from "../../shared/economics";
+import { estimateJobMicros, planJob } from "./jobPlans";
 
 /**
  * Climb AI's tools: one registry for the in-app side panel and the MCP server.
@@ -29,8 +31,8 @@ export interface ClimbTool<I extends z.ZodType = z.ZodType> {
   description: string;
   risk: Risk;
   input: I;
-  /** Plain-English summary of what will happen (shown on confirmation cards). */
-  summarize?: (input: z.infer<I>) => string;
+  /** Plain-English summary of what will happen (shown on confirmation cards), in the workspace's timezone. */
+  summarize?: (input: z.infer<I>, ctx?: { timeZone?: string }) => string;
   /** Narration while it runs, e.g. "Looking at your drafts". */
   doing: string;
   run?: (c: Caller, slug: string, input: z.infer<I>) => Promise<unknown>;
@@ -44,6 +46,16 @@ function short(s: unknown, n = 280): string {
 }
 
 const tool = <I extends z.ZodType>(t: ClimbTool<I>) => t as unknown as ClimbTool;
+
+/** A time as the owner reads it: in the workspace's timezone (UTC if it's unknown). */
+export function localTime(ms: number, timeZone = "UTC"): string {
+  const fmt = (tz: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(ms));
+  try {
+    return fmt(timeZone);
+  } catch {
+    return fmt("UTC");
+  }
+}
 
 export const CLIMB_TOOLS: ClimbTool[] = [
   /* ---------------- read ---------------- */
@@ -318,15 +330,6 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     },
   }),
   tool({
-    name: "refresh_plan",
-    title: "Refresh the growth plan",
-    description: "Ask the strategist for a new version of the growth plan (it needs the owner's approval before anything changes).",
-    risk: "draft",
-    doing: "Asking the strategist for a new plan",
-    input: z.object({}),
-    run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
-  }),
-  tool({
     name: "plan_week",
     title: "Plan the week (autopilot)",
     description: "Plan and draft the next week of social posts now (autopilot must be on).",
@@ -356,6 +359,16 @@ export const CLIMB_TOOLS: ClimbTool[] = [
 
   /* ---------------- confirm (never without the owner's tap) ---------------- */
   tool({
+    name: "refresh_plan",
+    title: "Refresh the growth plan",
+    description: "Ask the strategist for a new version of the growth plan (it needs the owner's approval before anything changes). Uses credits.",
+    risk: "confirm",
+    doing: "Asking the strategist for a new plan",
+    input: z.object({}),
+    summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(estimateJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
+    run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
+  }),
+  tool({
     name: "approve_draft",
     title: "Approve a draft",
     description: "Approve a draft's current version. For autopilot posts this schedules them for their planned time.",
@@ -381,8 +394,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Schedule an approved draft to publish at a time (ISO 8601 with timezone).",
     risk: "confirm",
     doing: "Scheduling",
-    input: z.object({ artifactId, when: z.string() }),
-    summarize: (i) => `Schedule it for ${new Date(i.when).toUTCString()}.`,
+    input: z.object({ artifactId, when: z.string().refine((s) => Number.isFinite(Date.parse(s)), "Use a full date and time with its offset, like 2026-10-20T09:00:00+01:00.") }),
+    summarize: (i, c) => `Schedule it for ${localTime(Date.parse(i.when), c?.timeZone)}.`,
     run: async (c, slug, i) => c.mutation(api.content.schedule, { slug, artifactId: i.artifactId as Id<"artifacts">, when: Date.parse(i.when) }),
   }),
   tool({

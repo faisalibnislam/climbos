@@ -11,6 +11,8 @@ import { relativeTime } from "@/components/app/money";
 import { LoadingBlock } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { Badge, Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
+import { PERMISSION_WHO, useWorkspaceMember } from "@/components/app/content/shared";
+import { can } from "@shared/policy";
 
 const CATEGORIES = ["product", "pricing", "offer", "audience", "proof", "brand", "competitor", "other"] as const;
 
@@ -24,6 +26,8 @@ export default function FactsPage() {
   const checkNow = useMutation(api.siteWatch.checkNow);
   const [editing, setEditing] = useState<{ id: Id<"businessFacts">; text: string } | null>(null);
   const [draft, setDraft] = useState({ category: "product" as (typeof CATEGORIES)[number], statement: "" });
+  const member = useWorkspaceMember(slug);
+  const canEdit = Boolean(member?.role && can(member.role, "edit"));
   const run = (fn: () => Promise<unknown>, ok?: string) => fn().then(() => ok && toast({ tone: "success", title: ok }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
   if (data === undefined) return <LoadingBlock label="Loading facts" lines={4} />;
   if (data === null) return <p className="text-sm text-ink-3">Finish onboarding first.</p>;
@@ -36,7 +40,7 @@ export default function FactsPage() {
         title="Business facts"
         intro="What your team uses in every plan, post, page and chat answer. We re-read your website weekly and suggest updates."
         actions={
-          data.website ? (
+          data.website && canEdit ? (
             <Button size="sm" variant="secondary" onClick={() => run(() => checkNow({ slug }), "Checking your site")}>
               <RefreshCw aria-hidden /> Check site now
             </Button>
@@ -54,14 +58,14 @@ export default function FactsPage() {
                   <p className="text-sm text-ink">{f.statement}</p>
                   {f.replaces ? <p className="text-xs text-ink-3">Replaces: {statementOf(f.replaces) ?? "an older fact"}</p> : null}
                 </div>
-                <div className="flex gap-1">
+                {canEdit ? <div className="flex gap-1">
                   <Button size="sm" onClick={() => run(() => confirmUpdate({ slug, factId: f.id }), "Confirmed")}>
                     <Check aria-hidden /> Confirm
                   </Button>
                   <Button size="sm" variant="ghost" aria-label="Reject" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
                     <X aria-hidden />
                   </Button>
-                </div>
+                </div> : null}
               </div>
             ))}
           </CardContent>
@@ -83,24 +87,24 @@ export default function FactsPage() {
                 <span className="min-w-0 text-ink-2">
                   <Badge tone="neutral">{f.category}</Badge> {f.statement}
                 </span>
-                <span className="flex shrink-0 gap-1">
+                {canEdit ? <span className="flex shrink-0 gap-1">
                   <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
                     <Pencil aria-hidden />
                   </Button>
                   <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
                     <X aria-hidden />
                   </Button>
-                </span>
+                </span> : null}
               </div>
             ),
           )}
-          <div className="mt-2 grid gap-2 border-t border-line pt-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
+          {canEdit ? <div className="mt-2 grid gap-2 border-t border-line pt-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
             <Select options={CATEGORIES.map((c) => ({ value: c, label: c }))} value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v as (typeof CATEGORIES)[number] })} aria-label="Category" />
             <Input value={draft.statement} placeholder="Add a fact (e.g. “Free plan: 3 forms, 100 responses a month”)" aria-label="New fact" onChange={(e) => setDraft({ ...draft, statement: e.target.value })} />
             <Button disabled={!draft.statement.trim()} onClick={() => run(async () => { await addFact({ slug, ...draft }); setDraft({ ...draft, statement: "" }); }, "Added")}>
               Add
             </Button>
-          </div>
+          </div> : <p className="mt-2 border-t border-line pt-3 text-xs text-ink-3">Changing facts needs {PERMISSION_WHO.edit}.</p>}
         </CardContent>
       </Card>
     </div>

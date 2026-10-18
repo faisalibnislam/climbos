@@ -56,7 +56,7 @@ export function TeamActivity({ slug }: { slug: string }) {
             <ul className="flex flex-col">
               {work.justFinished.map((r) => (
                 <li key={r.id}>
-                  <Link href={r.kind === "strategy" ? `/app/${slug}/plan` : `/app/${slug}/work/${r.id}`} className="flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-surface-2">
+                  <Link href={`/app/${slug}/work/${r.id}`} className="flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-surface-2">
                     <CircleCheck aria-hidden className="size-4 text-brand-800" />
                     <span className="min-w-0 flex-1 truncate text-ui text-ink">{r.title}</span>
                     <span className="shrink-0 text-xs text-ink-3">{relativeTime(r.finishedAt)}</span>

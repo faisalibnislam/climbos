@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { microsToCredits } from "../shared/economics";
-import { buildWeeklyReport, weekStartUtc, type WeekCounts } from "../shared/report/weekly";
+import { buildWeeklyReport, localWeek, type WeekCounts } from "../shared/report/weekly";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalQuery, query, type QueryCtx } from "./_generated/server";
@@ -17,19 +17,20 @@ const WEEK = 7 * DAY;
 
 async function countsFor(ctx: QueryCtx, orgId: Id<"organizations">, from: number, to: number): Promise<WeekCounts> {
   const inWin = (t?: number) => t !== undefined && t >= from && t < to;
-  const published = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", orgId).eq("status", "published")).take(500);
-  const campaigns = await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).take(50);
+  // Newest first: these lists only grow, and the window is recent.
+  const published = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", orgId).eq("status", "published")).order("desc").take(500);
+  const campaigns = await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).order("desc").take(50);
   let emailsSent = 0;
   let newProspects = 0;
   for (const c of campaigns) {
     const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", c._id).gte("createdAt", from - 30 * DAY)).take(2000);
     emailsSent += sends.filter((s) => s.status === "sent" && inWin(s.sentAt)).length;
-    const ps = await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(500);
+    const ps = await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).order("desc").take(500);
     newProspects += ps.filter((p) => inWin(p.createdAt)).length;
   }
   let replies = 0;
   for (const stage of ["replied", "booked", "won"] as const) {
-    const ps = await ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", stage)).take(500);
+    const ps = await ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", stage)).order("desc").take(500);
     replies += ps.filter((p) => inWin(p.updatedAt)).length;
   }
   const bookings = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", orgId).gte("startAt", from - 60 * DAY)).take(500);
@@ -37,7 +38,7 @@ async function countsFor(ctx: QueryCtx, orgId: Id<"organizations">, from: number
   // Latest snapshot per post, so repeated captures aren't double counted.
   const latest = new Map<string, Doc<"postMetrics">>();
   for (const m of metrics) if ((latest.get(m.artifactId)?.capturedAt ?? 0) < m.capturedAt) latest.set(m.artifactId, m);
-  const won = await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", "won")).take(1000);
+  const won = await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", "won")).order("desc").take(1000);
   const runs = await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId).gte("createdAt", from).lt("createdAt", to)).take(1000);
   return {
     dealsWon: won.filter((d) => inWin(d.wonAt)).length,
@@ -55,15 +56,18 @@ async function countsFor(ctx: QueryCtx, orgId: Id<"organizations">, from: number
 }
 
 async function reportFor(ctx: QueryCtx, org: Doc<"organizations">, weeksAgo: number, now = Date.now()) {
-  const thisWeek = weekStartUtc(now);
-  // weeksAgo 0 = the week so far; the Monday email reports the full week before (weeksAgo 1).
-  const weekStart = thisWeek - weeksAgo * WEEK;
-  return reportBetween(ctx, org, weekStart, Math.min(weekStart + WEEK, now + 1), WEEK, now);
+  // Weeks run Monday to Monday in the workspace's timezone. weeksAgo 0 = the week so far;
+  // the Monday email reports the full week before (weeksAgo 1).
+  const w = localWeek(now, org.timezone, weeksAgo);
+  const end = Math.min(w.end, now + 1);
+  // The week so far is compared with the same stretch of last week, not all of it.
+  return reportBetween(ctx, org, w.start, end, w.start - w.prevStart, now, [w.prevStart, w.prevStart + (end - w.start)]);
 }
 
-/** A report for any window, compared with the window of the same length before it. */
-export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, weekStart: number, weekEnd: number, span: number, now = Date.now()) {
-  const [current, before] = await Promise.all([countsFor(ctx, org._id, weekStart, weekEnd), countsFor(ctx, org._id, weekStart - span, weekStart)]);
+/** A report for any window, compared with the window of the same length before it (or `before`, when given). */
+export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, weekStart: number, weekEnd: number, span: number, now = Date.now(), before?: [number, number]) {
+  const [prevFrom, prevTo] = before ?? [weekStart - span, weekStart];
+  const [current, previous] = await Promise.all([countsFor(ctx, org._id, weekStart, weekEnd), countsFor(ctx, org._id, prevFrom, Math.min(prevTo, weekStart))]);
   const pending = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).take(100);
   const upcoming = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", org._id).gte("startAt", now).lt("startAt", now + WEEK)).take(20);
   const slots = await ctx.db.query("calendarSlots").withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", now).lt("slotAt", now + WEEK)).take(50);
@@ -75,7 +79,7 @@ export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, we
     weekStart,
     weekEnd,
     now: current,
-    before,
+    before: previous,
     ctx: {
       pendingApprovals: pending.length,
       upcomingCalls: upcoming.filter((b) => b.status === "confirmed").map((b) => ({ name: b.name, startAt: b.startAt })),
@@ -114,24 +118,30 @@ export const reportOrgs = internalQuery({
   },
 });
 
-/** Mondays: email last week's report to owners and admins who get digests. */
+/** Mondays: email last week's report to owners and admins who get digests. Each workspace runs in its own action. */
 export const sendWeeklyReports = internalAction({
   args: {},
-  handler: async (ctx) => {
-    let sent = 0;
-    for (const orgId of await ctx.runQuery(internal.reports.reportOrgs, {})) {
-      const data = await ctx.runQuery(internal.reports.weeklyForOrg, { orgId });
-      if (!data) continue;
-      const { orgName, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId, purpose: "digest", cadence: "weekly" });
-      const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${data.slug}/results/week`;
-      const r = data.report;
-      const md = [r.headline, "", ...r.lines.map((l) => `- **${l.label}:** ${l.value}${l.change ? ` (${l.change > 0 ? "+" : ""}${l.change})` : ""}`), ...(r.competitors?.length ? ["", "## Competitors", ...r.competitors.map((c) => `- **${c.name}:** ${c.summary}`)] : []), ...(r.next.length ? ["", "## Next week", ...r.next.map((n) => `- [ ] ${n}`)] : []), "", `[Open in ClimbOS](${url})`].join("\n");
-      if (data.folevi) await ctx.runAction(internal.airlyActions.saveReportToFolevi, { orgId, title: `${orgName}: week of ${new Date(r.weekStart).toISOString().slice(0, 10)}`, markdown: md, key: `climbos-week-${orgId}-${r.weekStart}` });
-      if (!emails.length) continue;
-      const mail = weeklyReportEmail({ orgName, report: data.report, url });
-      for (const to of emails) await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId, to, template: "digest", ...mail });
-      sent++;
-    }
-    return sent;
+  handler: async (ctx): Promise<number> => {
+    const orgIds = await ctx.runQuery(internal.reports.reportOrgs, {});
+    // Spread over a few minutes so thousands of workspaces never share one action's time limit.
+    for (const [i, orgId] of orgIds.entries()) await ctx.scheduler.runAfter(i * 150, internal.reports.sendWeeklyReportFor, { orgId });
+    return orgIds.length;
+  },
+});
+
+export const sendWeeklyReportFor = internalAction({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }): Promise<boolean> => {
+    const data = await ctx.runQuery(internal.reports.weeklyForOrg, { orgId });
+    if (!data) return false;
+    const { orgName, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId, purpose: "digest", cadence: "weekly" });
+    const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${data.slug}/results/week`;
+    const r = data.report;
+    const md = [r.headline, "", ...r.lines.map((l) => `- **${l.label}:** ${l.value}${l.change ? ` (${l.change > 0 ? "+" : ""}${l.change})` : ""}`), ...(r.competitors?.length ? ["", "## Competitors", ...r.competitors.map((c) => `- **${c.name}:** ${c.summary}`)] : []), ...(r.next.length ? ["", "## Next week", ...r.next.map((n) => `- [ ] ${n}`)] : []), "", `[Open in ClimbOS](${url})`].join("\n");
+    if (data.folevi) await ctx.runAction(internal.airlyActions.saveReportToFolevi, { orgId, title: `${orgName}: week of ${new Date(r.weekStart).toISOString().slice(0, 10)}`, markdown: md, key: `climbos-week-${orgId}-${r.weekStart}` });
+    if (!emails.length) return false;
+    const mail = weeklyReportEmail({ orgName, report: data.report, url });
+    for (const to of emails) await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId, to, template: "digest", ...mail });
+    return true;
   },
 });

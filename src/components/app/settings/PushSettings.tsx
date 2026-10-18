@@ -82,10 +82,10 @@ export function PushSettings() {
             <li key={d.id} className="flex items-center justify-between gap-2 py-2">
               <span className="text-ink-2">{d.label}</span>
               <span className="flex gap-1">
-                <Button size="sm" variant="ghost" onClick={() => test({}).then(() => toast({ tone: "success", title: "Test sent" }))}>
+                <Button size="sm" variant="ghost" onClick={() => test({}).then(() => toast({ tone: "success", title: "Test sent" }), (e) => toast({ tone: "danger", title: errorMessage(e) }))}>
                   Test
                 </Button>
-                <Button size="sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => unsubscribe({ id: d.id })}>
+                <Button size="sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => unsubscribe({ id: d.id }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
                   <Trash2 aria-hidden />
                 </Button>
               </span>
