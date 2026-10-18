@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -386,7 +387,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays)],
+      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS)],
     },
     o,
     "expert",
@@ -404,7 +405,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = lintGeneric(out, input);
+        const issues = [...lintGeneric(out, input), ...lintWordCaps(out, PLAN_CAPS)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
