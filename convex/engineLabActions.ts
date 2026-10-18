@@ -51,6 +51,9 @@ const Proposal = z.object({ rules: z.array(z.string()), rationale: z.string() })
 export const proposeWeekly = internalAction({
   args: {},
   handler: async (ctx): Promise<number> => {
+    // Paused (owner, 2026-10-18): feedback is cross-tenant free text and may carry
+    // tenant details. Re-enable with ENGINE_LAB_PROPOSALS=on once fixes are redacted.
+    if (process.env.ENGINE_LAB_PROPOSALS !== "on") return 0;
     if ((await ctx.runQuery(internal.engineLab.spend, {})) >= 4_800_000) return 0;
     let made = 0;
     for (const agentId of ["growth_plays", "growth_strategy"]) {
