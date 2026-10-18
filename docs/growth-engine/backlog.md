@@ -66,3 +66,6 @@ Each item needs owner approval before it changes runtime behaviour. Sizes: S < �
 | 2026-10-18 | A2 | Saved bench outputs | Expert plays JSON 11–14k chars before new fields; 1 of 8 exceeded the old 14k cut. Insights 11.6k |
 | 2026-10-18 | A3 | Own fetcher, 5 Airly sites | Before: Involets 1 page (www redirect), others 3. After ranking fix: 5 pages each, incl. pricing and competitor-compare pages |
 | 2026-10-18 | B5 | Unit tests | §18 fixture exact; simulated ranges reproducible; old plans without models still render |
+| 2026-10-18 | §13 feasibility | Unit tests; re-lint of saved plans | New checks: plays and channels within the ad budget, plays within owner hours, North Star = computed total (±15%). Saved Formkit plans: no violations |
+| 2026-10-18 | B4 citations | Saved plans | Citations sit mid-line (`[eesel.ai, C]`); the check now reads them anywhere. 1–2 per plays output lacked a fetched source offline (an upper bound: research notes weren't saved) |
+| 2026-10-18 | E2 (scrubbed) | /ops engine page | Owner approve / send-back logged with scrubbed notes; plan cost avg/p95 per mode |
