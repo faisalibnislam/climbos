@@ -1,5 +1,6 @@
 "use client";
 
+import { MailboxSending } from "@/components/app/outbound/MailboxSending";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -566,8 +567,18 @@ function SendPanel({ data }: { data: Data }) {
   return (
     <section className="rounded-xl border border-line bg-surface p-5">
       <h2 className="heading-card">Send</h2>
-      <p className="mt-0.5 text-sm text-ink-3">Sending from your own mailbox is coming soon. For now, export and send from your email.</p>
-      <div className="mt-4 flex flex-col gap-2">
+      <div className="mt-2">
+        <MailboxSending
+          slug={data.slug}
+          campaignId={data.campaign!.id as Id<"outboundCampaigns">}
+          approvedWithEmail={approved.filter((p) => p.publicEmail).length}
+          defaultCompany={data.businessName ?? ""}
+          bookingUrl={data.page ? bookingUrl(data.page.slug) : undefined}
+          canApprove={data.canApprove}
+        />
+      </div>
+      <p className="mt-4 text-xs text-ink-3">Or export and send from any tool:</p>
+      <div className="mt-2 flex flex-col gap-2">
         <Button onClick={download} disabled={!approved.length}>
           <Download aria-hidden /> Export {approved.length || ""} approved (CSV)
         </Button>

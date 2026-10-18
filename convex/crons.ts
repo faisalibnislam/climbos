@@ -22,6 +22,8 @@ crons.daily("sync connections", { hourUTC: 6, minuteUTC: 0 }, internal.maintenan
 crons.daily("check token expiry", { hourUTC: 6, minuteUTC: 30 }, internal.maintenance.checkExpiry, {});
 // Social autopilot: plan next week for each enabled workspace (Thursday 9:00 local or later).
 crons.interval("autopilot planning", { minutes: 60 }, internal.autopilot.tick, {});
+crons.interval("outbound: send due emails", { minutes: 5 }, internal.outboundSending.dispatch, {});
+crons.interval("outbound: read replies and bounces", { minutes: 15 }, internal.mailbox.checkReplies, {});
 // One-tap approvals: a daily email of drafts waiting for the owner.
 crons.daily("approvals waiting", { hourUTC: 14, minuteUTC: 0 }, internal.emailActions.sendApprovalEmails, {});
 // Owner digests at the frequency each user selected.

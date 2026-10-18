@@ -88,6 +88,9 @@ export const get = query({
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
     return {
+      slug: org.slug,
+      businessName: (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first())?.name ?? org.name,
+      canApprove: ["owner", "admin", "reviewer"].includes(role),
       canEdit: role !== "viewer",
       website: business?.website ?? null,
       businessType: business?.businessType ?? null,

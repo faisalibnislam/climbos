@@ -1,7 +1,7 @@
 import { httpRouter } from "convex/server";
 import { verifyStandardWebhook, WebhookVerificationError, webhookKeyCandidates } from "../shared/billing";
 import { sha256Hex } from "../shared/policy";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { handle as mcpHandle } from "./mcp";
@@ -88,6 +88,21 @@ http.route({
   path: "/health",
   method: "GET",
   handler: httpAction(async () => new Response(JSON.stringify({ ok: true, service: "climbos-convex", at: new Date().toISOString() }), { headers: { "Content-Type": "application/json" } })),
+});
+
+/** One-click unsubscribe (RFC 8058) for outbound emails; mail apps POST here from the List-Unsubscribe header. */
+http.route({
+  path: "/unsubscribe",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const token = new URL(req.url).searchParams.get("token") ?? "";
+    try {
+      await ctx.runMutation(api.outboundSending.unsubscribe, { token });
+      return new Response("Unsubscribed", { status: 200 });
+    } catch {
+      return new Response("Invalid link", { status: 400 });
+    }
+  }),
 });
 
 export default http;

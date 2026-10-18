@@ -8,6 +8,7 @@ import { Button, Callout, toast } from "@/components/ui";
 import { LoadingBlock, PageHeader } from "../results/QueryBoundary";
 import { ConnectionCard, type ConnectionsData } from "./ConnectionCard";
 import { GROUPS } from "./labels";
+import { MailboxSection } from "./MailboxSection";
 
 export function ConnectionsView({ slug }: { slug: string }) {
   const data = useQuery(api.connections.list, { slug });
@@ -38,6 +39,8 @@ export function ConnectionsView({ slug }: { slug: string }) {
               You can see every connection, but only owners and admins can connect or disconnect accounts.
             </Callout>
           ) : null}
+
+          <MailboxSection slug={slug} />
 
           {GROUPS.map((g) => {
             const items = data.items.filter((i) => i.group === g.key);

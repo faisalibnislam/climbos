@@ -76,6 +76,8 @@ export const providerValidator = v.union(
   v.literal("youtube"),
   v.literal("crm_csv"),
   v.literal("enrichment"),
+  /** The owner's own mailbox (SMTP + IMAP, app password) for sending outbound emails. */
+  v.literal("email_mailbox"),
 );
 
 export const capabilityStateValidator = v.union(
@@ -579,10 +581,46 @@ export default defineSchema({
     ownerNotes: v.array(v.string()),
     excluded: v.array(v.object({ company: v.string(), reason: v.string() })),
     runId: v.optional(v.id("workflowRuns")),
+    /** Sending from the owner's mailbox (started by the owner; stops on reply, bounce or opt-out). */
+    sending: v.optional(
+      v.object({
+        status: v.union(v.literal("on"), v.literal("paused"), v.literal("done")),
+        startedAt: v.number(),
+        startedBy: v.id("users"),
+        firstSentAt: v.optional(v.number()),
+        dailyCapOverride: v.optional(v.number()),
+        senderName: v.string(),
+        company: v.string(),
+        address: v.string(),
+        bookingUrl: v.optional(v.string()),
+        lastReplyCheckAt: v.optional(v.number()),
+      }),
+    ),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_org_created", ["orgId", "createdAt"]),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_sending", ["sending.status"]),
+
+  /** One email to one prospect for one sequence step. */
+  outboundSends: defineTable({
+    orgId: v.id("organizations"),
+    campaignId: v.id("outboundCampaigns"),
+    prospectId: v.id("prospects"),
+    step: v.number(),
+    to: v.string(),
+    scheduledFor: v.number(),
+    status: v.union(v.literal("queued"), v.literal("sending"), v.literal("sent"), v.literal("failed"), v.literal("canceled"), v.literal("bounced")),
+    messageId: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    attempts: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_status_scheduled", ["status", "scheduledFor"])
+    .index("by_campaign", ["campaignId", "createdAt"])
+    .index("by_prospect", ["prospectId", "step"]),
 
   prospects: defineTable({
     orgId: v.id("organizations"),
