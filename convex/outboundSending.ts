@@ -189,7 +189,7 @@ export const recordSend = internalMutation({
 
 /** Replies, bounces and "no" answers found in the mailbox. */
 export const applyInbox = internalMutation({
-  args: { campaignId: v.id("outboundCampaigns"), replies: v.array(v.object({ from: v.string(), optOut: v.boolean() })), bounced: v.array(v.string()), checkedAt: v.number() },
+  args: { campaignId: v.id("outboundCampaigns"), replies: v.array(v.object({ from: v.string(), optOut: v.boolean(), subject: v.optional(v.string()), messageId: v.optional(v.string()), text: v.optional(v.string()), at: v.optional(v.number()) })), bounced: v.array(v.string()), checkedAt: v.number() },
   handler: async (ctx, { campaignId, replies, bounced, checkedAt }) => {
     const c = await ctx.db.get(campaignId);
     if (!c?.sending) return;
@@ -198,7 +198,13 @@ export const applyInbox = internalMutation({
     const now = Date.now();
     for (const r of replies) {
       const p = byEmail.get(r.from.toLowerCase());
-      if (!p || p.stage === "replied") continue;
+      if (!p) continue;
+      // Unified inbox: every reply once (deduped by Message-ID), with the text to answer.
+      const externalId = `email:${r.messageId ?? `${r.from}:${r.at ?? 0}`}`;
+      if (r.text && !(await ctx.db.query("communityMessages").withIndex("by_org_external", (q) => q.eq("orgId", c.orgId).eq("externalId", externalId)).first())) {
+        await ctx.db.insert("communityMessages", { orgId: c.orgId, channel: "email", kind: "email", externalId, prospectId: p._id, campaignId, fromEmail: r.from.toLowerCase(), subject: r.subject, messageRef: r.messageId, authorName: p.company, text: r.text, receivedAt: r.at ?? now, status: r.optOut ? "dismissed" : "new", createdAt: now, updatedAt: now });
+      }
+      if (p.stage === "replied" || p.stage === "booked" || p.stage === "won" || p.stage === "lost") continue;
       await ctx.db.patch(p._id, { stage: r.optOut ? "lost" : "replied", updatedAt: now });
       await cancelQueued(ctx, p._id);
       if (r.optOut) await suppress(ctx, c.orgId, r.from, "unsubscribe", "reply");
@@ -228,7 +234,7 @@ export const replyCheckTargets = internalQuery({
         if (!c.sending || (st !== "on" && Date.now() - (c.sending.lastReplyCheckAt ?? 0) > 21 * 86_400_000)) continue;
         const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", c.orgId).eq("provider", "email_mailbox")).first();
         if (mailbox?.status !== "connected") continue;
-        const contacted = (await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(300)).filter((p) => p.publicEmail && (p.stage === "contacted" || p.stage === "approved"));
+        const contacted = (await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(300)).filter((p) => p.publicEmail && ["contacted", "approved", "replied", "booked"].includes(p.stage));
         if (contacted.length) out.push({ campaignId: c._id, connectionId: mailbox._id, since: c.sending.startedAt, emails: contacted.map((p) => p.publicEmail!) });
       }
     }

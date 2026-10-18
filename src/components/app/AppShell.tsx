@@ -7,29 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import {
-  BarChart3,
-  CalendarDays,
-  ChevronDown,
-  Compass,
-  Home,
-  LogOut,
-  PauseCircle,
-  PlayCircle,
-  Plug,
-  Settings,
-  Images,
-  Plane,
-  Target,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sparkles,
-  Bell,
-  Clapperboard,
-  Palette,
-  type LucideIcon,
-} from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Home, Images, Inbox, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Target, type LucideIcon } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -64,6 +42,7 @@ import { errorMessage } from "./errors";
 
 const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?: string }[] = [
   { key: "today", label: "Today", icon: Home, group: "" },
+  { key: "inbox", label: "Inbox", icon: Inbox, group: "" },
   { key: "plan", label: "Growth plan", icon: Compass, group: "Grow" },
   { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
   { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
@@ -102,6 +81,7 @@ export function AppShell({ slug, children, workspace = false }: { slug: string; 
 function Shell({ slug, children, workspace }: { slug: string; children: ReactNode; workspace: boolean }) {
   const climb = useClimb();
   const me = useQuery(api.orgs.me);
+  const inboxUnread = useQuery(api.inbox.unread, { slug });
   const pause = useQuery(api.workspace.pauseStatus, { slug });
   const pathname = usePathname();
   const current = me?.orgs.find((o) => o.slug === slug);
@@ -144,7 +124,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             {NAV_GROUPS.map((group) => (
               <NavGroup key={group || "home"} label={rail ? "" : group}>
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />}>
+                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}/new` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "inbox" ? inboxUnread : undefined}>
                     {item.label}
                   </NavLink>
                 ))}
@@ -281,7 +261,7 @@ function NavGroup({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function NavLink({ href, active, icon, children, compact = false }: { href: string; active: boolean; icon: ReactNode; children: ReactNode; compact?: boolean }) {
+function NavLink({ href, active, icon, children, compact = false, badge }: { href: string; active: boolean; icon: ReactNode; children: ReactNode; compact?: boolean; badge?: number }) {
   const link = (
     <Link
       href={href}
@@ -295,6 +275,11 @@ function NavLink({ href, active, icon, children, compact = false }: { href: stri
     >
       {icon}
       {compact ? null : children}
+      {badge ? (
+        <span className={cn("rounded-full bg-brand-700 px-1.5 text-2xs font-semibold leading-4 text-white tabular-nums", compact ? "absolute -right-1 -top-1" : "ml-auto")} aria-label={`${badge} unread`}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
   return compact ? (

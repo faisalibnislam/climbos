@@ -34,6 +34,7 @@ import type * as demo from "../demo.js";
 import type * as emailActions from "../emailActions.js";
 import type * as engine from "../engine.js";
 import type * as http from "../http.js";
+import type * as inbox from "../inbox.js";
 import type * as jobWrites from "../jobWrites.js";
 import type * as jobs from "../jobs.js";
 import type * as lib_access from "../lib/access.js";
@@ -109,6 +110,7 @@ declare const fullApi: ApiFromModules<{
   emailActions: typeof emailActions;
   engine: typeof engine;
   http: typeof http;
+  inbox: typeof inbox;
   jobWrites: typeof jobWrites;
   jobs: typeof jobs;
   "lib/access": typeof lib_access;

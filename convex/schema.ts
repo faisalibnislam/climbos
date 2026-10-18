@@ -1146,8 +1146,16 @@ export default defineSchema({
   communityMessages: defineTable({
     orgId: v.id("organizations"),
     channel: v.string(),
-    kind: v.union(v.literal("comment"), v.literal("dm"), v.literal("mention"), v.literal("review")),
+    kind: v.union(v.literal("comment"), v.literal("dm"), v.literal("mention"), v.literal("review"), v.literal("email"), v.literal("booking"), v.literal("chat")),
     externalId: v.string(),
+    /** Unified inbox: who wrote (email replies), the thread, and the run drafting our answer. */
+    prospectId: v.optional(v.id("prospects")),
+    campaignId: v.optional(v.id("outboundCampaigns")),
+    fromEmail: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    messageRef: v.optional(v.string()),
+    draftRunId: v.optional(v.id("workflowRuns")),
+    readAt: v.optional(v.number()),
     artifactId: v.optional(v.id("artifacts")),
     authorName: v.string(),
     text: v.string(),
@@ -1168,7 +1176,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org_status", ["orgId", "status"])
-    .index("by_org_external", ["orgId", "externalId"]),
+    .index("by_org_external", ["orgId", "externalId"])
+    .index("by_org_received", ["orgId", "receivedAt"])
+    .index("by_draft_run", ["draftRunId"]),
 
   postMetrics: defineTable({
     orgId: v.id("organizations"),

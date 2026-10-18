@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { isOptOutReply, MAILBOX_PRESETS, type MailboxPreset } from "../shared/outbound/sending";
+import { isOptOutReply, MAILBOX_PRESETS, replyText, type MailboxPreset } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction } from "./_generated/server";
@@ -124,7 +124,7 @@ export const checkReplies = internalAction({
       if (!raw) continue;
       const secret = JSON.parse(raw.value) as MailboxSecret;
       const wanted = new Set(t.emails.map((e) => e.toLowerCase()));
-      const replies: { from: string; optOut: boolean }[] = [];
+      const replies: { from: string; optOut: boolean; subject?: string; messageId?: string; text?: string; at?: number }[] = [];
       const bounced = new Set<string>();
       const client = imap(secret);
       try {
@@ -137,7 +137,8 @@ export const checkReplies = internalAction({
             const text = msg.source ? msg.source.toString("utf8") : "";
             if (wanted.has(from)) {
               const body = text.split(/\r?\n\r?\n/).slice(1).join("\n\n");
-              replies.push({ from, optOut: isOptOutReply(body) });
+              const clean = replyText(body);
+              replies.push({ from, optOut: isOptOutReply(clean), subject: msg.envelope?.subject?.slice(0, 200), messageId: msg.envelope?.messageId ?? undefined, text: clean.slice(0, 4000), at: msg.envelope?.date ? new Date(msg.envelope.date).getTime() : undefined });
             } else if (/mailer-daemon|postmaster/i.test(from) || /delivery status notification|undeliverable|delivery failure|returned mail/i.test(msg.envelope?.subject ?? "")) {
               for (const e of wanted) if (text.toLowerCase().includes(e)) bounced.add(e);
             }
@@ -153,5 +154,27 @@ export const checkReplies = internalAction({
       checked++;
     }
     return checked;
+  },
+});
+
+/** Answer an inbox email from the owner's mailbox, threaded under their message. */
+export const reply = action({
+  args: { slug: v.string(), id: v.id("communityMessages"), text: v.string() },
+  handler: async (ctx, { slug, id, text }): Promise<{ ok: boolean; message: string }> => {
+    const body = text.trim().slice(0, 8000);
+    if (body.length < 2) return { ok: false, message: "Write your reply first." };
+    const job = await ctx.runQuery(internal.inbox.prepareReply, { slug, id });
+    const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId });
+    if (!raw) return { ok: false, message: "Your mailbox is disconnected. Reconnect it in Connections." };
+    const secret = JSON.parse(raw.value) as MailboxSecret;
+    if (!process.env.CLIMBOS_FAKE_MAILBOX) {
+      try {
+        await transport(secret).sendMail({ from: secret.email, to: job.to, subject: job.subject, text: body, ...(job.inReplyTo ? { inReplyTo: job.inReplyTo, references: [job.inReplyTo] } : {}) });
+      } catch (e) {
+        return { ok: false, message: `Your mailbox didn't send it: ${(e as Error).message.slice(0, 160)}` };
+      }
+    }
+    await ctx.runMutation(internal.inbox.recordReply, { id, userId: job.userId, text: body });
+    return { ok: true, message: `Sent to ${job.to}.` };
   },
 });

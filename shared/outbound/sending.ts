@@ -84,6 +84,18 @@ export function isOptOutReply(text: string): boolean {
   return /^(no\.?|nope|not interested|unsubscribe|remove me|stop|please remove)\b/.test(first);
 }
 
+/** The new part of a reply: no quoted history, signature delimiter or MIME noise. */
+export function replyText(raw: string): string {
+  const lines = raw.replace(/=\r?\n/g, "").replace(/=([0-9A-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).split(/\r?\n/);
+  const out: string[] = [];
+  for (const l of lines) {
+    if (/^On .+wrote:$/.test(l.trim()) || /^-{2,}\s*Original Message/i.test(l) || l.trim() === "--" || /^From: /.test(l)) break;
+    if (l.startsWith(">") || /^Content-(Type|Transfer-Encoding):/i.test(l) || /^--[\w=-]{10,}/.test(l)) continue;
+    out.push(l);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /** Signed unsubscribe token: "<prospectId>.<sig>" (sig = first 20 hex chars of SHA-256(secret:id)). */
 export async function unsubscribeToken(prospectId: string, secret: string): Promise<string> {
   return `${prospectId}.${(await sha256(`${secret}:${prospectId}`)).slice(0, 20)}`;
