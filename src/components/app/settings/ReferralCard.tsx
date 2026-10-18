@@ -30,7 +30,11 @@ export function ReferralCard({ slug }: { slug: string }) {
               size="sm"
               variant="secondary"
               onClick={async () => {
-                await navigator.clipboard.writeText(link);
+                try {
+                  await navigator.clipboard.writeText(link);
+                } catch {
+                  return; // The link is shown above; copying is a convenience.
+                }
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}

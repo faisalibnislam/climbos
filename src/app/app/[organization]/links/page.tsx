@@ -32,12 +32,16 @@ export default function LinksPage() {
   const [campaign, setCampaign] = useState("");
   const [busy, setBusy] = useState(false);
   const copy = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    toast({ tone: "success", title: "Link copied" });
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ tone: "success", title: "Link copied" });
+    } catch {
+      toast({ tone: "info", title: "Link ready", description: text });
+    }
   };
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <PageHeader section="links" title="Links" intro={`Short links that count real clicks (not bots) and tag visits for your analytics.${data ? ` ${data.weekTotal} clicks in the last 7 days.` : ""}`} />
+      <PageHeader section="links" title="Links" intro={`Short links that count real clicks (not bots) and tag visits for your analytics.${data ? ` ${data.weekTotal} click${data.weekTotal === 1 ? "" : "s"} in the last 7 days.` : ""}`} />
       {data ? <Switch label="Track links in new drafts" description="Posts and emails get a short link; ads keep your page with UTM tags." checked={data.tracking} onCheckedChange={(on) => setTracking({ slug, on }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))} /> : null}
       <Card>
         <CardContent>
@@ -89,7 +93,7 @@ export default function LinksPage() {
               {l.channel ? <Badge tone="neutral">{CHANNELS.find((c) => c.value === l.channel)?.label ?? l.channel}</Badge> : null}
               {l.source === "auto" ? <Badge tone="blue">From a draft</Badge> : null}
               <div className="w-28 text-right">
-                <p className="text-sm font-semibold tabular-nums text-ink">{l.clicks.toLocaleString("en-US")} clicks</p>
+                <p className="text-sm font-semibold tabular-nums text-ink">{l.clicks.toLocaleString("en-US")} click{l.clicks === 1 ? "" : "s"}</p>
                 <p className="text-xs text-ink-3">{l.week} this week{l.lastClickAt ? ` · ${relativeTime(l.lastClickAt)}` : ""}</p>
               </div>
               <Button size="sm" variant="secondary" aria-label="Copy link" onClick={() => copy(l.shortUrl)}>
