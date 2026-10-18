@@ -15,8 +15,8 @@ Each item needs owner approval before it changes runtime behaviour. Sizes: S < �
 
 | # | Fix | Defect | Size |
 |---|---|---|---|
-| B1 | Number-trace evidence includes every prompt block; message becomes "cite or label as assumption", not "remove" | D1 | S |
-| B2 | No silent cuts: compact plays projection, budgeted context, log what's dropped | D2 | S |
+| B1 | ✅ Done 2026-10-18. Number-trace evidence includes every prompt block; message becomes "cite or label as assumption", not "remove" | D1 | S |
+| B2 | ✅ Done 2026-10-18. No silent cuts: budgeted context, log what's dropped | D2 | S |
 | B3 | Nullable owner-only numbers + `assumptions[]`; ≤3 decision-changing questions after the provisional plan | D3, D4 | M |
 | B4 | Save research sources with the plan; show them; reject cited URLs that weren't fetched | D5 | M |
 | B5 | Plays emit inputs only; calculator produces customers, CAC, payback, allowable CAC, break-even CPC; P10/P90 become low/high from ranges | D6, D7 | M |
@@ -51,3 +51,10 @@ Each item needs owner approval before it changes runtime behaviour. Sizes: S < �
 ## Recommended order
 
 B1 → B2 → B7 → A1 → B5 → B3 → B4. Then C1–C2 once a budget is approved.
+
+## Results log
+
+| Date | Item | Free check | Result |
+|---|---|---|---|
+| 2026-10-18 | B1 | `bench/lint-audit.mts` on 6 saved outputs, same inputs | `invented_fact` per plan 31–54 → 0–9; per plays output 9–32 → 1–5. Left: scorecard scores (not in offline inputs) and real untraced funnel rates |
+| 2026-10-18 | B2 | Unit tests (`tests/unit/context-fit.test.ts`) | JSON stays valid; drops are logged as `[context-trim]`. Budgets: plays 32k (was 14k), insights 20k (was 14k), critic sees all research notes (was 12k; about +$0.003 per plan on Luna) |

@@ -225,8 +225,24 @@ const CHANNEL_LIMITS: Record<string, { body: number; hashtags: number; fold?: nu
 /** Below this, a feed post reads as a stub (blind reviews penalised clipped Facebook and LinkedIn copy). */
 const MIN_BODY_WORDS: Record<string, number> = { facebook: 40, linkedin: 50 };
 
+/** Everything the writer was given: numbers in any prompt block trace (brief, facts, research, the task's inputs). */
 function evidenceOf(input: AgentInput): string {
-  return [input.brief, input.facts.join("\n"), input.untrustedContext ?? ""].join("\n");
+  return [input.brief, input.facts.join("\n"), input.untrustedContext ?? "", input.task].join("\n");
+}
+
+/** The output's own numeric fields (rates also as percentages), so prose may restate them. */
+export function ownNumbers(v: unknown, out: string[] = []): string[] {
+  if (typeof v === "number" && Number.isFinite(v)) {
+    out.push(String(v));
+    if (v > 0 && v < 1) out.push(String(Math.round(v * 10_000) / 100));
+  } else if (Array.isArray(v)) v.forEach((x) => ownNumbers(x, out));
+  else if (v && typeof v === "object") Object.values(v).forEach((x) => ownNumbers(x, out));
+  return out;
+}
+
+/** Plans and plays: numbers trace to any input or the output's own model; labelled assumptions and targets pass. */
+function lintPlanning(out: unknown, input: AgentInput): LintIssue[] {
+  return lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|days$|weeklyTarget|target$/i.test(p) });
 }
 
 function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
@@ -400,7 +416,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintGeneric(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintPlays(out.plays), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -418,7 +434,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintGeneric(out, input), ...lintWordCaps(out, PLAN_CAPS)];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

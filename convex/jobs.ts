@@ -76,6 +76,16 @@ import { agentRevisionSteps } from "./lib/jobPlans";
 import { estimateRun } from "./engine";
 import { usdToMicrosCeil } from "../shared/economics/money";
 import type { RateVersion } from "../shared/economics/rates";
+import { fitJson, fitText, reportDropped } from "../shared/agents/context";
+
+/** Computed results for the explainer: valid JSON within budget, drops logged. */
+function fitMetrics(json: string): string {
+  try {
+    return reportDropped("results explainer", fitJson(JSON.parse(json), 12_000, "results"));
+  } catch {
+    return reportDropped("results explainer", fitText(json, 12_000, "results"));
+  }
+}
 
 class JobStop extends Error {
   constructor(
@@ -401,7 +411,7 @@ async function runAgentTask<T>(
 function planContext(job: JobCtx): string {
   const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
   if (!insights) return "";
-  const pick = (k: string) => (insights[k] ? `${k}: ${JSON.stringify(insights[k]).slice(0, 3000)}` : "");
+  const pick = (k: string) => (insights[k] ? `${k}: ${reportDropped(`plan context ${k}`, fitJson(insights[k], 3000, k))}` : "");
   return `\n\nPOSITIONING AND CUSTOMER LANGUAGE (from research):\n${[pick("positioningStatement") || pick("positioning"), pick("vocPhrases"), pick("objections"), pick("audiences")].filter(Boolean).join("\n")}`;
 }
 
@@ -623,10 +633,10 @@ export const onboardingResearch = internalAction({
       });
 
       // Speed: a first take on what we see while the deep research runs (5-10 minutes).
-      await quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 5000)}`);
+      await quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${reportDropped("first take profile", fitJson(profile, 5000, "profile"))}`);
 
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
-      const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${JSON.stringify(profile).slice(0, 6000)}`;
+      const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${reportDropped("insights profile", fitJson(profile, 6000, "profile"))}`;
       const insights = await runAgentTask<BusinessInsights>(
         ctx,
         job,
@@ -634,7 +644,7 @@ export const onboardingResearch = internalAction({
         insightsSpec(),
         agentInput(
           job,
-          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.\n\nPROFILE (extracted from the website):\n${JSON.stringify(profile).slice(0, 6000)}`,
+          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
           {
             untrustedContext: pagesText,
             facts: profile.facts.map((f) => f.statement),
@@ -659,10 +669,10 @@ export const buildStrategy = internalAction({
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
       const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
-      const insightsBrief = `${insights ? JSON.stringify(insights).slice(0, 14_000) : "(none yet)"}${learned ? `\n\n${learned}` : ""}`;
+      const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
       // Speed: a first take in about a minute while the full plan is researched and reviewed.
-      await quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insightsBrief.slice(0, 6000)}`);
+      await quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)"}`);
       // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
       let profile = profileFrom({
         saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null,
@@ -730,7 +740,7 @@ export const buildStrategy = internalAction({
         strategySpec(),
         agentInput(
           job,
-          `${locked ? `${locked}\n\n` : ""}Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${JSON.stringify(plays).slice(0, 14_000)}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason. Write for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used. ${capsHint(PLAN_CAPS)}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
+          `${locked ? `${locked}\n\n` : ""}Create the 90-day growth plan for the goal, within the stated budget and the owner's time.${plays ? ` Build it around these growth plays (keep them as chosen; make channels, phases, the week-one checklist, North Star and measurement serve them):\n${reportDropped("plan plays", fitJson(plays, 32_000, "plays"))}` : ""}${scorecard}\nList strong channels left for later in notDoing, with the reason. Write for a busy owner: short sentences, no repeated thresholds; put the numbers where they're used. ${capsHint(PLAN_CAPS)}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):\n${insightsBrief}`,
         ),
         startedAt,
         {
@@ -738,7 +748,7 @@ export const buildStrategy = internalAction({
           context: "",
           ctx: fixtureCtx(job),
           text:
-        `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? JSON.stringify({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }).slice(0, 6000) : "(none yet)"}`,
+        `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? reportDropped("plan fallback insights", fitJson({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }, 6000, "insights")) : "(none yet)"}`,
         },
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
@@ -1155,7 +1165,7 @@ export const explainResults = internalAction({
         job,
         0,
         "metric_explanation",
-        `TASK: Explain these computed results in plain English for the owner. Use ONLY the numbers given. Say clearly what is observed, what is attributed and what is projected, and what is uncertain.\n\n${businessBrief(job)}\n\nCOMPUTED RESULTS (from ClimbOS statistics code):\n${metricsJson.slice(0, 12_000)}`,
+        `TASK: Explain these computed results in plain English for the owner. Use ONLY the numbers given. Say clearly what is observed, what is attributed and what is projected, and what is uncertain.\n\n${businessBrief(job)}\n\nCOMPUTED RESULTS (from ClimbOS statistics code):\n${fitMetrics(metricsJson)}`,
         "",
         fixtureCtx(job),
       );

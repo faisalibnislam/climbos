@@ -71,15 +71,29 @@ export interface CopyLintOptions {
   emojiPer150?: number;
   /** Publishable copy: a [NEEDS FACT] placeholder is an error, not a warning. */
   publishable?: boolean;
+  /** Plans: a number in a sentence labelled as an assumption, target, estimate or rule is not a factual claim. */
+  labelled?: boolean;
 }
 
+/** Words that mark a number as the planner's own assumption, forecast or decision rule. */
+const LABELLED = /\b(assum\w*|estimat\w*|targets?|goals?|aim\w*|forecast\w*|project(?:ed|ions?)|expect\w*|cap(?:ped)?|budget\w*|up to|at most|at least|max(?:imum)?|min(?:imum)?|kill|scale|stop|threshold\w*|limit\w*)\b/i;
+
 /** Numbers in the output that don't appear anywhere in the evidence. */
-export function untracedNumbers(text: string, evidence: string): string[] {
+export function untracedNumbers(text: string, evidence: string, opts: { labelled?: boolean } = {}): string[] {
   const normalize = (s: string) => s.replace(/[,\s]/g, "");
   const ev = normalize(evidence);
   const found: string[] = [];
+  // Labelled plans: drop sentences that say the number is an assumption, target or rule.
+  // Deadlines ("by day 21", "45 days", "week 6") are plan decisions, not claims.
+  const checked = opts.labelled
+    ? text
+        .split(/(?<=[.;!?])\s+|\n+/)
+        .filter((c) => !LABELLED.test(c))
+        .join("\n")
+        .replace(/\b(?:days?|weeks?|months?)\s+\d+\b|\b\d+(?:\s*[-–]\s*\d+)?\s*(?:days?|weeks?|months?)\b/gi, " ")
+    : text;
   // Units count only as whole tokens: "10k", "3x", "40%" — not the "m" of "1 month".
-  for (const m of text.matchAll(/[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi)) {
+  for (const m of checked.matchAll(/[$£€]?\d[\d,.]*(?:\s?%|(?:k|m|x)(?![a-z])|×)?/gi)) {
     const raw = m[0].trim();
     const digits = normalize(raw).replace(/[$£€%kmx×]/gi, "").replace(/\.$/, "");
     if (!digits) continue;
@@ -120,8 +134,16 @@ export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue
     }
     if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
     if (opts.evidence !== undefined) {
-      const untraced = untracedNumbers(text, opts.evidence);
-      if (untraced.length) issues.push({ severity: "error", rule: "invented_fact", message: `Numbers not found in the facts or research: ${untraced.join(", ")}. Remove them or rephrase without the number.`, path });
+      const untraced = untracedNumbers(text, opts.evidence, { labelled: opts.labelled });
+      if (untraced.length)
+        issues.push({
+          severity: "error",
+          rule: "invented_fact",
+          message: opts.labelled
+            ? `Numbers not found in the inputs, facts or research: ${untraced.join(", ")}. Cite where each comes from, use a number from the inputs, or say it is an assumption, target or estimate.`
+            : `Numbers not found in the facts or research: ${untraced.join(", ")}. Remove them or rephrase without the number.`,
+          path,
+        });
     }
     if (/\[NEEDS FACT|\[(insert|placeholder|your |add )/i.test(text)) {
       issues.push(

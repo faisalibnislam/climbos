@@ -1,3 +1,4 @@
+import { fitText, reportDropped } from "./context";
 import { z } from "zod";
 import type { MessageParam, SystemBlock, TurnRequest, TurnResult } from "../ai/types";
 import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
@@ -215,7 +216,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const result = await deps.turn(req);
       if (!result.ok) failure(result);
       return {
-        value: { notes: String(result.output).slice(0, 40_000), sources: result.sources.map((s) => ({ url: s.url, title: s.title })) },
+        value: { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.map((s) => ({ url: s.url, title: s.title })) },
         record: { phase: "research", round: 0, modelKey: spec.models.research, result },
       };
     });
@@ -269,7 +270,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
           {
             role: "user",
             content: `CONFIRMED FACTS:\n${input.facts.length ? input.facts.map((f, i) => `${i + 1}. ${f}`).join("\n") : "(none)"}\n\nBUSINESS BRIEF:\n${input.brief}\n\n${
-              research ? `RESEARCH THE WRITER HAD (claims may cite these):\n${research.notes.slice(0, 12_000)}\n\n` : ""
+              research ? `RESEARCH THE WRITER HAD (claims may cite these):\n${research.notes}\n\n` : ""
             }THE TASK THEY WERE GIVEN:\n${input.task}\n\nTHE WORK TO REVIEW (JSON):\n${JSON.stringify(output, null, 1)}\n\n${
               lint.length ? `AUTOMATIC CHECK RESULTS:\n${lint.map((l) => `- [${l.severity}] ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}\n\n` : ""
             }Review it against the rubric.`,
