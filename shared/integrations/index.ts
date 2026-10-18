@@ -12,6 +12,7 @@ export * from "./capabilities";
 export * from "./registry";
 export * from "./currency";
 export {
+  basicAuthHeader,
   buildAuthorizationUrl,
   buildCodeExchangeRequest,
   buildInstagramLongLivedExchangeRequest,
@@ -42,6 +43,8 @@ export * as googleAds from "./googleAds";
 export * as metaAds from "./metaAds";
 export * as facebookPages from "./facebookPages";
 export * as instagram from "./instagram";
+export * as linkedin from "./linkedin";
+export * as x from "./x";
 export * as resendMarketing from "./resendMarketing";
 export * as stripeRevenue from "./stripeRevenue";
 export * as csvRevenue from "./csvRevenue";

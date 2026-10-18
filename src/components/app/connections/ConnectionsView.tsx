@@ -53,12 +53,7 @@ export function ConnectionsView({ slug }: { slug: string }) {
                   </h2>
                   <p className="mt-0.5 text-sm text-ink-3">{g.intro}</p>
                 </div>
-                {g.key === "publish" ? (
-                  <Callout tone="info" title="Some platforms use drafts and export packs">
-                    LinkedIn, X, TikTok, Pinterest and YouTube don&apos;t have a verified official integration in ClimbOS yet. ClimbOS writes platform-ready posts
-                    you can copy or download and post yourself. It never asks for your passwords or uses browser bots.
-                  </Callout>
-                ) : null}
+                {g.key === "publish" ? <ExportOnlyNotice items={items} /> : null}
                 {g.key === "data" ? (
                   <Callout tone="info" title="ClimbOS has no contact database">
                     ClimbOS doesn&apos;t sell a contact database. Find customers researches businesses from public sources, with a source for every fact. For email
@@ -76,6 +71,19 @@ export function ConnectionsView({ slug }: { slug: string }) {
         </>
       )}
     </div>
+  );
+}
+
+/** Names the publish platforms that are drafts-and-export only right now. */
+function ExportOnlyNotice({ items }: { items: ConnectionsData["items"] }) {
+  const names = items.filter((i) => i.capabilities.some((c) => c.capability.endsWith(".manual_export"))).map((i) => i.name);
+  if (names.length === 0) return null;
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return (
+    <Callout tone="info" title="Some platforms use drafts and export packs">
+      {list} {names.length === 1 ? "doesn't" : "don't"} have a verified integration yet. ClimbOS writes ready-to-post drafts you copy or download. It never asks for your passwords or
+      uses browser bots.
+    </Callout>
   );
 }
 

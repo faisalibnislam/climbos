@@ -10,7 +10,7 @@ import { asNumber, asString, isRecord } from "./http";
 import { GRAPH_API_VERSION } from "./registry";
 
 export interface OAuthProviderConfig {
-  id: "google" | "meta" | "instagram";
+  id: "google" | "meta" | "instagram" | "linkedin" | "x";
   authorizationEndpoint: string;
   tokenEndpoint: string;
   revocationEndpoint?: string;
@@ -19,6 +19,8 @@ export interface OAuthProviderConfig {
   scopeSeparator: " " | ",";
   /** Extra fixed authorization params (e.g. Google offline access). */
   extraAuthParams?: Record<string, string>;
+  /** How the token endpoint authenticates us: secret in the form body (default) or HTTP Basic. */
+  clientAuth?: "body" | "basic";
 }
 
 export const OAUTH_PROVIDERS: Record<OAuthProviderConfig["id"], OAuthProviderConfig> = {
@@ -49,6 +51,24 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderConfig["id"], OAuthProviderCon
     scopeSeparator: ",",
     extraAuthParams: { enable_fb_login: "false" },
   },
+  linkedin: {
+    id: "linkedin",
+    authorizationEndpoint: "https://www.linkedin.com/oauth/v2/authorization",
+    tokenEndpoint: "https://www.linkedin.com/oauth/v2/accessToken",
+    revocationEndpoint: "https://www.linkedin.com/oauth/v2/revoke",
+    supportsPkce: false,
+    scopeSeparator: " ",
+  },
+  x: {
+    id: "x",
+    authorizationEndpoint: "https://x.com/i/oauth2/authorize",
+    tokenEndpoint: "https://api.x.com/2/oauth2/token",
+    revocationEndpoint: "https://api.x.com/2/oauth2/revoke",
+    // X requires PKCE for every OAuth 2.0 client.
+    supportsPkce: true,
+    scopeSeparator: " ",
+    clientAuth: "basic",
+  },
 };
 
 /** Least-privilege OAuth scopes per capability. */
@@ -67,6 +87,11 @@ export const CAPABILITY_SCOPES = {
   "facebook_pages.read_insights": ["pages_show_list", "read_insights", "pages_read_engagement"],
   "instagram.read_profile": ["instagram_business_basic"],
   "instagram.publish_media": ["instagram_business_basic", "instagram_business_content_publish"],
+  "linkedin.read_profile": ["openid", "profile"],
+  "linkedin.publish_post": ["w_member_social"],
+  "x.read_profile": ["users.read", "tweet.read"],
+  // offline.access → refresh token (X access tokens are short-lived).
+  "x.publish_post": ["tweet.read", "tweet.write", "users.read", "offline.access"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type ScopedCapability = keyof typeof CAPABILITY_SCOPES;
@@ -188,6 +213,20 @@ export interface TokenHttpRequest {
 
 const FORM = { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" };
 
+/** HTTP Basic credentials (RFC 6749 §2.3.1). */
+export function basicAuthHeader(clientId: string, clientSecret: string): string {
+  const bytes = new TextEncoder().encode(`${clientId}:${clientSecret}`);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return `Basic ${btoa(binary)}`;
+}
+
+/** Form fields + headers for client authentication, per provider.clientAuth. */
+function clientCredentials(provider: OAuthProviderConfig, clientId: string, clientSecret: string): { fields: Record<string, string>; headers: Record<string, string> } {
+  if (provider.clientAuth === "basic") return { fields: {}, headers: { ...FORM, Authorization: basicAuthHeader(clientId, clientSecret) } };
+  return { fields: { client_id: clientId, client_secret: clientSecret }, headers: { ...FORM } };
+}
+
 export function buildCodeExchangeRequest(input: {
   provider: OAuthProviderConfig;
   clientId: string;
@@ -196,9 +235,9 @@ export function buildCodeExchangeRequest(input: {
   redirectUri: string;
   codeVerifier?: string;
 }): TokenHttpRequest {
+  const auth = clientCredentials(input.provider, input.clientId, input.clientSecret);
   const body = new URLSearchParams({
-    client_id: input.clientId,
-    client_secret: input.clientSecret,
+    ...auth.fields,
     code: input.code,
     redirect_uri: input.redirectUri,
     grant_type: "authorization_code",
@@ -207,7 +246,7 @@ export function buildCodeExchangeRequest(input: {
     if (!input.codeVerifier) throw new Error("codeVerifier is required for PKCE providers");
     body.set("code_verifier", input.codeVerifier);
   }
-  return { url: input.provider.tokenEndpoint, method: "POST", headers: { ...FORM }, body: body.toString() };
+  return { url: input.provider.tokenEndpoint, method: "POST", headers: auth.headers, body: body.toString() };
 }
 
 export function buildRefreshRequest(input: {
@@ -232,13 +271,13 @@ export function buildRefreshRequest(input: {
     url.searchParams.set("fb_exchange_token", input.refreshToken);
     return { url: url.toString(), method: "GET", headers: { Accept: "application/json" } };
   }
+  const auth = clientCredentials(input.provider, input.clientId, input.clientSecret);
   const body = new URLSearchParams({
-    client_id: input.clientId,
-    client_secret: input.clientSecret,
+    ...auth.fields,
     refresh_token: input.refreshToken,
     grant_type: "refresh_token",
   });
-  return { url: input.provider.tokenEndpoint, method: "POST", headers: { ...FORM }, body: body.toString() };
+  return { url: input.provider.tokenEndpoint, method: "POST", headers: auth.headers, body: body.toString() };
 }
 
 /** Instagram: exchange a short-lived token for a 60-day long-lived token. */
@@ -250,14 +289,24 @@ export function buildInstagramLongLivedExchangeRequest(input: { clientSecret: st
   return { url: url.toString(), method: "GET", headers: { Accept: "application/json" } };
 }
 
-/** Revocation where the provider offers it. Instagram has no documented revoke endpoint. */
-export function buildRevocationRequest(input: { provider: OAuthProviderConfig; token: string }): TokenHttpRequest | null {
+/**
+ * Revocation where the provider offers it. Instagram has no documented revoke
+ * endpoint. LinkedIn and X authenticate the client, so they need its credentials.
+ */
+export function buildRevocationRequest(input: { provider: OAuthProviderConfig; token: string; clientId?: string; clientSecret?: string }): TokenHttpRequest | null {
   const endpoint = input.provider.revocationEndpoint;
   if (!endpoint) return null;
   if (input.provider.id === "meta") {
     const url = new URL(endpoint);
     url.searchParams.set("access_token", input.token);
     return { url: url.toString(), method: "DELETE", headers: { Accept: "application/json" } };
+  }
+  if (input.provider.id === "linkedin" || input.provider.id === "x") {
+    if (!input.clientId || !input.clientSecret) return null;
+    const auth = clientCredentials(input.provider, input.clientId, input.clientSecret);
+    const body = new URLSearchParams({ ...auth.fields, token: input.token });
+    if (input.provider.id === "x") body.set("token_type_hint", "access_token");
+    return { url: endpoint, method: "POST", headers: auth.headers, body: body.toString() };
   }
   return {
     url: endpoint,
