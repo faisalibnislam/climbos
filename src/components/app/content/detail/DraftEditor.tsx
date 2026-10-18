@@ -3,10 +3,11 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleAlert, ImagePlus } from "lucide-react";
+import { CircleAlert, ImagePlus, Palette } from "lucide-react";
 import { useId, useState } from "react";
 import { Button, Callout, Checkbox, Field, Input, Textarea, toast } from "@/components/ui";
 import { AssetPicker } from "@/components/app/AssetPicker";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ErrorCallout } from "../shared";
 import { bodyLimit, composeSocial, fieldLabels, headlineLimit, isSocial, parseHashtags, type ArtifactView, type TextLimit } from "./model";
@@ -158,9 +159,16 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
                 {imageAssetId ? "· new image picked" : hasImage && !removeImage ? "· current image kept" : artifact.channel === "instagram" ? "· required on Instagram" : "· optional"}
               </span>
             </p>
-            <Button size="sm" variant="secondary" onClick={() => setChoosing((c) => !c)} aria-expanded={choosing}>
-              <ImagePlus aria-hidden /> {choosing ? "Done" : hasImage || imageAssetId ? "Change image" : "Add an image"}
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={`/studio/${slug}/new?post=${artifact.id}`}>
+                  <Palette aria-hidden /> Design one
+                </Link>
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setChoosing((c) => !c)} aria-expanded={choosing}>
+                <ImagePlus aria-hidden /> {choosing ? "Done" : hasImage || imageAssetId ? "Change image" : "Add an image"}
+              </Button>
+            </div>
           </div>
           {choosing ? <AssetPicker slug={slug} selected={picked} onChange={setPicked} label="Pick from your images" /> : null}
         </div>
