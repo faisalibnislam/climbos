@@ -25,6 +25,7 @@ import {
   PanelLeftOpen,
   Sparkles,
   Bell,
+  Clapperboard,
   Palette,
   type LucideIcon,
 } from "lucide-react";
@@ -67,6 +68,7 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
   { key: "outbound", label: "Find customers", icon: Target, group: "Grow" },
   { key: "images", label: "Images", icon: Images, group: "Grow" },
+  { key: "reels", label: "Reels", icon: Clapperboard, group: "Grow" },
   { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
   { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
   { key: "connections", label: "Connections", icon: Plug, group: "Setup" },

@@ -143,7 +143,8 @@ export type JobKind =
   | "retention_plan"
   | "sales_sequence"
   | "social_calendar"
-  | "outbound";
+  | "outbound"
+  | "reel";
 
 export interface JobPlan {
   kind: JobKind;
@@ -242,6 +243,11 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "social_calendar":
       // Demo and v1: a deterministic plan from the business facts (no model call).
       return { kind, title: "Plan next week's posts", roles: ["social_media_manager"], tasks: [], steps: [], meters: {} };
+    case "reel": {
+      // Script (Luna) + up to 2 generated images (2 tries each); rendering runs on our own worker (not charged).
+      const images = Math.max(0, Math.min(params.images ?? 2, 2));
+      return { kind, title: "Make a reel", roles: ["creative_director", "social_media_manager"], tasks: [], steps: [{ kind: "model", role: "social_media_manager", modelKey: CALL_ROUTES.chat_intent, inputBudget: 12_000, outputBudget: 4_000 }, ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))], meters: { imageAttempts: images * 2 } };
+    }
     case "outbound":
       // Demo: deterministic example prospects (no model call).
       return { kind, title: "Find customers and write the emails", roles: ["cso"], tasks: [], steps: [], meters: {} };

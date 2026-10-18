@@ -24,7 +24,7 @@ const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The capture worker (/api/render/*) drives a real browser; keep it out of the bundle.
-  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core", "ffmpeg-static"],
   // File tracing misses data files these packages read at runtime (browsers.json, the Chromium pack).
   outputFileTracingIncludes: {
     "/api/render/*": [
@@ -32,6 +32,8 @@ const nextConfig: NextConfig = {
       "./node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
       "./node_modules/@sparticuz/chromium/**/*",
       "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/**/*",
+      "./node_modules/ffmpeg-static/**/*",
+      "./node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/**/*",
     ],
   },
   async rewrites() {

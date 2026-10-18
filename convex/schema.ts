@@ -992,6 +992,24 @@ export default defineSchema({
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind", ["orgId", "kind"]),
 
+  /** Short vertical videos (Reels, TikTok, Shorts) made by our own renderer. */
+  reels: defineTable({
+    orgId: v.id("organizations"),
+    title: v.string(),
+    brief: v.string(),
+    status: v.union(v.literal("working"), v.literal("ready"), v.literal("failed")),
+    runId: v.optional(v.id("workflowRuns")),
+    scenes: v.array(v.object({ caption: v.string(), sub: v.optional(v.string()), assetId: v.optional(v.id("assets")), cta: v.optional(v.boolean()) })),
+    caption: v.optional(v.string()),
+    videoStorageId: v.optional(v.id("_storage")),
+    seconds: v.optional(v.number()),
+    badge: v.boolean(),
+    error: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_org_created", ["orgId", "createdAt"]),
+
   assetJobs: defineTable({
     orgId: v.id("organizations"),
     kind: v.union(v.literal("capture"), v.literal("products"), v.literal("edit")),

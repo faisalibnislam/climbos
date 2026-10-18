@@ -438,7 +438,7 @@ async function finish(
   });
 }
 
-type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob";
+type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob" | "makeReel";
 interface Resume {
   fn: ResumableJob;
   args: Record<string, unknown>;
@@ -1173,5 +1173,133 @@ export const simplePlanJob = internalAction({
       await finish(ctx, runId, "verified", { output: out });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
     }, undefined, resumeAs(ctx, "simplePlanJob", { runId, task, cardId }));
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* Reels: script (Luna) → images (yours first, generated if needed) → our renderer */
+/* ------------------------------------------------------------------ */
+
+const ReelScriptSchema = z.object({
+  caption: z.string(),
+  scenes: z.array(z.object({ caption: z.string(), sub: z.string(), assetId: z.string(), imagePrompt: z.string() })),
+  cta: z.string(),
+});
+
+export const makeReel = internalAction({
+  args: { runId: v.id("workflowRuns"), reelId: v.id("reels"), assetIds: v.array(v.id("assets")) },
+  handler: async (ctx, args) => {
+    const job = await loadContext(ctx, args.runId);
+    if (!job) return;
+    const failReel = async (msg: string) => ctx.runMutation(internal.reels.save, { reelId: args.reelId, patch: { status: "failed", error: msg } });
+    await guarded(
+      ctx,
+      args.runId,
+      async () => {
+        const reel = (await ctx.runQuery(internal.reels.assetsFor, { orgId: job.org._id, assetIds: args.assetIds })) ?? [];
+        const brief = JSON.parse(job.run.input || "{}").brief as string;
+        const rates = getRateVersion(job.run.rateVersionId);
+        // 1. Script (checkpointed): 3-5 scenes, short captions, which of your images each uses.
+        const s1 = await begin(ctx, job.run._id, 0, "model", "Reel: script", "social_media_manager");
+        let script: z.infer<typeof ReelScriptSchema>;
+        if (s1.checkpoint !== undefined) script = s1.checkpoint as typeof script;
+        else if (job.run.isFixture || process.env.CLIMBOS_FAKE_LLM) {
+          script = { caption: `${brief} #smallbusiness`, scenes: [{ caption: brief.slice(0, 60), sub: "", assetId: reel[0]?.id ?? "", imagePrompt: "" }, { caption: "Here's how it works", sub: "", assetId: reel[1]?.id ?? "", imagePrompt: "" }], cta: "Try it today" };
+          await ctx.runMutation(internal.engine.completeStep, { stepId: s1.stepId!, output: JSON.stringify(script) });
+        } else {
+          const r = await modelTurn(
+            {
+              modelKey: CALL_ROUTES.chat_intent,
+              system: [{ text: "You write scroll-stopping 10-15 second vertical videos (Reels, TikTok, Shorts) for small businesses. Hook in the first scene, one idea per scene, captions of 3-8 words people can read in 2 seconds, plain words, no hashtags in captions, no invented claims, prices or reviews." }],
+              messages: [
+                {
+                  role: "user",
+                  content: `${businessBrief(job)}${planContext(job)}\n\nREEL BRIEF: ${untrusted("owner request", brief, 600)}\n\nAVAILABLE IMAGES (use their id in assetId; prefer real screenshots and product photos):\n${reel.map((a) => `- ${a.id}: ${a.kind} · ${a.label}`).join("\n") || "(none)"}\n\nReturn JSON: caption (the post caption, 1-3 short lines + up to 5 hashtags), scenes (3-5; each with caption, sub (optional short line or ""), assetId (an id above or ""), imagePrompt (only when no image fits: a short photo prompt, no text or logos; else "")), and cta (the last card, 2-5 words).`,
+                },
+              ],
+              schema: ReelScriptSchema,
+              maxTokens: 4_000,
+              effort: "low",
+              timeoutMs: 90_000,
+            },
+            rates,
+          );
+          if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: s1.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
+          if (!r.ok) {
+            await ctx.runMutation(internal.engine.failStep, { stepId: s1.stepId!, error: r.message.slice(0, 300) });
+            throw new JobStop(r.kind, "The AI couldn't write this reel. Try again.");
+          }
+          script = r.output as typeof script;
+          await ctx.runMutation(internal.engine.completeStep, { stepId: s1.stepId!, output: JSON.stringify(script) });
+        }
+        const scenes = script.scenes.slice(0, 5);
+        // 2. Images: your own first; at most 2 generated (each up to 2 tries), metered.
+        const urlFor = new Map(reel.map((a) => [a.id as string, a.url]));
+        const sceneImages: (string | undefined)[] = [];
+        let generated = 0;
+        let attempts = 0;
+        for (let i = 0; i < scenes.length; i++) {
+          const own = urlFor.get(scenes[i].assetId);
+          if (own) {
+            sceneImages.push(own);
+            continue;
+          }
+          if (!scenes[i].imagePrompt || generated >= 2 || job.run.isFixture || process.env.CLIMBOS_FAKE_LLM) {
+            sceneImages.push(reel[i % Math.max(1, reel.length)]?.url);
+            continue;
+          }
+          const st = await begin(ctx, job.run._id, 1 + generated, "image", `Reel: image ${generated + 1}`, "creative_director");
+          generated++;
+          if (st.checkpoint !== undefined) {
+            sceneImages.push((st.checkpoint as string | null) ?? undefined);
+            continue;
+          }
+          let dataUrl: string | null = null;
+          for (let a = 0; a < 2 && !dataUrl; a++) {
+            attempts++;
+            const img = await generateImage(`Vertical 9:16 photo for ${job.business?.name ?? "a small business"}: ${scenes[i].imagePrompt}. Natural light, modern, no text, no logos, no real people's faces.`, rates);
+            await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }] });
+            if (img.ok) dataUrl = `data:${img.mimeType};base64,${Buffer.from(img.bytes).toString("base64")}`;
+            else if (img.kind === "provider_unavailable") break;
+          }
+          await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify(null) });
+          sceneImages.push(dataUrl ?? reel[i % Math.max(1, reel.length)]?.url);
+        }
+        // 3. Render on our worker (not charged) and save the MP4.
+        const st = await begin(ctx, job.run._id, 10, "compute", "Reel: render video", "creative_director");
+        const reelDoc = await ctx.runQuery(internal.reels.get, { reelId: args.reelId });
+        const brand = { name: job.business?.name ?? job.org.name, color: job.brand?.colors?.[0] ?? "#0b5d46", website: job.business?.website ?? undefined };
+        const renderScenes: { caption: string; sub?: string; imageUrl?: string; cta?: boolean }[] = [...scenes.map((s, i) => ({ caption: s.caption, sub: s.sub || undefined, imageUrl: sceneImages[i] })), { caption: script.cta, cta: true }];
+        const secret = process.env.CLIMBOS_SERVER_SECRET;
+        let storageId: Id<"_storage"> | undefined;
+        let seconds: number | undefined;
+        if (job.run.isFixture || process.env.CLIMBOS_FAKE_LLM || !secret) {
+          seconds = renderScenes.length * 3;
+        } else {
+          const res = await fetch(`${(process.env.RENDER_WORKER_URL ?? process.env.SITE_URL ?? "https://climbos.app").replace(/\/$/, "")}/api/render/reel`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-climbos-secret": secret },
+            body: JSON.stringify({ scenes: renderScenes, brand, secondsEach: 3, badge: reelDoc?.badge ?? true }),
+          });
+          const json = (await res.json().catch(() => ({}))) as { mp4?: string; seconds?: number; error?: string };
+          if (!res.ok || !json.mp4) {
+            await ctx.runMutation(internal.engine.failStep, { stepId: st.stepId!, error: json.error ?? `Render failed (${res.status})` });
+            throw new JobStop("render_failed", "We couldn't render the video. Try again in a minute.");
+          }
+          storageId = await ctx.storage.store(new Blob([Buffer.from(json.mp4, "base64")], { type: "video/mp4" }));
+          seconds = json.seconds;
+        }
+        await ctx.runMutation(internal.engine.completeStep, { stepId: st.stepId!, output: JSON.stringify({ seconds }) });
+        await ctx.runMutation(internal.reels.save, {
+          reelId: args.reelId,
+          patch: { status: "ready", scenes: renderScenes.map((s, i) => ({ caption: s.caption, ...(s.sub ? { sub: s.sub } : {}), ...(scenes[i] && urlFor.has(scenes[i].assetId) ? { assetId: scenes[i].assetId } : {}), ...(s.cta ? { cta: true } : {}) })), caption: script.caption.slice(0, 2200), ...(storageId ? { videoStorageId: storageId } : {}), seconds },
+        });
+        await finish(ctx, args.runId, "verified", { output: { scenes: renderScenes.length, seconds }, meters: { imageAttempts: attempts } });
+      },
+      async (msg) => {
+        await failReel(msg);
+      },
+      resumeAs(ctx, "makeReel", args),
+    );
   },
 });

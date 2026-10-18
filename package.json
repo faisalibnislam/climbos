@@ -46,6 +46,7 @@
     "aws4fetch": "^1.0.20",
     "clsx": "^2.1.1",
     "convex": "^1.47.0",
+    "ffmpeg-static": "^5.3.0",
     "imapflow": "^2.5.2",
     "jose": "^5.10.0",
     "lucide-react": "^1.59.0",
@@ -84,7 +85,8 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "@google/genai",
-      "protobufjs"
+      "protobufjs",
+      "ffmpeg-static"
     ]
   }
 }
