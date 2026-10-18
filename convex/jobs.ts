@@ -32,7 +32,7 @@ import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } f
 import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import { type ClaudeTurnResult } from "../shared/ai/claude";
 import { modelTurn, providerOf } from "../shared/ai/turn";
-import { CALL_ROUTES, routesEnabled } from "../shared/agents/routes";
+import { CALL_ROUTES } from "../shared/agents/routes";
 import {
   adsSpec,
   conversionAuditSpec,
@@ -173,7 +173,7 @@ async function runModelTask<T>(
 
   const rates = getRateVersion(run.rateVersionId);
   const roleRoute = CURRENT_ROUTING.routes[task.role];
-  const primary = task.type === "chat_intent" && routesEnabled() ? CALL_ROUTES.chat_intent : task.primaryModel;
+  const primary = task.type === "chat_intent" ? CALL_ROUTES.chat_intent : task.primaryModel;
   const route = primary ? { ...roleRoute, primary } : roleRoute;
   const system = systemPrompt(task.role);
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;

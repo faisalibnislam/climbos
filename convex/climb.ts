@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type Anthropic from "@anthropic-ai/sdk";
 import { modelTurn, providerOf } from "../shared/ai/turn";
-import { CALL_ROUTES, routesEnabled } from "../shared/agents/routes";
+import { CALL_ROUTES } from "../shared/agents/routes";
 import { getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { fakeTurn } from "../shared/agents/fake";
@@ -21,13 +21,13 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
  * publishes, sends, spends or changes settings without a confirmation tap.
  */
 
-const CLASSIC_MODEL: ModelKey = "claude-sonnet-5.5";
+/** Backup when OpenAI is down or not configured. */
+const FALLBACK_MODEL: ModelKey = "claude-sonnet-5.5";
 /** Reservations assume the costlier route so an escalation always fits. */
-const MODEL: ModelKey = routesEnabled() ? CALL_ROUTES.climbEscalated : CLASSIC_MODEL;
+const MODEL: ModelKey = CALL_ROUTES.climbEscalated;
 
 /** Routine turns on Luna; analysis, strategy and multi-part questions on Sol (owner routes). */
 export function climbModelFor(text: string): ModelKey {
-  if (!routesEnabled()) return CLASSIC_MODEL;
   const analytical = /\b(why|analy[sz]e|compare|strategy|plan|forecast|explain|diagnos|what should|recommend|trade-?off)\b/i.test(text) || text.length > 280;
   return analytical ? CALL_ROUTES.climbEscalated : CALL_ROUTES.climb;
 }
@@ -213,7 +213,7 @@ export const respond = action({
     const turn: typeof modelTurn = async (req, r8) => {
       const first = await call({ ...req, modelKey: active }, r8);
       if (!first.ok && ["provider_unavailable", "spend_limit", "provider_error"].includes(first.kind) && !process.env.CLIMBOS_FAKE_LLM) {
-        active = providerOf(active) === "openai" ? CLASSIC_MODEL : CALL_ROUTES.fallback;
+        active = providerOf(active) === "openai" ? FALLBACK_MODEL : CALL_ROUTES.fallback;
         return call({ ...req, modelKey: active }, r8);
       }
       return first;

@@ -232,7 +232,7 @@ Pairwise, v2.x engine vs Opus one-shot (`v0f`); a win needs both orders to agree
 | D (18 Oct) | v2.4 | 12 | 9W 0T 3L (75%) | 10W 1T 1L (91%) | — | Instagram and ads 8/8 wins; Facebook thin; mean score 6.17 vs 5.71 |
 | D2 (18 Oct) | v2.5 | 4 (Facebook) | 3W 1T 0L | — | — | Fix: brevity never applies to publishable copy, 40-word minimum, serve the goal first |
 
-| Routes (18 Oct) | owner routes vs classic | Formkit growth plan | tie | tie | — | Pointwise 5 vs 7; cost $2.44 vs $2.85. Insights 5 (was 7) at $0.48 (was $1.32); outbound 9 prospects (was 4), score 4 both. **Owner kept the new routes everywhere.** |
+| Routes (18 Oct) | owner routes vs previous Claude routes | Formkit growth plan | tie | tie | — | Pointwise 5 vs 7; cost $2.44 vs $2.85. Insights 5 (was 7) at $0.48 (was $1.32); outbound 9 prospects (was 4), score 4 both. **Owner kept the new routes everywhere.** |
 
 \* The Anthropic credit balance ran out mid-run; the remaining pairs errored and are excluded.
 

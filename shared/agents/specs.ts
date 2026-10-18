@@ -337,7 +337,7 @@ function base<T>(s: Omit<AgentSpec<T>, "models" | "effort" | "maxTokens" | "maxR
   const lean = profile === "lean";
   return {
     ...s,
-    // Explicit overrides (benchmark arms, tests) beat the route; the route beats the classic defaults.
+    // Explicit overrides (benchmark arms, tests) beat the route; the route beats the base models.
     models: { ...routeModels(s.id, { research: SONNET, draft: OPUS, critic: lean ? SONNET : OPUS }), ...o.models },
     effort: { research: "medium", draft: "high", critic: lean ? "low" : "medium", ...o.effort },
     // Thinking counts against max_tokens (Opus always thinks), so leave generous headroom.

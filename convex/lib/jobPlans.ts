@@ -5,7 +5,7 @@ import { MODEL_SPECS } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "../engine";
 import type { AgentSpec } from "../../shared/agents/types";
-import { CALL_ROUTES, routesEnabled } from "../../shared/agents/routes";
+import { CALL_ROUTES } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -150,7 +150,7 @@ export interface JobPlan {
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   const contract = TASKS[task];
-  const modelKey = (task === "chat_intent" && routesEnabled() ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? CURRENT_ROUTING.routes[contract.role].primary;
+  const modelKey = (task === "chat_intent" ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? CURRENT_ROUTING.routes[contract.role].primary;
   const searches = MODEL_SPECS[modelKey].provider === "anthropic" ? webSearches : 0;
   return {
     kind: "model",

@@ -4,8 +4,8 @@ import type { PhaseModels } from "./types";
 /**
  * Model routes per agent (owner decision, 2026-10-18). research → draft →
  * review; `revise` is the conditional escalation used only when a review
- * fails (e.g. Opus for the growth plan). Set CLIMBOS_ROUTES=classic to roll
- * back to the previous Claude-only routes for new jobs.
+ * fails (e.g. Opus for the growth plan). These are the only routes; a provider
+ * outage is handled by the cross-provider fallback, not by a separate mode.
  */
 
 const LUNA: ModelKey = "gpt-6-luna";
@@ -44,12 +44,7 @@ export const CALL_ROUTES = {
   fallback: SOL,
 } as const;
 
-export function routesEnabled(): boolean {
-  return (typeof process !== "undefined" ? process.env.CLIMBOS_ROUTES : undefined) !== "classic";
-}
-
-/** Apply the route for an agent id over its default (classic) models. */
-export function routeModels(id: string, classic: PhaseModels): PhaseModels {
-  if (!routesEnabled()) return classic;
-  return { ...classic, ...(ROUTES[id] ?? {}) };
+/** Apply the route for an agent id over its base models. */
+export function routeModels(id: string, base: PhaseModels): PhaseModels {
+  return { ...base, ...(ROUTES[id] ?? {}) };
 }

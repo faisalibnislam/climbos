@@ -12,7 +12,6 @@ describe("OpenAI adapter", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     delete process.env.OPENAI_API_KEY;
-    delete process.env.CLIMBOS_ROUTES;
   });
 
   it("makes schemas strict: closed objects, all keys required, optional → nullable", () => {
@@ -89,12 +88,10 @@ describe("OpenAI adapter", () => {
     expect(!n.ok && n.kind).toBe("provider_unavailable");
   });
 
-  it("routes follow the owner's table, and classic mode rolls back", () => {
-    const classic = { research: "claude-sonnet-5.5" as const, draft: "claude-opus-5.5" as const, critic: "claude-opus-5.5" as const };
-    expect(routeModels("business_insights", classic)).toMatchObject({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "claude-sonnet-5.5" });
-    expect(routeModels("growth_strategy", classic)).toMatchObject({ draft: "claude-sonnet-5.5", revise: "claude-opus-5.5" });
-    expect(routeModels("social_posts", classic)).toMatchObject({ draft: "claude-sonnet-5.5", critic: "claude-haiku-5.5" });
-    process.env.CLIMBOS_ROUTES = "classic";
-    expect(routeModels("business_insights", classic)).toEqual(classic);
+  it("routes follow the owner's table", () => {
+    const base = { research: "claude-sonnet-5.5" as const, draft: "claude-opus-5.5" as const, critic: "claude-opus-5.5" as const };
+    expect(routeModels("business_insights", base)).toMatchObject({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "claude-sonnet-5.5" });
+    expect(routeModels("growth_strategy", base)).toMatchObject({ draft: "claude-sonnet-5.5", revise: "claude-opus-5.5" });
+    expect(routeModels("social_posts", base)).toMatchObject({ draft: "claude-sonnet-5.5", critic: "claude-haiku-5.5" });
   });
 });
