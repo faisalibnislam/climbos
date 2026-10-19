@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Callout, IconButton, Skeleton, SocialIcon } from "@/components/ui";

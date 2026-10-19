@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Copy, Link2, Trash2 } from "lucide-react";
+import { Copy, Link2, Trash2 } from "@/components/icons"
 import { useState } from "react";
 import { Button, Card, CardContent, ColorPicker, Field, Input, toast } from "@/components/ui";
 import { errorMessage } from "../errors";

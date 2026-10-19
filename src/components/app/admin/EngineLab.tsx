@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical } from "@/components/icons"
 import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
 import { Badge, Button, Card, CardContent, EmptyState, Progress, toast } from "@/components/ui";

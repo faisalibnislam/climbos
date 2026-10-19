@@ -4,7 +4,7 @@ import { Discussion } from "@/components/app/Discussion";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Target } from "lucide-react";
+import { Compass, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";

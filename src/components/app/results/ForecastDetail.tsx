@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { BacktestResult, HorizonSummary } from "@shared/forecasting";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@/components/icons"
 import Link from "next/link";
 import { Callout, DataTable, LineChart, Stat, StatGroup, buttonClasses, type DataTableColumn } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";

@@ -3,7 +3,7 @@
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { CircleCheck, ExternalLink, FlaskConical } from "lucide-react";
+import { CircleCheck, ExternalLink, FlaskConical } from "@/components/icons"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Badge, Button, Callout, DataTable, Meter, toast } from "@/components/ui";

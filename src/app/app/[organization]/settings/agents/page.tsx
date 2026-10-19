@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Bot, Check, Copy, KeyRound, ShieldCheck } from "lucide-react";
+import { Bot, Check, Copy, KeyRound, ShieldCheck } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, EmptyState, Field, Input, Segmented, TableFrame, Table, TBody, Td, Th, THead, Tr, CellStack, toast } from "@/components/ui";

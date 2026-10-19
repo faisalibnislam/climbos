@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, ImageIcon, MessageCircle } from "lucide-react";
+import { Heart, ImageIcon, MessageCircle } from "@/components/icons"
 import type { ReactNode } from "react";
 import { SocialIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";

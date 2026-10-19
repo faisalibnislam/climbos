@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 /** Loading placeholder with a gentle shimmer (static under reduced motion). Decorative. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons"
 import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { RoleAvatar } from "./RoleAvatar";

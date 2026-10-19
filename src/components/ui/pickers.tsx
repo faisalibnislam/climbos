@@ -1,7 +1,7 @@
 "use client";
 
 import { Popover as RPopover } from "radix-ui";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "@/components/icons"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { controlClasses, useFieldControl } from "./field";

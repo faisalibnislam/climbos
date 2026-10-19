@@ -1,4 +1,4 @@
-import { Ban, CircleAlert, CircleCheck, CircleMinus, Clock, Hourglass, Settings2, TriangleAlert } from "lucide-react";
+import { Ban, CircleAlert, CircleCheck, CircleMinus, Clock, Hourglass, Settings2, TriangleAlert } from "@/components/icons"
 import type { ReactNode } from "react";
 import type { Tone } from "@/components/ui";
 

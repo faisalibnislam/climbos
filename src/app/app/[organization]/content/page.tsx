@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Palette } from "lucide-react";
+import { Palette } from "@/components/icons"
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";

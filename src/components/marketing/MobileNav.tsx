@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { Menu } from "@/components/icons"
 import { IconButton } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/dialog";
 import { buttonClasses } from "@/components/ui/button-styles";

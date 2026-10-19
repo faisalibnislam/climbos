@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "lucide-react";
+import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "@/components/icons"
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { can, type MemberRole } from "@shared/policy";

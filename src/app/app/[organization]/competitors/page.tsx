@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Eye, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Eye, Plus, RefreshCw, Trash2 } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";

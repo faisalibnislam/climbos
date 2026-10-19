@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Bot, ChevronDown, Clock, Hand, ShieldAlert, Sparkles, UserRound, Wallet } from "lucide-react";
+import { Bot, ChevronDown, Clock, Hand, ShieldAlert, Sparkles, UserRound, Wallet } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Callout, ChoiceChips, EmptyState, Select, Skeleton, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";

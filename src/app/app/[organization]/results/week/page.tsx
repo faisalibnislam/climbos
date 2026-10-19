@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";

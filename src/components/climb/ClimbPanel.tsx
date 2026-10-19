@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MousePointerClick, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MousePointerClick, RotateCcw, ShieldCheck, Sparkles, X } from "@/components/icons"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { CircleCheck, CircleSlash, Clock } from "lucide-react";
+import { CircleCheck, CircleSlash, Clock } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";

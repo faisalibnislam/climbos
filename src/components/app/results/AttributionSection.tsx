@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Callout, CellStack, SocialIcon, Table, TableFrame, TBody, Td, Th, THead, Tr, buttonClasses, networkOf } from "@/components/ui";

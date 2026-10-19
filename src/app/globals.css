@@ -125,8 +125,9 @@
   --cream: #eae3ce;
   --cream-soft: #f4f0e3;
   --sage: #7c8f6e;
-  --sage-ink: #687c5c;
+  --sage-ink: #5b6e50;
   --lime: #c3ef88;
+  --focus-ring: var(--brand-600);
 }
 
 /*
@@ -144,17 +145,17 @@
   --surface-3: #e2e6de;
   --ink: #161815;
   --ink-2: #444841;
-  --ink-3: #5f645b;
+  --ink-3: #575c53;
   --line: rgb(22 24 21 / 0.07);
   --line-strong: rgb(22 24 21 / 0.12);
   --control-border: rgb(22 24 21 / 0.5);
   --control-border-hover: rgb(22 24 21 / 0.7);
 
-  /* Sage: brand, links, focus, chart lines. 800 on white = 5.9:1. */
+  /* Sage: brand, links, focus, chart lines. 800: 6.8:1 on white, 5.7:1 on the ground. */
   --brand-950: #1e2719;
   --brand-900: #2f3c29;
-  --brand-800: #55694a;
-  --brand-700: #6e8361;
+  --brand-800: #4d6043;
+  --brand-700: #627656;
   --brand-600: #7c8f6e;
   --brand-200: #d3dccb;
   --brand-100: #dfe6d8;
@@ -168,29 +169,33 @@
   --coral: #d0705a;
 
   /* Status: soft pill fills with deep inks, as in the reference tables. */
-  --green-800: #46752a;
+  --green-800: #3d6824;
   --green-500: #86b85c;
   --green-100: #e2f1d6;
-  --red-800: #b23a55;
+  --red-800: #a12f4b;
   --red-500: #d9667b;
   --red-100: #fbe1e6;
-  --amber-800: #876410;
+  --amber-800: #725506;
   --amber-500: #e0ae36;
   --amber-100: #fbf0c4;
-  --orange-800: #b05a1a;
+  --orange-800: #934710;
   --orange-500: #e3955c;
   --orange-100: #fcebdd;
 
-  --chart-1: #6e8361;
+  --chart-1: #627656;
   --chart-2: #6a9a2a;
   --chart-3: #4a8593;
   --chart-4: #8a7bbe;
   --chart-5: #b98a2e;
-  --chart-6: #b7bcb2;
+  --chart-6: #8a9084;
   --chart-grid: rgb(22 24 21 / 0.07);
 
-  --gradient-hero: linear-gradient(180deg, #eae3ce 0%, #d3d3b8 38%, #a7b293 70%, #7c8f6e 100%);
-  --gradient-soft: linear-gradient(180deg, #f4f0e3 0%, #e8ece5 100%);
+  /* No gradients (owner, 2026-10-19): feature surfaces are flat cream. */
+  --gradient-hero: #eae3ce;
+  --gradient-soft: #f4f0e3;
+  /* Chart areas: one flat tint instead of a fade. */
+  --area-top: 0.08;
+  --area-bottom: 0.08;
   /* No grid pattern (owner, 2026-10-19). */
   --grid-pattern: none;
 
@@ -227,6 +232,11 @@
   --tabs-track-border: transparent;
   --tab-active: #161815;
   --tab-active-ink: #ffffff;
+  /* Contrast (WCAG 2.2, owner rules 2026-10-19): body text ink/ink-2 ≥ 7:1 (AAA); meta, links,
+     status inks and placeholders ≥ 5.3:1 on every surface; chart lines, icons, borders and
+     focus ≥ 3:1. Sage-ink carries white text (5.5:1). */
+  --sage-ink: #5b6e50;
+  --focus-ring: #4d6043;
 }
 /* Marketing CTAs take the pill shape in themes that set one. */
 .marketing {
@@ -362,7 +372,7 @@ body {
 
 /* Visible, consistent focus for keyboard users. */
 :focus-visible {
-  outline: 2px solid var(--brand-600);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 6px;
 }

@@ -3,7 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Repeat2 } from "lucide-react";
+import { Repeat2 } from "@/components/icons"
 import { useState } from "react";
 import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Input, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "../errors";

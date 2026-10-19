@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, PlugZap } from "lucide-react";
+import { ArrowRight, PlugZap } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, LineChart, buttonClasses } from "@/components/ui";

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Check, Copy, Download, TriangleAlert } from "lucide-react";
+import { Check, Copy, Download, TriangleAlert } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, Skeleton, SocialIcon, buttonClasses, toast } from "@/components/ui";
 import { ErrorCallout } from "../shared";

@@ -2,7 +2,7 @@
 
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Bot, Cog, Headset, UserRound } from "lucide-react";
+import { Bot, Cog, Headset, UserRound } from "@/components/icons"
 import type { ReactNode } from "react";
 import { Badge, Button, EmptyState } from "@/components/ui";
 import { formatDateTime, relativeTime } from "../money";

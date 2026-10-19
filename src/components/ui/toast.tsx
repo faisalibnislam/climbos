@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, type ReactNode } from "react";
-import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, X } from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 export type ToastTone = "info" | "success" | "danger";

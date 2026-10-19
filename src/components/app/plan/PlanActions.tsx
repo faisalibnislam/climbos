@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { RefreshCw, Sparkles } from "@/components/icons"
 import { useState } from "react";
 import { Button, Card, CardContent, ConfirmDialog, Field, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";

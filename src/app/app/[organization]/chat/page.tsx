@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Copy, MessageCircle } from "lucide-react";
+import { Copy, MessageCircle } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";

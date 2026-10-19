@@ -2,7 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Download } from "lucide-react";
+import { Download } from "@/components/icons"
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { Button, Callout, DataTable, Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger, Label, Skeleton, buttonClasses } from "@/components/ui";
 import { formatNumber, plural } from "@/lib/utils";

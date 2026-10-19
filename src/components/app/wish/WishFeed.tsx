@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleCheck, CircleDashed, CircleX, Lightbulb, Loader2, Plug, Sparkles, Zap } from "lucide-react";
+import { CircleCheck, CircleDashed, CircleX, Lightbulb, Loader2, Plug, Sparkles, Zap } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";

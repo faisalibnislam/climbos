@@ -1,4 +1,4 @@
-import { BarChart3, Crown, HandCoins, HeartHandshake, Megaphone, Palette, Search, Share2, Target, Workflow, type LucideIcon } from "lucide-react";
+import { BarChart3, Crown, HandCoins, HeartHandshake, Megaphone, Palette, Search, Share2, Target, Workflow, type LucideIcon } from "@/components/icons"
 import { IconTile, type Tone } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ROLE_META } from "./roles";

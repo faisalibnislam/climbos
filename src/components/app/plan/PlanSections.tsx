@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink } from "@/components/icons"
 import { useState, type ReactNode } from "react";
 import { Badge, Callout, Card, CardContent, DataTable, Skeleton, Switch, buttonClasses, toast, type Tone } from "@/components/ui";
 import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";

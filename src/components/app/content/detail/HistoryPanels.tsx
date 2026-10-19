@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, CircleQuestionMark, FileText, FlaskConical, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleQuestionMark, FileText, FlaskConical, type LucideIcon } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, type Tone } from "@/components/ui";
 import { cn } from "@/lib/utils";

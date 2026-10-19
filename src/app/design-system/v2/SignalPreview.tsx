@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   CalendarCheck,
@@ -39,7 +39,7 @@ import {
   UsersRound,
   X,
   Zap,
-} from "lucide-react";
+} from "@/components/icons"
 import { Badge, Button, Segmented, SocialIcon, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark as BrandWordmark } from "@/components/brand/Logo";
@@ -127,7 +127,6 @@ function DropButton({ children, white }: { children: ReactNode; white?: boolean 
 
 /** Sparkline with soft area, a dotted end marker and a dot, as on the reference KPI cards. */
 function Spark({ values, good }: { values: number[]; good: boolean }) {
-  const id = useId();
   const w = 150;
   const h = 64;
   const min = Math.min(...values);
@@ -138,13 +137,7 @@ function Spark({ values, good }: { values: number[]; good: boolean }) {
   const [lx, ly] = pts[pts.length - 1];
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="h-14 w-28 xl:w-32" aria-hidden>
-      <defs>
-        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor={color} stopOpacity="0.22" />
-          <stop offset="1" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`${line} L${lx},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={`${line} L${lx},${h} L0,${h} Z`} fill={color} fillOpacity="0.08" />
       <path d={line} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
       <line x1={lx} x2={lx} y1={ly} y2={h} stroke="var(--line-strong)" strokeDasharray="2 3" />
       <circle cx={lx + 3} cy={ly - 3} r="2" fill="var(--ink-3)" />
@@ -224,9 +217,9 @@ function WorkspaceSwitcher() {
 
 function UpsellCard() {
   return (
-    <div className="flex flex-col gap-1 rounded-[14px] bg-sage p-4 text-white">
+    <div className="flex flex-col gap-1 rounded-[14px] bg-sage-ink p-4 text-white">
       <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4" aria-hidden /> More credits, more reach</p>
-      <p className="text-xs text-white/85">Upgrade to unlock more workspaces and weekly autopilot.</p>
+      <p className="text-xs text-white">Upgrade to unlock more workspaces and weekly autopilot.</p>
       <button type="button" className="mt-6 inline-flex h-10 items-center justify-center gap-1 rounded-full bg-lime text-sm font-medium text-ink hover:brightness-95">
         Upgrade <ChevronRight className="size-4" aria-hidden />
       </button>
@@ -426,7 +419,7 @@ function SourcesPanel() {
                   <span className="flex items-center gap-2.5">
                     {r.icon}
                     {r.name}
-                    {r.warn ? <TriangleAlert aria-label="Needs attention" className="size-4 text-amber-500" /> : null}
+                    {r.warn ? <TriangleAlert aria-label="Needs attention" className="size-4 text-amber-800" /> : null}
                   </span>
                 </td>
                 <td className="text-right tabular-nums">{r.reached}</td>
@@ -661,7 +654,7 @@ function Hero() {
       <div className="mx-auto max-w-3xl pb-10 pt-14 text-center">
         <h1 className="font-display text-5xl font-medium leading-[1.08] tracking-[-0.02em] text-ink sm:text-[64px]">
           Know which plays bring
-          <span className="block text-brand-700">real paying customers</span>
+          <span className="block text-brand-800">real paying customers</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base text-ink-2">
           ClimbOS researches your business, plans the work, runs it with your approval and tracks every lead back to the play that brought it.
@@ -795,16 +788,16 @@ const PALETTE: { group: string; colors: { name: string; hex: string; token: stri
       { name: "Panel", hex: "#FFFFFF", token: "surface", role: "Cards, tables, active nav" },
       { name: "Fill", hex: "#F2F4F0", token: "surface-2", role: "Chips, quiet buttons" },
       { name: "Ink", hex: "#161815", token: "ink", role: "Text, primary buttons", dark: true },
-      { name: "Ink 3", hex: "#5F645B", token: "ink-3", role: "Meta text", dark: true },
+      { name: "Ink 3", hex: "#575C53", token: "ink-3", role: "Meta, placeholders (5.7:1)", dark: true },
     ],
   },
   {
     group: "Brand",
     colors: [
-      { name: "Cream", hex: "#EAE3CE", token: "cream", role: "Gradient top, highlight pills" },
-      { name: "Sage", hex: "#7C8F6E", token: "sage", role: "Gradient base, upsell card", dark: true },
-      { name: "Sage ink", hex: "#687C5C", token: "sage-ink", role: "Pills with white text", dark: true },
-      { name: "Sage 800", hex: "#55694A", token: "brand-800", role: "Links, focus, chart line", dark: true },
+      { name: "Cream", hex: "#EAE3CE", token: "cream", role: "Hero and feature surfaces, pills" },
+      { name: "Sage", hex: "#7C8F6E", token: "sage", role: "Brand panels, decorative (no small text)", dark: true },
+      { name: "Sage ink", hex: "#5B6E50", token: "sage-ink", role: "White-text pills, upsell (5.5:1)", dark: true },
+      { name: "Sage 800", hex: "#4D6043", token: "brand-800", role: "Links, focus, sage text (5.7:1)", dark: true },
       { name: "Lime", hex: "#C3EF88", token: "lime", role: "Logo, Upgrade, CTA, outcome bar" },
       { name: "Lime deep", hex: "#94C256", token: "lime-deep", role: "Logo shading, decorative only" },
     ],
@@ -816,9 +809,22 @@ const PALETTE: { group: string; colors: { name: string; hex: string; token: stri
       { name: "Warn", hex: "#FBF0C4", token: "amber-100 / 800", role: "Paused, not a fit" },
       { name: "Alert", hex: "#FBE1E6", token: "red-100 / 800", role: "Stopped, Rejected, ↓" },
       { name: "Pending", hex: "#FCEBDD", token: "orange-100 / 800", role: "Unverified" },
-      { name: "Previous", hex: "#B7BCB2", token: "chart-6", role: "Comparison line" },
+      { name: "Previous", hex: "#8A9084", token: "chart-6", role: "Comparison line (3.3:1)", dark: true },
     ],
   },
+];
+
+const CONTRAST: [string, string, string, string][] = [
+  ["Ink on white / ground", "Titles, body", "17.9 / 14.9", "AAA"],
+  ["Ink 2 on white / ground", "Body copy, table text", "9.3 / 7.8", "AAA"],
+  ["Ink 3 on white / ground / cream", "Meta, placeholders, inactive tabs", "6.9 / 5.7 / 5.4", "AA"],
+  ["Sage 800 on white / ground / cream", "Links, sage headline, focus ring", "6.8 / 5.7 / 5.3", "AA"],
+  ["White on sage ink", "Pills, upsell card", "5.5", "AA"],
+  ["Ink on lime", "CTA, Upgrade", "13.6", "AAA"],
+  ["White on ink", "Primary buttons, active segment", "17.9", "AAA"],
+  ["Status inks on their fills", "Active, Paused, Stopped, Unverified", "5.6–6.1", "AA"],
+  ["Control border on white", "Inputs, checkboxes", "3.4", "AA (UI 3:1)"],
+  ["Chart line / previous line on white", "Charts", "5.0 / 3.3", "AA (graphics 3:1)"],
 ];
 
 function ColourSection() {
@@ -841,6 +847,25 @@ function ColourSection() {
           </div>
         </div>
       ))}
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
+        <p className="heading-card">Contrast (WCAG 2.2)</p>
+        <p className="text-xs text-ink-3">AA everywhere; AAA (7:1) for body text. Lime, sage and cream never carry small text in a light colour.</p>
+        <table className="mt-3 w-full min-w-[560px] text-ui">
+          <thead className="border-b border-line text-left text-ink-3">
+            <tr><th className="py-2 font-normal">Pair</th><th className="font-normal">Use</th><th className="font-normal">Ratio</th><th className="font-normal">Level</th></tr>
+          </thead>
+          <tbody>
+            {CONTRAST.map(([pair, use, ratio, level]) => (
+              <tr key={pair} className="border-b border-line last:border-0">
+                <td className="py-2 font-medium">{pair}</td>
+                <td className="text-ink-2">{use}</td>
+                <td className="tabular-nums">{ratio}</td>
+                <td><StatusPill kind={level.startsWith("AAA") ? "active" : "verified"}>{level}</StatusPill></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="bg-hero-grid grid h-64 place-items-center rounded-[var(--radius-card)]"><Wordmark tone="lime" size="lg" /></div>
         <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-lime"><Wordmark size="lg" tone="onLime" /></div>
@@ -938,7 +963,7 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
       <main className="mx-auto flex max-w-[1240px] flex-col gap-16 px-4 py-10 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
           <Badge tone="brand" icon={<Sparkles />} className="self-start">Proposal · not live yet</Badge>
-          <SectionTitle title="Signal" intro="The WAct visual language for ClimbOS: sage-tinted ground, white panels, black actions, cream and sage brand surfaces, one lime call to action, Reckless Neue titles and Hanken Grotesk body." />
+          <SectionTitle title="Signal" intro="The WAct visual language for ClimbOS, flat (no gradients or patterns): sage-tinted ground, white panels, black actions, cream and sage brand surfaces, one lime call to action, Reckless Neue titles and Hanken Grotesk body." />
         </header>
         <Hero />
         <section className="flex flex-col gap-6">
@@ -950,7 +975,7 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
           <ReportsScreen />
         </section>
         <section className="flex flex-col gap-6">
-          <SectionTitle title="Mobile" intro="Marketing on phones: Reckless titles, white cards on the ground, sage and cream pills, the gradient for the closing card." />
+          <SectionTitle title="Mobile" intro="Marketing on phones: Reckless titles, white cards on the ground, sage and cream pills, a cream closing card." />
           <MobileScreens />
         </section>
         <ColourSection />

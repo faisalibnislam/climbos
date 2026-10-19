@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BellRing, Smartphone, Trash2 } from "lucide-react";
+import { BellRing, Smartphone, Trash2 } from "@/components/icons"
 import { useEffect, useState } from "react";
 import { Button, Callout, toast } from "@/components/ui";
 import { errorMessage } from "../errors";

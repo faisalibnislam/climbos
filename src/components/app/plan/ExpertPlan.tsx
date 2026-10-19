@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { PlayResults } from "./PlayResults";
-import { CircleCheck, Crosshair, FlaskConical, Gem, Info, Rocket, ShieldCheck, Sparkles, Target, TriangleAlert, X, type LucideIcon } from "lucide-react";
+import { CircleCheck, Crosshair, FlaskConical, Gem, Info, Rocket, ShieldCheck, Sparkles, Target, TriangleAlert, X, type LucideIcon } from "@/components/icons"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/components/ui";

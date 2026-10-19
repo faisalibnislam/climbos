@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { X } from "lucide-react";
+import { X } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 

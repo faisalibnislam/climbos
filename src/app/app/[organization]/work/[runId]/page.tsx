@@ -5,7 +5,7 @@ import { RoleExplainer } from "@/components/app/RoleExplainer";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BackLink, Badge, Button, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";

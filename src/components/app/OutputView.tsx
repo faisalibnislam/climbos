@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink } from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { RadioGroup } from "radix-ui";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck } from "@/components/icons"
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 

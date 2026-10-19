@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Copy, Send, Trash2, Webhook } from "lucide-react";
+import { Copy, Send, Trash2, Webhook } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";

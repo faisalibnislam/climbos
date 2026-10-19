@@ -14,7 +14,7 @@ import {
   Pencil,
   Send,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Component, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";

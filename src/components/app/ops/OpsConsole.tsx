@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleAlert, CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, buttonClasses, toast } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";

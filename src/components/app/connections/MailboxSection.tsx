@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Mail } from "lucide-react";
+import { Mail } from "@/components/icons"
 import { Badge, Button } from "@/components/ui";
 import { ConnectMailbox } from "../outbound/MailboxSending";
 

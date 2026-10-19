@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Star } from "@/components/icons"
 import { useParams, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button, buttonClasses, Card, CardContent, Skeleton, Textarea } from "@/components/ui";

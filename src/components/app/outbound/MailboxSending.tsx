@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Mail, Pause, Play } from "lucide-react";
+import { Mail, Pause, Play } from "@/components/icons"
 import { useState } from "react";
 import { MAILBOX_PRESETS, type MailboxPreset } from "@shared/outbound/sending";
 import { Badge, Button, Callout, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Input, Select, toast } from "@/components/ui";

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleCheck, Coins } from "lucide-react";
+import { CircleCheck, Coins } from "@/components/icons"
 import { Container, PageHero, Section, SectionHeading } from "@/components/marketing/layout";
 import { CreditExamples, PlanCards, PlanComparison } from "@/components/marketing/pricing";
 import { getTopups, lowestPaidPrice } from "@/components/marketing/plans";

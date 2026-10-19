@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Circle, CircleCheck, CircleX } from "lucide-react";
+import { Circle, CircleCheck, CircleX } from "@/components/icons"
 import { cn } from "@/lib/utils";
 import { Spinner } from "./spinner";
 

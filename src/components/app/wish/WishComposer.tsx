@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp, Sparkles } from "@/components/icons"
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Button, Kbd, toast } from "@/components/ui";
 import { errorInfo } from "@/components/app/errors";

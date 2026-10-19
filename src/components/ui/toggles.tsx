@@ -1,7 +1,7 @@
 "use client";
 
 import { Checkbox as RCheckbox, Switch as RSwitch } from "radix-ui";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus } from "@/components/icons"
 import { useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 

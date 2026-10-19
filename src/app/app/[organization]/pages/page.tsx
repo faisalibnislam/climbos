@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ExternalLink, FileText, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ExternalLink, FileText, Plus, RotateCcw, Trash2, X } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AbTestPanel } from "@/components/app/AbTestPanel";

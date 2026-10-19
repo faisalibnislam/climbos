@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { AtSign, Bell, CheckCircle2, ClipboardList, MessageSquare } from "lucide-react";
+import { AtSign, Bell, CheckCircle2, ClipboardList, MessageSquare } from "@/components/icons"
 import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";

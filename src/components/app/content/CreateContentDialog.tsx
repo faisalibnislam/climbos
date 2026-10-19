@@ -4,7 +4,7 @@ import { AiModePicker, useAiMode, type AiMode } from "../AiModePicker";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import {

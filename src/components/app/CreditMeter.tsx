@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Coins } from "lucide-react";
+import { Coins } from "@/components/icons"
 import Link from "next/link";
 import { Progress, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";

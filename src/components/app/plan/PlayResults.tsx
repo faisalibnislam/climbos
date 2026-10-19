@@ -3,7 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ClipboardPen } from "lucide-react";
+import { ClipboardPen } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";

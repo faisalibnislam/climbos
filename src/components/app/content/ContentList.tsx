@@ -3,7 +3,7 @@
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { Check, Flag, ImageIcon, Inbox } from "lucide-react";
+import { Check, Flag, ImageIcon, Inbox } from "@/components/icons"
 import Link from "next/link";
 import { Button, Card, EmptyState, Skeleton, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";

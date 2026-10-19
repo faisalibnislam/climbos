@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Bell, CalendarCheck, CalendarDays, Check, Eye, Inbox, MailOpen, MessageSquareReply, MoreHorizontal, Plus, Search, Send, Sparkles, Trash2, Users } from "lucide-react";
+import { Bell, CalendarCheck, CalendarDays, Check, Eye, Inbox, MailOpen, MessageSquareReply, MoreHorizontal, Plus, Search, Send, Sparkles, Trash2, Users } from "@/components/icons"
 import {
   Avatar,
   Badge,

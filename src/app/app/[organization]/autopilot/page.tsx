@@ -4,7 +4,7 @@ import { AiModePicker, useAiMode, type AiMode } from "@/components/app/AiModePic
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarClock, CircleCheck, Hand, Loader2, Minus, MoreHorizontal, Plus, RotateCcw, ShieldCheck, SkipForward, Sparkles, TriangleAlert, Upload } from "lucide-react";
+import { CalendarClock, CircleCheck, Hand, Loader2, Minus, MoreHorizontal, Plus, RotateCcw, ShieldCheck, SkipForward, Sparkles, TriangleAlert, Upload } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";

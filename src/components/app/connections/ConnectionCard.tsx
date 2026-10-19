@@ -3,7 +3,7 @@
 import { useAction, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, Contact, CreditCard, FileSpreadsheet, Globe, RefreshCw, UserSearch, type LucideIcon } from "lucide-react";
+import { ArrowRight, Contact, CreditCard, FileSpreadsheet, Globe, RefreshCw, UserSearch, type LucideIcon } from "@/components/icons"
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Badge, Button, Callout, ConfirmDialog, IconTile, SocialIcon, StatusPill, toast, type Tone } from "@/components/ui";

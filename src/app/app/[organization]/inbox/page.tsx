@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, FileText, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "lucide-react";
+import { CalendarCheck, Check, FileText, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";

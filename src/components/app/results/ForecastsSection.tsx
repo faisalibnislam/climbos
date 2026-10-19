@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, CircleCheck, CircleHelp } from "lucide-react";
+import { ArrowRight, CircleCheck, CircleHelp } from "@/components/icons"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";

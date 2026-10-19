@@ -3,7 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Languages } from "lucide-react";
+import { Languages } from "@/components/icons"
 import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Select, toast } from "@/components/ui";
 import { CONTENT_LANGUAGES } from "../../../../shared/languages";

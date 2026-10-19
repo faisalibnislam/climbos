@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Target } from "lucide-react";
+import { Target } from "@/components/icons"
 import { useState } from "react";
 import { Button, Callout, Card, CardContent, Field, Input, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";

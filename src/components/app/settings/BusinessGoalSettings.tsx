@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, ConfirmDialog, Field, Input, Select, Textarea, buttonClasses, toast } from "@/components/ui";

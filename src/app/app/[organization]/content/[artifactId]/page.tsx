@@ -4,7 +4,7 @@ import { Discussion } from "@/components/app/Discussion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Archive, ArchiveRestore, ArrowLeft, Ellipsis, Pencil } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Ellipsis, Pencil } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";

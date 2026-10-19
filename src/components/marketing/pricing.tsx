@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons"
 import { CREDIT_EXAMPLES } from "@shared/economics";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button-styles";

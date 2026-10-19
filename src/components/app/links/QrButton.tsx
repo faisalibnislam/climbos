@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, QrCode } from "lucide-react";
+import { Download, QrCode } from "@/components/icons"
 import { useMemo, useState } from "react";
 import { qrSvg } from "@shared/links/qr";
 import { Button, Dialog, DialogContent, DialogFooter, DialogTrigger, toast } from "@/components/ui";

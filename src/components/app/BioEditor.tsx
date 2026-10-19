@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { ExternalLink, Plus, X } from "@/components/icons"
 import { useState } from "react";
 import { Button, Card, CardContent, ColorPicker, Field, Input, Switch, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "./errors";

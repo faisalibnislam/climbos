@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@/components/icons"
 import { useState } from "react";
 import { Button, Field, Input, Select, toast } from "@/components/ui";
 import { errorMessage } from "../errors";

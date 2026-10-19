@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck, TriangleAlert } from "@/components/icons"
 import { cn, formatNumber } from "@/lib/utils";
 
 export interface ProgressProps {

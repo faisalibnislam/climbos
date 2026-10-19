@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/icons"
 import Link from "next/link";
 
 /** Links to the drafts a job created, shown once they exist. */

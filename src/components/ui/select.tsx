@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as RSelect } from "radix-ui";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@/components/icons"
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { controlClasses, useFieldControl } from "./field";

@@ -5,7 +5,7 @@ import { MailboxSending } from "@/components/app/outbound/MailboxSending";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, MoreHorizontal, Search, Sparkles, Target, X } from "lucide-react";
+import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, MoreHorizontal, Search, Sparkles, Target, X } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FUNNEL_STAGES, PROSPECT_STAGES, STAGE_LABEL, mergeEmail, prospectScore, prospectsCsv, type ProspectStage } from "../../../../../shared/outbound";

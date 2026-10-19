@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Check, ImagePlus, Loader2, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
+import { Check, ImagePlus, Loader2, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Sparkles, Trash2, Upload, Wand2 } from "@/components/icons"
 import { SCENES, TREATMENTS, type Treatment } from "../../../../../shared/visuals/treatments";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";

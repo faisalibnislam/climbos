@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, type LucideIcon } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, SocialIcon, toast, type Tone } from "@/components/ui";

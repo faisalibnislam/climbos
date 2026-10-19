@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowDown, ArrowUp, Printer } from "lucide-react";
+import { ArrowDown, ArrowUp, Printer } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui";

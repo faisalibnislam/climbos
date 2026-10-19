@@ -21,7 +21,7 @@ import {
   Underline,
   Ungroup,
   Unlock,
-} from "lucide-react";
+} from "@/components/icons"
 import { newId } from "@shared/design/ops";
 import type { ImageLayer, Layer, ShapeLayer, TextLayer } from "@shared/design/types";
 import { DESIGN_FONTS, nearestWeight } from "../fonts";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
-import { CircleAlert, Clock, CreditCard, Lock, PlugZap, SearchX, WifiOff } from "lucide-react";
+import { CircleAlert, Clock, CreditCard, Lock, PlugZap, SearchX, WifiOff } from "@/components/icons"
 import Link from "next/link";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";

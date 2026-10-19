@@ -7,7 +7,7 @@ import {
   FlaskConical,
   Hourglass,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet" | "brand" | "teal" | "pink" | "orange";

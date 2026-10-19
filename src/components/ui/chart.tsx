@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { ChevronDown, Table2 } from "lucide-react";
+import { ChevronDown, Table2 } from "@/components/icons"
 import { cn, formatNumber } from "@/lib/utils";
 
 /* ------------------------------------------------------------------------- */

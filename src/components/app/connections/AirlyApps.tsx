@@ -2,7 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Unplug } from "lucide-react";
+import { Unplug } from "@/components/icons"
 import { useState } from "react";
 import { relativeTime } from "../money";
 import { errorMessage } from "../errors";

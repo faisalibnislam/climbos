@@ -1,4 +1,4 @@
-import { Calculator, CircleCheck, Link2, Megaphone, TrendingUp } from "lucide-react";
+import { Calculator, CircleCheck, Link2, Megaphone, TrendingUp } from "@/components/icons"
 import type { ReactNode } from "react";
 import { Badge, StatusPill } from "@/components/ui";
 import { cn } from "@/lib/utils";

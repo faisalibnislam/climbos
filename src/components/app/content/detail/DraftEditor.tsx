@@ -3,7 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleAlert, ImagePlus, Palette } from "lucide-react";
+import { CircleAlert, ImagePlus, Palette } from "@/components/icons"
 import { useId, useState } from "react";
 import { Button, Callout, Checkbox, Field, Input, Textarea, toast } from "@/components/ui";
 import { AssetPicker } from "@/components/app/AssetPicker";
