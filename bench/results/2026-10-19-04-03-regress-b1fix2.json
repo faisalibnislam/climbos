@@ -1,0 +1,2340 @@
+[
+ {
+  "case": "folevi",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Owner goal: “Get more paying customers in the next 90 days.” Scenario, not prediction: ≈16 new customers (range 6.9–33) for $129; cash ad spend $0.00/month, blended cost $8.21. Goal gap is unknown because no numeric target or baseline was supplied.",
+     "positioning": "Folevi is a calm web workspace for notes, linked pages, and tasks. Start free; write offline and sync when reconnected.",
+     "audiences": [
+      {
+       "name": "New accounts starting the Pro AI trial",
+       "hypothesis": "Clear terms and a first note-and-task workflow will help new users reach useful first value.",
+       "evidence": "Folevi offers a seven-day Pro AI trial, no card, then Free unless a plan is chosen."
+      },
+      {
+       "name": "Writers comparing note workspaces",
+       "hypothesis": "Factual writer-focused comparisons will bring relevant visitors to Free and paid plans.",
+       "evidence": "Folevi has six comparison pages and supports linked pages, tasks, and offline editing."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Free trial",
+       "score": 82,
+       "status": "primary",
+       "why": "The offer is already in place; improve its explanation and conversion path rather than rebuilding it."
+      },
+      {
+       "name": "Google organic search",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Potentially useful over time, but it needs sustained page work; do not lead with informational blog SEO."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 81,
+       "status": "later",
+       "why": "Supports conversion to paid from existing offers; contact volume, consent, and current automation are unconfirmed."
+      },
+      {
+       "name": "Reviews and reputation program",
+       "score": 80,
+       "status": "later",
+       "why": "Could build proof over time, but current review assets and customer volume are unknown."
+      },
+      {
+       "name": "Customer referral program",
+       "score": 79,
+       "status": "later",
+       "why": "Low cash cost, but there is not enough evidence yet to forecast reach or referrals."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 77,
+       "status": "later",
+       "why": "Best-fit, intent-rich use of an existing asset without relying on paid clicks."
+      },
+      {
+       "name": "Directory search visibility",
+       "score": 76,
+       "status": "later",
+       "why": "A low-cost discovery check; prioritize only directories with relevant search intent."
+      },
+      {
+       "name": "Comparison guides",
+       "score": 76,
+       "status": "later",
+       "why": "Useful high-intent asset, but overlaps with S09 and S10; combine the work."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Clear trial, useful first session",
+       "hypothesis": "Clear trial terms and a note-task guide will improve trial activation.",
+       "population": "New accounts starting the Pro AI trial; current trial copy is control.",
+       "method": "ab_split",
+       "primaryMetric": "Trial-start to note-plus-task activation rate",
+       "guardrails": [
+        "Roll out only if activation rises with 95% confidence and paid selection holds.",
+        "Stop only if a 95% interval shows lower activation; otherwise report inconclusive."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Stop at 120 starts or day 21; below target, report inconclusive."
+      },
+      {
+       "name": "Writer-intent comparison refresh",
+       "hypothesis": "Factual writer-focused comparisons will increase Free signups without lowering paid selection.",
+       "population": "Organic visitors split 50/50 across six existing comparison pages.",
+       "method": "ab_split",
+       "primaryMetric": "Free-account signups per comparison-page visitor",
+       "guardrails": [
+        "Scale only if a 95% interval shows more signups and paid selections do not fall.",
+        "Kill only if a 95% interval shows fewer signups; otherwise retain control."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Stop after 90 days or 900 visits; below 900, report inconclusive."
+      }
+     ],
+     "constraints": [
+      "Monthly ad budget: $200; plan uses $0.00/month on ad platforms.",
+      "Weekly owner hours are unknown; modeled effort is 0.1 hour per play.",
+      "Current paid count, numeric goal, funnel baselines, and source mix are unknown.",
+      "Economics use the $4.99 Pro price as a proxy; margin and churn are assumptions.",
+      "ClimbOS drafts require owner approval and installation."
+     ],
+     "measurementPlan": "UTM-tag every link. Track trial starts, note-plus-task activation, paid selection, and comparison-page visits and signups. Add a source question and weekly cohort scorecard; separate AI referrals and check relevant AI answers monthly.",
+     "firstActions": [
+      {
+       "title": "Confirm customer target, baseline, and owner availability",
+       "why": "This fills the goal gap and establishes whether the two plays have enough reach.",
+       "role": "Owner"
+      },
+      {
+       "title": "Draft trial sign-up copy and first-use guide",
+       "why": "State the seven-day trial, no-card terms, Free fallback, and AI data handling clearly.",
+       "role": "ClimbOS"
+      },
+      {
+       "title": "Audit and draft updates for all six comparison pages",
+       "why": "Use existing pages and verified feature details; owner reviews before publishing.",
+       "role": "ClimbOS"
+      }
+     ],
+     "diagnosis": "Bottleneck: an unmeasured self-serve funnel. Trial volume, comparison traffic, paid conversion, and the numeric goal are missing. If week-one data shows ample qualified traffic, focus shifts to activation or paid conversion.",
+     "affordableCac": "$4.24/month contribution, 5% monthly churn; $39 maximum 12-month customer cost. The $4.99 Pro price is a proxy; margin and churn are assumptions.",
+     "notDoing": [
+      {
+       "channel": "Search and Meta ads",
+       "why": "No validated CPC or CAC against the $39 ceiling; keep platform budget unspent."
+      },
+      {
+       "channel": "Lifecycle email",
+       "why": "Reachable list, consent, and existing automation are unconfirmed; test first use first."
+      },
+      {
+       "channel": "Customer referrals",
+       "why": "No referral path or referral baseline is confirmed; measure mentions before building."
+      },
+      {
+       "channel": "Directories and AlternativeTo",
+       "why": "Directory presence and relevant referral volume are unverified; audit after the core tests."
+      },
+      {
+       "channel": "Reviews and reputation",
+       "why": "Review volume is unknown; revisit after users have had a real chance to use Folevi."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying customers in 90 days",
+      "baseline": "Unknown; count new paying customers before launch.",
+      "target": "≈16 new paying customers by day 90; scenario, not owner goal."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Trial starts",
+       "weeklyTarget": "Modeled 40/week; verify against actuals.",
+       "source": "Planning assumption; validate in week one."
+      },
+      {
+       "metric": "Note-plus-task activation rate",
+       "weeklyTarget": "Assumed 50%; replace with test control.",
+       "source": "Planning assumption; no baseline."
+      },
+      {
+       "metric": "Activated-trial paid conversion",
+       "weeklyTarget": "Assumed 3%; validate with billing data.",
+       "source": "Planning assumption; no baseline."
+      },
+      {
+       "metric": "Comparison-page organic visits",
+       "weeklyTarget": "Modeled 1,538/week; verify in Search Console.",
+       "source": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14",
+       "focus": "Instrument events; launch both tests; clarify trial terms and AI data handling."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45",
+       "focus": "Run the 21-day trial test; review activation and paid selections."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Days 46–90",
+       "focus": "Keep changes that meet registered rules; finish comparison test; report inconclusive results honestly."
+      }
+     ],
+     "weekOneChecklist": [
+      "Confirm numeric 90-day target, current paid count, owner hours, and analytics access.",
+      "Add UTMs and “how did you hear about Folevi?” to signup.",
+      "Track trial starts, note-plus-task activation, paid selection, and page-level signups.",
+      "ClimbOS drafts trial test and six comparison updates; owner approves.",
+      "Launch both 50/50 tests after events pass tracking QA."
+     ],
+     "risks": [
+      {
+       "risk": "Economics are assumptions, not Folevi results.",
+       "mitigation": "Verify plan mix, margin, and churn against billing data by day 7."
+      },
+      {
+       "risk": "Test volumes may not support clear decisions.",
+       "mitigation": "Run full windows; if thresholds are unmet, retain control and report inconclusive."
+      },
+      {
+       "risk": "Comparison-page traffic may miss the modeled range.",
+       "mitigation": "Check Search Console weekly; reassess modeled reach by day 14."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Clear trial, useful first session",
+       "oneLiner": "Explain the existing trial, then guide a first note-and-task workflow.",
+       "kind": "bankable",
+       "audience": "New Folevi accounts starting the Pro AI trial.",
+       "trigger": "At sign-up, before users begin the seven-day Pro AI trial.",
+       "hook": "Try Pro AI for seven days, no card; afterward, your account moves to Free unless you choose a plan.",
+       "mechanic": "Clarify trial terms; guide one note-and-task workflow.",
+       "assetUsed": "Existing no-card trial; owner scorecard ranks it 82/100.",
+       "funnel": [
+        "Trial start→note plus task: 30–70%, likely 50% [assumption, grade D].",
+        "Activated trial→paid plan: 1–5%, likely 3% [assumption, grade D]."
+       ],
+       "unit": "paying personal customer",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Weekly trial volume and activated-user paid conversion.",
+       "test": "21-day 50/50 test; 120-start target; current trial copy is control.",
+       "killIf": "Stop if a 95% interval shows lower activation; otherwise mark inconclusive.",
+       "scaleIf": "Roll out only if activation rises with 95% confidence and paid selection holds.",
+       "scores": [
+        5,
+        4,
+        4,
+        4,
+        3,
+        5,
+        5,
+        2
+       ],
+       "firstActionToday": "Draft sign-up copy stating trial terms and the Free fallback.",
+       "climbosCanDo": "Draft A/B copy and track trial starts; owner approves and installs.",
+       "model": {
+        "weeklyReach": 40,
+        "weeklyReachLow": 10,
+        "weeklyReachHigh": 60,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "Business brief; no traffic baseline supplied"
+        },
+        "steps": [
+         {
+          "name": "Trial start to note plus task",
+          "rate": 0.5,
+          "low": 0.3,
+          "high": 0.7,
+          "source": "assumption",
+          "ref": "Planning assumption; no activation baseline supplied"
+         },
+         {
+          "name": "Activated trial to paid plan",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "Planning assumption; no paid-conversion data supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Plan"
+        },
+        "ownerHoursPerWeek": 0.1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Plan"
+        }
+       },
+       "p10": 3.4,
+       "p50": 7.7,
+       "p90": 11
+      },
+      {
+       "name": "Writer-intent comparison refresh",
+       "oneLiner": "Refresh existing comparison pages for writers weighing linked-note workflows.",
+       "kind": "creative",
+       "audience": "Writers comparing Obsidian, Notion, or Craft through Folevi’s comparison pages.",
+       "trigger": "While researching a notes workspace for a writing or research project.",
+       "hook": "Compare linked pages, tasks, offline editing, and AI options; start free.",
+       "mechanic": "Refresh comparison pages with factual feature tables and a Free-plan CTA.",
+       "assetUsed": "Six existing comparisons; confirmed offline editing, linked pages, and tasks.",
+       "funnel": [
+        "Organic visit→Free account: 1–5%, likely 2% [benchmark estimate, grade D].",
+        "Free account→paid plan: 1–5%, likely 3% [assumption, grade D]."
+       ],
+       "unit": "paying personal customer",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Actual page traffic and visitor-to-paid conversion.",
+       "test": "90-day 50/50 test on six pages; 900-visit lower-range target; control is current pages.",
+       "killIf": "Kill only if a 95% interval shows fewer sign-ups; otherwise retain control.",
+       "scaleIf": "Scale only if a 95% interval shows more sign-ups and paid selections do not fall.",
+       "scores": [
+        5,
+        3,
+        5,
+        3,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Check the Obsidian comparison page against current product facts.",
+       "climbosCanDo": "Draft factual updates for all six pages; owner approves and publishes.",
+       "model": {
+        "weeklyReach": 1538,
+        "weeklyReachLow": 75,
+        "weeklyReachHigh": 3000,
+        "reachSource": {
+         "source": "benchmark",
+         "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+         "quote": "Plan 1–5% signup, 50–2,000 visits/mo per niche page [practitioner estimate]. Six existing pages; weekly reach uses the range midpoint. Grade D.",
+         "check": "reported",
+         "checkedBy": "climbos-provenance-1"
+        },
+        "steps": [
+         {
+          "name": "Organic visit to Free account",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "benchmark",
+          "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+          "quote": "Plan 1–5% signup [practitioner estimate]; modeled range is a grade D estimate.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Free account to paid plan",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "Planning assumption; no paid-conversion data supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Plan"
+        },
+        "ownerHoursPerWeek": 0.1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Plan"
+        }
+       },
+       "p10": 5.2,
+       "p50": 12,
+       "p90": 29
+      }
+     ],
+     "portfolioNote": "Use the existing trial and comparison pages; ClimbOS runs page updates. The numeric customer goal and current traffic/conversion baselines are missing, so the 90-day customer gap cannot be credibly quantified.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 4.99,
+      "grossMargin": 0.85,
+      "monthlyChurn": 0.05,
+      "basis": "Pro monthly price is a planning proxy; margin and churn are assumptions, not reported actuals.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Not confirmed by you. Add it under Sharpen this plan."
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "Planning assumption; no margin supplied"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "Planning assumption; no churn supplied"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://obsidian.md/community",
+      "https://www.reddit.com/r/writers/comments/1r6yb9n/writers_who_use_obsidian_whats_your_advice_for_a/?utm_source=openai",
+      "https://www.producthunt.com/topics/notes",
+      "https://www.g2.com/categories/note-taking-software",
+      "https://folevi.com/compare",
+      "https://github.com/readwiseio/obsidian-readwise?utm_source=openai",
+      "https://community.obsidian.md/plugins/zotero-sync-client?utm_source=openai",
+      "https://reedsy.com/studio/challenges/reedsy-novel-sprint-2026/?utm_source=openai",
+      "https://writingmonth.org/?utm_source=openai",
+      "https://lighthousewriters.org/workshop/8-week-productivity-club%E2%80%94sunday-edition"
+     ]
+    },
+    "costMicros": 198640,
+    "ms": 1218555
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ },
+ {
+  "case": "taskeni",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run comparison pages and 150 agency emails weekly. Owner goal: “Grow paying teams by 30% in 90 days.” Scenario: ≈9 new customers (range 5.3–30; assumes 20% overlap), $1,286 modeled cost, $143 blended CAC, cash spend $0.00/month; missing baseline leaves the goal gap unknown.",
+     "positioning": "Taskeni keeps small-team tasks, status, and planning together, with five views and built-in task tools—not a broader work platform.",
+     "audiences": [
+      {
+       "name": "Small teams comparing task tools",
+       "hypothesis": "Factual view-by-view comparisons and a direct Free start will attract teams ready to evaluate Taskeni.",
+       "evidence": "Eight existing competitor pages: https://taskeni.app/compare"
+      },
+      {
+       "name": "Agency and client-service teams",
+       "hypothesis": "A client-project template can start conversations with agencies managing shared tasks and status.",
+       "evidence": "Agency project-tool questions appear in r/agency: https://www.reddit.com/r/agency/"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 83,
+       "status": "primary",
+       "why": "High-intent fit and a relevant existing asset; competition is established and organic impact takes time."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 83,
+       "status": "in_plan",
+       "why": "Captures comparison intent, but claims must stay tied to confirmed product differences."
+      },
+      {
+       "name": "Free trial",
+       "score": 81,
+       "status": "in_plan",
+       "why": "The offer exists and can reduce evaluation friction; trial-to-paid performance is unknown."
+      },
+      {
+       "name": "Templates",
+       "score": 79,
+       "status": "later",
+       "why": "Strong product and audience fit; templates can support both discovery and activation."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 79,
+       "status": "later",
+       "why": "Useful for activation and conversion if signups exist; list size and event tracking are unknown."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 78,
+       "status": "later",
+       "why": "The free tier fits the audience and enables self-service evaluation; upgrade behavior is not provided."
+      },
+      {
+       "name": "Content SEO",
+       "score": 77,
+       "status": "later",
+       "why": "Relevant content can compound, but broad informational SEO is slow and a weaker near-term bet."
+      },
+      {
+       "name": "Google organic search",
+       "score": 76,
+       "status": "later",
+       "why": "Search intent fits, but ranking takes time and current visibility is unknown."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Refresh comparison pages",
+       "hypothesis": "Factual feature tables and direct Free starts will turn tool-comparison visits into activated, paying teams.",
+       "population": "Visitors to Taskeni’s eight comparison pages; modeled reach is unverified.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid teams sourced to comparison pages; first-task activation is a leading measure.",
+       "guardrails": [
+        "Owner verifies every competitor claim before publication.",
+        "Track free starts and first-task completion alongside paid teams."
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Day60: zero sales or CAC >$353 kills; expand only after sales with CAC <$353."
+      },
+      {
+       "name": "Agency client-project outreach",
+       "hypothesis": "A personal client-project template invitation will earn qualified agency calls and paying teams.",
+       "population": "600 agency contacts in four weeks; published business emails only; 150 weekly.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid teams from the cohort; replies and booked calls are leading measures.",
+       "guardrails": [
+        "Owner approves each message; comply with applicable laws and include opt-outs.",
+        "Stop on reply; pause if email bounce rate exceeds 2%."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Day45: stop <1% replies/600 contacts or zero sales; scale after a sale if CAC <$353."
+      }
+     ],
+     "constraints": [
+      "Budget: $1,000/month available; chosen plays use $0.00/month cash media.",
+      "Plan assumes 2 owner hours/week for approvals, replies, and calls; availability was not supplied.",
+      "Economics assume eight Pro seats, 80% margin, and 5% monthly churn.",
+      "Paying-team baseline missing [NEEDS FACT: current paying-team count?]; 30% goal gap cannot be sized.",
+      "Assets: eight comparison pages and a client-project template; geography and fulfillment capacity are unverified."
+     ],
+     "measurementPlan": "UTM-tag every link; record self-reported source, page visits, free-workspace starts, first task, trial, paid team, and CAC in a weekly cohort sheet. Use server-side events where available; monthly prompt checks in ChatGPT, Perplexity, and Gemini.",
+     "firstActions": [
+      {
+       "title": "Set the paying-team baseline and funnel scorecard",
+       "why": "Without the active paid-workspace count, the plan cannot judge whether ≈9 additions closes the goal gap.",
+       "role": "Owner + ClimbOS"
+      },
+      {
+       "title": "Review the first comparison page and outreach batch",
+       "why": "Approve factual comparison claims and the first 25 agency contacts before anything publishes or sends.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "Binding constraint: no paying-team baseline or calibrated funnel. If +30% needs more than ≈9, expand budget, add partner reach, or extend the horizon; verified cohorts covering the gap would falsify this diagnosis.",
+     "affordableCac": "Eight Pro seats at $6 yield $48 revenue; assumed 80% margin gives $38/month contribution; 5% monthly churn models $353 gross profit over 12 months (CAC ceiling).",
+     "notDoing": [
+      {
+       "channel": "Google Search Ads",
+       "why": "CPC and paid conversion are unknown; validate the organic funnel before spending."
+      },
+      {
+       "channel": "Lifecycle email",
+       "why": "Signup volume and consent-list baseline are unknown; instrument activation first."
+      },
+      {
+       "channel": "General blog SEO",
+       "why": "Broad informational SEO is slower; prioritize existing high-intent comparison pages."
+      },
+      {
+       "channel": "Founder-led LinkedIn",
+       "why": "Founder audience and posting capacity are unverified; not part of the chosen plays."
+      },
+      {
+       "channel": "G2 and Capterra promotion",
+       "why": "Review traction is unverified; defer paid listings until genuine-user demand is established."
+      }
+     ],
+     "northStar": {
+      "metric": "Net new paying teams",
+      "baseline": "Current paying-team count missing; 30% gap unknown.",
+      "target": "≈9 new customers by day 90 (scenario)."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Comparison page visits",
+       "weeklyTarget": "924/week modeled; verify actual traffic in week one.",
+       "source": "Model; Eesel estimate, unverified."
+      },
+      {
+       "metric": "Comparison pages refreshed",
+       "weeklyTarget": "Two weekly; all eight by day 30.",
+       "source": "Chosen play cadence."
+      },
+      {
+       "metric": "Agency contacts sent",
+       "weeklyTarget": "150 weekly after mailbox warm-up.",
+       "source": "ClimbOS planned capacity."
+      },
+      {
+       "metric": "Agency reply rate",
+       "weeklyTarget": "2% benchmark; replace with actual after 600 contacts.",
+       "source": "Supplied grade-B benchmark."
+      },
+      {
+       "metric": "First-task activation",
+       "weeklyTarget": "25% modeled assumption; measure weekly by cohort.",
+       "source": "Play funnel assumption."
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14 (Oct 19–Nov 2, 2026)",
+       "focus": "Confirm baseline; instrument funnel; audit eight pages; publish two updates; warm mailbox; approve first batch."
+      },
+      {
+       "name": "Test",
+       "days": "15–45 (Nov 3–Dec 3, 2026)",
+       "focus": "Finish eight pages by day 30; send 600 agency emails in four weeks; review outreach at day 45."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90 (Dec 4, 2026–Jan 17, 2027)",
+       "focus": "Put 70–80% of effort into pages; continue outreach only after its day-45 scale gate."
+      }
+     ],
+     "weekOneChecklist": [
+      "Confirm active paying teams and calculate the additions required for 30% growth.",
+      "Add UTMs and track workspace creation, first task, trial, and paid conversion.",
+      "Have ClimbOS fact-check one comparison page; owner approves before publication.",
+      "Build 25 agency contacts using published business emails; owner approves the list and copy.",
+      "Warm the owner’s mailbox, send the approved batch, and log replies and calls."
+     ],
+     "risks": [
+      {
+       "risk": "Missing paying-team baseline makes the 30% target gap unknown.",
+       "mitigation": "Reconcile active paid workspaces and calculate required net additions by day 3."
+      },
+      {
+       "risk": "Modeled page traffic and conversion rates are not Taskeni results.",
+       "mitigation": "Track first-party funnel events; reassess scenario assumptions by day 60."
+      },
+      {
+       "risk": "Outreach may underperform or create compliance and deliverability issues.",
+       "mitigation": "Verify applicable email rules; use public business emails, opt-outs, and a bounce pause above 2%."
+      },
+      {
+       "risk": "Agency outreach has an 8.8-month modeled payback.",
+       "mitigation": "Validate contribution and retention assumptions before scaling; review by day 90."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Comparison-page conversion path",
+       "oneLiner": "Improve existing comparison pages to turn tool searches into paying teams.",
+       "kind": "bankable",
+       "audience": "Small teams comparing task tools through Taskeni’s existing competitor pages.",
+       "trigger": "A team compares tools after scattered tasks or unclear status.",
+       "hook": "See Taskeni’s five views and built-in task tools; start a free workspace.",
+       "mechanic": "Improve comparison pages with factual feature tables and a free-start path.",
+       "assetUsed": "Taskeni’s eight existing competitor comparison pages.",
+       "funnel": [
+        "Visit→signup 1–5%, 3% likely [eesel, C].",
+        "Signup→task 10–40%, 25% likely [assumption, D].",
+        "Task→paid 5–20%, 10% likely [assumption, D]."
+       ],
+       "unit": "paying team",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Actual search traffic and activated-workspace-to-paid conversion.",
+       "test": "Refresh eight pages in 30 days; $0 media; review sales at day 60.",
+       "killIf": "Stop expansion if no paid team by day 60 or CAC exceeds modeled 12-month gross profit.",
+       "scaleIf": "Add four role pages when a paid team arrives and CAC is below modeled 12-month gross profit.",
+       "scores": [
+        5,
+        4,
+        4,
+        3,
+        5,
+        4,
+        5,
+        3
+       ],
+       "firstActionToday": "Choose one comparison page and mark claims needing factual review.",
+       "climbosCanDo": "ClimbOS drafts factual page updates and tracks organic visits and workspace starts.",
+       "model": {
+        "weeklyReach": 924,
+        "weeklyReachLow": 92,
+        "weeklyReachHigh": 3695,
+        "reachSource": {
+         "source": "benchmark",
+         "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages; https://taskeni.app/compare",
+         "quote": "50–2,000 visits/mo per niche page [practitioner estimate]. Taskeni’s comparison pages cover Trello, Asana, ClickUp, monday.com, Notion, Linear, Basecamp, and Plane. Likely modeled at 500 visits/page/month, an assumption.",
+         "check": "reported",
+         "checkedBy": "climbos-provenance-1"
+        },
+        "steps": [
+         {
+          "name": "Organic visitor → free workspace",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "benchmark",
+          "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+          "quote": "Plan 1–5% signup, 50–2,000 visits/mo per niche page [practitioner estimate].",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Free workspace → first completed task",
+          "rate": 0.25,
+          "low": 0.1,
+          "high": 0.4,
+          "source": "assumption",
+          "ref": "No first-party activation data supplied"
+         },
+         {
+          "name": "First completed task → paid team",
+          "rate": 0.1,
+          "low": 0.05,
+          "high": 0.2,
+          "source": "assumption",
+          "ref": "No first-party paid-conversion data supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned channel budget"
+        },
+        "ownerHoursPerWeek": 1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned owner time; labor valued at $50/hour per playbook"
+        }
+       },
+       "p10": 5.2,
+       "p50": 8.9,
+       "p90": 35
+      },
+      {
+       "name": "Agency client-project outreach",
+       "oneLiner": "Reach agency teams with a client-project template and a measured outreach test.",
+       "kind": "creative",
+       "audience": "Digital agencies managing client projects, with target teams of eight paid seats.",
+       "trigger": "A new client project needs shared tasks, deadlines, and status.",
+       "hook": "Start a client project from Taskeni’s template; Free supports up to 10 members.",
+       "mechanic": "Personalized cold email inviting agency owners to a client-work template walkthrough.",
+       "assetUsed": "Client-project template; Board, Calendar, and Timeline views.",
+       "funnel": [
+        "Contact→reply 1–3%, 2% likely [benchmark, B].",
+        "Reply→call 20–40%, 30% likely [benchmark, B].",
+        "Call→paid 10–30%, 20% likely [assumption, D]."
+       ],
+       "unit": "paying team",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Agency reply-to-paid rate and eight-seat fit.",
+       "test": "Send 600 emails in four weeks; $0 media; replies day 21, sales day 45.",
+       "killIf": "Stop if reply rate <1% after 600 contacts or no paid team by day 45.",
+       "scaleIf": "Scale to 200 emails/week after one paid team and CAC below modeled 12-month gross profit by day 45.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        3,
+        3,
+        5,
+        4
+       ],
+       "firstActionToday": "Select 25 agencies with published business emails for the first approved batch.",
+       "climbosCanDo": "ClimbOS finds public agency emails, drafts personal openers, sends 150 weekly, and tracks replies.",
+       "model": {
+        "weeklyReach": 150,
+        "weeklyReachLow": 150,
+        "weeklyReachHigh": 150,
+        "reachSource": {
+         "source": "planned",
+         "ref": "ClimbOS capability statement in task brief"
+        },
+        "steps": [
+         {
+          "name": "Contact → reply",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.03,
+          "source": "benchmark",
+          "ref": "ClimbOS outreach benchmark supplied in task brief",
+          "quote": "Cold email benchmarks (grade B, not this business's results): 1–3% reply, 20–40% of replies booking.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Reply → booked call",
+          "rate": 0.3,
+          "low": 0.2,
+          "high": 0.4,
+          "source": "benchmark",
+          "ref": "ClimbOS outreach benchmark supplied in task brief",
+          "quote": "Cold email benchmarks (grade B, not this business's results): 1–3% reply, 20–40% of replies booking.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Booked call → paid team",
+          "rate": 0.2,
+          "low": 0.1,
+          "high": 0.3,
+          "source": "assumption",
+          "ref": "No first-party sales-conversion data supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned channel budget"
+        },
+        "ownerHoursPerWeek": 1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned owner time; labor valued at $50/hour per playbook"
+        }
+       },
+       "p10": 1.4,
+       "p50": 2.3,
+       "p90": 3.3
+      }
+     ],
+     "portfolioNote": "Required net additions equal 30% of today’s paying teams, but the baseline is absent. ClimbOS commits 150 agency emails weekly; current evidence cannot credibly substantiate the +30% goal within 90 days.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 48,
+      "grossMargin": 0.8,
+      "monthlyChurn": 0.05,
+      "basis": "Eight Pro seats at $6/member/month; 80% margin and 5% monthly churn are assumptions. Modeled 12-month gross profit is about $353/team.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Business brief Pro pricing; eight-seat team size assumed"
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "No Taskeni contribution-margin data supplied"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "No Taskeni churn data supplied"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://thedigitalprojectmanager.com/membership/?utm_source=openai",
+      "https://www.productmarketingalliance.com/join-the-pma-slack-community/?utm_source=openai",
+      "https://growyouragency.group/agency-community/?utm_source=openai",
+      "https://thedigitalprojectmanager.com/digital-project-manager-podcast/?utm_source=openai",
+      "https://taskeni.app/help/integrations",
+      "https://www.g2.com/categories/task-management-software?utm_source=openai",
+      "https://taskeni.app/compare",
+      "https://taskeni.app/features/apps",
+      "https://piv.opm.gov/policy-data-oversight/pay-leave/federal-holidays/?utm_source=openai",
+      "https://www.ces.tech/about-ces/about-ces/?utm_source=openai",
+      "https://podfestexpo.com/?utm_source=openai"
+     ]
+    },
+    "costMicros": 232134,
+    "ms": 1246644
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ },
+ {
+  "case": "meetrao",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Owner goal: “Reach 100 paying customers in 90 days.” The plays support an uncalibrated scenario of ≈0.1 customers for $103 in labor-valued cost and $0.00/month cash spend. The starting count is unknown, so the goal gap is unknown.",
+     "positioning": "Meetrao is a straightforward Google Calendar scheduler: guests book through a shared link; Business supports multiple companies and teams. Source: https://meetrao.com",
+     "audiences": [
+      {
+       "name": "Small agencies comparing schedulers",
+       "hypothesis": "Agencies comparing Cal.com may value Business support for client-company scheduling and a shared booking link.",
+       "evidence": "Meetrao’s Cal.com page; Business supports multiple companies and teams: https://meetrao.com/vs/cal-com"
+      },
+      {
+       "name": "Coach educators and their audiences",
+       "hypothesis": "Coach educators may demonstrate a no-card scheduler to coaches learning how to set up their practices.",
+       "evidence": "Meetrao lists coaches; ICF reports 60,000+ members: https://coachingfederation.org/about/icf-membership/"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Competitor alternative pages",
+       "score": 83,
+       "status": "primary",
+       "why": "Existing comparison content and high intent support a focused test; competitor claims need careful verification."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 83,
+       "status": "in_plan",
+       "why": "The confirmed calendar connection gives a relevant entry point, but marketplace access and setup are unknown."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "later",
+       "why": "High-intent topic fits self-service buying; organic search takes time and faces named competitors."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 77,
+       "status": "later",
+       "why": "A low-cost listing could suit a self-serve tool, but discovery volume is unverified."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 77,
+       "status": "later",
+       "why": "This is already a low-friction acquisition path; clear paid-plan fit can support conversion without added ad spend."
+      },
+      {
+       "name": "Google organic search",
+       "score": 76,
+       "status": "later",
+       "why": "Search intent fits, but results take time and the category has named competitors."
+      },
+      {
+       "name": "Content SEO",
+       "score": 76,
+       "status": "later",
+       "why": "Broad informational content is slow to pay back and competes with established scheduling tools."
+      },
+      {
+       "name": "AI search visibility (ChatGPT, Perplexity, Gemini)",
+       "score": 76,
+       "status": "later",
+       "why": "A low-cost factual visibility check is sensible, but discovery and attribution are unproven."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Refresh the Cal.com comparison page",
+       "hypothesis": "A verified comparison focused on fit and limits may increase qualified account starts.",
+       "population": "Visitors to Meetrao’s existing Cal.com comparison page.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Visitor-to-account-start rate",
+       "guardrails": [
+        "This is an uncalibrated scenario; report results as directional.",
+        "Verify all comparison claims before publication.",
+        "Do not scale unless realized CAC is at or below $68."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Review at day 90; do not scale above $68 CAC."
+      },
+      {
+       "name": "Disclosed coach-educator demo pitches",
+       "hypothesis": "Disclosed educator demos may earn relevant replies and published demos from coaches’ audiences.",
+       "population": "Coach educators with public business contact routes; owner-approved, disclosed pitches.",
+       "method": "ab_split",
+       "primaryMetric": "Replies per approved pitch",
+       "guardrails": [
+        "No scripted praise; disclose free access and honor opt-outs.",
+        "Use factual pitch angles; treat differences as directional.",
+        "Do not scale unless realized CAC is at or below $68."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Review at day 21; do not scale above $68 CAC."
+      }
+     ],
+     "constraints": [
+      "Owner goal: “Reach 100 paying customers in 90 days.”",
+      "Starting paying-customer count and goal gap are unknown; add the count under Business & goal.",
+      "Portfolio scenario: ≈0.1 customers (0.1–2.5), $103 labor-valued cost, $0.00/month cash spend, $1,878 blended CAC.",
+      "Cal.com scenario: ≈0.1 customers (0.1–3.1); $51 cost, $766 CAC; uncalibrated, not a prediction.",
+      "ICF scenario: ≈0 customers (0–0); $51 cost, $38,027 CAC; uncalibrated, not a prediction.",
+      "Both modeled plays never repay CAC within the customer lifetime.",
+      "Owner hours, sales cycle, geography, and fulfillment capacity are unconfirmed.",
+      "Business revenue, margin, and churn assumptions lack supplied validation."
+     ],
+     "measurementPlan": "Tag page and creator links; track visits, starts, bookings, paid accounts, and self-reported source. Reconcile billing and CRM weekly, log owner time, and check monthly for AI mentions.",
+     "firstActions": [
+      {
+       "title": "Review the Cal.com comparison page",
+       "why": "The page needs owner verification; its acquisition scenario is uncalibrated and above the CAC ceiling.",
+       "role": "ClimbOS drafts; owner fact-checks and approves publication."
+      },
+      {
+       "title": "Build the coach-educator prospect list",
+       "why": "The demo test needs relevant prospects with public business contact routes.",
+       "role": "ClimbOS researches and drafts; owner approves and sends."
+      },
+      {
+       "title": "Instrument the signup-to-paid funnel",
+       "why": "No supplied baseline validates conversion assumptions.",
+       "role": "ClimbOS configures tracking; owner grants access and verifies events."
+      }
+     ],
+     "diagnosis": "The goal gap is unknown because the starting count is missing. The binding constraint is modeled acquisition economics: both plays exceed the $68 ceiling and never repay within lifetime. Options: validate economics, find higher-value distribution, or revise the offer.",
+     "affordableCac": "Business-only ceiling: $68 per customer over 12 months. $99/year revenue, 90% margin, and 5% churn are unverified assumptions.",
+     "notDoing": [
+      {
+       "channel": "Google Workspace Marketplace listing",
+       "why": "Eligibility and setup are unverified; check after validating demand."
+      },
+      {
+       "channel": "AlternativeTo listing",
+       "why": "Access and discovery volume are unverified."
+      },
+      {
+       "channel": "Broad blog SEO",
+       "why": "Broad informational content is slow; prioritize high-intent comparisons."
+      },
+      {
+       "channel": "Lifecycle email and paid-feature prompts",
+       "why": "Consent, event tracking, and an opted-in list are unconfirmed."
+      },
+      {
+       "channel": "Founder LinkedIn and social",
+       "why": "Founder audience and available hours are unknown."
+      },
+      {
+       "channel": "G2, Capterra, and Product Hunt",
+       "why": "Profiles, eligibility, and genuine review volume are unverified."
+      },
+      {
+       "channel": "Paid search and Meta ads",
+       "why": "Modeled acquisition costs exceed the $68 ceiling; keep paid media off."
+      },
+      {
+       "channel": "AI-answer content and integration partnerships",
+       "why": "Visibility and partner access are unproven; launch no campaign."
+      },
+      {
+       "channel": "Template library",
+       "why": "Demand and onboarding benefit are unverified."
+      }
+     ],
+     "northStar": {
+      "metric": "New paying Business accounts",
+      "baseline": "Current count and recent adds are unknown.",
+      "target": "≈0 new customers by day 90 in scenario."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Comparison-page visits",
+       "weeklyTarget": "Establish baseline; no calibrated target.",
+       "source": "Analytics and UTMs"
+      },
+      {
+       "metric": "Visitor-to-start rate",
+       "weeklyTarget": "Establish baseline; no calibrated target.",
+       "source": "Product events"
+      },
+      {
+       "metric": "Coach pitches and replies",
+       "weeklyTarget": "Log activity; no calibrated target.",
+       "source": "CRM and records"
+      },
+      {
+       "metric": "Paid Business accounts",
+       "weeklyTarget": "Track actual accounts; no forecast target.",
+       "source": "Billing and CRM"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14",
+       "focus": "Instrument the funnel, refresh the Cal.com page, verify economics, and build the coach-educator list."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45",
+       "focus": "Run capped, non-paid tests; review page and educator evidence on day 21."
+      },
+      {
+       "name": "Commit or reset",
+       "days": "Days 46–90",
+       "focus": "Do not scale above the CAC ceiling; otherwise validate economics or revise the offer."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export current paid count; ask recent paying users how they found Meetrao.",
+      "Verify Business revenue, gross margin, and churn against billing and costs.",
+      "Fact-check every comparative claim on the Cal.com page.",
+      "Track visits, starts, bookings, paid accounts, and source.",
+      "Approve coach-educator prospects and disclosed demo pitches."
+     ],
+     "risks": [
+      {
+       "risk": "Margin and churn assumptions may overstate affordable CAC.",
+       "mitigation": "Reconcile price, costs, margin, and churn with billing records."
+      },
+      {
+       "risk": "Comparison-page traffic may not validate the scenario.",
+       "mitigation": "Review evidence at day 90; do not scale above the CAC ceiling."
+      },
+      {
+       "risk": "Educator demos may not generate paid Business accounts.",
+       "mitigation": "Track pitches through sales; do not scale above the CAC ceiling."
+      },
+      {
+       "risk": "The 100-customer goal may exceed these plays’ capacity.",
+       "mitigation": "Establish the baseline; explore better distribution or revise the offer."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Cal.com comparison-page engine",
+       "oneLiner": "Improve Meetrao’s Cal.com comparison page; expand only with verified claims.",
+       "kind": "bankable",
+       "audience": "Small agencies comparing Cal.com for client-company scheduling.",
+       "trigger": "An agency compares schedulers before organizing client-company bookings.",
+       "hook": "Business supports up to 10 companies and 100 people per company; bookings include Google Meet links.",
+       "mechanic": "Improve the comparison page; add verified alternatives one per week.",
+       "assetUsed": "Existing Cal.com comparison page and Google Calendar connection.",
+       "funnel": [
+        "Visit→account start: 1/3/5% [comparison-page benchmark, grade D].",
+        "Account start→first booking: 5/15/30% [assumption, grade D].",
+        "First booking→paid Business: 1/2/5% [assumption, grade D]."
+       ],
+       "unit": "paid Business account",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Qualified search visits and Business-plan conversion.",
+       "test": "Refresh Cal.com; verify up to four named alternatives; target 200 visits within 90 days; $0 media, $50 labor cap.",
+       "killIf": "Stop at 200 visits or day 90 if account starts stay below 1%.",
+       "scaleIf": "Day 21: continue if indexed; scale at 200 visits, 5% starts, one sale, CAC below modeled gross profit.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Review the Cal.com page and verify every comparison claim.",
+       "climbosCanDo": "Draft pages, track visits and account starts; owner verifies comparisons and approves publication.",
+       "model": {
+        "weeklyReach": 58,
+        "weeklyReachLow": 58,
+        "weeklyReachHigh": 2310,
+        "reachSource": {
+         "source": "benchmark",
+         "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+         "quote": "Plan 1–5% signup, 50–2,000 visits/mo per niche page [practitioner estimate].",
+         "check": "reported",
+         "checkedBy": "climbos-provenance-1"
+        },
+        "steps": [
+         {
+          "name": "Visit to account start",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "benchmark",
+          "ref": "https://www.eesel.ai/blog/how-to-create-comparison-and-alternative-pages",
+          "quote": "Plan 1–5% signup per niche page [practitioner estimate]; grade D.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Account start to first booking",
+          "rate": 0.15,
+          "low": 0.05,
+          "high": 0.3,
+          "source": "assumption",
+          "ref": "No first-booking baseline supplied"
+         },
+         {
+          "name": "First booking to paid Business",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "No paid-conversion baseline supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned; business brief sets a $300/month ad budget"
+        },
+        "ownerHoursPerWeek": 0.08,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Growth-play playbook; $50/hour owner-time convention"
+        }
+       },
+       "p10": 0.1,
+       "p50": 0.1,
+       "p90": 3.1
+      },
+      {
+       "name": "ICF coach-educator demos",
+       "oneLiner": "Test disclosed creator demos with coach educators, not broad lifestyle influencers.",
+       "kind": "creative",
+       "audience": "Micro coach educators serving ICF’s ~60,000-member community; 2026 media kit: https://coachingfederation.org/wp-content/uploads/2026/02/icf-ge-2026-media-kit.pdf",
+       "trigger": "Coach educators explain booking or client-session workflows to their audiences.",
+       "hook": "Show the no-card Free plan, Google Calendar availability and guest self-rescheduling.",
+       "mechanic": "Offer free access for a creator demo; disclose it and avoid scripted praise.",
+       "assetUsed": "Meetrao’s coach page, Free plan and Google Calendar workflow.",
+       "funnel": [
+        "Pitch→reply: 10/15/20% [ClimbOS creator benchmark, grade C].",
+        "Reply→post: 20/27.5/35% [assumption, grade D; gifted-post benchmark proxy].",
+        "Post→account start: 1/5/10% [assumption, grade D].",
+        "Account start→first booking: 5/15/30% [assumption, grade D].",
+        "First booking→paid Business: 1/2/5% [assumption, grade D]."
+       ],
+       "unit": "paid Business account",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether creator demos generate paid Business accounts.",
+       "test": "50 coach-creator pitches in 21 days; $0 media, $50 labor cap; track replies and published demos.",
+       "killIf": "Stop below five replies from 50 pitches by day 21.",
+       "scaleIf": "Day 21: 10 replies and 3 posts; scale only after one paid sale below modeled gross profit.",
+       "scores": [
+        4,
+        3,
+        4,
+        4,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Approve 20 coach educators with public business contact routes.",
+       "climbosCanDo": "Find coach creators, draft personal pitches and track replies; owner approves and sends.",
+       "model": {
+        "weeklyReach": 17,
+        "weeklyReachLow": 17,
+        "weeklyReachHigh": 17,
+        "reachSource": {
+         "source": "planned",
+         "ref": "Planned ClimbOS creator-finder volume; ICF media kit https://coachingfederation.org/wp-content/uploads/2026/02/icf-ge-2026-media-kit.pdf"
+        },
+        "steps": [
+         {
+          "name": "Pitch to reply",
+          "rate": 0.15,
+          "low": 0.1,
+          "high": 0.2,
+          "source": "benchmark",
+          "ref": "ClimbOS creator-finder benchmark supplied in brief",
+          "quote": "Creator outreach replies: 10–20%, grade C; ClimbOS benchmark supplied in brief.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Reply to published demo",
+          "rate": 0.275,
+          "low": 0.2,
+          "high": 0.35,
+          "source": "assumption",
+          "ref": "https://elev8or.io/; gifted-product post benchmark supplied in brief"
+         },
+         {
+          "name": "Published demo to account start",
+          "rate": 0.05,
+          "low": 0.01,
+          "high": 0.1,
+          "source": "assumption",
+          "ref": "No Meetrao creator-campaign data supplied"
+         },
+         {
+          "name": "Account start to first booking",
+          "rate": 0.15,
+          "low": 0.05,
+          "high": 0.3,
+          "source": "assumption",
+          "ref": "No first-booking baseline supplied"
+         },
+         {
+          "name": "First booking to paid Business",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "No paid-conversion baseline supplied"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned; business brief sets a $300/month ad budget"
+        },
+        "ownerHoursPerWeek": 0.08,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned test cap; growth-play playbook values owner time at $50/hour"
+        }
+       },
+       "p10": 0,
+       "p50": 0,
+       "p90": 0
+      }
+     ],
+     "portfolioNote": "Two capped tests model under one paid Business account in 90 days: at least 99 of the 100-customer goal remain unsupported. Business-only 12-month gross profit is about $68.26; scale only below that acquisition cost.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 8.25,
+      "grossMargin": 0.9,
+      "monthlyChurn": 0.05,
+      "basis": "Target Business accounts only: $99/year equals $8.25 monthly revenue. Assuming 90% margin and 5% monthly churn, modeled 12-month gross profit is about $68.26 per account.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Not confirmed by you. Add it under Sharpen this plan."
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "No cost-to-serve data supplied"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "No retention data supplied"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://freelancersunion.org/join/?utm_source=openai",
+      "https://freelancingfemales.com/?utm_source=openai",
+      "https://coachingfederation.org/community-events/?utm_source=openai",
+      "https://workspace.google.com/marketplace/category/business-tools?utm_source=openai",
+      "https://www.g2.com/sellers/calendly?utm_source=openai",
+      "https://www.capterra.com/scheduling-software/?utm_source=openai",
+      "https://www.producthunt.com/categories/scheduling?utm_source=openai",
+      "https://alternativeto.net/software/meetor/?utm_source=openai",
+      "https://support.google.com/calendar/answer/11608416?hl=en&utm_source=openai",
+      "https://workspace.google.com/marketplace/app/calendar_schedule/344220034239?utm_source=openai",
+      "https://membership.freelancersunion.org/contact/?utm_source=openai",
+      "https://freelancersunion.org/events/hub-events/?utm_source=openai",
+      "https://borderlesscon.com/?utm_source=openai",
+      "https://www.mbxsbve.com/?utm_source=openai",
+      "https://www.sba.gov/about-sba/organization/observances/small-business-saturday/?utm_source=openai",
+      "https://www.icf-events.org/event-calendar/page/2/?event_type=training_program&utm_source=openai"
+     ]
+    },
+    "costMicros": 224124,
+    "ms": 1277998
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ },
+ {
+  "case": "involets",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Owner goal: “Get the first 50 paying freelancers and small agencies” within 90 days. Current paid baseline is unknown; the gap cannot be calculated. Combined scenario benchmark (including the rejected creator play): ≈2.1 customers (range 2.1–22), $225 modeled cost, $108 blended CAC; $0.00/month cash spend.",
+     "positioning": "Involets connects tracked work to project management and branded PDF invoices; personal use is free, while Company adds shared spaces (https://involets.com/pricing).",
+     "audiences": [
+      {
+       "name": "Solo freelancers who bill for work",
+       "hypothesis": "Freelancers may try a free workflow that connects tracked work to branded PDF invoices.",
+       "evidence": "Involets lists freelancers, writers, editors and other professionals; personal use is free (https://involets.com/pricing)."
+      },
+      {
+       "name": "Small agencies, studios and teams",
+       "hypothesis": "Teams needing shared work may consider Company spaces instead of separate solo workflows.",
+       "evidence": "Company spaces share clients, projects, time and invoices, with roles and project owners (https://involets.com/pricing)."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 85,
+       "status": "primary",
+       "why": "High-intent fit and an existing asset make this a strong low-cash test; organic traffic volume is unconfirmed."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 85,
+       "status": "in_plan",
+       "why": "Search intent can be strong, but keep claims verifiable and expect slower signal than direct signup channels."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 79,
+       "status": "later",
+       "why": "A low-cost listing test is plausible, but audience size and listing eligibility are unverified."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 79,
+       "status": "later",
+       "why": "Potentially scalable, but the brief confirms no integrations to list or marketplace distribution."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 79,
+       "status": "later",
+       "why": "Low-cost conversion support for free users, but it depends on signup volume and is not a net-new audience source."
+      },
+      {
+       "name": "Google organic search",
+       "score": 77,
+       "status": "later",
+       "why": "Relevant high-intent discovery, but rankings and time to traffic are unknown."
+      },
+      {
+       "name": "AI search visibility (ChatGPT, Perplexity, Gemini)",
+       "score": 77,
+       "status": "later",
+       "why": "Low-cost visibility hygiene, but weak direct measurement makes it a supporting activity, not a primary engine."
+      },
+      {
+       "name": "Freemium plan",
+       "score": 77,
+       "status": "later",
+       "why": "Fits the existing offer and self-service economics; measure activation and paid Company upgrades."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Invoice-ready comparison pages",
+       "hypothesis": "Factual pages about tracked work and branded invoices may turn alternative searches into paid Company plans.",
+       "population": "Qualified visitors to comparison and alternative pages.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid Company plans per qualified page visit",
+       "guardrails": [
+        "Avoid unsupported competitor claims; clarify users send invoices themselves.",
+        "Expand only if observed CAC is at or below $45."
+       ],
+       "durationDays": 90,
+       "stoppingRule": "Review at day 90; expand only with observed CAC at or below $45."
+      }
+     ],
+     "constraints": [
+      "Cash ad budget: $0.00/month; modeled play costs are not monthly ad spend.",
+      "Owner time: weekly availability is unconfirmed; plan requires approval and replies.",
+      "Pricing: personal free; Company $6/month or $60/year (https://involets.com/pricing).",
+      "Model assumes 90% margin and 5% monthly churn; validate both.",
+      "Revenue assumption is unconfirmed; validate $5.40/month contribution and $50 in 12 months.",
+      "Current paid baseline, traffic, conversion, and source mix are unknown; audit them.",
+      "Add the current paid baseline under Business & goal to calculate the gap.",
+      "Comparison scenario assumes free signup to paid Company; reach and search conversion are unchecked.",
+      "Combined ≈2.1-customer scenario assumes 20% overlap; it is not calibrated to business results.",
+      "Assets include website, existing comparisons, web desk, Chrome extension, and Mac app (https://involets.com/pricing).",
+      "Sales cycle is self-serve; free-to-paid timing remains unmeasured.",
+      "ClimbOS drafts pages; owner approves claims and handles replies.",
+      "Fulfillment capacity and support load are unverified; review before scaling."
+     ],
+     "measurementPlan": "UTM-tag pages; log visits, signups, paid plans, sources, and effort weekly. Reconcile paid plans with billing, ask payers how they found Involets, and validate margin and churn.",
+     "firstActions": [
+      {
+       "title": "Export paid-user, traffic, and signup baselines",
+       "why": "Establishes the real goal gap and starting point for CAC.",
+       "role": "Owner and ClimbOS"
+      },
+      {
+       "title": "Approve comparison-page briefs",
+       "why": "Owner review keeps competitor claims accurate.",
+       "role": "Owner"
+      },
+      {
+       "title": "Set up UTMs and the weekly scorecard",
+       "why": "Makes visits, signups, and paid conversions attributable.",
+       "role": "ClimbOS; owner grants access"
+      },
+      {
+       "title": "Verify billing economics",
+       "why": "Tests the revenue, margin, and churn assumptions behind the CAC ceiling.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "The 50-customer owner goal is unchanged, but current paid baseline is unknown, so the goal gap cannot be calculated. The all-play total is a scenario, not a forecast; comparison pages are the only selected play.",
+     "affordableCac": "At $5.40/month contribution, one customer earns $50 in 12 months; use $45 as the conservative CAC ceiling. Validate margin and churn.",
+     "notDoing": [
+      {
+       "channel": "Freelance educator workflow demos",
+       "why": "Scenario: ≈0 customers, $161 cost, $3,704/customer, and payback never within lifetime."
+      },
+      {
+       "channel": "Paid search and Meta ads",
+       "why": "$0.00/month ad budget; preserve cash until self-serve CAC is measured."
+      },
+      {
+       "channel": "Cold email",
+       "why": "Low monthly contribution cannot support one-to-one customer acquisition."
+      },
+      {
+       "channel": "Lifecycle email and expanded onboarding",
+       "why": "Signup volume and activation baseline are unknown; measure first."
+      },
+      {
+       "channel": "Integration marketplaces",
+       "why": "Integration inventory and marketplace eligibility are unconfirmed."
+      },
+      {
+       "channel": "Software directories",
+       "why": "Eligibility and referral volume are unverified; prioritize the selected test."
+      },
+      {
+       "channel": "Broad informational SEO and templates",
+       "why": "Prioritize higher-intent comparison content."
+      },
+      {
+       "channel": "AI answer visibility as an acquisition channel",
+       "why": "Check visibility monthly, not as a separate acquisition campaign."
+      },
+      {
+       "channel": "Founder LinkedIn and broader social posting",
+       "why": "Reach and owner capacity are unknown; prioritize the selected test."
+      },
+      {
+       "channel": "Freelancer communities",
+       "why": "Rules prohibit unsolicited pitches; participation is not the chosen engine."
+      }
+     ],
+     "northStar": {
+      "metric": "New paid Company plans",
+      "baseline": "Current paid-plan count unknown; audit required.",
+      "target": "≈2 by day 90, scenario—not the owner's 50-customer goal."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Qualified comparison-page visits",
+       "weeklyTarget": "Record weekly; no validated target yet.",
+       "source": "Website analytics"
+      },
+      {
+       "metric": "Free signups from comparison pages",
+       "weeklyTarget": "Record weekly; no validated target yet.",
+       "source": "UTM signup records"
+      },
+      {
+       "metric": "New paid Company plans",
+       "weeklyTarget": "Record weekly; no validated target yet.",
+       "source": "Billing records"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Instrument and prepare pages",
+       "days": "Before launch",
+       "focus": "Verify baselines, claims, billing economics, and tracking."
+      },
+      {
+       "name": "Run the comparison-page test",
+       "days": "Through day 90",
+       "focus": "Track qualified traffic, signups, paid plans, and observed CAC."
+      },
+      {
+       "name": "Decide whether to expand",
+       "days": "After day 90",
+       "focus": "Scale only if observed CAC is at or below $45; otherwise revise the plan."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export paid-user, traffic, signup, and acquisition-source baselines.",
+      "Approve factual comparison-page briefs and exclude unverified claims.",
+      "Set UTMs and track visits, free signups, and paid Company plans.",
+      "Verify plan mix, gross margin, churn, and monthly contribution from billing.",
+      "Start a weekly scorecard for visits, signups, paid plans, and CAC."
+     ],
+     "risks": [
+      {
+       "risk": "Margin and churn assumptions may overstate affordable CAC.",
+       "mitigation": "Verify plan mix, gross margin, and churn from billing."
+      },
+      {
+       "risk": "Search traffic may miss the uncalibrated scenario.",
+       "mitigation": "Track indexing and qualified visits; review results by day 90."
+      },
+      {
+       "risk": "Comparison pages may produce no paid plans.",
+       "mitigation": "Measure observed CAC; do not expand without evidence."
+      },
+      {
+       "risk": "Available scenarios do not establish a path to 50 paying customers.",
+       "mitigation": "Quantify the gap from baseline; add distribution, budget, or time if short."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Comparison pages for the invoice-ready workflow",
+       "oneLiner": "Turn competitor searches into clear routes from tracked hours to branded invoices.",
+       "kind": "bankable",
+       "audience": "Freelancers and studio owners searching for Harvest, Toggl Track or Clockify alternatives.",
+       "trigger": "Freelancers and studios comparing time-tracking tools before choosing a workflow.",
+       "hook": "Track work and create branded PDF invoices; personal use is free, Company is $6 monthly.",
+       "mechanic": "Improve high-intent comparison pages with clear use cases and factual alternatives.",
+       "assetUsed": "Existing comparison pages; tracked-hours-to-branded-PDF workflow.",
+       "funnel": [
+        "Visits→signups: 1–5% (grade D benchmark); free signups→paid Company: 2–10% (grade D assumption)."
+       ],
+       "unit": "paid Company plans",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "How much search traffic converts to paid Company plans.",
+       "test": "Publish four pages, then measure visits, signups and paid Company plans for 30 days.",
+       "killIf": "Stop after 600 qualified visits with zero paid plans, or observed CAC above $45.",
+       "scaleIf": "Expand to eight pages after one paid plan and observed CAC below $45.",
+       "scores": [
+        5,
+        3,
+        4,
+        3,
+        5,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve four page briefs comparing verified workflows, not unsupported competitor claims.",
+       "climbosCanDo": "Research searches, draft factual pages, track visits, signups and paid plans.",
+       "model": {
+        "weeklyReach": 200,
+        "weeklyReachLow": 46,
+        "weeklyReachHigh": 1846,
+        "reachSource": {
+         "source": "benchmark",
+         "ref": "plays-saas-b2b catalog, play 1; practitioner estimate, grade D",
+         "quote": "Plan 1–5% signup, 50–2,000 visits/mo per niche page.",
+         "check": "reported",
+         "checkedBy": "climbos-provenance-1"
+        },
+        "steps": [
+         {
+          "name": "Search visit to signup",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "benchmark",
+          "ref": "plays-saas-b2b catalog, play 1; practitioner estimate, grade D",
+          "quote": "Plan 1–5% signup, 50–2,000 visits/mo per niche page.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Free signup to paid Company plan",
+          "rate": 0.05,
+          "low": 0.02,
+          "high": 0.1,
+          "source": "assumption",
+          "ref": "Model assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Business brief goal"
+        },
+        "ownerHoursPerWeek": 0.1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Proposed operating plan"
+        }
+       },
+       "p10": 2.6,
+       "p50": 2.6,
+       "p90": 28
+      },
+      {
+       "name": "Freelance educator workflow demos",
+       "oneLiner": "Borrow freelancer educators’ trust to demonstrate Involets’ time-to-invoice workflow.",
+       "kind": "creative",
+       "audience": "Micro YouTube creators covering freelance workflows; target channels have 5k–150k subscribers.",
+       "trigger": "Freelance-workflow creators need a practical time-to-invoice demo for their audience.",
+       "hook": "Show tracked hours becoming a branded PDF invoice; Company costs $6 monthly for up to 30 people.",
+       "mechanic": "Creator tutorials show the workflow; disclose free access and any relationship.",
+       "assetUsed": "Free personal use and the tracked-hours-to-branded-PDF workflow.",
+       "funnel": [
+        "Pitches→replies: 15–25% (grade C); agreement→post→signup→paid: grade D assumptions."
+       ],
+       "unit": "paid Company plans",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether creator viewers start a paid Company plan rather than free personal use.",
+       "test": "Send 150 tailored creator pitches over 30 days; spend $0 on ads.",
+       "killIf": "Stop below 15 replies per 150 pitches, or zero paid plans after 30 days.",
+       "scaleIf": "Scale to 100 pitches weekly after one paid plan and observed CAC below $45.",
+       "scores": [
+        4,
+        3,
+        4,
+        3,
+        3,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Use Creator Finder to shortlist 25 creators teaching freelance business workflows.",
+       "climbosCanDo": "Find creators, draft tailored pitches, track replies and tagged visits.",
+       "model": {
+        "weeklyReach": 50,
+        "weeklyReachLow": 50,
+        "weeklyReachHigh": 50,
+        "reachSource": {
+         "source": "planned",
+         "ref": "Proposed ClimbOS operating volume; creator-size range from plays-saas-b2b catalog, play 12"
+        },
+        "steps": [
+         {
+          "name": "Creator pitch to reply",
+          "rate": 0.15,
+          "low": 0.15,
+          "high": 0.25,
+          "source": "benchmark",
+          "ref": "ClimbOS growth-play benchmarks; elev8or.io, grade C",
+          "quote": "Creator outreach reply: Nano 40–60%, micro 15–25%, macro 5–10% [elev8or.io]",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Reply to collaboration agreement",
+          "rate": 0.3,
+          "low": 0.1,
+          "high": 0.5,
+          "source": "assumption",
+          "ref": "Model assumption"
+         },
+         {
+          "name": "Agreement to published demo",
+          "rate": 0.3,
+          "low": 0.2,
+          "high": 0.5,
+          "source": "assumption",
+          "ref": "Model assumption"
+         },
+         {
+          "name": "Published demo to tracked visit",
+          "rate": 0.5,
+          "low": 0.2,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "Model assumption"
+         },
+         {
+          "name": "Tracked visit to free signup",
+          "rate": 0.2,
+          "low": 0.1,
+          "high": 0.4,
+          "source": "assumption",
+          "ref": "Model assumption"
+         },
+         {
+          "name": "Free signup to paid Company plan",
+          "rate": 0.05,
+          "low": 0.02,
+          "high": 0.1,
+          "source": "assumption",
+          "ref": "Model assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Business brief goal"
+        },
+        "ownerHoursPerWeek": 0.25,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Proposed operating plan"
+        }
+       },
+       "p10": 0,
+       "p50": 0,
+       "p90": 0.1
+      }
+     ],
+     "portfolioNote": "The 50-paid-plan goal is not supported by current evidence: traffic, user base and paid conversion are unknown. These no-ad tests can establish actual CAC, not promise the goal.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 6,
+      "grossMargin": 0.9,
+      "monthlyChurn": 0.05,
+      "basis": "Assume monthly billing, 90% margin and 5% monthly churn: roughly $50 first-year gross contribution. Use $45 as the conservative CAC ceiling; both margin and churn need validation.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Not confirmed by you. Add it under Sharpen this plan."
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "Model assumption"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "Model assumption"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://freelancersunion.org/join/?utm_source=openai",
+      "https://freelancersunion.org/events/hub-events/?utm_source=openai",
+      "https://thefutur.com/pro-group?utm_source=openai",
+      "https://www.beingfreelance.com/?utm_source=openai",
+      "https://www.producthunt.com/products/producthunt?utm_source=openai",
+      "https://chromewebstore.google.com/detail/involets/nfpnodnmfkdggjkoabhlpjnllkikemma?utm_source=openai",
+      "https://www.g2.com/products/clockify/reviews?utm_source=openai",
+      "https://www.g2.com/compare/clockify-vs-harvest?utm_source=openai",
+      "https://membership.freelancersunion.org/resources/?utm_source=openai",
+      "https://gusto.com/partners/directory?utm_source=openai",
+      "https://www.thesmallbusinessexpo.com/?utm_source=openai",
+      "https://www.irs.gov/faqs/estimated-tax/individuals/individuals-2?utm_source=openai",
+      "https://www.nyc.gov/site/dca/talk-money/self-employed-tax-prep-events.page?utm_source=openai"
+     ]
+    },
+    "costMicros": 216617,
+    "ms": 1311095
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ },
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "Run the three selected plays; no ads. Their uncalibrated scenario is ≈2.1 customers (range 1.2–4.8), $418 modeled play cost, $0/month cash spend, and $196 blended cost/customer. Owner goal remains “Get more paying customers in the next 90 days”; its numeric target and gap are unknown.",
+     "positioning": "Formkit helps teams make branded forms from plain descriptions; AI builds them, while logic and paid workflows handle what happens next.",
+     "audiences": [
+      {
+       "name": "Small agencies",
+       "hypothesis": "Agencies managing client forms may pay for separate client workspaces and Business controls.",
+       "evidence": "Business offers approvals, shared templates, and audit logs; prospect pool: clutch.co/us/agencies/digital-marketing."
+      },
+      {
+       "name": "Agencies comparing Google Forms",
+       "hypothesis": "Agency teams may switch when branding, partial responses, and question-level drop-off matter.",
+       "evidence": "Formkit’s dated comparison asset: https://formkit.app/compare; search demand and conversion are unmeasured."
+      },
+      {
+       "name": "Claude and ChatGPT form users",
+       "hypothesis": "People building inside AI assistants may try a form tool discoverable through workflow directories.",
+       "evidence": "Workflow and integration details: https://formkit.app/integrations; directory eligibility and traffic need checking."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Integration marketplaces",
+       "score": 85,
+       "status": "primary",
+       "why": "Existing integrations offer a relevant discovery route, though listing effort and marketplace reach are unknown."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 84,
+       "status": "in_plan",
+       "why": "Comparison intent fits the product; an existing comparison table gives the page a starting point."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 84,
+       "status": "in_plan",
+       "why": "Alternative searches show product intent, but claims must stay specific and verifiable."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 82,
+       "status": "later",
+       "why": "Low-cost, relevant follow-up can connect product use to paid features; signup volume is unknown."
+      },
+      {
+       "name": "AI tool directories",
+       "score": 81,
+       "status": "later",
+       "why": "Good fit; add once the first channels show results."
+      },
+      {
+       "name": "Google organic search",
+       "score": 79,
+       "status": "later",
+       "why": "Search can compound around buyer intent, but ranking and timing are unknown."
+      },
+      {
+       "name": "Templates",
+       "score": 79,
+       "status": "later",
+       "why": "Templates can help visitors reach a useful published form and fit the existing free entry point."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 79,
+       "status": "later",
+       "why": "Alternative-seeking users fit the positioning; listing effort appears bounded, but referral volume is unknown."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Agency workspace outreach",
+       "hypothesis": "Agency teams may pay for client workspaces and Business controls; the account forecast is an uncalibrated scenario.",
+       "population": "500 published agency contacts; benchmark replies 1–3%, reply-to-booking 20–40%.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Replies and booked calls per 500 emails",
+       "guardrails": [
+        "Benchmark math: 5–15 replies and 1–6 bookings per 500 sends; directional only.",
+        "Day 21: scale only at 8 replies and 2 bookings; day 45 requires one sale.",
+        "No ad spend; honor opt-outs, stop on reply, and keep bounce rate below 2%."
+       ],
+       "durationDays": 45,
+       "stoppingRule": "Day 21: stop below 4 replies or 0 bookings/375; day 45 needs ≥1 sale."
+      },
+      {
+       "name": "Google Forms agency switch page",
+       "hypothesis": "Agencies may sign up when a fair switch page explains branding and response insight; funnel rates are assumptions.",
+       "population": "50 weekly organic visits is a planning assumption; modeled range is 10–200.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Organic clicks and attributed paid accounts",
+       "guardrails": [
+        "Keep comparison claims accurate, dated, and limited to verified product differences.",
+        "Add a related page only if organic visits reach 10 weekly by day 60."
+       ],
+       "durationDays": 60,
+       "stoppingRule": "Check indexing by day 21; stop expanding if no organic clicks by day 60."
+      },
+      {
+       "name": "AI workflow directory test",
+       "hypothesis": "A verified workflow listing may reach form users already working in AI assistants.",
+       "population": "Modeled directory reach is 5–100 weekly, with 20 central; actual reach is unverified.",
+       "method": "export_instructions",
+       "primaryMetric": "Attributed free signups and paid accounts",
+       "guardrails": [
+        "Replicate only after one attributable paid agency account by day 60.",
+        "Use only verified features and eligible listings; spend no ad budget."
+       ],
+       "durationDays": 60,
+       "stoppingRule": "No eligible route by day 21; stop after 120 views without a signup."
+      }
+     ],
+     "constraints": [
+      "Ad budget cap: $600/month; planned platform spend is $0 until attributable CAC evidence exists.",
+      "Owner hours were not supplied; plan assumes 1 hour/week for approvals, calls, closing, and review.",
+      "Current acquisition mix, traffic, paid baseline, and retention are unknown; establish them in week one.",
+      "Three-seat account contribution and churn are planning assumptions, not observed business results.",
+      "Directory eligibility, eligible audience size, and sales cycle remain unverified."
+     ],
+     "measurementPlan": "UTM-tag each play; record source, signup, first published form, paid upgrade, and seat count. Reconcile product events with billing weekly; ask new buyers how they found Formkit. Track AI referrals separately and check fixed buyer prompts monthly.",
+     "firstActions": [
+      {
+       "title": "Confirm the numeric target and available weekly hours",
+       "why": "The customer target and weekly capacity are missing, so confirm the plan’s bounds first.",
+       "role": "Owner"
+      },
+      {
+       "title": "Export paid-account, seat, and source baselines",
+       "why": "Current source mix and paid conversions are needed to validate CAC and protect what works.",
+       "role": "Owner and ClimbOS"
+      },
+      {
+       "title": "Approve the first 25 agency contacts",
+       "why": "This starts the selected outreach play using published business contacts only.",
+       "role": "Owner"
+      }
+     ],
+     "diagnosis": "Evidence is binding: paid-conversion history and eligible-user counts are missing, so play economics remain scenarios. Falsifier: first-party cohorts establish attributable CAC.",
+     "affordableCac": "Three-seat Business account (assumption): $46 monthly contribution; 5% monthly churn yields $419 in 12 months, the maximum CAC.",
+     "notDoing": [
+      {
+       "channel": "Lifecycle and nurture email",
+       "why": "Wait for consented signup volume and activation data; current cohort size is unknown."
+      },
+      {
+       "channel": "Broader SEO and templates",
+       "why": "Prove one high-intent switch page before adding pages and template maintenance."
+      },
+      {
+       "channel": "G2, Capterra, and AlternativeTo",
+       "why": "Review base, listing fit, and referral conversion are unverified."
+      },
+      {
+       "channel": "Referral and co-marketing",
+       "why": "User volume and partner access are unknown; revisit after an attributable win."
+      },
+      {
+       "channel": "Google and Meta ads",
+       "why": "No first-party paid-conversion evidence supports spending the available ad budget."
+      }
+     ],
+     "northStar": {
+      "metric": "New attributable paid accounts",
+      "baseline": "Not supplied; establish the paid-account baseline in week one.",
+      "target": "≈2 by day 90; scenario, not a replacement goal."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Agency emails sent",
+       "weeklyTarget": "125/week for four test weeks",
+       "source": "ClimbOS Pipeline"
+      },
+      {
+       "metric": "Agency replies and bookings",
+       "weeklyTarget": "Benchmark scenario: 2.5 replies; 0.75 bookings",
+       "source": "ClimbOS Pipeline; supplied benchmarks"
+      },
+      {
+       "metric": "Switch-page organic clicks",
+       "weeklyTarget": "Check indexing day 21; stop expansion day 60",
+       "source": "Google Search Console"
+      },
+      {
+       "metric": "Directory-attributed signups",
+       "weeklyTarget": "Track weekly; stop after 120 views without signup",
+       "source": "UTM links and product events"
+      },
+      {
+       "metric": "Paid accounts by source",
+       "weeklyTarget": "Weekly count; validate seat mix and source",
+       "source": "Billing and Pipeline"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "Days 0–14",
+       "focus": "Baseline sources and paid conversions; publish the switch page; verify a directory route; begin approved outreach."
+      },
+      {
+       "name": "Test",
+       "days": "Days 15–45",
+       "focus": "Complete the 500-contact outreach test; check page and directory signals; apply the day-21 and day-45 gates."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "Days 46–90",
+       "focus": "Concentrate on attributable winners; expand only after paid-account evidence; keep ads off until CAC is validated."
+      }
+     ],
+     "weekOneChecklist": [
+      "Confirm the numeric 90-day target, weekly owner time, and current paid baseline.",
+      "Add UTMs and track signup, first published form, paid upgrade, and seat count.",
+      "Approve the first 25 published agency contacts for ClimbOS outreach.",
+      "Verify Google Forms comparison claims; publish the tracked switch-page link.",
+      "Check Glama, Zapier, and Make eligibility; approve one listing route."
+     ],
+     "risks": [
+      {
+       "risk": "Modeled account contribution and churn may overstate the CAC ceiling.",
+       "mitigation": "Check actual seat mix, contribution margin, and churn in billing by day 14."
+      },
+      {
+       "risk": "Cold-email benchmarks may not transfer to Formkit’s agency list.",
+       "mitigation": "Use published business contacts, monitor replies and bounces, and apply the day-21 gate."
+      },
+      {
+       "risk": "Search and directory reach may arrive too slowly for the 90-day goal.",
+       "mitigation": "Verify indexing and listing eligibility by day 21; stop weak expansions by day 60."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Agency workspace outreach",
+       "oneLiner": "Reach agency teams with Formkit’s client-workspace and Business feature offer.",
+       "kind": "creative",
+       "audience": "Small agencies listed at clutch.co and ecosystem.hubspot.com/marketplace.",
+       "trigger": "A basic form becomes client-facing or needs response drop-off insight.",
+       "hook": "Run client forms in separate workspaces; use Business approvals, shared templates, and audit logs.",
+       "mechanic": "Personal cold email to published agency contacts; two compliant follow-ups.",
+       "assetUsed": "Business approvals, shared templates, audit log, and client workspaces.",
+       "funnel": [
+        "Sent→reply: 1% / 2% / 3%, ClimbOS benchmark, grade B.",
+        "Reply→booked: 20% / 30% / 40%, ClimbOS benchmark, grade B.",
+        "Booked→paid: 5% / 10% / 20%, assumption, grade D."
+       ],
+       "unit": "Paid Business agency account, modeled as three seats.",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Will agency calls convert to three-seat Business accounts?",
+       "test": "Send 500 agency emails over four weeks; $0 media; day-21 scale decision.",
+       "killIf": "Day 21: stop below 4 replies or zero bookings from 375 emails.",
+       "scaleIf": "Day 21: 250/week at 8 replies, 2 bookings; day 45 requires one sale.",
+       "scores": [
+        5,
+        2,
+        4,
+        3,
+        3,
+        5,
+        5,
+        5
+       ],
+       "firstActionToday": "Approve a 25-agency sample from Clutch and HubSpot partner directories.",
+       "climbosCanDo": "Find published business emails, personalize outreach, follow up, stop on reply, and track calls.",
+       "model": {
+        "weeklyReach": 250,
+        "weeklyReachLow": 125,
+        "weeklyReachHigh": 250,
+        "reachSource": {
+         "source": "planned",
+         "ref": "Planned volume; engine capacity from task brief"
+        },
+        "steps": [
+         {
+          "name": "Sent→reply",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.03,
+          "source": "benchmark",
+          "ref": "ClimbOS engine specification supplied in task; grade B",
+          "quote": "Cold email benchmarks (grade B, not this business's results): 1–3% reply, 20–40% of replies booking.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Reply→booked call",
+          "rate": 0.3,
+          "low": 0.2,
+          "high": 0.4,
+          "source": "benchmark",
+          "ref": "ClimbOS engine specification supplied in task; grade B",
+          "quote": "Cold email benchmarks (grade B, not this business's results): 1–3% reply, 20–40% of replies booking.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Booked call→paid account",
+          "rate": 0.1,
+          "low": 0.05,
+          "high": 0.2,
+          "source": "assumption",
+          "ref": "No first-party conversion data supplied; grade D assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned test budget"
+        },
+        "ownerHoursPerWeek": 0.5,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned workload"
+        }
+       },
+       "p10": 1,
+       "p50": 1.9,
+       "p90": 2.9
+      },
+      {
+       "name": "Google Forms agency switch page",
+       "oneLiner": "Turn Formkit’s existing comparison asset into a practical agency switch page.",
+       "kind": "creative",
+       "audience": "Agency teams researching Google Forms alternatives in Google Search.",
+       "trigger": "An agency needs a branded form or better response insight.",
+       "hook": "Compare branding, response drop-off, and partial responses; keep Google Forms for simpler jobs.",
+       "mechanic": "Publish one fair, intent-matched competitor alternative page.",
+       "assetUsed": "Existing comparison page: https://formkit.app/compare",
+       "funnel": [
+        "Visitor→free signup: 1% / 3% / 5%, assumption, grade D.",
+        "Signup→paid account: 1% / 3% / 5%, assumption, grade D."
+       ],
+       "unit": "Paid Business agency account, modeled as three seats.",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Will this page attract agency searches within 90 days?",
+       "test": "Publish Google Forms switch page; check indexing and visits day 21; spend $0.",
+       "killIf": "Stop expanding if no organic clicks arrive by day 60.",
+       "scaleIf": "Add one related page if organic traffic reaches 10 weekly visits by day 60.",
+       "scores": [
+        5,
+        1,
+        4,
+        2,
+        4,
+        5,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve the dated Google Forms claims already present in Formkit’s comparison.",
+       "climbosCanDo": "Draft the page, verify claims, publish tracked signup links, and check search visits.",
+       "model": {
+        "weeklyReach": 50,
+        "weeklyReachLow": 10,
+        "weeklyReachHigh": 200,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "Planning assumption; no Formkit search traffic supplied"
+        },
+        "steps": [
+         {
+          "name": "Organic visitor→free signup",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "No first-party traffic conversion data supplied; grade D assumption"
+         },
+         {
+          "name": "Free signup→paid account",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "No first-party upgrade data supplied; grade D assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned test budget"
+        },
+        "ownerHoursPerWeek": 0.05,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned workload"
+        }
+       },
+       "p10": 0.3,
+       "p50": 0.6,
+       "p90": 1.9
+      },
+      {
+       "name": "AI workflow directory test",
+       "oneLiner": "Test directory discovery around Formkit’s in-chat creation and supported workflows.",
+       "kind": "moonshot",
+       "audience": "Claude/ChatGPT form users and automation shoppers on Glama, Zapier, or Make.",
+       "trigger": "An agency searches for forms that fit its existing workflow.",
+       "hook": "Build and publish forms in Claude or ChatGPT; connect responses through supported integrations.",
+       "mechanic": "Submit one verified workflow listing linked to a focused use-case page.",
+       "assetUsed": "In-chat form creation and listed integrations: https://formkit.app/integrations",
+       "funnel": [
+        "Directory view→free signup: 1% / 3% / 10%, assumption, grade D.",
+        "Signup→paid account: 0.5% / 2% / 5%, assumption, grade D."
+       ],
+       "unit": "Paid Business agency account, modeled as three seats.",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Will eligible directories deliver qualified agency visitors?",
+       "test": "Check eligibility and submit one supported workflow listing by day 21; spend $0.",
+       "killIf": "Stop if no eligible listing route by day 21 or signup after 120 views.",
+       "scaleIf": "Replicate only after one attributable paid agency account by day 60.",
+       "scores": [
+        4,
+        1,
+        3,
+        2,
+        4,
+        5,
+        4,
+        5
+       ],
+       "firstActionToday": "Check directory eligibility for Formkit’s existing integrations and in-chat workflow.",
+       "climbosCanDo": "Check directory fit, draft the listing and workflow page, and track referrals; owner submits.",
+       "model": {
+        "weeklyReach": 20,
+        "weeklyReachLow": 5,
+        "weeklyReachHigh": 100,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "Planning assumption; directory traffic unverified"
+        },
+        "steps": [
+         {
+          "name": "Directory view→free signup",
+          "rate": 0.03,
+          "low": 0.01,
+          "high": 0.1,
+          "source": "assumption",
+          "ref": "No reliable marketplace conversion benchmark supplied; grade D assumption"
+         },
+         {
+          "name": "Free signup→paid account",
+          "rate": 0.02,
+          "low": 0.005,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "No first-party upgrade data supplied; grade D assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned test budget"
+        },
+        "ownerHoursPerWeek": 0.1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned workload"
+        }
+       },
+       "p10": 0.1,
+       "p50": 0.2,
+       "p90": 1.2
+      }
+     ],
+     "portfolioNote": "No bankable or creative-proven play clears the evidence gate: paid-conversion history and eligible-user count are missing. Three-seat agency economics are assumptions; the 90-day target is unspecified, so its gap is uncomputable. No ad spend until attributable CAC evidence exists.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 57,
+      "grossMargin": 0.8,
+      "monthlyChurn": 0.05,
+      "basis": "Three-seat Business agency account; seat count, contribution margin, and churn are assumptions.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Confirmed pricing plus modeled three-seat agency account"
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "Planning assumption; no contribution margin supplied"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "Planning assumption; no churn data supplied"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://www.indiehackers.com/post/i-launched-simple-forma-everywhere-here-s-what-worked-and-what-didn-t-d6ea0d2551?utm_source=openai",
+      "https://www.reddit.com/r/humanresources/comments/enm8km?utm_source=openai",
+      "https://www.producthunt.com/products/tally?utm_source=openai",
+      "https://www.g2.com/categories/online-form-builder/f/dedicated-online-form-builders?utm_source=openai",
+      "https://www.capterra.com/forms-automation-software/?utm_source=openai",
+      "https://formkit.app/integrations",
+      "https://formkit.app/",
+      "https://formkit.app/compare",
+      "https://alternativeto.net/browse/all/?tag=form-builder&utm_source=openai",
+      "https://www.pcma.org/event/2027-convening-leaders/?utm_source=openai",
+      "https://www.shrm.org/events-education/events?utm_source=openai",
+      "https://www.sba.gov/about-sba/organization/observances/small-business-saturday/?utm_source=openai",
+      "https://www.givingtuesday.org/participate/?trk=article-ssr-frontend-pulse_little-text-block&utm_source=openai"
+     ]
+    },
+    "costMicros": 296798,
+    "ms": 1491498
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ }
+]

@@ -216,4 +216,28 @@ pnpm bench --cases formkit,meetrao,involets,taskeni,folevi --tasks strategy --ar
 
 **What doesn't hold up:** less ambitious inputs lose to B0.
 
-**Next decision-changing step:** one more B1 run against the saved B0 outputs (Basic, same 5 cases). Expect about $1.30 for plans and $0.60 for the judge; **cap $2.50**. It needs new funding beyond the $5 already approved.
+### Run 3 (2026-10-19, separately approved cap of $2.50)
+
+**What ran:** B1 at `a43557c` (ambition restored, headline on the most-likely basis) against the saved B0 outputs.
+
+**Files:** `bench/results/2026-10-19-04-03-regress-b1fix2.*` and `2026-10-19-04-28-regress-judge3.*`, including the blind packet.
+
+| | B0 | B1 run 3 |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.17 |
+| Pairwise | — | **3 wins** (Involets, Formkit, Taskeni), 2 losses (Meetrao, Folevi) |
+| Pointwise overall (mean) | 4.0 | 3.6 |
+
+**Spend:** $1.72 of $2.50 for this run; $6.34 across all three runs.
+
+**Trend:** 2–3, then 1–1–3, then 3–2. The decision rule (at least 4 of 5) is still not met.
+
+**Why B1 won:**
+- **Formkit and Involets:** it separated benchmarks from assumptions and admitted when there was no route to the goal.
+- **Taskeni:** a named outreach engine with weekly volume.
+
+**Why it still loses (Meetrao, Folevi):** B0's plays are more specific self-serve conversion mechanisms; B1 restricted success to a narrow plan or segment.
+
+These losses are about strategy specificity, not maths. The S5 decision contract (flagged) and the structured decision fields target them.
+
+**Next decision-changing step:** flag `decision_contract` on for the bench arm and compare. It needs funding (cap about $2.50).
