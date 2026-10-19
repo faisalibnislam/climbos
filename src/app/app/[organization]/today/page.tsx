@@ -31,6 +31,7 @@ import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { WishFeed } from "@/components/app/wish/WishFeed";
+import { IdeaDeck } from "@/components/app/today/IdeaDeck";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 
@@ -191,17 +192,25 @@ export default function TodayPage() {
             )}
           </section>
           {suggested.length > 0 && (
-            <section aria-labelledby="suggested-heading" className="rounded-xl border border-line bg-surface">
-              <h2 id="suggested-heading" className="heading-section px-5 pt-4">
-                Ideas
-              </h2>
-              <ul className="mt-2 divide-y divide-line border-t border-line">
-                {suggested.map((c) => (
-                  <li key={c.id}>
-                    <ActionCard slug={slug} card={c} />
-                  </li>
-                ))}
-              </ul>
+            <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 id="suggested-heading" className="heading-section">
+                  Ideas
+                </h2>
+                <span className="text-xs text-ink-3">Swipe or use ← →</span>
+              </div>
+              <IdeaDeck slug={slug} cards={suggested.filter((c) => c.status === "proposed" || c.status === "blocked")} />
+              {suggested.some((c) => c.status !== "proposed" && c.status !== "blocked") ? (
+                <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--card-shadow)]">
+                  {suggested
+                    .filter((c) => c.status !== "proposed" && c.status !== "blocked")
+                    .map((c) => (
+                      <li key={c.id}>
+                        <ActionCard slug={slug} card={c} />
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
             </section>
           )}
         </div>
@@ -265,7 +274,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
     <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <Tooltip content={card.description || card.proposedEffect}>
-          <p tabIndex={0} className="truncate text-sm font-medium text-ink">{card.title}</p>
+          <p tabIndex={0} className="text-sm font-medium text-ink">{card.title}</p>
         </Tooltip>
         {status === "running" && card.runId ? (
           <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
