@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Palette } from "lucide-react";
+import { Palette } from "@/components/icons"
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
@@ -23,7 +23,6 @@ export default function ContentPage() {
       <PageHeader
         section="content"
         title="Content"
-        intro="Everything your AI team has created. Nothing is posted, sent or spent until you approve it."
         actions={
           <>
             <Button asChild variant="secondary">

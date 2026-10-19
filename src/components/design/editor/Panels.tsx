@@ -1,6 +1,7 @@
 "use client";
 
-import { icons, ChevronDown, ChevronUp, Eye, EyeOff, Image as ImageIcon, LayoutTemplate, Layers, Lock, Palette, Shapes, Type, Unlock, Upload, type LucideIcon } from "lucide-react";
+import { icons, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Image as ImageIcon, LayoutTemplate, Layers, Lock, Palette, Shapes, Type, Unlock, Upload } from "@/components/icons";
 import { useMemo, useRef, useState } from "react";
 import { newId } from "@shared/design/ops";
 import { TEMPLATES, templatePage } from "@shared/design/templates";

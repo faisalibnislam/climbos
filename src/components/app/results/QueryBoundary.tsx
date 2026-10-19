@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
-import { CircleAlert, Clock, CreditCard, Lock, PlugZap, SearchX, WifiOff } from "lucide-react";
+import { CircleAlert, Clock, CreditCard, Lock, PlugZap, SearchX, WifiOff } from "@/components/icons"
 import Link from "next/link";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -14,15 +14,15 @@ import { errorInfo, type AppErrorInfo } from "../errors";
  */
 
 const STATE_COPY: Record<AppErrorInfo["code"], { title: string; icon: ReactNode; body?: string }> = {
-  UNAUTHENTICATED: { title: "Please sign in again", icon: <Lock />, body: "Your session ended. Sign in to keep going." },
-  FORBIDDEN: { title: "You don't have access to this", icon: <Lock /> },
-  NOT_FOUND: { title: "We couldn't find that", icon: <SearchX /> },
-  INVALID: { title: "Something doesn't look right", icon: <CircleAlert /> },
-  LIMIT_REACHED: { title: "You've reached a plan limit", icon: <CircleAlert /> },
-  PAYMENT_REQUIRED: { title: "This needs an active plan", icon: <CreditCard /> },
+  UNAUTHENTICATED: { title: "Sign in again", icon: <Lock />, body: "Your session ended." },
+  FORBIDDEN: { title: "No access", icon: <Lock /> },
+  NOT_FOUND: { title: "Not found", icon: <SearchX /> },
+  INVALID: { title: "Something looks wrong", icon: <CircleAlert /> },
+  LIMIT_REACHED: { title: "Plan limit reached", icon: <CircleAlert /> },
+  PAYMENT_REQUIRED: { title: "Needs an active plan", icon: <CreditCard /> },
   PAUSED: { title: "Activity is paused", icon: <PlugZap /> },
-  RATE_LIMITED: { title: "Too many requests right now", icon: <Clock />, body: "Please wait a minute and try again." },
-  UNAVAILABLE: { title: "This isn't available right now", icon: <WifiOff /> },
+  RATE_LIMITED: { title: "Too many requests", icon: <Clock />, body: "Wait a minute, then retry." },
+  UNAVAILABLE: { title: "Unavailable right now", icon: <WifiOff /> },
   UNKNOWN: { title: "Something went wrong", icon: <CircleAlert /> },
 };
 
@@ -60,7 +60,7 @@ export function ErrorState({
         ) : null}
         {info.code === "FORBIDDEN" || info.code === "NOT_FOUND" ? (
           <Button variant="secondary" asChild>
-            <Link href="/app">Go to your workspace</Link>
+            <Link href="/app">Go to workspace</Link>
           </Button>
         ) : null}
       </div>

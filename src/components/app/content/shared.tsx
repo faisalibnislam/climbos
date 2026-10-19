@@ -14,11 +14,12 @@ import {
   Pencil,
   Send,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Component, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
-import { Badge, Button, Callout, SocialIcon } from "@/components/ui";
+import { Badge, Button, Callout, SocialIcon, Tooltip } from "@/components/ui";
+import { Highlight, Scannable, toBullets } from "@/components/ds/content";
 import { RoleAvatar } from "../RoleAvatar";
 import { cn } from "@/lib/utils";
 import { ARTIFACT_STATUS, CHANNEL_LABELS, ROLE_META, roleTitle } from "../roles";
@@ -124,7 +125,7 @@ export function explainError(err: unknown): ExplainedError {
     if (perm) who = PERMISSION_WHO[perm];
   }
   if (info.code === "UNKNOWN" && err instanceof Error && /ArgumentValidationError|does not match validator|Invalid argument/i.test(err.message)) {
-    return { code: "NOT_FOUND", message: "We couldn't find that. The link may be wrong or out of date.", title: "Not found" };
+    return { code: "NOT_FOUND", message: "The link may be wrong or out of date.", title: "Not found" };
   }
   const titles: Record<AppErrorInfo["code"], string> = {
     UNAUTHENTICATED: "Please sign in",
@@ -146,7 +147,7 @@ function AskApproval({ slug, error }: { slug: string; error: unknown }) {
   const ask = useMutation(api.team.requestApproval);
   const [sent, setSent] = useState(false);
   const data = (error instanceof ConvexError ? error.data : {}) as { title?: string; credits?: number };
-  if (sent) return <span>Sent. You&apos;ll see it start once they approve.</span>;
+  if (sent) return <span>Sent for approval.</span>;
   return (
     <Button
       size="sm"
@@ -156,7 +157,7 @@ function AskApproval({ slug, error }: { slug: string; error: unknown }) {
         setSent(true);
       }}
     >
-      Ask an owner or admin
+      Ask an admin
     </Button>
   );
 }
@@ -170,14 +171,14 @@ export function ErrorCallout({ error, onRetry, className }: { error: unknown; on
   let next: ReactNode = null;
   if (e.code === "LIMIT_REACHED" || e.code === "PAYMENT_REQUIRED") {
     next = (
-      <Link href={billing}>{e.code === "PAYMENT_REQUIRED" ? "Go to billing" : "See your plan and add capacity"}</Link>
+      <Link href={billing}>{e.code === "PAYMENT_REQUIRED" ? "Go to billing" : "Add capacity"}</Link>
     );
   } else if (e.code === "PAUSED") {
-    next = <span>An Owner or Admin can resume activity from the banner at the top of the page.</span>;
+    next = <span>An Owner or Admin can resume it.</span>;
   } else if (e.code === "FORBIDDEN" && e.reason === "approval_limit") {
     next = <AskApproval slug={slug} error={error} />;
   } else if (e.code === "FORBIDDEN") {
-    next = <span>{e.who ? `This needs ${e.who}. Ask one of them to do it, or to change your role.` : "Ask an Owner or Admin for help."}</span>;
+    next = <span>{e.who ? `Needs ${e.who}.` : "Ask an Owner or Admin."}</span>;
   } else if (e.code === "RATE_LIMITED") {
     next = <span>Wait a minute, then try again.</span>;
   } else if (e.code === "UNAUTHENTICATED") {
@@ -197,9 +198,50 @@ export function ErrorCallout({ error, onRetry, className }: { error: unknown; on
         ) : undefined
       }
     >
-      <p>{e.message}</p>
+      <MessageText text={e.message} />
       {next ? <p className="mt-1">{next}</p> : null}
     </Callout>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Scannable text (docs/ContentDesign.md)                               */
+/* ------------------------------------------------------------------ */
+
+/** A server or AI message: one sentence stays a line; more become bullets (first 3 shown). */
+export function MessageText({ text, className }: { text: string; className?: string }) {
+  if (toBullets(text).length < 2) return <p className={className}>{text}</p>;
+  return <Scannable text={text} max={3} tone="muted" className={className} />;
+}
+
+/** Labelled facts ("To", "When", "Max spend") as a compact definition list. */
+export function FactList({ items, className }: { items: { term: string; detail: ReactNode }[]; className?: string }) {
+  return (
+    <dl className={cn("grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm", className)}>
+      {items.map((it) => (
+        <div key={it.term} className="contents">
+          <dt className="text-ink-3">{it.term}</dt>
+          <dd className="min-w-0 break-words font-medium text-ink">{it.detail}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Secondary consequences or notes, one per line, key numbers bold. */
+export function NoteList({ items, className }: { items: string[]; className?: string }) {
+  if (items.length === 0) return null;
+  return (
+    <ul className={cn("flex flex-col gap-1 text-sm leading-relaxed text-ink-2", className)}>
+      {items.map((t) => (
+        <li key={t} className="flex gap-2.5">
+          <span aria-hidden className="mt-[0.6em] size-1.5 shrink-0 bg-brand-700" />
+          <span className="min-w-0">
+            <Highlight text={t} />
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -289,16 +331,27 @@ export function artifactStatusMeta(status: string) {
   return ARTIFACT_STATUS[status] ?? { label: status, tone: "neutral" as const, help: "" };
 }
 
-/** Status pill: icon + words + tone. Optionally shows the help text under it. */
+/** Status pill: icon + words + tone. Optionally shows the help text in a tooltip. */
 export function ArtifactStatus({ status, showHelp = false, className }: { status: string; showHelp?: boolean; className?: string }) {
   const meta = artifactStatusMeta(status);
   const Icon = STATUS_ICONS[status] ?? CircleQuestionMark;
+  const badge = (
+    <Badge tone={meta.tone} icon={<Icon />}>
+      {meta.label}
+    </Badge>
+  );
   return (
     <span className={cn("inline-flex min-w-0 flex-col items-start gap-1", className)}>
-      <Badge tone={meta.tone} icon={<Icon />}>
-        {meta.label}
-      </Badge>
-      {showHelp && meta.help ? <span className="text-xs text-ink-3">{meta.help}</span> : null}
+      {showHelp && meta.help ? (
+        <Tooltip content={meta.help}>
+          <span tabIndex={0} className="rounded-full">
+            {badge}
+            <span className="sr-only">: {meta.help}</span>
+          </span>
+        </Tooltip>
+      ) : (
+        badge
+      )}
     </span>
   );
 }
@@ -319,8 +372,8 @@ export function RoleName({ role, className }: { role: string | null | undefined;
 /* ------------------------------------------------------------------ */
 
 const METER_WORDS: Record<string, (n: number) => string> = {
-  socialPosts: (n) => `${n} social post${n === 1 ? "" : "s"} from your monthly post allowance`,
-  imageAttempts: (n) => `up to ${n} image attempt${n === 1 ? "" : "s"} from your monthly image allowance`,
+  socialPosts: (n) => `${n} social post${n === 1 ? "" : "s"}`,
+  imageAttempts: (n) => `up to ${n} image attempt${n === 1 ? "" : "s"}`,
   deliveredImages: (n) => `${n} finished image${n === 1 ? "" : "s"}`,
   searchCalls: (n) => `${n} web search${n === 1 ? "" : "es"}`,
   scrapeCredits: (n) => `${n} website page read${n === 1 ? "" : "s"}`,

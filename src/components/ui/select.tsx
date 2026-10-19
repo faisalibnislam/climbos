@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as RSelect } from "radix-ui";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@/components/icons"
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { controlClasses, useFieldControl } from "./field";
@@ -45,7 +45,7 @@ export function Select({
         aria-invalid={wiring["aria-invalid"]}
         className={cn(
           controlClasses,
-          "flex h-9 items-center justify-between gap-2 text-left data-[placeholder]:text-ink-3",
+          "flex h-[var(--h-md)] items-center justify-between gap-2 text-left data-[placeholder]:text-ink-3",
           className,
         )}
       >

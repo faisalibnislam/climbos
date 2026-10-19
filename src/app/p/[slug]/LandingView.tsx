@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/components/app/errors";

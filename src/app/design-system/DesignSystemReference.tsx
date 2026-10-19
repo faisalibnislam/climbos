@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Bell, CalendarCheck, CalendarDays, Check, Eye, Inbox, MailOpen, MessageSquareReply, MoreHorizontal, Plus, Search, Send, Sparkles, Trash2, Users } from "lucide-react";
+import { Bell, CalendarCheck, CalendarDays, Check, Eye, Inbox, MailOpen, MessageSquareReply, MoreHorizontal, Plus, Search, Send, Sparkles, Trash2, Users } from "@/components/icons"
 import {
   Avatar,
   Badge,
@@ -100,8 +100,22 @@ const TYPE: { cls: string; label: string; sample: string }[] = [
   { cls: "text-ui", label: "text-ui · 13/18 controls, tables", sample: "Scheduled for Tue, Oct 21 at 9:00" },
   { cls: "text-xs text-ink-3", label: "text-xs · 12/16 captions", sample: "Updated 2 minutes ago" },
   { cls: "text-overline", label: "text-overline · 11/16 caps", sample: "Grow" },
-  { cls: "metric", label: "metric · Reckless Neue 28/32", sample: "1,284" },
+  { cls: "metric", label: "metric · 28/32 (Reckless Neue in Summit, Inter 600 in Signal)", sample: "1,284" },
 ];
+
+/** Type labels in the Signal theme (Reckless titles, Hanken body). */
+const SIGNAL_TYPE_LABELS: Record<string, string> = {
+  "heading-page": "heading-page · Reckless 36/40",
+  "heading-section": "heading-section · Reckless 24/30",
+  "heading-card": "heading-card · Reckless 17/22",
+  "text-xl font-semibold tracking-tight": "dialog title · Reckless 22/28 (heading-dialog)",
+  "text-base": "text-base · Hanken 15/24 long-form",
+  "text-sm": "text-sm · Hanken 14/20 body",
+  "text-ui": "text-ui · Hanken 13/18 controls, tables",
+  "text-xs text-ink-3": "text-xs · Hanken 12/16 captions",
+  "text-overline": "text-overline · Hanken 11/16 caps",
+  metric: "metric · Hanken 600 28/32 (KPIs)",
+};
 
 const NETWORKS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest", "snapchat", "threads", "google"];
 
@@ -130,7 +144,24 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function DesignSystemReference() {
+/** Swatch names and notes for the proposed "Signal" theme (/design-system/v2). */
+const SIGNAL_SWATCHES: typeof SWATCHES = [
+  { name: "bg", varName: "--bg", note: "Stone ground" },
+  { name: "surface", varName: "--surface", note: "Panels" },
+  { name: "surface-2", varName: "--surface-2", note: "Subtle fill" },
+  { name: "surface-3", varName: "--surface-3", note: "Strong fill" },
+  { name: "ink", varName: "--ink", note: "Text, primary actions" },
+  { name: "ink-2", varName: "--ink-2", note: "Secondary" },
+  { name: "ink-3", varName: "--ink-3", note: "Meta" },
+  { name: "brand-800", varName: "--brand-800", note: "Sage" },
+  { name: "brand-100", varName: "--brand-100", note: "Sage tint" },
+  { name: "sun", varName: "--sun", note: "Lime accent" },
+  { name: "sun-strong", varName: "--sun-strong", note: "Lime for marks" },
+  { name: "sun-soft", varName: "--sun-soft", note: "Lime tint" },
+];
+
+export function DesignSystemReference({ theme }: { theme?: "signal" } = {}) {
+  const swatches = theme === "signal" ? SIGNAL_SWATCHES : SWATCHES;
   const [mode, setMode] = useState("trust");
   const [channel, setChannel] = useState("linkedin");
   const [day, setDay] = useState("");
@@ -142,8 +173,8 @@ export function DesignSystemReference() {
       <Toaster />
       <main className="mx-auto max-w-6xl px-6 py-10 lg:px-8">
         <PageHeader
-          eyebrow="ClimbOS · Summit"
-          title="Design system"
+          eyebrow="ClimbOS · Signal"
+          title={theme === "signal" ? "Components" : "Design system"}
           intro="Every token and component the product uses. If a screen needs something that isn't here, add it here first (docs/DesignSystem.md)."
           actions={
             <>
@@ -158,7 +189,7 @@ export function DesignSystemReference() {
         <div className="flex flex-col gap-10">
           <Section id="colour" title="Colour" intro="Sage-grey ground, white panels, pine for action, sunrise for small highlights. Status colours are soft fills with deep inks.">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-              {SWATCHES.map((s) => (
+              {swatches.map((s) => (
                 <div key={s.name} className="overflow-hidden rounded-xl border border-line bg-surface">
                   <div className="h-14 border-b border-line" style={{ background: `var(${s.varName})` }} />
                   <div className="p-2.5">
@@ -181,8 +212,8 @@ export function DesignSystemReference() {
             <div className="divide-y divide-line rounded-xl border border-line bg-surface px-5">
               {TYPE.map((t) => (
                 <div key={t.cls} className="grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">
-                  <div className="text-xs text-ink-3">{t.label}</div>
-                  <div className={t.cls}>{t.sample}</div>
+                  <div className="text-xs text-ink-3">{theme === "signal" ? SIGNAL_TYPE_LABELS[t.cls] ?? t.label : t.label}</div>
+                  <div className={t.cls === "text-xl font-semibold tracking-tight" && theme === "signal" ? "heading-dialog" : t.cls}>{t.sample}</div>
                 </div>
               ))}
               <div className="marketing grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">

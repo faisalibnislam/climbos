@@ -2,7 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Download } from "lucide-react";
+import { Download } from "@/components/icons"
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { Button, Callout, DataTable, Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger, Label, Skeleton, buttonClasses } from "@/components/ui";
 import { formatNumber, plural } from "@/lib/utils";
@@ -11,13 +11,13 @@ import { errorMessage } from "../errors";
 const MAX_BYTES = 5 * 1024 * 1024;
 
 const COLUMNS: { name: string; required: boolean; help: string }[] = [
-  { name: "email", required: true, help: "Their email address" },
-  { name: "first_name", required: false, help: "First name" },
-  { name: "last_name", required: false, help: "Last name" },
-  { name: "consent", required: false, help: "yes only if they agreed to marketing email" },
-  { name: "consent_source", required: false, help: "Where they agreed, e.g. signup form" },
-  { name: "consent_date", required: false, help: "When they agreed, e.g. 2026-05-14" },
-  { name: "segment", required: false, help: "A group name, e.g. customers or leads" },
+  { name: "email", required: true, help: "" },
+  { name: "first_name", required: false, help: "" },
+  { name: "last_name", required: false, help: "" },
+  { name: "consent", required: false, help: "yes = agreed to marketing" },
+  { name: "consent_source", required: false, help: "e.g. signup form" },
+  { name: "consent_date", required: false, help: "e.g. 2026-05-14" },
+  { name: "segment", required: false, help: "e.g. customers" },
 ];
 
 const TEMPLATE =
@@ -49,7 +49,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("This file is larger than 5 MB. Split it into smaller files and upload them one at a time.");
+      setError("Over 5 MB. Split it and upload in parts.");
       return;
     }
     setBusy(true);
@@ -78,18 +78,25 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
-        title="Upload your customer or lead list"
-        description="Only people you already have a relationship with. Uploading again updates existing contacts instead of duplicating them."
+        title="Upload contacts"
+        description="People you already know. Re-uploads update, not duplicate."
         className="max-w-2xl"
       >
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Callout tone="info" title="Consent is never assumed">
-            Only rows with consent = yes <strong className="font-semibold">and</strong> a consent source <strong className="font-semibold">and</strong> a consent date can receive marketing email. Everyone else is
-            imported as a contact for planning only — ClimbOS won&apos;t email them.
+            <p>Marketing email only with all three:</p>
+            <ul className="mt-1 list-disc pl-5">
+              <li>
+                <code className="font-mono text-xs">consent</code> = yes
+              </li>
+              <li>a source</li>
+              <li>a date</li>
+            </ul>
+            <p className="mt-1">Others: planning only.</p>
           </Callout>
           <div>
             <h3 className="heading-card">Columns</h3>
-            <p className="mt-0.5 text-ui text-ink-3">The first row must contain the column names. Only email is required.</p>
+            <p className="mt-0.5 text-ui text-ink-3">Row 1 = column names.</p>
             <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-ui sm:grid-cols-2">
               {COLUMNS.map((c) => (
                 <li key={c.name} className="flex flex-col">
@@ -97,7 +104,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
                     <code className="rounded-sm bg-surface-2 px-1 py-0.5 font-mono text-xs text-ink">{c.name}</code>{" "}
                     <span className={c.required ? "font-medium text-ink" : "text-ink-3"}>{c.required ? "required" : "optional"}</span>
                   </span>
-                  <span className="text-ink-3">{c.help}</span>
+                  {c.help ? <span className="text-ink-3">{c.help}</span> : null}
                 </li>
               ))}
             </ul>
@@ -107,7 +114,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
               className={buttonClasses({ variant: "link", className: "mt-3" })}
             >
               <Download aria-hidden="true" className="size-4" />
-              Download a template (CSV)
+              Template (CSV)
             </a>
           </div>
 
@@ -116,7 +123,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
               Contact file
             </Label>
             <p id={hintId} className="text-xs text-ink-3">
-              A .csv file, up to 5 MB and 10,000 rows.
+              .csv · max 5 MB, 10,000 rows
             </p>
             <input
               id={inputId}
@@ -134,7 +141,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
 
           <div aria-live="polite" className="flex flex-col gap-3">
             {error ? (
-              <Callout tone="danger" live="none" title="We couldn't import this file">
+              <Callout tone="danger" live="none" title="Couldn't import">
                 {error}
               </Callout>
             ) : null}
@@ -145,8 +152,8 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
             ) : null}
             {result && !result.fatal ? (
               <Callout tone={result.invalid.length ? "warning" : "success"} live="none" title={`Imported ${plural(result.imported, "new contact")}, updated ${formatNumber(result.updated)}`}>
-                {formatNumber(result.withConsent)} can receive marketing email (recorded consent). {formatNumber(result.withoutConsent)} are for planning only.
-                {result.invalid.length > 0 ? ` ${plural(result.invalid.length, "row")} need attention — see below.` : ""}
+                {formatNumber(result.withConsent)} can get marketing email · {formatNumber(result.withoutConsent)} planning only.
+                {result.invalid.length > 0 ? ` ${plural(result.invalid.length, "row")} need fixing.` : ""}
               </Callout>
             ) : null}
             {result && result.invalid.length > 0 ? (
@@ -168,8 +175,8 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
                 {result ? "Done" : "Cancel"}
               </Button>
             </DialogClose>
-            <Button type="submit" loading={busy} loadingText="Checking rows…" disabled={!file}>
-              Check and import
+            <Button type="submit" loading={busy} loadingText="Checking…" disabled={!file}>
+              Import
             </Button>
           </DialogFooter>
         </form>
@@ -210,7 +217,7 @@ export function AudienceSummary({ slug }: { slug: string }) {
       />
       <p className="text-xs text-ink-3">{audience.note}</p>
       {!audience.providerConnected && audience.segments.some((s) => s.sendable > 0) ? (
-        <p className="text-xs text-ink-3">To send email, connect your own Resend account under Email marketing.</p>
+        <p className="text-xs text-ink-3">To send, connect Resend (Email marketing).</p>
       ) : null}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ChevronDown, Download, FileText, ImageDown, Images, Send } from "lucide-react";
+import { ChevronDown, Download, FileText, ImageDown, Images, Send } from "@/components/icons"
 import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { DesignDoc } from "@shared/design/types";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "@/components/icons"
 import { cn } from "@/lib/utils";
 import { Table, TableFrame, TBody, Td, Th, THead, Tr } from "./table";
 

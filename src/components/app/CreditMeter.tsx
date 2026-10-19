@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Coins } from "lucide-react";
+import { Coins } from "@/components/icons"
 import Link from "next/link";
 import { Progress, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ export function CreditMeter({ slug, rail }: { slug: string; rail?: boolean }) {
         </span>
         {c.topup.left > 0 ? <span>Top-ups {c.topup.left.toLocaleString("en-US")}</span> : null}
       </span>
-      {!c.paid && !c.isDemo ? <span className="text-xs font-medium text-brand-800">Get more credits →</span> : low ? <span className="text-xs font-medium text-red-800">Running low · add credits →</span> : null}
+      {!c.paid && !c.isDemo ? <span className="text-xs font-medium text-brand-800">Get credits →</span> : low ? <span className="text-xs font-medium text-red-800">Low · add credits →</span> : null}
     </Link>
   );
 }

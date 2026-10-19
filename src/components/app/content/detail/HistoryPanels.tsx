@@ -1,11 +1,11 @@
 "use client";
 
-import { CircleAlert, CircleCheck, CircleQuestionMark, FileText, FlaskConical, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleQuestionMark, FileText, FlaskConical, type LucideIcon } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, type Tone } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatDateTime, relativeTime } from "../../money";
-import { RoleName, channelLabel } from "../shared";
+import { MessageText, channelLabel } from "../shared";
 import type { ArtifactView } from "./model";
 
 /* ---------------- Flagged claims ---------------- */
@@ -13,8 +13,8 @@ import type { ArtifactView } from "./model";
 export function FlaggedClaims({ claims }: { claims: string[] }) {
   if (claims.length === 0) return null;
   return (
-    <Callout tone="warning" title={`Check ${claims.length === 1 ? "this claim" : `these ${claims.length} claims`} before approving`}>
-      <p>We couldn&apos;t find a confirmed fact about your business that backs {claims.length === 1 ? "it" : "them"} up. Edit {claims.length === 1 ? "it" : "them"} out, or approve only if you know {claims.length === 1 ? "it's" : "they're"} true.</p>
+    <Callout tone="warning" title={`${claims.length} unverified claim${claims.length === 1 ? "" : "s"}`}>
+      <p>No confirmed fact backs {claims.length === 1 ? "it" : "them"}. Edit out, or approve only if true.</p>
       <ul className="mt-2 list-disc pl-5">
         {claims.map((c) => (
           <li key={c} className="font-medium text-ink">
@@ -45,19 +45,7 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
                   {i === 0 ? <Badge tone="green">Current</Badge> : null}
                 </span>
                 <span className="text-xs text-ink-3">
-                  {v.editedByRole ? (
-                    <>
-                      Written by <RoleName role={v.editedByRole} />
-                    </>
-                  ) : v.editedByUser ? (
-                    v.editedByUser === myUserId ? (
-                      `Edited by you${v.editedByName ? ` (${v.editedByName})` : ""}`
-                    ) : (
-                      `Edited by ${v.editedByName ?? "a teammate"}`
-                    )
-                  ) : (
-                    "Written by ClimbOS"
-                  )}
+                  {v.editedByRole ? "AI" : v.editedByUser ? (v.editedByUser === myUserId ? "You" : (v.editedByName ?? "Teammate")) : "AI"}
                   {" · "}
                   <time dateTime={new Date(v.createdAt).toISOString()} title={now ? formatDateTime(v.createdAt) : undefined}>
                     {now ? relativeTime(v.createdAt, now) : ""}
@@ -65,8 +53,8 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
                 </span>
               </div>
               {i > 0 ? (
-                <Button size="sm" variant="ghost" aria-expanded={isOpen} aria-controls={panelId} onClick={() => setOpen(isOpen ? null : v.id)}>
-                  {isOpen ? "Hide text" : "View text"}
+                <Button size="sm" variant="ghost" aria-expanded={isOpen} aria-controls={panelId} aria-label={`${isOpen ? "Hide" : "View"} version ${v.version}`} onClick={() => setOpen(isOpen ? null : v.id)}>
+                  {isOpen ? "Hide" : "View"}
                 </Button>
               ) : null}
             </div>
@@ -89,21 +77,21 @@ export function VersionHistory({ artifact, myUserId, now }: { artifact: Artifact
 
 const FACT_STATE: Record<string, { label: string; tone: Tone }> = {
   confirmed: { label: "Confirmed", tone: "green" },
-  edited: { label: "Edited by you", tone: "green" },
-  needs_review: { label: "Needs your review", tone: "amber" },
-  rejected: { label: "Rejected — shouldn't be used", tone: "red" },
+  edited: { label: "Edited", tone: "green" },
+  needs_review: { label: "Needs review", tone: "amber" },
+  rejected: { label: "Rejected", tone: "red" },
 };
 
 export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
   if (facts.length === 0) {
-    return <p className="text-sm text-ink-3">This draft doesn&apos;t rely on specific facts about your business.</p>;
+    return <p className="text-sm text-ink-3">None.</p>;
   }
   const unreviewed = facts.filter((f) => f.reviewState === "needs_review" || f.reviewState === "rejected").length;
   return (
     <div className="flex flex-col gap-3">
       {unreviewed > 0 ? (
         <p className="text-sm font-medium text-amber-800">
-          {unreviewed} fact{unreviewed === 1 ? " hasn't" : "s haven't"} been confirmed. Check {unreviewed === 1 ? "it" : "them"} before approving.
+          {unreviewed} unconfirmed. Check before approving.
         </p>
       ) : null}
       <ul className="flex flex-col gap-3">
@@ -127,20 +115,20 @@ export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
 
 export function approvalLabel(a: ArtifactView["approvals"][number], now: number | null): { label: string; tone: Tone; detail?: string } {
   if (a.status === "approved") {
-    if (now !== null && a.expiresAt < now) return { label: "Expired", tone: "neutral", detail: "Approvals expire if they aren't used in time." };
-    if (!a.isCurrent) return { label: "Approved an older version", tone: "neutral", detail: "The text changed since, so this doesn't apply." };
-    return { label: "Approved — this version", tone: "green", detail: now !== null ? `Valid until ${formatDateTime(a.expiresAt)}` : undefined };
+    if (now !== null && a.expiresAt < now) return { label: "Expired", tone: "neutral" };
+    if (!a.isCurrent) return { label: "Older version", tone: "neutral" };
+    return { label: "Approved", tone: "green", detail: now !== null ? `Until ${formatDateTime(a.expiresAt)}` : undefined };
   }
   if (a.status === "invalidated") return { label: "Cancelled", tone: "neutral", detail: a.invalidatedReason ?? undefined };
   if (a.status === "expired") return { label: "Expired", tone: "neutral" };
   if (a.status === "consumed") return { label: "Used to publish", tone: "blue" };
   if (a.status === "rejected") return { label: "Sent back", tone: "amber" };
-  if (a.status === "pending") return { label: "Waiting for a decision", tone: "amber" };
+  if (a.status === "pending") return { label: "Pending", tone: "amber" };
   return { label: a.status, tone: "neutral" };
 }
 
 export function ApprovalsList({ approvals, now }: { approvals: ArtifactView["approvals"]; now: number | null }) {
-  if (approvals.length === 0) return <p className="text-sm text-ink-3">No decisions yet.</p>;
+  if (approvals.length === 0) return <p className="text-sm text-ink-3">None yet.</p>;
   return (
     <ul className="flex flex-col gap-2.5">
       {approvals.map((a) => {
@@ -164,23 +152,23 @@ export function ApprovalsList({ approvals, now }: { approvals: ArtifactView["app
 const RECEIPT: Record<string, { label: string; Icon: LucideIcon; cls: string }> = {
   fixture_verified: { label: "Demo: simulated acceptance", Icon: FlaskConical, cls: "text-violet-800" },
   verified: { label: "Accepted by platform", Icon: CircleCheck, cls: "text-brand-800" },
-  uncertain: { label: "Outcome uncertain — we won't repeat it until it's checked", Icon: CircleQuestionMark, cls: "text-amber-800" },
-  exported: { label: "Exported for manual posting", Icon: FileText, cls: "text-violet-800" },
-  failed: { label: "Not accepted — nothing was posted", Icon: CircleAlert, cls: "text-red-800" },
+  uncertain: { label: "Outcome uncertain", Icon: CircleQuestionMark, cls: "text-amber-800" },
+  exported: { label: "Exported", Icon: FileText, cls: "text-violet-800" },
+  failed: { label: "Not posted", Icon: CircleAlert, cls: "text-red-800" },
 };
 
 const PROVIDER_LABEL: Record<string, string> = {
   instagram: "Instagram",
   facebook_pages: "Facebook Page",
   manual: "Manual export",
-  resend_marketing: "Your email provider (Resend)",
+  resend_marketing: "Resend",
   google_ads: "Google Ads",
   meta_ads: "Meta Ads",
 };
 
 export function ReceiptsTimeline({ receipts, now }: { receipts: ArtifactView["receipts"]; now: number | null }) {
   if (receipts.length === 0) {
-    return <p className="text-sm text-ink-3">Nothing has been sent or exported yet. Every attempt to publish or export shows up here.</p>;
+    return <p className="text-sm text-ink-3">Nothing sent yet.</p>;
   }
   return (
     <ol className="flex flex-col gap-4">
@@ -195,8 +183,8 @@ export function ReceiptsTimeline({ receipts, now }: { receipts: ArtifactView["re
                 {PROVIDER_LABEL[r.provider] ?? channelLabel(r.provider)}
                 {now ? ` · ${formatDateTime(r.createdAt)}` : ""}
               </span>
-              <span className="break-words text-sm text-ink-2">{r.summary}</span>
-              {r.externalId ? <span className="break-all text-xs text-ink-3">Platform reference: {r.externalId}</span> : null}
+              <MessageText text={r.summary} className="break-words text-sm text-ink-2" />
+              {r.externalId ? <span className="break-all text-xs text-ink-3">Ref: {r.externalId}</span> : null}
             </div>
           </li>
         );

@@ -158,8 +158,8 @@ export function AreaChart({ labels, series, format = formatNumber, height = 220,
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden="true">
             <defs>
               <linearGradient id={`fill-${gid}`} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={colors[0]} stopOpacity="0.16" />
-                <stop offset="100%" stopColor={colors[0]} stopOpacity="0" />
+                <stop offset="0%" stopColor={colors[0]} style={{ stopOpacity: "var(--area-top, 0.16)" }} />
+                <stop offset="100%" stopColor={colors[0]} style={{ stopOpacity: "var(--area-bottom, 0)" }} />
               </linearGradient>
             </defs>
             {ticks.map((t) => (
@@ -231,8 +231,8 @@ export function Sparkline({ values, color = "var(--chart-1)", height = 32, area 
     <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className={cn("w-full overflow-visible", className)} style={{ height }}>
       <defs>
         <linearGradient id={`spark-${gid}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor={color} style={{ stopOpacity: "var(--area-top, 0.18)" }} />
+          <stop offset="100%" stopColor={color} style={{ stopOpacity: "var(--area-bottom, 0)" }} />
         </linearGradient>
       </defs>
       {area ? <path d={`${d} L100,100 L0,100 Z`} fill={`url(#spark-${gid})`} /> : null}
@@ -262,7 +262,7 @@ export function StatTrend({ label, value, delta, upIsGood = true, deltaLabel = "
   const good = delta === undefined || delta === 0 ? null : delta > 0 === upIsGood;
   const deltaText = delta === undefined ? null : `${delta > 0 ? "Up" : delta < 0 ? "Down" : "No change"}${delta ? ` ${Math.abs(delta)}%` : ""}`;
   return (
-    <div className={cn("flex flex-col gap-2 rounded-xl border border-line bg-surface p-4", className)}>
+    <div className={cn("flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--card-shadow)]", className)}>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-ui font-medium text-ink-3">
           {icon ? <span aria-hidden="true" className="inline-flex [&_svg]:size-4">{icon}</span> : null}
@@ -278,7 +278,8 @@ export function StatTrend({ label, value, delta, upIsGood = true, deltaLabel = "
         {deltaText ? (
           <span
             className={cn(
-              "inline-flex h-5 items-center rounded-md px-1.5 text-xs font-medium",
+              "inline-flex h-5 items-center rounded-[var(--radius-badge)] border px-1.5 text-xs font-medium",
+              "border-current/25",
               good === null ? "bg-surface-2 text-ink-2" : good ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800",
             )}
             title={deltaLabel}

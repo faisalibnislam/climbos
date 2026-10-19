@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleAlert, CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, Crosshair, Workflow } from "@/components/icons"
+import { Scannable } from "@/components/ds/content";
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Callout, CellStack, SocialIcon, Table, TableFrame, TBody, Td, Th, THead, Tr, buttonClasses, networkOf } from "@/components/ui";
@@ -33,7 +34,7 @@ function isAdChannel(channel: string): boolean {
 function ReconcileBadge({ reconciled }: { reconciled: boolean }) {
   return reconciled ? (
     <Badge tone="green" icon={<CircleCheck />}>
-      Matches billing total
+      Matches billing
     </Badge>
   ) : (
     <Badge tone="red" icon={<CircleAlert />}>
@@ -50,7 +51,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <ReconcileBadge reconciled={group.reconciled} />
-        <span className="text-xs text-ink-3">Amounts in {group.currency}</span>
+        <span className="text-xs text-ink-3">{group.currency}</span>
       </div>
       <TableFrame>
         <Table>
@@ -61,8 +62,8 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
             <tr>
               <Th>Channel</Th>
               <Th numeric>Net revenue</Th>
-              <Th numeric>Paying customers</Th>
-              <Th numeric>Share of billing</Th>
+              <Th numeric>Customers</Th>
+              <Th numeric>Share</Th>
             </tr>
           </THead>
           <TBody>
@@ -81,7 +82,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
             ))}
             <Tr className="bg-surface-2/60">
               <th scope="row" className={rowHeader}>
-                <CellStack primary="Unattributed" secondary="No tracked link within 30 days" />
+                <CellStack primary="Unattributed" secondary="No tracked link in 30 days" />
               </th>
               <Td numeric>{fmt(group.unattributed.netRevenueMinor)}</Td>
               <Td numeric>{formatNumber(group.unattributed.conversions)}</Td>
@@ -91,7 +92,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
           <tfoot className="border-t border-line bg-surface-2 font-semibold">
             <tr>
               <th scope="row" className={rowHeader}>
-                Billing total (observed)
+                Billing total
               </th>
               <Td numeric>{fmt(total)}</Td>
               <Td numeric>{formatNumber(group.channels.reduce((s, c) => s + c.conversions, 0) + group.unattributed.conversions)}</Td>
@@ -101,10 +102,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
         </Table>
       </TableFrame>
       {!group.reconciled ? (
-        <p className="text-ui font-medium text-red-800">
-          The channel rows plus Unattributed don&apos;t add up to the billing total for {group.currency}. Treat these channel numbers with caution until this is
-          fixed.
-        </p>
+        <p className="text-ui font-medium text-red-800">Rows don&apos;t add up to the {group.currency} billing total. Use with caution.</p>
       ) : null}
     </div>
   );
@@ -116,12 +114,9 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
   return (
     <section aria-labelledby="attribution-heading" className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id="attribution-heading" className="heading-section flex flex-wrap items-center gap-2">
-            Where revenue came from <ValueKind kind="attributed" />
-          </h2>
-          <p className="mt-0.5 text-sm text-ink-3">Billing revenue, credited to the channel a customer came through.</p>
-        </div>
+        <h2 id="attribution-heading" className="heading-section flex flex-wrap items-center gap-2">
+          <Workflow aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Revenue by channel <ValueKind kind="attributed" />
+        </h2>
         <Segmented
           label="Attribution model"
           value={model}
@@ -132,14 +127,9 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
           ]}
         />
       </div>
-      <p className="text-ui text-ink-3">
-        {model === "last_touch"
-          ? "Last touch: credit goes to the last tracked channel before the purchase."
-          : "First touch: credit goes to the first tracked channel that brought the customer in."}
-      </p>
       {!attr ? (
-        <Callout tone="info" title="No billing revenue in this period yet">
-          Attribution starts once revenue arrives from Stripe or a revenue file. <Link href={`/app/${slug}/connections`}>Connect billing data</Link>.
+        <Callout tone="info" title="No billing revenue yet">
+          <Link href={`/app/${slug}/connections`}>Connect billing data</Link>
         </Callout>
       ) : (
         <div className="flex flex-col gap-5">
@@ -148,9 +138,10 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
           ))}
         </div>
       )}
-      <Callout tone="info" title="Association, not cause">
-        {data.attribution.note}
-      </Callout>
+      <Definition summary="How credit works">
+        <p>{model === "last_touch" ? "Last touch: last tracked channel before purchase." : "First touch: first tracked channel that brought them in."}</p>
+        <Scannable text={data.attribution.note} max={4} tone="muted" className="mt-2" />
+      </Definition>
     </section>
   );
 }
@@ -167,20 +158,17 @@ export function PlatformClaimsSection({ slug, data }: { slug: string; data: Over
 
   return (
     <section aria-labelledby="claims-heading" className="flex flex-col gap-4 rounded-xl border border-dashed border-line-strong bg-surface-2/60 p-5">
-      <div>
-        <h2 id="claims-heading" className="heading-section flex flex-wrap items-center gap-2">
-          What ad platforms say <ValueKind kind="platform_reported" />
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-3">Kept separate from your billing numbers on purpose.</p>
-      </div>
+      <h2 id="claims-heading" className="heading-section flex flex-wrap items-center gap-2">
+        <Crosshair aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> What ad platforms say <ValueKind kind="platform_reported" />
+      </h2>
       {!claims ? (
         <p className="text-sm text-ink-2">
-          No ad platform data in this period. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/connections`}>Connect Google Ads or Meta Ads</Link> to see what they report.
+          No ad data. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/connections`}>Connect Google or Meta Ads</Link>
         </p>
       ) : (
         <>
           <Callout tone="warning" title="Don't add these together">
-            {claims.warning}
+            They overlap and aren&apos;t billing revenue.
           </Callout>
           <ul className="grid gap-3 sm:grid-cols-2">
             {claims.platforms.map((p) => (
@@ -190,47 +178,43 @@ export function PlatformClaimsSection({ slug, data }: { slug: string; data: Over
                   {PLATFORM_LABELS[p.platform] ?? p.platform}
                 </h3>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
-                  <dt className="text-ink-3">Claimed conversions</dt>
+                  <dt className="text-ink-3">Conversions</dt>
                   <dd className="text-right font-medium tabular-nums text-ink">{formatNumber(p.conversions)}</dd>
                   {Object.entries(p.conversionValueMinorByCurrency).map(([cur, v]) => (
                     <div key={cur} className="contents">
-                      <dt className="text-ink-3">Claimed value ({cur})</dt>
+                      <dt className="text-ink-3">Value ({cur})</dt>
                       <dd className="text-right font-medium tabular-nums text-ink">{minorToDisplay(v, cur)}</dd>
                     </div>
                   ))}
-                  <dt className="text-ink-3">Days reported</dt>
-                  <dd className="text-right tabular-nums text-ink">
+                  <dt className="text-ink-3">Days</dt>
+                  <dd className="text-right tabular-nums text-ink" title={p.firstDate && p.lastDate ? `${longDate(p.firstDate)} – ${longDate(p.lastDate)}` : undefined}>
                     {p.days}
-                    {p.firstDate && p.lastDate ? ` (${longDate(p.firstDate)} – ${longDate(p.lastDate)})` : ""}
                   </dd>
                 </dl>
-                <p className="text-xs text-ink-3">Counted by {PLATFORM_LABELS[p.platform] ?? p.platform} under its own attribution rules.</p>
               </li>
             ))}
           </ul>
           <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
             <h3 className="heading-card">Return on ad spend</h3>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
-              <dt className="text-ink-3">Ad spend (observed, {currency})</dt>
+              <dt className="text-ink-3">Ad spend ({currency})</dt>
               <dd className="text-right font-medium tabular-nums text-ink">{minorToDisplay(spend, currency)}</dd>
-              <dt className="text-ink-3">Billing revenue credited to ad channels (attributed, last touch)</dt>
+              <dt className="text-ink-3">Revenue credited to ads</dt>
               <dd className="text-right font-medium tabular-nums text-ink">{minorToDisplay(adRevenue, currency)}</dd>
               <dt className="text-ink-3">ROAS</dt>
-              <dd className="text-right font-semibold tabular-nums text-ink">{roas !== null ? `${roas.toFixed(2)}×` : "Not available"}</dd>
+              <dd className="text-right font-semibold tabular-nums text-ink">{roas !== null ? `${roas.toFixed(2)}×` : "—"}</dd>
             </dl>
             {roas === null ? (
               <p className="text-xs text-ink-3">
-                {spend <= 0 ? "No ad spend recorded in this period." : "No billing revenue is credited to an ad channel yet. Tracked links (UTM tags) on your ads make this possible."}
+                {spend <= 0 ? "No ad spend this period." : "No revenue credited to ads yet. Add UTM tags."}
               </p>
             ) : null}
             <Definition summary="ROAS vs ROI">
               <p>
-                <strong className="font-semibold">ROAS</strong> (return on ad spend) = attributed billing revenue ÷ ad spend. 3.0× means $3 of revenue credited to ads for every $1 spent. It
-                uses your billing revenue, not the platforms&apos; claimed values.
+                <strong className="font-semibold">ROAS</strong> = billing revenue credited to ads (last touch) ÷ ad spend.
               </p>
               <p className="mt-1">
-                <strong className="font-semibold">ROI</strong> is different: (revenue − ad spend − all other costs) ÷ total cost. ClimbOS doesn&apos;t know your product costs, fees or
-                staff time, so it doesn&apos;t show ROI. Neither number proves the ads caused the sales.
+                <strong className="font-semibold">ROI</strong> also subtracts your other costs, which ClimbOS doesn&apos;t know, so it isn&apos;t shown. Neither proves cause.
               </p>
             </Definition>
           </div>

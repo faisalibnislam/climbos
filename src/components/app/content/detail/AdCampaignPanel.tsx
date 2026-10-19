@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Button, Callout, ConfirmDialog, DatePicker, Field, Input, Skeleton, toast } from "@/components/ui";
 import { minorToDisplay } from "../../money";
 import { CampaignCard } from "../Campaigns";
-import { ErrorCallout, PERMISSION_WHO, majorToDisplay } from "../shared";
+import { ErrorCallout, FactList, PERMISSION_WHO, majorToDisplay } from "../shared";
 import type { ArtifactView } from "./model";
 
 function isoDay(ms: number): string {
@@ -58,10 +58,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-sm text-ink-2">
-        Campaigns are created paused and only go live when you approve starting them. Ad spend is paid directly to {platform} from your own ad account, not to
-        ClimbOS. After a pause, platforms may report a little spend from before it took effect.
-      </p>
+      <p className="text-sm text-ink-2">Created paused. Spend is paid to {platform} directly.</p>
 
       {related.length > 0 ? (
         <ul className="flex flex-col gap-4">
@@ -83,10 +80,9 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               if (validate()) setConfirming(true);
             }}
           >
-            <h3 className="heading-card">{related.length ? "Prepare another campaign" : "Prepare a campaign"}</h3>
+            <h3 className="heading-card">{related.length ? "Another campaign" : "New campaign"}</h3>
             <p className="text-sm text-ink-2">
-              Your approved monthly ad budget is {ads.monthlyEnvelopeMinor > 0 ? minorToDisplay(ads.monthlyEnvelopeMinor, currency) : "not set yet (set it in Settings → Policies)"}.
-              Planned spend can&apos;t go above it.
+              Monthly cap: {ads.monthlyEnvelopeMinor > 0 ? minorToDisplay(ads.monthlyEnvelopeMinor, currency) : "not set (Settings → Policies)"}
             </p>
             <Field label={`Daily budget (${currency})`} error={fieldErrors.daily}>
               <Input type="number" inputMode="decimal" min={1} step="0.01" value={daily} onChange={(e) => setDaily(e.target.value)} />
@@ -105,20 +101,19 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
                   {days} day{days === 1 ? "" : "s"} × {majorToDisplay(dailyNum, currency)} = <strong className="font-semibold text-ink">up to {majorToDisplay(total, currency)}</strong> in total.
                 </>
               ) : (
-                "Enter a budget and dates to see the most this campaign can spend."
+                "Enter budget and dates to see max spend."
               )}
             </p>
             {!destination ? (
               <Callout tone="warning" title="No link set">
-                Add a link (starting with https://) to the ad before preparing a campaign, so people know where they&apos;ll land.
+                Add an https:// link to the ad first.
               </Callout>
             ) : (
-              <p className="break-words text-sm text-ink-3">Sends people to: {destination}</p>
+              <p className="break-words text-sm text-ink-3">Link: {destination}</p>
             )}
             {!accountConnected ? (
-              <Callout tone="warning" title="Connect your ad account first">
-                You can prepare the campaign now, but ClimbOS can&apos;t create or start it until your {platform} account is connected.{" "}
-                <Link href={`/app/${slug}/connections`}>Go to Connections</Link>
+              <Callout tone="warning" title={`${platform} not connected`}>
+                Needed to launch. <Link href={`/app/${slug}/connections`}>Connect</Link>
               </Callout>
             ) : null}
             <Button type="submit" className="self-start">
@@ -129,24 +124,32 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               open={confirming}
               onOpenChange={setConfirming}
               title="Prepare this campaign?"
-              description={`This only sets the campaign up inside ClimbOS: ${majorToDisplay(dailyNum || 0, currency)} a day from ${start} to ${end}, up to ${majorToDisplay(total, currency)} in total. Nothing is sent to ${platform} and nothing is spent. Next, someone with approval rights approves creating it (paused), then starting it.`}
+              description={`Set up in ClimbOS only: nothing sent to ${platform} or spent yet.`}
               confirmLabel="Prepare campaign"
               onConfirm={async () => {
                 setError(null);
                 try {
                   await prepare({ slug, artifactId: artifact.id, dailyBudget: dailyNum, startDate: start, endDate: end });
-                  toast({ tone: "success", title: "Campaign prepared.", description: "It now needs approval to be created (paused)." });
+                  toast({ tone: "success", title: "Campaign prepared. Needs approval." });
                 } catch (e) {
                   setError(e);
                 }
               }}
-            />
+            >
+              <FactList
+                items={[
+                  { term: "Daily", detail: `${majorToDisplay(dailyNum || 0, currency)}/day` },
+                  { term: "Dates", detail: `${start} to ${end}` },
+                  { term: "Max spend", detail: majorToDisplay(total, currency) },
+                ]}
+              />
+            </ConfirmDialog>
           </form>
         ) : (
-          <p className="text-sm text-ink-2">Preparing a campaign needs {PERMISSION_WHO.edit}.</p>
+          <p className="text-sm text-ink-2">Needs {PERMISSION_WHO.edit}.</p>
         )
       ) : related.length === 0 ? (
-        <p className="text-sm text-ink-3">Approve the ad text first. Then you can prepare a campaign here.</p>
+        <p className="text-sm text-ink-3">Approve the ad text first.</p>
       ) : null}
     </div>
   );

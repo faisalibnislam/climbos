@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Copy, Send, Trash2, Webhook } from "lucide-react";
+import { Copy, Send, Trash2, Webhook } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
@@ -36,21 +36,29 @@ function Webhooks() {
   const run = (fn: () => Promise<unknown>, ok?: string) => fn().then(() => ok && toast({ tone: "success", title: ok }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Webhooks" intro="Send ClimbOS events to Zapier, Make or your own server: new leads, won deals, bookings, chats, replies and published posts." />
+      <SettingsHeader title="Webhooks" intro="To Zapier, Make or your server" />
       {secret ? (
-        <Callout tone="info" title="Copy your signing secret now">
+        <Callout tone="info" title="Copy signing secret now">
           <span className="flex flex-wrap items-center gap-2">
             <code className="rounded bg-surface-2 px-2 py-0.5 text-xs">{secret}</code>
             <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(secret).then(() => toast({ tone: "success", title: "Copied" }), () => undefined)}>
               <Copy aria-hidden /> Copy
             </Button>
           </span>
-          <span className="mt-1 block text-xs">Each request has X-ClimbOS-Timestamp and X-ClimbOS-Signature (v1 = HMAC-SHA256 of “timestamp.body”). You won&apos;t see this secret again.</span>
+          <span className="mt-1 block text-xs font-medium">Shown once.</span>
+          <dl className="mt-2 grid gap-x-3 gap-y-1 text-xs sm:grid-cols-[max-content_1fr]">
+            <dt className="font-medium">Headers</dt>
+            <dd>
+              <code>X-ClimbOS-Timestamp</code>, <code>X-ClimbOS-Signature</code>
+            </dd>
+            <dt className="font-medium">Signature</dt>
+            <dd>v1 = HMAC-SHA256 of “timestamp.body”</dd>
+          </dl>
         </Callout>
       ) : null}
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <Field label="Endpoint URL" hint="In Zapier: Webhooks by Zapier → Catch Hook. In Make: Custom webhook. Paste the URL here.">
+          <Field label="Endpoint URL" hint="Zapier: Catch Hook · Make: Custom webhook">
             <Input value={url} placeholder="https://hooks.zapier.com/hooks/catch/…" onChange={(e) => setUrl(e.target.value)} />
           </Field>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -105,8 +113,18 @@ function Webhooks() {
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-ink-3">{e.events.join(" · ")}</p>
-            {!e.active && e.failures >= 20 ? <p className="text-xs text-red-800">Turned off after 20 failed deliveries in a row. Fix the endpoint, then switch it back on.</p> : null}
+            <ul className="flex flex-wrap gap-1" aria-label="Events sent">
+              {e.events.map((ev) => (
+                <li key={ev}>
+                  <Badge tone="neutral">{ev}</Badge>
+                </li>
+              ))}
+            </ul>
+            {!e.active && e.failures >= 20 ? (
+              <Callout tone="danger" live="none" title="Off after 20 failures in a row">
+                Fix it, then switch on.
+              </Callout>
+            ) : null}
             {e.recent.length ? (
               <ul className="flex flex-col gap-1 text-xs text-ink-3">
                 {e.recent.map((d) => (

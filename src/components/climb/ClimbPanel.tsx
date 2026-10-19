@@ -3,10 +3,11 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MousePointerClick, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MessageCircle, MessageSquarePlus, MousePointerClick, ShieldCheck, Sparkles, X } from "@/components/icons"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Highlight, toBullets } from "@/components/ds/content";
 import { Button, IconButton, Kbd, Popover, PopoverContent, PopoverTrigger, Progress, toast } from "@/components/ui";
 import { errorInfo } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
@@ -101,15 +102,15 @@ export function ClimbPanel({ slug }: { slug: string }) {
     <aside
       data-climb-panel
       aria-label="Climb AI"
-      className="fixed bottom-0 right-0 top-12 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
+      className="surface-pine fixed bottom-0 right-0 top-0 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
     >
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3">
-        <span aria-hidden className="grid size-7 place-items-center rounded-lg bg-brand-800 text-white">
+        <span aria-hidden className="grid size-7 place-items-center rounded-[var(--radius-control)] bg-lime text-[var(--action-ink)]">
           <Sparkles className="size-4" />
         </span>
         <h2 className="heading-card">Climb AI</h2>
         <span className="ml-auto flex items-center gap-1">
-          <IconButton size="sm" aria-label="New conversation" icon={<RotateCcw />} onClick={() => clear({ slug }).catch(() => undefined)} />
+          <IconButton size="sm" aria-label="New conversation" icon={<MessageSquarePlus />} onClick={() => clear({ slug }).catch(() => undefined)} />
           <IconButton size="sm" aria-label="Close Climb AI" icon={<X />} onClick={() => climb.setOpen(false)} />
         </span>
       </header>
@@ -121,7 +122,17 @@ export function ClimbPanel({ slug }: { slug: string }) {
           <li className="flex flex-col gap-3">
             <div className="rounded-xl bg-surface-2 p-3">
               <p className="heading-card">Hi, I&apos;m Climb AI.</p>
-              <p className="mt-1 text-ui text-ink-2">Ask about anything on this screen, or tell me what to do. I draft and prepare things straight away; I ask before anything goes live.</p>
+              <ul className="mt-2 flex flex-col gap-1.5 text-ui text-ink-2">
+                <li className="flex gap-2">
+                  <MessageCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-800" /> Ask about anything on this screen.
+                </li>
+                <li className="flex gap-2">
+                  <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-800" /> Tell me what to do: I draft and prepare things straight away.
+                </li>
+                <li className="flex gap-2">
+                  <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-800" /> I ask before anything goes live.
+                </li>
+              </ul>
               <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-3">
                 <MousePointerClick aria-hidden className="size-3.5" /> Tip: press the pointer to pick something on the screen.
               </p>
@@ -246,7 +257,7 @@ function ScreenPicker() {
                     onClick={() => (on ? climb.removeSelection(e.id) : climb.addSelection(e))}
                     className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-ui hover:bg-surface-2 focus-visible:bg-surface-2"
                   >
-                    <span aria-hidden className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] border-[1.5px]", on ? "border-brand-800 bg-brand-800 text-white" : "border-control")}>
+                    <span aria-hidden className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] border-[1.5px]", on ? "border-brand-800 bg-brand-800 text-[var(--action-ink)]" : "border-control")}>
                       {on ? <CircleCheck className="size-3" /> : null}
                     </span>
                     <span className="min-w-0">
@@ -266,7 +277,7 @@ function ScreenPicker() {
 
 function SelectionChip({ s, onRemove }: { s: ClimbEntity; onRemove: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-sun-soft py-0.5 pl-1.5 pr-0.5 text-xs text-ink">
+    <span className="inline-flex max-w-full items-center gap-1 rounded-[var(--radius-badge)] bg-brand-100 py-0.5 pl-1.5 pr-0.5 text-xs text-ink">
       <MousePointerClick aria-hidden className="size-3 shrink-0 text-sun-strong" />
       <span className="truncate">{s.label || s.type}</span>
       <button type="button" onClick={onRemove} aria-label={`Remove ${s.label}`} className="grid size-5 place-items-center rounded hover:bg-surface-3">
@@ -276,30 +287,194 @@ function SelectionChip({ s, onRemove }: { s: ClimbEntity; onRemove: () => void }
   );
 }
 
-/** Light formatting for agent text: paragraphs, bullets and **bold**. */
-function Rich({ text }: { text: string }) {
-  const blocks = text.split(/\n{2,}/);
-  return (
-    <div className="flex flex-col gap-2">
-      {blocks.map((b, i) => {
-        const lines = b.split("\n");
-        if (lines.every((l) => /^\s*([-*•]|\d+\.)\s/.test(l))) {
-          return (
-            <ul key={i} className="flex list-disc flex-col gap-1 pl-4 marker:text-ink-3">
-              {lines.map((l, j) => (
-                <li key={j}>{bold(l.replace(/^\s*([-*•]|\d+\.)\s/, ""))}</li>
-              ))}
-            </ul>
-          );
-        }
-        return <p key={i}>{bold(b)}</p>;
-      })}
-    </div>
+/** "Label: rest" lead-in, as the model writes facts. */
+const LEAD_IN = /^([^:*|]{2,40}):\s+(.+)$/;
+const LIST_ITEM = /^(\s*)([-*•]|(\d+)[.)])\s+(.*)$/;
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+const HEADING = /^\s*(#{1,4}\s+(.+)|\*\*([^*]+)\*\*:?)\s*$/;
+
+/** A list item, its sub-items and any indented lines that follow it. */
+interface Item {
+  text: string;
+  num?: number;
+  children: string[];
+  notes: string[];
+}
+type Block = { kind: "p"; text: string } | { kind: "h"; text: string } | { kind: "list"; ordered: boolean; items: Item[] } | { kind: "table"; rows: string[][] };
+
+/** Agent text → blocks: paragraphs, headings, bullet or numbered lists (one level of nesting) and small tables. */
+function blocksOf(text: string): Block[] {
+  const out: Block[] = [];
+  const para: string[] = [];
+  const flush = () => {
+    if (para.length) out.push({ kind: "p", text: para.splice(0).join(" ") });
+  };
+  for (const raw of text.split("\n")) {
+    const line = raw.trimEnd();
+    const prev = out[out.length - 1];
+    const last = prev?.kind === "list" ? prev.items[prev.items.length - 1] : undefined;
+    if (!line.trim()) {
+      flush();
+      continue;
+    }
+    if (TABLE_ROW.test(line)) {
+      flush();
+      if (TABLE_RULE.test(line)) continue;
+      const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      if (prev?.kind === "table") prev.rows.push(cells);
+      else out.push({ kind: "table", rows: [cells] });
+      continue;
+    }
+    const li = LIST_ITEM.exec(line);
+    if (li) {
+      flush();
+      const [, indent, , num, body] = li;
+      if (indent.length >= 2 && last) {
+        last.children.push(body);
+        continue;
+      }
+      const item: Item = { text: body, num: num ? Number(num) : undefined, children: [], notes: [] };
+      if (prev?.kind === "list" && prev.ordered === Boolean(num)) prev.items.push(item);
+      else out.push({ kind: "list", ordered: Boolean(num), items: [item] });
+      continue;
+    }
+    // Indented text right under a list item belongs to it.
+    if (/^\s{2,}\S/.test(line) && last && !para.length) {
+      last.notes.push(line.trim());
+      continue;
+    }
+    const h = HEADING.exec(line);
+    if (h && !para.length) {
+      out.push({ kind: "h", text: (h[2] ?? h[3]).trim() });
+      continue;
+    }
+    para.push(line.trim());
+  }
+  flush();
+  return out;
+}
+
+/** **bold** from the model plus key numbers in bold. */
+function inline(s: string): ReactNode {
+  return s.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i} className="font-semibold text-ink">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      <Highlight key={i} text={part} />
+    ),
   );
 }
 
-function bold(s: string) {
-  return s.split(/(\*\*[^*]+\*\*)/).map((part, i) => (part.startsWith("**") && part.endsWith("**") ? <strong key={i} className="font-semibold text-ink">{part.slice(2, -2)}</strong> : part));
+function leadIn(s: string): ReactNode {
+  const m = LEAD_IN.exec(s);
+  if (!m) return inline(s);
+  return (
+    <>
+      <strong className="font-semibold text-ink">{m[1]}:</strong> {inline(m[2])}
+    </>
+  );
+}
+
+const Dot = () => <span aria-hidden className="mt-[0.6em] size-1.5 shrink-0 bg-brand-700" />;
+
+function Items({ ordered, items }: { ordered: boolean; items: Item[] }) {
+  const Tag = ordered ? "ol" : "ul";
+  const first = items[0]?.num ?? 1;
+  return (
+    <Tag className="flex flex-col gap-1.5" start={ordered && first !== 1 ? first : undefined}>
+      {items.map((it, j) => (
+        <li key={j} className="flex gap-2">
+          {ordered ? (
+            <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-[var(--radius-badge)] bg-brand-100 text-2xs font-semibold tabular-nums text-brand-900">
+              {first + j}
+            </span>
+          ) : (
+            <Dot />
+          )}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span>{leadIn(it.text)}</span>
+            {it.children.length ? (
+              <ul className="flex flex-col gap-1">
+                {it.children.map((c, k) => (
+                  <li key={k} className="flex gap-2">
+                    <span aria-hidden className="mt-[0.6em] size-1 shrink-0 bg-ink-3" />
+                    <span className="min-w-0">{leadIn(c)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {it.notes.map((n, k) => (
+              <span key={k} className="text-ink-2">
+                {inline(n)}
+              </span>
+            ))}
+          </div>
+        </li>
+      ))}
+    </Tag>
+  );
+}
+
+/**
+ * Agent text as scannable blocks: the answer first, lists with bold lead-ins,
+ * long paragraphs split into one bullet per sentence, and small tables.
+ */
+function Rich({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col gap-2 leading-relaxed">
+      {blocksOf(text).map((b, i) => {
+        if (b.kind === "h") return <p key={i} className="font-semibold text-ink">{inline(b.text)}</p>;
+        if (b.kind === "list") return <Items key={i} ordered={b.ordered} items={b.items} />;
+        if (b.kind === "table") {
+          const [head, ...body] = b.rows;
+          return (
+            <div key={i} className="overflow-x-auto rounded-lg border border-line">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-surface-2 text-ink">
+                  <tr>
+                    {head.map((c, j) => (
+                      <th key={j} scope="col" className="px-2.5 py-1.5 font-semibold">
+                        {inline(c)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {body.map((r, k) => (
+                    <tr key={k}>
+                      {r.map((c, j) =>
+                        j === 0 ? (
+                          <th key={j} scope="row" className="px-2.5 py-1.5 font-medium text-ink">
+                            {inline(c)}
+                          </th>
+                        ) : (
+                          <td key={j} className="px-2.5 py-1.5 tabular-nums">
+                            {inline(c)}
+                          </td>
+                        ),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        // Lead with the answer; a long paragraph's other sentences become bullets.
+        const sentences = toBullets(b.text);
+        if (sentences.length < 3) return <p key={i}>{leadIn(b.text)}</p>;
+        return (
+          <div key={i} className="flex flex-col gap-1.5">
+            <p>{leadIn(/[.!?:]$/.test(sentences[0]) ? sentences[0] : `${sentences[0]}.`)}</p>
+            <Items ordered={false} items={sentences.slice(1).map((t) => ({ text: t, children: [], notes: [] }))} />
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<void>; onCancel: () => void }) {
@@ -310,14 +485,14 @@ function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<
         {m.selection.length ? (
           <span className="flex flex-wrap justify-end gap-1">
             {m.selection.map((s) => (
-              <span key={s.id} className="inline-flex max-w-60 items-center gap-1 rounded-md bg-sun-soft px-1.5 py-0.5 text-xs text-ink">
+              <span key={s.id} className="inline-flex max-w-60 items-center gap-1 rounded-[var(--radius-badge)] bg-brand-100 px-1.5 py-0.5 text-xs text-ink">
                 <MousePointerClick aria-hidden className="size-3 shrink-0 text-sun-strong" />
                 <span className="truncate">{s.label}</span>
               </span>
             ))}
           </span>
         ) : null}
-        <p className="max-w-[88%] whitespace-pre-line rounded-xl rounded-br-md bg-brand-800 px-3 py-2 text-sm text-white">{m.text}</p>
+        <p className="max-w-[88%] whitespace-pre-line rounded-xl rounded-br-md bg-lime px-3 py-2 text-sm text-[var(--action-ink)]">{m.text}</p>
       </div>
     );
   }
@@ -336,7 +511,9 @@ function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<
         <p className="flex items-center gap-1.5 text-ui font-semibold text-ink">
           <ShieldCheck aria-hidden className="size-4 text-amber-800" /> {a.title}
         </p>
-        <p className="mt-1 text-ui text-ink-2">{a.summary}</p>
+        <div className="mt-1 text-ui text-ink-2">
+          <Rich text={a.summary} />
+        </div>
         {a.status === "pending" ? (
           <div className="mt-2.5 flex gap-2">
             <Button

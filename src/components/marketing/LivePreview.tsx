@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "convex/react";
-import { ArrowRight, ExternalLink, Globe, Lightbulb, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, Globe, Lightbulb, RotateCcw, Sparkles } from "@/components/icons"
 import { api } from "../../../convex/_generated/api";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

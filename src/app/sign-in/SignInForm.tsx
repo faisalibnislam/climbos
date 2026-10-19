@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail } from "@/components/icons"
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/field";

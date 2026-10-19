@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { ExternalLink, Plus, X } from "@/components/icons"
 import { useState } from "react";
 import { Button, Card, CardContent, ColorPicker, Field, Input, Switch, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "./errors";
@@ -21,7 +21,7 @@ export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string
     return data?.live ? (
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-2">
-          <p className="heading-card">Link in bio</p>
+          <h2 className="heading-card">Link in bio</h2>
           <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
             {data.url.replace(/^https?:\/\//, "")} <ExternalLink className="size-3.5" aria-hidden />
           </a>
@@ -36,14 +36,14 @@ export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string
     <Card>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="heading-card">Link in bio</p>
+          <h2 className="heading-card">Link in bio</h2>
           {data?.live ? (
             <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
               {data.url.replace(/^https?:\/\//, "")} <ExternalLink className="size-3.5" aria-hidden />
             </a>
           ) : null}
         </div>
-        <p className="text-sm text-ink-3">One link for your Instagram or TikTok bio. Every button is a tracked link{data ? ` · ${data.views} views` : ""}.</p>
+        {data ? <p className="text-sm text-ink-3">{data.views} views</p> : null}
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <Field label="Name">
             <Input value={f.title} onChange={(e) => set({ title: e.target.value })} />
@@ -53,7 +53,8 @@ export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string
         <Field label="Short bio" optional>
           <Textarea value={f.bio} onChange={(e) => set({ bio: e.target.value })} rows={2} autosize />
         </Field>
-        <div className="flex flex-col gap-2">
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1.5 text-ui font-medium text-ink">Buttons</legend>
           {f.links.map((l, i) => (
             <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] gap-2">
               <Input aria-label={`Button ${i + 1} label`} value={l.label} placeholder="Button text" onChange={(e) => set({ links: f.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
@@ -69,8 +70,8 @@ export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string
               <Plus aria-hidden /> Button
             </Button>
           ) : null}
-        </div>
-        <Switch label="Collect emails" description="Sign-ups go to your Pipeline." checked={f.collectEmails} onCheckedChange={(v) => set({ collectEmails: v })} />
+        </fieldset>
+        <Switch label="Collect emails" description="To Pipeline" checked={f.collectEmails} onCheckedChange={(v) => set({ collectEmails: v })} />
         <Switch label="Live" checked={f.live} onCheckedChange={(v) => set({ live: v })} />
         <Button
           className="self-start"
@@ -80,7 +81,7 @@ export function BioEditor({ slug, defaultTitle, canEdit = true }: { slug: string
             try {
               await save({ slug, ...f, links: f.links.filter((l) => l.label.trim() && l.url.trim()) });
               setForm(null);
-              toast({ tone: "success", title: "Link in bio saved" });
+              toast({ tone: "success", title: "Saved" });
             } catch (e) {
               toast({ tone: "danger", title: errorMessage(e) });
             } finally {

@@ -7,17 +7,49 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { PlayResults } from "./PlayResults";
-import { CircleCheck, Crosshair, ExternalLink, FlaskConical, Gem, Info, Rocket, Search, ShieldCheck, Sparkles, Target, TriangleAlert, Users, X, type LucideIcon } from "lucide-react";
+import {
+  Ban,
+  CalendarClock,
+  CalendarDays,
+  ChartLine,
+  CircleCheck,
+  CircleHelp,
+  Crosshair,
+  ExternalLink,
+  Eye,
+  Flag,
+  FlaskConical,
+  Gauge,
+  Gem,
+  Info,
+  Lightbulb,
+  ListChecks,
+  Rocket,
+  Search,
+  ShieldCheck,
+  Magic,
+  Sparkles,
+  Target,
+  TriangleAlert,
+  UsersRound,
+  Wallet,
+  X,
+  Zap,
+  type LucideIcon,
+} from "@/components/icons";
 import Link from "next/link";
 import type { PlayTargets } from "@convex/targets";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/components/ui";
+import { useId, useState, type ReactNode } from "react";
+import { Badge, Button, Callout, Card, CardContent, Segmented, Tooltip, toast, type CalloutTone, type Tone } from "@/components/ui";
+import { ChartTooltip, CHART, ScatterPlot, SrTable, XTicks, focusRing, niceScale, useKeyNav } from "@/components/ds/charts";
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { churnOf, OWNER_HOUR_USD, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
-import { PlanSection } from "./PlanSections";
+import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
+import { ProseBullets } from "@/components/app/ProseBullets";
+import { StatBlocks } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
@@ -67,10 +99,54 @@ export interface ExpertView {
   decision?: Decision | null;
 }
 
-const KIND: Record<PlayView["kind"], { label: string; tone: Tone; icon: LucideIcon; hint: string }> = {
-  bankable: { label: "Bankable", tone: "green", icon: ShieldCheck, hint: "The most predictable lever: proven here or very close to it." },
-  creative: { label: "Creative, proven", tone: "violet", icon: Gem, hint: "A proven mechanic aimed at an audience, asset or moment competitors aren't using." },
-  moonshot: { label: "Capped moonshot", tone: "orange", icon: Rocket, hint: "High upside, low predictability: small budget and a hard stop rule." },
+/** Each play type has its own colour identity (flat token tints, never colour alone: label + icon too). */
+const KIND: Record<
+  PlayView["kind"],
+  { label: string; icon: LucideIcon; hint: string; band: string; rail: string; soft: string; tile: string; ink: string; quote: string; chart: string }
+> = {
+  bankable: {
+    label: "Bankable",
+    icon: ShieldCheck,
+    hint: "Most predictable: proven here or close to it.",
+    band: "bg-chart-1/10",
+    rail: "bg-chart-1",
+    soft: "bg-chart-1/30",
+    tile: "bg-chart-1/15 text-brand-800",
+    ink: "text-brand-800",
+    quote: "border-chart-1",
+    chart: CHART.sage,
+  },
+  creative: {
+    label: "Creative, proven",
+    icon: Gem,
+    hint: "A proven mechanic aimed where competitors aren't.",
+    band: "bg-chart-3/10",
+    rail: "bg-chart-3",
+    soft: "bg-chart-3/30",
+    tile: "bg-chart-3/15 text-chart-3",
+    ink: "text-chart-3",
+    quote: "border-chart-3",
+    chart: CHART.slate,
+  },
+  moonshot: {
+    label: "Capped moonshot",
+    icon: Rocket,
+    hint: "High upside, low predictability: small budget, hard stop.",
+    band: "bg-chart-4/10",
+    rail: "bg-chart-4",
+    soft: "bg-chart-4/30",
+    tile: "bg-chart-4/15 text-orange-800",
+    ink: "text-orange-800",
+    quote: "border-chart-4",
+    chart: CHART.clay,
+  },
+};
+const kindOf = (k: string) => KIND[k as PlayView["kind"]] ?? KIND.creative;
+
+const CONFIDENCE: Record<PlayView["confidence"], { label: string; tone: Tone }> = {
+  high: { label: "High confidence", tone: "green" },
+  medium: { label: "Medium confidence", tone: "amber" },
+  low: { label: "Low confidence", tone: "red" },
 };
 
 const GRADE: Record<string, string> = {
@@ -88,73 +164,59 @@ function score(sc: number[]) {
 const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
 
 const isShort = (s: string) => s.length <= 24;
+const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
 
-export function NorthStar({ expert }: { expert: ExpertView }) {
+/* ---------------- North star ---------------- */
+
+/** A leading number in a short value ("120 customers" → 120), or null. */
+const leadNum = (s: string) => {
+  if (!isShort(s)) return null;
+  const m = /^\$?\s?(\d[\d,]*(?:\.\d+)?)/.exec(s.trim());
+  return m ? Number(m[1].replace(/,/g, "")) : null;
+};
+
+function RouteBar({ baseline, target }: { baseline: string; target: string }) {
+  const b = leadNum(baseline);
+  const t = leadNum(target);
+  const pct = b !== null && t !== null && t > 0 ? Math.max(0, Math.min(100, (b / t) * 100)) : null;
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <Card>
-        <CardContent className="flex flex-col gap-2">
-          <p className="text-overline">Diagnosis</p>
-          {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
-          <p className="text-sm text-ink-2">{expert.diagnosis}</p>
-          {expert.affordableCac ? (
-            <p className="mt-1 text-ui text-ink-3">
-              <span className="font-medium text-ink">Affordable cost per customer: </span>
-              {expert.affordableCac}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="flex flex-col gap-2">
-          <p className="text-overline flex items-center gap-1.5">
-            <Target aria-hidden className="size-3.5" /> North Star
-          </p>
-          <p className="heading-card">{expert.northStar.metric}</p>
-          {/* Values range from "20 customers" to full sentences: short ones get the big number, long ones wrap as text. */}
-          <dl className="grid min-w-0 gap-2">
-            <div className="min-w-0">
-              <dt className="text-xs text-ink-3">Now</dt>
-              <dd className="break-words text-sm text-ink-2">{expert.northStar.baseline}</dd>
-            </div>
-            {expert.goalGap && expert.snapshot?.goal ? (
-              <div className="min-w-0">
-                <dt className="text-xs text-ink-3">Your goal</dt>
-                <dd className="break-words text-sm text-ink-2">{expert.snapshot.goal}</dd>
-              </div>
-            ) : null}
-            <div className="min-w-0">
-              <dt className="text-xs text-ink-3">{expert.goalGap ? "Plays support" : "Target"}</dt>
-              <dd className={cn("break-words", isShort(expert.northStar.target) ? "metric text-xl leading-6" : "text-sm font-medium text-ink")}>{expert.northStar.target}</dd>
-            </div>
-          </dl>
-          {expert.goalGap ? (
-            <p className={cn("rounded-md px-2.5 py-2 text-xs", expert.goalGap.state === "met" ? "bg-green-50 text-green-900" : expert.goalGap.state === "short" || expert.goalGap.state === "out_of_reach" ? "bg-amber-50 text-amber-900" : "bg-surface-2 text-ink-3")}>
-              <span className="font-medium">{GAP_LABEL[expert.goalGap.state]}. </span>
-              {expert.goalGap.note}
-            </p>
-          ) : null}
-          {expert.leadingIndicators.length ? (
-            <ul className="mt-1 flex min-w-0 flex-col gap-2 border-t border-line pt-2">
-              {expert.leadingIndicators.map((l) => (
-                <li key={l.metric} className="min-w-0 text-ui">
-                  {isShort(l.weeklyTarget) ? (
-                    <span className="flex justify-between gap-3">
-                      <span className="min-w-0 break-words text-ink-2">{l.metric}</span>
-                      <span className="shrink-0 font-medium tabular-nums text-ink">{/week|wk/i.test(l.weeklyTarget) ? l.weeklyTarget : `${l.weeklyTarget}/wk`}</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span className="block break-words font-medium text-ink">{l.metric}</span>
-                      <span className="block break-words text-ink-3">{l.weeklyTarget}</span>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </CardContent>
-      </Card>
+    <div className="flex items-center gap-2">
+      <span aria-hidden className="size-3 shrink-0 rounded-full border-2 border-sage-ink bg-surface" />
+      {pct !== null ? (
+        <div
+          role="meter"
+          aria-label="Progress from now to target"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pct)}
+          aria-valuetext={`${baseline} of ${target}`}
+          className="relative h-2 flex-1 overflow-hidden rounded-full bg-surface-3"
+        >
+          <span className="absolute inset-y-0 left-0 rounded-full bg-sun-strong" style={{ width: `${pct}%` }} />
+        </div>
+      ) : (
+        <span aria-hidden className="h-0 flex-1 border-t-2 border-dashed border-brand-300" />
+      )}
+      <Flag aria-hidden className="size-4 shrink-0 text-sun-strong" />
+    </div>
+  );
+}
+
+function ValueTile({ label, value, icon: Icon, className }: { label: string; value: string; icon: LucideIcon; className?: string }) {
+  return (
+    <div className={cn("flex min-w-0 flex-col gap-1 rounded-[var(--radius-card)] p-3", className)}>
+      <dt>
+        <FieldLabel icon={Icon}>{label}</FieldLabel>
+      </dt>
+      <dd className="min-w-0">
+        {isShort(value) ? (
+          <span className="text-kpi font-semibold tabular-nums text-ink">{value}</span>
+        ) : (
+          <Clamp lines={2} className="text-ui font-medium text-ink">
+            {value}
+          </Clamp>
+        )}
+      </dd>
     </div>
   );
 }
@@ -164,113 +226,268 @@ const SOURCE_WORD: Record<string, string> = { owner: "you", site: "your site", r
 /** The decision first; observations, explanations and the options that lost behind a toggle (REQ-STRAT-01/02, REQ-UX-01). */
 function DecisionSummary({ d }: { d: Decision }) {
   const [open, setOpen] = useState(false);
+  const panel = useId();
   const chosen = d.options.find((o) => o.chosen);
   const lost = d.options.filter((o) => !o.chosen);
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="heading-card">{CONSTRAINT_LABEL[d.constraint as BindingConstraint] ?? d.constraint}</p>
-      <p className="text-ui text-ink">
-        <span className="font-medium">Approach: </span>
-        {d.guidingPolicy}
-      </p>
-      <p className="text-ui text-ink-2">
-        <span className="font-medium text-ink">We&apos;re wrong if: </span>
-        {d.falsifier}
-      </p>
+    <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-2 p-3">
+      <FieldLabel icon={Crosshair}>Main constraint</FieldLabel>
+      <h3 className="heading-card">{CONSTRAINT_LABEL[d.constraint as BindingConstraint] ?? d.constraint}</h3>
+      <dl className="flex flex-col gap-1 text-ui">
+        <div>
+          <dt className="inline font-semibold text-ink">Approach: </dt>
+          <dd className="inline text-ink-2">{d.guidingPolicy}</dd>
+        </div>
+        <div>
+          <dt className="inline font-semibold text-ink">We&apos;re wrong if: </dt>
+          <dd className="inline text-ink-2">{d.falsifier}</dd>
+        </div>
+      </dl>
       {open ? (
-        <div className="mt-1 flex flex-col gap-3 border-t border-line pt-2 text-ui">
+        <div id={panel} className="flex flex-col gap-3 border-t border-line pt-2.5 text-ui">
           {d.observations.length ? (
-            <div>
-              <p className="text-overline">What we saw</p>
-              <ul className="mt-1 flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
+              <FieldLabel icon={Eye}>What we saw</FieldLabel>
+              <ul className="flex flex-col gap-1">
                 {d.observations.map((o, i) => (
-                  <li key={i} className="text-ink-2">
-                    {o.observation} <span className="text-xs text-ink-3">· {SOURCE_WORD[o.source] ?? o.source}</span>
+                  <li key={i} className="flex min-w-0 items-start gap-2 text-ink-2">
+                    <span aria-hidden className="mt-[0.6em] size-1.5 shrink-0 bg-brand-700" />
+                    <span className="min-w-0">
+                      {o.observation} <span className="text-xs text-ink-3">· {SOURCE_WORD[o.source] ?? o.source}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
           {d.explanations.length ? (
-            <div>
-              <p className="text-overline">Other explanations</p>
-              <ul className="mt-1 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
+              <FieldLabel icon={Lightbulb}>Other explanations</FieldLabel>
+              <ul className="flex flex-col gap-1.5">
                 {d.explanations.map((e, i) => (
-                  <li key={i}>
+                  <li key={i} className="flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-control)] bg-surface px-2.5 py-1.5">
                     <span className="text-ink">{e.explanation}</span>
-                    {e.evidenceFor ? <span className="block text-xs text-ink-3">For: {e.evidenceFor}</span> : null}
-                    {e.evidenceAgainst ? <span className="block text-xs text-ink-3">Against: {e.evidenceAgainst}</span> : null}
+                    {e.evidenceFor ? (
+                      <span className="text-xs text-ink-3">
+                        <span className="font-medium text-green-800">For: </span>
+                        {e.evidenceFor}
+                      </span>
+                    ) : null}
+                    {e.evidenceAgainst ? (
+                      <span className="text-xs text-ink-3">
+                        <span className="font-medium text-red-800">Against: </span>
+                        {e.evidenceAgainst}
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
           {chosen || lost.length ? (
-            <div>
-              <p className="text-overline">Options</p>
-              <ul className="mt-1 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
+              <FieldLabel icon={ListChecks}>Options</FieldLabel>
+              <ul className="flex flex-col gap-1.5">
                 {chosen ? (
-                  <li className="flex items-start gap-1 text-ink">
-                    <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-brand-800" />
-                    <span>
-                      <span className="font-medium">{chosen.name}</span> <span className="text-xs text-ink-3">· chosen</span>
+                  <li className="flex items-start gap-1.5 text-ink">
+                    <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-green-800" />
+                    <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <span className="font-medium">{chosen.name}</span>
+                      <Badge tone="green">Chosen</Badge>
                     </span>
                   </li>
                 ) : null}
                 {lost.map((o, i) => (
-                  <li key={i} className="flex items-start gap-1 text-ink-2">
+                  <li key={i} className="flex items-start gap-1.5 text-ink-2">
                     <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-ink-3" />
-                    <span>
-                      {o.name} <span className="block text-xs text-ink-3">{o.whyNot}</span>
+                    <span className="min-w-0">
+                      {o.name}
+                      <span className="block text-xs text-ink-3">{o.whyNot}</span>
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
-          {d.limits ? <p className="text-xs text-ink-3">Not known yet: {d.limits}</p> : null}
+          {d.limits ? (
+            <p className="flex items-start gap-1.5 text-xs text-ink-3">
+              <CircleHelp aria-hidden className="mt-px size-3.5 shrink-0" />
+              <span>
+                <span className="font-medium text-ink-2">Not known yet: </span>
+                {d.limits}
+              </span>
+            </p>
+          ) : null}
         </div>
       ) : null}
-      <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        {open ? "Hide the reasoning" : "Why this, not something else"}
-      </Button>
+      <span className="self-start">
+        <DetailsToggle open={open} onToggle={() => setOpen((v) => !v)} label="Why this, not something else" controls={panel} />
+      </span>
     </div>
   );
 }
 
+const GAP_TONE: Record<GoalGap["state"], CalloutTone> = { met: "success", short: "warning", out_of_reach: "warning", unknown: "info", not_comparable: "info" };
+
+export function NorthStar({ expert }: { expert: ExpertView }) {
+  const [all, setAll] = useState(false);
+  const ns = expert.northStar;
+  const gap = expert.goalGap ?? null;
+  const goal = gap && expert.snapshot?.goal ? expert.snapshot.goal : null;
+  const targetLabel = gap ? "Plays support" : "Target";
+  const allShort = isShort(ns.baseline) && isShort(ns.target) && (goal === null || isShort(goal));
+  return (
+    <PlanSection id="northstar-heading" title="Where you stand" navLabel="North star" icon={Target} bare>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <Card>
+          <CardContent className="flex h-full flex-col gap-3">
+            <p className="text-overline">Diagnosis</p>
+            {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
+            <ProseBullets text={expert.diagnosis} max={3} />
+            {expert.affordableCac ? (
+              <div className="mt-auto flex flex-col gap-1 rounded-[var(--radius-card)] bg-cream-soft p-3">
+                <FieldLabel icon={Wallet}>Affordable cost per customer</FieldLabel>
+                <ProseBullets text={expert.affordableCac} max={2} />
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex h-full flex-col gap-3">
+            <p className="text-overline flex items-center gap-1.5">
+              <Target aria-hidden className="size-3.5" /> North star
+            </p>
+            <h3 className="heading-card">{ns.metric}</h3>
+            <RouteBar baseline={ns.baseline} target={ns.target} />
+            {allShort ? (
+              <StatBlocks
+                stats={[
+                  { label: "Now", value: ns.baseline },
+                  ...(goal ? [{ label: "Your goal", value: goal }] : []),
+                  { label: targetLabel, value: ns.target, tone: gap ? (gap.state === "met" ? "good" : gap.state === "short" || gap.state === "out_of_reach" ? "warn" : "default") : "good" },
+                ]}
+              />
+            ) : (
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <ValueTile label="Now" value={ns.baseline} icon={CircleCheck} className="bg-surface-2" />
+                <ValueTile label={targetLabel} value={ns.target} icon={Flag} className="bg-sun-soft" />
+                {goal ? <ValueTile label="Your goal" value={goal} icon={Target} className="bg-surface-2 sm:col-span-2" /> : null}
+              </dl>
+            )}
+            {gap ? (
+              <Callout tone={GAP_TONE[gap.state] ?? "info"} title={GAP_LABEL[gap.state]}>
+                {gap.note}
+              </Callout>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+      {expert.leadingIndicators.length ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-overline flex items-center gap-1.5">
+              <ChartLine aria-hidden className="size-3.5" /> Weekly signals
+              <span className="ml-auto">
+                <ExpandAll open={all} onToggle={() => setAll((v) => !v)} />
+              </span>
+            </p>
+            <ul className="flex flex-col divide-y divide-line">
+              {expert.leadingIndicators.map((l, i) => (
+                <li key={l.metric} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1.4fr)]">
+                  <span aria-hidden className="mt-px grid size-5 place-items-center rounded-[var(--radius-badge)] bg-brand-100 text-2xs font-semibold text-brand-900 tabular-nums">
+                    {i + 1}
+                  </span>
+                  <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span className="text-ui font-medium text-ink">{l.metric}</span>
+                    {l.source ? (
+                      <Badge title={l.source} className={all ? "h-auto whitespace-normal [&>span:last-child]:whitespace-normal" : undefined}>
+                        {l.source}
+                      </Badge>
+                    ) : null}
+                  </span>
+                  {isShort(l.weeklyTarget) ? (
+                    <span className="col-start-2 md:col-start-auto">
+                      <Badge tone="brand">{/week|wk/i.test(l.weeklyTarget) ? l.weeklyTarget : `${l.weeklyTarget}/wk`}</Badge>
+                    </span>
+                  ) : (
+                    <Clamp lines={1} toggle={false} expanded={all} className="col-start-2 text-ui text-ink-2 md:col-start-auto">
+                      {l.weeklyTarget}
+                    </Clamp>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+    </PlanSection>
+  );
+}
+
+/* ---------------- Play card parts ---------------- */
+
 /** Neutral economics for plays saved without any (customer forecasts don't use them). */
 const NO_ECONOMICS: Economics = { revenuePerCustomerMonthUsd: 0, grossMargin: 0, basis: "" };
 
-/** P10–P90 range bar with the middle marker, labelled with what it rests on. */
-function ForecastBar({ f, economics }: { f: PlayView; economics?: Economics }) {
-  const max = Math.max(f.p90, 1) * 1.15;
-  const pos = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
+const BASIS_TONE: Record<string, Tone> = { assumption_scenario: "amber", sourced_estimate: "blue", unlabelled_scenario: "neutral" };
+
+/** The forecast as a KPI: likely number, unit, low/likely/high range bar and confidence. */
+function Forecast({ f, economics, open = false }: { f: PlayView; economics?: Economics; open?: boolean }) {
+  const k = kindOf(f.kind);
+  const max = Math.max(f.p90, 1) * 1.1;
+  const pos = (n: number) => Math.min(100, Math.max(0, (n / max) * 100));
   const basis = f.model?.steps?.length ? forecastBasis({ ...f, model: f.model }, economics ?? NO_ECONOMICS).customers : null;
   const scenario = basis?.kind !== "sourced_estimate";
+  const conf = CONFIDENCE[f.confidence] ?? { label: `${f.confidence} confidence`, tone: "neutral" as Tone };
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-ui text-ink-3">{scenario ? "Scenario" : "Expected"} for {f.horizonDays} days</span>
-        <span className="text-ui text-ink-2">
-          <span className="metric text-xl leading-6">{f.p50}</span> {f.unit} <span className="text-ink-3">{scenario ? "middle case" : "most likely"}</span>
+    <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-overline">
+          {scenario ? "Scenario" : "Forecast"} · {f.horizonDays} days
+        </p>
+        <Badge tone={conf.tone} icon={<Gauge />}>
+          {conf.label}
+        </Badge>
+      </div>
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className="text-kpi font-semibold tabular-nums text-ink">{fmtN(f.p50)}</span>
+        <span className="min-w-0 flex-1 text-ui text-ink-2" title={f.unit}>
+          {lead(f.unit).head} <span className="text-ink-3">· {scenario ? "middle case" : "most likely"}</span>
         </span>
       </div>
-      <div className="relative h-6" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: ${f.p10} to ${f.p90} ${f.unit}, middle ${f.p50}`}>
-        <span className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-3" />
-        <span className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-brand-200" style={{ left: pos(f.p10), right: `calc(100% - ${pos(f.p90)})` }} />
-        <span className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-brand-800" style={{ left: pos(f.p50) }} />
+      <div className="relative h-5" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: low ${fmtN(f.p10)}, likely ${fmtN(f.p50)}, high ${fmtN(f.p90)} ${lead(f.unit).head}`}>
+        <span aria-hidden className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-3" />
+        <span aria-hidden className={cn("absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full", k.soft)} style={{ left: `${pos(f.p10)}%`, width: `${Math.max(1, pos(f.p90) - pos(f.p10))}%` }} />
+        <span aria-hidden className={cn("absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2", k.rail)} style={{ left: `${pos(f.p10)}%` }} />
+        <span aria-hidden className={cn("absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2", k.rail)} style={{ left: `${pos(f.p90)}%` }} />
+        <span aria-hidden className={cn("absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface", k.rail)} style={{ left: `${pos(f.p50)}%` }} />
       </div>
-      <div className="flex justify-between text-xs text-ink-3">
-        <span>Low {f.p10}</span>
-        <span className="capitalize">{f.confidence} confidence</span>
-        <span>High {f.p90}</span>
-      </div>
+      <dl className="grid grid-cols-3 text-xs">
+        <div>
+          <dt className="text-ink-3">Low</dt>
+          <dd className="font-medium tabular-nums text-ink">{fmtN(f.p10)}</dd>
+        </div>
+        <div className="text-center">
+          <dt className="text-ink-3">Likely</dt>
+          <dd className="font-semibold tabular-nums text-ink">{fmtN(f.p50)}</dd>
+        </div>
+        <div className="text-right">
+          <dt className="text-ink-3">High</dt>
+          <dd className="font-medium tabular-nums text-ink">{fmtN(f.p90)}</dd>
+        </div>
+      </dl>
       {basis ? (
-        <p className={cn("text-xs", basis.kind === "assumption_scenario" ? "text-amber-800" : "text-ink-3")}>
-          {BASIS_LABEL[basis.kind]}
-          {basis.assumed.length ? <span className="text-ink-3"> · assumed: {basis.assumed.join(", ")}</span> : null}
-          {basis.unchecked.length ? <span className="text-ink-3"> · sources not checked: {basis.unchecked.join(", ")}</span> : null}
-        </p>
+        <div className="flex flex-col gap-1">
+          <Badge tone={BASIS_TONE[basis.kind] ?? "neutral"} className="self-start">
+            {BASIS_LABEL[basis.kind]}
+          </Badge>
+          {basis.assumed.length || basis.unchecked.length ? (
+            <Clamp lines={1} toggle={false} expanded={open} className="text-xs text-ink-3">
+              {basis.assumed.length ? <span className="text-amber-800">Assumed: {basis.assumed.join(", ")}. </span> : null}
+              {basis.unchecked.length ? <span>Not checked: {basis.unchecked.join(", ")}.</span> : null}
+            </Clamp>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -280,13 +497,32 @@ function ForecastBar({ f, economics }: { f: PlayView; economics?: Economics }) {
 function PlayEconomics({ play, economics }: { play: PlayView; economics: Economics }) {
   const m = playMaths({ ...play, model: play.model! }, economics);
   const cost = forecastBasis({ ...play, model: play.model! }, economics).cost;
-  const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
+  const pb = m.paybackMonths === null ? null : Math.max(0.1, Math.round(m.paybackMonths * 10) / 10);
   return (
-    <p className={cn("text-xs", m.profitable === false ? "text-red-800" : "text-ink-3")}>
-      <span title="At the most-likely rates, not the simulated range">Cost per customer</span> <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {m.valueUsd === null ? "unknown (add price, margin and churn)" : `${usd(m.valueUsd)} a year`}
-      {m.paybackMonths !== null ? ` · pays back in ${Math.max(0.1, Math.round(m.paybackMonths * 10) / 10)} months` : ""}
-      <span className={cost.kind === "assumption_scenario" ? "text-amber-800" : undefined}> · {COST_BASIS_LABEL[cost.kind]}</span>
-    </p>
+    <div className="flex flex-col gap-1.5">
+      <StatBlocks
+        className="grid-cols-3 sm:grid-cols-3"
+        stats={[
+          {
+            label: "Cost / customer",
+            value: usd(m.cacUsd),
+            tone: m.profitable === true ? "good" : m.profitable === false ? "bad" : "default",
+            hint: m.profitable === true ? "Below worth" : m.profitable === false ? "Above worth" : undefined,
+          },
+          m.valueUsd === null ? { label: "Worth / year", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Worth / year", value: usd(m.valueUsd) },
+          {
+            label: "Payback",
+            value: pb === null ? "—" : `${pb} mo`,
+            tone: pb === null ? "default" : pb <= 6 ? "good" : pb <= 12 ? "warn" : "bad",
+            hint: pb === null ? undefined : pb <= 6 ? "Fast" : pb <= 12 ? "Within a year" : "Over a year",
+          },
+        ]}
+      />
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge tone={cost.kind === "assumption_scenario" ? "amber" : "neutral"}>{`Cost basis: ${COST_BASIS_LABEL[cost.kind]}`}</Badge>
+        <span className="text-xs text-ink-3">At most-likely rates, not the simulated range</span>
+      </div>
+    </div>
   );
 }
 
@@ -309,27 +545,35 @@ const fmtInput = (r: InputRow): string => {
   return `${n(r.value)}${suffix}${range}`;
 };
 
+const SOURCE_TONE: Record<string, Tone> = { owner: "green", research: "blue", benchmark: "neutral", planned: "brand", assumption: "amber", unlabelled: "neutral" };
+
 /** Every number behind the play and where it came from. */
 function PlayInputs({ play, economics }: { play: PlayView; economics: Economics }) {
   const rows = playInputs({ ...play, model: play.model! }, economics);
   if (!rows.length) return null;
   return (
-    <div>
-      <p className="text-overline">The numbers and where they come from</p>
-      <ul className="mt-2 flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
+      <FieldLabel icon={ListChecks}>Inputs and sources</FieldLabel>
+      <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-control)] border border-line">
         {rows.map((r) => (
-          <li key={r.key} className="grid grid-cols-[1fr_auto] items-start gap-2 text-ui">
+          <li key={r.key} className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2.5 py-1.5 text-ui">
             <span className="min-w-0 text-ink-2">
-              {r.label} <span className="font-medium text-ink">{fmtInput(r)}</span>
+              {r.label} <span className="font-semibold tabular-nums text-ink">{fmtInput(r)}</span>
             </span>
-            <span className={cn("max-w-[12rem] truncate text-right text-xs", r.tag.source === "assumption" ? "text-amber-800" : "text-ink-3")} title={r.tag.ref || undefined}>
-              {SOURCE_LABEL[r.tag.source]}
-              {r.tag.ref && r.tag.source !== "assumption" && r.tag.check !== "owner_input" ? ` · ${r.tag.ref.replace(/^https?:\/\/(www\.)?/, "")}` : ""}
-              {r.tag.check ? ` · ${CHECK_LABEL[r.tag.check]}` : ""}
-              {r.tag.confirmedAt ? ` (${new Date(r.tag.confirmedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })})` : ""}
+            <span className="flex min-w-0 flex-wrap items-center gap-1" title={r.tag.ref || undefined}>
+              <Badge tone={SOURCE_TONE[r.tag.source] ?? "neutral"}>{SOURCE_LABEL[r.tag.source]}</Badge>
+              {r.tag.ref && r.tag.source !== "assumption" && r.tag.check !== "owner_input" ? (
+                /^https?:\/\//.test(r.tag.ref) ? (
+                  <LinkChip url={r.tag.ref} />
+                ) : (
+                  <span className="max-w-[12rem] truncate text-xs text-ink-3">{r.tag.ref}</span>
+                )
+              ) : null}
+              {r.tag.check ? <span className="text-xs text-ink-3">{CHECK_LABEL[r.tag.check]}</span> : null}
+              {r.tag.confirmedAt ? <span className="text-xs text-ink-3">({new Date(r.tag.confirmedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })})</span> : null}
             </span>
             {(r.tag.access && r.tag.check !== "source_verified") || r.tag.replaced ? (
-              <span className="col-span-2 -mt-0.5 text-right text-xs text-ink-3">
+              <span className="basis-full text-xs text-ink-3">
                 {r.tag.access && r.tag.check !== "source_verified" ? ACCESS_LABEL[r.tag.access] : ""}
                 {r.tag.replaced ? `Replaced ${fmtInput({ ...r, value: r.tag.replaced.value })} (${r.tag.replaced.source === "unlabelled" ? "not labelled" : r.tag.replaced.source})` : ""}
               </span>
@@ -337,6 +581,152 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Economics; id: string }) {
+  return (
+    <div id={id} className="flex flex-col gap-4">
+      {play.model?.steps?.length ? <PlayInputs play={play} economics={economics ?? NO_ECONOMICS} /> : null}
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel icon={Crosshair}>How we estimate it</FieldLabel>
+        <ol className="flex flex-col gap-1">
+          {play.funnel.map((line, i) => {
+            const grade = line.match(/\[[^\]]*,\s*([ABCD])\]/)?.[1] ?? (/assumption|grade d/i.test(line) ? "D" : null);
+            const src = splitLinks(line.match(/\[([^\]]*)\]/)?.[1] ?? "");
+            return (
+              <li key={i} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 rounded-[var(--radius-control)] bg-surface-2 px-2.5 py-1.5 text-ui text-ink">
+                <span aria-hidden className="mt-px text-xs font-semibold tabular-nums text-ink-3">
+                  {i + 1}
+                </span>
+                <span className="min-w-0">
+                  {line.replace(/\s*\[[^\]]*\]\s*$/, "")}
+                  {src.text ? <span className="block text-xs text-ink-3">{src.text}</span> : null}
+                  {src.urls.length ? (
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {src.urls.map((u) => (
+                        <LinkChip key={u} url={u} />
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
+                {grade ? (
+                  <Tooltip content={GRADE[grade]}>
+                    <span tabIndex={0} aria-label={GRADE[grade]} className={cn("grid size-6 place-items-center rounded-[var(--radius-badge)] text-xs font-semibold", grade === "D" ? "bg-amber-100 text-amber-800" : grade === "C" ? "bg-surface-3 text-ink-2" : "bg-green-100 text-green-800")}>
+                      {grade}
+                    </span>
+                  </Tooltip>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+        {play.biggestUnknown ? (
+          <p className="flex items-start gap-1.5 rounded-[var(--radius-control)] bg-amber-100 px-2.5 py-1.5 text-xs text-amber-800">
+            <Info aria-hidden className="mt-px size-3.5 shrink-0" />
+            <span>
+              <span className="font-semibold">Biggest unknown: </span>
+              {play.biggestUnknown}
+            </span>
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex flex-col gap-1 rounded-[var(--radius-control)] border border-line p-2.5">
+          <FieldLabel icon={FlaskConical}>The test</FieldLabel>
+          <p className="text-ui text-ink">{play.test}</p>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-[var(--radius-control)] border border-line p-2.5">
+          <FieldLabel icon={Crosshair}>Decide</FieldLabel>
+          <p className="flex items-start gap-1.5 text-ui text-ink">
+            <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-red-800" />
+            <span>
+              <span className="font-medium text-red-800">Stop if </span>
+              {play.killIf}
+            </span>
+          </p>
+          <p className="flex items-start gap-1.5 text-ui text-ink">
+            <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-green-800" />
+            <span>
+              <span className="font-medium text-green-800">Scale if </span>
+              {play.scaleIf}
+            </span>
+          </p>
+        </div>
+      </div>
+      {play.climbosCanDo ? (
+        <div className="flex flex-col gap-1">
+          <FieldLabel icon={Sparkles}>Your team will</FieldLabel>
+          <p className="text-ui text-ink">{play.climbosCanDo}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ScoreMeter({ scores, kind }: { scores: number[]; kind: PlayView["kind"] }) {
+  const total = score(scores);
+  const d = distinct(scores);
+  const k = kindOf(kind);
+  return (
+    <Tooltip content="Weighted score: fit, predictability, leverage, speed, compounding, cost, risk. Dots: how hard to copy.">
+      <span tabIndex={0} className="ml-auto flex items-center gap-2 rounded-[var(--radius-control)] text-xs text-ink-3">
+        <span
+          role="meter"
+          aria-label="Play score"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={total}
+          aria-valuetext={`${total} of 100`}
+          className="relative h-1.5 w-12 overflow-hidden rounded-full bg-surface-3"
+        >
+          <span className="absolute inset-y-0 left-0 rounded-full bg-ink-2" style={{ width: `${total}%` }} />
+        </span>
+        <span aria-hidden className="text-ui font-semibold tabular-nums text-ink">
+          {total}
+        </span>
+        <span className="flex items-center gap-0.5" role="img" aria-label={`Hard to copy: ${d} of 5`}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <span key={i} aria-hidden className={cn("size-1.5 rounded-full", i <= d ? k.rail : "bg-surface-3")} />
+          ))}
+        </span>
+      </span>
+    </Tooltip>
+  );
+}
+
+/** The first complete phrase of AI text (to the first ";" / sentence end / dash), so cards never cut mid-word. */
+function lead(text: string): { head: string; more: boolean } {
+  const t = (text ?? "").trim();
+  const m = /^(.{12,}?)(?:;\s|\.\s+(?=[A-Z“"])|\s[—–]\s|,\s(?=(?:but|and then|so|while|unless)\b))/.exec(t);
+  const head = (m ? m[1] : t).replace(/[.;,]$/, "");
+  return { head, more: head.length < t.replace(/[.;]$/, "").length };
+}
+
+/** Customers and similar counts: whole numbers from 10 up, one decimal below. */
+const fmtN = (n: number) => (Math.abs(n) >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
+
+/** Shows the lead phrase; the card's Details opens the full text. */
+function Lead({ text, open }: { text: string; open: boolean }) {
+  const { head, more } = lead(text);
+  if (open || !more) return <>{text}</>;
+  return (
+    <>
+      {head}
+      <span aria-hidden className="text-ink-3"> …</span>
+      <span className="sr-only">: {text}</span>
+    </>
+  );
+}
+
+function Row({ icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="grid min-w-0 grid-cols-[4.75rem_minmax(0,1fr)] items-start gap-2">
+      <dt className="pt-px">
+        <FieldLabel icon={icon}>{label}</FieldLabel>
+      </dt>
+      <dd className="min-w-0 text-ui text-ink">{children}</dd>
     </div>
   );
 }
@@ -364,187 +754,146 @@ function PlayTargetsBlock({ t, slug, strategyId, playId, canEdit }: { t: PlayTar
   const [busy, setBusy] = useState(false);
   const what = t.kind === "creators" ? "creators" : "companies";
   return (
-    <section aria-label={`Targets for this play`} className="flex flex-col gap-2 rounded-lg border border-line p-2.5">
+    <section aria-label="Targets for this play" className="flex flex-col gap-2.5 rounded-[var(--radius-card)] border border-line p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
-          <Users aria-hidden className="size-3.5" /> Targets
-        </p>
+        <FieldLabel icon={UsersRound}>Targets</FieldLabel>
         <Badge tone={TARGET_TONE[t.state]}>{t.label}</Badge>
-        {t.counts.found ? <span className="ml-auto text-xs tabular-nums text-ink-3">{t.counts.found} found</span> : null}
+        {t.counts.found ? (
+          <Badge tone="brand" className="ml-auto tabular-nums">
+            {`${t.counts.found} found`}
+          </Badge>
+        ) : null}
       </div>
       <p className="text-xs text-ink-3">{t.note}</p>
       {t.targets.length ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-control)] border border-line">
           {t.targets.map((x) => (
-            <li key={x.id} className="min-w-0 text-ui">
+            <li key={x.id} className="flex min-w-0 flex-col gap-1 px-2.5 py-2 text-ui">
               <a href={x.url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 font-medium text-ink underline-offset-2 hover:underline">
                 <span className="truncate">{x.handle && x.platform ? `${x.name} · ${x.platform}` : x.name}</span>
                 <ExternalLink aria-hidden className="size-3 shrink-0 text-ink-3" />
               </a>
-              <span className="block break-words text-xs text-ink-3">
-                {x.why}
-                {" · "}
-                {x.suppressed ? "opted out" : x.contactRoute === "email" ? "public email" : "contact route not found"}
-                {x.stage !== "suggested" ? ` · ${x.stage}` : ""}
+              {x.why ? (
+                <Clamp lines={2} className="text-xs text-ink-3">
+                  {x.why}
+                </Clamp>
+              ) : null}
+              <span className="flex flex-wrap gap-1">
+                <Badge tone={x.suppressed ? "neutral" : x.contactRoute === "email" ? "green" : "amber"}>{x.suppressed ? "Opted out" : x.contactRoute === "email" ? "Public email" : "No contact route"}</Badge>
+                {x.stage !== "suggested" ? <Badge>{cap(x.stage)}</Badge> : null}
               </span>
             </li>
           ))}
         </ul>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        {t.campaignId ? (
-          <Link href={`/app/${slug}/outbound?campaign=${t.campaignId}`} className="text-xs font-medium text-brand-800 underline-offset-2 hover:underline">
-            See all {what}
-          </Link>
-        ) : null}
-        {canEdit && t.canStart ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            loading={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                const r = await start({ slug, strategyId, playId });
-                toast({ tone: "success", title: `Finding ${what} for this play`, description: r.pausedSending ? "Sending on your previous campaign is paused. Resume it from Find customers." : undefined });
-              } catch (e) {
-                toast({ tone: "danger", title: errorMessage(e) });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Search aria-hidden /> {t.state === "not_started" || t.state === "waiting" ? `Find ${what}` : "Search again"}
-          </Button>
-        ) : null}
-      </div>
+      {t.campaignId || (canEdit && t.canStart) ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && t.canStart ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await start({ slug, strategyId, playId });
+                  toast({ tone: "success", title: `Finding ${what} for this play`, description: r.pausedSending ? "Sending on your previous campaign is paused. Resume it from Find customers." : undefined });
+                } catch (e) {
+                  toast({ tone: "danger", title: errorMessage(e) });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <Search aria-hidden /> {t.state === "not_started" || t.state === "waiting" ? `Find ${what}` : "Search again"}
+            </Button>
+          ) : null}
+          {t.campaignId ? (
+            <Link href={`/app/${slug}/outbound?campaign=${t.campaignId}`} className="inline-flex min-h-8 items-center text-ui font-medium text-brand-800 underline-offset-2 hover:underline">
+              See all {what}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
 
 function PlayCard({ play, slug, economics, results, planId, targets, canEdit = false }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx; planId?: Id<"strategies">; targets?: PlayTargets; canEdit?: boolean }) {
-  const k = KIND[play.kind] ?? KIND.creative;
+  const k = kindOf(play.kind);
   const send = useMutation(api.workspace.sendChat);
   const startPlay = useMutation(api.workspace.startPlay);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
-  const total = score(play.scores);
+  const panel = useId();
+  const edge = play.assetUsed ? splitLinks(play.assetUsed) : null;
   return (
-    <article {...climbTarget("play", play.name, `${play.name} (${play.kind} play)`)} className={cn("flex flex-col overflow-hidden rounded-xl border bg-surface", play.kind === "creative" ? "border-violet-500/40" : "border-line")}>
-      <header className="flex flex-col gap-2 border-b border-line p-4">
+    <article
+      {...climbTarget("play", play.name, `${play.name} (${play.kind} play)`)}
+      className="flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--card-shadow)]"
+    >
+      <span aria-hidden className={cn("h-1", k.rail)} />
+      <header className={cn("flex flex-col gap-2 border-b border-line p-4", k.band)}>
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip content={k.hint}>
-            <span tabIndex={0} className="rounded-md">
-              <Badge tone={k.tone} icon={<k.icon />}>
-                {k.label}
-              </Badge>
-            </span>
-          </Tooltip>
-          <Tooltip content="Weighted score (fit, predictability, leverage, speed, compounding, cost, risk). Distinctiveness is how hard this is for a competitor to copy.">
-            <span tabIndex={0} className="ml-auto flex items-center gap-2 rounded-md text-xs text-ink-3">
-              Score <span className="font-semibold tabular-nums text-ink">{total}</span>
-              <span aria-hidden>·</span>
-              <span className="flex items-center gap-0.5" aria-label={`Distinctiveness ${distinct(play.scores)} of 5`}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <span key={i} aria-hidden className={cn("size-1.5 rounded-full", i <= distinct(play.scores) ? "bg-violet-500" : "bg-surface-3")} />
-                ))}
+            <span tabIndex={0} className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-control)] text-xs font-semibold", k.ink)}>
+              <span aria-hidden className={cn("grid size-6 place-items-center rounded-[var(--radius-control)]", k.tile)}>
+                <k.icon className="size-3.5" />
               </span>
+              {k.label}
             </span>
           </Tooltip>
+          <ScoreMeter scores={play.scores} kind={play.kind} />
         </div>
-        <h3 className="heading-section">{play.name}</h3>
-        <p className="text-sm text-ink-2">{play.oneLiner}</p>
+        <h3 className="heading-card">{play.name}</h3>
+        <p className="text-ui text-ink-2">
+          <Lead text={play.oneLiner} open={open} />
+        </p>
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4">
-        <dl className="grid gap-2 text-ui">
-          <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-ink-3">Who</dt>
-            <dd className="text-ink">{play.audience}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-ink-3">Hook</dt>
-            <dd className="text-ink">“{play.hook}”</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-ink-3">When</dt>
-            <dd className="text-ink">{play.trigger}</dd>
-          </div>
-          {play.assetUsed ? (
-            <div className="flex gap-2">
-              <dt className="w-16 shrink-0 text-ink-3">Edge</dt>
-              <dd className="text-ink">{play.assetUsed}</dd>
-            </div>
+        <figure className={cn("rounded-r-[var(--radius-control)] border-l-2 bg-surface-2 px-3 py-2", k.quote)}>
+          <figcaption className="text-overline mb-0.5">Hook</figcaption>
+          <blockquote className="font-display text-sm italic leading-snug text-ink">
+            “<Lead text={play.hook.replace(/^[“"]|[”"]$/g, "")} open={open} />”
+          </blockquote>
+        </figure>
+        <dl className="flex flex-col gap-2">
+          <Row icon={UsersRound} label="Who">
+            <Lead text={play.audience} open={open} />
+          </Row>
+          <Row icon={CalendarClock} label="When">
+            <Lead text={play.trigger} open={open} />
+          </Row>
+          {edge ? (
+            <Row icon={Zap} label="Edge">
+              <Lead text={edge.text || play.assetUsed} open={open} />
+              {edge.urls.length ? (
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {edge.urls.map((u) => (
+                    <LinkChip key={u} url={u} />
+                  ))}
+                </span>
+              ) : null}
+            </Row>
           ) : null}
         </dl>
 
-        <ForecastBar f={play} economics={economics} />
+        <Forecast f={play} economics={economics} open={open} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
         {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} canEdit={results.canEdit} /> : null}
 
-        {open ? (
-          <div className="flex flex-col gap-4">
-            {play.model?.steps?.length ? <PlayInputs play={play} economics={economics ?? NO_ECONOMICS} /> : null}
-            <div>
-              <p className="text-overline">How we estimate it</p>
-              <ol className="mt-2 flex flex-col gap-1.5">
-                {play.funnel.map((line, i) => {
-                  const grade = line.match(/\[[^\]]*,\s*([ABCD])\]/)?.[1] ?? (/assumption|grade d/i.test(line) ? "D" : null);
-                  return (
-                    <li key={i} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-surface-2/70 px-2.5 py-1.5 text-ui text-ink">
-                      <span>{line.replace(/\s*\[[^\]]*\]\s*$/, "")}<span className="block text-xs text-ink-3">{line.match(/\[([^\]]*)\]/)?.[1] ?? ""}</span></span>
-                      {grade ? (
-                        <Tooltip content={GRADE[grade]}>
-                          <span tabIndex={0} className="grid size-6 place-items-center rounded-md border border-line text-xs font-semibold text-ink-2">
-                            {grade}
-                          </span>
-                        </Tooltip>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ol>
-              {play.biggestUnknown ? (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-3">
-                  <Info aria-hidden className="mt-px size-3.5 shrink-0" /> Biggest unknown: {play.biggestUnknown}
-                </p>
-              ) : null}
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded-lg border border-line p-2.5">
-                <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
-                  <FlaskConical aria-hidden className="size-3.5" /> The test
-                </p>
-                <p className="mt-1 text-ui text-ink">{play.test}</p>
-              </div>
-              <div className="rounded-lg border border-line p-2.5">
-                <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
-                  <Crosshair aria-hidden className="size-3.5" /> Decide
-                </p>
-                <p className="mt-1 flex items-start gap-1 text-ui text-ink">
-                  <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-red-800" /> {play.killIf}
-                </p>
-                <p className="flex items-start gap-1 text-ui text-ink">
-                  <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-brand-800" /> {play.scaleIf}
-                </p>
-              </div>
-            </div>
-            {play.climbosCanDo ? (
-              <p className="text-ui text-ink-2">
-                <span className="font-medium text-ink">Your team will: </span>
-                {play.climbosCanDo}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 
-        <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3">
-          <p className="text-ui text-ink-2">
-            <span className="font-medium text-ink">Today: </span>
-            {play.firstActionToday}
+        <div className="mt-auto flex flex-col gap-2.5 rounded-[var(--radius-card)] bg-cream-soft p-3">
+          <p className="text-overline flex items-center gap-1.5">
+            <CalendarDays aria-hidden className="size-3.5" /> Today
           </p>
-          <div className="flex flex-wrap gap-2">
+          <Clamp lines={2} toggle={false} expanded={open} className="text-ui text-ink">
+            {play.firstActionToday}
+          </Clamp>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               loading={busy}
@@ -562,11 +911,9 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
                 }
               }}
             >
-              <Sparkles aria-hidden /> Make it happen
+              <Magic aria-hidden /> Make it happen
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-              {open ? "Hide the numbers" : "How we estimate it"}
-            </Button>
+            <DetailsToggle open={open} onToggle={() => setOpen((v) => !v)} label="Details" controls={panel} />
           </div>
         </div>
       </div>
@@ -574,27 +921,165 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
   );
 }
 
+/* ---------------- Plays comparison chart ---------------- */
+
+/** Low–likely–high range per play on one axis; hover or arrow keys for the numbers. */
+function PlayRangeChart({ plays, economics }: { plays: PlayView[]; economics?: Economics }) {
+  const nav = useKeyNav(plays.length, 1);
+  const scale = niceScale(Math.max(...plays.map((p) => p.p90), 1));
+  const at = (v: number) => Math.min(100, Math.max(0, (v / scale.max) * 100));
+  const label = "Forecast range per play: low, likely and high";
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        role="group"
+        tabIndex={0}
+        aria-label={`${label}. Arrow keys read each play.`}
+        onKeyDown={nav.onKeyDown}
+        onBlur={nav.onBlur}
+        onMouseLeave={nav.onMouseLeave}
+        className={cn("flex flex-col gap-1.5 rounded-[2px]", focusRing)}
+      >
+        {plays.map((p, i) => {
+          const k = kindOf(p.kind);
+          const on = nav.active === i;
+          const cac = p.model && economics ? playMaths({ ...p, model: p.model }, economics).cacUsd : null;
+          return (
+            <div
+              key={p.name}
+              onMouseEnter={() => nav.setActive(i)}
+              className={cn("grid grid-cols-1 gap-x-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] sm:items-center", nav.active !== null && !on && "opacity-50")}
+            >
+              <span className="flex min-w-0 items-center gap-1.5 text-ui text-ink">
+                <span aria-hidden className={cn("size-2 shrink-0 rounded-full", k.rail)} />
+                <span className="truncate">{p.name}</span>
+              </span>
+              <div className="relative h-8">
+                {scale.ticks.slice(1, -1).map((t) => (
+                  <span key={t} aria-hidden className="absolute inset-y-0 border-l border-dashed border-line" style={{ left: `${at(t)}%` }} />
+                ))}
+                <span aria-hidden className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
+                <span aria-hidden className={cn("absolute top-1/2 h-3 -translate-y-1/2 rounded-full", k.soft)} style={{ left: `${at(p.p10)}%`, width: `${Math.max(1, at(p.p90) - at(p.p10))}%` }} />
+                <span aria-hidden className={cn("absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2", k.rail, on ? "ring-ink" : "ring-surface")} style={{ left: `${at(p.p50)}%` }} />
+                {on ? (
+                  <ChartTooltip
+                    place={i === 0 ? "below" : "above"}
+                    tip={{
+                      x: at(p.p50),
+                      y: i === 0 ? 100 : 0,
+                      title: p.name,
+                      rows: [
+                        { label: "Low", value: String(p.p10), color: k.chart, shape: "dot" },
+                        { label: "Likely", value: String(p.p50), color: k.chart, shape: "dot", strong: true },
+                        { label: "High", value: String(p.p90), color: k.chart, shape: "dot" },
+                        ...(cac !== null ? [{ label: "Cost / customer", value: usd(cac) }] : []),
+                      ],
+                      note: `${kindOf(p.kind).label} · ${CONFIDENCE[p.confidence]?.label ?? p.confidence} · ${p.horizonDays} days`,
+                    }}
+                  />
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="sm:ml-[calc(12rem+0.75rem)]">
+        <XTicks ticks={scale.ticks} at={at} />
+      </div>
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-5 rounded-full bg-surface-3" /> Low to high
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-full bg-ink-2" /> Likely
+        </span>
+        <span>New customers in {plays[0]?.horizonDays ?? 90} days</span>
+      </p>
+      <SrTable caption={label} columns={["Play", "Low", "Likely", "High", "Unit"]} rows={plays.map((p) => [p.name, p.p10, p.p50, p.p90, p.unit])} />
+    </div>
+  );
+}
+
+function PlaysChart({ plays, economics }: { plays: PlayView[]; economics?: Economics }) {
+  const [view, setView] = useState<"range" | "cost">("range");
+  const points = economics
+    ? plays.flatMap((p) => {
+        if (!p.model?.steps?.length) return [];
+        const m = playMaths({ ...p, model: p.model }, economics);
+        return m.cacUsd === null ? [] : [{ label: p.name, x: p.p50, y: Math.round(m.cacUsd), group: p.kind }];
+      })
+    : [];
+  const kinds = Array.from(new Set(plays.map((p) => p.kind)));
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-overline">{view === "range" ? "Expected customers per play" : "Cost per customer vs customers"}</p>
+          {points.length ? (
+            <Segmented
+              label="Chart view"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "range", label: "Customers" },
+                { value: "cost", label: "Cost" },
+              ]}
+            />
+          ) : null}
+        </div>
+        {view === "cost" && points.length ? (
+          <ScatterPlot
+            label="Cost per customer against expected customers, per play"
+            points={points}
+            groups={kinds.map((k) => ({ key: k, label: KIND[k].label, color: KIND[k].chart }))}
+            xLabel="Expected customers"
+            yLabel="Cost per customer"
+            formatY={(n) => `$${Math.round(n).toLocaleString("en-US")}`}
+            height={200}
+          />
+        ) : null}
+        {view === "cost" && points.length ? (
+          <p className="text-xs text-ink-3">Lower right is better: more customers, cheaper each.</p>
+        ) : (
+          <PlayRangeChart plays={plays} economics={economics} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** The unit economics every play's numbers rest on, with what's assumed called out (spec §25). */
 function EconomicsLine({ economics: e }: { economics: Economics }) {
   const churn = churnOf(e);
   const src = economicsSources(e);
-  const part = (label: string, value: string, key: keyof typeof src) => (
-    <span>
-      {label} <span className="font-medium text-ink">{value}</span>
-      <span className={src[key].source === "assumption" ? "text-amber-800" : undefined} title={src[key].ref || undefined}>
-        {" "}({SOURCE_LABEL[src[key].source].toLowerCase()}
-        {src[key].check && src[key].check !== "owner_input" ? `, ${CHECK_LABEL[src[key].check!]}` : ""})
-      </span>
-    </span>
-  );
+  const part = (label: string, value: string, key: keyof typeof src) => {
+    const s = src[key];
+    const assumed = s.source === "assumption";
+    return (
+      <li
+        key={label}
+        title={s.ref || undefined}
+        className={cn("inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-badge)] px-2 text-xs", assumed ? "bg-amber-100 text-amber-800" : "bg-surface-2 text-ink-2")}
+      >
+        {assumed ? <TriangleAlert aria-hidden className="size-3 shrink-0" /> : null}
+        {label} <span className="font-semibold tabular-nums text-ink">{value}</span>
+        <span>
+          · {SOURCE_LABEL[s.source].toLowerCase()}
+          {s.check && s.check !== "owner_input" ? `, ${CHECK_LABEL[s.check]}` : ""}
+        </span>
+      </li>
+    );
+  };
   return (
-    <p className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
-      <span>Each play is costed on:</span>
-      {part("revenue", `$${Math.round(e.revenuePerCustomerMonthUsd * 100) / 100}/month`, "revenue")}
-      {part("margin", `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
-      {churn !== null ? part("churn", `${Math.round(churn * 1000) / 10}%/month`, "churn") : null}
-      {part("owner time", `$${e.ownerHourUsd || OWNER_HOUR_USD}/hour`, "ownerHour")}
-    </p>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-medium text-ink-3">Costed on</span>
+      <ul className="flex flex-wrap gap-1.5">
+        {part("Revenue", `$${Math.round(e.revenuePerCustomerMonthUsd * 100) / 100}/mo`, "revenue")}
+        {part("Margin", `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
+        {churn !== null ? part("Churn", `${Math.round(churn * 1000) / 10}%/mo`, "churn") : null}
+        {part("Your time", `$${e.ownerHourUsd || OWNER_HOUR_USD}/h`, "ownerHour")}
+      </ul>
+    </div>
   );
 }
 
@@ -606,10 +1091,27 @@ export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdi
   const results = strategyId ? { strategyId, canEdit, byPlay: (byPlay ?? {}) as Record<string, PlayActuals | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
+  const counts = (Object.keys(KIND) as PlayView["kind"][]).map((k) => ({ k, n: plays.filter((p) => p.kind === k).length })).filter((c) => c.n);
   return (
-    <PlanSection id="plays" title="Growth plays" intro={focused ? "The few plays that attack the constraint above. Forecasts are computed from cited rates and their ranges; each play is tested before it scales." : "One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Forecasts are computed from cited rates and their ranges; each play is tested before it scales."}>
+    <PlanSection
+      id="plays"
+      title="Growth plays"
+      icon={Rocket}
+      intro={focused ? "Aimed at the constraint. Tested first." : "Tested before they scale."}
+      bare
+      meta={counts.map(({ k, n }) => {
+        const K = KIND[k];
+        return (
+          <span key={k} className={cn("inline-flex h-6 items-center gap-1.5 rounded-[var(--radius-badge)] px-2 text-xs font-medium", K.band, K.ink)}>
+            <K.icon aria-hidden className="size-3" />
+            {n} {K.label.toLowerCase()}
+          </span>
+        );
+      })}
+    >
       {economics ? <EconomicsLine economics={economics} /> : null}
-      <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
+      {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}
+      <div className={cn("grid gap-3", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
           <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} planId={planId} targets={p.id ? targets?.[p.id] : undefined} canEdit={canEdit} />
         ))}
@@ -618,68 +1120,212 @@ export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdi
   );
 }
 
-export function ExecutionPlan({ expert }: { expert: ExpertView }) {
+/* ---------------- Execution plan ---------------- */
+
+const PHASE_COLOR = [
+  { bar: "bg-chart-1", soft: "bg-chart-1/10" },
+  { bar: "bg-chart-3", soft: "bg-chart-3/10" },
+  { bar: "bg-chart-4", soft: "bg-chart-4/10" },
+  { bar: "bg-chart-5", soft: "bg-chart-5/10" },
+  { bar: "bg-chart-2", soft: "bg-surface-2" },
+];
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** "Days 15–45" → [15, 45]. */
+const dayRange = (s: string): [number, number] | null => {
+  const m = /(\d+)\s*(?:[–—-]|to)\s*(\d+)/.exec(s);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+};
+
+/** Day 0 → 90 strip: coloured segments per phase; hover or focus a phase to highlight it. */
+function PhaseStrip({ phases }: { phases: ExpertView["phases"] }) {
+  const [active, setActive] = useState<number | null>(null);
+  const ranges = phases.map((p) => dayRange(p.days));
+  const ok = ranges.every(Boolean) && ranges.length > 0;
+  const start = ok ? Math.min(...ranges.map((r) => r![0])) : 0;
+  const end = ok ? Math.max(...ranges.map((r) => r![1])) : phases.length;
+  const span = Math.max(1, end - start);
+  const seg = (i: number) => (ok ? { left: ((ranges[i]![0] - start) / span) * 100, width: ((ranges[i]![1] - ranges[i]![0]) / span) * 100 } : { left: (i / phases.length) * 100, width: 100 / phases.length });
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card>
-        <CardContent className="flex flex-col gap-2">
-          <p className="text-overline">This week</p>
-          <ol className="flex flex-col gap-2">
-            {expert.weekOneChecklist.map((w, i) => (
-              <li key={i} className="flex items-start gap-2 text-ui text-ink">
-                <span aria-hidden className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] border border-control text-2xs text-ink-3">
+    <div className="flex flex-col gap-3">
+      <div>
+        <div className="relative h-3 overflow-hidden rounded-full bg-surface-3" role="img" aria-label={`Timeline: ${phases.map((p) => `${p.name}, ${p.days}`).join("; ")}`}>
+          {phases.map((p, i) => {
+            const s = seg(i);
+            return (
+              <span
+                key={p.name}
+                aria-hidden
+                className={cn("absolute inset-y-0 border-r-2 border-surface transition-opacity duration-[var(--dur-base)]", PHASE_COLOR[i % PHASE_COLOR.length].bar, active !== null && active !== i && "opacity-30")}
+                style={{ left: `${s.left}%`, width: `${Math.max(2, s.width)}%` }}
+              />
+            );
+          })}
+        </div>
+        {ok ? (
+          <div aria-hidden className="mt-1 flex justify-between text-2xs tabular-nums text-ink-3">
+            <span>Day {start}</span>
+            <span>Day {end}</span>
+          </div>
+        ) : null}
+      </div>
+      <ol className={cn("grid gap-2", phases.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2")}>
+        {phases.map((p, i) => {
+          const c = PHASE_COLOR[i % PHASE_COLOR.length];
+          return (
+            <li
+              key={p.name}
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
+              className={cn("flex min-w-0 flex-col gap-1.5 rounded-[var(--radius-card)] p-3", c.soft)}
+            >
+              <span className="flex flex-wrap items-center gap-2">
+                <span aria-hidden className={cn("grid size-5 shrink-0 place-items-center rounded-[var(--radius-badge)] text-2xs font-semibold text-white", c.bar)}>
                   {i + 1}
                 </span>
-                {w}
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="flex flex-col gap-2">
-          <p className="text-overline">Phases</p>
-          <ol className="relative flex flex-col gap-3 border-l border-line-strong pl-4">
-            {expert.phases.map((p) => (
-              <li key={p.name} className="relative">
-                <span aria-hidden className="absolute -left-[21px] top-1 size-2.5 rounded-full border-2 border-surface bg-brand-800" />
-                <p className="text-ui font-medium text-ink">
-                  {p.name} <span className="font-normal text-ink-3">· {p.days}</span>
-                </p>
-                <p className="text-xs text-ink-3">{p.focus}</p>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div>
-            <p className="text-overline">Not doing (on purpose)</p>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {expert.notDoing.map((n) => (
-                <li key={n.channel} className="text-ui">
-                  <span className="font-medium text-ink line-through decoration-ink-3/60">{n.channel}</span> <span className="text-ink-3">· {n.why}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {expert.risks.length ? (
-            <div className="border-t border-line pt-3">
+                <span className="text-ui font-semibold text-ink">{p.name}</span>
+                <Badge className="bg-surface">{p.days}</Badge>
+              </span>
+              <ProseBullets text={cap(p.focus.replace(new RegExp(`^${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\s*`, "i"), ""))} max={1} tone="muted" />
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/** "Do X; then Y" → bold "Do X" + the rest. */
+function headOf(s: string): [string, string] {
+  const semi = s.search(/[;:]\s/);
+  if (semi > 8) return [s.slice(0, semi), s.slice(semi + 1).trim()];
+  const comma = s.search(/,\s/);
+  if (comma > 12 && comma < 70) return [s.slice(0, comma), s.slice(comma + 1).trim()];
+  return [s, ""];
+}
+
+function NotDoing({ items }: { items: ExpertView["notDoing"] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const why = useId();
+  return (
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-wrap gap-1.5">
+        {items.map((n, i) => (
+          <li key={n.channel}>
+            <button
+              type="button"
+              aria-expanded={open === i}
+              aria-controls={open === i ? why : undefined}
+              onClick={() => setOpen((o) => (o === i ? null : i))}
+              className={cn(
+                "inline-flex min-h-7 items-center gap-1.5 rounded-[var(--radius-badge)] border px-2 text-xs text-ink-2 hover:text-ink",
+                open === i ? "border-line-strong bg-surface" : "border-transparent bg-surface-2",
+              )}
+            >
+              <Ban aria-hidden className="size-3 shrink-0 text-ink-3" />
+              <span className="line-through decoration-ink-3">{n.channel}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {open !== null && items[open] ? (
+        <p id={why} className="rounded-[var(--radius-control)] bg-surface-2 px-2.5 py-2 text-ui text-ink-2">
+          <span className="font-medium text-ink">{items[open].channel}: </span>
+          {items[open].why}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function ExecutionPlan({ expert }: { expert: ExpertView }) {
+  const [weekAll, setWeekAll] = useState(false);
+  const [riskAll, setRiskAll] = useState(false);
+  return (
+    <PlanSection id="execution-heading" title="Execution plan" navLabel="Execution" icon={CalendarDays} bare>
+      {expert.phases.length ? (
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-overline">Phases</p>
+            <PhaseStrip phases={expert.phases} />
+          </CardContent>
+        </Card>
+      ) : null}
+      <div className="grid gap-3">
+        <Card>
+          <CardContent className="flex flex-col gap-2.5">
+            <p className="text-overline flex items-center gap-1.5">
+              <ListChecks aria-hidden className="size-3.5" /> This week
+              <Badge className="normal-case tracking-normal">{`${expert.weekOneChecklist.length} steps`}</Badge>
+              <span className="ml-auto">
+                <ExpandAll open={weekAll} onToggle={() => setWeekAll((v) => !v)} />
+              </span>
+            </p>
+            <ol className="flex flex-col gap-2">
+              {expert.weekOneChecklist.map((w, i) => {
+                const [head, rest] = headOf(w);
+                return (
+                  <li key={i} className="flex min-w-0 items-start gap-2.5">
+                    <span aria-hidden className="mt-px grid size-5 shrink-0 place-items-center rounded-[var(--radius-control)] border-[1.5px] border-control text-2xs font-semibold tabular-nums text-ink-2">
+                      {i + 1}
+                    </span>
+                    <Clamp lines={1} toggle={false} expanded={weekAll} className="flex-1 text-ui">
+                      <span className="font-medium text-ink">{head}</span>
+                      {rest ? <span className="text-ink-3">: {rest}</span> : null}
+                    </Clamp>
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
+        {expert.risks.length ? (
+          <Card>
+            <CardContent className="flex flex-col gap-2.5">
               <p className="text-overline flex items-center gap-1.5">
-                <TriangleAlert aria-hidden className="size-3.5" /> Risks
+                <TriangleAlert aria-hidden className="size-3.5" /> Risks → mitigations
+                <Badge tone="amber" className="normal-case tracking-normal">{`${expert.risks.length} risks`}</Badge>
+                <span className="ml-auto">
+                  <ExpandAll open={riskAll} onToggle={() => setRiskAll((v) => !v)} />
+                </span>
               </p>
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {expert.risks.slice(0, 3).map((r) => (
-                  <li key={r.risk} className="text-ui text-ink-2">
-                    <span className="text-ink">{r.risk}</span> → {r.mitigation}
+              <ul className="flex flex-col gap-2">
+                {expert.risks.map((r) => (
+                  <li key={r.risk} className="grid min-w-0 gap-px overflow-hidden rounded-[var(--radius-control)] border border-line sm:grid-cols-2">
+                    <div className="flex min-w-0 items-start gap-1.5 bg-amber-100 px-2.5 py-2">
+                      <TriangleAlert aria-hidden className="mt-0.5 size-3.5 shrink-0 text-amber-800" />
+                      <span className="sr-only">Risk: </span>
+                      <Clamp lines={1} toggle={false} expanded={riskAll} className="flex-1 text-ui text-ink">
+                        {r.risk}
+                      </Clamp>
+                    </div>
+                    <div className="flex min-w-0 items-start gap-1.5 bg-green-100 px-2.5 py-2">
+                      <ShieldCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-green-800" />
+                      <span className="sr-only">Mitigation: </span>
+                      <Clamp lines={1} toggle={false} expanded={riskAll} className="flex-1 text-ui text-ink">
+                        {r.mitigation}
+                      </Clamp>
+                    </div>
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-    </div>
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+      {expert.notDoing.length ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2.5">
+            <p className="text-overline flex items-center gap-1.5">
+              <Ban aria-hidden className="size-3.5" /> Not doing, on purpose
+            </p>
+            <NotDoing items={expert.notDoing} />
+          </CardContent>
+        </Card>
+      ) : null}
+    </PlanSection>
   );
 }

@@ -3,9 +3,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleAlert, CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, EyeOff, History } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, DataTable, Stat, StatGroup, buttonClasses, toast } from "@/components/ui";
+import { KeyValueList } from "@/components/ds/data/display";
 import { formatNumber } from "@/lib/utils";
 import { formatDateTime, microsToUsd, relativeTime } from "../money";
 import { LoadingBlock, PageHeader } from "../results/QueryBoundary";
@@ -62,8 +63,16 @@ export function OpsConsole() {
         <PageHeader
           section="ops"
           title="Operator console"
-          intro="Fleet health, money and controls. Customer content, contact lists and secrets are never shown here. Every action is audited."
+          intro="Fleet health, money and controls."
         />
+        <ul className="-mt-3 mb-3 flex flex-wrap gap-x-4 gap-y-1 text-ui text-ink-2">
+          <li className="flex items-center gap-1.5">
+            <EyeOff aria-hidden className="size-4 text-ink-3" /> Customer content, contact lists and secrets never shown
+          </li>
+          <li className="flex items-center gap-1.5">
+            <History aria-hidden className="size-4 text-ink-3" /> Every action audited
+          </li>
+        </ul>
         <nav aria-label="Console sections" className="-mx-1 -mt-3 flex gap-1 overflow-x-auto pb-1">
           {SECTIONS.map(([id, label]) => (
             <a key={id} href={`#${id}`} className={buttonClasses({ variant: "ghost", size: "sm", className: "shrink-0 text-ink-2" })}>
@@ -86,18 +95,25 @@ export function OpsConsole() {
           <Stat label="Customer workspaces" value={formatNumber(d.customers.workspaces)} sublabel="Most recent 100 counted" />
           <Stat label="Needs attention" value={formatNumber(attention)} sublabel="Failed, uncertain, stuck, unresolved" />
         </StatGroup>
-        <div className="flex flex-wrap items-center gap-2 text-ui text-ink-2">
+        <div className="flex flex-wrap items-center gap-2">
           <OkBadge ok={d.margin.ok} okText="Margin gate passing" badText={`Margin gate failing (${d.margin.failures.length})`} />
-          <span>Rates {d.margin.rateVersion} · Entitlements {d.margin.entitlementVersion} · Routing {d.margin.routingVersion}</span>
+          <KeyValueList
+            variant="inline"
+            items={[
+              { k: "Rates", v: d.margin.rateVersion, mono: true },
+              { k: "Entitlements", v: d.margin.entitlementVersion, mono: true },
+              { k: "Routing", v: d.margin.routingVersion, mono: true },
+            ]}
+          />
         </div>
-        <p className="text-ui text-ink-2">
-          Subscriptions:{" "}
-          {Object.keys(subsByStatus).length === 0
-            ? "none"
-            : Object.entries(subsByStatus)
-                .map(([s, n]) => `${n} ${s.replace(/_/g, " ")}`)
-                .join(" · ")}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ui font-medium text-ink-2">Subscriptions</span>
+          {Object.keys(subsByStatus).length === 0 ? (
+            <span className="text-ui text-ink-3">none</span>
+          ) : (
+            <KeyValueList variant="inline" items={Object.entries(subsByStatus).map(([s, n]) => ({ k: s.replace(/_/g, " "), v: formatNumber(n) }))} />
+          )}
+        </div>
         <h3 className="heading-card mt-2">Circuit breakers</h3>
         <DataTable
           caption="Provider circuit breakers"
@@ -176,7 +192,9 @@ export function OpsConsole() {
 
       <OpsSection id="jobs" title="Jobs needing attention" count={attention}>
         <h3 className="heading-card">Uncertain outcomes ({d.jobs.uncertain.length})</h3>
-        <p className="-mt-2 text-ui text-ink-3">Check the provider manually before resolving. Uncertain runs are never retried automatically.</p>
+        <Callout tone="warning" live="none" title="Check the provider manually before resolving">
+          Never retried automatically.
+        </Callout>
         <DataTable
           caption="Uncertain runs"
           hideCaption

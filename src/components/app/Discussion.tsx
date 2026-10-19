@@ -61,10 +61,10 @@ export function Discussion(subject: Subject) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-ink-3">No comments yet. Type @ to mention a teammate.</p>
+        <p className="text-sm text-ink-3">No comments yet.</p>
       )}
       <div className="relative flex flex-col gap-2">
-        <Textarea aria-label="Comment" rows={2} autosize value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comment, or @mention someone" />
+        <Textarea aria-label="Comment" rows={2} autosize value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comment (@ to mention)" />
         {suggestions.length ? (
           <ul className="absolute bottom-full left-0 z-10 mb-1 w-56 rounded-lg border border-line bg-surface p-1 shadow-md">
             {suggestions.map((m) => (

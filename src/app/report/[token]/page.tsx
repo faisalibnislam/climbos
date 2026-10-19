@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowDown, ArrowUp, Printer } from "lucide-react";
+import { ArrowDown, ArrowUp, Printer } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui";
@@ -43,11 +43,11 @@ export default function ClientReportPage() {
           </div>
           <div className="flex items-center gap-2 print:hidden">
             {PERIODS.map((d) => (
-              <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-full px-3 py-1 text-sm", d === days ? "text-white" : "bg-surface-2 text-ink-2")} style={d === days ? { background: r.color } : undefined}>
+              <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-[var(--radius-control)] px-3 py-1 text-sm", d === days ? "text-white" : "bg-surface-2 text-ink-2")} style={d === days ? { background: r.color } : undefined}>
                 {d} days
               </button>
             ))}
-            <button type="button" onClick={() => window.print()} aria-label="Print or save as PDF" className="rounded-full bg-surface-2 p-2 text-ink-2">
+            <button type="button" onClick={() => window.print()} aria-label="Print or save as PDF" className="rounded-[var(--radius-control)] bg-surface-2 p-2 text-ink-2">
               <Printer className="size-4" aria-hidden />
             </button>
           </div>

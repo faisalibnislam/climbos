@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, CircleX, Loader2 } from "lucide-react";
+import { CircleCheck, CircleX, Loader2 } from "@/components/icons"
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui";
 import { cn } from "@/lib/utils";

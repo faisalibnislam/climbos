@@ -28,7 +28,7 @@ export function TeamSettings({ slug }: { slug: string }) {
   const team = useQuery(api.settings.team, { slug });
   return (
     <div className="flex flex-col gap-8">
-      <SettingsHeader title="Team" intro="Who can see and change this workspace. Only reviewers, admins and owners can approve work before it goes live." />
+      <SettingsHeader title="Team" />
       {team === undefined ? (
         <LoadingBlock label="Loading team…" />
       ) : (
@@ -42,10 +42,10 @@ export function TeamSettings({ slug }: { slug: string }) {
               used={team.seatsUsed}
               max={team.seatLimit}
               unit="seats"
-              fullText="All seats in use. Choose a bigger package to add people."
+              fullText="All seats in use."
               footnote={
                 <>
-                  Seats are shared across all your workspaces. Pending invitations count. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Plans and seats</Link>
+                  Shared across workspaces; invites count. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Add seats</Link>
                 </>
               }
             />
@@ -55,7 +55,7 @@ export function TeamSettings({ slug }: { slug: string }) {
           {team.canManage ? <ApprovalLimit slug={slug} current={team.creditApprovalLimit} /> : null}
           {team.canManage ? <InviteForm slug={slug} team={team} /> : (
             <Callout tone="info" title="View only">
-              Your role is {ROLE_NAMES[team.yourRole] ?? team.yourRole}. Only owners and admins can invite people or change roles.
+              You’re {ROLE_NAMES[team.yourRole] ?? team.yourRole}. Owners and admins manage people.
             </Callout>
           )}
 
@@ -72,7 +72,7 @@ export function TeamSettings({ slug }: { slug: string }) {
 
           <section aria-labelledby="roles-heading" className="flex flex-col gap-3">
             <h2 id="roles-heading" className="heading-section">
-              What each role can do
+              Roles
             </h2>
             <dl className="grid gap-3 sm:grid-cols-2">
               {team.roles.map((r) => (
@@ -109,7 +109,7 @@ function InviteForm({ slug, team }: { slug: string; team: Team }) {
     setError(null);
     try {
       await invite({ slug, email, role });
-      toast({ tone: "success", title: "Invitation created", description: `We're emailing ${email.trim()} now. The link works for 7 days.` });
+      toast({ tone: "success", title: "Invitation created", description: `Emailing ${email.trim()}. Link lasts 7 days.` });
       setEmail("");
     } catch (err) {
       const info = errorInfo(err);
@@ -126,7 +126,7 @@ function InviteForm({ slug, team }: { slug: string; team: Team }) {
       </h2>
       {full ? (
         <Callout tone="warning" title="All seats are in use">
-          Remove someone or <Link href={`/app/${slug}/settings/billing`}>choose a plan with more seats</Link> to invite more people.
+          Remove someone or <Link href={`/app/${slug}/settings/billing`}>add seats</Link>.
         </Callout>
       ) : null}
       <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
@@ -137,7 +137,7 @@ function InviteForm({ slug, team }: { slug: string; team: Team }) {
           <Select value={role} onValueChange={(v) => setRole(v as Role)} options={roleOptions(team)} disabled={full} />
         </Field>
         <Button type="submit" loading={busy} loadingText="Sending…" disabled={full}>
-          Send invitation
+          Invite
         </Button>
       </form>
       <div aria-live="polite">
@@ -189,7 +189,7 @@ function MemberRow({ slug, member, team }: { slug: string; member: Member; team:
           <div className="mt-1 flex flex-wrap gap-1.5">
             {member.status === "invited" ? (
               <Badge tone="amber">
-                Invited{member.inviteExpiresAt ? ` · link expires ${relativeTime(member.inviteExpiresAt)}` : ""}
+                Invited{member.inviteExpiresAt ? ` · expires ${relativeTime(member.inviteExpiresAt)}` : ""}
               </Badge>
             ) : (
               <Badge tone="green">Active</Badge>
@@ -219,8 +219,8 @@ function MemberRow({ slug, member, team }: { slug: string; member: Member; team:
               title={member.status === "invited" ? `Cancel the invitation for ${display}?` : `Remove ${display}?`}
               description={
                 member.status === "invited"
-                  ? "The invitation link will stop working. You can invite them again later."
-                  : "They'll lose access to this workspace straight away. Their past work and approvals stay in the activity log."
+                  ? "The link stops working."
+                  : "Access ends now. Past work stays in the activity log."
               }
               confirmLabel={member.status === "invited" ? "Cancel invitation" : `Remove ${display}`}
               onConfirm={async () => {

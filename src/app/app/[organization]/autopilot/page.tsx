@@ -4,7 +4,7 @@ import { AiModePicker, useAiMode, type AiMode } from "@/components/app/AiModePic
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarClock, CircleCheck, Hand, Loader2, Minus, MoreHorizontal, Plus, RotateCcw, ShieldCheck, SkipForward, Sparkles, TriangleAlert, Upload } from "lucide-react";
+import { CalendarClock, CircleCheck, Hand, Layers, Lightbulb, Loader2, Magic, Minus, MoreHorizontal, Plus, RotateCcw, ShieldCheck, SkipForward, TriangleAlert, Upload } from "@/components/icons";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -40,8 +40,9 @@ import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { cn } from "@/lib/utils";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
-import { useNow } from "@/components/app/content/shared";
+import { MessageText, useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
+import { ClampText } from "@/components/app/results/ClampText";
 
 const CHANNELS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest"] as const;
 const HOURS = [
@@ -60,9 +61,9 @@ type Mode = "always_ask" | "trust_ladder" | "auto";
 const STATUS: Record<string, { label: string; tone: Tone; icon?: React.ReactNode }> = {
   planned: { label: "Planned", tone: "neutral" },
   drafting: { label: "Drafting", tone: "blue", icon: <Loader2 className="animate-spin" /> },
-  needs_approval: { label: "Needs your OK", tone: "amber", icon: <Hand /> },
+  needs_approval: { label: "Needs OK", tone: "amber", icon: <Hand /> },
   scheduled: { label: "Scheduled", tone: "brand", icon: <CalendarClock /> },
-  ready_to_post: { label: "Ready for you to post", tone: "violet", icon: <Upload /> },
+  ready_to_post: { label: "Ready to post", tone: "violet", icon: <Upload /> },
   published: { label: "Posted", tone: "green", icon: <CircleCheck /> },
   failed: { label: "Didn't finish", tone: "red", icon: <TriangleAlert /> },
 };
@@ -80,12 +81,11 @@ export default function AutopilotPage() {
       <PageHeader
         eyebrow="Social media"
         title="Autopilot"
-        intro="Your social media manager plans each week, writes and designs the posts, and publishes within the rules you set here."
         actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canApprove} /> : undefined}
       />
       {data.activeRuns?.length ? (
-        <section aria-label="Your team is working" className="rounded-xl border border-brand-200 bg-surface p-4">
-          <p className="text-overline">Your team is working</p>
+        <section aria-label="Working now" className="rounded-xl border border-brand-200 bg-surface p-4">
+          <p className="text-overline">Working now</p>
           <ul className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {data.activeRuns.map((r) => (
               <li key={r.id} className="min-w-0">
@@ -96,13 +96,13 @@ export default function AutopilotPage() {
           </ul>
         </section>
       ) : null}
-      {data.settings?.pausedReason ? <Callout tone="warning" title="Autopilot is waiting">{data.settings.pausedReason}</Callout> : null}
+      {data.settings?.pausedReason ? <Callout tone="warning" title="Autopilot is waiting"><MessageText text={data.settings.pausedReason} /></Callout> : null}
       {(!on || editing) && data.canApprove ? <SetupCard slug={slug} data={data} onDone={() => setEditing(false)} /> : null}
-      {!on && !data.canApprove ? <Callout tone="info" title="Autopilot is off">Ask an owner, admin or reviewer to set it up.</Callout> : null}
+      {!on && !data.canApprove ? <Callout tone="info" title="Autopilot is off">Ask an owner, admin or reviewer.</Callout> : null}
       {on ? <TrustLadder data={data} /> : null}
       {previewing ? (
         <Callout tone="info" title="Preview week">
-          Ideas only: nothing was drafted or posted. Choose a package to have your team write and post them.
+          Ideas only. Nothing drafted or posted.
         </Callout>
       ) : null}
       {on || previewing ? <WeekView slug={slug} data={data} /> : null}
@@ -125,7 +125,7 @@ function HeaderActions({ slug, onEdit, editing, canManage }: { slug: string; onE
           setBusy(true);
           try {
             await planNow({ slug });
-            toast({ tone: "success", title: "Planning the week", description: "Drafts appear here as they're written." });
+            toast({ tone: "success", title: "Planning the week" });
           } catch (e) {
             toast({ tone: "danger", title: errorMessage(e) });
           } finally {
@@ -133,7 +133,7 @@ function HeaderActions({ slug, onEdit, editing, canManage }: { slug: string; onE
           }
         }}
       >
-        <Sparkles aria-hidden /> Plan now
+        <Magic aria-hidden /> Plan now
       </Button>
     </>
   );
@@ -183,7 +183,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
         imagesPerWeek: images,
         aiMode: effectiveMode,
       });
-      toast({ tone: "success", title: enabled ? (s?.enabled ? "Autopilot updated" : "Autopilot is on") : "Autopilot is off", description: enabled && !s?.enabled ? "Your team is planning the first week now." : undefined });
+      toast({ tone: "success", title: enabled ? (s?.enabled ? "Autopilot updated" : "Autopilot is on") : "Autopilot is off", });
       onDone();
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
@@ -196,28 +196,27 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
     <Card>
       <CardHeader>
         <CardTitle as="h2">{s ? "Autopilot settings" : "Set up autopilot"}</CardTitle>
-        <CardDescription>Choose how much your team may do on its own. You can change this any time, and Pause stops everything at once.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <AiModePicker slug={slug} kind="social_calendar" value={effectiveMode} onChange={setPlanMode} label="Who plans each week?" />
+        <AiModePicker slug={slug} kind="social_calendar" value={effectiveMode} onChange={setPlanMode} label="Planner" />
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-ui font-medium text-ink">How should posts go out?</legend>
+          <legend className="text-ui font-medium text-ink">Posting</legend>
           <RadioCards
             aria-label="Autopilot mode"
             value={mode}
             onValueChange={(v) => setMode(v as Mode)}
             columns={3}
             options={[
-              { value: "always_ask", title: "Always ask me", description: "Every post waits for your OK. Approving one schedules it for its planned time." },
-              { value: "trust_ladder", title: "Earn trust (recommended)", description: "Each channel asks first. After 5 posts you approve without edits, it posts on its own." },
-              { value: "auto", title: "Fully automatic", description: "Posts go out on schedule. Prices, offers, sensitive claims and first posts still wait for you." },
+              { value: "always_ask", title: "Always ask me", description: "Every post waits for you" },
+              { value: "trust_ladder", title: "Earn trust (recommended)", description: "Auto-posts after 5 unedited approvals" },
+              { value: "auto", title: "Fully automatic", description: "Prices, offers, first posts still ask" },
             ]}
           />
         </fieldset>
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-ui font-medium text-ink">
-            Channels and posts per week <span className="font-normal text-ink-3">({total} a week)</span>
+            Posts per week <span className="font-normal text-ink-3">({total})</span>
           </legend>
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {CHANNELS.map((c) => {
@@ -227,7 +226,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
                   <SocialIcon network={c} variant="tile" size="md" />
                   <div className="min-w-0 flex-1">
                     <p className="text-ui font-medium text-ink">{networkName(c)}</p>
-                    <p className="truncate text-xs text-ink-3">{direct.has(c) ? (connected.has(c) ? "Posts for you" : "Connect to post for you") : "You post it from the export pack"}</p>
+                    <p className="truncate text-xs text-ink-3">{direct.has(c) ? (connected.has(c) ? "Auto-posts" : "Connect to auto-post") : "You post it"}</p>
                   </div>
                   <div className="flex items-center gap-1" role="group" aria-label={`${networkName(c)} posts per week`}>
                     <IconButton size="sm" variant="secondary" aria-label={`Fewer ${networkName(c)} posts`} icon={<Minus />} disabled={n === 0} onClick={() => setCadence((x) => ({ ...x, [c]: Math.max(0, n - 1) }))} />
@@ -245,7 +244,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
         <div className="grid gap-6 lg:grid-cols-2">
           <fieldset className="flex flex-col gap-2">
             <legend className="text-ui font-medium text-ink">
-              Preferred posting times <span className="font-normal text-ink-3">(optional; otherwise each platform&apos;s best times)</span>
+              Posting times <span className="font-normal text-ink-3">(optional)</span>
             </legend>
             <div className="flex flex-wrap gap-2">
               {HOURS.map(({ h, label }) => (
@@ -254,7 +253,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
                 </FilterChip>
               ))}
             </div>
-            <p className="text-xs text-ink-3">Times are in your workspace time zone ({data.timezone}).</p>
+            <p className="text-xs text-ink-3">{data.timezone}</p>
           </fieldset>
           <fieldset className="flex flex-col gap-2">
             <legend className="text-ui font-medium text-ink">Images per week</legend>
@@ -268,20 +267,20 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
                 { value: 2, label: "2" },
               ]}
             />
-            <p className="text-xs text-ink-3">Instagram can&apos;t post without an image, so it gets them first. You can also design posts in the studio.</p>
+            <p className="text-xs text-ink-3">Instagram gets them first.</p>
           </fieldset>
         </div>
 
-        <Field label="Always ask me about" optional hint="Comma-separated topics. Any post that mentions them waits for you, even in fully automatic mode.">
-          <Textarea value={topics} onChange={(e) => setTopics(e.target.value)} rows={2} placeholder="e.g. prices, new hires, our partners, health claims" />
+        <Field label="Always ask me about" optional hint="Comma-separated. Applies in every mode.">
+          <Textarea value={topics} onChange={(e) => setTopics(e.target.value)} rows={2} placeholder="prices, new hires, health claims" />
         </Field>
 
-        {s && paid ? <Switch label="Autopilot is on" description="Turning it off keeps scheduled posts as they are; nothing new is planned." checked={enabled} onCheckedChange={setEnabled} /> : null}
+        {s && paid ? <Switch label="Autopilot is on" description="Off keeps scheduled posts." checked={enabled} onCheckedChange={setEnabled} /> : null}
         {!paid ? (
-          <Callout tone="info" live="none" title="Autopilot comes with a package">
-            Save your settings and preview one week free: your team plans it, and you see exactly what would go out.{" "}
+          <Callout tone="info" live="none" title="Needs a package">
+            Preview one week free.{" "}
             <Link href={`/app/${slug}/settings/billing`} className="font-medium text-brand-800 hover:underline">
-              See packages
+              Packages
             </Link>
             {s ? (
               <Button
@@ -291,7 +290,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
                 onClick={async () => {
                   try {
                     await preview({ slug });
-                    toast({ tone: "success", title: "Planning your preview week" });
+                    toast({ tone: "success", title: "Planning preview" });
                   } catch (e) {
                     toast({ tone: "danger", title: errorMessage(e) });
                   }
@@ -305,7 +304,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
 
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
           <p className="mr-auto flex items-center gap-1.5 text-ui text-ink-3">
-            <ShieldCheck aria-hidden className="size-4 text-brand-800" /> Every automatic post is checked against your confirmed facts first.
+            <ShieldCheck aria-hidden className="size-4 text-brand-800" /> Checked against your facts first.
           </p>
           {s ? (
             <Button variant="ghost" onClick={onDone}>
@@ -313,7 +312,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
             </Button>
           ) : null}
           <Button loading={busy} disabled={total === 0 && enabled} onClick={submit}>
-            {s ? "Save settings" : paid ? "Turn on autopilot" : "Save settings"}
+            {s ? "Save" : paid ? "Turn on" : "Save"}
           </Button>
         </div>
       </CardContent>
@@ -331,7 +330,7 @@ function TrustLadder({ data }: { data: Data }) {
     <Card>
       <CardHeader>
         <CardTitle as="h2">Trust ladder</CardTitle>
-        <CardDescription>Approve {rows[0]?.threshold ?? 5} posts on a channel without edits and it starts posting on its own. A rejection or a problem sends it back to asking first.</CardDescription>
+        <CardDescription>{rows[0]?.threshold ?? 5} unedited approvals unlock a channel. Problems reset it.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-4">
         {rows.map((t) => (
@@ -343,7 +342,7 @@ function TrustLadder({ data }: { data: Data }) {
               <p className="flex items-center gap-1.5 text-ui font-medium text-ink">
                 <SocialIcon network={t.channel} size="sm" /> {networkName(t.channel)}
               </p>
-              <p className="text-xs text-ink-3">{t.unlocked ? "Posts on its own" : `${t.threshold - t.streak} more to go`}</p>
+              <p className="text-xs text-ink-3">{t.unlocked ? "Auto-posts" : `${t.threshold - t.streak} to go`}</p>
             </div>
           </div>
         ))}
@@ -375,7 +374,7 @@ function WeekView({ slug, data }: { slug: string; data: Data }) {
           <h2 id="week-heading" className="heading-section">
             {week === 0 ? "This week" : "Next week"}
           </h2>
-          <p className="mt-0.5 text-sm text-ink-3">{w.plan ? w.plan.theme : week === 1 ? "Your team plans next week on Thursday morning." : "No plan for this week yet."}</p>
+          <p className="mt-0.5 text-sm text-ink-3">{w.plan ? w.plan.theme : week === 1 ? "Planned Thursday morning." : "No plan yet."}</p>
         </div>
         <Segmented
           label="Week"
@@ -394,11 +393,18 @@ function WeekView({ slug, data }: { slug: string; data: Data }) {
         <div className="grid gap-3 lg:grid-cols-2">
           <Card>
             <CardContent className="flex flex-col gap-2">
-              <p className="text-overline">Content pillars</p>
+              <p className="text-overline flex items-center gap-1.5">
+                <Layers aria-hidden className="size-3.5" /> Content pillars
+              </p>
               <ul className="flex flex-col gap-1.5">
                 {w.plan.pillars.map((p) => (
                   <li key={p.name} className="text-ui">
-                    <span className="font-medium text-ink">{p.name}</span> <span className="text-ink-3">· {p.why}</span>
+                    <Tooltip content={p.why}>
+                      <span tabIndex={0} className="rounded-md font-medium text-ink">
+                        {p.name}
+                        <span className="sr-only">: {p.why}</span>
+                      </span>
+                    </Tooltip>
                   </li>
                 ))}
               </ul>
@@ -406,10 +412,14 @@ function WeekView({ slug, data }: { slug: string; data: Data }) {
           </Card>
           <Card>
             <CardContent className="flex flex-col gap-2">
-              <p className="text-overline">What we learned and changed</p>
+              <p className="text-overline flex items-center gap-1.5">
+                <Lightbulb aria-hidden className="size-3.5" /> Learnings
+              </p>
               <ul className="flex list-disc flex-col gap-1.5 pl-4 text-ui text-ink-2 marker:text-ink-3">
                 {w.plan.learnings.map((l) => (
-                  <li key={l}>{l}</li>
+                  <li key={l}>
+                    <ClampText lines={1}>{l}</ClampText>
+                  </li>
                 ))}
               </ul>
             </CardContent>
@@ -418,7 +428,7 @@ function WeekView({ slug, data }: { slug: string; data: Data }) {
       ) : null}
 
       {w.slots.length === 0 ? (
-        <EmptyState icon={<CalendarClock />} title={week === 0 ? "Nothing planned this week" : "Next week isn't planned yet"} body="Press Plan now and your team plans and drafts the week in a few minutes." />
+        <EmptyState icon={<CalendarClock />} title={week === 0 ? "Nothing planned this week" : "Next week isn't planned yet"} body="Press Plan now." />
       ) : (
         <div className="grid gap-2 md:grid-cols-7">
           {days.map((d) => {
@@ -495,29 +505,29 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
               <DropdownMenuContent align="end">
                 {slot.artifact ? (
                   <DropdownMenuItem asChild>
-                    <Link href={`/app/${slug}/content/${slot.artifact.id}`}>Open the post</Link>
+                    <Link href={`/app/${slug}/content/${slot.artifact.id}`}>Open</Link>
                   </DropdownMenuItem>
                 ) : null}
                 {canAct && slot.status === "failed" && !slot.artifact ? (
                   <DropdownMenuItem
                     icon={<RotateCcw />}
-                    onSelect={() => redraft({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Drafting it again." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                    onSelect={() => redraft({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Redrafting." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
                   >
-                    Draft it again
+                    Redraft
                   </DropdownMenuItem>
                 ) : null}
                 {!canAct || sending ? null : slot.status !== "published" ? (
                   <DropdownMenuItem
                     icon={<SkipForward />}
-                    onSelect={() => skip({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Skipped. Nothing will post in this slot." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                    onSelect={() => skip({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Skipped." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
                   >
-                    Skip this post
+                    Skip
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
                     danger
                     icon={<TriangleAlert />}
-                    onSelect={() => report({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Thanks. This channel will ask you first from now on." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
+                    onSelect={() => report({ slug, slotId: slot.id as Id<"calendarSlots"> }).then(() => toast({ title: "Reported. This channel asks first now." })).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}
                   >
                     Report a problem
                   </DropdownMenuItem>
@@ -528,11 +538,11 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
         </span>
       </div>
       {slot.artifact ? (
-        <Link href={`/app/${slug}/content/${slot.artifact.id}`} className="line-clamp-3 text-ui text-ink hover:underline">
+        <Link href={`/app/${slug}/content/${slot.artifact.id}`} className="line-clamp-2 text-ui text-ink hover:underline">
           {slot.artifact.title}
         </Link>
       ) : (
-        <p className="line-clamp-3 text-ui text-ink-2">{slot.idea}</p>
+        <p className="line-clamp-2 text-ui text-ink-2">{slot.idea}</p>
       )}
       <Tooltip content={reasons.length ? reasons.join(" ") : `${slot.purpose} · ${slot.format.replace("_", " ")} · ${slot.pillar}`}>
         <span tabIndex={0} className="self-start rounded-md">

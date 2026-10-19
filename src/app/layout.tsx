@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Hanken_Grotesk } from "next/font/google";
 import localFont from "next/font/local";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import "./globals.css";
 
-// Inter for the product UI (dense, legible SaaS type); Reckless Neue, our serif, for page titles, big numbers
-// and marketing headlines.
-const sans = Inter({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
+// Hanken Grotesk for body and UI (owner choice, 2026-10-19); Reckless Neue, our serif, for titles,
+// ClimbOS's voice and hero numbers.
+const hanken = Hanken_Grotesk({ variable: "--font-hanken-ui", subsets: ["latin"], display: "swap" });
 const recklessNeue = localFont({
   variable: "--font-display-serif",
   display: "swap",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f5f6f8",
+  themeColor: "#e8ece5",
   width: "device-width",
   initialScale: 1,
 };
@@ -54,7 +54,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" className={`${sans.variable} ${mono.variable} ${recklessNeue.variable} h-full antialiased`}>
+      <html lang="en" className={`${hanken.variable} ${mono.variable} ${recklessNeue.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col">
           <a href="#main" className="skip-link">
             Skip to content

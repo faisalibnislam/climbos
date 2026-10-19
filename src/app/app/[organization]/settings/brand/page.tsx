@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Magic, Plus, X } from "@/components/icons";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
@@ -27,7 +27,7 @@ function LanguageField({ slug }: { slug: string }) {
   const set = useMutation(api.translate.setLanguage);
   if (lang === undefined) return null;
   return (
-    <Field label="Content language" hint="Posts, emails, ads and pages are written in this language. Chat and inbox replies match the customer's language.">
+    <Field label="Content language" hint="Replies match the customer’s language.">
       <Select
         options={CONTENT_LANGUAGES.map((l) => ({ value: l, label: l }))}
         value={lang}
@@ -59,17 +59,17 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
   }
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Brand kit" intro="How your team writes and what it looks like. Every draft, image and reel uses this." />
+      <SettingsHeader title="Brand kit" />
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <Field label="Voice" hint="One or two sentences. E.g. “Friendly expert, plain words, a little playful.”">
+          <Field label="Voice" hint="1–2 sentences">
             <Textarea value={voice} onChange={(e) => setVoice(e.target.value)} rows={2} autosize />
           </Field>
-          <Field label="Tone words" hint="Up to 8, separated by commas.">
+          <Field label="Tone words" hint="Up to 8, comma-separated">
             <Input value={tone} onChange={(e) => setTone(e.target.value)} placeholder="warm, direct, confident" />
           </Field>
           <LanguageField slug={slug} />
-          <Field label="Never say or do" hint="One per line.">
+          <Field label="Never say or do" hint="One per line">
             <Textarea value={doNots} onChange={(e) => setDoNots(e.target.value)} rows={3} autosize />
           </Field>
           <div className="flex flex-col gap-2">
@@ -100,13 +100,13 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
           >
             Save
           </Button>
-          {!data.exists ? <p className="text-xs text-ink-3">Finish onboarding first; your team drafts a brand kit from your website.</p> : null}
+          {!data.exists ? <p className="text-xs text-ink-3">Finish onboarding first.</p> : null}
         </CardContent>
       </Card>
       <Card>
         <CardContent className="flex flex-col gap-3">
           <p className="heading-card">Learned from your edits</p>
-          <p className="text-sm text-ink-3">When you rewrite a draft, your team notices. Every {data.learnAfter} edits it updates these rules (about 1 credit).</p>
+          <p className="text-sm text-ink-3">Updates every {data.learnAfter} edits · ~1 credit</p>
           {data.learnedRules.length ? (
             <ul className="flex flex-col gap-1.5">
               {data.learnedRules.map((r, i) => (
@@ -119,14 +119,14 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-ink-2">Nothing learned yet.</p>
+            <p className="text-sm text-ink-2">Nothing yet</p>
           )}
           <Progress value={(Math.min(data.pending, data.learnAfter) / data.learnAfter) * 100} label="Edits until the next update" />
           <p className="flex items-center justify-between gap-2 text-xs text-ink-3">
-            {data.pending} of {data.learnAfter} edits collected
+            {data.pending}/{data.learnAfter} edits
             {data.pending >= 2 ? (
               <Button size="sm" variant="secondary" loading={busy === "learn"} onClick={() => run("learn", () => learnNow({ slug }), "Learning from your edits")}>
-                <Sparkles aria-hidden /> Learn now
+                <Magic aria-hidden /> Learn now
               </Button>
             ) : null}
           </p>

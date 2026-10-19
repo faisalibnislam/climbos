@@ -4,36 +4,25 @@ import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Button, Callout, Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger, Field, Input, toast } from "@/components/ui";
+import { Scannable } from "@/components/ds/content";
 import { errorMessage } from "../errors";
 
 type KeyProvider = "email_resend" | "stripe_revenue";
 
-const COPY: Record<KeyProvider, { title: string; label: string; hint: string; placeholder: string; steps: ReactNode }> = {
+const COPY: Record<KeyProvider, { title: string; label: string; hint: string; placeholder: string; steps: string[] }> = {
   stripe_revenue: {
     title: "Connect Stripe (read-only)",
     label: "Stripe restricted key",
-    hint: "Starts with rk_. Never paste your secret key (sk_).",
+    hint: "Starts with rk_. Never sk_.",
     placeholder: "rk_live_…",
-    steps: (
-      <ol className="list-decimal space-y-1 pl-5">
-        <li>In Stripe, open Developers → API keys → Create restricted key.</li>
-        <li>Give it Read access to Charges, Invoices and Refunds only. Leave everything else as None.</li>
-        <li>Copy the key (it starts with rk_) and paste it below.</li>
-      </ol>
-    ),
+    steps: ["Stripe → Developers → API keys → Create restricted key.", "Read: Charges, Invoices, Refunds. All else: None."],
   },
   email_resend: {
     title: "Connect your Resend account",
     label: "Resend API key",
-    hint: "Starts with re_. Use a key from your own Resend account.",
+    hint: "Starts with re_.",
     placeholder: "re_…",
-    steps: (
-      <ol className="list-decimal space-y-1 pl-5">
-        <li>In your Resend account, open API Keys → Create API key.</li>
-        <li>ClimbOS needs full access so it can manage your contacts, segments and broadcasts. Emails are sent from your account and your domain.</li>
-        <li>Copy the key (it starts with re_) and paste it below.</li>
-      </ol>
-    ),
+    steps: ["Resend → API Keys → Create API key.", "Full access (contacts, segments, broadcasts)."],
   },
 };
 
@@ -57,7 +46,7 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
     try {
       const res = await connect({ slug, provider, apiKey: key });
       if (res.ok) {
-        toast({ tone: "success", title: provider === "stripe_revenue" ? "Stripe connected" : "Resend connected", description: "The provider accepted the key." });
+        toast({ tone: "success", title: provider === "stripe_revenue" ? "Stripe connected" : "Resend connected" });
         setKey("");
         setOpen(false);
       } else {
@@ -83,9 +72,9 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title={copy.title} description="Least privilege: give ClimbOS only the access it needs.">
+      <DialogContent title={copy.title}>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <div className="text-sm text-ink-2">{copy.steps}</div>
+          <Scannable text={copy.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")} shape="steps" max={copy.steps.length} tone="muted" />
           <Field label={copy.label} hint={copy.hint} error={error ?? undefined}>
             <Input
               type="password"
@@ -101,8 +90,7 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
             {error ?? ""}
           </p>
           <Callout tone="info">
-            We check the key with the provider, then store it encrypted. It&apos;s never shown again — not to you, your team or ClimbOS staff. You can disconnect at
-            any time.
+            Checked, stored encrypted, never shown again.
           </Callout>
           <DialogFooter className="mt-2">
             <DialogClose asChild>
@@ -110,8 +98,8 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" loading={busy} loadingText="Checking key…">
-              Check and connect
+            <Button type="submit" loading={busy} loadingText="Checking…">
+              Connect
             </Button>
           </DialogFooter>
         </form>

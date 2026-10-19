@@ -7,7 +7,7 @@ import { extendTailwindMerge } from "tailwind-merge";
  */
 const twMerge = extendTailwindMerge({
   extend: {
-    theme: { text: ["2xs", "ui"] },
+    theme: { text: ["2xs", "ui", "kpi"] },
     classGroups: {
       "font-size": ["heading-page", "heading-section", "heading-card", "heading-dialog", "text-overline", "metric"],
     },

@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleCheck, Loader2 } from "lucide-react";
+import { CircleCheck, Loader2 } from "@/components/icons"
 import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { relativeTime } from "@/components/app/money";

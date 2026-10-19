@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, Target, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, Target, type LucideIcon } from "@/components/icons"
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -63,11 +63,11 @@ export function CommandPalette({ slug }: { slug: string }) {
       { id: "today", label: "Today", icon: Home, run: go(`/app/${slug}/today`) },
       { id: "plan", label: "Growth plan", icon: Compass, run: go(`/app/${slug}/plan`) },
       { id: "content", label: "Content", icon: CalendarDays, run: go(`/app/${slug}/content`) },
-      { id: "studio", label: "Design studio", hint: "Create an image post or carousel", icon: Palette, run: go(`/studio/${slug}`) },
+      { id: "studio", label: "Design studio", hint: "Images, carousels", icon: Palette, run: go(`/studio/${slug}`) },
       { id: "results", label: "Results", icon: BarChart3, run: go(`/app/${slug}/results`) },
       { id: "connections", label: "Connections", icon: Plug, run: go(`/app/${slug}/connections`) },
-      { id: "business", label: "Business & goal", hint: "Change your goal, budget or refresh research", icon: Target, run: go(`/app/${slug}/settings/business`) },
-      { id: "billing", label: "Plans and usage", icon: CreditCard, run: go(`/app/${slug}/settings/billing`) },
+      { id: "business", label: "Business & goal", hint: "Goal, budget, research", icon: Target, run: go(`/app/${slug}/settings/business`) },
+      { id: "billing", label: "Billing", hint: "Plans, credits", icon: CreditCard, run: go(`/app/${slug}/settings/billing`) },
       { id: "settings", label: "Settings", icon: Settings, run: go(`/app/${slug}/settings/team`) },
     ];
     const term = q.trim().toLowerCase();
@@ -76,7 +76,7 @@ export function CommandPalette({ slug }: { slug: string }) {
     const ask: Command = {
       id: "ask",
       label: `Make it happen: “${q.trim()}”`,
-      hint: "Your team starts right away",
+      hint: "Starts now",
       icon: Sparkles,
       run: () => {
         const wish = q.trim();
@@ -123,7 +123,7 @@ export function CommandPalette({ slug }: { slug: string }) {
                 commands[clamp]?.run();
               }
             }}
-            placeholder="Tell your team what you want, or jump to…"
+            placeholder="Make a wish or jump to…"
             aria-label="Make a wish or search"
             role="combobox"
             aria-expanded="true"

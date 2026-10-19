@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { AtSign, Bell, CheckCircle2, ClipboardList, MessageSquare } from "lucide-react";
+import { AtSign, Bell, CheckCircle2, ClipboardList, MessageSquare } from "@/components/icons"
 import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ export function NotificationBell({ slug }: { slug: string }) {
             })}
           </ul>
         ) : (
-          <p className="px-4 py-6 text-center text-sm text-ink-3">Nothing new. Mentions, assignments and approval requests show up here.</p>
+          <p className="px-4 py-6 text-center text-sm text-ink-3">Nothing new</p>
         )}
         <Link href={`/app/${slug}/settings/activity`} className="block border-t border-line px-4 py-2.5 text-center text-xs font-medium text-brand-800 hover:underline">
           All activity

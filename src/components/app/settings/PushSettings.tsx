@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BellRing, Smartphone, Trash2 } from "lucide-react";
+import { BellRing, Smartphone, Trash2 } from "@/components/icons"
 import { useEffect, useState } from "react";
 import { Button, Callout, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
@@ -46,7 +46,7 @@ export function PushSettings() {
       const reg = await navigator.serviceWorker.register(`/sw.js?pull=${encodeURIComponent(pull)}`, { scope: "/" });
       const perm = await Notification.requestPermission();
       if (perm !== "granted") {
-        toast({ tone: "info", title: "Notifications are blocked", description: "Allow notifications for ClimbOS in this browser's site settings, then try again." });
+        toast({ tone: "info", title: "Notifications are blocked", description: "Allow them in site settings, then retry." });
         return;
       }
       const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pub) }));
@@ -64,16 +64,16 @@ export function PushSettings() {
       <h2 id="push-heading" className="heading-section flex items-center gap-2">
         <BellRing className="size-4 text-brand-800" aria-hidden /> Phone notifications
       </h2>
-      <p className="text-sm text-ink-3">Approve drafts and answer leads from your phone. We notify you about approvals, replies, new leads, chats and bookings.</p>
+      <p className="text-sm text-ink-3">Approvals, replies, leads, chats, bookings</p>
       {support === "ios-install" ? (
-        <Callout tone="info" title="On iPhone, add ClimbOS to your Home Screen first">
-          Tap Share → Add to Home Screen, open ClimbOS from there, then turn notifications on.
+        <Callout tone="info" title="Add to Home Screen first">
+          Share → Add to Home Screen, then open from there.
         </Callout>
       ) : support === "no" ? (
         <p className="text-sm text-ink-2">This browser doesn&apos;t support notifications.</p>
       ) : (
         <Button className="self-start" loading={busy} disabled={!pub} onClick={turnOn}>
-          <Smartphone aria-hidden /> Turn on for this device
+          <Smartphone aria-hidden /> Turn on
         </Button>
       )}
       {devices?.length ? (

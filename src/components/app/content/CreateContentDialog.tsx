@@ -4,11 +4,10 @@ import { AiModePicker, useAiMode, type AiMode } from "../AiModePicker";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Sparkles } from "lucide-react";
+import { Magic } from "@/components/icons";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Badge,
   Button,
   Callout,
   Dialog,
@@ -22,18 +21,19 @@ import {
   SocialIcon,
   Textarea,
 } from "@/components/ui";
+import { StatBlocks } from "@/components/ds/content";
 import { microsToCreditsLabel } from "../money";
-import { ErrorCallout, RoleName, SectionBoundary, artifactStatusMeta, channelLabel, describeMeters, useWorkspaceMember } from "./shared";
+import { ErrorCallout, SectionBoundary, artifactStatusMeta, channelLabel, describeMeters, useWorkspaceMember } from "./shared";
 import { RunProgress } from "./RunProgress";
 
 type Job = "content_social" | "content_ads" | "content_email" | "content_seo";
 type SocialChannel = "instagram" | "facebook" | "linkedin" | "x" | "tiktok" | "pinterest" | "youtube";
 
 const JOB_OPTIONS = [
-  { value: "content_social", title: "Social posts", description: "Captions (and optional images) for one social channel.", icon: "📱" },
-  { value: "content_ads", title: "Ads", description: "Search and social ad copy. Nothing runs or spends until you approve a campaign.", icon: "🎯" },
-  { value: "content_email", title: "Email sequence", description: "A short series of emails for your customers.", icon: "✉️" },
-  { value: "content_seo", title: "SEO page", description: "A web page written to be found on search engines.", icon: "🔍" },
+  { value: "content_social", title: "Social posts", description: "One channel, optional images", icon: "📱" },
+  { value: "content_ads", title: "Ads", description: "Search and social ad copy", icon: "🎯" },
+  { value: "content_email", title: "Email sequence", description: "A short email series", icon: "✉️" },
+  { value: "content_seo", title: "SEO page", description: "A page built for search", icon: "🔍" },
 ];
 
 const SOCIAL_CHANNELS: { value: SocialChannel; label: string }[] = [
@@ -62,12 +62,12 @@ export function CreateContentDialog({ slug }: { slug: string }) {
     >
       <DialogTrigger asChild>
         <Button>
-          <Sparkles aria-hidden="true" /> Create content
+          <Magic aria-hidden="true" /> Create content
         </Button>
       </DialogTrigger>
       <DialogContent
         title="Create content"
-        description="Your AI team writes drafts. Nothing is posted, sent or spent until you approve it."
+        description="Drafts only. You approve before anything goes live."
         className="max-w-2xl"
       >
         <CreateContentForm key={session} slug={slug} onClose={() => setOpen(false)} />
@@ -106,7 +106,7 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
             </SectionBoundary>
           }
         />
-        <p className="text-sm text-ink-3">You can close this window. The team keeps working and new drafts appear in your content list.</p>
+        <p className="text-sm text-ink-3">Safe to close. Drafts land in Content.</p>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose}>
             Close
@@ -146,15 +146,15 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
       }}
     >
       {canEdit === false ? (
-        <Callout tone="info" title="Only some roles can create content">
-          Creating drafts needs an Owner, Admin or Editor. You can still review and approve drafts if you&apos;re a Reviewer.
+        <Callout tone="info" title="Can't create drafts">
+          Needs an Owner, Admin or Editor.
         </Callout>
       ) : null}
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1.5 text-ui font-medium text-ink">What should the team create?</legend>
+        <legend className="mb-1.5 text-ui font-medium text-ink">Type</legend>
         <RadioCards
-          aria-label="What should the team create?"
+          aria-label="Type"
           value={job}
           onValueChange={(v) => setJob(v as Job)}
           options={JOB_OPTIONS}
@@ -179,18 +179,14 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
               }))}
             />
           </Field>
-          <Field label="How many posts?" hint="Between 1 and 6.">
+          <Field label="Posts">
             <Select
               value={String(quantity)}
               onValueChange={(v) => setQuantity(Number(v))}
               options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: `${n} post${n === 1 ? "" : "s"}` }))}
             />
           </Field>
-          <Field
-            label="Include images?"
-            className="sm:col-span-2"
-            hint="Each image may use up to 2 image attempts from your monthly allowance (a retry if the first one isn't usable). Images are labeled “AI-generated illustration”."
-          >
+          <Field label="Images" className="sm:col-span-2" hint="Up to 2 image attempts each. Labeled AI-generated.">
             <Select
               value={String(images)}
               onValueChange={(v) => setImages(Number(v))}
@@ -204,15 +200,11 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
         </div>
       ) : null}
 
-      <Field
-        label="Anything the team should know?"
-        optional
-        hint="For example: a product to feature, an offer, or a tone to use. Leave it empty to let the team follow your plan."
-      >
+      <Field label="Notes" optional hint="Product, offer or tone">
         <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, BRIEF_MAX))} rows={3} autosize maxRows={8} maxLength={BRIEF_MAX} />
       </Field>
       <p className="-mt-4 text-right text-xs tabular-nums text-ink-3">
-        {brief.length} / {BRIEF_MAX} characters
+        {brief.length}/{BRIEF_MAX}
       </p>
 
       {isAds ? <AiModePicker slug={slug} kind="content_ads" value={ai.mode} onChange={ai.setMode} /> : null}
@@ -241,14 +233,13 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
   if (drafts.length === 0) {
     return (
       <Callout tone="info" live="status" title="Finished">
-        No drafts were created this time. <Link href={`/app/${slug}/content?status=in_review`} onClick={onOpen}>See drafts waiting for approval</Link>
+        No drafts created. <Link href={`/app/${slug}/content?status=in_review`} onClick={onOpen}>See pending</Link>
       </Callout>
     );
   }
   return (
-    <Callout tone="success" live="status" title={`See the ${drafts.length} draft${drafts.length === 1 ? "" : "s"}`}>
-      <p>Nothing has been posted. Open each one to check, edit and approve it.</p>
-      <ul className="mt-2 flex flex-col gap-1">
+    <Callout tone="success" live="status" title={`${drafts.length} draft${drafts.length === 1 ? "" : "s"} ready`}>
+      <ul className="flex flex-col gap-1">
         {drafts.map((d) => (
           <li key={d.id}>
             <Link href={`/app/${slug}/content/${d.id}`} onClick={onOpen} className="inline-flex min-h-9 items-center gap-2">
@@ -267,7 +258,7 @@ function EstimatePanel({ slug, job, quantity, images, aiMode }: { slug: string; 
   return (
     <section aria-labelledby="estimate-heading" className="rounded-lg border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
       <h3 id="estimate-heading" className="heading-card">
-        Before you start
+        Cost
       </h3>
       {est === undefined ? (
         <div className="mt-3 flex flex-col gap-2">
@@ -275,28 +266,14 @@ function EstimatePanel({ slug, job, quantity, images, aiMode }: { slug: string; 
           <Skeleton className="h-4 w-1/2" />
         </div>
       ) : (
-        <div className="mt-2 flex flex-col gap-3 text-sm text-ink-2">
-          <p>
-            <span className="font-semibold text-ink">{est.title}.</span> Uses up to <span className="font-semibold text-ink">{microsToCreditsLabel(est.maxCostMicros)}</span>. Unused credits return when the job finishes.
-          </p>
+        <div className="mt-3 grid gap-3 text-sm text-ink-2 sm:grid-cols-2">
+          <StatBlocks className="grid-cols-1" stats={[{ label: est.title, value: `Up to ${microsToCreditsLabel(est.maxCostMicros)}`, hint: "Unused credits return" }]} />
           <div>
             <p className="font-medium text-ink">Counts against</p>
             <ul className="mt-1 list-disc pl-5">
               <li>Your credits</li>
               {describeMeters(est.meters).map((m) => (
                 <li key={m}>{m}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium text-ink">Who works on it</p>
-            <ul className="mt-1 flex flex-wrap gap-2">
-              {est.roles.map((r) => (
-                <li key={r}>
-                  <Badge>
-                    <RoleName role={r} />
-                  </Badge>
-                </li>
               ))}
             </ul>
           </div>

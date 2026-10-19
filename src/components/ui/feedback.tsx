@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 /** Loading placeholder with a gentle shimmer (static under reduced motion). Decorative. */
@@ -33,7 +33,7 @@ export function EmptyState({ icon, title, body, action, headingLevel: H = "h3", 
           {icon}
         </span>
       ) : null}
-      <H className="heading-section">{title}</H>
+      <H className="heading-empty">{title}</H>
       {body ? <p className="max-w-md text-sm text-ink-3">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
@@ -96,7 +96,7 @@ export interface StatProps {
 /** Single number with label and provenance. */
 export function Stat({ label, value, sublabel, change, className }: StatProps) {
   return (
-    <div className={cn("flex flex-col gap-1 rounded-xl border border-line bg-surface p-4", className)}>
+    <div className={cn("flex flex-col gap-1 rounded-[var(--radius-card)] border border-line bg-surface p-4", className)}>
       <dt className="text-ui font-medium text-ink-3">{label}</dt>
       <dd className="metric">{value}</dd>
       {change ? <dd className="text-ui font-medium text-ink-2">{change}</dd> : null}

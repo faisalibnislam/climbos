@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Copy, Download, Maximize2, Minus, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, Download, Maximize2, Minus, Plus, Redo2, Trash2, Undo2 } from "@/components/icons"
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { newId } from "@shared/design/ops";

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { CalendarCheck, CalendarPlus, Clock, Download, Globe } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Clock, Download, Globe } from "@/components/icons"
 import { useParams, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { icsInvite } from "../../../../shared/outbound";

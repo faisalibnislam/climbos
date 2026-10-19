@@ -4,13 +4,12 @@ import { Discussion } from "@/components/app/Discussion";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Target } from "lucide-react";
+import { Compass, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
-import { formatDateTime } from "@/components/app/money";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import type { Economics } from "../../../../../shared/agents/economics";
@@ -20,10 +19,12 @@ import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView }
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
 import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunProgress";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
-import { PERMISSION_WHO, SectionBoundary, majorToDisplay, useNow } from "@/components/app/content/shared";
+import { PERMISSION_WHO, SectionBoundary, majorToDisplay } from "@/components/app/content/shared";
+import { PlanJumpNav } from "@/components/app/plan/PlanJumpNav";
+import { OlderVersionBar, PlanCompare, RestoreDialog, VersionPicker, usePlanVersions } from "@/components/app/plan/history/PlanHistory";
 
 const STRATEGY_STATUS: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: "Sent back — draft", tone: "neutral" },
+  draft: { label: "Sent back", tone: "red" },
   needs_approval: { label: "Needs your approval", tone: "amber" },
   approved: { label: "Approved", tone: "green" },
   superseded: { label: "Superseded", tone: "neutral" },
@@ -83,8 +84,11 @@ function PlanScreen({ slug }: { slug: string }) {
   // Which version is on screen: the approved one by default, or a newer one being reviewed.
   const [viewId, setViewId] = useState<Id<"strategies"> | null>(null);
   const plan = useQuery(api.workspace.plan, viewId ? { slug, strategyId: viewId } : { slug });
-  const now = useNow();
+  const versions = usePlanVersions(slug);
+  const [compare, setCompare] = useState<{ left: Id<"strategies">; right: Id<"strategies"> } | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [startedRunId, setStartedRunId] = useState<Id<"workflowRuns"> | null>(null);
+  const root = useRef<HTMLDivElement>(null);
 
   if (plan === undefined) {
     return (
@@ -107,27 +111,38 @@ function PlanScreen({ slug }: { slug: string }) {
   // A refresh that stopped after the newest version was written (otherwise it vanishes after a reload).
   const run = plan.strategyRun;
   const refreshStopped = Boolean(s && run && ["failed", "canceled", "uncertain"].includes(run.status) && run.createdAt > (plan.latestVersionAt ?? 0) && run.id !== startedRunId);
+  const latestV = versions?.[0] ?? null;
+  const viewingV = s ? (versions?.find((v) => v.id === s.id) ?? null) : null;
+  // An older version that isn't the one guiding the team: read-only, with compare and restore.
+  const olderView = Boolean(viewingV && latestV && !viewingV.isLatest && !viewingV.inUse);
+  const openCompare = () => {
+    if (!versions || versions.length < 2 || !latestV) return;
+    const left = viewingV && !viewingV.isLatest ? viewingV.id : versions[1].id;
+    setCompare({ left, right: latestV.id });
+  };
+  const onRestored = (id: Id<"strategies">) => {
+    setCompare(null);
+    setViewId(id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div ref={root} className="flex flex-col gap-6">
       <PageHeader
         section="plan"
         title="Your growth plan"
         intro={
           s && status ? (
-            <span className="flex flex-col gap-1">
-              <span className="flex flex-wrap items-center gap-2 text-ink-2">
-                <Badge tone={status.tone}>{status.label}</Badge>
-                <span>
-                  Version {s.version}
-                  {now ? ` · created ${formatDateTime(s.createdAt)}` : ""}
-                </span>
-              </span>
-              {s.version > 1 ? <span className="text-xs">Earlier versions are kept as superseded and no longer guide the team.</span> : null}
+            <span className="flex flex-wrap items-center gap-2">
+              {versions && versions.length ? (
+                <VersionPicker versions={versions} viewingId={s.id} onView={(id) => { setCompare(null); setViewId(id); }} onCompare={openCompare} />
+              ) : (
+                <span className="text-ink-2">Version {s.version}</span>
+              )}
+              {/* With several versions the picker carries the status. */}
+              {(s.status === "needs_approval" || s.status === "draft") && (versions?.length ?? 0) <= 1 ? <Badge tone={status.tone}>{status.label}</Badge> : null}
             </span>
-          ) : (
-            "Your AI CEO and CMO turn your goal into a plan: who to reach, which channels, what to test."
-          )
+          ) : null
         }
         actions={
           s && plan.canEdit ? (
@@ -166,27 +181,44 @@ function PlanScreen({ slug }: { slug: string }) {
         </Callout>
       ) : null}
 
-      {s && other ? (
+      {olderView && viewingV && latestV ? (
+        <OlderVersionBar version={viewingV} latest={latestV} canEdit={plan.canEdit} onBack={() => setViewId(null)} onCompare={openCompare} onRestore={() => setRestoreOpen(true)} />
+      ) : s && other && !compare ? (
         <Callout
           tone={other.status === "needs_approval" || s.status === "needs_approval" ? "warning" : "info"}
           title={
             s.status === "approved"
               ? other.status === "needs_approval"
-                ? `Version ${other.version} is waiting for approval`
-                : `Version ${other.version} was sent back`
-              : `You're viewing version ${s.version}. Version ${other.version} (approved) still guides the team.`
+                ? `v${other.version} is waiting for approval`
+                : `v${other.version} was sent back`
+              : `v${other.version} is in use until you approve this one`
           }
           action={
             <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
-              {s.status === "approved" ? `See version ${other.version}` : "Back to the approved plan"}
+              {s.status === "approved" ? `See v${other.version}` : `See v${other.version}`}
             </Button>
           }
-        >
-          {s.status === "approved" ? "The approved plan below keeps guiding the team until a new version is approved." : "Approving this version replaces it."}
-        </Callout>
+        />
       ) : null}
 
-      <Tabs defaultValue="plan">
+      {viewingV && latestV && !viewingV.isLatest ? (
+        <RestoreDialog slug={slug} from={viewingV} latest={latestV} open={restoreOpen} onOpenChange={setRestoreOpen} onRestored={onRestored} />
+      ) : null}
+
+      {compare && versions ? (
+        <PlanCompare
+          key={`${compare.left}-${compare.right}`}
+          slug={slug}
+          versions={versions}
+          initialLeft={compare.left}
+          initialRight={compare.right}
+          canEdit={plan.canEdit}
+          onClose={() => setCompare(null)}
+          onRestored={onRestored}
+        />
+      ) : null}
+
+      <Tabs defaultValue="plan" className={compare ? "hidden" : undefined}>
         <TabsList>
           <TabsTrigger value="plan">Plan</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -223,15 +255,10 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[] } } | null)?.quality ?? null} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[] } } | null)?.quality ?? null} /> : null}
           {s.status === "draft" ? (
-            <Callout tone="warning" title="This plan was sent back">
-              No work starts from it. {plan.canEdit ? "Use “Refresh plan” to get a new version." : `Ask ${PERMISSION_WHO.edit} to refresh it.`}
-            </Callout>
-          ) : null}
-          {s.status === "superseded" ? (
-            <Callout tone="info" title="This version has been superseded">
-              A newer approved plan guides the team now.
+            <Callout tone="warning" title="Sent back">
+              {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
             </Callout>
           ) : null}
           <ShortVersion strategy={s} />
@@ -255,6 +282,7 @@ function PlanScreen({ slug }: { slug: string }) {
       <SectionBoundary label="recent work">
         <RecentWork slug={slug} />
       </SectionBoundary>
+      <PlanJumpNav rootRef={root} />
     </div>
   );
 }

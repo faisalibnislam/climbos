@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@/components/icons"
 import { useState } from "react";
 import { Button, Field, Input, Select, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
@@ -20,7 +20,7 @@ export function InviteLinks({ slug, canInviteAdmins }: { slug: string; canInvite
       <h2 id="links-heading" className="heading-section">
         Invite link
       </h2>
-      <p className="text-sm text-ink-3">Anyone with the link can join as the role you pick, up to 10 people, for 7 days. Seats still apply.</p>
+      <p className="text-sm text-ink-3">Up to 10 people · 7 days · uses seats</p>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Joins as" className="w-48">
           <Select
@@ -91,7 +91,7 @@ export function ApprovalLimit({ slug, current }: { slug: string; current: number
       <h2 id="limit-heading" className="heading-section">
         Big jobs need approval
       </h2>
-      <p className="text-sm text-ink-3">Editors draft freely; jobs over this many credits need an owner or admin to start them. Leave empty for no limit.</p>
+      <p className="text-sm text-ink-3">Jobs over this need an owner or admin.</p>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Credits" className="w-40">
           <Input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ""))} placeholder="No limit" />

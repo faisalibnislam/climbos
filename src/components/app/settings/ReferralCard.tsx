@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Gift } from "lucide-react";
+import { Gift } from "@/components/icons"
 import { useState } from "react";
 import { Button } from "@/components/ui";
+import { StatBlocks } from "@/components/ds/content";
 
 /** "Give 200, get 200": the account's share link and what it has earned. */
 export function ReferralCard({ slug }: { slug: string }) {
@@ -21,7 +22,7 @@ export function ReferralCard({ slug }: { slug: string }) {
           Give {data.credits}, get {data.credits}
         </h2>
       </div>
-      <p className="mt-1 text-sm text-ink-3">When someone you invite buys a package, you both get {data.credits} credits (valid 12 months).</p>
+      <p className="mt-1 text-sm text-ink-3">When they buy a package · valid 12 months</p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {link ? (
           <>
@@ -48,11 +49,14 @@ export function ReferralCard({ slug }: { slug: string }) {
           </Button>
         )}
       </div>
-      <dl className="mt-4 flex gap-6 text-sm">
-        <div><dt className="text-ink-3">Signed up</dt><dd className="font-medium">{data.signedUp}</dd></div>
-        <div><dt className="text-ink-3">Bought</dt><dd className="font-medium">{data.rewarded}</dd></div>
-        <div><dt className="text-ink-3">Credits earned</dt><dd className="font-medium">{data.earned}</dd></div>
-      </dl>
+      <StatBlocks
+        className="mt-4"
+        stats={[
+          { label: "Signed up", value: data.signedUp },
+          { label: "Bought", value: data.rewarded },
+          { label: "Credits earned", value: data.earned, tone: data.earned > 0 ? "good" : "default" },
+        ]}
+      />
     </section>
   );
 }

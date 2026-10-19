@@ -11,7 +11,7 @@ import {
   FaXTwitter,
   FaYoutube,
 } from "react-icons/fa6";
-import { Globe, Mail } from "lucide-react";
+import { Globe, Mail } from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 /**

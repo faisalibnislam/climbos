@@ -19,7 +19,7 @@ import {
   Sparkles,
   Wallet,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons"
 import { buttonClasses } from "@/components/ui/button-styles";
 import { IconTile } from "@/components/ui/icon-tile";
 import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";

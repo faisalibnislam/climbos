@@ -3,18 +3,19 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ClipboardPen } from "lucide-react";
+import { ChartLine, CircleAlert, CircleCheck, ClipboardPen, Clock, type LucideIcon } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
+import { cn } from "@/lib/utils";
 
-const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone }> = {
-  ahead: { label: "Ahead of plan", tone: "green" },
-  on_track: { label: "On track", tone: "neutral" },
-  behind: { label: "Behind: check the kill rule", tone: "red" },
-  too_early: { label: "Too early to tell", tone: "neutral" },
+const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: LucideIcon }> = {
+  ahead: { label: "Ahead of plan", tone: "green", icon: CircleCheck },
+  on_track: { label: "On track", tone: "blue", icon: CircleCheck },
+  behind: { label: "Behind: check stop rule", tone: "red", icon: CircleAlert },
+  too_early: { label: "Too early to tell", tone: "neutral", icon: Clock },
 };
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -27,6 +28,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, canEdi
   const [busy, setBusy] = useState(false);
   const [vals, setVals] = useState<Record<string, string>>({});
   const fields = [{ key: "reach", label: "Reached" }, ...model.steps.map((s, i) => ({ key: `s${i}`, label: s.name })), { key: "spend", label: "Spent ($)" }, { key: "hours", label: "Your hours" }];
+  const st = actuals ? STATUS[actuals.status] : null;
   const submit = async () => {
     const n = (k: string) => Number(vals[k] || 0);
     setBusy(true);
@@ -42,30 +44,55 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, canEdi
     }
   };
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-line p-2.5">
+    <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line p-3">
+      <p className="text-overline flex items-center gap-1.5">
+        <ChartLine aria-hidden className="size-3.5" /> Plan vs actual
+      </p>
       {actuals ? (
         <>
-          <p className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-ink-2">
-              Week {actuals.weeks}: {actuals.customers} customer{actuals.customers === 1 ? "" : "s"} <span className="font-normal text-ink-3">(plan ≈{r1(actuals.expectedByNow.p50)} by now)</span>
-            </span>
-            <Badge tone={STATUS[actuals.status].tone}>{STATUS[actuals.status].label}</Badge>
-          </p>
-          <ul className="flex flex-col gap-0.5 text-xs text-ink-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold tabular-nums text-ink">{actuals.customers}</span>
+              <span className="text-ui text-ink-2">
+                customer{actuals.customers === 1 ? "" : "s"} · week {actuals.weeks}
+              </span>
+              <span className="text-xs tabular-nums text-ink-3">plan ≈{r1(actuals.expectedByNow.p50)}</span>
+            </p>
+            {st ? (
+              <Badge tone={st.tone} icon={<st.icon />}>
+                {st.label}
+              </Badge>
+            ) : null}
+          </div>
+          <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
               .filter((s) => s.trials > 0)
-              .map((s) => (
-                <li key={s.name} className="flex justify-between gap-2 tabular-nums">
-                  <span className="truncate">{s.name}</span>
-                  <span>
-                    <span className="text-ink">{pct(s.successes / s.trials)}</span> vs {pct(s.planned)} planned · {s.successes}/{s.trials}
-                  </span>
-                </li>
-              ))}
+              .map((s) => {
+                const rate = s.successes / s.trials;
+                const max = Math.max(rate, s.planned, 0.0001) * 1.15;
+                return (
+                  <li key={s.name} className="flex flex-col gap-1">
+                    <span className="flex justify-between gap-2 tabular-nums">
+                      <span className="truncate text-ink-2">{s.name}</span>
+                      <span className="shrink-0 text-ink-3">
+                        <span className={cn("font-semibold", rate >= s.planned ? "text-green-800" : "text-red-800")}>{pct(rate)}</span> vs {pct(s.planned)} · {s.successes}/{s.trials}
+                      </span>
+                    </span>
+                    <span
+                      role="img"
+                      aria-label={`${s.name}: ${pct(rate)} actual vs ${pct(s.planned)} planned`}
+                      className="relative h-1.5 overflow-hidden rounded-full bg-surface-3"
+                    >
+                      <span className={cn("absolute inset-y-0 left-0 rounded-full", rate >= s.planned ? "bg-green-500" : "bg-red-500")} style={{ width: `${(rate / max) * 100}%` }} />
+                      <span aria-hidden className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(s.planned / max) * 100}%` }} />
+                    </span>
+                  </li>
+                );
+              })}
           </ul>
         </>
       ) : (
-        <p className="text-xs text-ink-3">No results yet. Log each week to see plan vs actual.</p>
+        <p className="text-xs text-ink-3">No results yet. Log weekly to compare.</p>
       )}
       {canEdit && !open ? (
         <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen(true)}>

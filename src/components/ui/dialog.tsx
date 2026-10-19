@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertDialog, Dialog as RDialog } from "radix-ui";
-import { X } from "lucide-react";
+import { X } from "@/components/icons"
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";

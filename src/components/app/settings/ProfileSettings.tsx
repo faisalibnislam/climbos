@@ -17,7 +17,7 @@ export function ProfileSettings({ slug: _slug }: { slug: string }) {
   const prefs = useQuery(api.settings.preferences, {});
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Profile" intro="Your name and the emails ClimbOS sends you. These settings are yours and apply to every workspace you belong to." />
+      <SettingsHeader title="Profile" intro="Applies to all your workspaces" />
       {prefs === undefined ? <LoadingBlock label="Loading your profile…" /> : <ProfileForm key={`${prefs.name}-${prefs.digest}-${prefs.usageAlerts}`} prefs={prefs} />}
     </div>
   );
@@ -52,13 +52,12 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
         <h2 id="you-heading" className="heading-section">
           About you
         </h2>
-        <Field label="Your name" hint="Shown to your team in approvals and the activity log." optional>
+        <Field label="Your name" optional>
           <Input autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <div className="flex flex-col gap-1">
           <p className="text-ui font-medium text-ink">Email</p>
           <p className="text-sm text-ink-2">{prefs.email ?? "No email on this account"}</p>
-          <p className="text-xs text-ink-3">This is the address you sign in with.</p>
         </div>
       </section>
 
@@ -77,15 +76,15 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
             value={digest}
             onValueChange={(v) => setDigest(v as Digest)}
             options={[
-              { value: "daily", title: "Daily", description: "A short summary each morning." },
-              { value: "weekly", title: "Weekly", description: "One summary every Monday." },
-              { value: "off", title: "Off", description: "No summaries. Approval requests still arrive." },
+              { value: "daily", title: "Daily", description: "Each morning" },
+              { value: "weekly", title: "Weekly", description: "Mondays" },
+              { value: "off", title: "Off", description: "Approvals still arrive" },
             ]}
           />
         </div>
         <Switch
           label="Usage alerts"
-          description="Email me when this month's allowance is 70%, 90% and 100% used."
+          description="At 70%, 90% and 100% of monthly credits"
           checked={alerts}
           onCheckedChange={setAlerts}
         />
@@ -93,14 +92,14 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
 
       <div aria-live="polite">
         {error ? (
-          <Callout tone="danger" live="none" title="Your profile wasn't saved">
+          <Callout tone="danger" live="none" title="Profile not saved">
             {error}
           </Callout>
         ) : null}
       </div>
       <div>
         <Button type="submit" loading={busy} loadingText="Saving…" disabled={!dirty}>
-          Save profile
+          Save
         </Button>
       </div>
     </form>

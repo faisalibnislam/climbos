@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { ClipboardList, Magic, RefreshCw } from "@/components/icons";
 import { useState } from "react";
-import { Button, Card, CardContent, ConfirmDialog, Field, Textarea, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { microsToCreditsLabel } from "../money";
@@ -36,7 +36,7 @@ export function GeneratePlanButton({
   const ai = useAiMode(slug);
   const build = mode === "build";
   const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
-  const cost = `Uses up to ${microsToCreditsLabel(max)}; anything unused is returned.`;
+  const cost = `Up to ${microsToCreditsLabel(max)}; unused credits return.`;
   if (building) {
     return (
       <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"} disabled>
@@ -49,15 +49,15 @@ export function GeneratePlanButton({
       <ConfirmDialog
         trigger={
           <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"}>
-            {build ? <Sparkles aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
+            {build ? <Magic aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
             {build ? "Build my plan" : "Refresh plan"}
           </Button>
         }
         title={build ? "Build your growth plan?" : "Refresh your growth plan?"}
         description={
           build
-            ? `Your AI CEO and AI CMO draft a plan from your goal and the facts about your business. ${cost} Nothing is posted or spent — you review the plan before any work starts.`
-            : `Your AI CEO and AI CMO draft a new version${nextVersion ? ` (version ${nextVersion})` : ""} from your latest goal and facts. ${cost} Your current plan keeps guiding the team until you approve the new one; then the old one is marked superseded.`
+            ? `Drafted from your goal and facts. ${cost} Nothing is posted or spent until you approve.`
+            : `Drafts version ${nextVersion ?? "next"} from your latest goal and facts. ${cost} The current plan guides the team until you approve it.`
         }
         confirmLabel={build ? "Build my plan" : "Draft a new version"}
         onConfirm={async () => {
@@ -72,7 +72,7 @@ export function GeneratePlanButton({
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
       </ConfirmDialog>
-      <p className="text-xs text-ink-3">Up to {microsToCreditsLabel(max)}</p>
+      <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );
@@ -97,7 +97,7 @@ export function StrategyRunWatcher({
   return (
     <Card className="border-brand-200">
       <CardContent className="flex flex-col gap-4">
-        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-sm text-ink-2">Your new plan is below. Review it and approve it when you&apos;re happy.</p>} />
+        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-sm text-ink-2">New plan below. Review, then approve.</p>} />
         {finished && startedRunId ? (
           <Button variant="ghost" className="self-start" onClick={onDismiss}>
             Hide progress
@@ -140,38 +140,48 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
     }
   };
   return (
-    <section aria-labelledby="review-heading" className="rounded-xl border border-amber-500/30 bg-amber-100/60 p-5">
-      <h2 id="review-heading" className="heading-section">
-        Review your plan (version {version})
-      </h2>
-      <p className="mt-1 max-w-3xl text-sm text-ink-2">
-        Approving lets your team start drafting content for the active channels below. Every post, email and ad still needs its own approval before it goes
-        anywhere, and approving the plan spends no money.
-      </p>
-      {quality && quality.state !== "passed" ? (
-        <div className={cn("mt-3 rounded-lg border p-3 text-sm", blocked ? "border-red-500/30 bg-red-100/60 text-red-900" : "border-line bg-surface text-ink-2")}>
-          <p className="font-medium">{QUALITY_LABEL[quality.state]}</p>
-          <ul className="mt-1 list-disc pl-5">
-            {quality.reasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
+    <section aria-labelledby="review-heading" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-amber-500/40 bg-amber-100 p-[var(--card-p)]">
+      <div className="flex items-start gap-3">
+        <IconTile icon={ClipboardList} tone="amber" size="sm" className="bg-surface" />
+        <div className="min-w-0 flex-1">
+          <h2 id="review-heading" className="heading-section">
+            Review plan v{version}
+          </h2>
+          <ul className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-amber-800">
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Starts drafts for active channels</li>
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Each post, email, ad still needs approval</li>
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Spends no money</li>
           </ul>
-          {blocked ? <p className="mt-1">It can&apos;t start work. Refresh the plan, or send it back with what to change.</p> : null}
         </div>
+      </div>
+      {quality && quality.state !== "passed" ? (
+        <Callout tone={blocked ? "danger" : "warning"} live="none" title={QUALITY_LABEL[quality.state]} className={cn(!blocked && "bg-surface")}>
+          {quality.reasons.length ? (
+            <ul className="flex flex-col gap-1">
+              {quality.reasons.map((r) => (
+                <li key={r} className="flex min-w-0 items-start gap-2">
+                  <span aria-hidden className={cn("mt-[0.6em] size-1.5 shrink-0", blocked ? "bg-red-800" : "bg-amber-800")} />
+                  <span className="min-w-0">{r}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {blocked ? <p className="mt-1.5 font-medium text-red-800">Can&apos;t start work. Refresh the plan, or send it back with what to change.</p> : null}
+        </Callout>
       ) : null}
       {canApprove ? (
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <ConfirmDialog
             trigger={<Button disabled={blocked}>Approve plan</Button>}
             title={`Approve plan version ${version}?`}
-            description="Proposed channels become active and the team starts preparing drafts for them. Any earlier approved plan is marked superseded. Nothing is posted, sent or spent without a separate approval."
+            description="Proposed channels go active and drafts start. Any earlier plan is superseded. Nothing is posted, sent or spent without its own approval."
             confirmLabel="Approve plan"
             onConfirm={() => run("approve")}
           />
           <ConfirmDialog
             trigger={<Button variant="secondary">Send back</Button>}
             title="Send this plan back?"
-            description="It goes back to draft and no work starts from it. You can refresh the plan to get a new version."
+            description="It goes back to draft; no work starts. Refresh the plan for a new version."
             confirmLabel="Send plan back"
             onConfirm={() => run("reject")}
           >
@@ -181,9 +191,9 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
           </ConfirmDialog>
         </div>
       ) : (
-        <p className="mt-3 text-sm font-medium text-ink">Waiting for {PERMISSION_WHO.approve} to approve it.</p>
+        <p className="text-sm font-medium text-ink">Waiting for {PERMISSION_WHO.approve} to approve it.</p>
       )}
-      {error ? <ErrorCallout error={error} className="mt-4" /> : null}
+      {error ? <ErrorCallout error={error} /> : null}
     </section>
   );
 }

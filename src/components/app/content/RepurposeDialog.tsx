@@ -3,7 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Repeat2 } from "lucide-react";
+import { Repeat2 } from "@/components/icons"
 import { useState } from "react";
 import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogTrigger, Field, Input, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "../errors";
@@ -44,18 +44,17 @@ export function RepurposeDialog({ slug, artifactId, trigger }: { slug: string; a
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent title="Repurpose" description="One piece in, a draft for each channel out. You approve each one.">
+      <DialogContent title="Repurpose" description="One piece in, a draft per channel.">
         {runId ? (
           <div className="flex flex-col gap-3">
             <RunProgressCompact slug={slug} runId={runId} />
             <RunDrafts slug={slug} runId={runId} onOpen={() => setOpen(false)} />
-            <p className="text-sm text-ink-3">The drafts also appear in Content → Needs approval.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             {artifactId ? null : (
               <>
-                <Field label="Link" optional hint="A blog post, page or article.">
+                <Field label="Link" optional>
                   <Input value={url} placeholder="https://…" onChange={(e) => setUrl(e.target.value)} />
                 </Field>
                 <Field label="Or paste text" optional>

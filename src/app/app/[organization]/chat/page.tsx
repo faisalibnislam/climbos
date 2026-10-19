@@ -2,12 +2,13 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Copy, MessageCircle } from "lucide-react";
+import { Copy, MessageCircle } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
+import { StatBlocks } from "@/components/ds/content";
 import { Button, Callout, Card, CardContent, ColorPicker, EmptyState, Field, Input, Switch, toast } from "@/components/ui";
 
 /** Website chat: one script tag; Climb AI answers from your facts and hands over to you. */
@@ -32,19 +33,32 @@ export default function ChatSetupPage() {
   const w = data.widget;
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <PageHeader section="chat" title="Website chat" intro={w ? `${data.stats.week} chats this week · ${data.stats.leads} left their email. Chats land in your Inbox.` : "A chat bubble on your site. Climb AI answers from your business facts and passes anything it can't answer to you."} />
+      <PageHeader section="chat" title="Website chat" />
+      {w ? (
+        <StatBlocks
+          className="-mt-3"
+          stats={[
+            { label: "Chats this week", value: data.stats.week.toLocaleString("en-US") },
+            { label: "Emails collected", value: data.stats.leads.toLocaleString("en-US") },
+          ]}
+        />
+      ) : null}
       {!w ? (
-        <EmptyState icon={<MessageCircle />} title="Add chat to your website" body="Takes a minute: create it, then paste one line into your site." action={<Button loading={busy} onClick={() => run(() => setup({ slug }), "Chat created")}>Create website chat</Button>} />
+        <EmptyState icon={<MessageCircle />} title="Add chat to your site" body="AI answers from your facts." action={<Button loading={busy} onClick={() => run(() => setup({ slug }), "Chat created")}>Create chat</Button>} />
       ) : (
         <>
           {!data.aiAnswers ? (
             <Callout tone="info" title="Messages only on Free">
-              Visitors can message you and leave their email. AI answers come with a package. <Link href={`/app/${slug}/settings/billing`}>See packages</Link>
+              AI answers need a package. <Link href={`/app/${slug}/settings/billing`}>See packages</Link>
             </Callout>
           ) : null}
           <Card>
             <CardContent className="flex flex-col gap-3">
-              <p className="heading-card">1. Paste this before &lt;/body&gt; on your site</p>
+              <h2 className="heading-card flex items-center gap-2">
+                <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-[var(--radius-badge)] bg-brand-100 text-2xs font-semibold tabular-nums text-brand-900">1</span>
+                <span className="sr-only">Step 1: </span>
+                Paste before &lt;/body&gt;
+              </h2>
               <code className="block overflow-x-auto whitespace-nowrap rounded-lg bg-surface-2 p-3 text-xs">{w.snippet}</code>
               <Button
                 size="sm"
@@ -54,12 +68,16 @@ export default function ChatSetupPage() {
               >
                 <Copy aria-hidden /> Copy
               </Button>
-              <p className="text-xs text-ink-3">WordPress: Appearance → Theme file editor → footer, or any “insert scripts” plugin. Webflow, Wix, Squarespace and Shopify all have a “custom code” box.</p>
+              <p className="text-xs text-ink-3">Use your site’s “custom code” or footer box.</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="flex flex-col gap-4">
-              <p className="heading-card">2. Make it yours</p>
+              <h2 className="heading-card flex items-center gap-2">
+                <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-[var(--radius-badge)] bg-brand-100 text-2xs font-semibold tabular-nums text-brand-900">2</span>
+                <span className="sr-only">Step 2: </span>
+                Make it yours
+              </h2>
               <Switch label="Chat is on" checked={w.enabled} onCheckedChange={(on) => run(() => setup({ slug, enabled: on }))} />
               <Field label="Greeting">
                 <div className="flex gap-2">
@@ -72,10 +90,10 @@ export default function ChatSetupPage() {
               <div className="flex items-center gap-3">
                 <span className="text-sm text-ink-2">Colour</span>
                 <ColorPicker label="Chat colour" value={w.color} onChange={(hex) => run(() => setup({ slug, color: hex }))} />
-                <span className="text-xs text-ink-3">The bubble on your site uses data-color in the snippet.</span>
+                <span className="text-xs text-ink-3">Re-copy the snippet after changing.</span>
               </div>
               <a href={`/widget/${w.key}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
-                Try the chat panel
+                Preview chat
               </a>
             </CardContent>
           </Card>

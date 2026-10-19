@@ -2,6 +2,7 @@
 
 import { compareScenarios, simulateFunnel, type FunnelInput, type FunnelResult } from "@shared/forecasting";
 import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "@/components/icons";
 import { Callout, Field, Input, Select, Table, TableFrame, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { formatPercent } from "./format";
@@ -33,13 +34,13 @@ function toInput(f: ScenarioFields, horizonDays: number): { input: FunnelInput |
   const arpu = num(f.arpu);
   const churn = num(f.churnPct);
   const lag = num(f.lagDays);
-  if (!Number.isFinite(visits) || visits < 0) errors.visits = "Enter 0 or more visits.";
-  else if (visits > 100_000_000) errors.visits = "That's more than 100 million — please check the number.";
-  if (!Number.isFinite(signup) || signup < 0 || signup > 100) errors.signupPct = "Enter a percentage from 0 to 100.";
-  if (!Number.isFinite(paid) || paid < 0 || paid > 100) errors.paidPct = "Enter a percentage from 0 to 100.";
+  if (!Number.isFinite(visits) || visits < 0) errors.visits = "Enter 0 or more.";
+  else if (visits > 100_000_000) errors.visits = "Over 100 million: check it.";
+  if (!Number.isFinite(signup) || signup < 0 || signup > 100) errors.signupPct = "Enter 0–100.";
+  if (!Number.isFinite(paid) || paid < 0 || paid > 100) errors.paidPct = "Enter 0–100.";
   if (!Number.isFinite(arpu) || arpu < 0) errors.arpu = "Enter 0 or more.";
-  if (!Number.isFinite(churn) || churn < 0 || churn >= 100) errors.churnPct = "Enter a percentage from 0 up to (but not including) 100.";
-  if (!Number.isFinite(lag) || lag < 0 || lag > 365) errors.lagDays = "Enter between 0 and 365 days.";
+  if (!Number.isFinite(churn) || churn < 0 || churn >= 100) errors.churnPct = "Enter 0 to under 100.";
+  if (!Number.isFinite(lag) || lag < 0 || lag > 365) errors.lagDays = "Enter 0–365.";
   if (Object.keys(errors).length) return { input: null, errors };
   return {
     input: {
@@ -61,7 +62,7 @@ function run(f: ScenarioFields, horizonDays: number): { result: FunnelResult | n
   try {
     return { result: simulateFunnel(input), errors };
   } catch {
-    return { result: null, errors: { visits: "These numbers can't be combined. Please check them." } };
+    return { result: null, errors: { visits: "These numbers don't work together. Check them." } };
   }
 }
 
@@ -92,25 +93,25 @@ function ScenarioInputs({
   return (
     <fieldset className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
       <legend className="heading-card px-1">{name}</legend>
-      <Field label="Website visits in one month" error={errors.visits}>
+      <Field label="Visits per month" error={errors.visits}>
         {input("visits", { step: "1" })}
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Sign-up rate (%)" hint="Visits that sign up" error={errors.signupPct}>
+        <Field label="Visit → sign-up (%)" error={errors.signupPct}>
           {input("signupPct", { max: "100" })}
         </Field>
-        <Field label="Paid rate (%)" hint="Sign-ups that pay" error={errors.paidPct}>
+        <Field label="Sign-up → paid (%)" error={errors.paidPct}>
           {input("paidPct", { max: "100" })}
         </Field>
       </div>
-      <Field label={`Monthly revenue per customer (${currency})`} error={errors.arpu}>
+      <Field label={`Revenue per customer / month (${currency})`} error={errors.arpu}>
         {input("arpu", {})}
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Monthly churn (%)" hint="Customers who cancel each month" error={errors.churnPct}>
+        <Field label="Monthly churn (%)" error={errors.churnPct}>
           {input("churnPct", { max: "99.99" })}
         </Field>
-        <Field label="Days to convert" hint="From visit to first payment" error={errors.lagDays}>
+        <Field label="Days to first payment" error={errors.lagDays}>
           {input("lagDays", { step: "1", max: "365" })}
         </Field>
       </div>
@@ -146,24 +147,18 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
 
   const rows: { label: string; get: (r: FunnelResult) => string }[] = [
     { label: "New paying customers", get: (r) => count(r.expectedNewPayingAccounts) },
-    { label: "New monthly revenue once they convert (before churn)", get: (r) => money(r.newCohortMrrAtMaturation, currency) },
-    { label: `Monthly revenue left at day ${horizonDays} (after churn)`, get: (r) => money(r.expectedMrrAtHorizon, currency) },
+    { label: "New monthly revenue", get: (r) => money(r.newCohortMrrAtMaturation, currency) },
+    { label: `Monthly revenue at day ${horizonDays} (after churn)`, get: (r) => money(r.expectedMrrAtHorizon, currency) },
   ];
 
   return (
     <section aria-labelledby="scenario-heading" className="flex flex-col gap-4">
-      <div>
-        <h2 id="scenario-heading" className="heading-section flex flex-wrap items-center gap-2">
-          Scenario calculator <ValueKind kind="assumption" />
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-3">
-          No history needed. Type in your own numbers and compare two &ldquo;what if&rdquo; scenarios. This is plain arithmetic on your assumptions — not a
-          forecast — so there&apos;s no likely range.
-        </p>
-      </div>
+      <h2 id="scenario-heading" className="heading-section flex flex-wrap items-center gap-2">
+        <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Scenario calculator <ValueKind kind="assumption" />
+      </h2>
 
       <div className="max-w-xs">
-        <Field label="Planning horizon">
+        <Field label="Horizon">
           <Select
             value={horizon}
             onValueChange={setHorizon}
@@ -185,13 +180,13 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
       <div aria-live="polite" className="flex flex-col gap-3">
         <TableFrame>
           <Table>
-            <caption className="heading-card px-4 pb-1 pt-3 text-left">Scenario results (assumption-based, {currency})</caption>
+            <caption className="heading-card px-4 pb-1 pt-3 text-left">Results ({currency})</caption>
             <THead>
               <tr>
                 <Th>Result</Th>
                 <Th numeric>Scenario A</Th>
                 <Th numeric>Scenario B</Th>
-                <Th numeric>Difference (B − A)</Th>
+                <Th numeric>B − A</Th>
               </tr>
             </THead>
             <TBody>
@@ -219,20 +214,18 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
         {cmp ? (
           <p className="text-sm text-ink-2">
             {cmp.relativeMrrChange === null
-              ? "Scenario A produces no new revenue, so a percentage change can't be calculated."
-              : `Scenario B's new monthly revenue is ${formatPercent(Math.abs(cmp.relativeMrrChange))} ${cmp.relativeMrrChange >= 0 ? "higher" : "lower"} than Scenario A's.`}
+              ? "A has no new revenue, so no % change."
+              : `B: ${formatPercent(Math.abs(cmp.relativeMrrChange))} ${cmp.relativeMrrChange >= 0 ? "more" : "less"} new monthly revenue than A.`}
           </p>
         ) : null}
-        <Callout tone="info" title={cmp?.note ?? "Scenario difference, not evidence of causal uplift"}>
-          These numbers only show what happens if your assumptions are true. They don&apos;t show that any change will cause more sales.
-        </Callout>
+        <Callout tone="info" title="Your assumptions, not a prediction" />
         {ra.result ? (
           <Definition summary="How this is calculated">
             <ul className="list-disc space-y-1 pl-5">
-              <li>New paying customers = visits × sign-up rate × paid rate.</li>
-              <li>New monthly revenue = new paying customers × monthly revenue per customer.</li>
-              <li>Monthly revenue left = new monthly revenue × (1 − churn) for each month between conversion and the end of the horizon.</li>
-              <li>All visits are treated as one group that converts after the stated number of days.</li>
+              <li>Customers = visits × sign-up % × paid %.</li>
+              <li>New monthly revenue = customers × revenue per customer.</li>
+              <li>At day N = new monthly revenue × (1 − churn) per month after conversion.</li>
+              <li>All visits convert as one group after the set days.</li>
             </ul>
           </Definition>
         ) : null}

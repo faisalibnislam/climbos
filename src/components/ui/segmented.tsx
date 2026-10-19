@@ -26,7 +26,7 @@ export function Segmented<T extends string | number>({
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={label} className={cn("inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg border border-line bg-surface-2 p-0.5", className)}>
+    <div role="group" aria-label={label} className={cn("inline-flex max-w-full gap-[var(--seg-gap)] overflow-x-auto rounded-[calc(var(--radius-control)+2px)] border border-[var(--seg-track-border)] bg-[var(--seg-track)] p-0.5", className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -36,8 +36,8 @@ export function Segmented<T extends string | number>({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "inline-flex h-7 shrink-0 items-center justify-center rounded-md px-2.5 text-ui font-medium text-ink-3 transition-colors hover:text-ink",
-              active && "bg-surface text-ink shadow-sm",
+              "inline-flex h-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--seg-item)] px-2.5 text-ui font-medium text-ink-2 shadow-[var(--seg-item-shadow)] transition-colors hover:text-ink",
+              active && "bg-[var(--seg-active)] text-[var(--seg-active-ink)] shadow-sm hover:text-[var(--seg-active-ink)]",
             )}
           >
             {o.label}

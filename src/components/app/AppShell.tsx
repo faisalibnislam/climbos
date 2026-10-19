@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, Bell, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Magic, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -157,8 +157,8 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
               className="mx-auto flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
-              <Sparkles className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
-              <span className="flex-1 truncate">Tell your team what you want…</span>
+              <Magic className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
+              <span className="flex-1 truncate">Make a wish or search…</span>
               <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -170,7 +170,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                 onClick={() => climb.setOpen((o) => !o)}
                 className="gap-1.5"
               >
-                <Sparkles aria-hidden /> <span className="hidden md:inline">Climb AI</span>
+                <Magic aria-hidden /> <span className="hidden md:inline">Climb AI</span>
               </Button>
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
               <Presence slug={slug} />
@@ -195,7 +195,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                 <Link
                   href={`/app/${slug}/${item.key}`}
                   aria-current={active ? "page" : undefined}
-                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-brand-800" : "text-ink-3 hover:text-ink")}
+                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-ink" : "text-ink-3 hover:text-ink")}
                 >
                   <item.icon className="size-5" aria-hidden />
                   {item.key === "plan" ? "Plan" : item.label}
@@ -228,8 +228,8 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                         href={item.key === "studio" ? `/studio/${slug}` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
                         aria-current={section === item.key ? "page" : undefined}
                         className={cn(
-                          "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 text-center text-ui font-medium",
-                          section === item.key ? "border-brand-800 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink hover:bg-surface-2",
+                          "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-2 text-center text-ui font-medium",
+                          section === item.key ? "border-ink bg-surface text-ink shadow-[var(--card-shadow)]" : "border-line bg-surface text-ink hover:bg-surface-2",
                         )}
                       >
                         <item.icon className="size-5" aria-hidden />
@@ -274,15 +274,15 @@ function NavLink({ href, active, icon, children, compact = false, badge }: { hre
       aria-current={active ? "page" : undefined}
       aria-label={compact && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex h-8 items-center gap-2.5 rounded-lg text-ui transition-colors",
+        "relative flex h-[var(--h-sm)] items-center gap-2.5 rounded-[var(--radius-control)] text-ui transition-colors",
         compact ? "w-9 justify-center px-0" : "px-2",
-        active ? "bg-surface-3/70 font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:bg-surface/60 hover:text-ink",
       )}
     >
       {icon}
       {compact ? null : children}
       {badge ? (
-        <span className={cn("rounded-full bg-brand-700 px-1.5 text-2xs font-semibold leading-4 text-white tabular-nums", compact ? "absolute -right-1 -top-1" : "ml-auto")} aria-label={`${badge} unread`}>
+        <span className={cn("rounded-[var(--radius-badge)] bg-ink px-1.5 text-2xs font-semibold leading-4 text-white tabular-nums", compact ? "absolute -right-1 -top-1" : "ml-auto")} aria-label={`${badge} unread`}>
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -305,8 +305,8 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-surface-2">
-          <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-800 text-xs font-semibold text-white">
+        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 text-left hover:bg-surface/60">
+          <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-lime text-xs font-semibold text-ink">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">
@@ -365,11 +365,11 @@ function DemoBanner({ slug }: { slug: string }) {
   const reset = useMutation(api.demo.resetDemo);
   const router = useRouter();
   return (
-    <div className="bg-hero-gradient px-4 py-2 text-sm text-white" role="note">
+    <div className="bg-ink px-4 py-2 text-sm text-white" role="note">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1">
         <span className="inline-flex h-5 items-center rounded-md bg-white/20 px-1.5 text-xs font-medium">Demo data</span>
         <span>
-          Formkit example with synthetic numbers. Nothing here posts, emails or spends real money.
+          Synthetic numbers. Nothing real is sent or spent.
         </span>
         <span className="ml-auto flex gap-3">
           <button
@@ -402,12 +402,12 @@ function PausedBanner({ slug, canResume }: { slug: string; canResume: boolean })
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3">
         <PauseCircle className="size-4" aria-hidden />
         <strong className="font-semibold">All activity is paused.</strong>
-        <span>No new posts, emails, ads or AI jobs will start. You can still read, edit and export.</span>
+        <span>No new posts, emails, ads or AI jobs.</span>
         {canResume && (
           <ConfirmDialog
             trigger={<Button size="sm" variant="secondary" className="ml-auto">Resume activity</Button>}
             title="Resume activity?"
-            description="New work can start again. Posts that were unscheduled when you paused stay unscheduled; reschedule the ones you still want."
+            description="New work can start. Unscheduled posts stay unscheduled."
             confirmLabel="Resume activity"
             onConfirm={async () => {
               try {
@@ -426,7 +426,7 @@ function PausedBanner({ slug, canResume }: { slug: string; canResume: boolean })
 
 export function PauseAllButton({ slug, paused, variant }: { slug: string; paused: boolean; variant: "sidebar" | "compact" | "large" }) {
   const pauseAll = useMutation(api.workspace.pauseAll);
-  const [receipt, setReceipt] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<{ n: number; text: string }[] | null>(null);
   if (paused) {
     return variant === "compact" ? (
       <Badge tone="amber" icon={<PauseCircle />}>Paused</Badge>
@@ -451,32 +451,42 @@ export function PauseAllButton({ slug, paused, variant }: { slug: string; paused
           )
         }
         title="Pause all activity?"
-        description={
-          <span className="block space-y-2">
-            <span className="block">This immediately:</span>
-            <span className="block">• cancels AI jobs that haven’t started,</span>
-            <span className="block">• unschedules posts waiting to go out,</span>
-            <span className="block">• blocks any new posts, emails and ad changes,</span>
-            <span className="block">• asks Google and Meta to pause active ad campaigns.</span>
-            <span className="block text-ink-3">Ad platforms can take a little while to stop delivery and may report some spend from before the pause. You’ll see which pauses were confirmed.</span>
-          </span>
-        }
+        description="This immediately:"
         confirmLabel="Pause all activity"
         tone="danger"
         onConfirm={async () => {
           try {
             const r = await pauseAll({ slug });
-            setReceipt(
-              `Paused. ${r.canceledRuns} job${r.canceledRuns === 1 ? "" : "s"} canceled, ${r.unscheduled} post${r.unscheduled === 1 ? "" : "s"} unscheduled${r.campaignsPausing ? `, ${r.campaignsPausing} ad campaign pause${r.campaignsPausing === 1 ? "" : "s"} requested (see Activity for confirmations)` : ""}.`,
-            );
+            setReceipt([
+              { n: r.canceledRuns, text: `job${r.canceledRuns === 1 ? "" : "s"} canceled` },
+              { n: r.unscheduled, text: `post${r.unscheduled === 1 ? "" : "s"} unscheduled` },
+              ...(r.campaignsPausing ? [{ n: r.campaignsPausing, text: `ad campaign pause${r.campaignsPausing === 1 ? "" : "s"} requested (see Activity)` }] : []),
+            ]);
           } catch (e) {
             toast({ tone: "danger", title: errorMessage(e) });
           }
         }}
-      />
+      >
+        <ul className="flex flex-col gap-1.5 text-sm text-ink-2">
+          {["Cancels unstarted AI jobs", "Unschedules waiting posts", "Blocks new posts, emails and ad changes", "Asks Google and Meta to pause ads"].map((t) => (
+            <li key={t} className="flex items-start gap-2">
+              <PauseCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3" /> {t}
+            </li>
+          ))}
+        </ul>
+        <Callout tone="info" className="mt-3">
+          Ads may take a while to stop; some earlier spend may still report.
+        </Callout>
+      </ConfirmDialog>
       {receipt && (
-        <Callout tone="warning" live="status" className="mt-2 text-sm">
-          {receipt}
+        <Callout tone="warning" live="status" className="mt-2 text-sm" title="Paused">
+          <ul className="flex flex-col gap-0.5">
+            {receipt.map((t) => (
+              <li key={t.text}>
+                <strong className="font-semibold tabular-nums text-ink">{t.n}</strong> {t.text}
+              </li>
+            ))}
+          </ul>
         </Callout>
       )}
     </>

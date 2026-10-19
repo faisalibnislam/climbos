@@ -7,7 +7,7 @@ import {
   FlaskConical,
   Hourglass,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons"
 import { cn } from "@/lib/utils";
 
 export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet" | "brand" | "teal" | "pink" | "orange";
@@ -40,7 +40,7 @@ export function Badge({ tone = "neutral", icon, className, children, ...props }:
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-full items-center gap-1 rounded-md px-1.5 text-xs font-medium leading-5",
+        "inline-flex h-5 max-w-full items-center gap-1 rounded-[var(--radius-badge)] px-1.5 text-xs font-medium leading-5",
         "[&_svg]:size-3 [&_svg]:shrink-0",
         toneClasses[tone],
         className,

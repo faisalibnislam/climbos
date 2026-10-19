@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Compass, Home, Plug, Settings, ShieldCheck, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Compass, Home, Plug, Settings, ShieldCheck, type LucideIcon } from "@/components/icons"
 import { IconTile, type Tone } from "@/components/ui";
 
 /** The icon and colour of each app section, shared by the sidebar and page headers. */
