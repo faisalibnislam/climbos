@@ -33,7 +33,7 @@ import { lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/eco
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, type PlaysOutput, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
 import { skillPlaybook } from "../shared/skills";
 import { draftSystem, OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
@@ -376,7 +376,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   try {
     const base = inputFor(p, "strategy");
     // 0. Channel scoring (Acquisition Intelligence), exactly as the plan job runs it.
-    let profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []) });
+    let profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []), priceUsdMonth: entryPriceUsdMonth(p.profile.facts) });
     const candidates = candidatesFor(profile);
     // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
     const mode: AiMode = arm === "expert" ? "expert" : "basic";
@@ -390,7 +390,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
     // As production with decision_contract: owner time and capability limits apply before ranking (no connections in the bench).
     const scored = scoreChannels(profile, adjustmentsFrom(f), undefined, DC ? { ownerHoursPerWeek: base.constraints?.ownerHoursPerWeek, connected: [] } : undefined);
-    const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
+    const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
     const insights = insightsOf(p);
     const playsRun = await runAgent(withMode(growthPlaysSpec({ decisionContract: DC }, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
     const draft = playsRun.output as PlaysOutput;
@@ -425,9 +425,9 @@ async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   const t0 = Date.now();
   const mode: AiMode = arm === "single" ? "basic" : "expert";
   const base = inputFor(p, "strategy");
-  const profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []) });
+  const profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []), priceUsdMonth: entryPriceUsdMonth(p.profile.facts) });
   const scored = scoreChannels(profile, adjustmentsFrom({ channels: [] }));
-  const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
+  const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
   const insights = insightsOf(p);
   const pspec = growthPlaysSpec({}, playCatalogsFor(p.c.type));
   const sspec = strategySpec({});

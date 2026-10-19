@@ -89,9 +89,62 @@ export interface AcquisitionProfile {
   budgetUsd: number;
   /** Goal horizon in days. */
   horizonDays: number;
+  /** Lowest paid price per customer per month in USD: the owner's revenue per customer, else the website's pricing facts. */
+  priceUsdMonth?: number;
 }
 
 const dim = (p: AcquisitionProfile, k: DimensionKey) => p.dims[k]?.value;
+
+/* ---------------- price fit ---------------- */
+
+/** Below this monthly price, human effort per customer can't pay back (bench Run 4: creator recruitment for a $6/month product). */
+export const LOW_TICKET_USD_MONTH = 25;
+
+/** Low-ticket, not sales-led: the listed price when known, else the inferred order size. */
+export function lowTicket(p: AcquisitionProfile): boolean {
+  if (dim(p, "salesMotion") === "sales_led") return false;
+  return p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? p.priceUsdMonth < LOW_TICKET_USD_MONTH : dim(p, "aov") === "low";
+}
+
+/** Selling one customer at a time: cold or social outreach, demos, events, introductions. */
+const perCustomer = (c: Channel) => c.family === "outreach" || c.family === "events" || c.id.startsWith("D");
+/** Recruiting creators, partners or resellers one by one (user-generated content is self-serve). */
+const perPartner = (c: Channel) => (c.family === "creators" && c.id !== "V20") || c.family === "partnerships" || c.family === "distribution";
+/** Channels that sell without a person per customer: comparison and SEO pages, onboarding and activation, in-product virality. */
+const selfServe = (c: Channel) => !perCustomer(c) && ["organic_search", "content", "product_led", "email", "referral", "marketplaces"].includes(c.family);
+
+const MONTHLY = /\$\s?(\d+(?:\.\d+)?)\s*(?:(?:\/|per|a|an|each)\s*(?:seat|user|member|person|people|account|company|team)\s*)?(?:\/|per|a|an|each)\s*(month|mo|year|yr|annum)\b/gi;
+
+/** Lowest paid monthly price in the website's pricing facts (yearly prices count as a twelfth); undefined when none is stated. */
+export function entryPriceUsdMonth(facts: { statement: string; category?: string }[]): number | undefined {
+  const monthly: number[] = [];
+  const yearly: number[] = [];
+  for (const f of facts) {
+    if (f.category && f.category !== "pricing") continue;
+    for (const m of f.statement.matchAll(MONTHLY)) {
+      const n = Number(m[1]);
+      if (!(n > 0)) continue;
+      (/^(month|mo)$/i.test(m[2]) ? monthly : yearly).push(n);
+    }
+  }
+  if (monthly.length) return Math.min(...monthly);
+  if (yearly.length) return Math.round((Math.min(...yearly) / 12) * 100) / 100;
+  return undefined;
+}
+
+/** Why a channel ranks lower on price, for the scorecard; undefined when price doesn't change it. */
+export function priceFitReason(c: Channel, p: AcquisitionProfile): string | undefined {
+  if (!lowTicket(p) || !(perCustomer(c) || perPartner(c))) return undefined;
+  const price = p.priceUsdMonth ? `about $${p.priceUsdMonth}/month` : "a low price";
+  return perCustomer(c) ? `Selling one customer at a time doesn't pay back at ${price}; self-serve channels first.` : `Recruiting partners one by one rarely pays back at ${price}; self-serve channels first.`;
+}
+
+/** One line for the plays agent: what the price allows. Empty when the price isn't low. */
+export function priceFitText(p: AcquisitionProfile): string {
+  if (!lowTicket(p)) return "";
+  const price = p.priceUsdMonth ? `about $${p.priceUsdMonth} per customer per month` : "a low price per customer";
+  return `PRICE FIT: ${price}, self-serve. A play that needs a person per customer or per partner (cold or social outreach, demos, creator or partner recruitment) can't pay back; build the bankable play on self-serve channels: comparison and SEO pages, onboarding and activation, in-product virality and referral. Use a labour-heavy play only as a capped test, with owner hours priced in.`;
+}
 
 /** Dimensions worth asking the owner about: unknown or low confidence and decision-relevant. */
 export const ASK_ORDER: DimensionKey[] = ["customerType", "geography", "salesMotion", "aov", "team", "salesCycle", "scale"];
@@ -177,6 +230,11 @@ export function priors(c: Channel, p: AcquisitionProfile): Record<Factor, number
   if (dim(p, "salesMotion") === "sales_led" && c.family === "outreach") audience += 10;
   // One-to-one selling rarely pays back on a low-ticket, self-serve product.
   if ((dim(p, "aov") === "low" || dim(p, "salesMotion") === "self_service") && (c.family === "outreach" || c.family === "events") && dim(p, "salesMotion") !== "sales_led") audience -= 20;
+  // Price fit: at a low price, labour per customer or per partner can't pay back; self-serve channels lead.
+  const cheap = lowTicket(p);
+  if (cheap && perCustomer(c)) audience -= 25;
+  else if (cheap && perPartner(c)) audience -= 15;
+  else if (cheap && selfServe(c)) audience += 10;
 
   const intent = Math.max(...c.stages.map((s) => STAGE_INTENT[s]));
 
@@ -190,6 +248,7 @@ export function priors(c: Channel, p: AcquisitionProfile): Record<Factor, number
   const team = dim(p, "team") ?? "small";
   let feasibility = c.exec === "auto" ? 90 : c.exec === "partial" ? 75 : team === "solo" ? 35 : team === "small" ? 55 : 75;
   if (c.cash >= 3 && (team === "solo" || dim(p, "scale") === "solo")) feasibility -= 15;
+  if (cheap && perCustomer(c)) feasibility -= 15;
 
   const scalability = [40, 65, 90][c.scale];
   let measurement = c.measure;
@@ -292,6 +351,8 @@ export interface ScoredChannel {
   tactic?: string;
   audienceName?: string;
   caution?: string;
+  /** Why the price ranks it lower (low-ticket, labour-heavy channels). */
+  priceFit?: string;
   /** Hard-limit findings, when limits were applied (decision_contract plans). */
   limits?: LimitCheck[];
 }
@@ -305,6 +366,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
     const el = eligibility(c, p);
     const base = priors(c, p);
     const a = adj.get(c.id);
+    const priceFit = el.ok ? priceFitReason(c, p) : undefined;
     const factors = Object.fromEntries(FACTORS.map((f) => [f, clamp(base[f] + Math.max(-30, Math.min(30, a?.deltas[f] ?? 0)))])) as Record<Factor, number>;
     const score = clamp(FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0));
     return {
@@ -318,12 +380,13 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       factors,
       score: el.ok ? score : 0,
       status: el.ok ? "not_now" : "ineligible",
-      why: el.ok ? (a?.reason ?? "") : el.reason!,
+      why: el.ok ? (a?.reason ?? priceFit ?? "") : el.reason!,
       evidence: a?.evidence,
       platform: a?.platform,
       tactic: a?.tactic,
       audienceName: a?.audienceName,
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
+      priceFit,
       ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
     };
   });
@@ -385,12 +448,13 @@ export interface SavedAcquisition {
 }
 
 /** Profile from what's saved, the onboarding type guess and the goal. */
-export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: string | null; budgetMinor: number; horizonDays: number; legacyTypes: (t: string | null | undefined) => string[] }): AcquisitionProfile {
+export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: string | null; budgetMinor: number; horizonDays: number; legacyTypes: (t: string | null | undefined) => string[]; priceUsdMonth?: number }): AcquisitionProfile {
   return {
     types: p.saved?.types.length ? p.saved.types : p.legacyTypes(p.legacyType),
     dims: { ...(p.saved?.dims ?? {}) },
     budgetUsd: Math.max(0, Math.round(p.budgetMinor / 100)),
     horizonDays: p.horizonDays,
+    ...(p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? { priceUsdMonth: p.priceUsdMonth } : {}),
   };
 }
 
@@ -425,6 +489,6 @@ export function scorecardText(rows: ScoredChannel[], n = 14): string {
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n");
 }

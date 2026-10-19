@@ -263,3 +263,7 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 - **Unverified assets:** Meetrao's play rested on a five-page asset that the research never confirmed; B0 started from the confirmed Cal.com page.
 
 **Next fixes (deterministic, no spend):** price-aware channel scoring (low ARPU → self-serve channels first) and a rule that plays may only build on assets the research verified. Re-evaluating needs a new cap.
+
+**Fixes made (not yet re-evaluated):**
+- **Price fit** (`shared/acquisition/scoring.ts`): the entry price comes from owner revenue per customer, else the pricing facts. Below $25/month (unless sales-led), per-customer selling and partner or creator recruitment rank lower, and self-serve channels rank higher. The scorecard says why, and the plays task gets a PRICE FIT line.
+- **Verified assets** (`lintAssets` in `shared/agents/specs.ts`, plus the plays task): an existing page, integration or list needs a URL the writer read, and a claimed count needs that many URLs. Otherwise the play says "To build" and building it is the first action today.

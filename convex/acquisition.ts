@@ -46,7 +46,7 @@ export const view = query({
     const planned = strategy?.acquisition ?? null;
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
     const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, dims: business.acquisition.dims } : planned ? { types: planned.profile.types, dims: planned.profile.dims } : null;
-    const profile = profileFrom({ saved, legacyType: business.businessType, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy });
+    const profile = profileFrom({ saved, legacyType: business.businessType, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy, priceUsdMonth: business.unitEconomics?.revenuePerCustomerMonthUsd ?? (planned?.profile as { priceUsdMonth?: number } | undefined)?.priceUsdMonth });
     // decision_contract plans: the same hard limits as the plan, with today's connections.
     const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
     const limits = planned?.limits ? { ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined, connected } : undefined;

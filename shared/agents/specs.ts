@@ -356,6 +356,45 @@ export function lintProvenance(out: { economics: { sources?: Record<string, Lint
   return issues;
 }
 
+/** Assets a play can stand on: pages, integrations, lists, audiences and partners (product features are checked by the truth gate). */
+const ASSET_NOUN = /\b(pages?|comparisons?|integrations?|connections?|lists?|subscribers?|newsletters?|audiences?|followers?|community|communities|partners?|partnerships?|listings?|directory|blog|posts?|case stud(?:y|ies)|reviews?|testimonials?|waitlists?|landing)\b/i;
+const TO_BUILD = /^\s*(?:to build|new|build|create)\b|\b(?:to build|to create|to write|to publish|not (?:yet )?(?:built|live|confirmed|verified)|none yet|(?:will|we'll) (?:build|create|write|publish))\b/i;
+const BUILD_ACTION = /\b(build|create|write|draft|publish|set up|launch|make|add|ship|record|list|submit)\b/i;
+const NUMBER_WORDS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const COUNTED = /\b(\d+|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?:[\w-]+\s+){0,3}?(pages|comparisons|integrations|listings|posts|lists|reviews|case studies)\b/i;
+const urlKeyOf = (u: string) => u.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/[/.,;:)\]]+$/, "");
+
+/**
+ * Bench Run 4: a play rested on "five existing pages" the research never confirmed. A play may only build on an
+ * asset the research or facts confirm (its page URL is in what the writer read); otherwise it says "To build"
+ * and building it is the first action today.
+ */
+export function lintAssets(plays: { assetUsed: string; firstActionToday: string }[], evidence: string): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) => {
+    const a = p.assetUsed ?? "";
+    if (!ASSET_NOUN.test(a)) return;
+    if (TO_BUILD.test(a)) {
+      if (!BUILD_ACTION.test(p.firstActionToday ?? "")) issues.push({ severity: "error", rule: "asset", message: `The asset is still to build ("${a.slice(0, 80)}"); make building it the first action today.`, path: `plays[${i}].firstActionToday` });
+      return;
+    }
+    // A confirmed asset is a page with a path (not just the home page) that the writer actually read.
+    const urls = [...new Set((a.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}\/[^\s,;)\]]+/gi) ?? []).map(urlKeyOf))].filter((u) => u.includes("/"));
+    const verified = urls.filter((u) => ev.includes(u));
+    const unverified = urls.filter((u) => !ev.includes(u));
+    if (!verified.length) {
+      issues.push({ severity: "error", rule: "asset", message: `"${a.slice(0, 80)}" isn't confirmed by the research. Give each existing page, integration or list's URL from your research notes or facts, or write "To build: …" and make building it the first action today.`, path: `plays[${i}].assetUsed` });
+      return;
+    }
+    if (unverified.length) issues.push({ severity: "error", rule: "asset", message: `${unverified.map((u) => `"${u}"`).join(", ")} isn't in your research notes or facts. Cite pages you read, or mark the rest "To build".`, path: `plays[${i}].assetUsed` });
+    const m = a.match(COUNTED);
+    const claimed = m ? (NUMBER_WORDS[m[1].toLowerCase()] ?? Number(m[1])) : 0;
+    if (claimed > verified.length) issues.push({ severity: "error", rule: "asset", message: `Claims ${claimed} ${m![2]}, but research confirms ${verified.length}. List each one's URL, or count only the confirmed ones and mark the rest "To build".`, path: `plays[${i}].assetUsed` });
+  });
+  return issues;
+}
+
 /** Spec §13: the portfolio must fit the owner's cash and time. */
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
@@ -563,7 +602,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

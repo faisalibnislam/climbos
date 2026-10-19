@@ -74,7 +74,7 @@ import {
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, DIMENSIONS, FACTORS, mergeFit, profileFrom, scoreChannels, scorecardText, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -773,6 +773,7 @@ export const buildStrategy = internalAction({
         budgetMinor: job.goal?.monthlyAdBudgetMinor ?? 0,
         horizonDays: job.goal?.horizonDays ?? 90,
         legacyTypes: typesFromLegacy,
+        priceUsdMonth: job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? entryPriceUsdMonth(job.facts),
       });
       let adjustments: Adjustment[] = [];
       let channelSummary: string[] = [];
@@ -809,7 +810,7 @@ export const buildStrategy = internalAction({
       // S5 flag (REQ-STRAT-03): cash, owner time, sales cycle and capability limits apply before ranking.
       const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
       const scored = scoreChannels(profile, adjustments, undefined, limits);
-      const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
+      const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const playsMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
       const planMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
