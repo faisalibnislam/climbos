@@ -95,7 +95,8 @@
   --action-hover: var(--brand-900);
   --action-active: var(--brand-950);
   --action-ink: #ffffff;
-  --radius-control: 6px;
+  --radius-app: 6px;
+  --radius-control: var(--radius-app);
   --radius-field: 6px;
   --radius-card: 8px;
   --font-metric: var(--font-display-serif);
@@ -103,7 +104,28 @@
   --seg-track: var(--surface-2);
   --seg-active: var(--surface);
   --seg-active-ink: var(--ink);
+  --seg-track-border: var(--line);
+  --seg-gap: 2px;
+  --seg-item: transparent;
+  --seg-item-shadow: none;
+  --tabs-track: var(--surface-2);
+  --tabs-track-border: var(--line);
+  --tab-active: var(--surface);
+  --tab-active-ink: var(--ink);
+  --btn-2-bg: var(--surface);
+  --btn-2-border: var(--line-strong);
+  --btn-2-shadow: none;
+  --radius-badge: 5px;
+  --radius-cta: 6px;
+  --card-shadow: none;
   --grid-pattern: none;
+
+  /* Extra brand colours (Signal); unused by Summit screens. */
+  --cream: #eae3ce;
+  --cream-soft: #f4f0e3;
+  --sage: #7c8f6e;
+  --sage-ink: #687c5c;
+  --lime: #c5f08a;
 }
 
 /*
@@ -114,65 +136,102 @@
  * Preview at /design-system/v2; promote by moving these values into :root.
  */
 [data-theme="wact"] {
-  --bg: #f2f2ef;
+  /* Ground: soft sage-grey; white panels sit on it. */
+  --bg: #e8ece5;
   --surface: #ffffff;
-  --surface-2: #f7f7f4;
-  --surface-3: #ebebe6;
-  --ink: #151515;
-  --ink-2: #42433d;
-  --ink-3: #64655d;
-  --line: rgb(21 21 21 / 0.07);
-  --line-strong: rgb(21 21 21 / 0.13);
-  --control-border: rgb(21 21 21 / 0.5);
-  --control-border-hover: rgb(21 21 21 / 0.7);
+  --surface-2: #f2f4f0;
+  --surface-3: #e2e6de;
+  --ink: #161815;
+  --ink-2: #444841;
+  --ink-3: #5f645b;
+  --line: rgb(22 24 21 / 0.07);
+  --line-strong: rgb(22 24 21 / 0.12);
+  --control-border: rgb(22 24 21 / 0.5);
+  --control-border-hover: rgb(22 24 21 / 0.7);
 
-  /* Sage: brand, links, focus, tints. 800 on white = 6.6:1. */
+  /* Sage: brand, links, focus, chart lines. 800 on white = 5.9:1. */
   --brand-950: #1e2719;
-  --brand-900: #2c3925;
-  --brand-800: #4b6140;
-  --brand-700: #5d7651;
-  --brand-600: #728c66;
-  --brand-200: #d5ddcb;
-  --brand-100: #e9eee2;
-  --brand-50: #f4f7f0;
+  --brand-900: #2f3c29;
+  --brand-800: #55694a;
+  --brand-700: #6e8361;
+  --brand-600: #7c8f6e;
+  --brand-200: #d3dccb;
+  --brand-100: #dfe6d8;
+  --brand-50: #f0f3ec;
 
-  /* Lime: the accent CTA and highlights; dark text only. Strong lime marks charts and meters (3:1 on white). */
+  /* Lime: the one CTA (Upgrade, Start), the outcome bar and workspace tile. */
   --sun: #c5f08a;
   --sun-soft: #eef9dd;
   --sun-strong: #6a9a2a;
-  --pine: #2c3925;
+  --pine: #2f3c29;
   --coral: #d0705a;
 
-  --chart-1: #4b6140;
+  /* Status: soft pill fills with deep inks, as in the reference tables. */
+  --green-800: #46752a;
+  --green-500: #86b85c;
+  --green-100: #e2f1d6;
+  --red-800: #b23a55;
+  --red-500: #d9667b;
+  --red-100: #fbe1e6;
+  --amber-800: #876410;
+  --amber-500: #e0ae36;
+  --amber-100: #fbf0c4;
+  --orange-800: #b05a1a;
+  --orange-500: #e3955c;
+  --orange-100: #fcebdd;
+
+  --chart-1: #6e8361;
   --chart-2: #6a9a2a;
   --chart-3: #4a8593;
   --chart-4: #8a7bbe;
   --chart-5: #b98a2e;
-  --chart-6: #9aa094;
-  --chart-grid: rgb(21 21 21 / 0.06);
+  --chart-6: #b7bcb2;
+  --chart-grid: rgb(22 24 21 / 0.07);
 
-  /* Cream to sage, as in the reference hero. */
-  --gradient-hero: linear-gradient(180deg, #eae3ce 0%, #cfcfb4 40%, #a3ae8f 72%, #7c8f6e 100%);
-  --gradient-soft: linear-gradient(180deg, #f4f1e6 0%, #eef1e8 100%);
-  --grid-pattern: linear-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.09) 1px, transparent 1px);
+  --gradient-hero: linear-gradient(180deg, #eae3ce 0%, #d3d3b8 38%, #a7b293 70%, #7c8f6e 100%);
+  --gradient-soft: linear-gradient(180deg, #f4f0e3 0%, #e8ece5 100%);
+  --grid-pattern: linear-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.1) 1px, transparent 1px);
 
-  --shadow-sm: 0 1px 2px rgb(21 21 21 / 0.04);
-  --shadow: 0 1px 3px rgb(21 21 21 / 0.05);
-  --shadow-lg: 0 2px 8px rgb(21 21 21 / 0.06), 0 20px 40px -12px rgb(21 21 21 / 0.2);
+  --shadow-sm: 0 1px 2px rgb(22 24 21 / 0.06);
+  --shadow: 0 1px 3px rgb(22 24 21 / 0.06);
+  --shadow-lg: 0 2px 8px rgb(22 24 21 / 0.06), 0 20px 40px -12px rgb(22 24 21 / 0.2);
+  --card-shadow: 0 1px 2px rgb(22 24 21 / 0.04);
 
-  /* Black pill actions; softer, rounder panels; sans numbers. */
-  --action: #151515;
+  /* App controls: 8px soft white buttons, black active state. Marketing CTAs: pills. */
+  --action: #161815;
   --action-hover: #000000;
   --action-active: #000000;
   --action-ink: #ffffff;
-  --radius-control: 999px;
-  --radius-field: 10px;
-  --radius-card: 14px;
+  --radius-app: 8px;
+  --radius-control: var(--radius-app);
+  --radius-cta: 999px;
+  --radius-field: 8px;
+  --radius-card: 16px;
+  --radius-badge: 999px;
+  --btn-2-bg: #ffffff;
+  --btn-2-border: rgb(22 24 21 / 0.06);
+  --btn-2-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
   --font-metric: var(--font-sans-ui);
   --metric-weight: 600;
   --seg-track: transparent;
-  --seg-active: #151515;
+  --seg-track-border: transparent;
+  --seg-gap: 6px;
+  --seg-item: #ffffff;
+  --seg-item-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
+  --seg-active: #161815;
   --seg-active-ink: #ffffff;
+  --tabs-track: transparent;
+  --tabs-track-border: transparent;
+  --tab-active: #161815;
+  --tab-active-ink: #ffffff;
+}
+/* Marketing CTAs take the pill shape in themes that set one. */
+.marketing {
+  --radius-control: var(--radius-cta);
+}
+/* Product UI shown inside a marketing page keeps app corners. */
+.app-surface {
+  --radius-control: var(--radius-app);
 }
 
 @theme inline {
@@ -230,6 +289,11 @@
   --color-sun-soft: var(--sun-soft);
   --color-pine: var(--pine);
   --color-coral: var(--coral);
+  --color-cream: var(--cream);
+  --color-cream-soft: var(--cream-soft);
+  --color-sage: var(--sage);
+  --color-sage-ink: var(--sage-ink);
+  --color-lime: var(--lime);
 
   --font-sans: var(--font-sans-ui);
   --font-display: var(--font-display-serif);

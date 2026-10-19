@@ -1,8 +1,47 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { CalendarCheck, ChartColumn, Clock, CreditCard, Download, FolderOpen, Inbox, LayoutGrid, Megaphone, MessageCircle, Mountain, Search, Settings, Sparkles, Star, Target, Users, X } from "lucide-react";
-import { Badge, Button, Segmented, Sparkline, StatTrend } from "@/components/ui";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  ChartLine,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleDollarSign,
+  Clock,
+  CreditCard,
+  Download,
+  Flag,
+  Globe,
+  Info,
+  LayoutGrid,
+  Link2,
+  LogOut,
+  Megaphone,
+  MessageCircle,
+  Mountain,
+  MoreVertical,
+  MousePointerClick,
+  PanelLeft,
+  Plug,
+  Plus,
+  Search,
+  Send,
+  SlidersHorizontal,
+  Sparkle,
+  Sparkles,
+  Star,
+  Store,
+  Tag,
+  Target,
+  TriangleAlert,
+  Users,
+  UsersRound,
+  X,
+  Zap,
+} from "lucide-react";
+import { Badge, Button, Segmented, SocialIcon, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { DesignSystemReference } from "../DesignSystemReference";
 
@@ -19,26 +58,727 @@ function useSignalTheme() {
   }, []);
 }
 
-const PALETTE: { name: string; hex: string; role: string; dark?: boolean }[] = [
-  { name: "Cream", hex: "#EAE3CE", role: "Top of the hero gradient" },
-  { name: "Sage", hex: "#7C8F6E", role: "Bottom of the gradient, brand", dark: true },
-  { name: "Sage 800", hex: "#4B6140", role: "Links, focus, sage text", dark: true },
-  { name: "Lime", hex: "#C5F08A", role: "The one CTA, highlights" },
-  { name: "Ink", hex: "#151515", role: "Text and primary actions", dark: true },
-  { name: "Stone", hex: "#F2F2EF", role: "App ground" },
-  { name: "White", hex: "#FFFFFF", role: "Panels" },
-];
+/* ------------------------------------------------------------------ */
+/* Brand                                                               */
+/* ------------------------------------------------------------------ */
 
-function Wordmark({ light }: { light?: boolean }) {
+function Wordmark({ tone = "ink", size = "md" }: { tone?: "ink" | "lime" | "white"; size?: "sm" | "md" | "lg" }) {
+  const color = tone === "lime" ? "text-lime border-lime" : tone === "white" ? "text-white border-white" : "text-ink border-ink";
+  const s = size === "lg" ? { ring: "size-14 border-[5px]", icon: "size-7", text: "text-5xl" } : size === "sm" ? { ring: "size-7 border-[2.5px]", icon: "size-3.5", text: "text-lg" } : { ring: "size-8 border-[3px]", icon: "size-4", text: "text-[22px]" };
   return (
-    <span className={cn("inline-flex items-center gap-2 text-[22px] font-semibold tracking-[-0.03em]", light ? "text-[var(--sun)]" : "text-ink")}>
-      <span className={cn("grid size-8 place-items-center rounded-full border-[3px]", light ? "border-[var(--sun)]" : "border-ink")}>
-        <Mountain className="size-4" strokeWidth={2.6} aria-hidden />
+    <span className={cn("inline-flex items-center gap-2 font-semibold tracking-[-0.035em]", color, s.text)}>
+      <span className={cn("grid place-items-center rounded-full", color, s.ring)}>
+        <Mountain className={s.icon} strokeWidth={2.75} aria-hidden />
       </span>
       ClimbOS
     </span>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Small building blocks                                               */
+/* ------------------------------------------------------------------ */
+
+/** Bordered icon tile on KPI cards. */
+function IconTile({ children }: { children: ReactNode }) {
+  return <span className="grid size-9 place-items-center rounded-[10px] border border-line bg-surface text-ink-2 shadow-sm [&_svg]:size-4">{children}</span>;
+}
+
+/** Outline change pill (reference: ↑ 5.6% / ↓ 3.2%). */
+function Delta({ value, good }: { value: string; good: boolean }) {
+  return (
+    <span className={cn("inline-flex h-5 items-center gap-0.5 rounded-full border px-2 text-2xs font-medium tabular-nums", good ? "border-green-800/30 bg-green-100/50 text-green-800" : "border-red-800/30 bg-red-100/50 text-red-800")}>
+      {value}
+    </span>
+  );
+}
+
+/** Soft status pill (reference: Active / Disabled / Pause / Verified / Rejected). */
+type Status = "active" | "paused" | "off" | "verified" | "rejected" | "pending";
+const STATUS: Record<Status, string> = {
+  active: "bg-green-100 text-green-800",
+  verified: "bg-green-100/70 text-green-800",
+  paused: "bg-amber-100 text-amber-800",
+  off: "bg-red-100 text-red-800",
+  rejected: "bg-red-100 text-red-800",
+  pending: "bg-orange-100/70 text-orange-800",
+};
+function StatusPill({ kind, children }: { kind: Status; children: ReactNode }) {
+  return <span className={cn("inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium", STATUS[kind])}>{children}</span>;
+}
+
+/** Grey tag chip (reference: Campaign A, WhatsApp · Direct). */
+function Tagchip({ children, removable }: { children: ReactNode; removable?: boolean }) {
+  return (
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-xs text-ink-2">
+      {children}
+      {removable ? <X aria-hidden className="size-3.5 text-ink-3" /> : null}
+    </span>
+  );
+}
+
+/** Light dropdown button (reference: Sources ⌄, Last 6 months ⌄). */
+function DropButton({ children, white }: { children: ReactNode; white?: boolean }) {
+  return (
+    <button type="button" className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-ui text-ink-2 transition-colors hover:text-ink", white ? "bg-surface shadow-[var(--btn-2-shadow)]" : "bg-surface-2")}>
+      {children}
+      <ChevronDown aria-hidden className="size-4" />
+    </button>
+  );
+}
+
+/** Sparkline with soft area, a dotted end marker and a dot, as on the reference KPI cards. */
+function Spark({ values, good }: { values: number[]; good: boolean }) {
+  const id = useId();
+  const w = 150;
+  const h = 64;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 8), h - 4 - ((v - min) / (max - min || 1)) * (h - 14)] as const);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const color = good ? "var(--chart-1)" : "var(--red-500)";
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-14 w-28 xl:w-32" aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor={color} stopOpacity="0.22" />
+          <stop offset="1" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L${lx},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
+      <line x1={lx} x2={lx} y1={ly} y2={h} stroke="var(--line-strong)" strokeDasharray="2 3" />
+      <circle cx={lx + 3} cy={ly - 3} r="2" fill="var(--ink-3)" />
+    </svg>
+  );
+}
+
+function Kpi({ icon, value, label, delta, good, values }: { icon: ReactNode; value: string; label: string; delta: string; good: boolean; values: number[] }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--card-shadow)]">
+      <IconTile>{icon}</IconTile>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">{value}</p>
+          <p className="whitespace-nowrap text-ui text-ink-2">{label}</p>
+        </div>
+        <div className="flex flex-col items-end">
+          <Delta value={delta} good={good} />
+          <Spark values={values} good={good} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Panel({ title, sub, actions, children, className }: { title: string; sub?: string; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={cn("rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]", className)}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-base font-semibold tracking-[-0.01em]">{title}</h4>
+          {sub ? <p className="text-xs text-ink-3">{sub}</p> : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar                                                             */
+/* ------------------------------------------------------------------ */
+
+function NavItem({ icon, label, active }: { icon: ReactNode; label: string; active?: boolean }) {
+  return (
+    <span className={cn("flex h-10 items-center gap-2.5 rounded-[10px] px-3 text-sm", active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:text-ink")}>
+      <span aria-hidden className="inline-flex text-ink-2 [&_svg]:size-4">{icon}</span>
+      {label}
+    </span>
+  );
+}
+
+function NavGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 border-t border-line pt-3">
+      <p className="flex items-center gap-1.5 px-3 pb-1 text-ui text-ink-3">
+        <span aria-hidden className="text-[9px]">▼</span> {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function WorkspaceSwitcher() {
+  return (
+    <div className="flex items-center gap-3 px-1 py-2">
+      <span className="grid size-10 place-items-center rounded-[10px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">Tartine Bakery</span>
+        <span className="block text-xs text-ink-3">Local business · Pro</span>
+      </span>
+      <ChevronsUpDown aria-hidden className="size-4 text-ink-3" />
+    </div>
+  );
+}
+
+function UpsellCard() {
+  return (
+    <div className="flex flex-col gap-1 rounded-[14px] bg-sage p-4 text-white">
+      <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4" aria-hidden /> More credits, more reach</p>
+      <p className="text-xs text-white/85">Upgrade to unlock more workspaces and weekly autopilot.</p>
+      <button type="button" className="mt-6 inline-flex h-10 items-center justify-center gap-1 rounded-full bg-lime text-sm font-medium text-ink hover:brightness-95">
+        Upgrade <ChevronRight className="size-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function UserCard() {
+  return (
+    <div className="flex items-center gap-3 rounded-[12px] bg-surface p-2.5 shadow-[var(--card-shadow)]">
+      <span className="grid size-9 place-items-center rounded-[10px] bg-surface-2 text-xs font-semibold">MR</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">Maya Rahman</span>
+        <span className="block text-xs text-ink-3">Owner</span>
+      </span>
+      <LogOut aria-hidden className="size-4 text-ink-3" />
+    </div>
+  );
+}
+
+function Sidebar() {
+  return (
+    <aside className="hidden w-[248px] shrink-0 flex-col gap-3 p-4 lg:flex">
+      <div className="flex items-center justify-between px-1 py-1">
+        <Wordmark />
+        <PanelLeft aria-hidden className="size-[18px] text-ink-3" />
+      </div>
+      <WorkspaceSwitcher />
+      <NavGroup label="Grow">
+        <NavItem icon={<LayoutGrid />} label="Today" active />
+        <NavItem icon={<Target />} label="Growth plan" />
+        <NavItem icon={<UsersRound />} label="Customers" />
+        <NavItem icon={<Megaphone />} label="Campaigns" />
+        <NavItem icon={<MessageCircle />} label="Inbox" />
+      </NavGroup>
+      <NavGroup label="Measure">
+        <NavItem icon={<ChartLine />} label="Results" />
+        <NavItem icon={<Search />} label="Attribution" />
+      </NavGroup>
+      <NavGroup label="Workspace settings">
+        <NavItem icon={<SlidersHorizontal />} label="General" />
+        <NavItem icon={<Zap />} label="Connections" />
+        <NavItem icon={<Plug />} label="Integrations" />
+        <NavItem icon={<Link2 />} label="Tracking" />
+        <NavItem icon={<Sparkle />} label="Autopilot" />
+        <NavItem icon={<Users />} label="Team & roles" />
+      </NavGroup>
+      <div className="mt-auto flex flex-col gap-3 pt-6">
+        <UpsellCard />
+        <UserCard />
+      </div>
+    </aside>
+  );
+}
+
+function IconRail() {
+  const items = [LayoutGrid, Target, UsersRound, MessageCircle];
+  const items2 = [ChartLine, Search];
+  const items3 = [SlidersHorizontal, Zap, Plug, Link2, Sparkle, Users];
+  const Btn = ({ I, active }: { I: typeof LayoutGrid; active?: boolean }) => (
+    <span className={cn("grid size-10 place-items-center rounded-[10px] text-ink-2", active && "bg-surface shadow-[var(--card-shadow)]")}>
+      <I className="size-[18px]" aria-hidden />
+    </span>
+  );
+  return (
+    <aside className="hidden w-[76px] shrink-0 flex-col items-center gap-2 py-5 md:flex">
+      <PanelLeft aria-hidden className="mb-3 size-[18px] text-ink-3" />
+      <span className="grid size-11 place-items-center rounded-[10px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
+      <span className="my-2 h-px w-8 bg-line-strong" />
+      {items.map((I, i) => <Btn key={i} I={I} />)}
+      <span className="my-2 h-px w-8 bg-line-strong" />
+      {items2.map((I, i) => <Btn key={i} I={I} active={i === 0} />)}
+      <span className="my-2 h-px w-8 bg-line-strong" />
+      {items3.map((I, i) => <Btn key={i} I={I} />)}
+      <span className="mt-auto grid size-11 place-items-center rounded-[10px] bg-surface text-xs font-semibold shadow-[var(--card-shadow)]">MR</span>
+    </aside>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Screens                                                             */
+/* ------------------------------------------------------------------ */
+
+const RANGES = ["7d", "30d", "3m", "6m", "1y", "Custom"].map((v) => ({ value: v, label: v }));
+
+function PageHead({ title, sub, actions }: { title: string; sub: string; actions?: ReactNode }) {
+  const [range, setRange] = useState("30d");
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h3 className="heading-page">{title}</h3>
+        <p className="text-sm text-ink-3">{sub}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented label="Time period" value={range} onChange={setRange} options={RANGES} />
+        <DropButton white>All sources</DropButton>
+        <Button variant="secondary" size="sm"><Download /> Export</Button>
+        {actions}
+      </div>
+    </div>
+  );
+}
+
+const FUNNEL: { label: string; pct: number; n: string; note: string; tone: string; bar: string }[] = [
+  { label: "Reached", pct: 100, n: "2,400", note: "", tone: "", bar: "hatched" },
+  { label: "Replied", pct: 45, n: "320", note: "−86.7% didn't reply", tone: "text-red-800", bar: "bg-surface-3" },
+  { label: "Qualified", pct: 20, n: "180", note: "−43.8% not a fit", tone: "text-amber-800", bar: "bg-[#d4d8cf]" },
+  { label: "Call booked", pct: 15, n: "150", note: "−16.7% didn't book", tone: "text-sage-ink", bar: "bg-[#c4c9bf]" },
+  { label: "Customer", pct: 6, n: "120", note: "−20.0% 30 still deciding", tone: "text-ink-3", bar: "bg-lime" },
+];
+
+function FunnelPanel() {
+  return (
+    <Panel
+      title="Conversion funnel"
+      sub="From first contact to paying customer, across the plays you approved"
+      actions={
+        <>
+          <DropButton>Sources</DropButton>
+          <DropButton>Last 6 months</DropButton>
+        </>
+      }
+    >
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Tagchip removable>Cold email · Agencies</Tagchip>
+        <Tagchip removable>Google Ads · Brand</Tagchip>
+        <Tagchip removable>Instagram</Tagchip>
+      </div>
+      <ul className="mt-5 flex flex-col gap-4">
+        {FUNNEL.map((f) => (
+          <li key={f.label} className="grid grid-cols-[18px_130px_44px_52px_1fr] items-center gap-3 text-sm">
+            <Info aria-hidden className="size-4 text-ink-3" />
+            <span className="text-ink-2">{f.label}</span>
+            <span className="tabular-nums text-ink-2">{f.pct}%</span>
+            <span className="font-medium tabular-nums">{f.n}</span>
+            <span className="flex min-w-0 items-center gap-3">
+              <span
+                className={cn("h-4 rounded-[4px]", f.bar === "hatched" ? "flex-1" : cn("shrink-0", f.bar))}
+                style={f.bar === "hatched" ? { backgroundImage: "repeating-linear-gradient(115deg, var(--surface-3) 0 1.5px, transparent 1.5px 5px)" } : { width: `${Math.max(f.pct, 6) * 0.95}%` }}
+              />
+              {f.note ? <span className={cn("truncate text-sm", f.tone)}>{f.note}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+const SOURCES: { icon: ReactNode; name: string; reached: string; replies: string; qualified: string; rate: string; cpl: string; status: Status; label: string; warn?: boolean }[] = [
+  { icon: <SocialIcon network="google" size="sm" />, name: "Google Ads · Brand search", reached: "1,200", replies: "180", qualified: "110", rate: "61%", cpl: "$3.80", status: "active", label: "Active" },
+  { icon: <SocialIcon network="facebook" size="sm" />, name: "Meta Ads · Lead form", reached: "800", replies: "90", qualified: "45", rate: "50%", cpl: "$3.80", status: "active", label: "Active" },
+  { icon: <SocialIcon network="email" size="sm" />, name: "Cold email · Agencies", reached: "320", replies: "32", qualified: "12", rate: "37%", cpl: "$8.40", status: "off", label: "Stopped", warn: true },
+  { icon: <SocialIcon network="instagram" size="sm" />, name: "Instagram · Organic", reached: "400", replies: "50", qualified: "25", rate: "50%", cpl: "$4.10", status: "paused", label: "Paused" },
+];
+
+function Th({ children, right }: { children: ReactNode; right?: boolean }) {
+  return <th className={cn("pb-3 text-ui font-normal text-ink-3", right ? "text-right" : "text-left")}>{children}</th>;
+}
+
+function Box() {
+  return <span aria-hidden className="inline-block size-[18px] rounded-[5px] border-[1.5px] border-control/70 bg-surface align-middle" />;
+}
+
+function SourcesPanel() {
+  return (
+    <Panel
+      title="Sources"
+      sub="Performance by play and channel. Click a row to drill down"
+      actions={
+        <>
+          <DropButton>By spend</DropButton>
+          <DropButton>Channel</DropButton>
+          <DropButton>By status</DropButton>
+        </>
+      }
+    >
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="border-b border-line">
+            <tr>
+              <Th><Box /></Th>
+              <Th>Source</Th>
+              <Th right>Reached</Th>
+              <Th right>Replies</Th>
+              <Th right>Qualified</Th>
+              <Th right>Q-rate</Th>
+              <Th right>CPL</Th>
+              <Th right>Status</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {SOURCES.map((r) => (
+              <tr key={r.name} className="border-b border-line last:border-0">
+                <td className="py-3.5 pr-3"><Box /></td>
+                <td className="py-3.5">
+                  <span className="flex items-center gap-2.5">
+                    {r.icon}
+                    {r.name}
+                    {r.warn ? <TriangleAlert aria-label="Needs attention" className="size-4 text-amber-500" /> : null}
+                  </span>
+                </td>
+                <td className="text-right tabular-nums">{r.reached}</td>
+                <td className="text-right tabular-nums">{r.replies}</td>
+                <td className="text-right tabular-nums">{r.qualified}</td>
+                <td className="text-right tabular-nums">{r.rate}</td>
+                <td className="text-right tabular-nums">{r.cpl}</td>
+                <td className="text-right"><StatusPill kind={r.status}>{r.label}</StatusPill></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+const ACTIVITY: { name: string; sub: string; source: string; status: Status; label: string; time: string; ttc: string; cost: string }[] = [
+  { name: "A. Tomland", sub: "Agency · Austin", source: "Cold email", status: "verified", label: "Call booked", time: "15 min ago", ttc: "9 min", cost: "$4.20" },
+  { name: "No name yet", sub: "+1 (201) 523-6434", source: "Instagram · DM", status: "rejected", label: "Duplicate", time: "8 min ago", ttc: "9 min", cost: "$4.20" },
+  { name: "M. Morgan", sub: "Studio Morgan", source: "Google Ads", status: "verified", label: "Qualified", time: "15 min ago", ttc: "9 min", cost: "$4.20" },
+  { name: "D. Ruiz", sub: "Ruiz & Co", source: "Cold email", status: "verified", label: "Replied", time: "23 min ago", ttc: "9 min", cost: "$4.20" },
+  { name: "No name yet", sub: "+1 (201) 321-9058", source: "Meta Ads", status: "pending", label: "Email unverified", time: "31 min ago", ttc: "9 min", cost: "$4.20" },
+];
+
+function ActivityPanel() {
+  return (
+    <Panel
+      title="Recent activity"
+      sub="Live feed of new leads and replies"
+      actions={
+        <>
+          <Button variant="secondary" size="sm" className="bg-surface-2 shadow-none">View all leads <ArrowRight /></Button>
+          <button type="button" aria-label="More" className="grid size-8 place-items-center rounded-lg bg-surface-2 text-ink-2"><MoreVertical className="size-4" /></button>
+        </>
+      }
+    >
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="border-b border-line">
+            <tr>
+              <Th>Lead</Th>
+              <Th>Source</Th>
+              <Th>Status</Th>
+              <Th>Time</Th>
+              <Th>First reply</Th>
+              <Th>Cost</Th>
+              <Th> </Th>
+            </tr>
+          </thead>
+          <tbody>
+            {ACTIVITY.map((r, i) => (
+              <tr key={i} className="border-b border-line last:border-0">
+                <td className="py-3">
+                  <span className="block font-medium">{r.name}</span>
+                  <span className="block text-xs text-ink-3">{r.sub}</span>
+                </td>
+                <td><Tagchip>{r.source}</Tagchip></td>
+                <td><StatusPill kind={r.status}>{r.label}</StatusPill></td>
+                <td className="tabular-nums">{r.time}</td>
+                <td className="tabular-nums">{r.ttc}</td>
+                <td className="tabular-nums">{r.cost}</td>
+                <td className="text-right"><MoreVertical aria-hidden className="ml-auto size-4 text-ink-3" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+function DashboardScreen() {
+  return (
+    <div className="app-surface flex overflow-hidden rounded-[24px] bg-bg">
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 lg:pl-0">
+        <div className="px-1 pt-2">
+          <PageHead title="Today" sub="Booked calls, cost per lead and what ClimbOS did this week" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <Kpi icon={<UsersRound />} value="180" label="Qualified leads" delta="↑ 5.6%" good values={[40, 46, 47, 60, 64, 66, 82, 96]} />
+          <Kpi icon={<CircleDollarSign />} value="$4.20" label="CPL (cost per lead)" delta="↓ 3.2%" good={false} values={[9, 8.4, 6.2, 6.4, 5.1, 4.4, 4.4, 4.3]} />
+          <Kpi icon={<Star />} value="63.8%" label="Lead quality score" delta="↑ 12.6%" good values={[38, 44, 50, 52, 52, 53, 58, 66]} />
+        </div>
+        <FunnelPanel />
+        <SourcesPanel />
+        <ActivityPanel />
+      </div>
+    </div>
+  );
+}
+
+/* Reports ----------------------------------------------------------- */
+
+const CUR = [2.5, 3.2, 2.2, 4, 3.3, 5, 4.2, 3.4, 5.6, 6.6, 4.5, 5.5, 6.5, 7.5, 5.8, 6.7, 5.9, 7.8, 8.6, 6.8, 7.4, 8.4, 7.6, 9.6, 8.9, 7.8, 9.9, 10.9, 9.1, 9.8];
+const PREV = [1.2, 2, 2.6, 1.5, 2.5, 1.6, 3.3, 2.7, 2.1, 3.9, 2.3, 3.4, 2.8, 4.1, 3.6, 3.3, 5.2, 3.5, 4.5, 3.7, 5, 4.2, 3.6, 5.3, 4.6, 3.8, 5.4, 4.9, 6.7, 5.9];
+
+function LineChart() {
+  const w = 1000;
+  const h = 200;
+  const max = 12;
+  const path = (vals: number[]) => vals.map((v, i) => `${i ? "L" : "M"}${((i / (vals.length - 1)) * w).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`).join(" ");
+  return (
+    <div className="mt-6 grid grid-cols-[24px_1fr] gap-x-2">
+      <div className="flex h-[200px] flex-col justify-between text-right text-2xs text-ink-3">
+        {[12, 8, 4, 0].map((t) => <span key={t}>{t}</span>)}
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-[200px] w-full" role="img" aria-label="Qualified leads per day, last 30 days vs previous 30 days">
+        {[0, 1, 2, 3].map((i) => <line key={i} x1="0" x2={w} y1={(i * h) / 3} y2={(i * h) / 3} stroke="var(--chart-grid)" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />)}
+        <path d={path(PREV)} fill="none" stroke="var(--chart-6)" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+        <path d={path(CUR)} fill="none" stroke="var(--chart-1)" strokeWidth="2.25" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span />
+      <div className="mt-3 flex justify-between text-xs text-ink-3">
+        {["Apr 1", "Apr 4", "Apr 8", "Apr 12", "Apr 16", "Apr 20", "Apr 24", "Apr 28"].map((d) => <span key={d}>{d}</span>)}
+      </div>
+    </div>
+  );
+}
+
+const WEEKS: [string, number, number, number, number][] = [
+  ["Cold email", 32, 38, 41, 45],
+  ["Google Ads", 18, 22, 19, 24],
+  ["Meta Ads", 8, 6, 7, 9],
+  ["Instagram", 12, 14, 16, 15],
+];
+
+function ReportsScreen() {
+  const [metric, setMetric] = useState("Qualified");
+  return (
+    <div className="app-surface flex overflow-hidden rounded-[24px] bg-bg">
+      <IconRail />
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 md:pl-0">
+        <div className="px-1 pt-2">
+          <PageHead title="Results" sub="Trends across leads, sources and conversions" />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <Tabs defaultValue="performance">
+            <TabsList>
+              <TabsTrigger value="performance">Performance</TabsTrigger>
+              <TabsTrigger value="funnel">Funnel</TabsTrigger>
+              <TabsTrigger value="sources">Sources</TabsTrigger>
+              <TabsTrigger value="conversations">Conversations</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button variant="secondary" size="sm"><Plus /> New report</Button>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)]">
+          <div className="flex flex-col gap-3">
+            <Kpi icon={<UsersRound />} value="258" label="Qualified leads" delta="↑ 18.6%" good values={[40, 50, 60, 72, 74, 75, 88, 100]} />
+            <Kpi icon={<CircleDollarSign />} value="$4.20" label="CPL" delta="↓ 5.6%" good={false} values={[9, 8.4, 6.2, 6.4, 5.1, 4.4, 4.4, 4.3]} />
+          </div>
+          <Panel
+            title="Performance over time"
+            sub="Last 30 days vs previous 30 days"
+            actions={
+              <div className="flex gap-1">
+                {["Qualified", "CPL", "Reply rate", "Spend"].map((m) => (
+                  <button key={m} type="button" aria-pressed={metric === m} onClick={() => setMetric(m)} className={cn("h-8 rounded-lg px-3 text-ui text-ink-2", metric === m && "bg-surface-2 text-ink")}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            <p className="mt-4 text-[32px] font-semibold leading-10 tracking-[-0.02em]">258</p>
+            <p className="text-sm text-ink-2">qualified leads</p>
+            <LineChart />
+            <div className="mt-4 flex gap-6 text-ui">
+              <span className="flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm bg-chart-1" /> Last 30d <b className="font-medium">258</b></span>
+              <span className="flex items-center gap-2 text-ink-2"><span className="h-2.5 w-5 rounded-sm bg-chart-6" /> Previous 30d <b className="font-medium text-ink">218</b></span>
+            </div>
+          </Panel>
+        </div>
+        <Panel title="Source breakdown by week" sub="Lead volume by source · Last 4 weeks" actions={<DropButton>Last 4 weeks</DropButton>}>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="border-b border-line">
+                <tr><Th>Source</Th><Th>W1</Th><Th>W2</Th><Th>W3</Th><Th>W4</Th><Th>Total</Th><Th> </Th></tr>
+              </thead>
+              <tbody>
+                {WEEKS.map(([name, ...w]) => (
+                  <tr key={name} className="border-b border-line">
+                    <td className="py-3.5"><Tagchip>{name}</Tagchip></td>
+                    {w.map((n, i) => <td key={i} className="tabular-nums">{n}</td>)}
+                    <td className="font-medium tabular-nums">{w.reduce((a, b) => a + b, 0)}</td>
+                    <td className="text-right"><MoreVertical aria-hidden className="ml-auto size-4 text-ink-3" /></td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="py-3.5 pl-1 text-ink-2">Total</td>
+                  {[0, 1, 2, 3].map((i) => <td key={i} className="tabular-nums">{WEEKS.reduce((s, r) => s + (r[i + 1] as number), 0)}</td>)}
+                  <td className="font-medium tabular-nums">{WEEKS.reduce((s, r) => s + (r.slice(1) as number[]).reduce((a, b) => a + b, 0), 0)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 shadow-[var(--card-shadow)]">
+          <div>
+            <h4 className="text-base font-semibold">Run this report on a schedule</h4>
+            <p className="text-xs text-ink-3">Send a CSV to email or Slack every Monday</p>
+          </div>
+          <Button variant="secondary" size="sm" className="bg-surface-2 shadow-none">Schedule report <ArrowRight /></Button>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* Marketing ---------------------------------------------------------- */
+
+function Hero() {
+  return (
+    <div className="marketing bg-hero-grid relative overflow-hidden rounded-[24px] px-4 pt-4 sm:px-8">
+      <nav className="flex items-center justify-between gap-4 border-b border-ink/10 pb-4">
+        <Wordmark />
+        <div className="hidden items-center gap-8 text-[15px] text-ink md:flex">
+          <span>How it works</span>
+          <span>Use cases</span>
+          <span>Integrations</span>
+          <span>Pricing</span>
+          <span>Contact</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="lg" className="bg-ink/[0.06] hover:bg-ink/10">Sign in</Button>
+          <Button size="lg">Start my free plan</Button>
+        </div>
+      </nav>
+      <div className="mx-auto max-w-3xl pb-10 pt-14 text-center">
+        <h1 className="font-display text-5xl font-medium leading-[1.08] tracking-[-0.02em] text-ink sm:text-[64px]">
+          Know which plays bring
+          <span className="block text-brand-700">real paying customers</span>
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-base text-ink-2">
+          ClimbOS researches your business, plans the work, runs it with your approval and tracks every lead back to the play that brought it.
+        </p>
+        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-display text-[15px] text-ink-2">
+          <li className="flex items-center gap-1.5"><Clock className="size-4" aria-hidden /> Plan in 10 minutes</li>
+          <li aria-hidden className="h-5 w-px bg-ink/15" />
+          <li className="flex items-center gap-1.5"><CalendarCheck className="size-4" aria-hidden /> 50 free credits</li>
+          <li aria-hidden className="h-5 w-px bg-ink/15" />
+          <li className="flex items-center gap-1.5"><CreditCard className="size-4" aria-hidden /> No credit card needed</li>
+        </ul>
+        <Button variant="accent" size="lg" className="mt-7 px-6">Get my free plan</Button>
+      </div>
+      <div className="relative mx-auto max-w-5xl">
+        <div aria-hidden className="absolute inset-x-24 -top-7 h-10 rounded-t-[18px] bg-white/25" />
+        <div aria-hidden className="absolute inset-x-12 -top-3.5 h-10 rounded-t-[18px] bg-white/35" />
+        <div className="relative max-h-[430px] overflow-hidden rounded-t-[20px] shadow-lg">
+          <DashboardScreen />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Mobile -------------------------------------------------------------- */
+
+function Phone({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("relative flex h-[640px] w-[300px] shrink-0 flex-col overflow-hidden rounded-[40px] px-5 pb-6 pt-4", className)}>
+      <div className="flex items-center justify-between px-2 text-sm font-semibold"><span>9:41</span><span className="text-xs">●●● ▬</span></div>
+      <div className="mt-5 flex items-center justify-between">
+        <Wordmark size="sm" />
+        <span className="marketing"><Button variant="secondary" size="sm" className="px-4">Menu</Button></span>
+      </div>
+      {children}
+      <span aria-hidden className="absolute bottom-2.5 left-1/2 h-1 w-24 -translate-x-1/2 rounded-full bg-ink/30" />
+    </div>
+  );
+}
+
+function KV({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <span className="text-ink-3">{k}</span>
+      <span className="truncate rounded-md bg-surface-2 px-2 py-0.5 font-mono text-[11px] text-ink-2">{v}</span>
+    </div>
+  );
+}
+
+function MobileScreens() {
+  return (
+    <div className="flex gap-6 overflow-x-auto rounded-[24px] bg-sage p-8">
+      <Phone className="bg-bg">
+        <div className="mt-14 flex flex-col items-center text-center">
+          <Flag className="size-9" strokeWidth={2.5} aria-hidden />
+          <p className="mt-6 font-display text-[26px] leading-8 tracking-[-0.01em]">Every lead arrives with its source attached.</p>
+          <p className="mt-3 text-sm text-ink-2">Play, channel, campaign and keyword land in your pipeline with each reply.</p>
+        </div>
+        <div className="mt-auto flex flex-col gap-2">
+          <div className="flex gap-3 rounded-[16px] bg-surface p-3 shadow-[var(--card-shadow)]">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-cream text-xs font-semibold">LH</span>
+            <span className="min-w-0 text-xs">
+              <span className="flex justify-between"><b className="font-semibold">Layla Haddad</b><span className="text-ink-3">10:53</span></span>
+              <span className="text-ink-2">Hi, I&apos;d love to book a tasting for 40 guests.</span>
+            </span>
+          </div>
+          <div className="flex flex-col gap-2 rounded-[16px] bg-surface p-3 shadow-[var(--card-shadow)]">
+            <KV k="Play" v="Event planners outreach" />
+            <KV k="Channel" v="Cold email" />
+            <KV k="Campaign" v="Spring weddings" />
+            <KV k="Link" v="tartine.co/l/sp-12" />
+          </div>
+        </div>
+      </Phone>
+      <Phone className="bg-surface">
+        <div className="mt-14 text-center">
+          <p className="font-display text-[26px] leading-8 tracking-[-0.01em]">Stop paying for clicks that never reply.</p>
+          <p className="mt-3 text-sm text-ink-2">Counting clicks, not conversations, spends your budget on the wrong people.</p>
+        </div>
+        <div className="mt-auto flex flex-col gap-2.5 rounded-[18px] bg-bg p-4">
+          <div className="flex flex-col items-center gap-2 py-4">
+            <span className="flex w-[84%] items-center justify-between rounded-full bg-sage-ink px-4 py-2 font-display text-xs text-white"><span className="flex items-center gap-2"><Globe className="size-3.5" aria-hidden /> Channel</span><span className="text-white/75">Google</span></span>
+            <span className="flex w-full items-center justify-between rounded-full bg-cream px-4 py-2 font-display text-xs"><span className="flex items-center gap-2"><MousePointerClick className="size-3.5" aria-hidden /> Click ID</span><span className="text-ink-3">CjwKCAjws…</span></span>
+            <span className="flex w-full items-center justify-between rounded-full bg-sage-ink px-4 py-2 font-display text-xs text-white"><span className="flex items-center gap-2"><Tag className="size-3.5" aria-hidden /> Keyword</span><span className="text-white/75">wedding cake…</span></span>
+            <span className="flex w-[84%] items-center justify-between rounded-full bg-sage-ink px-4 py-2 font-display text-xs text-white"><span className="flex items-center gap-2"><Link2 className="size-3.5" aria-hidden /> Page</span><span className="text-white/75">tartine.co/…</span></span>
+          </div>
+          <p className="font-display text-lg leading-6">Track every ad click to a real conversation</p>
+          <p className="text-xs text-ink-2">Click IDs and UTM tags are kept when a chat or email starts.</p>
+        </div>
+      </Phone>
+      <Phone className="bg-hero-gradient">
+        <div className="mt-12">
+          <p className="font-display text-[26px] leading-8 tracking-[-0.01em]">Track the four numbers that matter, live.</p>
+          <p className="mt-3 text-sm text-ink-2">Clicks alone optimise for the wrong people. ClimbOS tracks the numbers that move revenue.</p>
+        </div>
+        <div className="mt-auto">
+          <p className="font-display text-lg">Qualified leads</p>
+          <p className="mt-1 text-sm text-ink-2">Real conversations that became sales-ready leads.</p>
+          <div className="mt-4 rounded-[18px] bg-surface/85 p-4 backdrop-blur">
+            <IconTile><UsersRound /></IconTile>
+            <div className="mt-2 flex items-end justify-between">
+              <div>
+                <p className="text-[32px] font-semibold leading-10">180</p>
+                <p className="text-xs text-ink-2">Qualified leads</p>
+              </div>
+              <div className="flex flex-col items-end"><Delta value="↑ 5.6%" good /><Spark values={[40, 46, 47, 60, 64, 66, 82, 96]} good /></div>
+            </div>
+          </div>
+        </div>
+      </Phone>
+    </div>
+  );
+}
+
+/* Reference sections ------------------------------------------------ */
 
 function SectionTitle({ title, intro }: { title: string; intro: string }) {
   return (
@@ -49,235 +789,180 @@ function SectionTitle({ title, intro }: { title: string; intro: string }) {
   );
 }
 
-function NavItem({ icon, label, active }: { icon: ReactNode; label: string; active?: boolean }) {
-  return (
-    <span className={cn("flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-ui", active ? "bg-surface font-medium text-ink shadow-sm" : "text-ink-2")}>
-      <span aria-hidden className="inline-flex text-ink-3 [&_svg]:size-4">{icon}</span>
-      {label}
-    </span>
-  );
-}
-
-function Chip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-xs text-ink-2">
-      {children}
-      <X aria-hidden className="size-3.5 text-ink-3" />
-    </span>
-  );
-}
-
-const FUNNEL = [
-  { label: "Visitors", pct: 100, n: "2,400" },
-  { label: "Leads", pct: 45, n: "320" },
-  { label: "Qualified", pct: 20, n: "180" },
-  { label: "Calls booked", pct: 15, n: "150" },
-  { label: "Customers", pct: 6, n: "120", lime: true },
+const PALETTE: { group: string; colors: { name: string; hex: string; token: string; role: string; dark?: boolean }[] }[] = [
+  {
+    group: "Ground and ink",
+    colors: [
+      { name: "Ground", hex: "#E8ECE5", token: "bg", role: "App and page background" },
+      { name: "Panel", hex: "#FFFFFF", token: "surface", role: "Cards, tables, active nav" },
+      { name: "Fill", hex: "#F2F4F0", token: "surface-2", role: "Chips, quiet buttons" },
+      { name: "Ink", hex: "#161815", token: "ink", role: "Text, primary buttons", dark: true },
+      { name: "Ink 3", hex: "#5F645B", token: "ink-3", role: "Meta text", dark: true },
+    ],
+  },
+  {
+    group: "Brand",
+    colors: [
+      { name: "Cream", hex: "#EAE3CE", token: "cream", role: "Gradient top, highlight pills" },
+      { name: "Sage", hex: "#7C8F6E", token: "sage", role: "Gradient base, upsell card", dark: true },
+      { name: "Sage ink", hex: "#687C5C", token: "sage-ink", role: "Pills with white text", dark: true },
+      { name: "Sage 800", hex: "#55694A", token: "brand-800", role: "Links, focus, chart line", dark: true },
+      { name: "Lime", hex: "#C5F08A", token: "lime", role: "Upgrade, CTA, outcome bar" },
+    ],
+  },
+  {
+    group: "Status",
+    colors: [
+      { name: "Good", hex: "#E2F1D6", token: "green-100 / 800", role: "Active, Verified, ↑" },
+      { name: "Warn", hex: "#FBF0C4", token: "amber-100 / 800", role: "Paused, not a fit" },
+      { name: "Alert", hex: "#FBE1E6", token: "red-100 / 800", role: "Stopped, Rejected, ↓" },
+      { name: "Pending", hex: "#FCEBDD", token: "orange-100 / 800", role: "Unverified" },
+      { name: "Previous", hex: "#B7BCB2", token: "chart-6", role: "Comparison line" },
+    ],
+  },
 ];
 
-function DashboardSample() {
-  const [range, setRange] = useState("30d");
+function ColourSection() {
   return (
-    <div className="grid overflow-hidden rounded-[18px] border border-line bg-[#fafaf8] shadow-lg md:grid-cols-[220px_1fr]">
-      <aside className="hidden flex-col gap-1 border-r border-line bg-[#f5f5f2] p-4 md:flex">
-        <Wordmark />
-        <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-line bg-surface p-2">
-          <span className="grid size-9 place-items-center rounded-lg bg-[var(--sun)] text-ink"><FolderOpen className="size-4" aria-hidden /></span>
-          <span className="min-w-0">
-            <span className="block truncate text-ui font-medium">Tartine Bakery</span>
-            <span className="block text-2xs text-ink-3">Local · Pro plan</span>
-          </span>
-        </div>
-        <p className="mt-4 px-2.5 text-2xs font-medium text-ink-3">▾ Grow</p>
-        <NavItem icon={<LayoutGrid />} label="Today" active />
-        <NavItem icon={<Target />} label="Growth plan" />
-        <NavItem icon={<Users />} label="Customers" />
-        <NavItem icon={<Megaphone />} label="Campaigns" />
-        <NavItem icon={<MessageCircle />} label="Inbox" />
-        <p className="mt-3 px-2.5 text-2xs font-medium text-ink-3">▾ Measure</p>
-        <NavItem icon={<ChartColumn />} label="Results" />
-        <NavItem icon={<Search />} label="Attribution" />
-        <NavItem icon={<Settings />} label="Settings" />
-      </aside>
-      <div className="min-w-0 p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-display text-3xl font-medium tracking-[-0.02em]">Today</h3>
-            <p className="text-ui text-ink-3">Booked calls, cost per lead and what ClimbOS did this week.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Segmented label="Time period" value={range} onChange={setRange} options={["7d", "30d", "3m", "6m", "1y"].map((v) => ({ value: v, label: v }))} />
-            <Button variant="secondary" size="sm"><Download /> Export</Button>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <StatTrend label="Qualified leads" icon={<Users />} value="180" delta={5.6} trend={[60, 72, 70, 95, 110, 124, 150, 180]} />
-          <StatTrend label="Cost per lead" icon={<CreditCard />} value="$4.20" delta={-3.2} upIsGood={false} trend={[6.1, 5.8, 5.9, 5.1, 4.9, 4.6, 4.4, 4.2]} />
-          <StatTrend label="Lead quality" icon={<Star />} value="63.8%" delta={12.6} trend={[41, 44, 48, 51, 55, 58, 61, 63.8]} />
-        </div>
-        <div className="mt-3 rounded-[var(--radius-card)] border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="heading-card">Conversion funnel</p>
-              <p className="text-xs text-ink-3">From first visit to paying customer, by source.</p>
-            </div>
-            <Button variant="secondary" size="sm">Last 6 months</Button>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Chip>Google Ads · Search</Chip>
-            <Chip>Instagram</Chip>
-            <Chip>Cold email</Chip>
-          </div>
-          <ul className="mt-4 flex flex-col gap-3">
-            {FUNNEL.map((f) => (
-              <li key={f.label} className="grid grid-cols-[110px_44px_56px_1fr] items-center gap-3 text-ui">
-                <span className="text-ink-2">{f.label}</span>
-                <span className="tabular-nums text-ink-3">{f.pct}%</span>
-                <span className="font-medium tabular-nums">{f.n}</span>
-                <span className="h-5 overflow-hidden rounded-md bg-surface-2">
-                  <span
-                    className={cn("block h-full rounded-md", f.lime ? "bg-[var(--sun)]" : "bg-surface-3")}
-                    style={{ width: `${Math.max(f.pct, 4)}%`, ...(f.pct === 100 ? { backgroundImage: "repeating-linear-gradient(135deg, var(--surface-3) 0 2px, transparent 2px 6px)" } : {}) }}
-                  />
-                </span>
-              </li>
+    <section className="flex flex-col gap-6">
+      <SectionTitle title="Colour" intro="Sage-tinted ground, white panels, black actions. Lime marks the single most important thing on a screen and never carries small text on white." />
+      {PALETTE.map((g) => (
+        <div key={g.group} className="flex flex-col gap-3">
+          <p className="text-overline">{g.group}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {g.colors.map((c) => (
+              <div key={c.name} className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--card-shadow)]">
+                <div className={cn("flex h-20 items-end p-3 text-xs font-medium", c.dark ? "text-white" : "text-ink")} style={{ background: c.hex }}>{c.hex}</div>
+                <div className="p-3">
+                  <p className="heading-card">{c.name} <span className="font-normal text-ink-3">· {c.token}</span></p>
+                  <p className="text-xs text-ink-3">{c.role}</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
+      ))}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="bg-hero-grid grid h-64 place-items-center rounded-[var(--radius-card)]"><Wordmark tone="lime" size="lg" /></div>
+        <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-lime"><Wordmark size="lg" /></div>
       </div>
-    </div>
+    </section>
   );
 }
 
-function Hero() {
+function ControlsSection() {
+  const [seg, setSeg] = useState("30d");
   return (
-    <div className="bg-hero-grid relative overflow-hidden rounded-[24px] px-4 pb-0 pt-4 sm:px-8">
-      <nav className="flex items-center justify-between gap-4 border-b border-ink/10 pb-4">
-        <Wordmark />
-        <div className="hidden items-center gap-7 text-ui text-ink md:flex">
-          <span>How it works</span>
-          <span>Pricing</span>
-          <span>Results</span>
-          <span>Security</span>
+    <section className="flex flex-col gap-6">
+      <SectionTitle title="Controls" intro="Two shapes by context. In the app: 8px white buttons with a soft shadow, a black active state, light dropdowns and grey chips. On marketing and upsell: pills." />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="flex flex-col gap-4 rounded-[var(--radius-card)] bg-bg p-6">
+          <p className="text-overline">In the app</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented label="Example period" value={seg} onChange={setSeg} options={RANGES} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm">Approve</Button>
+            <Button variant="secondary" size="sm"><Download /> Export</Button>
+            <Button variant="secondary" size="sm"><Plus /> New report</Button>
+            <DropButton white>All sources</DropButton>
+            <DropButton>Last 6 months</DropButton>
+            <Button variant="ghost" size="sm">Cancel</Button>
+          </div>
+          <Tabs defaultValue="a">
+            <TabsList>
+              <TabsTrigger value="a">Performance</TabsTrigger>
+              <TabsTrigger value="b">Funnel</TabsTrigger>
+              <TabsTrigger value="c">Sources</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tagchip removable>Google Ads · Brand</Tagchip>
+            <Tagchip>Cold email</Tagchip>
+            <Delta value="↑ 5.6%" good />
+            <Delta value="↓ 3.2%" good={false} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill kind="active">Active</StatusPill>
+            <StatusPill kind="verified">Verified</StatusPill>
+            <StatusPill kind="paused">Paused</StatusPill>
+            <StatusPill kind="off">Stopped</StatusPill>
+            <StatusPill kind="rejected">Rejected · duplicate</StatusPill>
+            <StatusPill kind="pending">Email unverified</StatusPill>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" className="bg-ink/5 hover:bg-ink/10">Sign in</Button>
-          <Button>Start free</Button>
+        <div className="marketing bg-hero-gradient flex flex-col gap-4 rounded-[var(--radius-card)] p-6">
+          <p className="text-overline text-ink-2">Marketing and upsell</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="lg">Start my free plan</Button>
+            <Button variant="ghost" size="lg" className="bg-ink/[0.06] hover:bg-ink/10">Sign in</Button>
+            <Button variant="accent" size="lg" className="px-6">Get my free plan</Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary">Menu</Button>
+            <span className="rounded-full bg-sage-ink px-4 py-2 font-display text-xs text-white">Channel · Google</span>
+            <span className="rounded-full bg-cream px-4 py-2 font-display text-xs">Click ID · CjwK…</span>
+          </div>
+          <div className="mt-auto w-60"><UpsellCard /></div>
         </div>
-      </nav>
-      <div className="mx-auto max-w-3xl pb-10 pt-14 text-center">
-        <h1 className="font-display text-5xl font-medium leading-[1.05] tracking-[-0.02em] text-ink sm:text-6xl">
-          Your AI growth team.
-          <span className="block text-brand-700">Booked calls, not busywork.</span>
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base text-ink-2">
-          ClimbOS researches your business, builds the plan, makes the work and measures what happens. You approve anything that goes live.
-        </p>
-        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-display text-sm text-ink-2">
-          <li className="flex items-center gap-1.5"><Clock className="size-4" aria-hidden /> Plan in 10 minutes</li>
-          <li aria-hidden className="h-4 w-px bg-ink/15" />
-          <li className="flex items-center gap-1.5"><CalendarCheck className="size-4" aria-hidden /> 50 free credits</li>
-          <li aria-hidden className="h-4 w-px bg-ink/15" />
-          <li className="flex items-center gap-1.5"><CreditCard className="size-4" aria-hidden /> No card needed</li>
-        </ul>
-        <Button variant="accent" size="lg" className="mt-7">Get my free plan</Button>
       </div>
-      <div className="relative mx-auto max-w-5xl">
-        <div aria-hidden className="absolute inset-x-16 -top-6 h-10 rounded-t-[18px] bg-white/25" />
-        <div aria-hidden className="absolute inset-x-8 -top-3 h-10 rounded-t-[18px] bg-white/35" />
-        <div className="relative max-h-[420px] overflow-hidden rounded-t-[18px]">
-          <DashboardSample />
+    </section>
+  );
+}
+
+function TypeSection() {
+  return (
+    <section className="flex flex-col gap-6">
+      <SectionTitle title="Type" intro="Reckless Neue for every title: marketing headlines, page titles, trust lines and mobile cards. Inter for everything you read and click; numbers are Inter semibold so cards and tables line up." />
+      <div className="grid gap-6 rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-[var(--card-shadow)] md:grid-cols-2">
+        <div className="flex flex-col gap-3">
+          <p className="font-display text-6xl font-medium tracking-[-0.02em]">Aa Reckless</p>
+          <p className="heading-page">Today · Results · Growth plan</p>
+          <p className="font-display text-3xl tracking-[-0.02em]">Stop paying for clicks that never reply.</p>
+          <p className="font-display text-[15px] text-ink-2">Plan in 10 minutes · No credit card needed</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <p className="text-6xl font-semibold tracking-[-0.03em]">Aa Inter</p>
+          <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">180 · $4.20 · 63.8%</p>
+          <p className="text-base font-semibold">Conversion funnel <span className="font-normal text-ink-3">· panel title 16/24</span></p>
+          <p className="text-sm text-ink-2">Body 14/20 · Controls and tables 13–14 · Captions 12/16</p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 export function SignalPreview() {
   useSignalTheme();
   return (
-    <div className="min-h-dvh bg-surface">
-      <main className="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-dvh bg-bg">
+      <main className="mx-auto flex max-w-[1240px] flex-col gap-16 px-4 py-10 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
           <Badge tone="brand" icon={<Sparkles />} className="self-start">Proposal · not live yet</Badge>
-          <SectionTitle
-            title="Signal"
-            intro="One visual language from the first ad to the daily workflow: a cream-to-sage ground, white panels on stone, black pill actions, one lime call to action, and Reckless Neue for headlines."
-          />
+          <SectionTitle title="Signal" intro="The WAct visual language for ClimbOS: sage-tinted ground, white panels, black actions, cream and sage brand surfaces, one lime call to action, Reckless Neue titles." />
         </header>
-
         <Hero />
-
         <section className="flex flex-col gap-6">
-          <SectionTitle title="Colour" intro="Few colours, each with one job. Lime is for the single most important action or the number that matters, never for small text on white." />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            {PALETTE.map((c) => (
-              <div key={c.name} className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
-                <div className={cn("flex h-24 items-end p-3 text-xs font-medium", c.dark ? "text-white" : "text-ink")} style={{ background: c.hex }}>
-                  {c.hex}
-                </div>
-                <div className="p-3">
-                  <p className="heading-card">{c.name}</p>
-                  <p className="text-xs text-ink-3">{c.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="bg-hero-grid grid h-56 place-items-center rounded-[var(--radius-card)]">
-              <Wordmark light />
-            </div>
-            <div className="grid h-56 place-items-center rounded-[var(--radius-card)] bg-[var(--sun)]">
-              <Wordmark />
-            </div>
-          </div>
+          <SectionTitle title="Product: Today" intro="Full sidebar with grouped sections, workspace switcher, upsell and user card. KPI cards, funnel with loss notes, sources and activity tables." />
+          <DashboardScreen />
         </section>
-
         <section className="flex flex-col gap-6">
-          <SectionTitle title="Type" intro="Reckless Neue for headlines, page titles and short trust lines; Inter for everything you read and click. Numbers are Inter semibold so tables and cards line up." />
-          <div className="grid gap-6 rounded-[var(--radius-card)] border border-line bg-surface p-6 md:grid-cols-2">
-            <div className="flex flex-col gap-3">
-              <p className="font-display text-6xl font-medium tracking-[-0.02em]">Aa Reckless</p>
-              <p className="font-display text-3xl font-medium tracking-[-0.02em]">Understand which plays bring customers</p>
-              <p className="font-display text-xl italic text-brand-700">Booked calls, not busywork.</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <p className="text-6xl font-semibold tracking-[-0.03em]">Aa Inter</p>
-              <p className="metric">180 · $4.20 · 63.8%</p>
-              <p className="text-sm text-ink-2">Body 14/20. Controls and tables 13/18. Captions 12/16.</p>
-            </div>
-          </div>
+          <SectionTitle title="Product: Results" intro="Collapsed icon rail, black tabs, stacked KPIs, a comparison line chart and weekly breakdown." />
+          <ReportsScreen />
         </section>
-
         <section className="flex flex-col gap-6">
-          <SectionTitle title="Controls" intro="Pill buttons: black for the main action, white with a hairline for the rest, lime once per screen. Small pill toggles with a black active state." />
-          <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-6">
-            <Button>Start free</Button>
-            <Button variant="secondary">Sign in</Button>
-            <Button variant="accent">Get my free plan</Button>
-            <Button variant="ghost">Cancel</Button>
-            <Button variant="danger">Delete</Button>
-            <Button variant="link">See how it works</Button>
-            <Segmented label="Example period" value="30d" onChange={() => {}} options={["7d", "30d", "3m"].map((v) => ({ value: v, label: v }))} />
-            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-green-800/25 bg-green-100 px-2 text-xs font-medium text-green-800">↑ 5.6%</span>
-            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-red-800/25 bg-red-100 px-2 text-xs font-medium text-red-800">↓ 3.2%</span>
-            <span className="inline-flex items-center"><Sparkline values={[3, 4, 4, 6, 7, 9]} className="w-24" height={28} color="var(--chart-1)" /></span>
-          </div>
+          <SectionTitle title="Mobile" intro="Marketing on phones: Reckless titles, white cards on the ground, sage and cream pills, the gradient for the closing card." />
+          <MobileScreens />
         </section>
-
-        <section className="flex flex-col gap-6">
-          <SectionTitle title="Product" intro="White panels on a stone ground, a quiet sidebar with grouped sections, sans numbers and one lime mark for the outcome." />
-          <DashboardSample />
-        </section>
-
-        <section className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface-2 p-5">
-          <p className="heading-card flex items-center gap-2"><Inbox className="size-4" aria-hidden /> Every component in this theme</p>
+        <ColourSection />
+        <TypeSection />
+        <ControlsSection />
+        <section className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
+          <p className="heading-card flex items-center gap-2"><Send className="size-4" aria-hidden /> Every component in this theme</p>
           <p className="text-ui text-ink-3">Below is the full component reference rendered in Signal, including dialogs, menus and toasts.</p>
         </section>
       </main>
-      <div className="bg-bg">
-        <DesignSystemReference theme="signal" />
-      </div>
+      <DesignSystemReference theme="signal" />
     </div>
   );
 }

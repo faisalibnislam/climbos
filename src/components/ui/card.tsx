@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** White panel with a hairline border and 8px corners (no shadow). Compose with CardHeader/CardContent/CardFooter. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-[var(--radius-card)] border border-line bg-surface", className)} {...props} />
+    <div className={cn("rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--card-shadow)]", className)} {...props} />
   );
 }
 
