@@ -61,6 +61,22 @@ const arms = (arg("arms") ?? "v1,v0f,v2s").split(",");
 const compare = (arg("compare") ?? "v2s:v1,v2s:v0f").split(",").map((c) => c.split(":") as [string, string]);
 const judges = (arg("judges") ?? "sol").split(",");
 const pointwise = arg("pointwise") !== "off";
+/**
+ * --import-arm name=results.json:sourceArm[,name2=…] loads arms' outputs from earlier runs
+ * (e.g. the same bench run at another git ref), so two code versions can be judged
+ * side by side without re-running either. Imported outputs cost nothing here.
+ */
+const imported = new Map(
+  (arg("import-arm") ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map((spec) => {
+      const [name, rest] = spec.split("=");
+      const [file, source] = rest.split(":");
+      const rows = JSON.parse(readFileSync(file, "utf8")) as { case: string; task: string; outs: Record<string, ArmResult> }[];
+      return [name, new Map(rows.map((r) => [`${r.case}|${r.task}`, r.outs[source]]))] as const;
+    }),
+);
 mkdirSync("bench/cache", { recursive: true });
 mkdirSync("bench/results", { recursive: true });
 
@@ -145,6 +161,7 @@ async function prepare(c: BenchCase): Promise<Prepared | null> {
       },
       rates,
     );
+    spentMicros += prof.costMicros;
     if (!prof.ok) throw new Error(`profile: ${prof.message}`);
     const profile = prof.output as BusinessProfile;
     const it = TASKS.business_insights;
@@ -160,6 +177,8 @@ async function prepare(c: BenchCase): Promise<Prepared | null> {
       },
       rates,
     );
+    spentMicros += ins.costMicros;
+    console.log(`[prepare] ${c.id}: $${((prof.costMicros + ins.costMicros) / 1e6).toFixed(3)}`);
     if (!ins.ok) throw new Error(`insights: ${ins.message}`);
     const prepared = { profile, pagesText, insights: ins.output as BusinessInsights };
     writeFileSync(file, JSON.stringify(prepared, null, 1));
@@ -369,14 +388,15 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const scored = scoreChannels(profile, adjustmentsFrom(f));
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
     const insights = insightsOf(p);
-    const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
     const draft = playsRun.output as PlaysOutput;
     const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
     const checked = verifyTags(draft, { pages, searched: (playsRun.research?.sources ?? []).map((x) => urlKey(x.url)), fetchedAt: Date.now() });
     provenanceLog.push({ arm, cited: citedUrls(draft).length, fetched: Object.values(pages).filter(Boolean).length, searched: playsRun.research?.sources?.length ?? 0 });
     const plays = { output: withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) }) };
-    const locked = lockedNumbers(plays.output);
-    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output) } };
+    // As production: the goal stays as stated and its horizon drives totals and checks.
+    const locked = lockedNumbers(plays.output, { statement: p.c.goal, target: null, horizonDays: p.c.horizonDays });
+    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights, horizonDays: p.c.horizonDays }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output, p.c.horizonDays), horizonDays: p.c.horizonDays } };
     const planRun = await runAgent(withMode(strategySpec({})), planInput, deps);
     const sspec = strategySpec({});
     const plan = { output: (await reconcile({ turn: deps.turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, planInput) ?? [], caps: capsHint(PLAN_CAPS) })).plan };
@@ -487,6 +507,10 @@ async function runV2(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult>
 }
 
 function runArm(p: Prepared, t: BenchTask, arm: string): Promise<ArmResult> {
+  if (imported.has(arm)) {
+    const o = imported.get(arm)!.get(`${p.c.id}|${t}`);
+    return Promise.resolve(o ? { ...o, arm, costMicros: 0 } : { arm, ok: false, error: "not in imported run", costMicros: 0, ms: 0 });
+  }
   if (arm === "v1") return runV1(p, t);
   if (arm === "v0f") return t === "strategy" ? runStrategySingle(p, arm) : runFrontier(p, t);
   if (arm === "single" || arm === "single-expert") return runStrategySingle(p, arm);
@@ -584,6 +608,10 @@ async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | 
 async function main() {
   const cases = CASES.filter((c) => caseIds.includes(c.id));
   const prepared = (await pool(cases, 4, prepare)).filter((p): p is Prepared => Boolean(p));
+  if (process.argv.includes("--prepare-only")) {
+    console.log(`Prepared ${prepared.length}/${cases.length} cases · spent $${(spentMicros / 1e6).toFixed(3)}`);
+    return;
+  }
   const jobs = prepared.flatMap((p) => tasks.map((t) => ({ p, t })));
   console.log(`Running ${jobs.length} case×task pairs · arms ${arms.join(", ")} · compare ${compare.map((c) => c.join(">")).join(", ")} · judges ${judges.join(", ")} · concurrency ${concurrency}`);
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
