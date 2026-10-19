@@ -552,9 +552,12 @@ const ScoreSchema = z.object({
 });
 type Score = z.infer<typeof ScoreSchema>;
 
+/** The pointwise judge; the report heading names this, never a hard-coded model. */
+const POINTWISE_JUDGE = "gpt-6.1-sol";
+
 async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | null> {
   const r = await turnWithRetry({
-    modelKey: "gpt-6.1-sol",
+    modelKey: POINTWISE_JUDGE,
     system: [
       {
         text: `You are a strict senior marketing expert. Score one piece of work for a small business from 1 to 10 on each dimension, where 10 means the best work a top specialist anywhere would produce, 7 means solid professional work, 5 means usable after real edits and 3 or below means it should be redone.
@@ -667,7 +670,7 @@ function summarize(rows: Record<string, unknown>[]): string {
     }
   }
   if (pointwise) {
-    lines.push("", "## Absolute expert scores (Opus judge, 1–10, mean)", "", `| Task | ${arms.join(" | ")} |`, `|---|${arms.map(() => "---").join("|")}|`);
+    lines.push("", `## Absolute expert scores (${POINTWISE_JUDGE} judge, 1–10, mean)`, "", `| Task | ${arms.join(" | ")} |`, `|---|${arms.map(() => "---").join("|")}|`);
     for (const t of [...tasks, "ALL" as const]) {
       const rs = t === "ALL" ? R : R.filter((r) => r.task === t);
       lines.push(`| ${t} | ${arms.map((a) => mean(rs.map((r) => r.scores[a]?.overall).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
