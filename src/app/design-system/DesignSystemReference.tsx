@@ -91,7 +91,7 @@ const SWATCHES: { name: string; varName: string; note: string }[] = [
 ];
 
 const TYPE: { cls: string; label: string; sample: string }[] = [
-  { cls: "heading-page", label: "heading-page · Spectral 28/36", sample: "Your growth plan" },
+  { cls: "heading-page", label: "heading-page · Reckless Neue 28/36", sample: "Your growth plan" },
   { cls: "heading-section", label: "heading-section · Inter 16/24 600", sample: "This week's posts" },
   { cls: "heading-card", label: "heading-card · Inter 14/20 600", sample: "LinkedIn · Tuesday 9:00" },
   { cls: "text-xl font-semibold tracking-tight", label: "dialog title · Inter 18/26 600", sample: "Approve this post?" },
@@ -100,7 +100,7 @@ const TYPE: { cls: string; label: string; sample: string }[] = [
   { cls: "text-ui", label: "text-ui · 13/18 controls, tables", sample: "Scheduled for Tue, Oct 21 at 9:00" },
   { cls: "text-xs text-ink-3", label: "text-xs · 12/16 captions", sample: "Updated 2 minutes ago" },
   { cls: "text-overline", label: "text-overline · 11/16 caps", sample: "Grow" },
-  { cls: "metric", label: "metric · Spectral 28/32", sample: "1,284" },
+  { cls: "metric", label: "metric · Reckless Neue 28/32", sample: "1,284" },
 ];
 
 const NETWORKS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest", "snapchat", "threads", "google"];
@@ -177,7 +177,7 @@ export function DesignSystemReference() {
             </div>
           </Section>
 
-          <Section id="type" title="Type" intro="Three families, one scale. Spectral for page titles and big numbers, Inter for everything you read and click.">
+          <Section id="type" title="Type" intro="Three families, one scale. Reckless Neue for page titles, big numbers and marketing headlines, Inter for everything you read and click.">
             <div className="divide-y divide-line rounded-xl border border-line bg-surface px-5">
               {TYPE.map((t) => (
                 <div key={t.cls} className="grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">
@@ -186,7 +186,7 @@ export function DesignSystemReference() {
                 </div>
               ))}
               <div className="marketing grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">
-                <div className="text-xs text-ink-3">marketing h2 · EB Garamond</div>
+                <div className="text-xs text-ink-3">marketing h2 · Reckless Neue</div>
                 <h2 className="text-4xl">Drop your link. Get booked calls.</h2>
               </div>
             </div>
