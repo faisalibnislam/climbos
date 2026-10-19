@@ -103,3 +103,39 @@ These are four small changes in `provenance.ts`, `economics.ts`, `jobs.ts` and `
   - unsupported claims (`invented_fact`, `citation` and `provenance` lint findings).
 - **Expected cost:** about $1.30–1.60, from earlier bench runs. The run stops automatically at $3.
 - **Order:** best after the fixes, so the run measures the hardened checks. It can also run first as a baseline.
+
+## Results after the fixes (branch `provenance-hardening`, 2026-10-19)
+
+**Implemented:** F1–F4, plus adversarial tests in `tests/unit/provenance.test.ts`. All 633 tests pass. The branch is not pushed or deployed.
+
+**Real-model run:** Formkit, Basic + Expert, no judge, capped at $3.
+
+- Command: `bench/run.ts --arms basic,expert --compare none --pointwise off --max-usd 3`
+- Offline report: `bench/provenance-report.mts`
+
+| | Basic | Expert |
+|---|---|---|
+| Cost | **$0.264** | **$0.918** (total $1.18) |
+| Time | 24 min | 30 min |
+| Pages returned by search | 9 | 14 |
+| Input tags after checks | 11 assumption · 7 planned · 2 benchmark (not checked) | 20 assumption · 6 planned · 1 benchmark (not checked) |
+| Research tags | 0 | 0 |
+| "Owner" tags downgraded | 0 (no owner economics in this case) | 0 |
+| Funnel text citing pages the tags don't claim | 0 | 0 |
+| Unsupported numbers in text (lint) | 4 | 1 |
+
+**What the unsupported numbers are:** planner-made test sizes ("Planned: spend $108 over 21 days for about 36 clicks", "$120 fully loaded") and a date ("by Oct 26"). None is a factual claim about the business or market. The lint flags them because its label words don't include "planned" and it doesn't recognise month-day dates.
+
+**Not exercised by the real run:**
+- **Research verification:** both models chose assumption or benchmark over research, so no research tag reached the page check. The page check is covered only by unit tests.
+- **Owner verification:** this bench case has no owner-confirmed economics.
+
+**Observations**
+- **Revenue:** both arms labelled revenue an assumption ($57 and $47.50 per account), derived from the confirmed pricing fact (Pro $6/seat, Business $19/seat) times an assumed seat count. That's an honest label for a derived number.
+- **Benchmarks:** the benchmark tags point at the outreach rates ClimbOS supplies in the prompt, which are model-reported and correctly not checked.
+- **Trade-off:** requiring a verbatim quote seems to push the writer away from research tags entirely. That's honest, but more plays will read as assumption-based scenarios even when they're loosely grounded.
+
+**Possible next steps (not done)**
+1. Add "planned" and month-day dates to the lint's label and date rules. This removes the false positives above.
+2. Allow `research` from the owner's own site pages already fetched at onboarding (`pagesText`). Verify quotes against that cached text, so real prices can be "verified on page" without a web search.
+3. Run one bench case with owner economics set, to exercise the owner path end to end.
