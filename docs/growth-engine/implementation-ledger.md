@@ -17,8 +17,8 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 ## Resumption note (2026-10-19)
 
 **Done:**
-- S1, S2, S3 (deterministic) and the S0 docs on `growth-engine-v2`. Not pushed, not deployed.
-- 672 tests pass. `tsc` is clean. ESLint shows 0 errors.
+- S0, S1, S2/S3 (deterministic), S4 (core) and S5 (capability context, flagged decision contract) on `growth-engine-v2`. Not pushed, not deployed.
+- 686 tests pass. `tsc` is clean (app and convex). ESLint shows 0 errors.
 
 **Next:**
 1. **S2 remainder.** Add an old-plan read adapter with schema versioning (REQ-ENG-03), stored from `expert.version`. Add the population, period and denominator binding for research tags (REQ-EVID-02). Files: `shared/agents/provenance.ts`, `convex/workspace.ts` (read path).
@@ -28,7 +28,11 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
    - Audit the k-anonymity of pooled rates (REQ-LEARN-06).
    - Recalculate scenarios, or show they're stale, after an owner edit (REQ-LEARN-07, REQ-UX-07).
    - Classify replies as positive or negative (REQ-LEARN-02).
-4. **S5.** Remove the mandatory bankable/creative shape (`specs.ts:162-177`, `planTasks.ts:12`). Generate the capacity text from live capabilities (`shared/agents/capacity.ts`).
+4. **S5 remainder.**
+   - Under `decision_contract`, add structured `decision` fields to StrategyV2: observations, competing explanations, options considered and why each lost, the chosen guiding policy, and a falsifier (REQ-STRAT-01/02).
+   - Add a deterministic pre-ranking filter for cash, time, sales cycle and capability (REQ-STRAT-03).
+   - Files: `shared/agents/specs.ts`, `planTasks.ts`, `ExpertPlan.tsx`.
+5. **Opting in a workspace:** `npx convex run engineFlags:setEngineFlag '{"orgId":"…","flag":"decision_contract","on":true}'`. Owner approval needed; this runs against the deployment.
 
 **Paid check:** a proposal is ready in [evaluation-and-cost.md](evaluation-and-cost.md) §6 ($5 cap). The approved budget is still $0.
 
@@ -46,7 +50,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | S2 Evidence lineage | partial, done-fixture | `13476ed` (pre-V2 F1–F4), `746e350` | Partly. The negative provenance fixtures fail safely and owner input survives. The legacy read adapter and schema version are still to do |
 | S3 Calculations and goal | partial, done-fixture | `746e350`, `9b4c2ab`, `1bf428d` | Partly. The reference fixture passes, the goal stays intact and the gap is explained. Ramp/lag, currency and the CAC basis are still to do |
 | S4 Measurement integrity | partial, done-fixture | S4 commit | Yes. A cumulative-views fixture isn't reported as a 120-day rate, and a play rename keeps its observations. Shrinkage, privacy audit and recalculation are still to do |
-| S5 Decision-centred strategy | missing (small parts in S3) | `1bf428d` (task text) | — |
+| S5 Decision-centred strategy | partial, done-fixture | `1bf428d`, `3d44c75`, `3dd664c` | Partly. Capability context is live per run; the decision contract is behind a flag. Structured diagnosis, options and falsifier are still to do, and contrasting-business evidence needs the paid check |
 | S6 Targets in plan | missing | — | — |
 | S7 Competitor discovery | missing | — | — |
 | S8 Content briefs | missing | — | — |
@@ -66,15 +70,15 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 |---|---|---|---|---|
 | REQ-OUT-01 | partial | S5 | `shared/agents/specs.ts:59-100` (PlaySchema) | Has audience, hook, funnel, test and first action. No structured diagnosis→effect→evidence→target→capability chain |
 | REQ-OUT-02 | partial | S5 | `specs.ts:189` | Generic-phrasing lint is a warning and regex only |
-| REQ-OUT-03 | missing | S5 | `specs.ts:162-177` | Lint still forces 1 bankable plus a creative play and a minimum P50 |
+| REQ-OUT-03 | done-fixture (flagged) | S5 | `specs.ts` `lintPlays` (`decisionContract`), `planTasks.ts` `DECISION_CONTRACT`, `convex/engineFlags.ts` | With `decision_contract` on, 1 to 4 plays of any kind; a single retention play is valid (`decision-contract.test.ts`). Off by default; no workspace opted in |
 | REQ-OUT-04 | partial | S3/S5 | `shared/agents/goal.ts`, `planTasks.ts` | The goal gap states short or out of reach in code (`goal-gap.test.ts`). The plan doesn't yet name the binding constraint in a structured way |
 | REQ-OUT-05 | partial | S5 | `shared/agents/quality.ts` | Plan-level provisional/needs_input only. Actions aren't split into safe-now vs depends-on |
 | REQ-CTX-01 | partial | S5 | `convex/jobs.ts` `planSnapshot` | Snapshot holds counts, goal and goal target. Not versioned, no contradictions or freshness, not reused by content jobs |
 | REQ-STRAT-01 | partial | S5 | StrategyV2 `diagnosis` | Free text. No observations, competing explanations or falsifier |
 | REQ-STRAT-02 | missing | S5 | `routes.ts:39` | Best-of-two compares drafts, not strategies |
 | REQ-STRAT-03 | partial | S5 | `specs.ts:320,335` | Budget and owner hours are linted after drafting. No sales cycle, fulfilment or capability check before ranking |
-| REQ-STRAT-04 | partial | S5 | `specs.ts:544` | Channel count cap only |
-| REQ-STRAT-05 | missing | S5 | `specs.ts:168-172`, `planTasks.ts:12` | Mandatory portfolio shape remains |
+| REQ-STRAT-04 | partial | S5 | `specs.ts:544`, `DECISION_CONTRACT` | Flagged task asks for one primary motion, a supporting move and maintenance. No structured guiding policy yet |
+| REQ-STRAT-05 | done-fixture (flagged) | S5 | as REQ-OUT-03 | The flag replaces the mandatory shape. The default path keeps it until evaluated (§6 proposal) |
 | REQ-STRAT-06 | partial | S3 | `economics.ts` lint, `planTasks.ts` | The money-loser remedy no longer says "raise volume or conversion". The task says never raise reach or rates. Measured effect: not measured |
 | REQ-STRAT-07 | missing | S5 | — | Qualification, fulfilment and refunds aren't modelled |
 | REQ-STRAT-08 | partial | S5 | `specs.ts:743` | Channel-fit deltas need evidence. No owner override with a rationale |
@@ -215,7 +219,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
-| REQ-ENG-01 | partial | S5 | `engine.ts:188`, `ENGINE_VERSION` | Global env switch. No per-tenant flag |
+| REQ-ENG-01 | done-fixture | S5 | `organizations.engineFlags`, `convex/engineFlags.ts` (internal, audited), `planSnapshot.flags` | Per-workspace, staff-set flags; plans record which were on (`engine-flags.test.ts`) |
 | REQ-ENG-02 | done-fixture | S1 | `shared/agents/quality.ts`, `convex/jobs.ts`, `convex/schema.ts`, `convex/workspace.ts`, `PlanActions.tsx` | `plan-quality.test.ts` (8 cases), `plan-approval.test.ts` |
 | REQ-ENG-03 | partial | S2 | `openai.ts` `normalizeNulls`, zod at output | Strict-schema nulls preserved (`openai-nulls.test.ts`). `expert.plays`/`economics` are still `v.any()`; no read adapter |
 | REQ-ENG-04 | partial | S4 | `learning.ts:93` | Sequential loop over every org |
@@ -225,5 +229,5 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-ENG-08 | partial | S2 | provenance receipts (fetch time + content hash), snapshot | Page text isn't stored. The hash proves what was read, not what it said |
 | REQ-ENG-09 | partial | S13 | facts provenance | |
 | REQ-ENG-10 | exists | — | `scripts/skills-build.mjs` | No skill edits in S1–S3 |
-| REQ-ENG-11 | partial | S5 | `shared/agents/capacity.ts` | Wrong claims fixed (owner time, publishing list, benchmark labels). Still static |
+| REQ-ENG-11 | done-fixture | S5 | `capacity.ts` `capabilityContext`, `jobWrites.ts` job context | Built per run from connected providers and the approval mode; nothing unconnected is promised (`capability-context.test.ts`). Bench and Engine Lab use the static text |
 | REQ-ENG-12 | partial | S0 | docs listed under REQ-COST-12 | Pricing and provider setup docs not yet checked |
