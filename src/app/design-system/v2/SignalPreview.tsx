@@ -43,6 +43,7 @@ import {
 import { Badge, Button, Segmented, SocialIcon, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark as BrandWordmark } from "@/components/brand/Logo";
+import { SHARP_ICONS } from "@/components/icons";
 import { DesignSystemReference } from "../DesignSystemReference";
 
 /** Applies the proposed theme to the whole document (so dialogs and menus preview it too) while this page is open. */
@@ -79,7 +80,7 @@ function Wordmark({ tone = "ink", size = "md" }: { tone?: "ink" | "lime" | "whit
 
 /** Bordered icon tile on KPI cards. */
 function IconTile({ children }: { children: ReactNode }) {
-  return <span className="grid size-9 place-items-center rounded-[5px] border border-line bg-surface text-ink-2 shadow-sm [&_svg]:size-4">{children}</span>;
+  return <span className="grid size-9 place-items-center rounded-[3px] border border-line bg-surface text-ink-2 shadow-sm [&_svg]:size-4">{children}</span>;
 }
 
 /** Outline change pill (reference: ↑ 5.6% / ↓ 3.2%). */
@@ -184,7 +185,7 @@ function Panel({ title, sub, actions, children, className }: { title: string; su
 
 function NavItem({ icon, label, active }: { icon: ReactNode; label: string; active?: boolean }) {
   return (
-    <span className={cn("flex h-10 items-center gap-2.5 rounded-[5px] px-3 text-sm", active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:text-ink")}>
+    <span className={cn("flex h-10 items-center gap-2.5 rounded-[3px] px-3 text-sm", active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:text-ink")}>
       <span aria-hidden className="inline-flex text-ink-2 [&_svg]:size-4">{icon}</span>
       {label}
     </span>
@@ -205,7 +206,7 @@ function NavGroup({ label, children }: { label: string; children: ReactNode }) {
 function WorkspaceSwitcher() {
   return (
     <div className="flex items-center gap-3 px-1 py-2">
-      <span className="grid size-10 place-items-center rounded-[5px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
+      <span className="grid size-10 place-items-center rounded-[3px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">Tartine Bakery</span>
         <span className="block text-xs text-ink-3">Local business · Pro</span>
@@ -217,7 +218,7 @@ function WorkspaceSwitcher() {
 
 function UpsellCard() {
   return (
-    <div className="flex flex-col gap-1 rounded-[7px] bg-sage-ink p-4 text-white">
+    <div className="flex flex-col gap-1 rounded-[5px] bg-sage-ink p-4 text-white">
       <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4" aria-hidden /> More credits, more reach</p>
       <p className="text-xs text-white">Upgrade to unlock more workspaces and weekly autopilot.</p>
       <button type="button" className="mt-6 inline-flex h-10 items-center justify-center gap-1 rounded-[var(--radius-cta)] bg-lime text-sm font-medium text-ink hover:brightness-95">
@@ -229,8 +230,8 @@ function UpsellCard() {
 
 function UserCard() {
   return (
-    <div className="flex items-center gap-3 rounded-[6px] bg-surface p-2.5 shadow-[var(--card-shadow)]">
-      <span className="grid size-9 place-items-center rounded-[5px] bg-surface-2 text-xs font-semibold">MR</span>
+    <div className="flex items-center gap-3 rounded-[4px] bg-surface p-2.5 shadow-[var(--card-shadow)]">
+      <span className="grid size-9 place-items-center rounded-[3px] bg-surface-2 text-xs font-semibold">MR</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">Maya Rahman</span>
         <span className="block text-xs text-ink-3">Owner</span>
@@ -280,21 +281,21 @@ function IconRail() {
   const items2 = [ChartLine, Search];
   const items3 = [SlidersHorizontal, Zap, Plug, Link2, Sparkle, Users];
   const Btn = ({ I, active }: { I: typeof LayoutGrid; active?: boolean }) => (
-    <span className={cn("grid size-10 place-items-center rounded-[5px] text-ink-2", active && "bg-surface shadow-[var(--card-shadow)]")}>
+    <span className={cn("grid size-10 place-items-center rounded-[3px] text-ink-2", active && "bg-surface shadow-[var(--card-shadow)]")}>
       <I className="size-[18px]" aria-hidden />
     </span>
   );
   return (
     <aside className="hidden w-[76px] shrink-0 flex-col items-center gap-2 py-5 md:flex">
       <PanelLeft aria-hidden className="mb-3 size-[18px] text-ink-3" />
-      <span className="grid size-11 place-items-center rounded-[5px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
+      <span className="grid size-11 place-items-center rounded-[3px] bg-lime text-ink"><Store className="size-[18px]" aria-hidden /></span>
       <span className="my-2 h-px w-8 bg-line-strong" />
       {items.map((I, i) => <Btn key={i} I={I} />)}
       <span className="my-2 h-px w-8 bg-line-strong" />
       {items2.map((I, i) => <Btn key={i} I={I} active={i === 0} />)}
       <span className="my-2 h-px w-8 bg-line-strong" />
       {items3.map((I, i) => <Btn key={i} I={I} />)}
-      <span className="mt-auto grid size-11 place-items-center rounded-[5px] bg-surface text-xs font-semibold shadow-[var(--card-shadow)]">MR</span>
+      <span className="mt-auto grid size-11 place-items-center rounded-[3px] bg-surface text-xs font-semibold shadow-[var(--card-shadow)]">MR</span>
     </aside>
   );
 }
@@ -357,7 +358,7 @@ function FunnelPanel() {
             <span className="font-medium tabular-nums">{f.n}</span>
             <span className="flex min-w-0 items-center gap-3">
               <span
-                className={cn("h-4 rounded-[2px]", f.bar === "hatched" ? "flex-1" : cn("shrink-0", f.bar))}
+                className={cn("h-4 rounded-[1.5px]", f.bar === "hatched" ? "flex-1" : cn("shrink-0", f.bar))}
                 style={f.bar === "hatched" ? { backgroundImage: "repeating-linear-gradient(115deg, var(--surface-3) 0 1.5px, transparent 1.5px 5px)" } : { width: `${Math.max(f.pct, 6) * 0.95}%` }}
               />
               {f.note ? <span className={cn("truncate text-sm", f.tone)}>{f.note}</span> : null}
@@ -381,7 +382,7 @@ function Th({ children, right }: { children: ReactNode; right?: boolean }) {
 }
 
 function Box() {
-  return <span aria-hidden className="inline-block size-[18px] rounded-[2.5px] border-[1.5px] border-control/70 bg-surface align-middle" />;
+  return <span aria-hidden className="inline-block size-[18px] rounded-[2px] border-[1.5px] border-control/70 bg-surface align-middle" />;
 }
 
 function SourcesPanel() {
@@ -494,7 +495,7 @@ function ActivityPanel() {
 
 function DashboardScreen() {
   return (
-    <div className="app-surface flex overflow-hidden rounded-[12px] bg-bg">
+    <div className="app-surface flex overflow-hidden rounded-[8px] bg-bg">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 lg:pl-0">
         <div className="px-1 pt-2">
@@ -551,7 +552,7 @@ const WEEKS: [string, number, number, number, number][] = [
 function ReportsScreen() {
   const [metric, setMetric] = useState("Qualified");
   return (
-    <div className="app-surface flex overflow-hidden rounded-[12px] bg-bg">
+    <div className="app-surface flex overflow-hidden rounded-[8px] bg-bg">
       <IconRail />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 md:pl-0">
         <div className="px-1 pt-2">
@@ -636,7 +637,7 @@ function ReportsScreen() {
 
 function Hero() {
   return (
-    <div className="marketing bg-hero-grid relative overflow-hidden rounded-[12px] px-4 pt-4 sm:px-8">
+    <div className="marketing bg-hero-grid relative overflow-hidden rounded-[8px] px-4 pt-4 sm:px-8">
       <nav className="flex items-center justify-between gap-4 border-b border-ink/10 pb-4">
         <Wordmark />
         <div className="hidden items-center gap-8 whitespace-nowrap text-[15px] text-ink lg:flex">
@@ -669,9 +670,9 @@ function Hero() {
         <Button variant="accent" size="lg" className="mt-7 px-6">Get my free plan</Button>
       </div>
       <div className="relative mx-auto max-w-5xl">
-        <div aria-hidden className="absolute inset-x-24 -top-7 h-10 rounded-t-[9px] bg-white/25" />
-        <div aria-hidden className="absolute inset-x-12 -top-3.5 h-10 rounded-t-[9px] bg-white/35" />
-        <div className="relative max-h-[430px] overflow-hidden rounded-t-[10px] shadow-lg">
+        <div aria-hidden className="absolute inset-x-24 -top-7 h-10 rounded-t-[6px] bg-white/25" />
+        <div aria-hidden className="absolute inset-x-12 -top-3.5 h-10 rounded-t-[6px] bg-white/35" />
+        <div className="relative max-h-[430px] overflow-hidden rounded-t-[7px] shadow-lg">
           <DashboardScreen />
         </div>
       </div>
@@ -683,7 +684,7 @@ function Hero() {
 
 function Phone({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("relative flex h-[640px] w-[300px] shrink-0 flex-col overflow-hidden rounded-[20px] px-5 pb-6 pt-4", className)}>
+    <div className={cn("relative flex h-[640px] w-[300px] shrink-0 flex-col overflow-hidden rounded-[8px] px-5 pb-6 pt-4", className)}>
       <div className="flex items-center justify-between px-2 text-sm font-semibold"><span>9:41</span><span className="text-xs">●●● ▬</span></div>
       <div className="mt-5 flex items-center justify-between">
         <Wordmark size="sm" />
@@ -706,7 +707,7 @@ function KV({ k, v }: { k: string; v: string }) {
 
 function MobileScreens() {
   return (
-    <div className="flex gap-6 overflow-x-auto rounded-[12px] bg-sage p-8">
+    <div className="flex gap-6 overflow-x-auto rounded-[8px] bg-sage p-8">
       <Phone className="bg-bg">
         <div className="mt-14 flex flex-col items-center text-center">
           <Flag className="size-9" strokeWidth={2.5} aria-hidden />
@@ -714,14 +715,14 @@ function MobileScreens() {
           <p className="mt-3 text-sm text-ink-2">Play, channel, campaign and keyword land in your pipeline with each reply.</p>
         </div>
         <div className="mt-auto flex flex-col gap-2">
-          <div className="flex gap-3 rounded-[8px] bg-surface p-3 shadow-[var(--card-shadow)]">
+          <div className="flex gap-3 rounded-[5px] bg-surface p-3 shadow-[var(--card-shadow)]">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-cream text-xs font-semibold">LH</span>
             <span className="min-w-0 text-xs">
               <span className="flex justify-between"><b className="font-semibold">Layla Haddad</b><span className="text-ink-3">10:53</span></span>
               <span className="text-ink-2">Hi, I&apos;d love to book a tasting for 40 guests.</span>
             </span>
           </div>
-          <div className="flex flex-col gap-2 rounded-[8px] bg-surface p-3 shadow-[var(--card-shadow)]">
+          <div className="flex flex-col gap-2 rounded-[5px] bg-surface p-3 shadow-[var(--card-shadow)]">
             <KV k="Play" v="Event planners outreach" />
             <KV k="Channel" v="Cold email" />
             <KV k="Campaign" v="Spring weddings" />
@@ -734,7 +735,7 @@ function MobileScreens() {
           <p className="font-display text-[26px] leading-8 tracking-[-0.01em]">Stop paying for clicks that never reply.</p>
           <p className="mt-3 text-sm text-ink-2">Counting clicks, not conversations, spends your budget on the wrong people.</p>
         </div>
-        <div className="mt-auto flex flex-col gap-2.5 rounded-[9px] bg-bg p-4">
+        <div className="mt-auto flex flex-col gap-2.5 rounded-[6px] bg-bg p-4">
           <div className="flex flex-col items-center gap-2 py-4">
             <span className="flex w-[84%] items-center justify-between rounded-[var(--radius-cta)] bg-sage-ink px-4 py-2 font-display text-xs text-white"><span className="flex items-center gap-2"><Globe className="size-3.5" aria-hidden /> Channel</span><span className="text-white/75">Google</span></span>
             <span className="flex w-full items-center justify-between rounded-[var(--radius-cta)] bg-cream px-4 py-2 font-display text-xs"><span className="flex items-center gap-2"><MousePointerClick className="size-3.5" aria-hidden /> Click ID</span><span className="text-ink-3">CjwKCAjws…</span></span>
@@ -753,7 +754,7 @@ function MobileScreens() {
         <div className="mt-auto">
           <p className="font-display text-lg">Qualified leads</p>
           <p className="mt-1 text-sm text-ink-2">Real conversations that became sales-ready leads.</p>
-          <div className="mt-4 rounded-[9px] bg-surface/85 p-4 backdrop-blur">
+          <div className="mt-4 rounded-[6px] bg-surface/85 p-4 backdrop-blur">
             <IconTile><UsersRound /></IconTile>
             <div className="mt-2 flex items-end justify-between">
               <div>
@@ -898,7 +899,7 @@ function ColourSection() {
         </table>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="bg-hero-grid grid h-64 place-items-center rounded-[var(--radius-card)]"><Wordmark tone="lime" size="lg" /></div>
+        <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-ink"><Wordmark tone="lime" size="lg" /></div>
         <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-lime"><Wordmark size="lg" tone="onLime" /></div>
       </div>
     </section>
@@ -965,6 +966,45 @@ function ControlsSection() {
   );
 }
 
+function IconsSection() {
+  const entries = Object.entries(SHARP_ICONS).filter(([name], i, all) => all.findIndex(([, c]) => c === SHARP_ICONS[name as keyof typeof SHARP_ICONS]) === i);
+  return (
+    <section className="flex flex-col gap-6">
+      <SectionTitle title="Icons" intro="ClimbOS Sharp: our own set, drawn on a 24px grid with a 1.5px stroke, square caps, mitred joins and hard corners. Small marks are squares. Core set below; the rest follow in the same style." />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line sm:grid-cols-5 md:grid-cols-7 xl:grid-cols-9">
+          {entries.map(([name, I]) => (
+            <div key={name} className="flex flex-col items-center gap-2 bg-surface px-2 py-4">
+              <I className="size-6 text-ink" />
+              <span className="max-w-full truncate text-2xs text-ink-3">{name}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
+          <p className="heading-card">Sizes</p>
+          {[16, 20, 24].map((px) => (
+            <div key={px} className="flex items-center gap-3 text-ink">
+              <span className="w-10 text-xs text-ink-3">{px}px</span>
+              {[SHARP_ICONS.Users, SHARP_ICONS.ChartLine, SHARP_ICONS.Settings, SHARP_ICONS.Bell, SHARP_ICONS.Search].map((I, i) => <I key={i} style={{ width: px, height: px }} />)}
+            </div>
+          ))}
+          <p className="heading-card mt-2">Grid</p>
+          <svg viewBox="0 0 24 24" className="size-40 self-center text-ink" aria-hidden>
+            {Array.from({ length: 25 }, (_, i) => <line key={`v${i}`} x1={i} x2={i} y1="0" y2="24" stroke="var(--line-strong)" strokeWidth="0.04" />)}
+            {Array.from({ length: 25 }, (_, i) => <line key={`h${i}`} y1={i} y2={i} x1="0" x2="24" stroke="var(--line-strong)" strokeWidth="0.04" />)}
+            <rect x="3" y="3" width="18" height="18" fill="none" stroke="var(--brand-600)" strokeWidth="0.08" strokeDasharray="0.4 0.3" />
+            <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+              <circle cx="9" cy="8" r="3.25" />
+              <path d="M3 20.5v-2l2.5-2.5h7l2.5 2.5v2M15.5 4.9a3.25 3.25 0 0 1 0 6.2M17.5 16h1l2.5 2.5v2" />
+            </g>
+          </svg>
+          <p className="text-xs text-ink-3">Live area 3–21. Stroke 1.5. Curves only for heads, clocks, lenses, coins and globes.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TypeSection() {
   return (
     <section className="flex flex-col gap-6">
@@ -1011,6 +1051,7 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
         </section>
         <ColourSection />
         <TypeSection />
+        <IconsSection />
         {bodyFonts ? (
           <section className="flex flex-col gap-6">
             <SectionTitle title="Body font options" intro="Reckless Neue for titles, Hanken Grotesk for body and UI (chosen). The alternatives stay here for reference." />

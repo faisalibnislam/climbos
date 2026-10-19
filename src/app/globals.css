@@ -211,17 +211,17 @@
   --shadow-lg: 0 2px 8px rgb(22 24 21 / 0.06), 0 20px 40px -12px rgb(22 24 21 / 0.2);
   --card-shadow: 0 1px 2px rgb(22 24 21 / 0.04);
 
-  /* Corners halved (owner, 2026-10-19): app controls 4px, cards 8px, CTAs 10px, pills 6px. */
+  /* Corners (owner, 2026-10-19): 8px is the largest (page-level frames); everything scales down from it: cards 5px, CTAs 7px, pills 4px, controls and fields 3px. */
   --action: #161815;
   --action-hover: #000000;
   --action-active: #000000;
   --action-ink: #ffffff;
-  --radius-app: 4px;
+  --radius-app: 3px;
   --radius-control: var(--radius-app);
-  --radius-cta: 10px;
-  --radius-field: 4px;
-  --radius-card: 8px;
-  --radius-badge: 6px;
+  --radius-cta: 7px;
+  --radius-field: 3px;
+  --radius-card: 5px;
+  --radius-badge: 4px;
   --btn-2-bg: #ffffff;
   --btn-2-border: rgb(22 24 21 / 0.06);
   --btn-2-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
@@ -244,12 +244,12 @@
      focus ≥ 3:1. Sage-ink carries white text (5.5:1). */
   --sage-ink: #5b6e50;
   --focus-ring: #4d6043;
-  --r-sm: 2px;
-  --r-md: 2.5px;
-  --r-lg: 3px;
-  --r-xl: 4px;
-  --r-2xl: 5px;
-  --r-3xl: 6px;
+  --r-sm: 1.5px;
+  --r-md: 2px;
+  --r-lg: 2px;
+  --r-xl: 3px;
+  --r-2xl: 3.5px;
+  --r-3xl: 4px;
 }
 /* Marketing CTAs take the pill shape in themes that set one. */
 .marketing {
