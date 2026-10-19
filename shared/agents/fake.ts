@@ -81,6 +81,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         ...tmpl,
         name: `${marker} ${kind} play`,
         kind,
+        mechanic: kind === "bankable" ? "Personal email to past customers asking for a referral" : "Co-hosted workshop with a complementary local business",
         funnel: ["a hundred contacted → replies: low to high [example.com, C]", "replies → booked: about a third [example.com, C]"],
         unit: "booked jobs",
         horizonDays: 90,

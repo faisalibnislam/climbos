@@ -40,8 +40,8 @@ describe("decision contract flag", () => {
   });
 
   it("on: still at most 4 plays, one moonshot, and 'bankable' must be predictable", () => {
-    expect(portfolio(lintPlays([1, 2, 3, 4, 5].map((i) => play({ name: `P${i}` })), econ, { decisionContract: true })).length).toBe(1);
-    expect(portfolio(lintPlays([play({ kind: "moonshot" }), play({ kind: "moonshot", name: "M2" })], econ, { decisionContract: true })).length).toBe(1);
+    expect(portfolio(lintPlays(["Referral ask", "Partner webinar", "Directory listing", "Review request", "Local press"].map((n) => play({ name: n, mechanic: `${n} campaign` })), econ, { decisionContract: true })).length).toBe(1);
+    expect(portfolio(lintPlays([play({ kind: "moonshot" }), play({ kind: "moonshot", name: "Billboard stunt", mechanic: "Guerrilla billboard near the stadium" })], econ, { decisionContract: true })).length).toBe(1);
     expect(portfolio(lintPlays([play({ kind: "bankable" })], econ, { decisionContract: true }))[0]).toBeTruthy(); // predictability 3
   });
 
@@ -51,5 +51,38 @@ describe("decision contract flag", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_CONTRACT);
     expect(playsTask({ scorecard: "", insights: "" })).toMatch(/one bankable play, one or two creative-but-proven plays/);
     expect(playsTask({ scorecard: "", insights: "" })).not.toContain("DECISION CONTRACT");
+  });
+});
+
+/** Regression shapes from the 2026-10-19 paid check (B1 losses on Folevi and Formkit). */
+describe("plan checks from the regression run", () => {
+  const issue = (issues: { rule: string; message: string }[], re: RegExp) => issues.some((i) => re.test(i.message));
+  it("an empty plays list is a hard no_plays failure", async () => {
+    const { HARD_RULES } = await import("../../shared/agents/quality");
+    const issues = lintPlays([], econ);
+    expect(issues.some((i) => i.rule === "no_plays")).toBe(true);
+    expect(HARD_RULES.has("no_plays")).toBe(true);
+  });
+
+  it("a unit that isn't a paying outcome (visits, events) is an economics error", () => {
+    const issues = lintPlays([play({ unit: "organic page visit", model: { ...play().model, steps: [{ name: "Organic page visit to free signup", rate: 0.03, low: 0.01, high: 0.05, source: "assumption", ref: "", quote: "" }] } })], econ, { decisionContract: true });
+    expect(issues.some((i) => i.rule === "economics" && /isn't a paying outcome/.test(i.message))).toBe(true);
+  });
+
+  it("a customer unit whose funnel stops at a click or sign-up is flagged; ending at paid is fine", () => {
+    const stopsAtClick = play({ unit: "paying accounts", model: { ...play().model, steps: [{ name: "Delivered email to click", rate: 0.05, low: 0.02, high: 0.08, source: "assumption", ref: "", quote: "" }] } });
+    expect(issue(lintPlays([stopsAtClick], econ, { decisionContract: true }), /isn't a paying/)).toBe(true);
+    const toPaid = play({ unit: "paying accounts", model: { ...play().model, steps: [{ name: "Free signup → paid", rate: 0.05, low: 0.02, high: 0.08, source: "assumption", ref: "", quote: "" }] } });
+    expect(issue(lintPlays([toPaid], econ, { decisionContract: true }), /isn't a paying/)).toBe(false);
+  });
+
+  it("the same move twice is flagged", () => {
+    const a = play({ name: "Comparison page refresh", mechanic: "Refresh the comparison page with a free-plan call to action" });
+    const b = play({ name: "Comparison page refresh test", mechanic: "Refresh the comparison page and test the free-plan call to action" });
+    expect(issue(lintPlays([a, b], econ, { decisionContract: true }), /repeats/)).toBe(true);
+  });
+
+  it("the default plays task requires a real volume engine and distinct moves", () => {
+    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/at least one play must be a real volume engine/);
   });
 });

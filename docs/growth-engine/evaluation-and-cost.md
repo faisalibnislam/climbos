@@ -114,7 +114,7 @@ Controls:
 - **The fix:** on 2026-10-19 the generator was changed to print the real judge model (`POINTWISE_JUDGE`).
 - **Historical file:** left unedited.
 
-## 6. Proposal: the next paid check (not approved; $0 stands)
+## 6. Basic regression check (approved 2026-10-19, $5 cap): run and result
 
 **Why it changes a decision.** S1–S3 change the planner's instructions:
 - the goal horizon replaces the fixed 90 days;
@@ -149,3 +149,41 @@ pnpm bench --cases formkit,meetrao,involets,taskeni,folevi --tasks strategy --ar
 ```
 
 `--refs` doesn't exist yet. Until it does, run each arm from its own checkout.
+
+### Result (2026-10-19)
+
+**What ran:** Basic only. B0 = `c5dfc09` (detached worktree). B1 = `befc3c9`, which is S1–S4 plus the S5 capability context; the S5/S6 flags were off. Both arms used the same 5 prepared cases.
+
+**Judge:** Sol, pairwise, both orders; a win counts only when both orders agree. Pointwise scores are 1–10.
+
+**Files:** `bench/results/2026-10-19-02-50-regress-b0.*`, `…-regress-b1.*` and `2026-10-19-03-22-regress-judge.*`. The blind owner packet is `…-regress-judge-blind.md`; its key is in `…-blind-key.json`.
+
+| | B0 | B1 |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.16 |
+| Mean time per plan | about 20.9 min | about 20.8 min |
+| Pairwise vs the other arm | — | 2 wins, 3 losses, 0 ties |
+| Pointwise overall (mean) | 4.0 | 3.6 |
+
+**Total spent:** $2.79 of the $5 cap (case preparation $0.015, plans $2.23, judge $0.54).
+
+**Decision rule:** win or tie in at least 4 of 5 cases. B1 didn't meet it (2 of 5). B1 isn't released as run, and per the stop rule no more money was spent.
+
+**Why B1 lost:**
+- **Folevi:** the plays list was empty, so the plan became measurement prerequisites.
+- **Meetrao:** the same comparison-page play appeared twice, forecasting about 1 customer.
+- **Formkit:** play units were "organic page visit" and "eligible trigger event". Funnels ending at a click or sign-up were counted as customers.
+
+**Where B1 was better:**
+- Truth scores were higher in 3 of 5 cases.
+- It said when the goal was out of reach (the Involets and Taskeni wins).
+
+**Fixes since (free, deterministic):**
+- `no_plays` is a hard failure.
+- The play unit must be a paying outcome, and the funnel's last step must reach payment (both are hard economics findings).
+- Repeated moves are flagged.
+- The default plays task again requires at least one real volume engine and distinct moves, while still forbidding rates above the evidence.
+
+**Re-checked offline** against the saved outputs: the new checks flag the Folevi and Formkit failures and none of the other 8 plans. The Meetrao duplicate is semantic, and word overlap doesn't catch it (known gap).
+
+**Next decision-changing step:** re-run B1 with the fixes against B0, using the remaining $2.21 of this cap (about $1.70 expected). It needs the owner's OK.

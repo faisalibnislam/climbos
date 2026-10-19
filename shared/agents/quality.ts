@@ -15,7 +15,7 @@ import type { Assessment, LintIssue } from "./types";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency"]);
+export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays"]);
 
 export interface AgentQuality {
   agentId: string;
@@ -53,6 +53,7 @@ const LABEL: Record<string, string> = {
   citation: "a play cites a source the research didn't read",
   provenance: "a number is credited to a source without naming or quoting it",
   consistency: "the headline target doesn't match what the plays add up to",
+  no_plays: "the plan has no plays to run",
 };
 
 /** Combine the plays and plan agents' results (plus any extra hard lint on the final plan) into one quality state. */

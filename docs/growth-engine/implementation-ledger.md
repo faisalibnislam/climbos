@@ -193,7 +193,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-COST-01 | partial | all | this ledger | Decision records are written per slice in commit messages. No formal record per workflow yet |
 | REQ-COST-02 | missing | S14 | run `actualMicros` | No $ per accepted output |
 | REQ-COST-03 | partial | S12/S14 | reservation, `jobs.ts:95`, `engine.ts:192` | No per-automation ceiling |
-| REQ-COST-04 | partial | S14 | bench arms | Proposal ready (§6), blocked on funding |
+| REQ-COST-04 | partial | S14 | bench arms, `bench/run.ts --import-arm` | First paid Basic regression run 2026-10-19 ($2.79): B1 lost 2–3 to B0. Causes fixed with deterministic checks; re-run pending owner OK |
 | REQ-COST-05 | missing | S14 | `routes.ts` | Mode-based only. Explicit Expert choice preserved |
 | REQ-COST-06 | missing | S14 | — | |
 | REQ-COST-07 | partial | S14 | cache blocks, `prompt_cache_key` | Hits not measured |

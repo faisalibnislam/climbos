@@ -162,6 +162,19 @@ const GENERIC = /\b(post consistently|build a community|leverage social media|in
 
 /** Deterministic portfolio checks (growth-plays §3–4). */
 const CUSTOMER_UNIT = /customer|client|account|member|order|booking|job|sale|subscriber|patient|student|deal|sign-?up/i;
+/** A funnel's last step must be the paying outcome, not an intermediate action (bench 2026-10-19: signups and clicks counted as customers). */
+/** Units that are paying outcomes (sign-ups, visits and events aren't). */
+const PAYING_UNIT = /customer|client|account|member|order|booking|booked|job|sale|subscri|patient|student|deal|team|seat|purchase|buyer|user.*paid|paid/i;
+const PAYING_STEP = /paid|pay|purchas|buy|bought|customer|order|subscri|upgrad|clos|won|win|sale|client|deal|contract|enrol|member|convert/i;
+const INTERMEDIATE_STEP = /click|visit|view|open|repl|lead|sign-?up|trial|install|download|register|demo|call|book|follow|watch|read|start/i;
+const STOP = new Set(["with", "your", "their", "this", "that", "from", "into", "page", "pages", "play", "they", "them", "then", "each", "more", "about", "every", "week", "weekly"]);
+const words = (s: string) => new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !STOP.has(w)));
+/** Jaccard similarity of two word sets. */
+const overlap = (a: Set<string>, b: Set<string>) => {
+  if (!a.size || !b.size) return 0;
+  const inter = [...a].filter((w) => b.has(w)).length;
+  return inter / (a.size + b.size - inter);
+};
 
 export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { decisionContract?: boolean } = {}): LintIssue[] {
   const plays = economics ? withForecasts({ economics, plays: drafts }).plays : (drafts as Play[]);
@@ -180,6 +193,21 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
     if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
   }
   if (plays.filter((p) => p.kind === "moonshot").length > 1) err("At most one moonshot.");
+  // A plan with no plays can't drive work, whatever else it says (hard).
+  if (!plays.length) issues.push({ severity: "error", rule: "no_plays", message: "No plays. Give at least one play with a weekly volume the owner can run now.", path: "plays" });
+  // Two plays that are the same move count once.
+  plays.forEach((p, i) => plays.slice(0, i).forEach((q, j) => {
+    if (overlap(words(`${p.name} ${p.mechanic}`), words(`${q.name} ${q.mechanic}`)) >= 0.6) err(`"${p.name}" repeats "${q.name}". Merge them or replace one with a different move.`, `plays[${i}]`);
+  }));
+  // The forecast counts paying outcomes: the unit must be one, and so must the last step.
+  plays.forEach((p, i) => {
+    const last = p.model?.steps?.at(-1)?.name ?? "";
+    const bookingUnit = /book|job|appointment/i.test(p.unit);
+    if (p.model?.steps?.length && !PAYING_UNIT.test(p.unit))
+      issues.push({ severity: "error", rule: "economics", message: `"${p.unit}" isn't a paying outcome. Use paying customers, orders or booked jobs as the unit, and add the steps that get there.`, path: `plays[${i}].unit` });
+    else if (last && !bookingUnit && INTERMEDIATE_STEP.test(last) && !PAYING_STEP.test(last))
+      issues.push({ severity: "error", rule: "economics", message: `The last step "${last}" isn't a paying ${p.unit.replace(/s$/, "")}. Add the step from it to paying (with its rate) so customers aren't overstated.`, path: `plays[${i}].model.steps` });
+  });
   // Ambition: the portfolio must credibly move the goal, not run a cautious measurement exercise.
   const customerLike = plays.filter((p) => CUSTOMER_UNIT.test(p.unit));
   const combined = customerLike.reduce((s, p) => s + p.p50, 0);
