@@ -1,5 +1,7 @@
 # Anthropic platform research for the ClimbOS AI engine rebuild
 
+> **Retired (2026-10-18).** ClimbOS text models are OpenAI only (`shared/agents/routes.ts`). This file is kept only as a historical record. Don't use it for routing or cost claims.
+
 Researched 17 Oct 2026. Covers the Claude API, Agent Skills, server tools, caching and batching, agent-loop and eval guidance, Managed Agents and the Agent SDK, Convex limits for long runs, and Gemini.
 
 **Sources.** Anthropic docs (platform.claude.com, fetched today), anthropic.com/engineering, the installed SDK type definitions, Convex docs and component READMEs, and ai.google.dev.

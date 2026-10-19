@@ -1,6 +1,21 @@
 # Growth engine architecture, contracts and formulas
 
-Proposal only. Nothing here is live until approved (spec §29 phases B–D).
+Proposal from 2026-10-18. Parts are now live and parts are superseded. See `implementation-ledger.md` for current status.
+
+**Live since:**
+- **Forecasts:** computed in code by `withForecasts` in `shared/agents/economics.ts`. The model no longer writes P10/P50/P90.
+- **Plan quality state:** `shared/agents/quality.ts`.
+- **Provenance:** checks and page-verified research.
+- **Goal gap:** `shared/agents/goal.ts`.
+- **Null-safe economics:** no percent coercion; unknown churn stays null.
+
+**Not as written here:**
+- `shared/growth/contracts.ts` doesn't exist. The contracts live in `shared/agents/specs.ts`, `economics.ts` and `provenance.ts`.
+- The 20% play overlap is a fixed constant (`PLAY_OVERLAP`). It isn't shown to the owner as an editable assumption.
+- Engine Lab runs weekly (`convex/crons.ts`). It isn't paused.
+- Find customers does collect published business emails. The "no prospect email database" line refers to bought lists.
+
+Still accurate: research notes are clipped at 40k characters.
 
 ## 1. Principles
 

@@ -1,0 +1,1150 @@
+[
+ {
+  "case": "formkit",
+  "type": "b2b_saas",
+  "task": "strategy",
+  "outs": {
+   "basic": {
+    "arm": "basic",
+    "ok": true,
+    "output": {
+     "summary": "By Jan 17, target ≈5 paid agency accounts. The all-play scenario is ≈5.3 (range 2.7–9, with 20% overlap) at $3,734 modeled cost; cash spend is $540/month. HubSpot remains deferred.",
+     "positioning": "For agencies managing client forms: client workspaces, approvals, shared templates, and audit logs. Compare Google Forms fairly; date all claims.",
+     "audiences": [
+      {
+       "name": "Agency operators comparing Google Forms for client projects",
+       "hypothesis": "A fair comparison and client-workspace path can attract teams outgrowing basic forms.",
+       "evidence": "Formkit's comparison and agency features: https://formkit.app/."
+      },
+      {
+       "name": "Small agency owners and operations leads",
+       "hypothesis": "Separate client workspaces, approvals, templates, and audit logs fit multi-client operations.",
+       "evidence": "Clutch lists US agencies: https://clutch.co/us/agencies; pool size remains unverified."
+      },
+      {
+       "name": "HubSpot sales and marketing teams browsing form tools",
+       "hypothesis": "A verified listing could reach teams selecting forms within their HubSpot workflow.",
+       "evidence": "HubSpot lists form-builder apps: https://ecosystem.hubspot.com/marketplace/apps/form-builder."
+      }
+     ],
+     "channels": [
+      {
+       "name": "Comparison pages",
+       "score": 82,
+       "status": "primary",
+       "why": "Adjusted mean 76.9/100. High-intent fit; validate search demand and page signups."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 82,
+       "status": "in_plan",
+       "why": "Adjusted mean 76.3/100. Strong intent, but trust and differentiation need proof."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 82,
+       "status": "in_plan",
+       "why": "Adjusted mean 80.6/100. Strong potential reach; confirm eligible listings before investing effort."
+      },
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 79,
+       "status": "later",
+       "why": "Adjusted mean 79.4/100. Fits self-service conversion; test against actual signup and upgrade volume."
+      },
+      {
+       "name": "AlternativeTo",
+       "score": 78,
+       "status": "later",
+       "why": "Adjusted mean 75.6/100. Low-cost visibility is plausible; measure qualified visits and paid conversions."
+      },
+      {
+       "name": "Templates",
+       "score": 77,
+       "status": "later",
+       "why": "Adjusted mean 73.1/100. Supports discovery and faster first value; track template starts and published forms."
+      },
+      {
+       "name": "Content SEO",
+       "score": 76,
+       "status": "later",
+       "why": "Adjusted mean 70.6/100. Slower and less direct than comparison pages; AI search further weakens generic blog priority."
+      },
+      {
+       "name": "G2",
+       "score": 76,
+       "status": "later",
+       "why": "Adjusted mean 72.5/100. Relevant intent, but credibility depends on real review volume."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Agency switcher Search pilot",
+       "hypothesis": "An agency-focused comparison page matched to search intent can generate paid agency accounts.",
+       "population": "Agency-intent Google searches; $108 cap; approximately 36 planned clicks.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid agency accounts and fully loaded CAC",
+       "guardrails": [
+        "Pause for irrelevant search terms",
+        "Count fully loaded cost, not clicks alone",
+        "Small sample supports directional decisions only"
+       ],
+       "durationDays": 21,
+       "stoppingRule": "At 36 clicks, 0 paid: pause; ≥1 paid: continue only if CAC ≤$419."
+      },
+      {
+       "name": "Client-workspace outreach test",
+       "hypothesis": "The client-workspace offer can earn relevant agency replies and paid accounts.",
+       "population": "600 Clutch-listed agencies over 21 days; 200 weekly; personalized emails and two follow-ups.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Paid agency accounts and fully loaded CAC",
+       "guardrails": [
+        "Pause above 2% bounce",
+        "Use published business emails and include opt-out",
+        "Stop follow-ups on reply or opt-out",
+        "Treat reply and close rates as directional"
+       ],
+       "durationDays": 21,
+       "stoppingRule": "Under 6 relevant replies: stop audience; scale only with paid account and CAC ≤$419."
+      },
+      {
+       "name": "HubSpot eligibility gate",
+       "hypothesis": "A verified integration may qualify for a future marketplace listing.",
+       "population": "Check HubSpot listing requirements only by Oct 26; do not launch acquisition.",
+       "method": "export_instructions",
+       "primaryMetric": "Verified eligibility",
+       "guardrails": [
+        "Verify integration and eligibility before making claims",
+        "No paid promotion or third active acquisition channel"
+       ],
+       "durationDays": 7,
+       "stoppingRule": "If eligible, reconsider after day 45 only as a channel replacement."
+      }
+     ],
+     "constraints": [
+      "Search ads are capped at $600/month; $540/month is planned, with $60 held.",
+      "The $3,734 all-play scenario includes all three plays and 20% overlap; HubSpot remains deferred.",
+      "All forecasts are uncalibrated assumption-based scenarios, not predictions.",
+      "Owner plan: 1.25 hours/week (0.25 Search, 1 outreach); confirm by Oct 23.",
+      "ClimbOS handles page, ads, prospecting, personalization, follow-ups, and tracking.",
+      "The 3,100 Clutch prospects figure is an assumption; validate by Oct 26.",
+      "Model assumes $57 monthly revenue, 80% margin, and 5% monthly churn; validate with billing.",
+      "Paid-agency baseline was not supplied; date it Oct 19 and reconcile by Oct 23."
+     ],
+     "measurementPlan": "Use UTMs and a weekly CRM/billing scorecard for signups, published forms, paid agencies, seats, churn, source, and CAC. Import paid conversions where supported; log AI referrals separately and check answer visibility monthly.",
+     "firstActions": [
+      {
+       "title": "Build the dated agency Google Forms switcher page",
+       "why": "Turn documented comparison gaps into a focused, evidence-backed page.",
+       "role": "ClimbOS; owner approves"
+      },
+      {
+       "title": "Review the first 20 Clutch agency prospects",
+       "why": "Check fit, published business emails, and personalization before full outreach.",
+       "role": "Owner and ClimbOS"
+      },
+      {
+       "title": "Reconcile billing and customer-source baseline",
+       "why": "Replace assumed seats, margin, churn, and source mix with actual data.",
+       "role": "Owner"
+      },
+      {
+       "title": "Configure UTMs, conversion events, and weekly scorecard",
+       "why": "Make paid accounts and source-level CAC visible before scaling.",
+       "role": "ClimbOS and owner"
+      },
+      {
+       "title": "Check HubSpot marketplace eligibility",
+       "why": "Proceed only if eligibility and the unpaid listing path are verified.",
+       "role": "ClimbOS"
+      }
+     ],
+     "diagnosis": "Acquisition data is uncalibrated; channel figures are scenarios, not Formkit results. All-play blended CAC is $707, above the $419 ceiling. Falsifier: observed channel CAC remains below the ceiling.",
+     "affordableCac": "At $46 monthly contribution and 5% monthly churn, a customer earns $419 in 12 months; maximum affordable CAC is $419.",
+     "notDoing": [
+      {
+       "channel": "Lifecycle email and freemium onboarding",
+       "why": "Wait for signup and activation data before building another lifecycle."
+      },
+      {
+       "channel": "More templates and use-case pages",
+       "why": "Start with one agency starter form; expand after activation evidence."
+      },
+      {
+       "channel": "AlternativeTo, G2, and Capterra listings",
+       "why": "Wait for accurate profiles and real, voluntary customer reviews."
+      },
+      {
+       "channel": "AI-search acquisition and broad blog SEO",
+       "why": "Check AI answers monthly; broad informational SEO is not the acquisition engine."
+      },
+      {
+       "channel": "HubSpot marketplace listing",
+       "why": "The scenario loses money; defer acquisition and consider only as a replacement after day 45."
+      }
+     ],
+     "northStar": {
+      "metric": "New paid agency accounts, cumulative",
+      "baseline": "As of Oct 19, 2026: paid-agency baseline unknown; reconcile by Oct 23.",
+      "target": "≈5 paid agency accounts by day 90."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Search-ad clicks",
+       "weeklyTarget": "42/week after scale; scenario assumption",
+       "source": "Google Ads; play model"
+      },
+      {
+       "metric": "Agency outreach sends",
+       "weeklyTarget": "200 approved sends",
+       "source": "ClimbOS CRM"
+      },
+      {
+       "metric": "Relevant agency replies",
+       "weeklyTarget": "2–6/week; benchmark, not baseline",
+       "source": "Supplied ClimbOS benchmark"
+      },
+      {
+       "metric": "Paid agency accounts",
+       "weeklyTarget": "≈5 cumulative by day 90",
+       "source": "Billing and CRM"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14 (Oct 19–Nov 2)",
+       "focus": "Build dated agency comparison page; launch capped Search pilot and 200 weekly outreach contacts."
+      },
+      {
+       "name": "Test and decide",
+       "days": "15–45 (Nov 3–Dec 3)",
+       "focus": "Complete pilots; review paid outcomes, CAC, replies, and search terms; decide by day 45."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90 (Dec 4–Jan 17)",
+       "focus": "Scale only CAC-fit Search and outreach; HubSpot may replace, never add to, an active channel."
+      }
+     ],
+     "weekOneChecklist": [
+      "Export billing and acquisition sources; reconcile the Oct 19 baseline by Oct 23.",
+      "ClimbOS drafts the comparison page, ads, and tracking; owner approves claims.",
+      "Validate the 3,100-prospect assumption and HubSpot eligibility by Oct 26.",
+      "Approve first 20 prospects; ClimbOS starts 200 weekly contacts with opt-outs.",
+      "Launch the $108 Search pilot with UTMs, negatives, and paid-conversion tracking."
+     ],
+     "risks": [
+      {
+       "risk": "Assumption-based channel CAC may exceed the $419 ceiling.",
+       "mitigation": "Use observed fully loaded CAC; pause or replace any channel above the ceiling by Dec 3."
+      },
+      {
+       "risk": "Owner's weekly time commitment is not confirmed.",
+       "mitigation": "Confirm the proposed 1.25 hours weekly by Oct 23; ClimbOS owns production."
+      },
+      {
+       "risk": "The 3,100-prospect estimate is unverified.",
+       "mitigation": "ClimbOS audits directory count and email quality by Oct 26."
+      },
+      {
+       "risk": "Small samples cannot establish reliable conversion rates.",
+       "mitigation": "Treat pilot outcomes as directional; use them only for stop-or-continue decisions."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Agency Google Forms Switcher",
+       "oneLiner": "Match a fair Google Forms comparison page to agency-focused search ads.",
+       "kind": "bankable",
+       "audience": "Agency operators comparing Google Forms for client projects; Google Search.",
+       "trigger": "Agency searches for a Google Forms alternative for client work.",
+       "hook": "Manage client forms with workspaces, approvals, and audit logs; Business is $19 per seat monthly.",
+       "mechanic": "Comparison page matched to high-intent search ads.",
+       "assetUsed": "Business workspaces, approvals, audit log, and comparison table.",
+       "funnel": [
+        "Search click→free signup: 1% / 5% / 8% [assumption, grade D]",
+        "Free signup→paid agency: 5% / 20% / 30% [assumption, grade D]"
+       ],
+       "unit": "paid agency accounts",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Search cost and paid conversion for agency visitors.",
+       "test": "Planned: spend $108 over 21 days for about 36 clicks; measure paid agency accounts.",
+       "killIf": "Zero paid accounts after 36 clicks; pause ads and revise the page.",
+       "scaleIf": "At least 1 paid agency account; raise spend to $540/month and target 42 clicks weekly.",
+       "scores": [
+        5,
+        4,
+        4,
+        3,
+        4,
+        4,
+        5,
+        3
+       ],
+       "firstActionToday": "Draft the agency-focused Google Forms comparison page.",
+       "climbosCanDo": "Build the landing page, draft ads, track clicks, signups, and paid accounts.",
+       "model": {
+        "weeklyReach": 42,
+        "weeklyReachLow": 30,
+        "weeklyReachHigh": 60,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "Google Search planning estimate"
+        },
+        "steps": [
+         {
+          "name": "Search click to free signup",
+          "rate": 0.05,
+          "low": 0.01,
+          "high": 0.08,
+          "source": "assumption",
+          "ref": "Formkit planning assumption"
+         },
+         {
+          "name": "Free signup to paid agency",
+          "rate": 0.2,
+          "low": 0.05,
+          "high": 0.3,
+          "source": "assumption",
+          "ref": "Formkit planning assumption"
+         }
+        ],
+        "monthlySpendUsd": 540,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned search budget"
+        },
+        "ownerHoursPerWeek": 0.25,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned owner review"
+        }
+       },
+       "p10": 2.2,
+       "p50": 4.6,
+       "p90": 7.9
+      },
+      {
+       "name": "Agency Client-Workspace Outreach",
+       "oneLiner": "Offer agencies a separate Formkit workspace for each client.",
+       "kind": "creative",
+       "audience": "Small agencies listed on Clutch; agency owners and operations leads.",
+       "trigger": "An agency is managing forms across several client projects.",
+       "hook": "Give each client a workspace; Business adds approvals, shared templates, and an audit log.",
+       "mechanic": "Personalized B2B email to agency operators, with two follow-ups.",
+       "assetUsed": "Client workspaces, shared templates, approvals, and audit log.",
+       "funnel": [
+        "Sent→reply: 1% / 2% / 3% [cold-email benchmark, grade B]",
+        "Reply→booked call: 20% / 30% / 40% [ClimbOS benchmark, grade B]",
+        "Booked call→paid agency: 5% / 12% / 20% [assumption, grade D]"
+       ],
+       "unit": "paid agency accounts",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether agencies will adopt a newer tool across client accounts.",
+       "test": "Planned: contact 600 agencies over 21 days; track relevant replies, booked calls, and paid accounts.",
+       "killIf": "Fewer than 6 relevant replies from 600 contacts; stop and change the audience.",
+       "scaleIf": "At least 1 paid agency from 600 contacts; increase outreach to 250 contacts weekly.",
+       "scores": [
+        5,
+        3,
+        4,
+        4,
+        3,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Choose one agency niche and approve 20 Clutch profiles.",
+       "climbosCanDo": "Find agency targets and published emails; personalize outreach, follow up, and track replies.",
+       "model": {
+        "weeklyReach": 200,
+        "weeklyReachLow": 150,
+        "weeklyReachHigh": 250,
+        "reachSource": {
+         "source": "planned",
+         "ref": "ClimbOS outreach volume guidance"
+        },
+        "steps": [
+         {
+          "name": "Sent to reply",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.03,
+          "source": "benchmark",
+          "ref": "Supplied ClimbOS outreach benchmarks",
+          "quote": "Plan on 1–3% reply and 20–40% of replies booking (cold email benchmarks, grade B).",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Reply to booked call",
+          "rate": 0.3,
+          "low": 0.2,
+          "high": 0.4,
+          "source": "benchmark",
+          "ref": "Supplied ClimbOS outreach benchmarks",
+          "quote": "Plan on 1–3% reply and 20–40% of replies booking (cold email benchmarks, grade B).",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Booked call to paid agency",
+          "rate": 0.12,
+          "low": 0.05,
+          "high": 0.2,
+          "source": "assumption",
+          "ref": "Formkit planning assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned outreach"
+        },
+        "ownerHoursPerWeek": 1,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned owner time"
+        }
+       },
+       "p10": 1.1,
+       "p50": 1.8,
+       "p90": 2.9
+      },
+      {
+       "name": "HubSpot Marketplace Listing Test",
+       "oneLiner": "Test whether a verified HubSpot listing can reach sales teams in their workflow.",
+       "kind": "moonshot",
+       "audience": "HubSpot sales and marketing teams browsing its app marketplace.",
+       "trigger": "A HubSpot user searches its marketplace for a lead-form tool.",
+       "hook": "Capture leads with Formkit forms and connect responses to HubSpot.",
+       "mechanic": "Verified marketplace listing paired with a lead-form template.",
+       "assetUsed": "Formkit's HubSpot connection and sales lead forms.",
+       "funnel": [
+        "Listing view→click: 1% / 2% / 5% [assumption, grade D]",
+        "Click→signup: 2% / 5% / 10% [assumption, grade D]",
+        "Signup→paid team: 5% / 10% / 20% [assumption, grade D]"
+       ],
+       "unit": "paid agency accounts",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Listing eligibility and Formkit's share of marketplace views.",
+       "test": "Planned: check listing eligibility within 7 days; if accepted, track installs for 30 days.",
+       "killIf": "Ineligible after 7 days, or zero installs 30 days after listing.",
+       "scaleIf": "At least 3 installs and 1 paid team in 30 days; continue without paid promotion.",
+       "scores": [
+        4,
+        1,
+        4,
+        2,
+        4,
+        5,
+        4,
+        4
+       ],
+       "firstActionToday": "Check HubSpot marketplace requirements against Formkit's current integration.",
+       "climbosCanDo": "Check listing requirements, draft listing copy, and track marketplace-referred installs.",
+       "model": {
+        "weeklyReach": 50,
+        "weeklyReachLow": 0,
+        "weeklyReachHigh": 300,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "https://ecosystem.hubspot.com/marketplace/apps/apps-for-marketing-campaigns"
+        },
+        "steps": [
+         {
+          "name": "Listing view to click",
+          "rate": 0.02,
+          "low": 0.01,
+          "high": 0.05,
+          "source": "assumption",
+          "ref": "Supplied growth-play base-rate guidance"
+         },
+         {
+          "name": "Click to free signup",
+          "rate": 0.05,
+          "low": 0.02,
+          "high": 0.1,
+          "source": "assumption",
+          "ref": "Supplied growth-play base-rate guidance"
+         },
+         {
+          "name": "Free signup to paid team",
+          "rate": 0.1,
+          "low": 0.05,
+          "high": 0.2,
+          "source": "assumption",
+          "ref": "Formkit planning assumption"
+         }
+        ],
+        "monthlySpendUsd": 0,
+        "spendSource": {
+         "source": "planned",
+         "ref": "Planned cap"
+        },
+        "ownerHoursPerWeek": 2,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "Planned owner time"
+        }
+       },
+       "p10": 0.1,
+       "p50": 0.2,
+       "p90": 0.6
+      }
+     ],
+     "portfolioNote": "Use up to $600 monthly: $540 for Google Search after a capped $108 test; hold $60. ClimbOS outreach targets 200 agencies weekly; marketplace testing is unpaid.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 57,
+      "grossMargin": 0.8,
+      "monthlyChurn": 0.05,
+      "basis": "Model customer is an agency account with three Business seats: $57 monthly revenue. Seat count, margin, and churn are assumptions; churn-adjusted 12-month gross profit is about $420.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "Confirmed fact index 1; Formkit planning assumption"
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "Formkit planning assumption"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "Formkit planning assumption"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://www.g2.com/categories/online-form-builder",
+      "https://www.reddit.com/r/freelance/",
+      "https://www.reddit.com/r/Teachers/",
+      "https://www.reddit.com/r/indiehackers/comments/1sai5g6/small_teams_whats_your_actual_form_workflow/?utm_source=openai",
+      "https://ecosystem.hubspot.com/marketplace/apps/apps-for-marketing-campaigns?utm_source=openai",
+      "https://apps.apple.com/us/app/formkit-build-your-form/id6523429811?utm_source=openai",
+      "https://formkit.app/",
+      "https://www.shrm.org/events-education/events?utm_source=openai",
+      "https://usc.edu/academic-calendar/?utm_source=openai"
+     ]
+    },
+    "costMicros": 264035,
+    "ms": 1458573
+   },
+   "expert": {
+    "arm": "expert",
+    "ok": true,
+    "output": {
+     "summary": "Prioritize approval-triggered upgrades, then the intake workbench; cap directory setup. Uncalibrated 90-day scenario: ≈19 customers (range 7.1–41), assuming 20% overlap; $2,629 total cost and $670/month cash spend.",
+     "positioning": "Formkit helps agencies build client-intake forms in Claude or ChatGPT, then add Business approvals when client work needs review.",
+     "audiences": [
+      {
+       "name": "Activated Free agencies",
+       "hypothesis": "Attempting publishing approvals signals paid-workflow need; link directly to Business checkout instead of sending generic upgrade reminders.",
+       "evidence": "Supplied agency research identifies publishing approvals as a Business feature; eligible-account volume remains unverified. https://formkit.app/"
+      },
+      {
+       "name": "Agencies building client intake",
+       "hypothesis": "A usable intake prompt attracts agencies that publish forms, receive responses, and later need approval controls.",
+       "evidence": "Supplied product research describes agency approval workflows and client workspaces. https://formkit.app/"
+      },
+      {
+       "name": "Agency operators using assistant directories",
+       "hypothesis": "An accurate assistant-native intake demonstration can attract qualified agencies without funding connector development.",
+       "evidence": "Claude provides a connector-submission route; Formkit eligibility and agency-qualified traffic are not established. https://claude.com/marketplace/connectors-plugins"
+      }
+     ],
+     "channels": [
+      {
+       "name": "Lifecycle and nurture email",
+       "score": 83,
+       "status": "primary",
+       "why": "Secondary engine: test whether demonstrated feature need converts better than generic upgrade reminders, using the shared pilot gates."
+      },
+      {
+       "name": "Integration marketplaces",
+       "score": 81,
+       "status": "in_plan",
+       "why": "First reserve acquisition test: assistant-native publishing supplies a specific discovery hook; stop setup if no eligible listing exists."
+      },
+      {
+       "name": "AI tool directories",
+       "score": 81,
+       "status": "in_plan",
+       "why": "Strong fit that the budget can support alongside the primary channel."
+      },
+      {
+       "name": "Comparison pages",
+       "score": 79,
+       "status": "later",
+       "why": "Reserve for demand capture; a useful comparison does not establish that it will rank within the goal window."
+      },
+      {
+       "name": "Competitor alternative pages",
+       "score": 78,
+       "status": "later",
+       "why": "Reserve; publish one strong alternative page rather than a thin page for every competitor."
+      },
+      {
+       "name": "Templates",
+       "score": 78,
+       "status": "later",
+       "why": "Strong reserve acquisition asset; start with one job-specific template instead of a large library."
+      },
+      {
+       "name": "Google organic search",
+       "score": 77,
+       "status": "later",
+       "why": "Maintain commercial search foundations, but do not depend on unmeasured rankings for the near-term goal."
+      },
+      {
+       "name": "Video tutorials",
+       "score": 77,
+       "status": "later",
+       "why": "Strong supporting asset; judge it by activated accounts and upgrades, not views."
+      }
+     ],
+     "experiments": [
+      {
+       "name": "Approval-needed upgrade sequence pilot",
+       "hypothesis": "Demonstrated approval need creates actionable upgrade interest; verify eligible-account volume before launch.",
+       "population": "500 sends to distinct eligible agency recipients; one contact per account.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Distinct recipients clicking the upgrade link; qualifying purchases authorize expansion.",
+       "guardrails": [
+        "$60 fully loaded pilot; included in the play allocation.",
+        "Use permissioned recipients; suppress purchases and opt-outs immediately.",
+        "Pause for spam complaints ≥0.3% or hard bounces >2%.",
+        "Pilot reads are directional; do not claim causality."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "No purchase by day 45: stop; otherwise ≥9 clicks: scale, ≤4: kill, else revise once."
+      },
+      {
+       "name": "Client-intake prompt workbench pilot",
+       "hypothesis": "A usable intake prompt drives real form usage and subsequent approval-related buying demand.",
+       "population": "80 paid visits acquired within 14 days; observe purchase progression afterward.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Accounts created per paid visit; qualifying purchases authorize expansion.",
+       "guardrails": [
+        "$120 fully loaded pilot; included in the play allocation.",
+        "Stay within the shared cash cap.",
+        "If affordable traffic cannot reach the sample, report inconclusive and pause expansion.",
+        "Keep audience, landing page, offer, and qualification fixed during enrollment.",
+        "Track signup through qualifying purchase; exclude smaller purchases."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "No purchase by day 45: stop; otherwise ≥10 signups: scale, ≤4: kill, else revise once."
+      },
+      {
+       "name": "Assistant-directory activation pilot",
+       "hypothesis": "Eligible assistant listings attract agencies that activate and buy approval controls, not merely directory clicks.",
+       "population": "100 tagged, agency-qualified visits from officially eligible assistant listings.",
+       "method": "pre_post_observational",
+       "primaryMetric": "Accounts created per qualified directory visit; qualifying purchases authorize expansion.",
+       "guardrails": [
+        "$60 fully loaded pilot; included in the play allocation.",
+        "Reuse existing assets; do not fund connector development.",
+        "Ineligibility ends setup; verify claims against official requirements.",
+        "Do not assume endorsement, placement, or traffic.",
+        "Deduplicate accounts and document placement changes and purchase lag."
+       ],
+       "durationDays": 21,
+       "stoppingRule": "No purchase by day 45: stop; otherwise ≥12 signups: scale, ≤5: kill, else revise once."
+      }
+     ],
+     "constraints": [
+      "Cash spend: $670/month; locked scenario total cost: $2,629 over 90 days.",
+      "Monthly allocation: $600 search ads and $70 credits across the plays.",
+      "Owner availability: one hour weekly proposed, not confirmed.",
+      "ClimbOS handles production; owner approves key decisions.",
+      "Steady-state play costs: $21/$102/$46 per qualifying customer.",
+      "Pilot costs are play subsets, not additions.",
+      "Sources, audience size, and conversion baselines require export.",
+      "English-language pilot; select permitted countries before advertising.",
+      "Self-serve sales cycle; observe purchase lag before expansion.",
+      "Verify support and AI-cost capacity before increasing volume."
+     ],
+     "measurementPlan": "Establish source shares and funnel baselines; tag links, deduplicate accounts, and reconcile billing weekly. Import qualifying purchases to Google; use server-side events where supported. Track AI referrals separately and check assistant visibility monthly.",
+     "firstActions": [
+      {
+       "title": "Verify the upgrade audience",
+       "why": "Export distinct eligible accounts and historical sources; sufficient lawful reach unlocks the pilot.",
+       "role": "ClimbOS lifecycle specialist; owner approves"
+      },
+      {
+       "title": "Ship one verified intake workbench",
+       "why": "Verify assistant-to-published-form completion and account-level tracking before buying visits.",
+       "role": "ClimbOS landing-page and search specialists; owner tests and launches"
+      },
+      {
+       "title": "Check directory eligibility before submission",
+       "why": "Eligibility, tagged qualified visits, and purchases determine whether directory work continues.",
+       "role": "ClimbOS partnership specialist; owner approves"
+      }
+     ],
+     "diagnosis": "Activation-to-paid conversion is the working constraint: Free usage needs a concrete approval-related upgrade moment. Source shares and funnel baselines are unknown; strong qualifying purchases without approval attempts would falsify this diagnosis.",
+     "affordableCac": "A qualifying agency account contributes $38/month and $388 over 12 months; maximum modeled CAC is $388. Qualifying agency accounts only.",
+     "notDoing": [
+      {
+       "channel": "Comparison pages, alternatives pages, and broader organic SEO",
+       "why": "Reserve high-intent pages; near-term rankings and paid-customer contribution remain unmeasured."
+      },
+      {
+       "channel": "Standalone template library, video tutorials, and interactive demos",
+       "why": "Reuse one intake demonstration; additional production waits for qualifying purchases."
+      },
+      {
+       "channel": "AlternativeTo, browser extension stores, and additional AI directories",
+       "why": "Complete the directory pilot first; avoid unsupported listings and development."
+      },
+      {
+       "channel": "Integration partnerships and founder LinkedIn",
+       "why": "Wait until self-serve conversion works; use the founder profile when activated."
+      },
+      {
+       "channel": "Broader freemium promotion, cold outbound, Meta ads, and LinkedIn ads",
+       "why": "Keep approval-led activation; avoid diluting the budget with unqualified acquisition."
+      }
+     ],
+     "northStar": {
+      "metric": "New qualifying agency customers",
+      "baseline": "Current qualifying-customer acquisition baseline unknown; establish in week one.",
+      "target": "≈19 customers by day 90; scenario estimate."
+     },
+     "leadingIndicators": [
+      {
+       "metric": "Eligible agency recipients",
+       "weeklyTarget": "200, conditional on sufficient permissioned accounts",
+       "source": "Eligibility export; scenario assumption"
+      },
+      {
+       "metric": "Workbench qualified visits",
+       "weeklyTarget": "138, conditional on observed acquisition cost",
+       "source": "UTMs and analytics; scenario assumption"
+      },
+      {
+       "metric": "Directory qualified visits",
+       "weeklyTarget": "100, conditional on approved listings",
+       "source": "Directory UTMs; scenario assumption"
+      },
+      {
+       "metric": "First-response activation",
+       "weeklyTarget": "60% of published accounts; assumption",
+       "source": "Play models; product events"
+      },
+      {
+       "metric": "New-account event coverage",
+       "weeklyTarget": "100% across signup-to-purchase funnel",
+       "source": "Event audit; proposed process target"
+      }
+     ],
+     "phases": [
+      {
+       "name": "Foundation",
+       "days": "0–14",
+       "focus": "Audit sources and eligibility; verify workflow; instrument billing; launch capped pilots."
+      },
+      {
+       "name": "Test",
+       "days": "15–45",
+       "focus": "Review weekly; apply pilot rules; confirm or replace the primary engine by day 45."
+      },
+      {
+       "name": "Commit and compound",
+       "days": "46–90",
+       "focus": "Allocate 75% of ClimbOS execution to the winner; compound intake; keep directory work capped."
+      }
+     ],
+     "weekOneChecklist": [
+      "ClimbOS audits the last 20 customers’ sources; owner approves eligibility export (15 minutes).",
+      "Owner validates economics; ClimbOS instruments account-level events (10 minutes).",
+      "Owner tests the intake example; ClimbOS builds the workbench (15 minutes).",
+      "Owner approves eligible directory submission; ClimbOS prepares tagged listing (10 minutes).",
+      "Owner approves capped search pilot; ClimbOS registers tests and scorecard (10 minutes)."
+     ],
+     "risks": [
+      {
+       "risk": "The locked scenario may exceed available execution funding.",
+       "mitigation": "Keep the $670/month cash allocation; recalibrate before any expansion."
+      },
+      {
+       "risk": "Lifecycle eligibility may not support sustained reach.",
+       "mitigation": "Verify distinct permissioned accounts; never fill shortages with cold contacts."
+      },
+      {
+       "risk": "Revenue, margin, and churn remain assumptions.",
+       "mitigation": "Audit billing and costs; inspect retention before continued acquisition."
+      },
+      {
+       "risk": "Directory eligibility and qualified traffic remain unverified.",
+       "mitigation": "Verify official requirements; stop setup if connector development is necessary."
+      },
+      {
+       "risk": "Workflow friction or costs undermine paid activation.",
+       "mitigation": "Test checkout, explain plan boundaries, and verify support capacity."
+      }
+     ],
+     "plays": [
+      {
+       "name": "Approval-needed upgrade sequence",
+       "oneLiner": "Convert demonstrated approval needs instead of sending generic upgrade reminders.",
+       "kind": "bankable",
+       "audience": "Three-person agencies already using Formkit Free; permissioned product email.",
+       "trigger": "An activated agency attempts to use publishing approvals.",
+       "hook": "Need approval before client forms go live? Business adds publishing approvals. See the plan.",
+       "mechanic": "Show the approval-limit prompt; send checkout-linked emails; suppress purchases and opt-outs.",
+       "assetUsed": "Free unlimited members plus Business publishing approvals.",
+       "funnel": [
+        "Click [benchmark,grade A]",
+        "Checkout [assumption,grade D]",
+        "Purchase [assumption,grade D]"
+       ],
+       "unit": "paying agency accounts with at least three Business seats",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether the eligibility export supports sustained volume.",
+       "test": "Planned: 500 sends/21days; $60 fully loaded; primary metric: upgrade-link clicks.",
+       "killIf": "Planned: kill at ≤4 clicks/500 sends; stop without purchases by day45.",
+       "scaleIf": "Planned day21: ≥9 clicks/500 sends and one purchase; expand to 200 eligible accounts/week.",
+       "scores": [
+        4,
+        4,
+        5,
+        4,
+        4,
+        5,
+        5,
+        3
+       ],
+       "firstActionToday": "Export eligible accounts; approve the pilot only after confirming sufficient distinct recipients.",
+       "climbosCanDo": "Run feature-triggered emails, link exact checkout, deduplicate acquisition cohorts, honor opt-outs, and track purchases.",
+       "model": {
+        "weeklyReach": 200,
+        "weeklyReachLow": 0,
+        "weeklyReachHigh": 400,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "assumption.lifecycle.eligible-audience"
+        },
+        "steps": [
+         {
+          "name": "Recipient clicks upgrade link",
+          "rate": 0.0209,
+          "low": 0.0209,
+          "high": 0.0209,
+          "source": "benchmark",
+          "ref": "Supplied base rates: email campaigns, mailerlite.com",
+          "quote": "Supplied benchmark: email campaigns average 2.09% click, grade A. No range was supplied, so both bounds retain the point estimate; feature-triggered upgrade performance remains unverified.",
+          "check": "reported",
+          "checkedBy": "climbos-provenance-1"
+         },
+         {
+          "name": "Clicker starts Business checkout",
+          "rate": 0.4,
+          "low": 0.15,
+          "high": 0.65,
+          "source": "assumption",
+          "ref": "assumption.lifecycle.checkout"
+         },
+         {
+          "name": "Checkout starter purchases qualifying account",
+          "rate": 0.5,
+          "low": 0.2,
+          "high": 0.7,
+          "source": "assumption",
+          "ref": "assumption.lifecycle.purchase"
+         }
+        ],
+        "monthlySpendUsd": 20,
+        "spendSource": {
+         "source": "planned",
+         "ref": "plan.lifecycle.costs"
+        },
+        "ownerHoursPerWeek": 0.25,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "plan.lifecycle.owner-time"
+        }
+       },
+       "p10": 3.8,
+       "p50": 9.5,
+       "p90": 18
+      },
+      {
+       "name": "Client-intake prompt workbench",
+       "oneLiner": "Give agencies a usable intake prompt, then sell approvals when the workflow needs them.",
+       "kind": "creative",
+       "audience": "Agency operators searching Google for client-intake templates and AI form generators.",
+       "trigger": "An agency needs a reusable client-intake workflow before its next project.",
+       "hook": "Turn your client brief into an intake form. Build in Claude or ChatGPT; add Business when approvals matter.",
+       "mechanic": "Transplant free-tool acquisition into an assistant-ready agency intake generator.",
+       "assetUsed": "Assistant-native publishing plus Business approvals for agency workflows.",
+       "funnel": [
+        "Signup [assumption,grade D]",
+        "Publish [assumption,grade D]",
+        "Response [assumption,grade D]",
+        "Approval-attempt [assumption,grade D]",
+        "Checkout [assumption,grade D]",
+        "Purchase [assumption,grade D]"
+       ],
+       "unit": "paying agency accounts with at least three Business seats",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Whether qualified agency visits are available at the assumed click cost.",
+       "test": "Planned: 80 visits/14days; $120 fully loaded; primary metric: account signups.",
+       "killIf": "Planned: kill at ≤4 signups/80 visits; stop without purchases by day45.",
+       "scaleIf": "Planned day21: ≥10 signups/80 visits and one purchase; reach 138 paid visitors weekly.",
+       "scores": [
+        4,
+        3,
+        5,
+        4,
+        4,
+        3,
+        5,
+        4
+       ],
+       "firstActionToday": "Approve a client-intake example and verify its complete assistant-to-published-form workflow.",
+       "climbosCanDo": "Build the prompt tool, draft search ads, track 138 weekly visits, and run purchase-suppressed activation emails; owner launches ads.",
+       "model": {
+        "weeklyReach": 138,
+        "weeklyReachLow": 46,
+        "weeklyReachHigh": 276,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "assumption.intake-workbench.paid-reach"
+        },
+        "steps": [
+         {
+          "name": "Visitor creates account",
+          "rate": 0.15,
+          "low": 0.05,
+          "high": 0.25,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.signup"
+         },
+         {
+          "name": "Signup publishes intake form",
+          "rate": 0.7,
+          "low": 0.3,
+          "high": 0.85,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.publication"
+         },
+         {
+          "name": "Published account receives first response",
+          "rate": 0.6,
+          "low": 0.2,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.activation"
+         },
+         {
+          "name": "Activated account attempts approvals",
+          "rate": 0.5,
+          "low": 0.15,
+          "high": 0.7,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.paid-need"
+         },
+         {
+          "name": "Approval-attempting account starts checkout",
+          "rate": 0.6,
+          "low": 0.2,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.checkout"
+         },
+         {
+          "name": "Checkout starter purchases qualifying account",
+          "rate": 0.65,
+          "low": 0.25,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "assumption.intake-workbench.purchase"
+         }
+        ],
+        "monthlySpendUsd": 640,
+        "spendSource": {
+         "source": "planned",
+         "ref": "plan.intake-workbench.costs"
+        },
+        "ownerHoursPerWeek": 0.5,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "plan.intake-workbench.owner-time"
+        }
+       },
+       "p10": 4.3,
+       "p50": 11,
+       "p90": 25
+      },
+      {
+       "name": "Assistant directory to agency activation",
+       "oneLiner": "Test assistant discovery without funding connector development or assuming directory traffic.",
+       "kind": "moonshot",
+       "audience": "Agency operators browsing Claude Marketplace; verify ChatGPT directory eligibility separately.",
+       "trigger": "An agency searches its assistant directory for a form-building workflow.",
+       "hook": "Build and publish client intake from your assistant. Start free; add Business when your agency needs approvals.",
+       "mechanic": "Distribute the agency-intake demonstration through eligible assistant listings.",
+       "assetUsed": "Formkit’s existing assistant-to-published-form workflow and agency approval demonstration.",
+       "funnel": [
+        "Signup [assumption,grade D]",
+        "Publish [assumption,grade D]",
+        "Response [assumption,grade D]",
+        "Approval-attempt [assumption,grade D]",
+        "Checkout [assumption,grade D]",
+        "Purchase [assumption,grade D]"
+       ],
+       "unit": "paying agency accounts with at least three Business seats",
+       "horizonDays": 90,
+       "confidence": "low",
+       "biggestUnknown": "Official eligibility and agency-qualified listing traffic.",
+       "test": "Planned: 100 visits/21days; $60 fully loaded; primary metric: account signups.",
+       "killIf": "Planned: kill if ineligible or ≤5 signups/100 visits; stop without purchases by day45.",
+       "scaleIf": "Planned: ≥12 signups/100 visits and one purchase; pursue 100 weekly visits across eligible listings.",
+       "scores": [
+        4,
+        1,
+        4,
+        3,
+        4,
+        5,
+        5,
+        5
+       ],
+       "firstActionToday": "Verify official listing eligibility; stop setup if approval requires new connector development.",
+       "climbosCanDo": "Check eligibility, draft accurate listings, reuse the intake walkthrough, tag accounts, and track upgrades; owner approves submissions.",
+       "model": {
+        "weeklyReach": 100,
+        "weeklyReachLow": 0,
+        "weeklyReachHigh": 250,
+        "reachSource": {
+         "source": "assumption",
+         "ref": "https://claude.com/marketplace/connectors-plugins"
+        },
+        "steps": [
+         {
+          "name": "Visitor creates account",
+          "rate": 0.1,
+          "low": 0.02,
+          "high": 0.2,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.signup"
+         },
+         {
+          "name": "Signup publishes intake form",
+          "rate": 0.6,
+          "low": 0.3,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.publication"
+         },
+         {
+          "name": "Published account receives first response",
+          "rate": 0.6,
+          "low": 0.2,
+          "high": 0.8,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.activation"
+         },
+         {
+          "name": "Activated account attempts approvals",
+          "rate": 0.3,
+          "low": 0.1,
+          "high": 0.6,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.paid-need"
+         },
+         {
+          "name": "Approval-attempting account starts checkout",
+          "rate": 0.5,
+          "low": 0.2,
+          "high": 0.75,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.checkout"
+         },
+         {
+          "name": "Checkout starter purchases qualifying account",
+          "rate": 0.5,
+          "low": 0.2,
+          "high": 0.7,
+          "source": "assumption",
+          "ref": "assumption.assistant-directories.purchase"
+         }
+        ],
+        "monthlySpendUsd": 10,
+        "spendSource": {
+         "source": "planned",
+         "ref": "plan.assistant-directories.costs"
+        },
+        "ownerHoursPerWeek": 0.2,
+        "hoursSource": {
+         "source": "planned",
+         "ref": "plan.assistant-directories.owner-time"
+        }
+       },
+       "p10": 0.8,
+       "p50": 2.8,
+       "p90": 7.6
+      }
+     ],
+     "portfolioNote": "Prioritize agency activation and self-serve acquisition; cap directory setup. Verify lifecycle audience before scheduling. Propose one owner-hour weekly. Scores are editorial mechanic ratings, supported by email and free-tool evidence; revenue confidence remains low.",
+     "economics": {
+      "revenuePerCustomerMonthUsd": 47.5,
+      "grossMargin": 0.8,
+      "monthlyChurn": 0.03,
+      "basis": "Model qualifying agency accounts only; smaller purchases are excluded. Assumption-loaded steady-state acquisition costs, including credits and owner labor, are approximately $21/$102/$46 by play versus $388 twelve-month contribution per account.",
+      "sources": {
+       "revenue": {
+        "source": "assumption",
+        "ref": "brief: paid-plan pricing; assumption: qualifying agency account"
+       },
+       "margin": {
+        "source": "assumption",
+        "ref": "assumption.economics.contribution"
+       },
+       "churn": {
+        "source": "assumption",
+        "ref": "assumption.economics.retention"
+       }
+      },
+      "assumed": [
+       "revenue",
+       "margin",
+       "churn"
+      ]
+     },
+     "researchSources": [
+      "https://claude.com/marketplace/connectors-plugins?utm_source=openai",
+      "https://nocodefounders.beehiiv.com/?utm_source=openai",
+      "https://www.shrm.org/topics-tools/flagships/all-things-work?utm_source=openai",
+      "https://www.classcentral.com/course/youtube-how-to-build-online-form-tally-forms-tutorial-365805?utm_source=openai",
+      "https://www.reddit.com/r/smallbusiness/comments/1vusemm/indepth_google_forms_alternative/?utm_source=openai",
+      "https://stripe.com/partners?utm_source=openai",
+      "https://zapier.com/apps/typeform/integrations?utm_source=openai",
+      "https://www.make.com/en/integrations?fromImt=1&utm_source=openai",
+      "https://tally.junctionbot.io/customers/thomas-frank?utm_source=openai",
+      "https://claude.com/marketplace/connectors/jotform?f80ce999_sort_date=desc&trk=em_a131L000005OhA2QAK&utm_source=openai",
+      "https://formkit.app/",
+      "https://www.g2.com/products/formdesigner/reviews?utm_source=openai",
+      "https://piv.opm.gov/policy-data-oversight/pay-leave/federal-holidays/?utm_source=openai",
+      "https://www.givingtuesday.org/generosity-week/?utm_source=openai"
+     ]
+    },
+    "costMicros": 918274,
+    "ms": 1807240
+   }
+  },
+  "comparisons": {},
+  "scores": {}
+ }
+]

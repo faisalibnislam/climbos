@@ -1,5 +1,15 @@
 # ClimbOS Engine v2: expert agents, skills, lead generation and outreach
 
+> **Historical design record (17 Oct 2026). Don't use it for product claims.**
+> Superseded where it conflicts with the code:
+> - **Models:** OpenAI only, with no fallback (`shared/agents/routes.ts`, route `openai-2026-10-18`). The Opus/Sonnet/Fable models, the Anthropic Skills API, Claude `web_search`/`web_fetch` and Anthropic credits below are retired.
+> - **Web fetch:** the OpenAI adapter doesn't implement `web_fetch`.
+> - **Skills:** built locally by `scripts/skills-build.mjs` into `shared/skills/generated.ts`. Nothing is published.
+> - **Bench judge:** `gpt-6.1-sol` (`bench/run.ts`).
+> - **`convex/agents/`:** this path doesn't exist. The runtime is `shared/agents/runtime.ts`, orchestrated in `convex/jobs.ts`.
+>
+> Current status: `ClimbOS_Growth_Engine_Master_Spec.md` and `docs/growth-engine/implementation-ledger.md`.
+
 Status: in progress (started 17 Oct 2026). Research inputs: `docs/research/strategy-positioning.md`, `channel-content.md`, `leadgen-cold-email.md`, `anthropic-platform.md`.
 
 ## Goals (owner decisions, 17 Oct 2026)
