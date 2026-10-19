@@ -183,10 +183,10 @@
 
 /* Dark green surface (Climb AI panel): every token re-pointed so components adapt. Lime is the accent. */
 .surface-pine {
-  --bg: #1b2416;
-  --surface: #222d1c;
-  --surface-2: #2c3925;
-  --surface-3: #37462f;
+  --bg: #13190f;
+  --surface: #182014;
+  --surface-2: #1f281a;
+  --surface-3: #273121;
   --ink: #f2f5ee;
   --ink-2: #d2dacb;
   --ink-3: #aeb9a4;

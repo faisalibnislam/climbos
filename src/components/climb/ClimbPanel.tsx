@@ -105,7 +105,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
       className="surface-pine fixed bottom-0 right-0 top-0 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
     >
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3">
-        <span aria-hidden className="grid size-7 place-items-center rounded-[var(--radius-control)] bg-lime text-ink">
+        <span aria-hidden className="grid size-7 place-items-center rounded-[var(--radius-control)] bg-lime text-[var(--action-ink)]">
           <Sparkles className="size-4" />
         </span>
         <h2 className="heading-card">Climb AI</h2>
@@ -277,7 +277,7 @@ function ScreenPicker() {
 
 function SelectionChip({ s, onRemove }: { s: ClimbEntity; onRemove: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-sun-soft py-0.5 pl-1.5 pr-0.5 text-xs text-ink">
+    <span className="inline-flex max-w-full items-center gap-1 rounded-[var(--radius-badge)] bg-brand-100 py-0.5 pl-1.5 pr-0.5 text-xs text-ink">
       <MousePointerClick aria-hidden className="size-3 shrink-0 text-sun-strong" />
       <span className="truncate">{s.label || s.type}</span>
       <button type="button" onClick={onRemove} aria-label={`Remove ${s.label}`} className="grid size-5 place-items-center rounded hover:bg-surface-3">
@@ -485,7 +485,7 @@ function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<
         {m.selection.length ? (
           <span className="flex flex-wrap justify-end gap-1">
             {m.selection.map((s) => (
-              <span key={s.id} className="inline-flex max-w-60 items-center gap-1 rounded-md bg-sun-soft px-1.5 py-0.5 text-xs text-ink">
+              <span key={s.id} className="inline-flex max-w-60 items-center gap-1 rounded-[var(--radius-badge)] bg-brand-100 px-1.5 py-0.5 text-xs text-ink">
                 <MousePointerClick aria-hidden className="size-3 shrink-0 text-sun-strong" />
                 <span className="truncate">{s.label}</span>
               </span>
