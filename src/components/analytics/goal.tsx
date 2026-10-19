@@ -154,12 +154,12 @@ export function TickGauge({ value, max = 100, label, caption }: { value: number;
             <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on ? "var(--brand-700)" : "var(--surface-3)"} strokeWidth={4} strokeLinecap="butt" style={{ opacity: entered || !on ? 1 : 0, transition: `opacity .25s ${i * 18}ms` }} />
           );
         })}
-        <text x={120} y={112} textAnchor="middle" fontSize={44} fontWeight={600} fill="var(--ink)" letterSpacing={-1}>{value}</text>
+        <text x={120} y={112} textAnchor="middle" fontSize={46} fontWeight={400} fill="var(--ink)" letterSpacing={-1.5} style={{ fontFamily: "var(--font-hero-num)" }}>{value}</text>
         <text x={152} y={112} fontSize={14} fill="var(--ink-3)">/ {max}</text>
         <text x={14} y={136} fontSize={11} fill="var(--ink-3)">0</text>
         <text x={226} y={136} fontSize={11} fill="var(--ink-3)" textAnchor="end">{max}</text>
       </svg>
-      {caption ? <p className="text-center text-sm text-ink-2">{caption}</p> : null}
+      {caption ? <p className="text-voice text-center">{caption}</p> : null}
     </div>
   );
 }

@@ -100,6 +100,27 @@
   --radius-field: 6px;
   --radius-card: 8px;
   --font-body: var(--font-sans-ui);
+  /* Type hierarchy tokens (Summit values; Signal overrides). */
+  --fs-page: 28px;
+  --lh-page: 36px;
+  --font-section: var(--font-body);
+  --fw-section: 600;
+  --fs-section: 16px;
+  --lh-section: 24px;
+  --ls-section: -0.01em;
+  --font-card: var(--font-body);
+  --fw-card: 600;
+  --fs-card: 14px;
+  --lh-card: 20px;
+  --ls-card: -0.005em;
+  --font-dialog: var(--font-body);
+  --fw-dialog: 600;
+  --fs-dialog: 18px;
+  --lh-dialog: 26px;
+  --font-voice: var(--font-body);
+  --fs-voice: 14px;
+  --lh-voice: 20px;
+  --font-hero-num: var(--font-metric);
   --font-metric: var(--font-display-serif);
   --metric-weight: 500;
   --seg-track: var(--surface-2);
@@ -252,6 +273,32 @@
   --r-xl: 3px;
   --r-2xl: 3.5px;
   --r-3xl: 4px;
+  /* Editorial type hierarchy (owner, 2026-10-19): Reckless for every title level, the AI's voice,
+     annotations, quotes, trust lines and hero numbers; Hanken Grotesk for body, UI, tables and KPI numbers. */
+  --fs-page: 36px;
+  --lh-page: 40px;
+  --font-section: var(--font-display-serif);
+  --fw-section: 500;
+  --fs-section: 24px;
+  --lh-section: 30px;
+  --ls-section: -0.015em;
+  --font-card: var(--font-display-serif);
+  --fw-card: 500;
+  --fs-card: 17px;
+  --lh-card: 22px;
+  --ls-card: -0.01em;
+  --font-dialog: var(--font-display-serif);
+  --fw-dialog: 500;
+  --fs-dialog: 22px;
+  --lh-dialog: 28px;
+  --font-voice: var(--font-display-serif);
+  --fs-voice: 16px;
+  --lh-voice: 24px;
+  --font-hero-num: var(--font-display-serif);
+  --font-empty: var(--font-display-serif);
+  --fw-empty: 500;
+  --fs-empty: 22px;
+  --lh-empty: 28px;
 }
 /* Marketing CTAs take the pill shape in themes that set one. */
 .marketing {
@@ -590,33 +637,33 @@ body {
  */
 @utility heading-page {
   font-family: var(--font-display-serif), ui-serif, Georgia, serif;
-  font-size: 28px;
-  line-height: 36px;
+  font-size: var(--fs-page);
+  line-height: var(--lh-page);
   font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
 @utility heading-section {
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-section), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--fs-section);
+  line-height: var(--lh-section);
+  font-weight: var(--fw-section);
+  letter-spacing: var(--ls-section);
   color: var(--ink);
 }
 @utility heading-card {
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-family: var(--font-card), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--fs-card);
+  line-height: var(--lh-card);
+  font-weight: var(--fw-card);
+  letter-spacing: var(--ls-card);
   color: var(--ink);
 }
 @utility heading-dialog {
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 600;
+  font-family: var(--font-dialog), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--fs-dialog);
+  line-height: var(--lh-dialog);
+  font-weight: var(--fw-dialog);
   letter-spacing: -0.01em;
   color: var(--ink);
 }
@@ -643,4 +690,65 @@ body {
   font-weight: 500;
   letter-spacing: -0.015em;
   font-variant-numeric: lining-nums tabular-nums;
+}
+
+/*
+ * Signal voice styles (Reckless). In Summit they fall back to the body face.
+ *   heading-empty   empty states and onboarding prompts
+ *   text-voice      ClimbOS's own narrative: diagnosis, insights, "why this play"
+ *   text-annotation short italic notes on charts
+ *   text-quote      customer words and testimonials (italic)
+ *   text-trust      small reassuring lines
+ *   metric-hero     the one or two hero numbers on a screen
+ *   text-display    marketing display headlines
+ */
+@utility heading-empty {
+  /* Summit: same as a section title; Signal: Reckless 22/28. */
+  font-family: var(--font-empty, var(--font-section)), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--fs-empty, var(--fs-section));
+  line-height: var(--lh-empty, var(--lh-section));
+  font-weight: var(--fw-empty, var(--fw-section));
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+@utility text-voice {
+  font-family: var(--font-voice), ui-serif, Georgia, serif;
+  font-size: var(--fs-voice);
+  line-height: var(--lh-voice);
+  font-weight: 400;
+  color: var(--ink-2);
+}
+@utility text-annotation {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 18px;
+}
+@utility text-quote {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  line-height: 27px;
+  color: var(--ink);
+}
+@utility text-trust {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--ink-2);
+}
+@utility metric-hero {
+  font-family: var(--font-hero-num), ui-serif, Georgia, serif;
+  font-size: 60px;
+  line-height: 60px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+@utility text-display {
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-size: clamp(44px, 6vw, 72px);
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.025em;
 }

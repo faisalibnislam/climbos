@@ -33,7 +33,7 @@ export function EmptyState({ icon, title, body, action, headingLevel: H = "h3", 
           {icon}
         </span>
       ) : null}
-      <H className="heading-section">{title}</H>
+      <H className="heading-empty">{title}</H>
       {body ? <p className="max-w-md text-sm text-ink-3">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

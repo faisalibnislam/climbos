@@ -119,7 +119,7 @@ export function AnalyticsShowcase() {
           }
         >
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <BigNumber value="62%" delta="↑ 8 pts" onInk />
+            <BigNumber value="62%" delta="↑ 8 pts" onInk hero />
             <p className="max-w-56 text-xs text-white/70">
               of the route covered. At this pace you reach the summit on Dec 18.
             </p>

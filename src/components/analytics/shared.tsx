@@ -85,7 +85,7 @@ export function ChartCard({ title, sub, actions, tone = "white", className, chil
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="text-base font-semibold tracking-[-0.01em]">{title}</h4>
+          <h4 className="heading-card">{title}</h4>
           {sub ? <p className={cn("text-xs", tone === "ink" ? "text-white/70" : "text-ink-3")}>{sub}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
@@ -96,10 +96,11 @@ export function ChartCard({ title, sub, actions, tone = "white", className, chil
 }
 
 /** Big number with an optional change chip (reference: “186 ↑”). */
-export function BigNumber({ value, unit, delta, good = true, size = "lg", onInk }: { value: string; unit?: string; delta?: string; good?: boolean; size?: "lg" | "xl"; onInk?: boolean }) {
+/** `hero` sets the number in Reckless (one or two hero numbers per screen); KPI numbers stay Hanken. */
+export function BigNumber({ value, unit, delta, good = true, size = "lg", onInk, hero }: { value: string; unit?: string; delta?: string; good?: boolean; size?: "lg" | "xl"; onInk?: boolean; hero?: boolean }) {
   return (
     <div className="flex items-end gap-2">
-      <span className={cn("font-semibold tabular-nums tracking-[-0.03em]", size === "xl" ? "text-[72px] leading-[72px]" : "text-[40px] leading-[44px]")}>
+      <span className={cn(hero ? "metric-hero" : cn("font-semibold tabular-nums tracking-[-0.03em]", size === "xl" ? "text-[72px] leading-[72px]" : "text-[40px] leading-[44px]"))}>
         {value}
         {unit ? <span className={cn("ml-1 text-base font-medium tracking-normal", onInk ? "text-white/70" : "text-ink-3")}>{unit}</span> : null}
       </span>

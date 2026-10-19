@@ -151,7 +151,7 @@ function Panel({ title, sub, actions, children, className }: { title: string; su
     <section className={cn("rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]", className)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="text-base font-semibold tracking-[-0.01em]">{title}</h4>
+          <h4 className="heading-card">{title}</h4>
           {sub ? <p className="text-xs text-ink-3">{sub}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -343,7 +343,7 @@ function FunnelPanel() {
                 className={cn("h-4 rounded-[1.5px]", f.bar === "hatched" ? "flex-1" : cn("shrink-0", f.bar))}
                 style={f.bar === "hatched" ? { backgroundImage: "repeating-linear-gradient(115deg, var(--surface-3) 0 1.5px, transparent 1.5px 5px)" } : { width: `${Math.max(f.pct, 6) * 0.95}%` }}
               />
-              {f.note ? <span className={cn("truncate text-sm", f.tone)}>{f.note}</span> : null}
+              {f.note ? <span className={cn("text-annotation truncate", f.tone)}>{f.note}</span> : null}
             </span>
           </li>
         ))}
@@ -586,7 +586,7 @@ function ReportsScreen() {
         </Panel>
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-5 py-4 shadow-[var(--card-shadow)]">
           <div>
-            <h4 className="text-base font-semibold">Run this report on a schedule</h4>
+            <h4 className="heading-card">Run this report on a schedule</h4>
             <p className="text-xs text-ink-3">Send a CSV to email or Slack every Monday</p>
           </div>
           <Button variant="secondary" size="sm" className="bg-surface-2 shadow-none">Schedule report <ArrowRight /></Button>
@@ -978,22 +978,98 @@ function IconsSection() {
   );
 }
 
+const HIERARCHY: { role: string; cls: string; spec: string; sample: string; serif: boolean }[] = [
+  { role: "Display", cls: "text-display", spec: "Reckless 500 · 44–72 / 1.05", sample: "Know which plays bring customers", serif: true },
+  { role: "Page title (h1)", cls: "heading-page", spec: "Reckless 500 · 36 / 40", sample: "Results", serif: true },
+  { role: "Section title (h2)", cls: "heading-section", spec: "Reckless 500 · 24 / 30", sample: "Recent activity", serif: true },
+  { role: "Card title (h3)", cls: "heading-card", spec: "Reckless 500 · 17 / 22", sample: "Conversion funnel", serif: true },
+  { role: "Dialog title", cls: "heading-dialog", spec: "Reckless 500 · 22 / 28", sample: "Approve this post?", serif: true },
+  { role: "Empty state", cls: "heading-empty", spec: "Reckless 500 · 22 / 28", sample: "Nothing waiting on you", serif: true },
+  { role: "Body", cls: "text-sm", spec: "Hanken 400 · 14 / 20", sample: "Approve it and it goes out at the planned time.", serif: false },
+  { role: "Long-form", cls: "text-base", spec: "Hanken 400 · 15 / 24", sample: "ClimbOS researches your business, plans the week and drafts every post for your approval.", serif: false },
+  { role: "UI", cls: "text-ui", spec: "Hanken 400–500 · 13 / 18", sample: "Scheduled for Tue, Oct 21 at 9:00", serif: false },
+  { role: "Caption", cls: "text-xs text-ink-3", spec: "Hanken 400 · 12 / 16", sample: "Updated 2 minutes ago", serif: false },
+  { role: "Overline", cls: "text-overline", spec: "Hanken 600 · 11 / 16 caps", sample: "Grow", serif: false },
+  { role: "KPI number", cls: "text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums", spec: "Hanken 600 · 32 / 40 tabular", sample: "180 · $4.20 · 63.8%", serif: false },
+];
+
+const VOICE: { role: string; cls: string; spec: string; use: string; sample: string }[] = [
+  { role: "AI voice", cls: "text-voice", spec: "Reckless 400 · 16 / 24", use: "Diagnosis, insights, why this play", sample: "Your bottleneck isn't traffic, it's the follow-up: 68% of replies wait more than a day for an answer." },
+  { role: "Annotation", cls: "text-annotation text-ink-2", spec: "Reckless italic · 13 / 18", use: "Short notes on charts", sample: "+16% growth projected · −86.7% didn't reply" },
+  { role: "Quote", cls: "text-quote", spec: "Reckless italic · 18 / 27", use: "Customer words, testimonials", sample: "“Booked three tastings the first week. I just approved the emails.”" },
+  { role: "Trust line", cls: "text-trust", spec: "Reckless 400 · 15 / 22", use: "Reassurance near actions", sample: "No card needed · You approve everything that goes out" },
+  { role: "Hero number", cls: "metric-hero", spec: "Reckless 400 · 60 / 60", use: "One or two per screen", sample: "62%" },
+];
+
 function TypeSection() {
   return (
     <section className="flex flex-col gap-6">
-      <SectionTitle title="Type" intro="Reckless Neue for every title: marketing headlines, page titles, trust lines and mobile cards. Hanken Grotesk for everything you read and click; numbers are Hanken Grotesk semibold so cards and tables line up." />
-      <div className="grid gap-6 rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-[var(--card-shadow)] md:grid-cols-2">
-        <div className="flex flex-col gap-3">
-          <p className="font-display text-6xl font-medium tracking-[-0.02em]">Aa Reckless</p>
-          <p className="heading-page">Today · Results · Growth plan</p>
-          <p className="font-display text-3xl tracking-[-0.02em]">Stop paying for clicks that never reply.</p>
-          <p className="font-display text-[15px] text-ink-2">Plan in 10 minutes · No credit card needed</p>
+      <SectionTitle
+        title="Type"
+        intro="Two families, clear jobs. Reckless Neue sets every title level and ClimbOS's own voice; Hanken Grotesk sets everything you read in bulk, click or compare. Numbers you compare (KPIs, tables, charts) stay Hanken; the one hero number per screen is Reckless."
+      />
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--card-shadow)]">
+        <table className="w-full min-w-[720px]">
+          <thead className="border-b border-line text-left text-xs text-ink-3">
+            <tr><th className="px-5 py-3 font-normal">Level</th><th className="font-normal">Sample</th><th className="pr-5 text-right font-normal">Spec</th></tr>
+          </thead>
+          <tbody>
+            {HIERARCHY.map((h) => (
+              <tr key={h.role} className="border-b border-line last:border-0">
+                <td className="w-44 px-5 py-4 align-middle">
+                  <p className="text-ui font-medium">{h.role}</p>
+                  <p className="text-2xs text-ink-3">{h.serif ? "Reckless Neue" : "Hanken Grotesk"}</p>
+                </td>
+                <td className="py-4 pr-4 align-middle"><p className={h.cls}>{h.sample}</p></td>
+                <td className="w-52 py-4 pr-5 text-right align-middle text-xs tabular-nums text-ink-3">{h.spec}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-col gap-3">
+        <p className="text-overline">Voice: where Reckless speaks</p>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {VOICE.map((v) => (
+            <div key={v.role} className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-ui font-medium">{v.role}</p>
+                <p className="text-2xs tabular-nums text-ink-3">{v.spec}</p>
+              </div>
+              <p className={v.cls}>{v.sample}</p>
+              <p className="mt-auto text-xs text-ink-3">{v.use}</p>
+            </div>
+          ))}
+          <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-cream p-5">
+            <p className="text-ui font-medium">Rules</p>
+            <ul className="flex flex-col gap-1.5 text-sm text-ink-2">
+              <li>Reckless for titles and voice, never for buttons, labels, inputs or table cells.</li>
+              <li>At most one Reckless italic line per card.</li>
+              <li>One hero number per screen; compare numbers in Hanken.</li>
+              <li>Titles in sentence case; no all-caps Reckless.</li>
+            </ul>
+          </div>
         </div>
-        <div className="flex flex-col gap-3">
-          <p className="text-6xl font-semibold tracking-[-0.03em]">Aa Hanken</p>
-          <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">180 · $4.20 · 63.8%</p>
-          <p className="text-base font-semibold">Conversion funnel <span className="font-normal text-ink-3">· panel title 16/24</span></p>
-          <p className="text-sm text-ink-2">Body 14/20 · Controls and tables 13–14 · Captions 12/16</p>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-[var(--card-shadow)]">
+          <p className="text-overline">In a card</p>
+          <h3 className="heading-card">Diagnosis</h3>
+          <p className="text-voice">Your bottleneck isn&apos;t traffic, it&apos;s the follow-up: 68% of replies wait more than a day for an answer.</p>
+          <div className="flex items-end justify-between border-t border-line pt-3">
+            <div><p className="text-[32px] font-semibold leading-10 tabular-nums">68%</p><p className="text-ui text-ink-2">Replies answered after 24h</p></div>
+            <p className="text-annotation text-red-800">−12 pts since September</p>
+          </div>
+          <Button size="sm" className="self-start">Turn on reply alerts</Button>
+          <p className="text-trust text-sm">You approve every reply before it goes out.</p>
+        </div>
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-ink p-6 text-white">
+          <p className="text-overline !text-white/60">Hero</p>
+          <p className="heading-card !text-white">Route to your goal</p>
+          <p className="metric-hero">62%</p>
+          <p className="text-voice !text-white/80">Of the route covered. At this pace you reach the summit on Dec 18.</p>
+          <p className="text-quote !text-white/90 mt-2">“Booked three tastings the first week.”</p>
+          <p className="text-xs text-white/60">Layla, Tartine Bakery</p>
         </div>
       </div>
     </section>

@@ -103,6 +103,20 @@ const TYPE: { cls: string; label: string; sample: string }[] = [
   { cls: "metric", label: "metric · 28/32 (Reckless Neue in Summit, Inter 600 in Signal)", sample: "1,284" },
 ];
 
+/** Type labels in the Signal theme (Reckless titles, Hanken body). */
+const SIGNAL_TYPE_LABELS: Record<string, string> = {
+  "heading-page": "heading-page · Reckless 36/40",
+  "heading-section": "heading-section · Reckless 24/30",
+  "heading-card": "heading-card · Reckless 17/22",
+  "text-xl font-semibold tracking-tight": "dialog title · Reckless 22/28 (heading-dialog)",
+  "text-base": "text-base · Hanken 15/24 long-form",
+  "text-sm": "text-sm · Hanken 14/20 body",
+  "text-ui": "text-ui · Hanken 13/18 controls, tables",
+  "text-xs text-ink-3": "text-xs · Hanken 12/16 captions",
+  "text-overline": "text-overline · Hanken 11/16 caps",
+  metric: "metric · Hanken 600 28/32 (KPIs)",
+};
+
 const NETWORKS = ["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest", "snapchat", "threads", "google"];
 
 const ROWS = [
@@ -198,8 +212,8 @@ export function DesignSystemReference({ theme }: { theme?: "signal" } = {}) {
             <div className="divide-y divide-line rounded-xl border border-line bg-surface px-5">
               {TYPE.map((t) => (
                 <div key={t.cls} className="grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">
-                  <div className="text-xs text-ink-3">{t.label}</div>
-                  <div className={t.cls}>{t.sample}</div>
+                  <div className="text-xs text-ink-3">{theme === "signal" ? SIGNAL_TYPE_LABELS[t.cls] ?? t.label : t.label}</div>
+                  <div className={t.cls === "text-xl font-semibold tracking-tight" && theme === "signal" ? "heading-dialog" : t.cls}>{t.sample}</div>
                 </div>
               ))}
               <div className="marketing grid gap-1 py-4 sm:grid-cols-[240px_1fr] sm:items-baseline">
