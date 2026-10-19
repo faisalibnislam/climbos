@@ -45,6 +45,7 @@ import type * as demo from "../demo.js";
 import type * as designs from "../designs.js";
 import type * as emailActions from "../emailActions.js";
 import type * as engine from "../engine.js";
+import type * as engineFlags from "../engineFlags.js";
 import type * as engineLab from "../engineLab.js";
 import type * as engineLabActions from "../engineLabActions.js";
 import type * as http from "../http.js";
@@ -150,6 +151,7 @@ declare const fullApi: ApiFromModules<{
   designs: typeof designs;
   emailActions: typeof emailActions;
   engine: typeof engine;
+  engineFlags: typeof engineFlags;
   engineLab: typeof engineLab;
   engineLabActions: typeof engineLabActions;
   http: typeof http;

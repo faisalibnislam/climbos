@@ -279,6 +279,8 @@ export default defineSchema({
     name: v.string(),
     slug: v.string(),
     kind: v.union(v.literal("customer"), v.literal("demo")),
+    /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
+    engineFlags: v.optional(v.array(v.string())),
     createdBy: v.id("users"),
     timezone: v.string(),
     /** Default Climb AI mode for new jobs (Expert needs a paid plan). Absent = expert when paid, else basic. */
@@ -1204,6 +1206,7 @@ export default defineSchema({
             insightsChars: v.number(),
             ownerEconomics: v.optional(v.any()),
             goalTarget: v.optional(v.any()),
+            flags: v.optional(v.array(v.string())),
           }),
         ),
         /** Owner goal vs what the plays support (computed in code; spec §8.1). */

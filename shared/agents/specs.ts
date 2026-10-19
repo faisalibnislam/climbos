@@ -129,7 +129,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
-export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget }
+export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v2.6-provenance-checked";
 
@@ -160,21 +160,29 @@ const GENERIC = /\b(post consistently|build a community|leverage social media|in
 /** Deterministic portfolio checks (growth-plays §3–4). */
 const CUSTOMER_UNIT = /customer|client|account|member|order|booking|job|sale|subscriber|patient|student|deal|sign-?up/i;
 
-export function lintPlays(drafts: PlayDraft[], economics?: Economics): LintIssue[] {
+export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { decisionContract?: boolean } = {}): LintIssue[] {
   const plays = economics ? withForecasts({ economics, plays: drafts }).plays : (drafts as Play[]);
   const issues: LintIssue[] = [];
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
-  if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
   const scored = plays.map((p) => ({ p, s: playScores(p) }));
   const bankable = scored.filter((x) => x.p.kind === "bankable");
-  if (bankable.length !== 1) err(`${bankable.length} bankable plays; exactly one is needed.`);
-  if (bankable[0] && bankable[0].s.predictability < 4) err("The bankable play needs predictability ≥ 4.");
-  if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
+  if (opts.decisionContract) {
+    // Focus over shape: 1–4 plays of any kind; the goal gap (code) reports a shortfall instead of pushing volume.
+    if (plays.length < 1 || plays.length > 4) err(`${plays.length} plays; give 1 to 4.`);
+    if (bankable.some((x) => x.s.predictability < 4)) err("A play labelled bankable needs predictability ≥ 4; otherwise call it creative.");
+  } else {
+    if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
+    if (bankable.length !== 1) err(`${bankable.length} bankable plays; exactly one is needed.`);
+    if (bankable[0] && bankable[0].s.predictability < 4) err("The bankable play needs predictability ≥ 4.");
+    if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
+  }
   if (plays.filter((p) => p.kind === "moonshot").length > 1) err("At most one moonshot.");
   // Ambition: the portfolio must credibly move the goal, not run a cautious measurement exercise.
   const customerLike = plays.filter((p) => CUSTOMER_UNIT.test(p.unit));
   const combined = customerLike.reduce((s, p) => s + p.p50, 0);
-  if (customerLike.length && combined < 2) err(`The plays add up to ${Math.round(combined * 10) / 10} ${customerLike[0].unit} at P50 — too small to move the goal. Add a bankable demand-generation play that reaches enough of the right people (with a weekly volume), or raise the volume of the existing ones.`);
+  if (opts.decisionContract) {
+    // No volume pressure: the goal gap shows how far the plays get, and why.
+  } else if (customerLike.length && combined < 2) err(`The plays add up to ${Math.round(combined * 10) / 10} ${customerLike[0].unit} at P50 — too small to move the goal. Add a bankable demand-generation play that reaches enough of the right people (with a weekly volume), or raise the volume of the existing ones.`);
   else if (customerLike.length && combined < 5) issues.push({ severity: "warn", rule: "portfolio", message: `Combined P50 is only ${Math.round(combined * 10) / 10} ${customerLike[0].unit}; check the volumes are big enough to matter.`, path: "plays" });
   scored.forEach(({ p, s }, i) => {
     const path = `plays[${i}]`;
@@ -462,15 +470,16 @@ interface SpecOptions {
   effort?: Partial<Record<"research" | "draft" | "critic", Effort>>;
   maxRevisions?: number;
   shipOn?: "gates" | "rubric";
+  /** S5 flag (REQ-STRAT-05, REQ-OUT-03): a focused decision instead of the fixed bankable + creative portfolio. */
+  decisionContract?: boolean;
 }
 
 /**
- * Engine v2.2 (final, chosen by benchmark Phase A2):
- * - "expert" jobs (insights, strategy, weekly plan): Opus drafts, an Opus
- *   reviewer scores the full rubric, at most one revision.
- * - "lean" jobs (publishable content, audits, plans for owners): Opus drafts
- *   once with the skills; a fast Sonnet reviewer only checks hard gates and
- *   lint, and one revision happens only when something actually fails.
+ * Review profiles (models come from shared/agents/routes.ts):
+ * - "expert" jobs (insights, strategy, weekly plan): the reviewer scores the
+ *   full rubric, at most one revision.
+ * - "lean" jobs (publishable content, audits): drafted once with the skills;
+ *   the reviewer only checks hard gates and lint, and revises only on a failure.
  */
 type Profile = "expert" | "lean";
 
@@ -523,7 +532,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

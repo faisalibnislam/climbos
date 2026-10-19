@@ -449,6 +449,11 @@ function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}):
 }
 
 /** The owner's cash and time limits, checked in code against every plan. */
+/** Engine rollout flags (REQ-ENG-01): per workspace, staff-set; the old path is the default. */
+function hasFlag(job: JobCtx, flag: string): boolean {
+  return Boolean(job.org.engineFlags?.includes(flag));
+}
+
 function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanConstraints {
   return {
     ...(job.goal ? { monthlyAdBudgetUsd: job.goal.monthlyAdBudgetMinor / 100 } : {}),
@@ -496,6 +501,7 @@ function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
     insightsChars,
     ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
     ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
+    ...(job.org.engineFlags?.length ? { flags: job.org.engineFlags } : {}),
   };
 }
 
@@ -810,10 +816,10 @@ export const buildStrategy = internalAction({
             ctx,
             job,
             0,
-            growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
+            growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType)),
             agentInput(
               job,
-              playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
+              playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities), decisionContract: hasFlag(job, "decision_contract") }),
               { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
             ),
             startedAt,
