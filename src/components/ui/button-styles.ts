@@ -9,7 +9,7 @@ const base =
   "[&_svg]:shrink-0";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-brand-800 text-white hover:bg-brand-900 active:bg-brand-950",
+  primary: "bg-[var(--action)] text-[var(--action-ink)] hover:bg-[var(--action-hover)] active:bg-[var(--action-active)]",
   secondary: "border border-line-strong bg-surface text-ink hover:bg-surface-2 active:bg-surface-3",
   accent: "bg-sun text-ink hover:brightness-95 active:brightness-90",
   ghost: "text-ink hover:bg-surface-2 active:bg-surface-3",
@@ -23,9 +23,9 @@ const variants: Record<ButtonVariant, string> = {
  * Labels are 13px medium (text-ui); lg uses 14px.
  */
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 rounded-lg px-2.5 text-ui [&_svg]:size-4",
-  md: "h-9 rounded-lg px-3.5 text-ui [&_svg]:size-4",
-  lg: "h-10 rounded-lg px-4 text-sm [&_svg]:size-[18px]",
+  sm: "h-8 rounded-[var(--radius-control)] px-2.5 text-ui [&_svg]:size-4",
+  md: "h-9 rounded-[var(--radius-control)] px-3.5 text-ui [&_svg]:size-4",
+  lg: "h-10 rounded-[var(--radius-control)] px-4 text-sm [&_svg]:size-[18px]",
 };
 
 /** Shared class builder so links and other elements can look like buttons. */

@@ -262,7 +262,7 @@ export function StatTrend({ label, value, delta, upIsGood = true, deltaLabel = "
   const good = delta === undefined || delta === 0 ? null : delta > 0 === upIsGood;
   const deltaText = delta === undefined ? null : `${delta > 0 ? "Up" : delta < 0 ? "Down" : "No change"}${delta ? ` ${Math.abs(delta)}%` : ""}`;
   return (
-    <div className={cn("flex flex-col gap-2 rounded-xl border border-line bg-surface p-4", className)}>
+    <div className={cn("flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4", className)}>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-ui font-medium text-ink-3">
           {icon ? <span aria-hidden="true" className="inline-flex [&_svg]:size-4">{icon}</span> : null}

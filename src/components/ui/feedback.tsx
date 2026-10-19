@@ -96,7 +96,7 @@ export interface StatProps {
 /** Single number with label and provenance. */
 export function Stat({ label, value, sublabel, change, className }: StatProps) {
   return (
-    <div className={cn("flex flex-col gap-1 rounded-xl border border-line bg-surface p-4", className)}>
+    <div className={cn("flex flex-col gap-1 rounded-[var(--radius-card)] border border-line bg-surface p-4", className)}>
       <dt className="text-ui font-medium text-ink-3">{label}</dt>
       <dd className="metric">{value}</dd>
       {change ? <dd className="text-ui font-medium text-ink-2">{change}</dd> : null}

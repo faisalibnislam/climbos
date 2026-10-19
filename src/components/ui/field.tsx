@@ -43,7 +43,7 @@ export function useFieldControl(own: { id?: string; "aria-describedby"?: string;
 }
 
 export const controlClasses =
-  "w-full rounded-lg border border-control bg-surface px-3 text-ui text-ink " +
+  "w-full rounded-[var(--radius-field)] border border-control bg-surface px-3 text-ui text-ink " +
   "placeholder:text-ink-3 transition-colors hover:border-control-hover " +
   "focus-visible:border-brand-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 " +
   "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3 " +

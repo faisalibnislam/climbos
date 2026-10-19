@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * Use <DataTable> for simple sortable lists; compose these for anything custom.
  */
 export function TableFrame({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("w-full overflow-x-auto rounded-xl border border-line bg-surface", className)} {...props} />;
+  return <div className={cn("w-full overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface", className)} {...props} />;
 }
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
