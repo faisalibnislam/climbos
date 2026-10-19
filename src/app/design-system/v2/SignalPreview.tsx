@@ -814,6 +814,18 @@ const PALETTE: { group: string; colors: { name: string; hex: string; token: stri
   },
 ];
 
+const STANDARD: [string, string, string, string][] = [
+  ["Normal text (under 24px)", "4.5:1", "7:1", "Body 7.8–17.9 (AAA); meta 5.4+"],
+  ["Large text (24px+, or 18.7px bold)", "3:1", "4.5:1", "Headings 5.3+"],
+  ["Button labels", "4.5:1", "7:1", "13.6–17.9"],
+  ["Input text and placeholders", "4.5:1", "7:1", "Text 17.9; placeholder 6.9"],
+  ["Icons that carry meaning", "3:1", "4.5:1", "Ink icons 9.3+; status 5.5+"],
+  ["Input borders and component edges", "3:1", "4.5:1", "Control border 3.4"],
+  ["Focus indicator", "3:1", "—", "Sage 800 ring, 5.3+"],
+  ["Charts and meaningful graphics", "3:1", "—", "Lines 3.3–5.0"],
+  ["Decorative and disabled", "None", "—", "Sage, cream, lime fills (no small light text)"],
+];
+
 const CONTRAST: [string, string, string, string][] = [
   ["Ink on white / ground", "Titles, body", "17.9 / 14.9", "AAA"],
   ["Ink 2 on white / ground", "Body copy, table text", "9.3 / 7.8", "AAA"],
@@ -847,6 +859,25 @@ function ColourSection() {
           </div>
         </div>
       ))}
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
+        <p className="heading-card">Colour standard</p>
+        <p className="text-xs text-ink-3">WCAG 2.2 AA is the minimum across ClimbOS; body text aims for AAA. Every pair below is checked against this.</p>
+        <table className="mt-3 w-full min-w-[560px] text-ui">
+          <thead className="border-b border-line text-left text-ink-3">
+            <tr><th className="py-2 font-normal">Element</th><th className="font-normal">Minimum</th><th className="font-normal">Recommended</th><th className="font-normal">Signal</th></tr>
+          </thead>
+          <tbody>
+            {STANDARD.map(([el, min, rec, ours]) => (
+              <tr key={el} className="border-b border-line last:border-0">
+                <td className="py-2 font-medium">{el}</td>
+                <td className="tabular-nums">{min}</td>
+                <td className="tabular-nums text-ink-2">{rec}</td>
+                <td className="text-ink-2">{ours}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
         <p className="heading-card">Contrast (WCAG 2.2)</p>
         <p className="text-xs text-ink-3">AA everywhere; AAA (7:1) for body text. Lime, sage and cream never carry small text in a light colour.</p>
