@@ -102,7 +102,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
     <aside
       data-climb-panel
       aria-label="Climb AI"
-      className="fixed bottom-0 right-0 top-12 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
+      className="fixed bottom-0 right-0 top-0 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
     >
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3">
         <span aria-hidden className="grid size-7 place-items-center rounded-lg bg-brand-800 text-white">

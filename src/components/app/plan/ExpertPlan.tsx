@@ -313,12 +313,12 @@ function Forecast({ f, economics, open = false }: { f: PlayView; economics?: Eco
         </Badge>
       </div>
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="text-kpi font-semibold tabular-nums text-ink">{f.p50}</span>
-        <span className="min-w-0 flex-1 truncate text-ui text-ink-2" title={f.unit}>
-          {f.unit} <span className="text-ink-3">· {scenario ? "middle case" : "most likely"}</span>
+        <span className="text-kpi font-semibold tabular-nums text-ink">{fmtN(f.p50)}</span>
+        <span className="min-w-0 flex-1 text-ui text-ink-2" title={f.unit}>
+          {lead(f.unit).head} <span className="text-ink-3">· {scenario ? "middle case" : "most likely"}</span>
         </span>
       </div>
-      <div className="relative h-5" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: low ${f.p10}, likely ${f.p50}, high ${f.p90} ${f.unit}`}>
+      <div className="relative h-5" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: low ${fmtN(f.p10)}, likely ${fmtN(f.p50)}, high ${fmtN(f.p90)} ${lead(f.unit).head}`}>
         <span aria-hidden className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-3" />
         <span aria-hidden className={cn("absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full", k.soft)} style={{ left: `${pos(f.p10)}%`, width: `${Math.max(1, pos(f.p90) - pos(f.p10))}%` }} />
         <span aria-hidden className={cn("absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2", k.rail)} style={{ left: `${pos(f.p10)}%` }} />
@@ -328,15 +328,15 @@ function Forecast({ f, economics, open = false }: { f: PlayView; economics?: Eco
       <dl className="grid grid-cols-3 text-xs">
         <div>
           <dt className="text-ink-3">Low</dt>
-          <dd className="font-medium tabular-nums text-ink">{f.p10}</dd>
+          <dd className="font-medium tabular-nums text-ink">{fmtN(f.p10)}</dd>
         </div>
         <div className="text-center">
           <dt className="text-ink-3">Likely</dt>
-          <dd className="font-semibold tabular-nums text-ink">{f.p50}</dd>
+          <dd className="font-semibold tabular-nums text-ink">{fmtN(f.p50)}</dd>
         </div>
         <div className="text-right">
           <dt className="text-ink-3">High</dt>
-          <dd className="font-medium tabular-nums text-ink">{f.p90}</dd>
+          <dd className="font-medium tabular-nums text-ink">{fmtN(f.p90)}</dd>
         </div>
       </dl>
       {basis ? (
@@ -552,6 +552,30 @@ function ScoreMeter({ scores, kind }: { scores: number[]; kind: PlayView["kind"]
   );
 }
 
+/** The first complete phrase of AI text (to the first ";" / sentence end / dash), so cards never cut mid-word. */
+function lead(text: string): { head: string; more: boolean } {
+  const t = (text ?? "").trim();
+  const m = /^(.{12,}?)(?:;\s|\.\s+(?=[A-Z“"])|\s[—–]\s|,\s(?=(?:but|and then|so|while|unless)\b))/.exec(t);
+  const head = (m ? m[1] : t).replace(/[.;,]$/, "");
+  return { head, more: head.length < t.replace(/[.;]$/, "").length };
+}
+
+/** Customers and similar counts: whole numbers from 10 up, one decimal below. */
+const fmtN = (n: number) => (Math.abs(n) >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
+
+/** Shows the lead phrase; the card's Details opens the full text. */
+function Lead({ text, open }: { text: string; open: boolean }) {
+  const { head, more } = lead(text);
+  if (open || !more) return <>{text}</>;
+  return (
+    <>
+      {head}
+      <span aria-hidden className="text-ink-3"> …</span>
+      <span className="sr-only">: {text}</span>
+    </>
+  );
+}
+
 function Row({ icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
     <div className="grid min-w-0 grid-cols-[4.75rem_minmax(0,1fr)] items-start gap-2">
@@ -596,33 +620,27 @@ function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: st
           <ScoreMeter scores={play.scores} kind={play.kind} />
         </div>
         <h3 className="heading-card">{play.name}</h3>
-        <Clamp lines={1} toggle={false} expanded={open} className="text-ui text-ink-2">
-          {play.oneLiner}
-        </Clamp>
+        <p className="text-ui text-ink-2">
+          <Lead text={play.oneLiner} open={open} />
+        </p>
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4">
-        <figure className={cn("border-l-2 pl-3", k.quote)}>
-          <figcaption className="sr-only">Hook</figcaption>
-          <Clamp lines={2} toggle={false} expanded={open} className="text-quote">
-            “{play.hook}”
-          </Clamp>
+        <figure className={cn("rounded-r-[var(--radius-control)] border-l-2 bg-surface-2 px-3 py-2", k.quote)}>
+          <figcaption className="text-overline mb-0.5">Hook</figcaption>
+          <blockquote className="font-display text-sm italic leading-snug text-ink">
+            “<Lead text={play.hook.replace(/^[“"]|[”"]$/g, "")} open={open} />”
+          </blockquote>
         </figure>
         <dl className="flex flex-col gap-2">
           <Row icon={UsersRound} label="Who">
-            <Clamp lines={1} toggle={false} expanded={open}>
-              {play.audience}
-            </Clamp>
+            <Lead text={play.audience} open={open} />
           </Row>
           <Row icon={CalendarClock} label="When">
-            <Clamp lines={1} toggle={false} expanded={open}>
-              {play.trigger}
-            </Clamp>
+            <Lead text={play.trigger} open={open} />
           </Row>
           {edge ? (
             <Row icon={Zap} label="Edge">
-              <Clamp lines={1} toggle={false} expanded={open}>
-                {edge.text || play.assetUsed}
-              </Clamp>
+              <Lead text={edge.text || play.assetUsed} open={open} />
               {edge.urls.length ? (
                 <span className="mt-1 flex flex-wrap gap-1">
                   {edge.urls.map((u) => (
