@@ -61,7 +61,11 @@ export const jobContext = internalQuery({
       .order("desc")
       .take(10);
     const strategy = recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
+    // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
+    const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
+    const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
     return {
+      capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       org,
       business,

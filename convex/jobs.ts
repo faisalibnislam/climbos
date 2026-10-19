@@ -43,6 +43,7 @@ import { applyOwnerEconomics, churnOf, lockedNumbers, playsGoalGap, portfolioP50
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, type AgentQuality } from "../shared/agents/quality";
+import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -812,7 +813,7 @@ export const buildStrategy = internalAction({
             growthPlaysSpec({}, playCatalogsFor(job.business?.businessType)),
             agentInput(
               job,
-              playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays }),
+              playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
               { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
             ),
             startedAt,
@@ -832,7 +833,7 @@ export const buildStrategy = internalAction({
         strategySpec(),
         agentInput(
           job,
-          planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays }),
+          planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
           plays ? { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) } : {},
         ),
         startedAt,
@@ -846,12 +847,12 @@ export const buildStrategy = internalAction({
         planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
-      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) }));
+      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) }));
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.
       const quality = plays
         ? planQuality(
             [playsMeta.quality, planMeta.quality].filter((q): q is AgentQuality => Boolean(q)),
-            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
+            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
             { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null },
           )
         : null;
