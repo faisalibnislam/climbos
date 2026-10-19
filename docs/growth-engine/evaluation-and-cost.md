@@ -293,3 +293,27 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 **Next fixes (deterministic, no spend):** improve existing verified assets before building new ones; never return a data-only plan, so there is always at least one concrete test on an existing asset inside the horizon.
 
 **Done (no spend, not yet benched):** plays lint `assets_first` (a new asset of a kind the business already has needs some play to improve the existing one first; more than one new asset at once needs a demand baseline or goes in scaleIf) and `existing_test` (at least one play tests a confirmed existing asset inside the horizon); plan lint `data_only` ("keep plays paused" / "should not launch", export-only experiments, no dated action). Replayed on Run 5 outputs: flags Meetrao, Folevi and Formkit; Involets and Taskeni pass.
+
+### Run 6 (2026-10-19, separately approved cap of $2.50): existing assets first, never data-only
+
+**What ran:** B1 at `13b5be5` (Run 5 engine plus "improve existing assets before new ones" and "always one concrete test on an existing asset") against the saved B0 outputs.
+
+**Files:** `bench/results/2026-10-19-13-33-regress-b1fix4.*` and `2026-10-19-13-56-regress-judge6.*`, including the blind packet.
+
+| | B0 | B1 run 6 |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.14 |
+| Pairwise | — | **3 wins** (Involets, Formkit, Taskeni), 1 tie (Folevi), 1 loss (Meetrao) |
+| Pointwise overall (mean) | 4.2 | 3.4 |
+
+**Spend:** $1.69 of $2.50 for this run; $11.35 across all six runs.
+
+**Trend:** 2–3, 1–1–3, 3–2, 1–1–3, 3–2, 3–1–1. The best run so far (fewest losses), but the release rule (at least 4 wins of 5) is still not met.
+
+**What changed:** Folevi moved from a loss to a tie (no longer "collect data only"). Wins still come from forecast honesty.
+
+**Why it still loses:**
+- **Meetrao:** it edits two existing pages but doesn't say how qualified visitors will reach them. B0 pairs the comparison page with a distribution test (creators).
+- **Pointwise gap (3.4 vs 4.2):** absolute scores reward B0's more ambitious, concrete plays, so honesty alone isn't winning the absolute rubric.
+
+**Next fix (deterministic):** every play that improves an asset must also name its distribution route to qualified visitors (channel, volume, cost). Re-evaluating needs a new cap.
