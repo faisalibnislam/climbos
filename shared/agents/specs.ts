@@ -46,7 +46,11 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
 export type InsightsV2 = z.infer<typeof InsightsV2Schema>;
 
 /** A growth play card (skills/growth-plays): creative, forecast with base rates, testable. */
-/** Where a number came from: the owner (brief/facts), research the writer read (ref = URL or domain), a named benchmark (ref = its name), or an assumption (ref = ""). */
+/**
+ * Where a number came from: owner (a number the owner actually gave in the brief or facts), research the writer read
+ * (ref = URL), a named benchmark (ref = its name), planned (an allocation the planner proposes within the owner's
+ * limits, e.g. spend or hours), or an assumption (ref = ""). ClimbOS checks these tags after writing.
+ */
 export const ProvenanceSchema = z.enum(PROVENANCE);
 export const SourceTagSchema = z.object({ source: ProvenanceSchema, ref: z.string() });
 

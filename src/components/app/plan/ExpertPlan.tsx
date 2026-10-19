@@ -12,7 +12,7 @@ import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/c
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { churnOf, OWNER_HOUR_USD, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
-import { BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
+import { BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { PlanSection } from "./PlanSections";
 import { climbTarget } from "@/components/climb/context";
 
@@ -166,6 +166,7 @@ function ForecastBar({ f, economics }: { f: PlayView; economics?: Economics }) {
         <p className={cn("text-xs", basis.kind === "assumption_scenario" ? "text-amber-800" : "text-ink-3")}>
           {BASIS_LABEL[basis.kind]}
           {basis.assumed.length ? <span className="text-ink-3"> · assumed: {basis.assumed.join(", ")}</span> : null}
+          {basis.unchecked.length ? <span className="text-ink-3"> · sources not checked: {basis.unchecked.join(", ")}</span> : null}
         </p>
       ) : null}
     </div>
@@ -181,7 +182,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
     <p className={cn("text-xs", m.profitable ? "text-ink-3" : "text-red-800")}>
       Cost per customer <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {usd(m.valueUsd)} a year
       {m.paybackMonths !== null ? ` · pays back in ${Math.max(0.1, Math.round(m.paybackMonths * 10) / 10)} months` : ""}
-      {cost.kind === "assumption_scenario" ? <span className="text-amber-800"> · rests on assumptions</span> : null}
+      <span className={cost.kind === "assumption_scenario" ? "text-amber-800" : undefined}> · {COST_BASIS_LABEL[cost.kind]}</span>
     </p>
   );
 }
@@ -220,7 +221,8 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
             </span>
             <span className={cn("max-w-[12rem] truncate text-right text-xs", r.tag.source === "assumption" ? "text-amber-800" : "text-ink-3")} title={r.tag.ref || undefined}>
               {SOURCE_LABEL[r.tag.source]}
-              {r.tag.ref && r.tag.source !== "assumption" ? ` · ${r.tag.ref.replace(/^https?:\/\/(www\.)?/, "")}` : ""}
+              {r.tag.ref && r.tag.source !== "assumption" && r.tag.check !== "owner_input" ? ` · ${r.tag.ref.replace(/^https?:\/\/(www\.)?/, "")}` : ""}
+              {r.tag.check ? ` · ${CHECK_LABEL[r.tag.check]}` : ""}
             </span>
           </li>
         ))}
@@ -391,7 +393,8 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
     <span>
       {label} <span className="font-medium text-ink">{value}</span>
       <span className={src[key].source === "assumption" ? "text-amber-800" : undefined} title={src[key].ref || undefined}>
-        {" "}({SOURCE_LABEL[src[key].source].toLowerCase()})
+        {" "}({SOURCE_LABEL[src[key].source].toLowerCase()}
+        {src[key].check && src[key].check !== "owner_input" ? `, ${CHECK_LABEL[src[key].check!]}` : ""})
       </span>
     </span>
   );

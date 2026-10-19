@@ -41,7 +41,7 @@ import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { applyOwnerEconomics, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
-import { withDerivedAssumed } from "../shared/agents/provenance";
+import { verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -307,7 +307,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
-  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[] },
+  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string },
 ): Promise<T> {
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
@@ -414,6 +414,7 @@ async function runAgentTask<T>(
     if (meta) {
       meta.shipped = result.assessment?.ship ?? null;
       meta.sources = result.research?.sources ?? [];
+      meta.notes = [result.research?.notes ?? "", ...(result.research?.sources ?? []).map((x) => x.url)].join("\n");
     }
     if (result.quality) {
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
@@ -493,6 +494,16 @@ function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
     insightsChars,
     ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
   };
+}
+
+/**
+ * The writer's source tags, checked by code: "owner" only for numbers the owner gave, proposed spend and
+ * hours as "planned", research against this run's notes. Then the owner's confirmed economics win.
+ */
+function ownedAndChecked(draft: PlaysOutput, job: JobCtx, notes: string): PlaysOutput {
+  const owner = job.business?.unitEconomics;
+  const checked = verifyTags(draft, { notes, facts: job.facts.map((f) => f.statement), owner });
+  return { ...checked, economics: applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"] };
 }
 
 function uniqueSources(xs: { url: string; title?: string }[]): { url: string; title?: string }[] {
@@ -786,7 +797,7 @@ export const buildStrategy = internalAction({
       const scored = scoreChannels(profile, adjustments);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
-      const playsMeta: { sources?: { url: string; title?: string }[] } = {};
+      const playsMeta: { sources?: { url: string; title?: string }[]; notes?: string } = {};
       const planMeta: { sources?: { url: string; title?: string }[] } = {};
       const playsDraft = v2
         ? await runAgentTask<PlaysOutput>(
@@ -806,7 +817,7 @@ export const buildStrategy = internalAction({
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
-      const plays = playsDraft ? withForecasts({ ...playsDraft, economics: applyOwnerEconomics(withDerivedAssumed(playsDraft.economics), job.business?.unitEconomics) }) : null;
+      const plays = playsDraft ? withForecasts(ownedAndChecked(playsDraft, job, playsMeta.notes ?? "")) : null;
       // 2. The 90-day plan, built around those plays.
       const locked = plays ? lockedNumbers(plays) : "";
       let strategy = await runAgentTask<StrategyOutput>(

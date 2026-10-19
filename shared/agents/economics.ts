@@ -1,5 +1,5 @@
 import type { LintIssue } from "./types";
-import { economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag } from "./provenance";
+import { economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 
@@ -18,9 +18,10 @@ export interface PlayStep {
   rate: number;
   low?: number;
   high?: number;
-  /** Where the rate came from (newer plans). */
+  /** Where the rate came from (newer plans); `check` is set by code, never by the writer. */
   source?: Provenance;
   ref?: string;
+  check?: TagCheck;
 }
 export interface PlayModel {
   weeklyReach: number;
@@ -256,8 +257,9 @@ function sourcesLine(e: Economics): string {
 /** How a play's forecast should be described in the plan. */
 function basisNote(p: PlayLike, e: Economics): string {
   const b = forecastBasis(p, e).customers;
-  if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).`;
-  if (b.kind === "sourced_estimate") return "Forecast basis: estimate from cited sources, not yet from this business's results.";
+  const unchecked = b.unchecked.length ? ` Unchecked sources: ${b.unchecked.join(", ")}.` : "";
+  if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).${unchecked}`;
+  if (b.kind === "sourced_estimate") return `Forecast basis: estimate from cited sources, not yet from this business's results.${unchecked}`;
   return "Forecast basis: scenario from the play's own inputs (sources not labelled).";
 }
 
@@ -273,13 +275,13 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
     if (typeof v === "number" && v > 0) {
       out[k] = v;
       out.assumed = out.assumed!.filter((a) => a !== KEY_OF[k]);
-      out.sources![KEY_OF[k]] = { source: "owner", ref: "Owner confirmed" };
+      out.sources![KEY_OF[k]] = { source: "owner", ref: "Owner confirmed", check: "owner_input" };
       confirmed.push(KEY_OF[k]);
     }
   }
   if (typeof owner.ownerHourUsd === "number" && owner.ownerHourUsd > 0) {
     out.ownerHourUsd = owner.ownerHourUsd;
-    out.sources!.ownerHour = { source: "owner", ref: "Owner confirmed" };
+    out.sources!.ownerHour = { source: "owner", ref: "Owner confirmed", check: "owner_input" };
     confirmed.push("owner hour");
   }
   if (confirmed.length) out.basis = `Owner confirmed ${confirmed.join(", ")}.${e.basis ? ` ${e.basis}` : ""}`.slice(0, 400);

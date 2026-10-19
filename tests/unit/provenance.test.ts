@@ -49,13 +49,13 @@ describe("input provenance", () => {
 
   it("labels the customer forecast by its own inputs and the cost by everything", () => {
     expect(forecastBasis(play(), tagged).customers.kind).toBe("sourced_estimate");
-    expect(forecastBasis(play("assumption"), tagged).customers).toEqual({ kind: "assumption_scenario", assumed: ["Weekly reach"] });
+    expect(forecastBasis(play("assumption"), tagged).customers).toMatchObject({ kind: "assumption_scenario", assumed: ["Weekly reach"] });
     expect(forecastBasis(play(), tagged).cost.assumed).toEqual(["Your hours a week", "Margin", "Value of your hour"]);
   });
 
   it("owner-confirmed numbers become the owner's and stop being assumptions", () => {
     const e = applyOwnerEconomics(withDerivedAssumed(tagged), { grossMargin: 0.7, ownerHourUsd: 80 });
-    expect(economicsSources(e).margin).toEqual({ source: "owner", ref: "Owner confirmed" });
+    expect(economicsSources(e).margin).toEqual({ source: "owner", ref: "Owner confirmed", check: "owner_input" });
     expect(economicsSources(e).ownerHour.source).toBe("owner");
     expect(e.assumed).toEqual([]);
     expect(withDerivedAssumed(tagged).assumed).toEqual(["margin"]);
@@ -81,5 +81,44 @@ describe("input provenance", () => {
     const issues = lintProvenance(bad, "Sources: https://formkit.app");
     expect(issues.map((i) => i.path)).toEqual(["economics.sources.revenue", "plays[0].model.reachSource"]);
     expect(lintProvenance({ economics: {}, plays: [{ model: { steps: [{ name: "reply" }] } }] }, "")).toEqual([]); // older outputs
+  });
+});
+
+describe("checked tags", () => {
+  const notes = "## Pricing\n- Plans start at $29/month (https://formkit.app/pricing)\n- Trial to paid about 15% [formkit.app/pricing]\n\n## Elsewhere\n- Reply rates 1–4% (https://other.example.net)";
+  const draft = (over: Partial<ReturnType<typeof play>["model"]> = {}) => ({
+    economics: { ...tagged, sources: { revenue: { source: "research" as const, ref: "https://formkit.app/pricing" }, margin: { source: "owner" as const, ref: "brief" }, churn: { source: "benchmark" as const, ref: "Survey" } } },
+    plays: [{ ...play(), model: { ...play().model, spendSource: { source: "owner" as const, ref: "Budget $600" }, hoursSource: { source: "owner" as const, ref: "" }, ...over } }],
+  });
+
+  it("research is checked only when the number sits next to the cited page", async () => {
+    const { verifyTags } = await import("../../shared/agents/provenance");
+    const out = verifyTags(draft(), { notes, facts: [] });
+    expect(out.economics.sources?.revenue?.check).toBe("research_notes"); // $29 next to formkit.app/pricing
+    const steps = out.plays[0].model.steps;
+    expect(steps[1]).toMatchObject({ source: "research", check: "research_notes" }); // 15% near the pricing page
+    expect(out.economics.sources?.churn?.check).toBe("reported"); // benchmarks can't be checked
+    // A rate cited to a page whose notes don't contain it stays model-reported.
+    const wrong = verifyTags(draft({ steps: [{ name: "paid", rate: 0.4, low: 0.3, high: 0.5, source: "research", ref: "https://formkit.app/pricing" }] }), { notes, facts: [] });
+    expect(wrong.plays[0].model.steps[0].check).toBe("reported");
+  });
+
+  it("owner is kept only for numbers the owner gave; allocations become planned", async () => {
+    const { verifyTags } = await import("../../shared/agents/provenance");
+    const out = verifyTags(draft(), { notes, facts: ["Our margin is about 80% after hosting."] });
+    expect(out.economics.sources?.margin).toMatchObject({ source: "owner", check: "owner_facts" });
+    expect(out.plays[0].model.spendSource).toEqual({ source: "planned", ref: "Budget $600" });
+    expect(out.plays[0].model.hoursSource?.source).toBe("planned");
+    const noFacts = verifyTags(draft(), { notes, facts: [] });
+    expect(noFacts.economics.sources?.margin?.source).toBe("assumption");
+  });
+
+  it("unchecked sources are named in the basis, and the cost line always has a basis", async () => {
+    const { forecastBasis, verifyTags, COST_BASIS_LABEL } = await import("../../shared/agents/provenance");
+    const out = verifyTags(draft(), { notes, facts: [] });
+    const b = forecastBasis(out.plays[0] as never, out.economics);
+    expect(b.customers.unchecked).toEqual(["Weekly reach", "reply"]); // reach: research not in notes; reply: benchmark
+    expect(Object.keys(COST_BASIS_LABEL).sort()).toEqual(["assumption_scenario", "sourced_estimate", "unlabelled_scenario"]);
+    expect(COST_BASIS_LABEL.sourced_estimate).toMatch(/not yet your results/);
   });
 });
