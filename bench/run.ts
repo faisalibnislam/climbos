@@ -61,6 +61,9 @@ const arms = (arg("arms") ?? "v1,v0f,v2s").split(",");
 const compare = (arg("compare") ?? "v2s:v1,v2s:v0f").split(",").map((c) => c.split(":") as [string, string]);
 const judges = (arg("judges") ?? "sol").split(",");
 const pointwise = arg("pointwise") !== "off";
+/** --flags decision_contract[,…]: run the strategy arms with these engine flags on (as a flagged workspace would). */
+const engineFlags = new Set((arg("flags") ?? "").split(",").filter(Boolean));
+const DC = engineFlags.has("decision_contract");
 /**
  * --import-arm name=results.json:sourceArm[,name2=…] loads arms' outputs from earlier runs
  * (e.g. the same bench run at another git ref), so two code versions can be judged
@@ -385,10 +388,11 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     );
     const f = fit.output as ChannelFit;
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
-    const scored = scoreChannels(profile, adjustmentsFrom(f));
+    // As production with decision_contract: owner time and capability limits apply before ranking (no connections in the bench).
+    const scored = scoreChannels(profile, adjustmentsFrom(f), undefined, DC ? { ownerHoursPerWeek: base.constraints?.ownerHoursPerWeek, connected: [] } : undefined);
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
     const insights = insightsOf(p);
-    const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const playsRun = await runAgent(withMode(growthPlaysSpec({ decisionContract: DC }, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
     const draft = playsRun.output as PlaysOutput;
     const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
     const checked = verifyTags(draft, { pages, searched: (playsRun.research?.sources ?? []).map((x) => urlKey(x.url)), fetchedAt: Date.now() });
@@ -403,7 +407,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     return {
       arm,
       ok: true,
-      output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, economics: plays.output.economics, researchSources: (playsRun.research?.sources ?? []).map((x) => x.url), channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
+      output: { ...(plan.output as object), ...(DC && (plays.output as { decision?: unknown }).decision ? { decision: (plays.output as { decision?: unknown }).decision } : {}), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, economics: plays.output.economics, researchSources: (playsRun.research?.sources ?? []).map((x) => x.url), channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
       costMicros: cost,
       ms: Date.now() - t0,
     };

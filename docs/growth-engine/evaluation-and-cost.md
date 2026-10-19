@@ -241,3 +241,25 @@ pnpm bench --cases formkit,meetrao,involets,taskeni,folevi --tasks strategy --ar
 These losses are about strategy specificity, not maths. The S5 decision contract (flagged) and the structured decision fields target them.
 
 **Next decision-changing step:** flag `decision_contract` on for the bench arm and compare. It needs funding (cap about $2.50).
+
+### Run 4 (2026-10-19, separately approved cap of $2.50): decision contract on
+
+**What ran:** the same B1 with the `decision_contract` flag on (`bench/run.ts --flags decision_contract`) against the saved B0 outputs.
+
+**Files:** `bench/results/2026-10-19-06-28-regress-b1dc.*` and `2026-10-19-06-55-regress-judge4.*`, including the blind packet.
+
+| | B0 | B1 + decision contract |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.10 |
+| Pairwise | — | **1 win** (Formkit), 1 tie (Folevi), 3 losses (Involets, Meetrao, Taskeni) |
+| Pointwise overall (mean) | 4.0 | 3.4 |
+
+**Spend:** $1.64 of $2.50 for this run; $7.98 across all four runs.
+
+**Trend:** 2–3, then 1–1–3, then 3–2, then 1–1–3. The contract made plans worse; it stays off.
+
+**Why it lost:**
+- **Channel fit vs price:** labour-heavy plays (creator recruitment, partner outreach) for $6/month self-serve products (Involets, Taskeni).
+- **Unverified assets:** Meetrao's play rested on a five-page asset that the research never confirmed; B0 started from the confirmed Cal.com page.
+
+**Next fixes (deterministic, no spend):** price-aware channel scoring (low ARPU → self-serve channels first) and a rule that plays may only build on assets the research verified. Re-evaluating needs a new cap.
