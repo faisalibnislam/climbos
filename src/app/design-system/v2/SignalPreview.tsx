@@ -912,7 +912,7 @@ function ControlsSection() {
 function TypeSection() {
   return (
     <section className="flex flex-col gap-6">
-      <SectionTitle title="Type" intro="Reckless Neue for every title: marketing headlines, page titles, trust lines and mobile cards. Inter for everything you read and click; numbers are Inter semibold so cards and tables line up." />
+      <SectionTitle title="Type" intro="Reckless Neue for every title: marketing headlines, page titles, trust lines and mobile cards. Hanken Grotesk for everything you read and click; numbers are Hanken Grotesk semibold so cards and tables line up." />
       <div className="grid gap-6 rounded-[var(--radius-card)] border border-line bg-surface p-6 shadow-[var(--card-shadow)] md:grid-cols-2">
         <div className="flex flex-col gap-3">
           <p className="font-display text-6xl font-medium tracking-[-0.02em]">Aa Reckless</p>
@@ -921,7 +921,7 @@ function TypeSection() {
           <p className="font-display text-[15px] text-ink-2">Plan in 10 minutes · No credit card needed</p>
         </div>
         <div className="flex flex-col gap-3">
-          <p className="text-6xl font-semibold tracking-[-0.03em]">Aa Inter</p>
+          <p className="text-6xl font-semibold tracking-[-0.03em]">Aa Hanken</p>
           <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">180 · $4.20 · 63.8%</p>
           <p className="text-base font-semibold">Conversion funnel <span className="font-normal text-ink-3">· panel title 16/24</span></p>
           <p className="text-sm text-ink-2">Body 14/20 · Controls and tables 13–14 · Captions 12/16</p>
@@ -938,7 +938,7 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
       <main className="mx-auto flex max-w-[1240px] flex-col gap-16 px-4 py-10 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
           <Badge tone="brand" icon={<Sparkles />} className="self-start">Proposal · not live yet</Badge>
-          <SectionTitle title="Signal" intro="The WAct visual language for ClimbOS: sage-tinted ground, white panels, black actions, cream and sage brand surfaces, one lime call to action, Reckless Neue titles." />
+          <SectionTitle title="Signal" intro="The WAct visual language for ClimbOS: sage-tinted ground, white panels, black actions, cream and sage brand surfaces, one lime call to action, Reckless Neue titles and Hanken Grotesk body." />
         </header>
         <Hero />
         <section className="flex flex-col gap-6">
@@ -957,7 +957,7 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
         <TypeSection />
         {bodyFonts ? (
           <section className="flex flex-col gap-6">
-            <SectionTitle title="Body font options" intro="Reckless Neue stays for titles. Pick the body and UI font: the same title, copy, number, table figures and buttons in each." />
+            <SectionTitle title="Body font options" intro="Reckless Neue for titles, Hanken Grotesk for body and UI (chosen). The alternatives stay here for reference." />
             {bodyFonts}
           </section>
         ) : null}

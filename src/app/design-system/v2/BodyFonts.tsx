@@ -7,11 +7,11 @@ const dmSans = DM_Sans({ subsets: ["latin"], display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], display: "swap" });
 
 const CANDIDATES: { name: string; family: string; note: string }[] = [
-  { name: "Inter (current)", family: "var(--font-sans-ui)", note: "Neutral, very legible at 13–14px, everywhere in SaaS." },
+  { name: "Inter (Summit)", family: "var(--font-sans-ui)", note: "Neutral, very legible at 13–14px, everywhere in SaaS." },
   { name: "Geist", family: geist.style.fontFamily, note: "Crisp and modern with tight numbers; closest to the reference dashboards." },
   { name: "Instrument Sans", family: instrument.style.fontFamily, note: "Slightly condensed with warm curves; pairs closely with Reckless." },
   { name: "DM Sans", family: dmSans.style.fontFamily, note: "Soft geometric and friendly; rounder, less corporate." },
-  { name: "Hanken Grotesk", family: hanken.style.fontFamily, note: "Classic grotesk with a little character; calm in tables." },
+  { name: "Hanken Grotesk (chosen)", family: hanken.style.fontFamily, note: "Classic grotesk with a little character; calm in tables." },
 ];
 
 /** The same KPI, table row, copy and buttons in each candidate, under a Reckless title. */

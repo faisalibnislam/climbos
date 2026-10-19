@@ -99,6 +99,7 @@
   --radius-control: var(--radius-app);
   --radius-field: 6px;
   --radius-card: 8px;
+  --font-body: var(--font-sans-ui);
   --font-metric: var(--font-display-serif);
   --metric-weight: 500;
   --seg-track: var(--surface-2);
@@ -212,7 +213,8 @@
   --btn-2-bg: #ffffff;
   --btn-2-border: rgb(22 24 21 / 0.06);
   --btn-2-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
-  --font-metric: var(--font-sans-ui);
+  --font-body: var(--font-hanken-ui);
+  --font-metric: var(--font-body);
   --metric-weight: 600;
   --seg-track: transparent;
   --seg-track-border: transparent;
@@ -296,7 +298,7 @@
   --color-sage-ink: var(--sage-ink);
   --color-lime: var(--lime);
 
-  --font-sans: var(--font-sans-ui);
+  --font-sans: var(--font-body);
   --font-display: var(--font-display-serif);
   --font-mono: var(--font-mono-ui);
 
@@ -353,7 +355,7 @@ body {
   color: var(--ink);
   font-size: 14px;
   line-height: 20px;
-  font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "cv11", "ss01";
   text-rendering: optimizeLegibility;
 }
@@ -570,7 +572,7 @@ body {
   color: var(--ink);
 }
 @utility heading-section {
-  font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 600;
@@ -578,7 +580,7 @@ body {
   color: var(--ink);
 }
 @utility heading-card {
-  font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
@@ -586,7 +588,7 @@ body {
   color: var(--ink);
 }
 @utility heading-dialog {
-  font-family: var(--font-sans-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   font-size: 18px;
   line-height: 26px;
   font-weight: 600;

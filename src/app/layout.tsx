@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Hanken_Grotesk, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
@@ -9,6 +9,8 @@ import "./globals.css";
 // Inter for the product UI (dense, legible SaaS type); Reckless Neue, our serif, for page titles, big numbers
 // and marketing headlines.
 const sans = Inter({ variable: "--font-sans-ui", subsets: ["latin"], display: "swap" });
+// Hanken Grotesk: the body/UI font in the Signal theme (owner choice, 2026-10-19).
+const hanken = Hanken_Grotesk({ variable: "--font-hanken-ui", subsets: ["latin"], display: "swap" });
 const recklessNeue = localFont({
   variable: "--font-display-serif",
   display: "swap",
@@ -54,7 +56,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" className={`${sans.variable} ${mono.variable} ${recklessNeue.variable} h-full antialiased`}>
+      <html lang="en" className={`${sans.variable} ${hanken.variable} ${mono.variable} ${recklessNeue.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col">
           <a href="#main" className="skip-link">
             Skip to content
