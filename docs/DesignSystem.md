@@ -34,14 +34,15 @@ Rules:
 
 Fonts:
 - **Inter** for all UI.
-- **Spectral** for page titles and big numbers.
-- **EB Garamond** for marketing headlines only.
+- **Reckless Neue** (our serif) for page titles, big numbers and marketing headlines.
+  - Self-hosted from `src/app/fonts/reckless/` in Regular, Medium and SemiBold, each with its italic.
+  - Commercial font from Displaay: the web licence must cover climbos.app.
 
 | Style | Class | Spec | Use |
 |---|---|---|---|
-| Display | `.marketing h1` + `text-5xl`–`7xl` | EB Garamond 500 | Marketing hero only. |
-| Headline | `.marketing h2` + `text-4xl` | EB Garamond 500 | Marketing section titles. |
-| Page title | `heading-page` (all `h1` default to Spectral) | Spectral 28/36 500 | One per screen, via `PageHeader`. |
+| Display | `.marketing h1` + `text-5xl`–`7xl` | Reckless Neue 500 | Marketing hero only. |
+| Headline | `.marketing h2` + `text-4xl` | Reckless Neue 500 | Marketing section titles. |
+| Page title | `heading-page` (all `h1` default to Reckless Neue) | Reckless Neue 28/36 500 | One per screen, via `PageHeader`. |
 | Section title | `heading-section` | Inter 16/24 600 | `h2` inside a page: groups of cards, settings sections, empty-state titles. |
 | Card title | `heading-card` / `CardTitle` | Inter 14/20 600 | `h3` on cards, panels, list items, toasts. |
 | Dialog title | `text-xl font-semibold` | Inter 18/26 600 | Dialog and sheet titles (built into `DialogContent`). |
@@ -50,7 +51,7 @@ Fonts:
 | UI | `text-ui` | Inter 13/18 | Buttons, inputs, labels, nav, table cells, tabs, menu items. |
 | Caption | `text-xs` | Inter 12/16 | Meta, timestamps, table headers, badges, hints. |
 | Overline | `text-overline` | Inter 11/16 600 caps +0.06em | Group labels in nav, menus and above titles. |
-| Metric | `metric` | Spectral 28/32 tabular | Big numbers on stat cards and pricing. |
+| Metric | `metric` | Reckless Neue 28/32 tabular | Big numbers on stat cards and pricing. |
 
 Rules:
 - Use only three weights: 400 (text), 500 (UI labels and buttons), 600 (headings and emphasis). No bold or extrabold.
@@ -102,7 +103,7 @@ Rules:
 | Nothing yet | `EmptyState` | Always offers the next step. |
 | Progress | `Progress`, `Meter`, `StepList` | |
 | Small things | `Avatar`, `Kbd`, `Separator`, `IconTile` | |
-| Page scaffold | `PageHeader` (`components/app/results/QueryBoundary.tsx`) | Every app screen starts with it: optional overline, Spectral title, one-line description, actions on the right. |
+| Page scaffold | `PageHeader` (`components/app/results/QueryBoundary.tsx`) | Every app screen starts with it: optional overline, Reckless Neue title, one-line description, actions on the right. |
 
 ## 3. Accessibility (non-negotiable)
 

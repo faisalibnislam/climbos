@@ -4,7 +4,7 @@
  * ClimbOS design tokens ("Summit"). Layout and sizing follow Apollo.io;
  * the surface language follows Airly's own taskeni.app and Meetrao: a
  * sage-grey ground, white panels with hairlines instead of shadows, tight
- * corners (6px controls, 8px cards) and a Spectral / Inter pairing (EB Garamond for marketing headlines).
+ * corners (6px controls, 8px cards) and a Reckless Neue / Inter pairing.
  * Pine is the brand and primary action colour; sunrise is a highlight that
  * never carries small text. Text/background pairs meet WCAG 2.2 AA. Status
  * is never conveyed by colour alone.
@@ -364,8 +364,8 @@ body {
 }
 
 /* Element defaults live in the base layer so utilities (heading-*, font-*)
-   always win. Page titles (h1) use Spectral, paired with Inter like Meetrao;
-   marketing headlines use EB Garamond at display sizes. */
+   always win. Page titles (h1) use Reckless Neue, paired with Inter;
+   marketing headlines use it at display sizes. */
 @layer base {
   h1 {
     font-family: var(--font-display-serif), ui-serif, Georgia, serif;
@@ -382,7 +382,7 @@ body {
   }
   .marketing h1,
   .marketing h2 {
-    font-family: var(--font-marketing-serif), var(--font-display-serif), ui-serif, Georgia, serif;
+    font-family: var(--font-display-serif), ui-serif, Georgia, serif;
     font-weight: 500;
     letter-spacing: -0.015em;
   }
@@ -402,11 +402,11 @@ body {
 /*
  * Semantic text styles. Prefer these over ad-hoc size/weight pairs so every
  * screen shares one hierarchy (see docs/DesignSystem.md):
- *   heading-page    page title (h1): Spectral 28/36
+ *   heading-page    page title (h1): Reckless Neue 28/36
  *   heading-section section title (h2): Inter 16/24 semibold
  *   heading-card    card/panel title (h3): Inter 14/20 semibold
  *   text-overline   small caps label above a title or group: 11/16
- *   metric          big numbers: Spectral 28/32
+ *   metric          big numbers: Reckless Neue 28/32
  */
 @utility heading-page {
   font-family: var(--font-display-serif), ui-serif, Georgia, serif;

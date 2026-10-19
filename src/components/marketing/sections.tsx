@@ -53,7 +53,7 @@ const CAPABILITY_NETWORKS: Record<string, SocialNetwork[]> = {
 /** Inline text link used inside marketing copy. */
 const textLink = "font-medium text-brand-800 underline underline-offset-4 hover:decoration-2";
 
-/** Landing hero: a flat white showcase panel, EB Garamond headline, live preview. */
+/** Landing hero: a flat white showcase panel, serif headline, live preview. */
 export function Hero() {
   return (
     <section aria-labelledby="hero-heading" className="bg-bg p-3 sm:p-5">

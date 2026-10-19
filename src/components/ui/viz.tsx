@@ -257,7 +257,7 @@ export interface StatTrendProps {
   className?: string;
 }
 
-/** KPI card: label, Spectral number, coloured change with words, sparkline and provenance. */
+/** KPI card: label, serif number, coloured change with words, sparkline and provenance. */
 export function StatTrend({ label, value, delta, upIsGood = true, deltaLabel = "vs last period", trend, sublabel, icon, help, className }: StatTrendProps) {
   const good = delta === undefined || delta === 0 ? null : delta > 0 === upIsGood;
   const deltaText = delta === undefined ? null : `${delta > 0 ? "Up" : delta < 0 ? "Down" : "No change"}${delta ? ` ${Math.abs(delta)}%` : ""}`;

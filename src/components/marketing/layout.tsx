@@ -40,7 +40,7 @@ export function Section({
 }
 
 /**
- * Marketing section heading: `text-overline` eyebrow, EB Garamond h2
+ * Marketing section heading: `text-overline` eyebrow, serif h2
  * (text-3xl, text-4xl from sm) and a text-base intro. `inverse` for the pine
  * feature section.
  */
