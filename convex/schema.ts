@@ -640,6 +640,9 @@ export default defineSchema({
     title: v.string(),
     /** Who to find: customers (companies) or creators (influencers to partner with). Absent = customers. */
     kind: v.optional(v.union(v.literal("customers"), v.literal("creators"))),
+    /** plan_targets (S6, REQ-TARGET-01/04): the plan and the play (stable ID) this search finds targets for. */
+    strategyId: v.optional(v.id("strategies")),
+    playId: v.optional(v.string()),
     /** Owner's optional steer: who, where, how many. */
     brief: v.object({ who: v.string(), where: v.string(), count: v.number() }),
     status: v.union(v.literal("researching"), v.literal("review"), v.literal("failed"), v.literal("archived")),
@@ -726,6 +729,11 @@ export default defineSchema({
       v.literal("won"),
       v.literal("lost"),
     ),
+    /** plan_targets (S6): plays (stable IDs) this target was found for; one record per entity across plans (REQ-TARGET-06). */
+    playIds: v.optional(v.array(v.string())),
+    /** Creators: canonical identity from the profile path (REQ-TARGET-03), e.g. instagram + "studio.ana". */
+    platform: v.optional(v.string()),
+    handle: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

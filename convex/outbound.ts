@@ -8,6 +8,7 @@ import { cancelQueued } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
+import { creatorIdentity } from "../shared/growth/targets";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -69,15 +70,17 @@ export async function bookingLive(ctx: QueryCtx, page: Doc<"bookingPages"> | nul
 /* ---------------- Owner-facing API ---------------- */
 
 export const get = query({
-  args: { slug: v.string() },
-  handler: async (ctx, { slug }) => {
+  args: { slug: v.string(), campaignId: v.optional(v.id("outboundCampaigns")) },
+  handler: async (ctx, { slug, campaignId }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const campaigns = await ctx.db
       .query("outboundCampaigns")
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(10);
-    const campaign = campaigns.find((c) => c.status !== "archived") ?? null;
+    // A play's target list links here with its campaign (S6); any other workspace's campaign is ignored.
+    const asked = campaignId ? await ctx.db.get(campaignId) : null;
+    const campaign = (asked && asked.orgId === org._id ? asked : null) ?? campaigns.find((c) => c.status !== "archived") ?? null;
     const prospects = campaign
       ? await ctx.db
           .query("prospects")
@@ -169,7 +172,7 @@ export const start = mutation({
 /** Create a campaign and its research run (also used by wishes). */
 export async function startCampaign(
   ctx: MutationCtx,
-  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators" },
+  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
 ): Promise<Id<"outboundCampaigns">> {
   const { org, brief } = p;
   const busy = await ctx.db
@@ -190,8 +193,9 @@ export async function startCampaign(
   }
   const campaignId = await ctx.db.insert("outboundCampaigns", {
     orgId: org._id,
-    title: brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
+    title: p.play ? `Targets: ${p.play.name}`.slice(0, 120) : brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
     ...(creators ? { kind: "creators" as const } : {}),
+    ...(p.play ? { strategyId: p.play.strategyId, playId: p.play.playId } : {}),
     brief,
     status: "researching",
     sequence: [],
@@ -441,6 +445,12 @@ function profileKey(url: string): string {
   }
 }
 
+/** A creator's dedupe key: platform + handle when the profile path names one (REQ-TARGET-03), else the profile path. */
+function creatorKey(url: string): { key: string; platform?: string; handle?: string } {
+  const id = creatorIdentity(url);
+  return id ? { key: id.key, platform: id.platform, handle: id.handle } : { key: profileKey(url) };
+}
+
 export const saveResult = internalMutation({
   args: { campaignId: v.id("outboundCampaigns"), prospects: v.any(), outreach: v.any() },
   handler: async (ctx, a) => {
@@ -452,13 +462,24 @@ export const saveResult = internalMutation({
     const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f.line]));
     const seen = new Set<string>();
     let added = 0;
+    let merged = 0;
     for (const p of found.prospects) {
-      // Creators share platform domains (instagram.com/…): key them by profile path instead.
-      const domain = c.kind === "creators" ? profileKey(p.website) : domainOf(p.website);
+      // Creators share platform domains (instagram.com/…): key them by platform + handle instead.
+      const ident = c.kind === "creators" ? creatorKey(p.website) : { key: domainOf(p.website) };
+      const domain = ident.key;
       if (!domain || seen.has(domain)) continue;
-      // Skip anyone already in the pipeline (any campaign).
-      if (await ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", domain)).first()) continue;
       seen.add(domain);
+      // Anyone already in the pipeline (any campaign) stays one record with its stage; a play search links it (REQ-TARGET-06).
+      const byKey = (key: string) => ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", key)).first();
+      // Creators saved before platform + handle keys used the bare profile path.
+      const existing = (await byKey(domain)) ?? (c.kind === "creators" && profileKey(p.website) !== domain ? await byKey(profileKey(p.website)) : null);
+      if (existing) {
+        if (c.playId && !(existing.playIds ?? []).includes(c.playId)) {
+          await ctx.db.patch(existing._id, { playIds: [...(existing.playIds ?? []), c.playId], updatedAt: now });
+          merged++;
+        }
+        continue;
+      }
       await ctx.db.insert("prospects", {
         orgId: c.orgId,
         campaignId: c._id,
@@ -477,6 +498,8 @@ export const saveResult = internalMutation({
         ...((p as { check?: Doc<"prospects">["check"] }).check ? { check: (p as { check?: Doc<"prospects">["check"] }).check } : {}),
         firstLine: (lines.get(p.company.trim().toLowerCase()) ?? "").slice(0, 400),
         stage: "suggested",
+        ...(c.playId ? { playIds: [c.playId] } : {}),
+        ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
         createdAt: now,
         updatedAt: now,
       });
@@ -490,8 +513,8 @@ export const saveResult = internalMutation({
       excluded: found.excluded.slice(0, 30),
       updatedAt: now,
     });
-    await audit(ctx, { orgId: c.orgId, actorType: "agent", action: "outbound.ready", subjectType: "outboundCampaign", subjectId: c._id, summary: `Found ${added} prospects and wrote a ${outreach.sequence.length}-email sequence` });
-    return { added };
+    await audit(ctx, { orgId: c.orgId, actorType: "agent", action: "outbound.ready", subjectType: "outboundCampaign", subjectId: c._id, summary: `Found ${added} prospects${merged ? ` (${merged} already known, linked to this play)` : ""} and wrote a ${outreach.sequence.length}-email sequence` });
+    return { added, merged };
   },
 });
 

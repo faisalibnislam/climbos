@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, MoreHorizontal, Search, Sparkles, Target, X } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FUNNEL_STAGES, PROSPECT_STAGES, STAGE_LABEL, mergeEmail, prospectScore, prospectsCsv, type ProspectStage } from "../../../../../shared/outbound";
 import {
@@ -66,7 +66,9 @@ const WHO_IDEAS: Record<string, string[]> = {
  */
 export default function OutboundPage() {
   const { organization: slug } = useParams<{ organization: string }>();
-  const data = useQuery(api.outbound.get, { slug });
+  // A play's target list links here with ?campaign= (S6).
+  const campaignId = useSearchParams().get("campaign") as Id<"outboundCampaigns"> | null;
+  const data = useQuery(api.outbound.get, campaignId ? { slug, campaignId } : { slug });
   const [startOpen, setStartOpen] = useState(false);
 
   if (data === undefined) return <LoadingBlock label="Loading your prospects" />;

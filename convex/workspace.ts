@@ -7,6 +7,7 @@ import { activePolicyVersion, jobForAction } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can } from "../shared/policy";
 import { holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
+import { autoStartPlanTargets } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { creditBalance } from "./lib/credits";
@@ -185,30 +186,49 @@ export const sendChat = mutation({
   args: { slug: v.string(), text: v.string() },
   handler: async (ctx, { slug, text }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
-    const clean = text.trim().slice(0, 2000);
-    if (!clean) throw appError("INVALID", "Type a message first.");
-    const now = Date.now();
-    const recent = await ctx.db
-      .query("chatMessages")
-      .withIndex("by_org_created", (q) => q.eq("orgId", org._id).gt("createdAt", now - 60_000))
-      .take(20);
-    if (recent.filter((m) => m.author === "user").length >= 6) {
-      throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give the team a moment to catch up.");
-    }
-    const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId: user._id, text: clean, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
-    const plan = planJob("chat_intent");
-    let runId;
-    try {
-      runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId }, steps: plan.steps, meters: plan.meters, createdBy: user._id, isFixture: org.kind === "demo" });
-    } catch (e) {
-      await ctx.db.patch(messageId, { status: "failed" });
-      throw e;
-    }
-    await ctx.db.patch(messageId, { runId });
-    await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
-    return { messageId };
+    return postChat(ctx, org, user._id, text);
   },
 });
+
+/**
+ * "Make it happen" on a play (REQ-UX-03): the request is built here from the
+ * stored play, found by plan and play ID, never from text the page assembled.
+ */
+export const startPlay = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), playId: v.string() },
+  handler: async (ctx, { slug, strategyId, playId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
+    if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
+    return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
+  },
+});
+
+async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string): Promise<{ messageId: Id<"chatMessages"> }> {
+  const clean = text.trim().slice(0, 2000);
+  if (!clean) throw appError("INVALID", "Type a message first.");
+  const now = Date.now();
+  const recent = await ctx.db
+    .query("chatMessages")
+    .withIndex("by_org_created", (q) => q.eq("orgId", org._id).gt("createdAt", now - 60_000))
+    .take(20);
+  if (recent.filter((m) => m.author === "user").length >= 6) {
+    throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give the team a moment to catch up.");
+  }
+  const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId, text: clean, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
+  const plan = planJob("chat_intent");
+  let runId;
+  try {
+    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo" });
+  } catch (e) {
+    await ctx.db.patch(messageId, { status: "failed" });
+    throw e;
+  }
+  await ctx.db.patch(messageId, { runId });
+  await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
+  return { messageId };
+}
 
 /** Approving a card starts exactly the job it described, with the estimate it showed. */
 export const runCard = mutation({
@@ -509,6 +529,10 @@ export const decidePlan = mutation({
     if (decision === "approve") {
       // Approving starts the work the plan describes: first drafts for each active channel, within credits.
       work = await startPlanWork(ctx, { org, strategyId: s._id, userId: user._id });
+      // plan_targets (S6): the first target-heavy play starts finding named targets too.
+      const targets = await autoStartPlanTargets(ctx, { org, strategyId: s._id, userId: user._id });
+      if (targets.started) work.started.push(`Targets: ${targets.started}`);
+      else if (targets.waiting) work.waiting.push({ title: "Targets for your plays", reason: targets.waiting });
       await afterPlanWork(ctx, org._id, s._id, user._id, work, 0);
     }
     return work;

@@ -3,7 +3,7 @@ import { internalMutation } from "./_generated/server";
 import { audit } from "./lib/audit";
 
 /** Engine flags a workspace can be opted into while the new behaviour is evaluated (REQ-ENG-01). */
-export const ENGINE_FLAGS = ["decision_contract"] as const;
+export const ENGINE_FLAGS = ["decision_contract", "plan_targets"] as const;
 
 /** Staff only (internal, run from the Convex CLI or dashboard): opt a workspace in or out of an engine flag. */
 export const setEngineFlag = internalMutation({

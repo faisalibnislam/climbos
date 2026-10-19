@@ -102,6 +102,7 @@ import type * as settings from "../settings.js";
 import type * as siteWatch from "../siteWatch.js";
 import type * as siteWatchActions from "../siteWatchActions.js";
 import type * as status from "../status.js";
+import type * as targets from "../targets.js";
 import type * as team from "../team.js";
 import type * as translate from "../translate.js";
 import type * as webhooks from "../webhooks.js";
@@ -208,6 +209,7 @@ declare const fullApi: ApiFromModules<{
   siteWatch: typeof siteWatch;
   siteWatchActions: typeof siteWatchActions;
   status: typeof status;
+  targets: typeof targets;
   team: typeof team;
   translate: typeof translate;
   webhooks: typeof webhooks;

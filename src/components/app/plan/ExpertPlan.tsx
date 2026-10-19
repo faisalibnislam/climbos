@@ -7,7 +7,9 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { PlayResults } from "./PlayResults";
-import { CircleCheck, Crosshair, FlaskConical, Gem, Info, Rocket, ShieldCheck, Sparkles, Target, TriangleAlert, X, type LucideIcon } from "lucide-react";
+import { CircleCheck, Crosshair, ExternalLink, FlaskConical, Gem, Info, Rocket, Search, ShieldCheck, Sparkles, Target, TriangleAlert, Users, X, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import type { PlayTargets } from "@convex/targets";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/components/ui";
@@ -20,6 +22,8 @@ import { climbTarget } from "@/components/climb/context";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
+  /** Stable play ID (S4), carried across plan versions. */
+  id?: string;
   name: string;
   oneLiner: string;
   kind: "bankable" | "creative" | "moonshot";
@@ -343,9 +347,85 @@ interface ResultsCtx {
   byPlay: Record<string, PlayActuals | undefined>;
 }
 
-function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx }) {
+const TARGET_TONE: Record<PlayTargets["state"], Tone> = {
+  ready: "green",
+  researching: "blue",
+  needs_connection: "orange",
+  no_contact_route: "orange",
+  waiting: "neutral",
+  not_started: "neutral",
+  none_found: "neutral",
+  failed: "red",
+};
+
+/** Named targets for a target-heavy play, with an honest state (REQ-TARGET-05, REQ-UX-02). */
+function PlayTargetsBlock({ t, slug, strategyId, playId, canEdit }: { t: PlayTargets; slug: string; strategyId: Id<"strategies">; playId: string; canEdit: boolean }) {
+  const start = useMutation(api.targets.startForPlay);
+  const [busy, setBusy] = useState(false);
+  const what = t.kind === "creators" ? "creators" : "companies";
+  return (
+    <section aria-label={`Targets for this play`} className="flex flex-col gap-2 rounded-lg border border-line p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
+          <Users aria-hidden className="size-3.5" /> Targets
+        </p>
+        <Badge tone={TARGET_TONE[t.state]}>{t.label}</Badge>
+        {t.counts.found ? <span className="ml-auto text-xs tabular-nums text-ink-3">{t.counts.found} found</span> : null}
+      </div>
+      <p className="text-xs text-ink-3">{t.note}</p>
+      {t.targets.length ? (
+        <ul className="flex flex-col gap-1.5">
+          {t.targets.map((x) => (
+            <li key={x.id} className="min-w-0 text-ui">
+              <a href={x.url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 font-medium text-ink underline-offset-2 hover:underline">
+                <span className="truncate">{x.handle && x.platform ? `${x.name} · ${x.platform}` : x.name}</span>
+                <ExternalLink aria-hidden className="size-3 shrink-0 text-ink-3" />
+              </a>
+              <span className="block break-words text-xs text-ink-3">
+                {x.why}
+                {" · "}
+                {x.suppressed ? "opted out" : x.contactRoute === "email" ? "public email" : "contact route not found"}
+                {x.stage !== "suggested" ? ` · ${x.stage}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {t.campaignId ? (
+          <Link href={`/app/${slug}/outbound?campaign=${t.campaignId}`} className="text-xs font-medium text-brand-800 underline-offset-2 hover:underline">
+            See all {what}
+          </Link>
+        ) : null}
+        {canEdit && t.canStart ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await start({ slug, strategyId, playId });
+                toast({ tone: "success", title: `Finding ${what} for this play`, description: r.pausedSending ? "Sending on your previous campaign is paused. Resume it from Find customers." : undefined });
+              } catch (e) {
+                toast({ tone: "danger", title: errorMessage(e) });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Search aria-hidden /> {t.state === "not_started" || t.state === "waiting" ? `Find ${what}` : "Search again"}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function PlayCard({ play, slug, economics, results, planId, targets, canEdit = false }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx; planId?: Id<"strategies">; targets?: PlayTargets; canEdit?: boolean }) {
   const k = KIND[play.kind] ?? KIND.creative;
   const send = useMutation(api.workspace.sendChat);
+  const startPlay = useMutation(api.workspace.startPlay);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -400,6 +480,7 @@ function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: st
 
         <ForecastBar f={play} economics={economics} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
+        {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
         {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} canEdit={results.canEdit} /> : null}
 
         {open ? (
@@ -470,7 +551,9 @@ function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: st
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await send({ slug, text: `Start the "${play.name}" play: ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}` });
+                  // Structured IDs when the play has one (REQ-UX-03); older plays fall back to the text request.
+                  if (planId && play.id) await startPlay({ slug, strategyId: planId, playId: play.id });
+                  else await send({ slug, text: `Start the "${play.name}" play: ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}` });
                   router.push(`/app/${slug}/today`);
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
@@ -515,8 +598,10 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-export function GrowthPlays({ plays, slug, economics, strategyId, canEdit = false, focused = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; canEdit?: boolean; focused?: boolean }) {
+export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdit = false, focused = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean }) {
   const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
+  // plan_targets workspaces only (null otherwise): named targets per play.
+  const targets = useQuery(api.targets.forStrategy, planId ? { slug, strategyId: planId } : "skip");
   if (!plays.length) return null;
   const results = strategyId ? { strategyId, canEdit, byPlay: (byPlay ?? {}) as Record<string, PlayActuals | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
@@ -526,7 +611,7 @@ export function GrowthPlays({ plays, slug, economics, strategyId, canEdit = fals
       {economics ? <EconomicsLine economics={economics} /> : null}
       <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
-          <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} />
+          <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} planId={planId} targets={p.id ? targets?.[p.id] : undefined} canEdit={canEdit} />
         ))}
       </div>
     </PlanSection>
