@@ -40,7 +40,7 @@ export function QrButton({ url, label }: { url: string; label: string }) {
           <QrCode aria-hidden />
         </Button>
       </DialogTrigger>
-      <DialogContent title="QR code" description={`Scans open ${url.replace(/^https?:\/\//, "")}. Clicks count like the link.`}>
+      <DialogContent title="QR code" description={url.replace(/^https?:\/\//, "")}>
         {/* Our own encoder's SVG: only rects and a path. */}
         <div className="mx-auto rounded-lg border border-line bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />
         <DialogFooter>

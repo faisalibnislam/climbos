@@ -78,7 +78,7 @@ export function AssetPicker({
     try {
       const { saved, failed } = await uploadToLibrary(slug, Array.from(files), genUrl, saveUpload);
       if (saved.length) onChange(max === 1 ? [saved[0]] : [...selected, ...saved].slice(-max));
-      if (failed) toast({ tone: "danger", title: `${failed} image${failed === 1 ? "" : "s"} didn't upload. Try again.` });
+      if (failed) toast({ tone: "danger", title: `${failed} upload${failed === 1 ? "" : "s"} failed. Try again.` });
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
     } finally {
@@ -108,7 +108,7 @@ export function AssetPicker({
           title="No images yet"
           body={
             <>
-              Upload one, or capture your site in <Link href={`/app/${slug}/images`}>Images</Link>.
+              Upload one or open <Link href={`/app/${slug}/images`}>Images</Link>.
             </>
           }
         />

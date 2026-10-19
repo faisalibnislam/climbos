@@ -19,7 +19,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
     <div className="flex flex-col gap-8">
       <SettingsHeader
         title="Workspaces"
-        intro="All workspaces on your account share one credit balance and one bill. Cap a workspace to keep any one client from using too much."
+        intro="Shared credits and bill"
         actions={
           <Link href="/onboarding?new=1" className={buttonClasses({ size: "sm" })}>
             New workspace
@@ -29,7 +29,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
       {data === undefined ? (
         <LoadingBlock label="Loading workspaces…" />
       ) : data === null ? (
-        <Callout tone="info">This workspace isn&apos;t on an account.</Callout>
+        <Callout tone="info">Not on an account.</Callout>
       ) : (
         <>
           <DataTable
@@ -54,7 +54,20 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
               rowKey={(p) => p.email}
               columns={[
                 { key: "who", header: "Person", rowHeader: true, cell: (p) => p.name ? `${p.name} · ${p.email}` : p.email },
-                { key: "access", header: "Access", cell: (p) => p.roles.map((r) => `${r.workspace}: ${r.role}${r.status === "invited" ? " (invited)" : ""}`).join(" · ") },
+                {
+                  key: "access",
+                  header: "Access",
+                  cell: (p) => (
+                    <ul className="flex flex-col gap-0.5">
+                      {p.roles.map((r) => (
+                        <li key={r.workspace}>
+                          <span className="font-medium text-ink">{r.workspace}:</span> {r.role}
+                          {r.status === "invited" ? <span className="text-ink-3"> (invited)</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                },
               ]}
             />
           </section>

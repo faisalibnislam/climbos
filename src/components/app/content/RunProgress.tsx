@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
 import { microsToCreditsLabel } from "../money";
 import { roleTitle } from "../roles";
-import { useWorkspaceMember } from "./shared";
+import { Highlight } from "@/components/ds/content";
+import { MessageText, useWorkspaceMember } from "./shared";
 import { can } from "@shared/policy";
 
 export type RunStatusView = FunctionReturnType<typeof api.content.runStatus>;
@@ -80,15 +81,15 @@ function phaseName(label: string): string {
 
 const AGENT_WHO: Record<string, string> = {
   "Read your website": "Reading your website",
-  "Understand the business": "AI Data Analyst: pulling out the facts",
-  "Business insights": "AI CMO: customers, competitors and positioning",
-  "Channel scoring": "AI CMO: ranking acquisition channels",
-  "Growth plays": "AI CMO: choosing growth plays",
-  "Growth plan": "AI CEO: the 90-day plan",
-  "Find customers": "AI Sales: finding companies that need you",
-  "Find creators": "AI CMO: finding creators who reach your buyers",
-  "First take": "AI CEO: a quick first take",
-  "Write the emails": "AI Sales: writing the emails",
+  "Understand the business": "Pulling out the facts",
+  "Business insights": "Customers and competitors",
+  "Channel scoring": "Ranking channels",
+  "Growth plays": "Choosing growth plays",
+  "Growth plan": "The 90-day plan",
+  "Find customers": "Finding companies",
+  "Find creators": "Finding creators",
+  "First take": "Quick first take",
+  "Write the emails": "Writing the emails",
 };
 
 type Phase = { label: string; name: string; status: StepStatus; startedAt: number | null; finishedAt: number | null; findings: string[] };
@@ -207,11 +208,13 @@ export function RunProgress({
       ) : null}
       {run.preview && !finished ? (
         <section aria-label="First take" className="rounded-lg border border-brand-200 bg-brand-50/60 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">First take · the full version is on its way</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">First take · full version coming</p>
           <p className="mt-1 text-sm font-medium text-ink">{run.preview.headline}</p>
           <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
             {run.preview.points.map((p) => (
-              <li key={p}>{p}</li>
+              <li key={p}>
+                <Highlight text={p} />
+              </li>
             ))}
           </ul>
         </section>
@@ -247,21 +250,21 @@ export function RunProgress({
           ))}
         </ol>
       ) : (
-        <p className="text-sm text-ink-3">Getting the team ready…</p>
+        <p className="text-sm text-ink-3">Starting…</p>
       )}
       <p className="text-sm text-ink-3">
         {finished
-          ? `Used ${microsToCreditsLabel(run.actualMicros)} of up to ${microsToCreditsLabel(run.estimateMicros)} reserved. The rest was returned.`
-          : `Up to ${microsToCreditsLabel(run.estimateMicros)} reserved for this; anything unused is returned. You can leave this page; the team keeps working.`}
+          ? `Used ${microsToCreditsLabel(run.actualMicros)} of ${microsToCreditsLabel(run.estimateMicros)} reserved. Rest returned.`
+          : `Up to ${microsToCreditsLabel(run.estimateMicros)} reserved; unused returned.`}
       </p>
       {run.status === "verified" || run.status === "needs_approval" ? done : null}
       {run.status === "failed" || run.status === "canceled" || run.status === "uncertain" ? (
         <Callout tone={run.status === "failed" ? "danger" : "warning"} live="none" title={label}>
-          {run.userMessage ?? (run.status === "canceled" ? "This job was canceled before it finished." : "The team couldn't finish this. Unused capacity was returned.")}
+          <MessageText text={run.userMessage ?? (run.status === "canceled" ? "Canceled before it finished." : "Couldn't finish. Unused credits returned.")} />
           {run.canRetry ? <RetryRun slug={slug} runId={runId} className="mt-3" /> : null}
         </Callout>
       ) : run.userMessage && run.status !== "verified" ? (
-        <p className="text-sm text-ink-2">{run.userMessage}</p>
+        <MessageText text={run.userMessage} className="text-sm text-ink-2" />
       ) : null}
     </div>
   );
@@ -294,9 +297,9 @@ export function RetryRun({ slug, runId, className }: { slug: string; runId: Id<"
           }
         }}
       >
-        Retry from where it stopped
+        Retry
       </Button>
-      <span className="text-xs text-ink-3">Finished steps are kept. Only the rest runs again.</span>
+      <span className="text-xs text-ink-3">Keeps finished steps.</span>
       {error ? (
         <span role="alert" className="text-xs text-red-800">
           {error}
@@ -333,14 +336,14 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
       {progress ? <Progress value={progress.percent} label={`${run.title} progress`} /> : <Skeleton className="h-2 w-full" />}
       <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs">
         <span className="min-w-0 truncate font-medium text-brand-800">
-          {finished ? (RUN_STATUS_LABEL[run.status] ?? run.status) : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Getting the team ready…"}
+          {finished ? (RUN_STATUS_LABEL[run.status] ?? run.status) : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Starting…"}
         </span>
         {progress && !finished ? <span className="shrink-0 tabular-nums text-ink-3">{progress.percent}% · {formatEta(progress.etaSeconds).replace("About ", "~")}</span> : null}
       </p>
       {latest ? <p className="truncate text-xs text-ink-3">Latest: {latest}</p> : null}
       {run.canRetry ? <RetryRun slug={slug} runId={runId} /> : null}
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="self-start text-xs font-medium text-brand-800 hover:underline">
-        {open ? "Hide steps" : "Show all steps"}
+        {open ? "Hide steps" : "All steps"}
       </button>
       {open ? (
         <div className="mt-1 rounded-lg border border-line bg-surface p-3">

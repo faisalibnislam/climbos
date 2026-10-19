@@ -18,8 +18,8 @@ function CharCount({ id, value, limit }: { id: string; value: string; limit: Tex
   return (
     <p id={id} className={cn("flex items-center gap-1.5 text-xs tabular-nums", over > 0 ? "font-medium text-red-800" : "text-ink-3")}>
       {over > 0 ? <CircleAlert aria-hidden="true" className="size-3.5" /> : null}
-      {limit.label}: {n.toLocaleString("en-US")} of {limit.limit.toLocaleString("en-US")} characters
-      {over > 0 ? ` — ${over.toLocaleString("en-US")} over the limit` : ""}
+      {limit.label}: {n.toLocaleString("en-US")}/{limit.limit.toLocaleString("en-US")}
+      {over > 0 ? ` (${over.toLocaleString("en-US")} over)` : ""}
     </p>
   );
 }
@@ -65,7 +65,7 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
     const e: Record<string, string> = {};
     if (!body.trim()) e.body = "The text can't be empty.";
     if (url.trim() && !/^https:\/\//i.test(url.trim())) e.url = "Links must start with https://";
-    if (imageKept && !alt.trim()) e.alt = "Describe the image for people who use screen readers.";
+    if (imageKept && !alt.trim()) e.alt = "Describe the image.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -89,7 +89,7 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
         imageAssetId,
       });
       if (res.changed) {
-        toast({ tone: "success", title: `Saved as version ${res.version}.`, description: "It now needs approval before it can go out." });
+        toast({ tone: "success", title: `Saved as v${res.version}. Needs approval.` });
         onDone();
       } else {
         toast({ tone: "info", title: "No changes to save." });
@@ -110,11 +110,11 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
         void save();
       }}
     >
-      <Callout tone={approvedish ? "warning" : "info"} title={approvedish ? "Saving will cancel the current approval" : "Editing will require a new approval"}>
-        Saving creates version {(cur?.version ?? 0) + 1}. {approvedish ? "It must be approved again before it can be scheduled or published." : "Someone with approval rights reviews it before it goes anywhere."}
+      <Callout tone={approvedish ? "warning" : "info"} title={approvedish ? "Saving cancels approval" : "Needs new approval"}>
+        Saves as version {(cur?.version ?? 0) + 1}.
       </Callout>
 
-      <Field label="Name in ClimbOS" hint="Only you and your team see this.">
+      <Field label="Internal name">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} />
       </Field>
 
@@ -135,18 +135,18 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
       </div>
 
       {showCta ? (
-        <Field label="Button text" optional hint="For example “Book a table” or “Shop the sale”.">
+        <Field label="Button text" optional>
           <Input value={cta} onChange={(e) => setCta(e.target.value)} maxLength={120} />
         </Field>
       ) : null}
 
       {isSocial(artifact.channel) || hashtagList.length > 0 ? (
-        <Field label="Hashtags" optional hint="Separate with commas. The # is added for you.">
+        <Field label="Hashtags" optional hint="Comma-separated">
           <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="smallbusiness, localcoffee" />
         </Field>
       ) : null}
 
-      <Field label="Link" optional hint="Where people go when they tap. Must start with https://" error={errors.url}>
+      <Field label="Link" optional error={errors.url}>
         <Input type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
       </Field>
 
@@ -156,31 +156,31 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
             <p className="text-ui font-medium text-ink">
               Image{" "}
               <span className="font-normal text-ink-3">
-                {imageAssetId ? "· new image picked" : hasImage && !removeImage ? "· current image kept" : artifact.channel === "instagram" ? "· required on Instagram" : "· optional"}
+                {imageAssetId ? "· new" : hasImage && !removeImage ? "· current" : artifact.channel === "instagram" ? "· required" : "· optional"}
               </span>
             </p>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" asChild>
                 <Link href={`/studio/${slug}/new?post=${artifact.id}`}>
-                  <Palette aria-hidden /> Design one
+                  <Palette aria-hidden /> Design
                 </Link>
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setChoosing((c) => !c)} aria-expanded={choosing}>
-                <ImagePlus aria-hidden /> {choosing ? "Done" : hasImage || imageAssetId ? "Change image" : "Add an image"}
+                <ImagePlus aria-hidden /> {choosing ? "Done" : hasImage || imageAssetId ? "Change image" : "Add image"}
               </Button>
             </div>
           </div>
-          {choosing ? <AssetPicker slug={slug} selected={picked} onChange={setPicked} label="Pick from your images" /> : null}
+          {choosing ? <AssetPicker slug={slug} selected={picked} onChange={setPicked} label="Your images" /> : null}
         </div>
       ) : null}
 
       {imageKept ? (
-        <Field label="Image description (alt text)" required hint="Required with an image: describe what's in it for people who use screen readers." error={errors.alt}>
+        <Field label="Alt text" required error={errors.alt}>
           <Textarea value={alt} onChange={(e) => setAlt(e.target.value)} rows={2} autosize maxLength={1000} />
         </Field>
       ) : null}
       {hasImage && !imageAssetId ? (
-        <Checkbox checked={removeImage} onCheckedChange={(v) => setRemoveImage(v === true)} label="Remove the image" description="The post goes out as text only." />
+        <Checkbox checked={removeImage} onCheckedChange={(v) => setRemoveImage(v === true)} label="Remove image" />
       ) : null}
 
       {error ? <ErrorCallout error={error} /> : null}
@@ -190,7 +190,7 @@ export function DraftEditor({ slug, artifact, onDone }: { slug: string; artifact
           Cancel
         </Button>
         <Button type="submit" loading={saving} loadingText="Saving…">
-          Save as new version
+          Save
         </Button>
       </div>
     </form>

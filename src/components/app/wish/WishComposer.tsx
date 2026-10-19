@@ -2,9 +2,9 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowUp, Sparkles } from "@/components/icons"
+import { ArrowUp, Magic } from "@/components/icons";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { Button, Kbd, toast } from "@/components/ui";
+import { Button, toast } from "@/components/ui";
 import { errorInfo } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 
@@ -17,32 +17,32 @@ export function wishSuggestions(type: string | null | undefined): string[] {
   switch (type) {
     case "saas":
       return [
-        "Plan a Product Hunt launch for next month",
-        "Get 10 new G2 reviews from our happiest customers",
-        "Find YouTubers who review tools like ours and draft pitches",
-        "Write 5 LinkedIn posts from the founder's story",
+        "Plan a Product Hunt launch",
+        "Get 10 G2 reviews",
+        "Pitch YouTube reviewers",
+        "5 founder-story LinkedIn posts",
       ];
     case "ecommerce":
     case "physical_products":
       return [
-        "Find 20 creators to send our product to",
-        "Get us into this year's holiday gift guides",
-        "Plan a limited pre-order drop with posts and an email",
-        "Win back customers who haven't ordered in 90 days",
+        "Send our product to 20 creators",
+        "Get into holiday gift guides",
+        "Plan a pre-order drop",
+        "Win back lapsed customers",
       ];
     case "services":
       return [
-        "Get more 5-star Google reviews this month",
-        "Find local businesses we could partner with",
-        "Plan a seasonal offer with posts and a flyer",
-        "Write a referral offer for past clients",
+        "Get more Google reviews",
+        "Find local partners",
+        "Plan a seasonal offer",
+        "Write a referral offer",
       ];
     default:
       return [
-        "Get 3 Instagram posts ready for next week",
-        "Audit my website for more enquiries",
-        "Turn on autopilot for Instagram and Facebook",
-        "Why did sign-ups change last month?",
+        "3 Instagram posts for next week",
+        "Audit my site for enquiries",
+        "Autopilot for Instagram",
+        "Why did sign-ups change?",
       ];
   }
 }
@@ -84,19 +84,10 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; sugge
   };
 
   return (
-    <section aria-labelledby="wish-heading" className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 id="wish-heading" className="heading-section flex items-center gap-2">
-            <Sparkles aria-hidden className="size-4 text-sun-strong" /> What should your team do?
-          </h2>
-          <p className="mt-0.5 text-sm text-ink-3">Say it in your own words. Drafts, plans and research start right away; nothing goes live without you.</p>
-        </div>
-        <span className="hidden shrink-0 items-center gap-1 text-xs text-ink-3 sm:flex">
-          Anywhere: <Kbd>⌘</Kbd>
-          <Kbd>K</Kbd>
-        </span>
-      </div>
+    <section aria-labelledby="wish-heading" className="rounded-[var(--radius-card)] border border-line bg-surface p-[var(--card-p)] shadow-[var(--card-shadow)]">
+      <h2 id="wish-heading" className="heading-section flex items-center gap-2">
+        <Magic aria-hidden className="size-4 text-sun-strong" /> What should your team do?
+      </h2>
       <form
         className={cn(
           "mt-4 flex items-end gap-2 rounded-xl border border-control bg-surface p-2 pl-3.5 transition-colors focus-within:border-brand-800 focus-within:ring-2 focus-within:ring-brand-100",
@@ -128,17 +119,17 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; sugge
           }}
           rows={1}
           disabled={disabled}
-          placeholder={`e.g. ${suggestions[0] ?? "Get posts ready for our launch next Tuesday"}`}
+          placeholder={`${suggestions[0] ?? "Posts for our launch"}…`}
           className="min-h-9 flex-1 resize-none bg-transparent py-2 text-base text-ink outline-none placeholder:text-ink-3"
         />
-        <Button type="submit" loading={busy} disabled={!text.trim() || disabled} aria-label="Make it happen">
+        <Button type="submit" loading={busy} disabled={!text.trim() || disabled} aria-label="Send">
           <ArrowUp aria-hidden className="sm:hidden" />
-          <span className="hidden sm:inline">Make it happen</span>
+          <span className="hidden sm:inline">Send</span>
         </Button>
       </form>
       {disabled && disabledReason ? <p className="mt-2 text-ui text-ink-3">{disabledReason}</p> : null}
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Ideas">
-        {suggestions.map((s) => (
+        {suggestions.slice(0, 3).map((s) => (
           <button
             key={s}
             type="button"

@@ -26,15 +26,15 @@ export default function AiSettingsPage() {
   };
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Climb AI" intro="Choose the default depth for plans, insights, ads and the weekly plan. You can change it each time you start one." />
+      <SettingsHeader title="Climb AI" />
       <Card>
         <CardHeader>
           <CardTitle as="h2">Default mode</CardTitle>
-          <CardDescription>Everything else (posts, emails, SEO, audits, finding customers, chat) always uses Basic.</CardDescription>
+          <CardDescription>For plans, insights, ads. All else uses Basic.</CardDescription>
         </CardHeader>
         <CardContent>
           <AiModeChoice unlocked={data.expertUnlocked} costs={data.estimates.strategy} value={data.mode} onChange={onChange} label="Growth plan cost shown as an example" upgradeHref={`/app/${slug}/settings/billing`} />
-          {!data.canEdit ? <p className="mt-3 text-xs text-ink-3">Only owners and admins can change this.</p> : null}
+          {!data.canEdit ? <p className="mt-3 text-xs text-ink-3">Owners and admins only.</p> : null}
         </CardContent>
       </Card>
     </div>

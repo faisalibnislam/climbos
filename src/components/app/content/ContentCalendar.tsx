@@ -99,10 +99,7 @@ function CalendarInner({ slug, now }: { slug: string; now: number }) {
           className="self-start sm:self-auto"
         />
       </div>
-      <p className="text-sm text-ink-3">
-        Times are shown in your time zone ({browserTimeZone()}). “Scheduled in ClimbOS” means ClimbOS will send it then; it isn&apos;t on the platform until the
-        platform accepts it.
-      </p>
+      <p className="text-xs text-ink-3">{browserTimeZone()}</p>
       <SectionBoundary label="the calendar" key={`${range.from}-${range.to}`}>
         <CalendarGrid slug={slug} days={range.days} from={range.from} to={range.to} todayKey={todayKey} view={view} anchorMonth={anchor.getMonth()} />
       </SectionBoundary>
@@ -145,7 +142,7 @@ function CalendarGrid({
       </p>
       {items !== undefined && total === 0 ? (
         <Callout tone="info" className="mb-4">
-          Nothing is scheduled in this {view}. Approved content you schedule shows up here.
+          Nothing scheduled this {view}.
         </Callout>
       ) : null}
       <div aria-hidden="true" className="hidden grid-cols-7 gap-px md:grid">

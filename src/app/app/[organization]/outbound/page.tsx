@@ -5,7 +5,7 @@ import { MailboxSending } from "@/components/app/outbound/MailboxSending";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Mail, MoreHorizontal, Search, Sparkles, Target, X } from "@/components/icons"
+import { CalendarCheck, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Magic, Mail, MoreHorizontal, Search, Target, X } from "@/components/icons";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FUNNEL_STAGES, PROSPECT_STAGES, STAGE_LABEL, mergeEmail, prospectScore, prospectsCsv, type ProspectStage } from "../../../../../shared/outbound";
@@ -47,6 +47,7 @@ import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary
 import { RetryRunIfPossible, RunProgress } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
+import { Highlight, Scannable, toBullets } from "@/components/ds/content";
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.outbound.get>>>;
 type Prospect = Data["prospects"][number];
@@ -76,7 +77,6 @@ export default function OutboundPage() {
       <PageHeader
         section="outbound"
         title="Find customers"
-        intro="We find companies that need you, write the emails and book the calls. Nothing is sent without you."
         actions={
           c && c.status !== "researching" && data.canEdit ? (
             <Button variant="secondary" onClick={() => setStartOpen(true)}>
@@ -97,8 +97,8 @@ export default function OutboundPage() {
         )
       ) : c.status === "failed" ? (
         <Callout tone="danger" title="This search didn't finish">
-          {c.run?.message ?? "Nothing was charged beyond what was used."}{" "}
-          <Button size="sm" variant="secondary" className="ml-2" onClick={() => setStartOpen(true)}>
+          {c.run?.message && toBullets(c.run.message).length > 1 ? <Scannable text={c.run.message} tone="muted" /> : <p>{c.run?.message ?? "Nothing was charged beyond what was used."}</p>}
+          <Button size="sm" variant="secondary" className="mt-3" onClick={() => setStartOpen(true)}>
             Start over
           </Button>
           {c.run ? <RetryRunIfPossible slug={slug} runId={c.run.id} className="mt-3" /> : null}
@@ -107,7 +107,7 @@ export default function OutboundPage() {
         <Campaign slug={slug} data={data} />
       )}
       <Dialog open={startOpen} onOpenChange={setStartOpen}>
-        <DialogContent title="Find more customers" description="A new search. Companies already in your list are skipped.">
+        <DialogContent title="Find more customers" description="Skips companies already listed.">
           <StartForm slug={slug} businessType={data.businessType} onDone={() => setStartOpen(false)} />
         </DialogContent>
       </Dialog>
@@ -122,13 +122,13 @@ function StartPanel({ slug, businessType, canEdit }: { slug: string; businessTyp
     <section className="grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
       <div>
         <h2 className="heading-section">Who should we find?</h2>
-        <div className="mt-4">{canEdit ? <StartForm slug={slug} businessType={businessType} /> : <p className="text-sm text-ink-3">Ask an owner or admin to start a search.</p>}</div>
+        <div className="mt-4">{canEdit ? <StartForm slug={slug} businessType={businessType} /> : <p className="text-sm text-ink-3">Ask an admin to start.</p>}</div>
       </div>
       <ol className="flex flex-col gap-3" aria-label="How it works">
         {[
-          { icon: Search, title: "Find", body: "Real companies, each with a source you can check." },
-          { icon: Mail, title: "Write", body: "A short sequence and a personal first line for each." },
-          { icon: CalendarCheck, title: "Book", body: "Your own booking page. Calls land in your calendar." },
+          { icon: Search, title: "Find", body: "Real, sourced companies" },
+          { icon: Mail, title: "Write", body: "Personal emails" },
+          { icon: CalendarCheck, title: "Book", body: "Calls in your calendar" },
         ].map((s, i) => (
           <li key={s.title} className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 p-3">
             <IconTile icon={s.icon} tone={i === 2 ? "green" : "brand"} size="sm" />
@@ -165,7 +165,7 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
         setBusy(true);
         try {
           const r = await start({ slug, kind, who: whoMode === "pick" ? who : "", where: whereMode === "pick" ? where : "", count: Number(count) });
-          toast({ tone: "success", title: "Your team is on it", description: r.pausedSending ? "About 10–15 minutes. Sending for your last search is paused; resume it under Send." : "About 10–15 minutes. You can leave this page." });
+          toast({ tone: "success", title: "Searching · ~10–15 min", description: r.pausedSending ? "Last search's sending paused." : undefined });
           onDone?.();
         } catch (err) {
           toast({ tone: "danger", title: errorMessage(err) });
@@ -190,8 +190,8 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
           value={whoMode}
           onValueChange={(v) => setWhoMode(v as "auto" | "pick")}
           options={[
-            { value: "auto", title: "We find the customer", description: "From your plan and website." },
-            { value: "pick", title: "Select your customer", description: "Pick an idea or describe them." },
+            { value: "auto", title: "Auto", description: "From your plan" },
+            { value: "pick", title: "Choose" },
           ]}
         />
         {whoMode === "pick" ? (
@@ -214,8 +214,8 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
           value={whereMode}
           onValueChange={(v) => setWhereMode(v as "auto" | "pick")}
           options={[
-            { value: "auto", title: "We find the area", description: "Where you already sell." },
-            { value: "pick", title: "Select your area", description: "A city, region or country." },
+            { value: "auto", title: "Auto", description: "Where you sell" },
+            { value: "pick", title: "Choose" },
           ]}
         />
         {whereMode === "pick" ? <Input aria-label="Your area" autoFocus value={where} onChange={(e) => setWhere(e.target.value)} placeholder="e.g. Greater Manchester" maxLength={120} /> : null}
@@ -237,9 +237,9 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={busy} disabled={missing}>
-          <Sparkles aria-hidden /> Find customers
+          <Magic aria-hidden /> Find customers
         </Button>
-        <span className="text-xs text-ink-3">Uses AI allowance. Nothing is sent.</span>
+        <span className="text-xs text-ink-3">Uses AI allowance · Nothing sent</span>
       </div>
     </form>
   );
@@ -250,8 +250,8 @@ function Researching() {
     <section className="flex items-start gap-4 rounded-xl border border-line bg-surface p-5" aria-live="polite">
       <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-800"><Loader2 className="size-5 animate-spin" /></span>
       <div>
-        <h2 className="heading-card">Your team is researching</h2>
-        <p className="mt-0.5 text-sm text-ink-3">Finding companies, checking each one on its own website, then writing the emails. Usually 3–6 minutes. You can leave this page.</p>
+        <h2 className="heading-card">Researching</h2>
+        <p className="mt-0.5 text-sm text-ink-3">~3–6 min. Safe to leave.</p>
       </div>
     </section>
   );
@@ -271,22 +271,42 @@ function Campaign({ slug, data }: { slug: string; data: Data }) {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
       <div className="flex min-w-0 flex-col gap-6">
         {c.icp ? (
-          <section className="rounded-xl border border-line bg-surface p-5" {...climbTarget("icp", c.id, c.icp.summary)}>
-            <p className="text-overline">Ideal customer</p>
-            <p className="mt-1 text-sm font-medium text-ink">{c.icp.summary}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {c.icp.mustHaves.slice(0, 4).map((m) => (
-                <Badge key={m} tone="brand">
-                  {m}
-                </Badge>
-              ))}
-              {c.icp.triggers.slice(0, 3).map((t) => (
-                <Badge key={t} tone="amber">
-                  {t}
-                </Badge>
-              ))}
+          <section aria-labelledby="icp-h" className="rounded-xl border border-line bg-surface p-5" {...climbTarget("icp", c.id, c.icp.summary)}>
+            <div className="flex items-center gap-2">
+              <IconTile icon={Target} tone="brand" size="sm" />
+              <h2 id="icp-h" className="text-overline">
+                Ideal customer
+              </h2>
             </div>
-            <p className="mt-2 text-xs text-ink-3">Contact: {c.icp.decisionMaker}</p>
+            <p className="mt-2 max-w-[70ch] text-sm font-medium leading-relaxed text-ink">{c.icp.summary}</p>
+            <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
+              {c.icp.mustHaves.length ? (
+                <>
+                  <dt className="pt-0.5 text-xs font-medium text-ink-3">Must have</dt>
+                  <dd className="flex flex-wrap gap-1.5">
+                    {c.icp.mustHaves.slice(0, 4).map((m) => (
+                      <Badge key={m} tone="brand">
+                        {m}
+                      </Badge>
+                    ))}
+                  </dd>
+                </>
+              ) : null}
+              {c.icp.triggers.length ? (
+                <>
+                  <dt className="pt-0.5 text-xs font-medium text-ink-3">Why now</dt>
+                  <dd className="flex flex-wrap gap-1.5">
+                    {c.icp.triggers.slice(0, 3).map((t) => (
+                      <Badge key={t} tone="amber">
+                        {t}
+                      </Badge>
+                    ))}
+                  </dd>
+                </>
+              ) : null}
+              <dt className="text-xs font-medium text-ink-3">Contact</dt>
+              <dd className="text-ink-2">{c.icp.decisionMaker}</dd>
+            </dl>
           </section>
         ) : null}
         <Tabs defaultValue="people">
@@ -306,7 +326,6 @@ function Campaign({ slug, data }: { slug: string; data: Data }) {
         <SendPanel data={data} />
         <FunnelChart
           title="Pipeline"
-          description="Everyone your team has found so far."
           headingLevel="h2"
           steps={[
             { label: "Found", value: reached("suggested") },
@@ -353,7 +372,7 @@ function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }
         ))}
       </div>
       {shown.length === 0 ? (
-        <EmptyState icon={<Target aria-hidden />} title={view === "suggested" ? "All reviewed" : "Nobody here yet"} body={view === "suggested" ? "Approved people are ready to email." : "Change the filter to see more."} />
+        <EmptyState icon={<Target aria-hidden />} title={view === "suggested" ? "All reviewed" : "Nobody here yet"} body={view === "suggested" ? "Approved ones are ready to email." : "Try another filter."} />
       ) : (
         <div className="rounded-xl border border-line bg-surface">
           <div className="flex min-h-12 flex-wrap items-center gap-3 border-b border-line px-4 py-2">
@@ -399,14 +418,20 @@ function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }
                       </span>
                       {p.stage !== "suggested" ? <Badge tone={p.stage === "skipped" ? "neutral" : p.stage === "booked" ? "green" : "brand"}>{STAGE_LABEL[p.stage]}</Badge> : null}
                     </div>
-                    <p className="mt-0.5 text-sm text-ink-2">{p.why}</p>
-                    {p.trigger ? (
-                      <p className="mt-1 text-xs">
-                        <Badge tone="amber">Why now</Badge> <span className="text-ink-3">{p.trigger}</span>
-                      </p>
+                    {open !== p.id ? (
+                      <dl className="mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-sm">
+                        <dt className="text-xs font-medium leading-5 text-ink-3">Why</dt>
+                        <dd className="line-clamp-1 text-ink-2">{toBullets(p.why)[0] ?? p.why}</dd>
+                        {p.trigger ? (
+                          <>
+                            <dt className="text-xs font-medium leading-5 text-amber-800">Now</dt>
+                            <dd className="line-clamp-1 text-ink-3">{p.trigger}</dd>
+                          </>
+                        ) : null}
+                      </dl>
                     ) : null}
                     <button type="button" className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-brand-800 hover:underline" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>
-                      <ChevronDown aria-hidden className={cn("size-3.5 transition-transform", open === p.id && "rotate-180")} /> Evidence and first line
+                      <ChevronDown aria-hidden className={cn("size-3.5 transition-transform", open === p.id && "rotate-180")} /> {open === p.id ? "Less" : "Details"}
                     </button>
                     {open === p.id ? <ProspectDetail slug={slug} p={p} canEdit={canEdit} /> : null}
                   </div>
@@ -443,13 +468,14 @@ function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }
       {excluded.length ? (
         <details className="text-sm text-ink-3">
           <summary className="cursor-pointer font-medium text-ink-2">Left out ({excluded.length})</summary>
-          <ul className="mt-2 list-disc pl-5">
+          <dl className="mt-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(7rem,max-content)_1fr]">
             {excluded.map((e) => (
-              <li key={e.company}>
-                {e.company}: {e.reason}
-              </li>
+              <div key={e.company} className="contents">
+                <dt className="font-medium text-ink-2">{e.company}</dt>
+                <dd className="-mt-1 sm:mt-0">{e.reason}</dd>
+              </div>
             ))}
-          </ul>
+          </dl>
         </details>
       ) : null}
     </div>
@@ -460,33 +486,59 @@ function ProspectDetail({ slug, p, canEdit }: { slug: string; p: Prospect; canEd
   const save = useMutation(api.outbound.updateFirstLine);
   const [line, setLine] = useState(p.firstLine);
   return (
-    <div className="mt-2 flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-3">
-      <ul className="flex flex-col gap-1.5">
-        {p.evidence.map((e) => (
-          <li key={e.url} className="text-xs text-ink-2">
-            “{e.observation}”{" "}
-            <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-link">
-              source<span className="sr-only"> for {p.company} (opens in a new tab)</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-ink-3">
-        Contact: <span className="text-ink-2">{p.contact}</span>
+    <div className="mt-2 flex flex-col gap-4 rounded-lg border border-line bg-surface-2 p-3">
+      <div>
+        <h3 className="text-overline mb-1.5 text-ink-2">Why this lead</h3>
+        <Scannable text={p.why} max={3} />
+      </div>
+      {p.trigger ? (
+        <div>
+          <h3 className="text-overline mb-1.5 text-amber-800">Why now</h3>
+          <p className="max-w-[70ch] text-sm leading-relaxed text-ink">
+            <Highlight text={p.trigger} />
+          </p>
+        </div>
+      ) : null}
+      {p.evidence.length ? (
+        <div>
+          <h3 className="text-overline mb-1.5 text-ink-2">Evidence</h3>
+          <ul className="flex flex-col gap-1.5">
+            {p.evidence.map((e) => (
+              <li key={e.url} className="flex gap-2 text-xs leading-relaxed text-ink-2">
+                <span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 bg-brand-700" />
+                <span className="min-w-0">
+                  “{e.observation}”{" "}
+                  <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-link">
+                    source<span className="sr-only"> for {p.company} (opens in a new tab)</span>
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+        <dt className="text-ink-3">Contact</dt>
+        <dd className="text-ink-2">{p.contact}</dd>
         {p.publicEmail ? (
           <>
-            {" "}
-            · <span className="text-ink-2">{p.publicEmail}</span> (published on their site)
+            <dt className="text-ink-3">Email</dt>
+            <dd className="break-all text-ink-2">{p.publicEmail}</dd>
           </>
         ) : null}
-      </p>
-      {p.check ? (
-        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
-          <span>{p.check.siteLive ? "✓ Website live" : "Website didn't load"}</span>
-          {p.check.emailSource ? <span>✓ Email found on {new URL(p.check.emailSource).pathname === "/" ? "their homepage" : new URL(p.check.emailSource).pathname}</span> : <span>No email published</span>}
-          {p.check.mxOk === true ? <span>✓ Domain receives email</span> : p.check.mxOk === false ? <span>Domain can&apos;t receive email</span> : null}
-        </p>
-      ) : null}
+        {p.check ? (
+          <>
+            <dt className="text-ink-3">Checks</dt>
+            <dd>
+              <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                <li className={p.check.siteLive ? "text-green-800" : "text-red-800"}>{p.check.siteLive ? "✓ Site live" : "Site down"}</li>
+                {p.check.emailSource ? <li className="text-green-800">✓ Email on {new URL(p.check.emailSource).pathname === "/" ? "homepage" : new URL(p.check.emailSource).pathname}</li> : <li className="text-ink-3">No public email</li>}
+                {p.check.mxOk === true ? <li className="text-green-800">✓ Receives email</li> : p.check.mxOk === false ? <li className="text-red-800">Can&apos;t receive email</li> : null}
+              </ul>
+            </dd>
+          </>
+        ) : null}
+      </dl>
       <Field label="First line">
         <Textarea value={line} onChange={(e) => setLine(e.target.value)} rows={2} disabled={!canEdit} maxLength={400} />
       </Field>
@@ -521,7 +573,9 @@ function Sequence({ slug, campaignId, sequence, notes, sample, canEdit }: { slug
         <Callout tone="info" title="Before you send">
           <ul className="list-disc pl-5">
             {notes.map((n) => (
-              <li key={n}>{n}</li>
+              <li key={n}>
+                <Highlight text={n} />
+              </li>
             ))}
           </ul>
         </Callout>
@@ -551,7 +605,7 @@ function Sequence({ slug, campaignId, sequence, notes, sample, canEdit }: { slug
                 <Field label="Subject">
                   <Input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} maxLength={120} />
                 </Field>
-                <Field label="Email" hint={i === 0 ? "{{firstLine}} is replaced by each person's first line." : undefined}>
+                <Field label="Email" hint={i === 0 ? "{{firstLine}} = their first line" : undefined}>
                   <Textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={6} maxLength={2000} />
                 </Field>
                 <div className="flex gap-2">
@@ -577,7 +631,7 @@ function Sequence({ slug, campaignId, sequence, notes, sample, canEdit }: { slug
               <>
                 <p className="mt-1 font-medium text-ink">{s.subject}</p>
                 <p className="mt-1 whitespace-pre-line text-sm text-ink-2">{i === 0 && sample ? mergeEmail(s.body, sample.firstLine) : s.body}</p>
-                {i === 0 && sample ? <p className="mt-2 text-xs text-ink-3">Preview for {sample.company}.</p> : null}
+                {i === 0 && sample ? <p className="mt-2 text-xs text-ink-3">Preview: {sample.company}</p> : null}
               </>
             )}
           </li>
@@ -623,9 +677,8 @@ function SendPanel({ data }: { data: Data }) {
       ) : null}
       {data.canExport ? (
         <>
-          <p className="mt-4 text-xs text-ink-3">Or export and send from any tool:</p>
-          <Button className="mt-2 w-full" onClick={download} disabled={!approved.length}>
-            <Download aria-hidden /> Export {approved.length || ""} approved (CSV)
+          <Button className="mt-4 w-full" onClick={download} disabled={!approved.length}>
+            <Download aria-hidden /> Export {approved.length || ""} approved
           </Button>
         </>
       ) : null}
@@ -638,7 +691,7 @@ function SendPanel({ data }: { data: Data }) {
               toast({ tone: "success", title: "Booking link copied" });
             }}
           >
-            <Copy aria-hidden /> Copy booking link
+            <Copy aria-hidden /> Booking link
           </Button>
         ) : null}
       </div>
@@ -680,10 +733,17 @@ function BookingCard({ slug, data }: { slug: string; data: Data }) {
           </Button>
         ) : null}
       </div>
-      {!page.live ? <p className="mt-2 text-xs text-amber-800">{page.active ? "Off: the booking page comes with a package." : "Off: switch it on in Edit."}</p> : null}
-      <p className="mt-2 text-xs text-ink-3">
-        {page.durationMin} min · {DAY_OPTIONS.filter((d) => page.days.includes(d.value)).map((d) => d.label).join(", ")} · {String(page.startHour).padStart(2, "0")}:00–{String(page.endHour).padStart(2, "0")}:00 ({page.timezone})
-      </p>
+      {!page.live ? <p className="mt-2 text-xs text-amber-800">{page.active ? "Off · needs a package" : "Off · turn on in Edit"}</p> : null}
+      <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+        <dt className="text-ink-3">Length</dt>
+        <dd className="font-medium tabular-nums text-ink">{page.durationMin} min</dd>
+        <dt className="text-ink-3">Days</dt>
+        <dd className="text-ink">{DAY_OPTIONS.filter((d) => page.days.includes(d.value)).map((d) => d.label).join(", ")}</dd>
+        <dt className="text-ink-3">Hours</dt>
+        <dd className="tabular-nums text-ink">
+          {String(page.startHour).padStart(2, "0")}:00–{String(page.endHour).padStart(2, "0")}:00 <span className="text-ink-3">({page.timezone})</span>
+        </dd>
+      </dl>
       <h3 className="mt-4 text-overline">Upcoming calls</h3>
       {data.bookings.length ? (
         <ul className="mt-2 flex flex-col gap-2">
@@ -698,14 +758,14 @@ function BookingCard({ slug, data }: { slug: string; data: Data }) {
               {data.canEdit && b.upcoming ? (
                 <ConfirmDialog
                   title={`Cancel the call with ${b.name}?`}
-                  description="We email them that it's cancelled, with a link to pick another time."
-                  confirmLabel="Cancel the call"
+                  description="They get an email to rebook."
+                  confirmLabel="Cancel call"
                   cancelLabel="Keep it"
                   tone="danger"
                   onConfirm={async () => {
                     try {
                       await cancel({ slug, bookingId: b.id as Id<"bookings"> });
-                      toast({ tone: "success", title: "Call cancelled", description: "They've been told." });
+                      toast({ tone: "success", title: "Call cancelled" });
                     } catch (e) {
                       toast({ tone: "danger", title: errorMessage(e) });
                     }
@@ -724,7 +784,7 @@ function BookingCard({ slug, data }: { slug: string; data: Data }) {
         <p className="mt-1 text-sm text-ink-3">None yet.</p>
       )}
       <Dialog open={edit} onOpenChange={setEdit}>
-        <DialogContent title="Booking page" description="When people can book a call with you.">
+        <DialogContent title="Booking page">
           <BookingForm
             initial={page}
             onSave={async (v) => {

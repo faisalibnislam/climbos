@@ -353,7 +353,9 @@ export const plan = query({
     const latest = versions[0] ?? null;
     const approved = versions.find((s) => s.status === "approved") ?? null;
     // The approved plan guides the team, so it shows first; a newer version waiting or sent back gets a banner.
-    const strategy = (strategyId ? versions.find((s) => s._id === strategyId) : null) ?? approved ?? latest;
+    // Any version can be opened from the history, not only the most recent ones.
+    const picked = strategyId ? (versions.find((s) => s._id === strategyId) ?? (await ctx.db.get(strategyId))) : null;
+    const strategy = (picked && picked.orgId === org._id ? picked : null) ?? approved ?? latest;
     const newer = approved && latest && latest._id !== approved._id && (latest.status === "needs_approval" || latest.status === "draft") ? latest : null;
     const other = strategy && newer ? (strategy._id === newer._id ? approved : newer) : null;
     const business = await ctx.db

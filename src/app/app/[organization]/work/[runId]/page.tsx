@@ -10,31 +10,30 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BackLink, Badge, Button, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";
 import { OutputView } from "@/components/app/OutputView";
-import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { relativeTime } from "@/components/app/money";
 import { RunProgress } from "@/components/app/content/RunProgress";
-import { roleTitle } from "@/components/app/roles";
+import { ClampText } from "@/components/app/results/ClampText";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 
 /** Work receipt: what one job was asked to do, who did it, every step, its cost and what it produced. */
 export default function WorkPage() {
   const { organization: slug, runId } = useParams<{ organization: string; runId: string }>();
   const run = useQuery(api.workspace.runDetail, { slug, runId: runId as Id<"workflowRuns"> });
-  if (run === undefined) return <LoadingBlock label="Loading this job" lines={4} />;
+  if (run === undefined) return <LoadingBlock label="Loading job" lines={4} />;
   const isPlan = run.kind === "strategy";
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <BackLink href={`/app/${slug}/today`}>Back to Today</BackLink>
+        <BackLink href={`/app/${slug}/today`}>Today</BackLink>
         <PageHeader
           eyebrow={`Started ${relativeTime(run.createdAt)}`}
           title={run.title}
-          intro={run.brief ? `You asked: ${run.brief.slice(0, 220)}${run.brief.length > 220 ? "…" : ""}` : undefined}
+          intro={run.brief ? <ClampText inline>{run.brief}</ClampText> : undefined}
           actions={
             isPlan && run.status === "verified" ? (
               <Button asChild>
                 <Link href={`/app/${slug}/plan`}>
-                  Review the plan <ArrowRight aria-hidden />
+                  Review plan <ArrowRight aria-hidden />
                 </Link>
               </Button>
             ) : undefined
@@ -56,8 +55,8 @@ export default function WorkPage() {
           {run.artifacts.length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle as="h2">
-                  {run.artifacts.length} draft{run.artifacts.length === 1 ? "" : "s"} ready for you
+                <CardTitle as="h2" className="flex items-center gap-2">
+                  Drafts <Badge tone="neutral">{run.artifacts.length}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 pt-3">
@@ -94,7 +93,7 @@ export default function WorkPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle as="h2">Who worked on it</CardTitle>
+              <CardTitle as="h2">Team</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1 pt-3">
               {run.roles.map((r) => (

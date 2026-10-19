@@ -9,6 +9,7 @@ import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
+import { StatBlocks } from "@/components/ds/content";
 import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
 
 /** "1200" or "1200.50" → 1200.5; anything else ("1.2.3") → NaN. */
@@ -41,13 +42,21 @@ export default function PipelinePage() {
       <PageHeader
         section="pipeline"
         title="Pipeline"
-        intro={data ? `${data.totals.open} open · ${money(data.totals.pipelineValue, data.totals.currency)} in play · ${money(data.totals.wonValue, data.totals.currency)} won. Replies and bookings land here by themselves.` : "Replies and bookings land here by themselves."}
         actions={<AddDeal slug={slug} />}
       />
+      {data && data.deals.length ? (
+        <StatBlocks
+          stats={[
+            { label: "Open", value: data.totals.open },
+            { label: "In play", value: money(data.totals.pipelineValue, data.totals.currency) },
+            { label: "Won", value: money(data.totals.wonValue, data.totals.currency), tone: data.totals.wonValue ? "good" : "default" },
+          ]}
+        />
+      ) : null}
       {data === undefined ? (
         <LoadingBlock label="Loading your pipeline…" lines={4} />
       ) : data.deals.length === 0 ? (
-        <EmptyState icon={<Users />} title="No one here yet" body="When someone replies to your outreach or books a call, they show up here. You can add people yourself too." />
+        <EmptyState icon={<Users />} title="No one here yet" body="Replies and bookings land here." />
       ) : (
         <div className="grid gap-3 md:grid-cols-5">
           {STAGES.map((s) => {
@@ -102,17 +111,28 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
   const save = (patch: Parameters<typeof update>[0]) => update(patch).catch((e) => toast({ tone: "danger", title: errorMessage(e) }));
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-ink-3">
-        {d.company ? `${d.company} · ` : ""}
-        {d.email ? `${d.email} · ` : ""}
-        {SOURCE[d.source]}
-      </p>
+      <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+        {d.company ? (
+          <>
+            <dt className="text-ink-3">Company</dt>
+            <dd className="text-ink">{d.company}</dd>
+          </>
+        ) : null}
+        {d.email ? (
+          <>
+            <dt className="text-ink-3">Email</dt>
+            <dd className="break-all text-ink">{d.email}</dd>
+          </>
+        ) : null}
+        <dt className="text-ink-3">Source</dt>
+        <dd className="text-ink">{SOURCE[d.source]}</dd>
+      </dl>
       <Field label="Stage">
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
-      <Field label={`Deal value (${d.currency})`} hint="Won deals with a value count as revenue in Results.">
+      <Field label={`Deal value (${d.currency})`} hint="Won value counts as revenue.">
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => {
-            if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Enter the value as a number, like 1200 or 1200.50." });
+            if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });
             void save({ slug, id: d.id, value: value ? parseMoney(value) : null });
           }} />
       </Field>
@@ -143,8 +163,8 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
       </div>
       <ConfirmDialog
         title={`Remove ${d.name}?`}
-        description="Their notes and history in the pipeline go too. This can't be undone."
-        confirmLabel="Remove from pipeline"
+        description="Notes and history go too. Can't be undone."
+        confirmLabel="Remove"
         tone="danger"
         onConfirm={async () => {
           try {
@@ -156,7 +176,7 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
         }}
         trigger={
           <Button variant="ghost" size="sm" className="self-start text-red-800">
-            <Trash2 aria-hidden /> Remove from pipeline
+            <Trash2 aria-hidden /> Remove
           </Button>
         }
       />
@@ -185,7 +205,7 @@ function AddDeal({ slug }: { slug: string }) {
         className="flex flex-col gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (f.value && !Number.isFinite(parseMoney(f.value))) return void toast({ tone: "danger", title: "Enter the value as a number, like 1200 or 1200.50." });
+          if (f.value && !Number.isFinite(parseMoney(f.value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });
           setBusy(true);
           try {
             await create({ slug, name: f.name, company: f.company || undefined, email: f.email || undefined, value: f.value ? parseMoney(f.value) : undefined });
@@ -211,7 +231,7 @@ function AddDeal({ slug }: { slug: string }) {
           <Input inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") })} />
         </Field>
         <Button type="submit" loading={busy} disabled={!f.name.trim()}>
-          Add to pipeline
+          Add
         </Button>
       </form>
     </Sheet>

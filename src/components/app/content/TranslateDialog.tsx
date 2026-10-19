@@ -25,7 +25,7 @@ export function TranslateDialog({ slug, artifactId }: { slug: string; artifactId
           <Languages aria-hidden /> Translate
         </Button>
       </DialogTrigger>
-      <DialogContent title="Translate" description="A new draft in the language you pick. Links and names stay as they are. About 1 credit.">
+      <DialogContent title="Translate" description="New draft · about 1 credit">
         {runId ? (
           <div className="flex flex-col gap-3">
             <RunProgressCompact slug={slug} runId={runId} />

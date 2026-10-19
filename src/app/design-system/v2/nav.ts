@@ -61,6 +61,7 @@ export const NAV: NavGroup[] = [
   {
     title: "Patterns",
     items: [
+      { title: "Content", href: `${B}/patterns/content`, elements: ["Before and after", "Bullets with lead-ins", "Numbered steps", "Labelled facts", "Key numbers", "Key takeaways", "Stat blocks", "Step flow", "Timeline", "Comparison", "Callouts", "Q&A", "Progressive disclosure", "30 techniques", "Choosing the format", "Readability rules"] },
       { title: "Interactions", href: `${B}/patterns/interactions`, elements: ["Drag and drop", "Inline editing", "Multi-item selection", "Keyboard navigation", "Hover-reveal actions", "Reorderable lists", "Undo / redo", "Auto-save", "Optimistic updates", "Real-time updates", "Infinite scrolling", "Sticky action bars", "Progressive disclosure", "Conditional fields", "Multi-step forms", "Copy-to-clipboard feedback"] },
       { title: "Analytics showcase", href: `${B}/patterns/analytics`, elements: ["Analytics bento"] },
     ],

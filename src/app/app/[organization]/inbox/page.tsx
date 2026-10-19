@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CalendarCheck, Check, FileText, Inbox, Mail, MessageCircle, Send, Sparkles, Star, Undo2 } from "@/components/icons"
+import { CalendarCheck, Check, FileText, Inbox, Magic, Mail, MessageCircle, Send, Star, Undo2 } from "@/components/icons";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
@@ -29,11 +29,11 @@ export default function InboxPage() {
   const current = items?.find((m) => m.id === selected) ?? items?.[0] ?? null;
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      <PageHeader section="inbox" title="Inbox" intro="Replies to your emails, new bookings and chats. Climb AI drafts answers; you send." actions={<Segmented label="Box" options={BOXES} value={box} onChange={(v) => { setBox(v); setSelected(null); }} />} />
+      <PageHeader section="inbox" title="Inbox" actions={<Segmented label="Box" options={BOXES} value={box} onChange={(v) => { setBox(v); setSelected(null); }} />} />
       {items === undefined ? (
         <LoadingBlock label="Loading your inbox…" lines={4} />
       ) : items.length === 0 ? (
-        <EmptyState icon={<Inbox />} title={box === "open" ? "All caught up" : "Nothing here yet"} body={box === "open" ? "Replies to your outreach and new bookings land here." : "Answered and dismissed messages show here."} />
+        <EmptyState icon={<Inbox />} title={box === "open" ? "All caught up" : "Nothing here yet"} body={box === "open" ? "Replies and bookings land here." : undefined} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <ul className="flex flex-col gap-1.5" aria-label="Messages">
@@ -120,10 +120,10 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         {!done && m.kind !== "booking" ? (
           <div className="flex flex-col gap-2">
             {drafting && m.draftRunId ? <RunProgressCompact slug={slug} runId={m.draftRunId} /> : null}
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write your reply, or let Climb AI draft it." : m.kind === "review" ? "Draft your reply here, then post it under the review." : "Draft your answer here, then post it on the platform."} />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write a reply" : m.kind === "review" ? "Draft, then post under the review" : "Draft, then post on the platform"} />
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" loading={busy === "draft"} disabled={drafting} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
-                <Sparkles aria-hidden /> {m.suggestedReply ? "Redraft" : "Draft with AI"}
+                <Magic aria-hidden /> {m.suggestedReply ? "Redraft" : "Draft"}
               </Button>
               {m.canReply ? (
                 <Button
@@ -136,14 +136,14 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
                     })
                   }
                 >
-                  <Send aria-hidden /> Send from my mailbox
+                  <Send aria-hidden /> Send
                 </Button>
               ) : null}
               <Button variant="ghost" loading={busy === "done"} onClick={() => run("done", () => setStatus({ slug, id: m.id, status: m.canReply ? "dismissed" : "replied" }))}>
                 <Check aria-hidden /> Mark done
               </Button>
             </div>
-            <p className="text-xs text-ink-3">AI drafts use about 1 credit.</p>
+            <p className="text-xs text-ink-3">AI draft ≈ 1 credit</p>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -209,16 +209,16 @@ function ChatDetail({ slug, m }: { slug: string; m: Item }) {
         {thread === undefined ? (
           <LoadingBlock label="Loading the chat…" lines={2} />
         ) : thread === null ? (
-          <p className="text-sm text-ink-3">This chat is no longer available.</p>
+          <p className="text-sm text-ink-3">Chat no longer available.</p>
         ) : (
           <>
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} autosize aria-label="Your reply" placeholder="Reply in the chat. Climb AI steps back once you answer." />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} autosize aria-label="Your reply" placeholder="Reply (AI steps back)" />
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" loading={busy === "draft"} disabled={m.drafting} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
-                <Sparkles aria-hidden /> Draft with AI
+                <Magic aria-hidden /> Draft
               </Button>
               <Button loading={busy === "send"} disabled={!text.trim()} onClick={() => run("send", async () => { await reply({ slug, threadId: thread.threadId, text }); setText(""); })}>
-                <Send aria-hidden /> Send in chat
+                <Send aria-hidden /> Send
               </Button>
               {m.canReply ? (
                 <Button
@@ -233,7 +233,7 @@ function ChatDetail({ slug, m }: { slug: string; m: Item }) {
                     })
                   }
                 >
-                  <Mail aria-hidden /> Send by email
+                  <Mail aria-hidden /> Email
                 </Button>
               ) : null}
               <Button variant="ghost" onClick={() => run("done", () => setStatus({ slug, id: m.id, status: "dismissed" }))}>
@@ -253,7 +253,7 @@ function BookingOutcome({ slug, inboxId }: { slug: string; inboxId: Id<"communit
   const setOutcome = useMutation(api.bookings.setOutcome);
   if (!b || b.status === "cancelled" || !b.past) return null;
   if (b.outcome) return <Badge tone={b.outcome === "attended" ? "green" : "orange"}>{b.outcome === "attended" ? "Showed up" : b.followUpSent ? "No-show · follow-up sent" : "No-show"}</Badge>;
-  const run = (outcome: "attended" | "no_show") => setOutcome({ slug, bookingId: b.id, outcome }).then(() => toast({ tone: "success", title: outcome === "no_show" ? "We sent them a link to rebook" : "Marked as attended" }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
+  const run = (outcome: "attended" | "no_show") => setOutcome({ slug, bookingId: b.id, outcome }).then(() => toast({ tone: "success", title: outcome === "no_show" ? "Rebook link sent" : "Marked attended" }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
   return (
     <>
       <Button size="sm" variant="secondary" onClick={() => run("attended")}>

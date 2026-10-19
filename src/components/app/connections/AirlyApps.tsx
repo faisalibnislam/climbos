@@ -6,7 +6,8 @@ import { Unplug } from "@/components/icons"
 import { useState } from "react";
 import { relativeTime } from "../money";
 import { errorMessage } from "../errors";
-import { Badge, Button, Card, CardContent, Field, Input, Select, toast } from "@/components/ui";
+import { KeyValueList } from "@/components/ds/data/display";
+import { Badge, Button, Callout, Card, CardContent, Field, Input, Select, toast } from "@/components/ui";
 
 type App = NonNullable<ReturnType<typeof useQuery<typeof api.airly.overview>>>[number];
 
@@ -20,7 +21,7 @@ export function AirlyApps({ slug, canManage }: { slug: string; canManage: boolea
         <h2 id="airly-heading" className="heading-section">
           Airly apps
         </h2>
-        <p className="text-sm text-ink-3">Connect your other Airly apps with a token from each. Nothing changes in those apps.</p>
+        <p className="text-sm text-ink-3">One token per app.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {apps.map((a) => (
@@ -52,12 +53,15 @@ function AppCard({ slug, a, canManage }: { slug: string; a: App; canManage: bool
         <p className="text-sm text-ink-3">{a.what}</p>
         {a.link ? (
           <>
-            <p className="text-xs text-ink-3">
-              {a.link.label ?? ""}
-              {a.link.lastSyncAt ? ` · synced ${relativeTime(a.link.lastSyncAt)}` : ""}
-              {a.link.imported ? ` · ${a.link.imported} imported` : ""}
-            </p>
-            {a.link.error ? <p className="text-xs text-red-800">{a.link.error}</p> : null}
+            <KeyValueList
+              variant="inline"
+              items={[
+                ...(a.link.label ? [{ k: "Account", v: a.link.label }] : []),
+                ...(a.link.lastSyncAt ? [{ k: "Synced", v: relativeTime(a.link.lastSyncAt) }] : []),
+                ...(a.link.imported ? [{ k: "Imported", v: String(a.link.imported) }] : []),
+              ]}
+            />
+            {a.link.error ? <Callout tone="danger" live="none">{a.link.error}</Callout> : null}
             {pick && canManage ? (
               choices ? (
                 <Field label={pick === "board" ? "Board for new tasks" : "Where notes go"}>
@@ -82,7 +86,7 @@ function AppCard({ slug, a, canManage }: { slug: string; a: App; canManage: bool
                 <Input value={token} type="password" autoComplete="off" onChange={(e) => setToken(e.target.value)} />
               </Field>
               {a.needsBase ? (
-                <Field label="API base" hint="Shown next to the token, ends with /api/v1.">
+                <Field label="API base" hint="Ends with /api/v1">
                   <Input value={base} placeholder="https://….convex.site/api/v1" onChange={(e) => setBase(e.target.value)} />
                 </Field>
               ) : null}
@@ -109,8 +113,8 @@ function AppCard({ slug, a, canManage }: { slug: string; a: App; canManage: bool
               </Button>
             </div>
           ) : (
-            <Button size="sm" variant="secondary" className="self-start" onClick={() => setOpen(true)}>
-              Connect {a.name}
+            <Button size="sm" variant="secondary" className="self-start" aria-label={`Connect ${a.name}`} onClick={() => setOpen(true)}>
+              Connect
             </Button>
           )
         ) : null}
@@ -143,12 +147,12 @@ export function PlanToAirly({ slug }: { slug: string }) {
     <div className="flex flex-wrap gap-2">
       {taskeni ? (
         <Button size="sm" variant="secondary" loading={busy === "t"} onClick={() => run("t", () => toTaskeni({ slug }), (r) => `Sent ${r.created ?? 0} to-dos to Taskeni`)}>
-          Send to-dos to Taskeni
+          Send to Taskeni
         </Button>
       ) : null}
       {folevi ? (
         <Button size="sm" variant="secondary" loading={busy === "f"} onClick={() => run("f", () => toFolevi({ slug }), () => "Saved to Folevi")}>
-          Save plan to Folevi
+          Save to Folevi
         </Button>
       ) : null}
     </div>

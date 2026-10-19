@@ -12,6 +12,7 @@ import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Card, CardContent, ColorPicker, ConfirmDialog, EmptyState, Field, Input, Switch, Textarea, toast } from "@/components/ui";
+import { KeyValueList } from "@/components/ds/data/display";
 import type { LandingContent } from "../../../../../shared/landing";
 
 /** Landing pages: Climb AI writes the page, you edit and publish. Leads go to Pipeline and Inbox. */
@@ -28,12 +29,12 @@ export default function PagesPage() {
   const open = data.pages.find((p) => p.id === openId) ?? null;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <PageHeader section="pages" title="Landing pages" intro="One focused page per offer, written from your business facts. Edit any line, publish, share the link. Form leads land in your Pipeline and Inbox." />
+      <PageHeader section="pages" title="Landing pages" />
       {data.canEdit ? (
         <Card>
           <CardContent className="flex flex-col gap-3">
-            <Field label="What's the page for?" hint="E.g. “Free 15-minute SEO audit for dentists” or “Autumn menu tasting night”.">
-              <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 600))} rows={2} autosize />
+            <Field label="What's the page for?">
+              <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 600))} rows={2} autosize placeholder="e.g. Free SEO audit for dentists" />
             </Field>
             <Button
               className="self-start"
@@ -52,15 +53,15 @@ export default function PagesPage() {
                 }
               }}
             >
-              <Plus aria-hidden /> Write the page
+              <Plus aria-hidden /> Write page
             </Button>
-            <p className="text-xs text-ink-3">About 2 credits. {data.liveLimit === 1 ? "Free: 1 live page." : `Up to ${data.liveLimit} live pages.`}</p>
+            <p className="text-xs text-ink-3">~2 credits · {data.liveLimit === 1 ? "Free: 1 live page" : `Up to ${data.liveLimit} live`}</p>
           </CardContent>
         </Card>
       ) : null}
       <BioEditor slug={slug} defaultTitle="" canEdit={data.canEdit} />
       {data.pages.length === 0 ? (
-        <EmptyState icon={<FileText />} title="No pages yet" body="Describe an offer above. Your team writes the page in about a minute." />
+        <EmptyState icon={<FileText />} title="No pages yet" body="Describe an offer above." />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {data.pages.map((p) => (
@@ -72,13 +73,18 @@ export default function PagesPage() {
                     <Badge tone={p.status === "live" ? "green" : p.status === "failed" ? "red" : p.status === "drafting" ? "blue" : "neutral"}>{p.status === "live" ? "Live" : p.status === "failed" ? "Didn't finish" : p.status === "drafting" ? "Writing" : "Draft"}</Badge>
                   </p>
                   {p.status === "drafting" && p.runId ? <RunProgressCompact slug={slug} runId={p.runId} /> : null}
-                  <p className="text-xs text-ink-3">
-                    {p.views} views · {p.leads} leads{p.views ? ` · ${Math.round((p.leads / p.views) * 100)}% convert` : ""}
-                  </p>
+                  <KeyValueList
+                    variant="inline"
+                    items={[
+                      { k: "Views", v: p.views.toLocaleString("en-US") },
+                      { k: "Leads", v: p.leads.toLocaleString("en-US") },
+                      ...(p.views ? [{ k: "Convert", v: `${Math.round((p.leads / p.views) * 100)}%` }] : []),
+                    ]}
+                  />
                   <div className="flex flex-wrap items-center gap-2">
                     {p.content && (data.canEdit || data.canPublish) ? (
                       <Button size="sm" variant="secondary" onClick={() => setOpenId(p.id)}>
-                        {data.canEdit ? "Edit and publish" : "Publish"}
+                        {data.canEdit ? "Edit" : "Publish"}
                       </Button>
                     ) : null}
                     {p.status === "failed" && data.canEdit ? (
@@ -92,7 +98,7 @@ export default function PagesPage() {
                     ) : null}
                     {data.canEdit && p.status !== "drafting" ? <DeletePage page={p} onDelete={() => remove({ slug, id: p.id }).then(() => setOpenId((o) => (o === p.id ? null : o)))} /> : null}
                   </div>
-                  {p.status === "failed" ? <p className="text-xs text-ink-3">Trying again is a new job: about 2 credits.</p> : null}
+                  {p.status === "failed" ? <p className="text-xs text-ink-3">Retry ≈ 2 credits</p> : null}
                 </CardContent>
               </Card>
             </li>
@@ -116,13 +122,13 @@ function DeletePage({ page, onDelete }: { page: Page; onDelete: () => Promise<un
         </Button>
       }
       title="Delete this page?"
-      description={`${page.status === "live" ? "The link stops working right away. " : ""}Any running headline test ends. Leads already collected stay in your Pipeline and Inbox.`}
-      confirmLabel="Delete page"
+      description={`${page.status === "live" ? "Link stops working. " : ""}Headline tests end. Leads stay.`}
+      confirmLabel="Delete"
       tone="danger"
       onConfirm={async () => {
         try {
           await onDelete();
-          toast({ tone: "success", title: "Page deleted." });
+          toast({ tone: "success", title: "Page deleted" });
         } catch (e) {
           toast({ tone: "danger", title: errorMessage(e) });
         }
@@ -153,7 +159,7 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="heading-card">Edit page</p>
+          <h2 className="heading-card">Edit page</h2>
           <div className="flex items-center gap-2">
             {canEdit ? <ColorPicker label="Page colour" value={page.color} onChange={(hex) => run("color", () => update({ slug, id: page.id, color: hex }))} /> : null}
             <Button size="sm" variant="ghost" aria-label="Close editor" onClick={onClose}>
@@ -168,24 +174,30 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
           <Field label="Subhead">
             <Textarea value={c.subhead} onChange={(e) => setC({ ...c, subhead: e.target.value })} rows={2} autosize />
           </Field>
-          {c.benefits.map((b, i) => (
-            <div key={i} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-              <Input aria-label={`Benefit ${i + 1} title`} value={b.title} onChange={(e) => setC({ ...c, benefits: c.benefits.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} />
-              <Input aria-label={`Benefit ${i + 1} text`} value={b.text} onChange={(e) => setC({ ...c, benefits: c.benefits.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} />
-            </div>
-          ))}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1.5 text-ui font-medium text-ink">Benefits</legend>
+            {c.benefits.map((b, i) => (
+              <div key={i} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <Input aria-label={`Benefit ${i + 1} title`} value={b.title} onChange={(e) => setC({ ...c, benefits: c.benefits.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} />
+                <Input aria-label={`Benefit ${i + 1} text`} value={b.text} onChange={(e) => setC({ ...c, benefits: c.benefits.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} />
+              </div>
+            ))}
+          </fieldset>
           <Field label="Steps" hint="One per line.">
             <Textarea value={lines(c.steps)} onChange={(e) => setC({ ...c, steps: e.target.value.split("\n") })} rows={3} autosize />
           </Field>
-          <Field label="Proof or promise" hint="Only real facts. No made-up reviews or numbers.">
+          <Field label="Proof or promise" hint="Real facts only.">
             <Textarea value={c.proof} onChange={(e) => setC({ ...c, proof: e.target.value })} rows={2} autosize />
           </Field>
-          {c.faq.map((q, i) => (
-            <div key={i} className="grid gap-2">
-              <Input aria-label={`Question ${i + 1}`} value={q.q} onChange={(e) => setC({ ...c, faq: c.faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)) })} />
-              <Textarea aria-label={`Answer ${i + 1}`} value={q.a} onChange={(e) => setC({ ...c, faq: c.faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)) })} rows={2} autosize />
-            </div>
-          ))}
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-1.5 text-ui font-medium text-ink">FAQ</legend>
+            {c.faq.map((q, i) => (
+              <div key={i} className="grid gap-2">
+                <Input aria-label={`Question ${i + 1}`} value={q.q} onChange={(e) => setC({ ...c, faq: c.faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)) })} />
+                <Textarea aria-label={`Answer ${i + 1}`} value={q.a} onChange={(e) => setC({ ...c, faq: c.faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)) })} rows={2} autosize />
+              </div>
+            ))}
+          </fieldset>
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Button">
               <Input value={c.ctaLabel} onChange={(e) => setC({ ...c, ctaLabel: e.target.value })} />

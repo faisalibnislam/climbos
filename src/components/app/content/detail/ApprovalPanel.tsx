@@ -5,14 +5,15 @@ import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { Button, Callout, ConfirmDialog, Field, Textarea, toast } from "@/components/ui";
 import { formatDateTime } from "../../money";
-import { ErrorCallout, PERMISSION_WHO, channelLabel } from "../shared";
+import { toBullets } from "@/components/ds/content";
+import { ErrorCallout, MessageText, NoteList, PERMISSION_WHO, channelLabel } from "../shared";
 import { ApprovalsList } from "./HistoryPanels";
 import { isCampaignAd, type ArtifactView } from "./model";
 
 const SLOT_TOAST: Record<string, string> = {
-  scheduled: "Approved. Autopilot posts it at its planned time.",
-  needs_time: "Approved. Its planned time has passed: pick a new time below.",
-  ready_to_post: "Approved. It's ready for you to post or schedule.",
+  scheduled: "Approved. Autopilot will post it.",
+  needs_time: "Approved. Pick a new time.",
+  ready_to_post: "Approved. Ready to post.",
 };
 
 export function hasValidApproval(artifact: ArtifactView, now: number | null): boolean {
@@ -26,24 +27,24 @@ export function hasValidApproval(artifact: ArtifactView, now: number | null): bo
 export function approveConsequence(artifact: ArtifactView, now: number | null): string {
   const ch = channelLabel(artifact.channel);
   const v = artifact.current?.version ?? 1;
-  const demo = artifact.isDemo ? " This is a demo workspace, so publishing is simulated — nothing is really posted." : "";
+  const demo = artifact.isDemo ? " Demo: simulated." : "";
   const slot = artifact.autopilotSlot;
   if (slot && artifact.publishTarget?.connected) {
     const when = formatDateTime(slot.slotAt);
     return now === null || slot.slotAt > now + 120_000
-      ? `Autopilot posts this exact version (version ${v}) to ${ch} at its planned time, ${when}. Any edit cancels this approval.${demo}`
-      : `Its planned time (${when}) has passed, so nothing goes out on its own. After approving, pick a new time or publish it now.${demo}`;
+      ? `Autopilot posts v${v} to ${ch} at ${when}. Edits cancel approval.${demo}`
+      : `Planned time (${when}) passed. Then pick a new time or publish now.${demo}`;
   }
   if (isCampaignAd(artifact.channel)) {
     const platform = artifact.channel === "google_search_ad" ? "Google Ads" : "Meta";
-    return `Approving the ad text (version ${v}) lets you prepare a campaign. Nothing is created in ${platform} and no money is spent until you separately approve creating and starting a campaign. Any edit cancels this approval.${demo}`;
+    return `Approves ad text v${v} only. Nothing is created in ${platform} or spent until you approve a campaign. Edits cancel approval.${demo}`;
   }
   const t = artifact.publishTarget;
   if (t?.connected) {
     const account = t.accountLabel ? `${t.accountLabel} on ${ch}` : ch;
-    return `Approving lets ClimbOS publish this exact version (version ${v}) to ${account}. Nothing goes out until you schedule it or press Publish now. Any edit cancels this approval.${demo}`;
+    return `Lets ClimbOS publish v${v} to ${account}. Nothing goes out until you schedule or publish. Edits cancel approval.${demo}`;
   }
-  return `Approving marks this exact version (version ${v}) as ready. ClimbOS can't post to ${ch} for you${t ? " until it's connected" : " yet"}, so you'll copy it from the export pack and post it yourself. Any edit cancels this approval.${demo}`;
+  return `Marks v${v} ready. ClimbOS can't post to ${ch}${t ? " until connected" : ""}: copy it from the export pack. Edits cancel approval.${demo}`;
 }
 
 /** Approve / Send back (reviewer roles) + decision history. */
@@ -58,6 +59,8 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
     Boolean(artifact.current) &&
     (["draft", "in_review", "failed"].includes(artifact.status) || (artifact.status === "approved" && !valid));
   const needsImage = artifact.channel === "instagram" && !artifact.isDemo && !artifact.current?.imageUrl && !artifact.reel;
+  // Lead with what approving does; the conditions follow as notes.
+  const [consequence = "", ...conditions] = toBullets(approveConsequence(artifact, now));
 
   const run = async (decision: "approve" | "reject") => {
     setError(null);
@@ -74,12 +77,12 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
     <div className="flex flex-col gap-4">
       {artifact.status === "approved" && !valid && (artifact.approvals.length > 0 || artifact.approvalProblem) ? (
         <Callout tone="warning" title={artifact.approvalProblem && artifact.publishTarget?.connected ? "Approve it again" : "The approval has expired"}>
-          {artifact.approvalProblem && artifact.publishTarget?.connected ? artifact.approvalProblem : "Approve it again before scheduling or publishing."}
+          {artifact.approvalProblem && artifact.publishTarget?.connected ? <MessageText text={artifact.approvalProblem} /> : "Re-approve before publishing."}
         </Callout>
       ) : null}
       {decidable && needsImage ? (
         <Callout tone="info" title="Add an image first">
-          Instagram posts need an image. Edit the post and pick one from your images.
+          Instagram needs one. Edit to add it.
         </Callout>
       ) : null}
       {decidable ? (
@@ -92,12 +95,13 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
                 </Button>
               }
               title={`Approve version ${artifact.current?.version ?? 1}?`}
-              description={approveConsequence(artifact, now)}
-              confirmLabel={claims.length ? "Approve anyway" : "Approve this version"}
+              description={`${consequence}.`}
+              confirmLabel={claims.length ? "Approve anyway" : "Approve"}
               onConfirm={() => run("approve")}
             >
+              <NoteList items={conditions} />
               {claims.length > 0 ? (
-                <Callout tone="warning" title={`${claims.length} claim${claims.length === 1 ? "" : "s"} couldn't be checked`}>
+                <Callout tone="warning" className={conditions.length ? "mt-3" : undefined} title={`${claims.length} unchecked claim${claims.length === 1 ? "" : "s"}`}>
                   <ul className="list-disc pl-5">
                     {claims.map((c) => (
                       <li key={c}>“{c}”</li>
@@ -112,9 +116,9 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
                   Send back
                 </Button>
               }
-              title="Send this back for changes?"
-              description="It goes back to draft. Nothing is posted. Your note helps the team revise it."
-              confirmLabel="Send back to draft"
+              title="Send back for changes?"
+              description="Returns to draft. Nothing is posted."
+              confirmLabel="Send back"
               onConfirm={() => run("reject")}
             >
               <Field label="What should change?" optional>
@@ -123,7 +127,7 @@ export function ApprovalPanel({ slug, artifact, now }: { slug: string; artifact:
             </ConfirmDialog>
           </div>
         ) : (
-          <p className="text-sm text-ink-2">Waiting for approval from {PERMISSION_WHO.approve}. You can still edit the draft if your role allows it.</p>
+          <p className="text-sm text-ink-2">Needs approval from {PERMISSION_WHO.approve}.</p>
         )
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}

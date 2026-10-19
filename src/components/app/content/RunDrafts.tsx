@@ -15,7 +15,7 @@ export function RunDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"wo
       {drafts.map((d) => (
         <li key={d.id}>
           <Link href={`/app/${slug}/content/${d.id}`} onClick={onOpen} className="inline-flex items-center gap-1.5 text-ui font-medium text-brand-800 underline-offset-2 hover:underline">
-            Open “{d.title}” <ArrowRight aria-hidden className="size-3.5" />
+            {d.title} <ArrowRight aria-hidden className="size-3.5" />
           </Link>
         </li>
       ))}

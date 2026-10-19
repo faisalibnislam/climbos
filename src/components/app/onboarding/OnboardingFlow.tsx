@@ -3,10 +3,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowUp, Check, ExternalLink, MessageSquareText, Pencil, Plus, ListChecks, Sparkles, X } from "@/components/icons"
+import { ArrowUp, Building2, CalendarDays, Check, Clock, Coins, ExternalLink, Globe, ListChecks, Magic, MessageSquareText, Pencil, Plus, Sparkles, Target, X, type LucideIcon } from "@/components/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Logo } from "@/components/brand/Logo";
 import {
   Badge,
@@ -25,6 +25,7 @@ import {
   toast,
   Toaster,
 } from "@/components/ui";
+import { Scannable, StepFlow } from "@/components/ds/content";
 import { cn } from "@/lib/utils";
 import { errorInfo, errorMessage } from "../errors";
 import { RoleAvatar } from "../RoleAvatar";
@@ -37,35 +38,36 @@ import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPT
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
 const STEP_ORDER: Step[] = ["business", "research", "facts", "goal", "preferences", "plan"];
 const STEP_LABEL: Record<Step, string> = {
-  business: "Your business",
-  research: "Understanding it",
-  facts: "Check the facts",
-  goal: "Your goal",
-  preferences: "How you approve",
-  plan: "Your plan",
+  business: "Business",
+  research: "Research",
+  facts: "Facts",
+  goal: "Goal",
+  preferences: "Approvals",
+  plan: "Plan",
   done: "Done",
 };
 
 /** What the team does at each step, shown beside the form so owners always know what happens next. */
-const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[] }> = {
+const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[]; ordered?: boolean }> = {
   business: {
     title: "What happens next",
     roles: ["data_analyst", "cmo", "ceo"],
-    points: ["We read a few public pages of your website", "You check every fact before it's used", "Your team drafts a short growth plan for your OK"],
+    points: ["We read your public site", "You check every fact", "You OK the plan"],
+    ordered: true,
   },
   research: {
     title: "Your team is on it",
     roles: ["data_analyst", "cmo"],
-    points: ["The Data Analyst pulls out the facts", "The CMO studies your customers and competitors", "Nothing is published or sent"],
+    points: ["Pulling out facts", "Studying customers and rivals", "Nothing is published"],
   },
   facts: {
     title: "Why facts matter",
     roles: ["data_analyst"],
-    points: ["Only confirmed facts are used in your content", "Fix or remove anything that's off", "You can add what we missed"],
+    points: ["Only confirmed facts are used", "Fix, remove or add"],
   },
-  goal: { title: "Setting your goal", roles: ["ceo"], points: ["One clear goal keeps the plan focused", "Ad money goes straight to Google or Meta, never to us", "You can change it any time"] },
-  preferences: { title: "You stay in control", roles: ["coo"], points: ["Nothing goes live without your approval", "Pause everything with one click", "Budgets are hard limits"] },
-  plan: { title: "Building your plan", roles: ["ceo", "cmo"], points: ["Who to reach and what to say", "1–2 channels to focus on, with costs", "How we'll measure progress"] },
+  goal: { title: "Your goal", roles: ["ceo"], points: ["One goal keeps focus", "Change it any time"] },
+  preferences: { title: "You stay in control", roles: ["coo"], points: ["Pause all in one click", "Budgets are hard limits"] },
+  plan: { title: "Your plan covers", roles: ["ceo", "cmo"], points: ["Who to reach, what to say", "1–2 channels, with costs", "How we measure progress"] },
   done: { title: "All set", roles: ["ceo"], points: [] },
 };
 
@@ -103,8 +105,8 @@ export function OnboardingFlow() {
   if (me.isAnonymous) {
     return (
       <Shell step="business">
-        <Callout tone="info" title="Create a free account to save your business">
-          You’re browsing as a guest (demo). Sign in with your email to set up your own workspace.
+        <Callout tone="info" title="Create a free account">
+          You’re a guest. Sign in to set up yours.
           <div className="mt-3">
             <Button asChild>
               <Link href="/sign-in?switch=1&next=/onboarding">Create a free account</Link>
@@ -139,7 +141,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
           <Logo />
           {slug ? (
             <Link href={`/app/${slug}/today`} className={buttonClasses({ variant: "ghost", size: "sm", className: "text-ink-2" })}>
-              Save and finish later
+              Finish later
             </Link>
           ) : null}
         </div>
@@ -173,16 +175,21 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
               ))}
             </div>
             <p className="heading-card mt-4">{help.title}</p>
-            <ul className="mt-3 space-y-3">
-              {help.points.map((p) => (
-                <li key={p} className="flex gap-2.5 text-sm text-ink-2">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-white">
-                    <Check className="size-3" aria-hidden />
-                  </span>
-                  {p}
-                </li>
-              ))}
-            </ul>
+            {(() => {
+              const List = help.ordered ? "ol" : "ul";
+              return (
+                <List className="mt-3 space-y-3">
+                  {help.points.map((p, i) => (
+                    <li key={p} className="flex gap-2.5 text-sm text-ink-2">
+                      <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand-800 text-2xs font-semibold tabular-nums text-white">
+                        {help.ordered ? i + 1 : <Check className="size-3" />}
+                      </span>
+                      {p}
+                    </li>
+                  ))}
+                </List>
+              );
+            })()}
           </aside>
         ) : null}
       </main>
@@ -222,11 +229,11 @@ function BusinessStep({
   async function submit(fields: { name: string; website?: string; ownerText?: string; parsed?: ParsedIntro }) {
     setError(null);
     if (!fields.name.trim()) {
-      setError("Please tell us your business name.");
+      setError("Add your business name.");
       return;
     }
     if (!fields.website && !fields.ownerText) {
-      setError("Add your website, or describe your business in a few sentences.");
+      setError("Add a website or a description.");
       return;
     }
     setBusy(true);
@@ -261,9 +268,7 @@ function BusinessStep({
   return (
     <Shell step="business">
       <h1 className="heading-page">Let’s meet your business</h1>
-      <p className="mt-1 max-w-xl text-sm text-ink-3">
-        Tell us about it in your own words. Your AI growth team reads your website, and you check everything before it’s used.
-      </p>
+      <StepFlow className="mt-5 lg:hidden" steps={STEP_HELP.business.points.map((title) => ({ title }))} />
 
       <div className="mt-6 inline-flex gap-0.5 rounded-lg border border-line bg-surface-2 p-0.5" role="tablist" aria-label="How do you want to start?">
         <button type="button" role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn(segmentClasses, mode === "chat" && segmentActive)}>
@@ -281,7 +286,7 @@ function BusinessStep({
           <div className="rounded-xl border border-line-strong bg-surface transition-colors focus-within:border-brand-700">
             <div className="rounded-xl p-4">
               <label htmlFor="intro-chat" className="text-ui font-medium text-ink">
-                Tell us about your business and what you want
+                Your business and goal
               </label>
               <Textarea
                 id="intro-chat"
@@ -289,15 +294,15 @@ function BusinessStep({
                 onChange={(e) => setChat(e.target.value)}
                 rows={4}
                 autosize
-                placeholder="e.g. We are Formkit (formkit.app). Help us get more paying customers in the next 90 days. I can spend $600 a month on ads."
+                placeholder="e.g. We’re Formkit (formkit.app). More paying customers in 90 days. $600 a month on ads."
                 className="mt-2 border-0 px-0 text-sm focus-visible:outline-none"
               />
               <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
-                <span className="text-xs text-ink-3">Include your website if you have one.</span>
+                <span className="text-xs text-ink-3">Include your website</span>
                 <Button
                   size="md"
                   loading={busy}
-                  loadingText="Setting up your team…"
+                  loadingText="Setting up…"
                   onClick={() =>
                     submit({
                       name: parsed.businessName ?? name,
@@ -335,15 +340,15 @@ function BusinessStep({
             {chat.trim().length > 8 && (
               <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
                 <p className="heading-card flex flex-wrap items-center gap-2">
-                  <Sparkles className="size-4 text-brand-800" aria-hidden /> Here’s what we understood <span className="font-normal text-ink-3">(you can change it later)</span>
+                  <Sparkles className="size-4 text-brand-800" aria-hidden /> What we understood
                 </p>
-                <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-                  <Understood label="Business" value={parsed.businessName} />
-                  <Understood label="Website" value={parsed.website} />
-                  <Understood label="Goal" value={parsed.goalStatement} />
-                  <Understood label="Ad budget" value={parsed.monthlyAdBudget !== undefined ? `$${parsed.monthlyAdBudget.toLocaleString()} / month` : undefined} />
-                  <Understood label="Time frame" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
-                  <Understood label="Review day" value={parsed.reviewDay} />
+                <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Understood icon={Building2} label="Business" value={parsed.businessName} />
+                  <Understood icon={Globe} label="Website" value={parsed.website} />
+                  <Understood icon={Target} label="Goal" value={parsed.goalStatement} wide />
+                  <Understood icon={Coins} label="Ad budget" value={parsed.monthlyAdBudget !== undefined ? `$${parsed.monthlyAdBudget.toLocaleString()} / month` : undefined} />
+                  <Understood icon={Clock} label="Time frame" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
+                  <Understood icon={CalendarDays} label="Review day" value={parsed.reviewDay} />
                 </dl>
                 {!parsed.businessName && (
                   <Field label="Business name" className="mt-3">
@@ -360,19 +365,19 @@ function BusinessStep({
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Formkit" autoComplete="organization" />
             </Field>
             {!noWebsite ? (
-              <Field label="Website" hint="We read a few public pages (like your homepage and pricing). We respect sites that ask robots not to read them.">
+              <Field label="Website" hint="We read a few public pages.">
                 <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="yourbusiness.com" inputMode="url" autoComplete="url" />
               </Field>
             ) : (
-              <Field label="Describe your business" hint="What you sell, who buys it, and anything that makes you different. We'll mark this as information you supplied.">
+              <Field label="Describe your business" hint="What you sell, to whom, what’s different.">
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} autosize />
               </Field>
             )}
             <Button variant="link" className="whitespace-normal text-left" onClick={() => setNoWebsite((v) => !v)}>
-              {noWebsite ? "I have a website after all" : "No website, or it's private? Describe your business instead"}
+              {noWebsite ? "Use a website" : "No website? Describe it"}
             </Button>
             <div>
-              <Button size="lg" loading={busy} loadingText="Setting up your team…" onClick={() => submit({ name, website: noWebsite ? undefined : website, ownerText: noWebsite ? description : undefined })}>
+              <Button size="lg" loading={busy} loadingText="Setting up…" onClick={() => submit({ name, website: noWebsite ? undefined : website, ownerText: noWebsite ? description : undefined })}>
                 Continue
               </Button>
             </div>
@@ -384,17 +389,21 @@ function BusinessStep({
         <AiModeChoice unlocked={false} value="basic" onChange={() => undefined} label="Your team" />
       </div>
       <p className="mt-6 text-sm text-ink-3">
-        Want to look around first? <Link href="/demo" className={buttonClasses({ variant: "link" })}>Open the Formkit demo</Link>
+        <Link href="/demo" className={buttonClasses({ variant: "link" })}>Try the demo first</Link>
       </p>
     </Shell>
   );
 }
 
-function Understood({ label, value }: { label: string; value?: string }) {
+/** One understood fact as a tile: icon, label, value (or "not mentioned", muted). */
+function Understood({ icon: Icon, label, value, wide }: { icon: LucideIcon; label: string; value?: string; wide?: boolean }) {
   return (
-    <div className="flex gap-2">
-      <dt className="text-ink-3">{label}:</dt>
-      <dd className={value ? "text-ink" : "text-ink-3 italic"}>{value ?? "not mentioned"}</dd>
+    <div className={cn("flex min-w-0 gap-2.5 rounded-lg border border-line px-3 py-2", value ? "bg-surface" : "bg-surface-2", wide && "sm:col-span-2")}>
+      <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", value ? "text-brand-800" : "text-ink-3")} />
+      <div className="min-w-0">
+        <dt className="text-xs text-ink-3">{label}</dt>
+        <dd className={cn("break-words", value ? "font-medium text-ink" : "italic text-ink-3")}>{value ?? "not mentioned"}</dd>
+      </div>
     </div>
   );
 }
@@ -456,22 +465,21 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
     return (
       <div>
         <h1 className="heading-page">Let’s get to know {state.business?.name ?? "your business"}</h1>
-        <p className="mt-1 text-sm text-ink-3">Add your website, or describe your business. You check every fact before it’s used.</p>
         {!state.canRunAi && state.accessMessage ? <Callout tone="warning" className="mt-4">{state.accessMessage}</Callout> : null}
         <Card className="mt-6">
           <CardContent className="space-y-4">
-            <Field label="Website" hint="We read a few public pages, like your homepage and pricing.">
+            <Field label="Website">
               <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="yourbusiness.com" inputMode="url" autoComplete="url" />
             </Field>
-            <Field label="Or describe your business" optional hint="What you sell, who buys it and what makes you different.">
+            <Field label="Or describe your business" optional>
               <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={4} autosize />
             </Field>
             <div className="flex flex-wrap gap-3">
               <Button loading={busy} loadingText="Starting…" disabled={!website.trim() && !ownerText.trim()} onClick={start}>
-                Start research
+                Start
               </Button>
               <Button variant="ghost" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-                Skip — I’ll add facts myself
+                Add facts myself
               </Button>
             </div>
           </CardContent>
@@ -487,7 +495,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
       {!failed ? (
         <>
           <p className="mt-1 text-sm text-ink-3">
-            {v2 ? "Deep research takes about 5–10 minutes. You can leave this page; your team keeps working." : "This usually takes under a minute."} You’ll check everything before anything is used.
+            {v2 ? "About 5–10 min. Safe to leave." : "Under a minute."}
           </p>
           <Card className="mt-6">
             <CardContent>
@@ -498,8 +506,8 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
         </>
       ) : research?.failureKind === "ai_unavailable" ? (
         <>
-          <Callout tone="warning" className="mt-4" title="Our AI team is temporarily unavailable">
-            Nothing was lost, and you weren’t charged for work that didn’t happen. Try again in a moment, or add the key facts yourself now and refresh the research later.
+          <Callout tone="warning" className="mt-4" title="AI temporarily unavailable">
+            Nothing lost, nothing charged. Try again soon.
           </Callout>
           {research ? <RetryRunIfPossible slug={slug} runId={research.id} className="mt-4" /> : null}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -519,7 +527,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
               Try again
             </Button>
             <Button variant="secondary" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-              Add the facts myself
+              Add facts myself
             </Button>
           </div>
         </>
@@ -529,7 +537,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
           {research ? <RetryRunIfPossible slug={slug} runId={research.id} className="mt-4" /> : null}
           <Card className="mt-6">
             <CardContent className="space-y-4">
-              <Field label="Describe your business in a few sentences" hint="What you sell, who buys it, prices if you’re happy to share, and what makes you different. We’ll label these facts as supplied by you.">
+              <Field label="Describe your business" hint="What you sell, to whom, prices, what’s different.">
                 <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={6} autosize />
               </Field>
               <div className="flex flex-wrap gap-3">
@@ -546,10 +554,10 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
                     }
                   }}
                 >
-                  Continue with my description
+                  Use my description
                 </Button>
                 <Button variant="ghost" onClick={() => skipResearch({ slug }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-                  Skip — I’ll add facts myself
+                  Add facts myself
                 </Button>
               </div>
             </CardContent>
@@ -571,6 +579,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+/** Facts in category order (product first), keeping their order within each group. */
+function groupFacts<F extends { category: string }>(facts: F[]): [string, F[]][] {
+  const order = Object.keys(CATEGORY_LABEL);
+  const groups = new Map<string, F[]>();
+  for (const f of facts) groups.set(f.category, [...(groups.get(f.category) ?? []), f]);
+  return [...groups.entries()].sort(([a], [b]) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+}
+
 function FactsStep({ slug, state }: { slug: string; state: State }) {
   const review = useMutation(api.orgs.reviewFact);
   const confirmAll = useMutation(api.orgs.confirmAllFacts);
@@ -590,80 +606,84 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
       {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
         <>
           <h1 className="heading-page">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
-          <p className="mt-1 text-sm text-ink-3">
-            Add three to five short facts: what you sell, who it’s for, and what makes you different. Your team only uses facts you’ve confirmed, so it never invents claims.
-          </p>
+          <p className="mt-1 text-sm text-ink-3">Add 3–5 short facts.</p>
         </>
       ) : (
         <>
           <h1 className="heading-page">Is this right?</h1>
-          <p className="mt-1 text-sm text-ink-3">
-            {state.business?.summary ?? "Here’s what we found."} Fix anything that’s wrong. Only confirmed facts are used in your content.
-          </p>
+          {state.business?.summary ? <Scannable text={state.business.summary} tone="muted" max={3} className="mt-2" /> : null}
         </>
       )}
-      <ul className="mt-6 space-y-3">
-        {state.facts.map((f) => (
-          <li key={f.id}>
-            <Card className={cn(f.reviewState === "needs_review" && "border-amber-800/25")}>
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge tone="neutral">{CATEGORY_LABEL[f.category] ?? f.category}</Badge>
-                  {f.provenance === "owner_supplied" ? <Badge tone="blue">Supplied by you</Badge> : f.provenance === "demo_fixture" ? <Badge tone="violet">Demo data</Badge> : <Badge tone="neutral">From your website</Badge>}
-                  {f.confidence === "low" && f.reviewState === "needs_review" && <Badge tone="amber">Low confidence — please check</Badge>}
-                  {f.reviewState === "confirmed" || f.reviewState === "edited" ? <Badge tone="green" icon={<Check />}>Confirmed</Badge> : null}
-                </div>
-                {editing === f.id ? (
-                  <div className="mt-3 space-y-2">
-                    <Field label="Edit this fact">
-                      <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} autosize />
-                    </Field>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={async () => { try { await review({ slug, factId: f.id, action: "edit", statement: draft }); setEditing(null); } catch (e) { toast({ tone: "danger", title: errorMessage(e) }); } }}>Save</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+      {/* Facts grouped by what they're about, so each group can be checked at a glance. */}
+      {groupFacts(state.facts).map(([category, facts]) => (
+        <section key={category} aria-labelledby={`facts-${category}`} className="mt-6">
+          <h2 id={`facts-${category}`} className="heading-card flex items-center gap-2">
+            {CATEGORY_LABEL[category] ?? category}
+            <span className="text-ui font-normal tabular-nums text-ink-3">{facts.length}</span>
+          </h2>
+          <ul className="mt-2 space-y-3">
+            {facts.map((f) => (
+              <li key={f.id}>
+                <Card className={cn(f.reviewState === "needs_review" && "border-amber-800/25")}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {f.provenance === "owner_supplied" ? <Badge tone="blue">From you</Badge> : f.provenance === "demo_fixture" ? <Badge tone="violet">Demo data</Badge> : <Badge tone="neutral">From website</Badge>}
+                      {f.confidence === "low" && f.reviewState === "needs_review" && <Badge tone="amber">Low confidence</Badge>}
+                      {f.reviewState === "confirmed" || f.reviewState === "edited" ? <Badge tone="green" icon={<Check />}>Confirmed</Badge> : null}
                     </div>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm text-ink">{f.statement}</p>
-                )}
-                {f.sources.length > 0 && (
-                  <p className="mt-2 text-xs text-ink-3">
-                    Source:{" "}
-                    {f.sources.map((s, i) =>
-                      s && s.url ? (
-                        <a key={i} href={s.url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 underline underline-offset-2">
-                          {s.title ?? new URL(s.url).hostname} <ExternalLink className="size-3" aria-hidden />
-                          <span className="sr-only">(opens in a new tab)</span>
-                        </a>
-                      ) : (
-                        <span key={i}>{s?.title ?? "your description"}</span>
-                      ),
+                    {editing === f.id ? (
+                      <div className="mt-3 space-y-2">
+                        <Field label="Fact">
+                          <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} autosize />
+                        </Field>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={async () => { try { await review({ slug, factId: f.id, action: "edit", statement: draft }); setEditing(null); } catch (e) { toast({ tone: "danger", title: errorMessage(e) }); } }}>Save</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-ink">{f.statement}</p>
                     )}
-                  </p>
-                )}
-                {editing !== f.id && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {f.reviewState === "needs_review" && (
-                      <Button size="sm" variant="secondary" onClick={() => review({ slug, factId: f.id, action: "confirm" }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-                        <Check className="size-4" aria-hidden /> Correct
-                      </Button>
+                    {f.sources.length > 0 && (
+                      <p className="mt-2 text-xs text-ink-3">
+                        Source:{" "}
+                        {f.sources.map((s, i) =>
+                          s && s.url ? (
+                            <a key={i} href={s.url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 underline underline-offset-2">
+                              {s.title ?? new URL(s.url).hostname} <ExternalLink className="size-3" aria-hidden />
+                              <span className="sr-only">(opens in a new tab)</span>
+                            </a>
+                          ) : (
+                            <span key={i}>{s?.title ?? "your description"}</span>
+                          ),
+                        )}
+                      </p>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(f.id); setDraft(f.statement); }}>
-                      <Pencil className="size-4" aria-hidden /> Edit
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => review({ slug, factId: f.id, action: "reject" }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-                      <X className="size-4" aria-hidden /> Not true
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
-      <Card className="mt-4">
+                    {editing !== f.id && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {f.reviewState === "needs_review" && (
+                          <Button size="sm" variant="secondary" onClick={() => review({ slug, factId: f.id, action: "confirm" }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+                            <Check className="size-4" aria-hidden /> Correct
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => { setEditing(f.id); setDraft(f.statement); }}>
+                          <Pencil className="size-4" aria-hidden /> Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => review({ slug, factId: f.id, action: "reject" }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
+                          <X className="size-4" aria-hidden /> Not true
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <Card className="mt-6">
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
-          <Field label={state.facts.length === 0 ? "Add a fact" : "Add something we missed"} className="flex-1">
+          <Field label="Add a fact" className="flex-1">
             <Input value={newFact} onChange={(e) => setNewFact(e.target.value)} placeholder="e.g. We offer a 14-day free trial" />
           </Field>
           <Field label="About" className="sm:w-44">
@@ -687,7 +707,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         </CardContent>
       </Card>
 
-      <h2 className="heading-section mt-8">A few details</h2>
+      <h2 className="heading-section mt-8">Details</h2>
       <Card className="mt-4">
         <CardContent className="grid gap-5 sm:grid-cols-2">
           <Field label="Type of business">
@@ -697,12 +717,12 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
               options={BUSINESS_TYPE_OPTIONS}
             />
           </Field>
-          <Field label="Currency" hint="Used for budgets and results.">
+          <Field label="Currency">
             <Select value={currency} onValueChange={setCurrency} options={CURRENCY_OPTIONS} />
           </Field>
           <div className="sm:col-span-2">
-            <p className="text-ui font-medium text-ink">What counts as a valuable customer action?</p>
-            <p className="mt-0.5 text-xs text-ink-3">We’ll measure success with these. Untick anything that doesn’t apply. Times use {state.business?.timezone ?? TIMEZONE}.</p>
+            <p className="text-ui font-medium text-ink">What counts as success?</p>
+            <p className="mt-0.5 text-xs text-ink-3">Untick any that don’t apply.</p>
             <ul className="mt-3 space-y-2">
               {events.map((ev, i) => (
                 <li key={ev.key} className="rounded-xl border border-line px-3">
@@ -710,19 +730,16 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                     id={`ev-${ev.key}`}
                     checked={ev.confirmed}
                     onCheckedChange={(c) => setEvents(events.map((x, j) => (j === i ? { ...x, confirmed: c === true } : x)))}
-                    label={
-                      <>
-                        {ev.label} — <span className="font-normal text-ink-2">{ev.definition}</span>
-                      </>
-                    }
+                    label={ev.label}
+                    description={ev.definition}
                   />
                 </li>
               ))}
               {events.length === 0 && (
                 <li className="flex flex-wrap items-center gap-3 text-sm text-ink-2">
-                  No suggestions yet.
+                  None yet.
                   <Button size="sm" variant="secondary" onClick={() => setEvents(defaultEvents(businessType))}>
-                    Use common ones for this type of business
+                    Use common ones
                   </Button>
                 </li>
               )}
@@ -746,9 +763,9 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
             }
           }}
         >
-          Looks right — continue
+          Looks right
         </Button>
-        <span className="text-xs text-ink-3">Any facts still unchecked will be marked as confirmed.</span>
+        <span className="text-xs text-ink-3">Unchecked facts become confirmed.</span>
       </div>
     </div>
   );
@@ -775,7 +792,6 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   return (
     <div>
       <h1 className="heading-page">What would you like to achieve?</h1>
-      <p className="mt-1 text-sm text-ink-3">Pick one to start. You can change it anytime.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       <RadioCards
         className="mt-6"
@@ -789,16 +805,16 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
       />
       <Card className="mt-6">
         <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field label="Your goal in a sentence" className="sm:col-span-2">
+          <Field label="Goal" className="sm:col-span-2">
             <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
           </Field>
           <Field label="Time frame">
             <Select value={horizon} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
           </Field>
-          <Field label={`Monthly ad budget (${state.business?.currency ?? "USD"})`} hint="Paid directly to Google or Meta, never to ClimbOS. 0 means no ads. Ads always need your approval.">
+          <Field label={`Monthly ad budget (${state.business?.currency ?? "USD"})`} hint="Paid to Google/Meta, not us. 0 = no ads.">
             <Input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
           </Field>
-          <Field label="When do you like to review work?" hint="We'll have drafts ready before then.">
+          <Field label="Review day">
             <Select value={reviewDay} onValueChange={setReviewDay} options={REVIEW_DAY_OPTIONS} />
           </Field>
         </CardContent>
@@ -831,8 +847,7 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <div>
-      <h1 className="heading-page">How hands-on do you want to be?</h1>
-      <p className="mt-1 text-sm text-ink-3">Whatever you choose, nothing goes live, gets sent or spends money without the safeguards below.</p>
+      <h1 className="heading-page">How hands-on?</h1>
       <RadioCards
         className="mt-6"
         columns={1}
@@ -840,13 +855,19 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
         value={mode}
         onValueChange={setMode}
         options={[
-          { value: "review", title: "Review before anything goes live (recommended)", description: "Your team drafts everything. You approve each post, email and ad before it goes out.", icon: "✅" },
-          { value: "copilot", title: "Copilot", description: "Your team drafts and suggests. You publish and send everything yourself.", icon: "🧭" },
-          { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Only work you've pre-approved (for example a weekly post calendar) runs within the accounts, times and budget you set. New channels, audiences, ads and budget increases still come to you. Available on paid plans; owners and admins choose it.", icon: "🛟" },
+          { value: "review", title: "Review first (recommended)", description: "You approve each post, email and ad.", icon: "✅" },
+          { value: "copilot", title: "Copilot", description: "We draft. You publish and send.", icon: "🧭" },
+          { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Pre-approved work runs within your limits. Paid plans; owners and admins.", icon: "🛟" },
         ]}
       />
-      <Callout tone="info" className="mt-6" title="Always your call">
-        The first post on any channel, new ads, new audiences, budget increases, discounts and website changes always need your approval. You can press <strong className="font-semibold">Pause all activity</strong> at any time.
+      <Callout tone="info" className="mt-6" title="Always needs you">
+        <ul className="mt-1 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {["First posts", "New ads and audiences", "Budget raises", "Discounts", "Site changes"].map((t) => (
+            <li key={t} className="flex items-center gap-2">
+              <Check aria-hidden className="size-3.5 shrink-0" /> {t}
+            </li>
+          ))}
+        </ul>
       </Callout>
       <Button
         size="lg"
@@ -927,22 +948,22 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       {(choosing || (!ready && !running && !stopped && !sentBack)) && !busy ? (
         <Card className="mt-6">
           <CardContent className="flex flex-col gap-5">
-            <p className="text-sm text-ink-3">Your CMO ranks channels and picks growth plays; your CEO turns them into a 90-day plan. You review it before anything starts.</p>
+            <p className="text-sm text-ink-3">Channels, plays and a 90-day plan.</p>
             {canEdit ? (
               <>
                 <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
                 <Button size="lg" className="self-start" disabled={!state.canRunAi} onClick={start}>
-                  <Sparkles aria-hidden /> Build my plan
+                  <Magic aria-hidden /> Build my plan
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-ink-2">Building a plan needs an Owner, Admin or Editor.</p>
+              <p className="text-sm text-ink-2">Needs an Owner, Admin or Editor.</p>
             )}
           </CardContent>
         </Card>
       ) : null}
       {!state.canRunAi && !ready && state.accessMessage && (
-        <Callout tone="warning" className="mt-4" title="Your free starter allowance is used up">
+        <Callout tone="warning" className="mt-4" title="Free allowance used up">
           {state.accessMessage}
           <div className="mt-3">
             <Button asChild><Link href={`/app/${slug}/settings/billing`}>Choose a plan</Link></Button>
@@ -951,14 +972,14 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       )}
       {!ready && (running || busy) && (
         <>
-          <p className="mt-1 text-sm text-ink-3">Your CMO ranks channels and picks growth plays, then your CEO turns them into a 90-day plan. About 10–15 minutes; you can leave this page.</p>
+          <p className="mt-1 text-sm text-ink-3">About 10–15 min. Safe to leave.</p>
           <Card className="mt-6">
             <CardContent>
               {run?.id && running ? (
                 <RunProgress slug={slug} runId={run.id} headingLevel="h2" />
               ) : (
                 <p className="text-sm text-ink-3" aria-live="polite">
-                  Getting the team ready…
+                  Starting…
                 </p>
               )}
             </CardContent>
@@ -968,8 +989,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
       {ready && state.firstWinRunIds?.length ? (
         <Card className="mt-6">
           <CardContent className="flex flex-col gap-3">
-            <p className="heading-card">Your first posts and a welcome email are on the way</p>
-            <p className="text-sm text-ink-3">Drafted from your new plan. You approve each one before anything goes out.</p>
+            <p className="heading-card">First posts and welcome email drafting</p>
             {state.firstWinRunIds.map((id) => (
               <RunProgressCompact key={id} slug={slug} runId={id} />
             ))}
@@ -977,8 +997,8 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
         </Card>
       ) : null}
       {(stopped || sentBack) && !busy && (
-        <Callout tone={stopped ? "danger" : "warning"} className="mt-6" title={stopped ? "The plan didn't finish" : "No work starts from a sent-back plan"}>
-          {stopped ? (run?.userMessage ?? (run?.status === "canceled" ? "The plan was canceled before it finished." : "Something went wrong.")) : "Build a new version from your latest goal and facts."}
+        <Callout tone={stopped ? "danger" : "warning"} className="mt-6" title={stopped ? "Plan didn't finish" : "Plan sent back"}>
+          {stopped ? (run?.userMessage ?? (run?.status === "canceled" ? "Canceled before it finished." : "Something went wrong.")) : "Build a new version."}
           <div className="mt-3 flex flex-wrap gap-3">
             {stopped && run?.id ? <RetryRunIfPossible slug={slug} runId={run.id} /> : null}
             {canEdit ? (
@@ -987,17 +1007,17 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
               </Button>
             ) : null}
             <Button variant="secondary" loading={leaving} onClick={() => leave("today")}>
-              Go to Today for now
+              Go to Today
             </Button>
           </div>
         </Callout>
       )}
       {ready && (
         <>
-          <p className="mt-1 text-sm text-ink-3">Review it, approve it, and your team gets to work. Nothing goes live without you.</p>
+          <p className="text-trust mt-1">Nothing goes live without you.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" loading={leaving} onClick={() => leave("plan")}>
-              See my plan
+              See plan
             </Button>
             <Button size="lg" variant="secondary" disabled={leaving} onClick={() => leave("today")}>
               Go to Today

@@ -15,9 +15,9 @@ export function MailboxSection({ slug }: { slug: string }) {
     <section aria-labelledby="mailbox-heading" className="flex flex-col gap-3">
       <div>
         <h2 id="mailbox-heading" className="heading-section">
-          Your mailbox
+          Mailbox
         </h2>
-        <p className="mt-0.5 text-sm text-ink-3">Send Find-customers emails from your own address. ClimbOS reads only replies and bounces, to stop sequences.</p>
+        <p className="mt-0.5 text-sm text-ink-3">Sends outreach. Reads only replies.</p>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4">
         <span className="flex items-center gap-2 text-ui text-ink">

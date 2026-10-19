@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Check, ImagePlus, Loader2, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Sparkles, Trash2, Upload, Wand2 } from "@/components/icons"
+import { Check, ImagePlus, Magic, Monitor, MoreHorizontal, ShoppingBag, Smartphone, Trash2, Upload, Wand2 } from "@/components/icons";
 import { SCENES, TREATMENTS, type Treatment } from "../../../../../shared/visuals/treatments";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -31,7 +31,7 @@ import {
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { cn } from "@/lib/utils";
-import { useNow } from "@/components/app/content/shared";
+import { MessageText, useNow } from "@/components/app/content/shared";
 import { climbTarget } from "@/components/climb/context";
 import { StagedProgress } from "@/components/app/StagedProgress";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
@@ -71,45 +71,54 @@ export default function ImagesPage() {
       <PageHeader
         eyebrow="Content"
         title="Images"
-        intro="Real screenshots and product photos make better posts than stock or AI images. Your team uses these first; AI images are always optional."
       />
 
       {data.canEdit ? <Sources slug={slug} data={data} /> : null}
 
-      {running.map((j) => (
-        <section key={j.id} className="rounded-xl border border-brand-200 bg-surface p-4" aria-live="polite">
-          <StagedProgress
-            title={j.kind === "capture" ? "Taking screenshots of your site" : "Collecting your product photos"}
-            stages={j.stages}
-            expected={{ shoot: 25, save: 6, find: 15, download: 25 }}
-          />
-          <p className="mt-2 text-xs text-ink-3">New images appear below as they arrive. You can leave this page.</p>
+      {running.length || data.activeEdits.length ? (
+        <section aria-label="Working now" className="rounded-xl border border-brand-200 bg-surface p-4">
+          <p className="text-overline">Working now</p>
+          <ul className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {running.map((j) => (
+              <li key={j.id} className="min-w-0" aria-live="polite">
+                <StagedProgress
+                  title={j.kind === "capture" ? "Taking screenshots of your site" : "Collecting your product photos"}
+                  stages={j.stages}
+                  expected={{ shoot: 25, save: 6, find: 15, download: 25 }}
+                />
+              </li>
+            ))}
+            {data.activeEdits.map((r) => (
+              <li key={r.id} className="min-w-0">
+                <p className="truncate text-ui font-medium text-ink">{r.title}</p>
+                <RunProgressCompact slug={slug} runId={r.id as Id<"workflowRuns">} className="mt-1.5" />
+              </li>
+            ))}
+          </ul>
         </section>
-      ))}
-      {data.activeEdits.map((r) => (
-        <section key={r.id} className="rounded-xl border border-brand-200 bg-surface p-4">
-          <p className="text-ui font-medium text-ink">{r.title}</p>
-          <RunProgressCompact slug={slug} runId={r.id as Id<"workflowRuns">} className="mt-1.5" />
-        </section>
-      ))}
-      {lastFailed && !running.length ? <Callout tone="warning" title="That didn't work this time">{lastFailed.message ?? "Try again in a moment."}</Callout> : null}
+      ) : null}
+      {lastFailed && !running.length ? (
+        <Callout tone="warning" title="Didn't work">
+          <MessageText text={lastFailed.message ?? "Try again in a moment."} />
+        </Callout>
+      ) : null}
       {data.failedEdits
         .filter((r) => now !== null && now - r.createdAt < 86_400_000)
         .map((r) => (
           <Callout key={r.id} tone="warning" title={`${r.title} didn't finish`}>
-            {r.message ?? "Nothing was added. Try again."}
+            <MessageText text={r.message ?? "Nothing added. Try again."} />
           </Callout>
         ))}
 
       <section aria-labelledby="library-heading" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="library-heading" className="heading-section">
-            Your library <span className="font-normal text-ink-3">({data.assets.length})</span>
+            Library <span className="font-normal text-ink-3">({data.assets.length})</span>
           </h2>
           <ChoiceChips aria-label="Show" value={filter} onValueChange={(v) => setFilter(v as Filter)} options={FILTERS} />
         </div>
         {shown.length === 0 ? (
-          <EmptyState icon={<ImagePlus />} title="No images here yet" body="Capture your website, collect product photos or upload your own. Then tick the ones you like and ClimbOS writes posts around them." />
+          <EmptyState icon={<ImagePlus />} title="No images yet" body="Capture, collect or upload." />
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {shown.map((a) => (
@@ -163,7 +172,7 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
     await run("upload", async () => {
       const { saved, failed } = await uploadToLibrary(slug, Array.from(files), genUrl, saveUpload);
       if (saved.length) toast({ tone: "success", title: `Added ${saved.length} image${saved.length === 1 ? "" : "s"}` });
-      if (failed) toast({ tone: "danger", title: `${failed} image${failed === 1 ? "" : "s"} didn't upload. Try again.` });
+      if (failed) toast({ tone: "danger", title: `${failed} upload${failed === 1 ? "" : "s"} failed. Try again.` });
     });
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -179,8 +188,8 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
     {
       key: "capture",
       icon: Monitor,
-      title: "Capture my website",
-      body: host ? `Real desktop, mobile and feature screenshots of ${host}.` : "Add your website in settings first.",
+      title: "Capture website",
+      body: host ? `Screenshots of ${host}` : "Add your website in settings first.",
       disabled: !host,
       cta: "Capture",
       first: saas,
@@ -188,8 +197,8 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
     {
       key: "products",
       icon: ShoppingBag,
-      title: "Get my product photos",
-      body: "Your real product images, names and prices from your store.",
+      title: "Product photos",
+      body: "From your store",
       disabled: !host,
       cta: "Collect",
       first: store,
@@ -197,8 +206,8 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
     {
       key: "upload",
       icon: Smartphone,
-      title: "Upload screenshots or photos",
-      body: "App screens (desktop or phone), product shots, team photos. PNG, JPG or WebP.",
+      title: "Upload",
+      body: "PNG, JPG or WebP",
       disabled: false,
       cta: "Upload",
       first: !saas && !store,
@@ -215,7 +224,7 @@ function Sources({ slug, data }: { slug: string; data: Data }) {
             </span>
             <div className="min-w-0">
               <p className="heading-card flex items-center gap-2">
-                {t.title} {t.first ? <Badge tone="brand">Best for you</Badge> : null}
+                {t.title} {t.first ? <Badge tone="brand">Best</Badge> : null}
               </p>
               <p className="mt-0.5 text-ui text-ink-3">{t.body}</p>
             </div>
@@ -274,21 +283,21 @@ function AssetCard({ slug, asset, picked, onPick, canEdit }: { slug: string; ass
             <DropdownMenuContent align="end">
               {improvable(asset) ? (
                 <DropdownMenuItem icon={<Wand2 />} onSelect={() => setImproving(true)}>
-                  Improve this image…
+                  Improve…
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem asChild>
-                <Link href={`/studio/${slug}/new?asset=${asset.id}`}>Design a post with it</Link>
+                <Link href={`/studio/${slug}/new?asset=${asset.id}`}>Design post</Link>
               </DropdownMenuItem>
               {asset.url ? (
                 <DropdownMenuItem asChild>
                   <a href={asset.url} target="_blank" rel="noreferrer">
-                    Open full size
+                    Full size
                   </a>
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem danger icon={<Trash2 />} onSelect={() => archive({ slug, assetId: asset.id as Id<"assets"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
-                Remove from library
+                Remove
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -307,16 +316,16 @@ function ImproveDialog({ slug, asset, onClose }: { slug: string; asset: Asset; o
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Improve this image" description="Your team edits a copy; the original stays in your library.">
+      <DialogContent title="Improve image" description="Edits a copy. Original kept.">
         <div className="flex flex-col gap-4">
           <RadioCards aria-label="Treatment" value={treatment} onValueChange={(v) => setTreatment(v as Treatment)} options={options.map((t) => ({ value: t, title: TREATMENTS[t].label, description: TREATMENTS[t].description }))} />
           {treatment === "lifestyle_scene" ? (
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-ui font-medium text-ink">Where should it be?</legend>
+              <legend className="text-ui font-medium text-ink">Scene</legend>
               <ChoiceChips aria-label="Scene" value={scene} onValueChange={setScene} options={SCENES.map((s) => ({ value: s, label: s.replace(/^(on|in) (a )?/, "").replace(/^./, (c) => c.toUpperCase()) }))} />
             </fieldset>
           ) : null}
-          {treatment === "sample_data" ? <p className="text-xs text-ink-3">The new image is labelled &ldquo;Sample data&rdquo; so it&apos;s never mistaken for real results.</p> : null}
+          {treatment === "sample_data" ? <p className="text-xs text-ink-3">Labelled &ldquo;Sample data&rdquo;.</p> : null}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
@@ -328,7 +337,7 @@ function ImproveDialog({ slug, asset, onClose }: { slug: string; asset: Asset; o
               setBusy(true);
               try {
                 await edit({ slug, assetId: asset.id as Id<"assets">, treatment, scene: treatment === "lifestyle_scene" ? scene : undefined });
-                toast({ tone: "success", title: "Working on it", description: "The new image appears in your library in about a minute." });
+                toast({ tone: "success", title: "Ready in about a minute" });
                 onClose();
               } catch (e) {
                 toast({ tone: "danger", title: errorMessage(e) });
@@ -355,7 +364,7 @@ function PickedBar({ slug, picked, onClear }: { slug: string; picked: string[]; 
     <div className="fixed inset-x-0 bottom-16 z-30 px-4 lg:bottom-6 lg:left-60">
       <div role="region" aria-label="Selected images" className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 rounded-xl border border-line bg-surface p-3 shadow-lg">
         <p className="text-ui font-medium text-ink">
-          {picked.length} image{picked.length === 1 ? "" : "s"} selected
+          {picked.length} selected
         </p>
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Post to">
           {CHANNELS.map((c) => (
@@ -384,7 +393,7 @@ function PickedBar({ slug, picked, onClear }: { slug: string; picked: string[]; 
               }
             }}
           >
-            <Sparkles aria-hidden /> Make {picked.length} post{picked.length === 1 ? "" : "s"}
+            <Magic aria-hidden /> Make {picked.length} post{picked.length === 1 ? "" : "s"}
           </Button>
         </div>
       </div>

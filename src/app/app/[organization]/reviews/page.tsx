@@ -9,7 +9,8 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Badge, Button, Card, CardContent, Checkbox, Field, Input, Textarea, toast } from "@/components/ui";
+import { StatBlocks } from "@/components/ds/content";
+import { Badge, Button, Card, CardContent, Checkbox, Field, IconTile, Input, Textarea, toast } from "@/components/ui";
 
 /** Reviews: ask happy customers, share your review page, and reply to reviews with Climb AI. */
 export default function ReviewsPage() {
@@ -50,10 +51,18 @@ export default function ReviewsPage() {
   };
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <PageHeader section="reviews" title="Reviews" intro={`${data.stats.sent} asked · ${data.stats.clicked} opened the review link · ${data.stats.feedback} sent a private note.`} />
+      <PageHeader section="reviews" title="Reviews" />
+      <StatBlocks
+        className="grid-cols-3 sm:grid-cols-3"
+        stats={[
+          { label: "Asked", value: data.stats.sent },
+          { label: "Opened", value: data.stats.clicked, tone: data.stats.clicked ? "good" : "default" },
+          { label: "Private notes", value: data.stats.feedback },
+        ]}
+      />
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <Field label="Your review link" hint="Google: open your Business Profile → “Ask for reviews” → copy the link. Any review site works.">
+          <Field label="Your review link" hint="Google: Business Profile → “Ask for reviews”">
             <div className="flex gap-2">
               <Input value={url ?? data.reviewUrl ?? ""} placeholder="https://g.page/r/…/review" onChange={(e) => setUrlText(e.target.value)} />
               <Button variant="secondary" loading={busy === "url"} disabled={url === null} onClick={() => run("url", () => setUrl({ slug, url: url ?? "" }), "Saved")}>
@@ -63,7 +72,7 @@ export default function ReviewsPage() {
           </Field>
           {data.reviewUrl ? (
             <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-              Your review page: <code className="rounded bg-surface-2 px-2 py-0.5 text-xs">{data.pageUrl}</code>
+              Review page: <code className="rounded bg-surface-2 px-2 py-0.5 text-xs">{data.pageUrl}</code>
               <Button size="sm" variant="ghost" aria-label="Copy review page link" onClick={() => navigator.clipboard.writeText(data.pageUrl).then(() => toast({ tone: "success", title: "Copied" }), () => undefined)}>
                 <Copy aria-hidden />
               </Button>
@@ -74,8 +83,13 @@ export default function ReviewsPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <p className="heading-card">Ask customers</p>
-          <p className="text-sm text-ink-3">A short, personal email from your own mailbox. Everyone gets the same link; unhappy customers can also tell you privately.</p>
+          <div className="flex items-center gap-3">
+            <IconTile icon={Send} tone="brand" size="sm" />
+            <div>
+              <h2 className="heading-card">Ask customers</h2>
+              <p className="text-sm text-ink-3">Sent from your mailbox.</p>
+            </div>
+          </div>
           {data.candidates.length ? (
             <ul className="flex flex-col gap-1.5">
               {data.candidates.map((c) => (
@@ -95,14 +109,14 @@ export default function ReviewsPage() {
             </ul>
           ) : (
             <p className="text-xs text-ink-3">
-              Won deals in your <Link href={`/app/${slug}/pipeline`}>Pipeline</Link> show up here.
+              Won <Link href={`/app/${slug}/pipeline`}>Pipeline</Link> deals appear here.
             </p>
           )}
           <Field label="Or add people" hint="One per line: Name <email@example.com>">
             <Textarea value={extra} onChange={(e) => setExtra(e.target.value)} rows={3} autosize />
           </Field>
-          <Button className="self-start" loading={busy === "ask"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("ask", async () => { const r = await request({ slug, people: people() }); setPicked(new Set()); setExtra(""); toast({ tone: "success", title: `Asking ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.recentlyAsked ? `Skipped ${r.recentlyAsked} asked in the last 90 days.` : undefined }); })}>
-            <Send aria-hidden /> Ask for reviews
+          <Button className="self-start" loading={busy === "ask"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("ask", async () => { const r = await request({ slug, people: people() }); setPicked(new Set()); setExtra(""); toast({ tone: "success", title: `Asking ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.recentlyAsked ? `Skipped ${r.recentlyAsked} (asked < 90 days)` : undefined }); })}>
+            <Send aria-hidden /> Ask
           </Button>
           {data.recent.length ? (
             <ul className="mt-2 flex flex-col divide-y divide-line text-sm">
@@ -110,8 +124,8 @@ export default function ReviewsPage() {
                 <li key={r.id} className="flex items-center justify-between gap-2 py-2">
                   <span className="truncate text-ink-2">{r.name}</span>
                   <span className="flex gap-1.5">
-                    {r.feedback ? <Badge tone="violet">Private note</Badge> : null}
-                    {r.clicked ? <Badge tone="green">Opened link</Badge> : null}
+                    {r.feedback ? <Badge tone="violet">Note</Badge> : null}
+                    {r.clicked ? <Badge tone="green">Opened</Badge> : null}
                     <Badge tone={r.status === "failed" ? "red" : r.status === "sent" ? "neutral" : "blue"}>{r.status === "sent" ? "Asked" : r.status === "failed" ? "Didn't send" : "Sending"}</Badge>
                   </span>
                 </li>
@@ -123,8 +137,13 @@ export default function ReviewsPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <p className="heading-card">Reply to a review</p>
-          <p className="text-sm text-ink-3">Paste a review from Google or anywhere else. It goes to your Inbox, where Climb AI drafts the reply.</p>
+          <div className="flex items-center gap-3">
+            <IconTile icon={Star} tone="amber" size="sm" />
+            <div>
+              <h2 className="heading-card">Reply to a review</h2>
+              <p className="text-sm text-ink-3">AI drafts a reply in Inbox.</p>
+            </div>
+          </div>
           <Input value={review.author} placeholder="Reviewer's name" aria-label="Reviewer's name" onChange={(e) => setReview({ ...review, author: e.target.value })} />
           <Textarea value={review.text} onChange={(e) => setReview({ ...review, text: e.target.value })} rows={3} autosize aria-label="Review text" placeholder="Paste the review" />
           <Button className="self-start" variant="secondary" loading={busy === "review"} disabled={!review.text.trim()} onClick={() => run("review", async () => { await addReview({ slug, author: review.author, text: review.text, source: "google" }); setReview({ author: "", text: "" }); }, "Added to your Inbox")}>

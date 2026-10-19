@@ -7,10 +7,10 @@ export type ValueKindKey = "observed" | "attributed" | "projected" | "platform_r
 
 const KIND: Record<ValueKindKey, { label: string; tone: "green" | "blue" | "neutral" | "violet"; icon: ReactNode; help: string }> = {
   observed: { label: "Observed", tone: "green", icon: <CircleCheck />, help: "Counted directly by the source system." },
-  attributed: { label: "Attributed", tone: "blue", icon: <Link2 />, help: "Billing revenue credited to a channel by a rule. Shows association, not cause." },
+  attributed: { label: "Attributed", tone: "blue", icon: <Link2 />, help: "Credited to a channel by a rule. Association, not cause." },
   projected: { label: "Projected", tone: "neutral", icon: <TrendingUp />, help: "An estimate of the future, not a measurement." },
-  platform_reported: { label: "Platform reported", tone: "neutral", icon: <Megaphone />, help: "What the ad platform says, using its own rules. Can overlap with other platforms." },
-  assumption: { label: "Assumption-based scenario", tone: "neutral", icon: <Calculator />, help: "Arithmetic on numbers you typed in. Not a measurement or a forecast." },
+  platform_reported: { label: "Platform reported", tone: "neutral", icon: <Megaphone />, help: "The platform's own count. Can overlap." },
+  assumption: { label: "Assumptions", tone: "neutral", icon: <Calculator />, help: "Math on numbers you typed. Not a forecast." },
 };
 
 /** Labels a number as observed / attributed / projected / platform reported / assumption. */
@@ -24,7 +24,7 @@ export function ValueKind({ kind, className }: { kind: ValueKindKey; className?:
 }
 
 export function DemoBadge({ show }: { show: boolean }) {
-  return show ? <StatusPill status="demo">Demo data (synthetic)</StatusPill> : null;
+  return show ? <StatusPill status="demo">Demo data</StatusPill> : null;
 }
 
 /** Expandable "what does this mean" block. Native <details> so it works without JS and with keyboard. */

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button, Card, EmptyState, Skeleton, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatDateTime, relativeTime } from "../money";
-import { ArtifactStatus, ChannelTag, RoleName, SectionBoundary, useNow } from "./shared";
+import { ArtifactStatus, ChannelTag, SectionBoundary, useNow } from "./shared";
 import { climbTarget } from "@/components/climb/context";
 
 export type ArtifactStatusValue =
@@ -31,7 +31,7 @@ export const FILTERS: { key: string; label: string; statuses: ArtifactStatusValu
   { key: "approved", label: "Approved", statuses: ["approved"] },
   { key: "scheduled", label: "Scheduled", statuses: ["scheduled"] },
   { key: "published", label: "Published", statuses: ["published"] },
-  { key: "problems", label: "Uncertain / Failed", statuses: ["uncertain", "failed"] },
+  { key: "problems", label: "Problems", statuses: ["uncertain", "failed"] },
   { key: "draft", label: "Drafts", statuses: ["draft"] },
   { key: "exported", label: "Exported", statuses: ["exported"] },
   { key: "archived", label: "Archived", statuses: ["archived"] },
@@ -150,11 +150,6 @@ function ListBody({
       <EmptyState
         icon={<Inbox />}
         title={label === "All" ? "No content yet" : `Nothing in “${label}”`}
-        body={
-          label === "All"
-            ? "Use “Create content” and your AI team will write drafts for you to review. Nothing goes live until you approve it."
-            : "Try another filter, or create new content."
-        }
       />
     );
   }
@@ -196,23 +191,20 @@ function ContentCard({ slug, item }: { slug: string; item: ListItem }) {
           {item.title}
         </Link>
       </h3>
-      <ArtifactStatus status={item.status} showHelp />
-      {item.preview ? <p className="line-clamp-3 text-sm text-ink-3">{item.preview}</p> : null}
+      <ArtifactStatus status={item.status} />
+      {item.preview ? <p className="line-clamp-2 text-sm text-ink-3">{item.preview}</p> : null}
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-3 text-xs text-ink-3">
-        <span>
-          Created by <RoleName role={item.createdByRole} className="text-ink-2" />
-        </span>
         {item.hasImage ? (
           <span className="inline-flex items-center gap-1">
-            <ImageIcon aria-hidden="true" className="size-3.5" /> Has image
+            <ImageIcon aria-hidden="true" className="size-3.5" /> <span className="sr-only">Has image</span>
           </span>
         ) : null}
         {item.flags > 0 ? (
           <span className="inline-flex items-center gap-1 font-medium text-amber-800">
-            <Flag aria-hidden="true" className="size-3.5" /> {item.flags} claim{item.flags === 1 ? "" : "s"} to check
+            <Flag aria-hidden="true" className="size-3.5" /> {item.flags} to check
           </span>
         ) : null}
-        <span>Updated {now ? relativeTime(item.updatedAt, now) : "…"}</span>
+        <span>{now ? relativeTime(item.updatedAt, now) : "…"}</span>
       </div>
     </article>
   );

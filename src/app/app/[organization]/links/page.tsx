@@ -7,7 +7,6 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { QrButton } from "@/components/app/links/QrButton";
-import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Card, CardContent, EmptyState, Field, Input, Select, Switch, toast } from "@/components/ui";
 
@@ -42,8 +41,8 @@ export default function LinksPage() {
   };
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <PageHeader section="links" title="Links" intro={`Short links that count real clicks (not bots) and tag visits for your analytics.${data ? ` ${data.weekTotal} click${data.weekTotal === 1 ? "" : "s"} in the last 7 days.` : ""}`} />
-      {data ? <Switch label="Track links in new drafts" description="Posts and emails get a short link; ads keep your page with UTM tags." checked={data.tracking} onCheckedChange={(on) => setTracking({ slug, on }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))} /> : null}
+      <PageHeader section="links" title="Links" intro={data ? `${data.weekTotal} click${data.weekTotal === 1 ? "" : "s"} in 7 days` : undefined} />
+      {data ? <Switch label="Track links in new drafts" checked={data.tracking} onCheckedChange={(on) => setTracking({ slug, on }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))} /> : null}
       <Card>
         <CardContent>
           <form
@@ -62,10 +61,10 @@ export default function LinksPage() {
               }
             }}
           >
-            <Field label="Page to link to">
+            <Field label="Page">
               <Input value={url} placeholder="https://yoursite.com/offer" onChange={(e) => setUrl(e.target.value)} />
             </Field>
-            <Field label="Where you'll share it">
+            <Field label="Channel">
               <Select options={CHANNELS} value={channel} onValueChange={setChannel} />
             </Field>
             <Field label="Campaign" optional>
@@ -80,7 +79,7 @@ export default function LinksPage() {
       {data === undefined ? (
         <LoadingBlock label="Loading links…" lines={3} />
       ) : data.links.length === 0 ? (
-        <EmptyState icon={<Link2 />} title="No links yet" body="Make one above, or create posts: each draft with a link gets a tracked one." />
+        <EmptyState icon={<Link2 />} title="No links yet" />
       ) : (
         <ul className="flex flex-col gap-2">
           {data.links.map((l) => (
@@ -92,10 +91,10 @@ export default function LinksPage() {
                 </p>
               </div>
               {l.channel ? <Badge tone="neutral">{CHANNELS.find((c) => c.value === l.channel)?.label ?? l.channel}</Badge> : null}
-              {l.source === "auto" ? <Badge tone="blue">From a draft</Badge> : null}
+              {l.source === "auto" ? <Badge tone="blue">Auto</Badge> : null}
               <div className="w-28 text-right">
                 <p className="text-sm font-semibold tabular-nums text-ink">{l.clicks.toLocaleString("en-US")} click{l.clicks === 1 ? "" : "s"}</p>
-                <p className="text-xs text-ink-3">{l.week} this week{l.lastClickAt ? ` · ${relativeTime(l.lastClickAt)}` : ""}</p>
+                <p className="text-xs text-ink-3">{l.week} this week</p>
               </div>
               <Button size="sm" variant="secondary" aria-label="Copy link" onClick={() => copy(l.shortUrl)}>
                 <Copy aria-hidden />

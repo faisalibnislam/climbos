@@ -23,7 +23,6 @@ export default function ContentPage() {
       <PageHeader
         section="content"
         title="Content"
-        intro="Everything your AI team has created. Nothing is posted, sent or spent until you approve it."
         actions={
           <>
             <Button asChild variant="secondary">

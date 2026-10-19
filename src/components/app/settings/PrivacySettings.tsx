@@ -11,6 +11,20 @@ import { formatDateTime, relativeTime } from "../money";
 import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
 
+/** What an action covers, as short labelled facts ("Deleted: …", "Kept: …"). */
+function Covers({ items }: { items: { term: string; detail: string; tone?: "keep" | "gone" }[] }) {
+  return (
+    <dl className="grid gap-2 text-sm sm:grid-cols-2">
+      {items.map((it) => (
+        <div key={it.term} className="flex flex-col gap-0.5 rounded-lg border border-line px-3 py-2">
+          <dt className={it.tone === "gone" ? "text-xs font-medium text-red-800" : "text-xs font-medium text-ink-3"}>{it.term}</dt>
+          <dd className="text-ink-2">{it.detail}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 const KIND: Record<string, string> = { export: "Workspace export", delete_contact: "Contact deletion", delete_workspace: "Workspace deletion" };
 const STATUS: Record<string, { label: string; tone: "neutral" | "blue" | "green" | "red" }> = {
   pending: { label: "Waiting", tone: "neutral" },
@@ -22,7 +36,7 @@ const STATUS: Record<string, { label: string; tone: "neutral" | "blue" | "green"
 export function PrivacySettings({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-8">
-      <SettingsHeader title="Privacy" intro="Download everything in this workspace, remove a person's details, or delete the workspace." />
+      <SettingsHeader title="Privacy" />
       <QueryBoundary headingLevel="h2">
         <ExportSection slug={slug} />
       </QueryBoundary>
@@ -44,7 +58,7 @@ function ExportSection({ slug }: { slug: string }) {
     setError(null);
     try {
       await requestExport({ slug });
-      toast({ title: "Export requested", description: "It will appear below with a download link when it's ready." });
+      toast({ title: "Export requested", description: "Link appears below when ready." });
     } catch (err) {
       setError(errorInfo(err).message);
     } finally {
@@ -57,28 +71,31 @@ function ExportSection({ slug }: { slug: string }) {
       <h2 id="export-heading" className="heading-section">
         Export your data
       </h2>
-      <p className="text-sm text-ink-2">
-        One JSON file with your business profile, plans, content, results and activity. Passwords, keys and connection tokens are never included.
-      </p>
+      <Covers
+        items={[
+          { term: "You get", detail: "One JSON file" },
+          { term: "Never included", detail: "Passwords, keys or tokens" },
+        ]}
+      />
       <div>
         <Button onClick={onExport} loading={busy} loadingText="Requesting…" disabled={pending}>
-          {pending ? "Export in progress…" : "Request an export"}
+          {pending ? "Exporting…" : "Export"}
         </Button>
         {pending ? (
           <div className="flex flex-col gap-1.5">
             <Progress label="Preparing your export" />
-            <p className="text-xs text-ink-3">Collecting your workspace data into one file. Usually under a minute; the download link appears below.</p>
+            <p className="text-xs text-ink-3">Usually under a minute.</p>
           </div>
         ) : null}
       </div>
       <div aria-live="polite">
         {error ? (
-          <Callout tone="danger" live="none" title="Export wasn't requested">
+          <Callout tone="danger" live="none" title="Export not requested">
             {error}
           </Callout>
         ) : null}
       </div>
-      <h3 className="heading-card mt-2">Recent requests</h3>
+      <h3 className="heading-card mt-2">Requests</h3>
       {requests === undefined ? (
         <LoadingBlock label="Loading requests…" lines={1} />
       ) : (
@@ -88,7 +105,7 @@ function ExportSection({ slug }: { slug: string }) {
             hideCaption
             rows={requests}
             rowKey={(r) => r.id}
-            emptyText="No requests yet."
+            emptyText="None yet"
             columns={[
               { key: "kind", header: "Request", rowHeader: true, cell: (r) => KIND[r.kind] ?? r.kind },
               { key: "created", header: "Requested", cell: (r) => <span title={formatDateTime(r.createdAt)}>{relativeTime(r.createdAt)}</span> },
@@ -142,16 +159,18 @@ function DeleteContactSection({ slug }: { slug: string }) {
       <h2 id="contact-heading" className="heading-section">
         Delete a person&apos;s details
       </h2>
-      <p className="text-sm text-ink-2">
-        Use this when a customer or lead asks to be forgotten. Their contact record and consent history are deleted. A one-way fingerprint of the address is kept so
-        they&apos;re never emailed again.
-      </p>
+      <Covers
+        items={[
+          { term: "Use for", detail: "“Forget me” requests" },
+          { term: "Kept", detail: "A hashed address, to block future emails" },
+        ]}
+      />
       <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <Field label="Their email address" error={error ?? undefined}>
+        <Field label="Their email" error={error ?? undefined}>
           <Input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Button type="submit" variant="danger">
-          Delete their details
+          Delete
         </Button>
       </form>
       <ConfirmDialog
@@ -159,7 +178,7 @@ function DeleteContactSection({ slug }: { slug: string }) {
         onOpenChange={setConfirm}
         tone="danger"
         title="Delete this person's details?"
-        description={`Every contact record for ${email.trim()} in this workspace will be permanently deleted, and the address will be blocked from future emails. This can't be undone.`}
+        description={`Permanently deletes every record for ${email.trim()} and blocks the address. Can't be undone.`}
         confirmLabel="Delete permanently"
         onConfirm={async () => {
           try {
@@ -167,7 +186,7 @@ function DeleteContactSection({ slug }: { slug: string }) {
             toast({
               tone: "success",
               title: res.deleted > 0 ? `Deleted ${res.deleted} contact record${res.deleted === 1 ? "" : "s"}` : "No matching contact found",
-              description: "The address is now blocked from future emails.",
+              description: "Address blocked from future emails.",
             });
             setEmail("");
           } catch (err) {
@@ -189,7 +208,7 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const org = me?.orgs.find((o) => o.slug === slug);
   const canDelete = org?.role === "owner";
   const impact = useQuery(api.settings.deletionImpact, canDelete ? { slug } : "skip");
-  const billingNote = impact?.packageEnds ? " Your package will end at the end of this billing period." : impact?.sharedPackage ? " Your package stays active for your other workspaces." : "";
+  const billingNote = impact?.packageEnds ? " Your package ends this billing period." : impact?.sharedPackage ? " Your package stays for other workspaces." : "";
   const matches = org ? typed.trim() === org.name : false;
 
   return (
@@ -197,14 +216,16 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
       <h2 id="delete-ws-heading" className="heading-section text-red-800!">
         Delete this workspace
       </h2>
-      <p className="text-sm text-ink-2">
-        Everything stops straight away. Your business profile, plans, content, results, contacts and connections (including stored keys) are then permanently
-        deleted. Billing records, usage costs and the activity log are kept, as required for accounting, with personal details minimized.
-      </p>
+      <Covers
+        items={[
+          { term: "Permanently deleted", detail: "Content, contacts and keys", tone: "gone" },
+          { term: "Kept for accounting", detail: "Billing and logs" },
+        ]}
+      />
       {me === undefined ? (
         <LoadingBlock label="Loading workspace…" lines={1} />
       ) : !org ? null : !canDelete ? (
-        <p className="text-sm text-ink-3">Only an owner can delete the workspace.</p>
+        <p className="text-sm text-ink-3">Owners only.</p>
       ) : (
         <form
           onSubmit={(e) => {
@@ -215,7 +236,7 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
           }}
           className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end"
         >
-          <Field label={`Type the workspace name to confirm: ${org.name}`} error={error ?? undefined}>
+          <Field label={`Type ${org.name} to confirm`} error={error ?? undefined}>
             <Input autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
           </Field>
           <Button type="submit" variant="danger" disabled={!matches}>
@@ -229,12 +250,12 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
           onOpenChange={setConfirm}
           tone="danger"
           title={`Delete ${org.name}?`}
-          description={`All activity stops now and the workspace's content is permanently deleted. This can't be undone.${billingNote}`}
+          description={`Stops everything and permanently deletes content. Can't be undone.${billingNote}`}
           confirmLabel={`Delete ${org.name}`}
           onConfirm={async () => {
             try {
               await del({ slug, confirmName: typed });
-              toast({ tone: "success", title: "Workspace deletion started", description: "Everything is stopped. Content is being removed now." });
+              toast({ tone: "success", title: "Workspace deletion started", description: "Content is being removed." });
               router.push("/app");
             } catch (err) {
               setError(errorInfo(err).message);

@@ -16,11 +16,7 @@ export function ConnectionsView({ slug }: { slug: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
-      <PageHeader
-        section="connections"
-        title="Connections"
-        intro="Connect the tools you already use. Each connection lists exactly what ClimbOS can and can't do with it — and why — so there are no surprises."
-      />
+      <PageHeader section="connections" title="Connections" />
 
       <Suspense fallback={null}>
         <OAuthReturnNotice data={data} />
@@ -32,12 +28,12 @@ export function ConnectionsView({ slug }: { slug: string }) {
         <>
           {data.isDemo ? (
             <Callout tone="info" title="Demo workspace">
-              These are demo connections with synthetic data. Create your own workspace to connect real accounts.
+              Synthetic data. Use your own workspace for real accounts.
             </Callout>
           ) : null}
           {!data.canManage && !data.isDemo ? (
             <Callout tone="info" title="View only">
-              You can see every connection, but only owners and admins can connect or disconnect accounts.
+              Only owners and admins can change these.
             </Callout>
           ) : null}
 
@@ -58,8 +54,7 @@ export function ConnectionsView({ slug }: { slug: string }) {
                 {g.key === "publish" ? <ExportOnlyNotice items={items} /> : null}
                 {g.key === "data" ? (
                   <Callout tone="info" title="ClimbOS has no contact database">
-                    ClimbOS doesn&apos;t sell a contact database. Find customers researches businesses from public sources, with a source for every fact. For email
-                    lookups at scale, connect a data provider you license.
+                    For email lookups, connect a provider you license.
                   </Callout>
                 ) : null}
                 <div className="flex flex-col gap-3">
@@ -82,9 +77,8 @@ function ExportOnlyNotice({ items }: { items: ConnectionsData["items"] }) {
   if (names.length === 0) return null;
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return (
-    <Callout tone="info" title="Some platforms use drafts and export packs">
-      {list} {names.length === 1 ? "doesn't" : "don't"} have a verified integration yet. ClimbOS writes ready-to-post drafts you copy or download. It never asks for your passwords or
-      uses browser bots.
+    <Callout tone="info" title="Drafts + export only">
+      {list}: no verified integration yet. Copy or download drafts.
     </Callout>
   );
 }
@@ -103,8 +97,8 @@ function OAuthReturnNotice({ data }: { data: ConnectionsData | undefined }) {
     const key = connected ? `ok:${connected}` : failed ? `fail:${failed}` : null;
     if (!key || announced.current === key) return;
     announced.current = key;
-    if (connected) toast({ tone: "success", title: "Connected", description: "Check the card below to see what it can do." });
-    else toast({ tone: "danger", title: "Connection didn't finish", description: "Nothing was connected. You can try again." });
+    if (connected) toast({ tone: "success", title: "Connected" });
+    else toast({ tone: "danger", title: "Connection didn't finish", description: "Nothing connected. Try again." });
   }, [connected, failed]);
 
   if (!connected && !failed) return null;
@@ -116,17 +110,17 @@ function OAuthReturnNotice({ data }: { data: ConnectionsData | undefined }) {
   if (connected) {
     return (
       <Callout tone="success" live="none" title={`${name} is connected`} action={dismiss}>
-        The provider confirmed access. Some capabilities may still need setup or approval — each one is listed on its card below.
+        Some features may still need setup. See its card.
       </Callout>
     );
   }
   return (
     <Callout tone="danger" live="none" title={"The connection didn't finish"} action={dismiss}>
       {failed === "canceled"
-        ? "Sign-in was canceled, so nothing was connected."
+        ? "Sign-in canceled. Nothing connected."
         : failed === "expired"
-          ? "The connection link expired. Please try connecting again."
-          : "The provider didn't grant access, so nothing was connected. Please try again, and make sure you approve every permission ClimbOS asks for."}
+          ? "Link expired. Try again."
+          : "Access not granted. Try again and approve every permission."}
     </Callout>
   );
 }

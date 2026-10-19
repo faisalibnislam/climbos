@@ -24,10 +24,10 @@ export const HORIZON_OPTIONS = [
 export const REVIEW_DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => ({ value: d, label: d }));
 
 export const GOAL_KIND_OPTIONS: { value: GoalKind; title: string; description: string; icon: string }[] = [
-  { value: "more_customers", title: "More customers", description: "New people signing up or buying", icon: "🙋" },
-  { value: "more_sales", title: "More sales", description: "More revenue, including from existing customers", icon: "💰" },
-  { value: "more_reach", title: "More reach", description: "More of the right people knowing you exist", icon: "📣" },
-  { value: "custom", title: "Something else", description: "Describe it in your own words", icon: "✏️" },
+  { value: "more_customers", title: "More customers", description: "New sign-ups or buyers", icon: "🙋" },
+  { value: "more_sales", title: "More sales", description: "More revenue", icon: "💰" },
+  { value: "more_reach", title: "More reach", description: "More awareness", icon: "📣" },
+  { value: "custom", title: "Something else", description: "Your own words", icon: "✏️" },
 ];
 
 /** A ready-made goal sentence for each kind. */

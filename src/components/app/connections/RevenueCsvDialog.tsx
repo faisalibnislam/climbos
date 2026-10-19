@@ -11,16 +11,16 @@ import { errorMessage } from "../errors";
 const MAX_BYTES = 10 * 1024 * 1024;
 
 const COLUMNS: { name: string; required: boolean; help: string }[] = [
-  { name: "event_id", required: true, help: "Unique id for the payment (used to skip duplicates)" },
-  { name: "occurred_at", required: true, help: "Date and time, e.g. 2026-09-30T14:05:00Z" },
-  { name: "customer_id", required: false, help: "Your id for the customer" },
-  { name: "order_id", required: false, help: "Your order or invoice number" },
-  { name: "currency", required: true, help: "Three-letter code, e.g. USD" },
-  { name: "amount", required: true, help: "Amount charged, e.g. 49.00" },
-  { name: "refunded_amount", required: false, help: "Amount refunded so far, e.g. 0" },
-  { name: "utm_source", required: false, help: "Tracked link source, e.g. google" },
-  { name: "utm_medium", required: false, help: "Tracked link medium, e.g. cpc" },
-  { name: "utm_campaign", required: false, help: "Tracked link campaign name" },
+  { name: "event_id", required: true, help: "Unique; skips duplicates" },
+  { name: "occurred_at", required: true, help: "e.g. 2026-09-30T14:05:00Z" },
+  { name: "customer_id", required: false, help: "" },
+  { name: "order_id", required: false, help: "" },
+  { name: "currency", required: true, help: "e.g. USD" },
+  { name: "amount", required: true, help: "e.g. 49.00" },
+  { name: "refunded_amount", required: false, help: "e.g. 0" },
+  { name: "utm_source", required: false, help: "e.g. google" },
+  { name: "utm_medium", required: false, help: "e.g. cpc" },
+  { name: "utm_campaign", required: false, help: "" },
 ];
 
 const TEMPLATE =
@@ -58,7 +58,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("This file is larger than 10 MB. Split it into smaller files and upload them one at a time.");
+      setError("Over 10 MB. Split it and upload in parts.");
       return;
     }
     setBusy(true);
@@ -83,11 +83,11 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title="Upload a revenue file" description="Use this when your checkout isn't connected. You can upload new files at any time; rows you've already sent are skipped." className="max-w-2xl">
+      <DialogContent title="Upload revenue CSV" description="Rows already imported are skipped." className="max-w-2xl">
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div>
             <h3 className="heading-card">Columns</h3>
-            <p className="mt-0.5 text-ui text-ink-3">The first row must contain these column names. Columns marked required must be present.</p>
+            <p className="mt-0.5 text-ui text-ink-3">Row 1 = column names.</p>
             <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-ui sm:grid-cols-2">
               {COLUMNS.map((c) => (
                 <li key={c.name} className="flex flex-col">
@@ -95,7 +95,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
                     <code className="rounded-sm bg-surface-2 px-1 py-0.5 font-mono text-xs text-ink">{c.name}</code>{" "}
                     <span className={c.required ? "font-medium text-ink" : "text-ink-3"}>{c.required ? "required" : "optional"}</span>
                   </span>
-                  <span className="text-ink-3">{c.help}</span>
+                  {c.help ? <span className="text-ink-3">{c.help}</span> : null}
                 </li>
               ))}
             </ul>
@@ -105,7 +105,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
               className={buttonClasses({ variant: "link", className: "mt-3" })}
             >
               <Download aria-hidden="true" className="size-4" />
-              Download a template (CSV)
+              Template (CSV)
             </a>
           </div>
 
@@ -114,7 +114,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
               Revenue file
             </Label>
             <p id={hintId} className="text-xs text-ink-3">
-              A .csv file, up to 10 MB and 50,000 rows.
+              .csv · max 10 MB, 50,000 rows
             </p>
             <input
               id={inputId}
@@ -132,7 +132,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
 
           <div aria-live="polite" className="flex flex-col gap-3">
             {error ? (
-              <Callout tone="danger" live="none" title="We couldn't import this file">
+              <Callout tone="danger" live="none" title="Couldn't import">
                 {error}
               </Callout>
             ) : null}
@@ -143,10 +143,10 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
             ) : null}
             {result && !result.fatal ? (
               <Callout tone={result.errors.length ? "warning" : "success"} live="none" title={`Imported ${plural(result.imported, "new row")}`}>
-                {result.duplicates > 0 ? `${plural(result.duplicates, "row")} had already been imported and were skipped. ` : ""}
+                {result.duplicates > 0 ? `${plural(result.duplicates, "duplicate")} skipped. ` : ""}
                 {result.errors.length > 0
-                  ? `${plural(result.errors.length, "row")} had problems and were not imported — fix them and upload again.`
-                  : "Results will update in a moment."}
+                  ? `${plural(result.errors.length, "row")} not imported. Fix and re-upload.`
+                  : "Results update shortly."}
               </Callout>
             ) : null}
             {result && result.errors.length > 0 ? (
@@ -168,8 +168,8 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
                 {result ? "Done" : "Cancel"}
               </Button>
             </DialogClose>
-            <Button type="submit" loading={busy} loadingText="Checking rows…" disabled={!file}>
-              Check and import
+            <Button type="submit" loading={busy} loadingText="Checking…" disabled={!file}>
+              Import
             </Button>
           </DialogFooter>
         </form>

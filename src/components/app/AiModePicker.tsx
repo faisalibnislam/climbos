@@ -48,7 +48,7 @@ export function AiModeChoice({
   costs,
   value,
   onChange,
-  label = "How deep should the team go?",
+  label = "Depth",
   upgradeHref,
 }: {
   unlocked: boolean;
@@ -66,7 +66,7 @@ export function AiModeChoice({
         value={unlocked ? value : "basic"}
         onValueChange={(v) => onChange(v as AiMode)}
         options={[
-          { value: "basic", title: "Climb AI Basic", description: `Fast and low-cost. Good for most work.${cost("basic")}` },
+          { value: "basic", title: "Climb AI Basic", description: `Fast, low-cost.${cost("basic")}` },
           {
             value: "expert",
             disabled: !unlocked,
@@ -80,21 +80,19 @@ export function AiModeChoice({
                 ) : null}
               </span>
             ),
-            description: `Deeper analysis by a stronger model for plans, insights, ads and the weekly plan.${unlocked ? cost("expert") : ""}`,
+            description: `Deeper plans, insights and ads.${unlocked ? cost("expert") : ""}`,
           },
         ]}
       />
       {!unlocked ? (
         <p className="text-xs text-ink-3">
-          Expert unlocks with a paid plan.
           {upgradeHref ? (
-            <>
-              {" "}
-              <Link href={upgradeHref} className="font-medium text-brand-800 hover:underline">
-                See plans
-              </Link>
-            </>
-          ) : null}
+            <Link href={upgradeHref} className="font-medium text-brand-800 hover:underline">
+              Unlock Expert
+            </Link>
+          ) : (
+            "Expert needs a paid plan."
+          )}
         </p>
       ) : null}
     </fieldset>

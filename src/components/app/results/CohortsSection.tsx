@@ -4,6 +4,8 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
+import { Repeat2 } from "@/components/icons";
+import { Scannable } from "@/components/ds/content";
 import { Callout, Table, TableFrame, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { cn, formatNumber } from "@/lib/utils";
 import { formatPercent } from "./format";
@@ -75,32 +77,31 @@ export function CohortsSection({ slug }: { slug: string }) {
 
   return (
     <section aria-labelledby="cohorts-heading" className="flex flex-col gap-4">
-      <div>
-        <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
-          Do customers keep paying? <ValueKind kind="observed" />
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-3">Customers grouped by the month they first paid, and how many paid again in each month after.</p>
-      </div>
+      <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
+        <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Retention <ValueKind kind="observed" />
+      </h2>
       {data === undefined ? (
         <LoadingBlock label="Loading customer cohorts…" lines={3} />
       ) : data.rows.length === 0 ? (
-        <Callout tone="info" title={data.hasCustomerIds ? "No paying customers in the last year yet" : "No customer-level billing data yet"}>
-          Cohorts need payments that name the customer, from Stripe or a revenue file with a customer column.{" "}
-          <Link href={`/app/${slug}/connections`}>Connect billing data</Link>.
+        <Callout tone="info" title={data.hasCustomerIds ? "No paying customers this year" : "No customer-level billing data"}>
+          Needs payments with customer IDs. <Link href={`/app/${slug}/connections`}>Connect billing</Link>
         </Callout>
       ) : (
         <>
           {latestFull ? (
             <p className="text-sm text-ink">
-              Of the {formatNumber(latestFull.size)} customers who first paid in {monthLabel(latestFull.cohort)},{" "}
-              <strong className="font-semibold">{formatPercent(latestFull.retention[1] ?? 0, 0)}</strong> paid again the next month.
+              <strong className="font-semibold">{formatPercent(latestFull.retention[1] ?? 0, 0)}</strong> of {monthLabel(latestFull.cohort)}&apos;s{" "}
+              {formatNumber(latestFull.size)} customers paid again next month.
             </p>
           ) : null}
           <CohortTable data={data} />
           <Definition>
-            A customer belongs to the month of their first payment in {data.currency}. Each later column shows the share of that group with at least one payment that
-            month, after refunds. A dot means that month isn&apos;t over yet, so newer groups never look like they left.
-            {data.truncated ? " Only the most recent 10,000 payments are included." : ""}
+            <Scannable
+              shape="bullets"
+              max={4}
+              tone="muted"
+              text={`Grouped by first payment month (${data.currency}). Each column: share who paid that month, after refunds. A dot means the month isn't over.${data.truncated ? " Latest 10,000 payments only." : ""}`}
+            />
           </Definition>
         </>
       )}

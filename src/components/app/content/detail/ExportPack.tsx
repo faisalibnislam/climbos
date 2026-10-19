@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import { Check, Copy, Download, TriangleAlert } from "@/components/icons"
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, Skeleton, SocialIcon, buttonClasses, toast } from "@/components/ui";
-import { ErrorCallout } from "../shared";
+import { ErrorCallout, MessageText } from "../shared";
 import type { ArtifactView } from "./model";
 
 function CopyButton({ text, label }: { text: string; label: string }) {
@@ -31,7 +31,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       <span role="status" className="sr-only">
         {state === "copied" ? `${label}: copied to clipboard.` : ""}
       </span>
-      {state === "failed" ? <span className="text-ui font-medium text-red-800">Couldn&apos;t copy. Select the text and copy it manually.</span> : null}
+      {state === "failed" ? <span className="text-ui font-medium text-red-800">Couldn&apos;t copy. Copy manually.</span> : null}
     </span>
   );
 }
@@ -54,7 +54,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
       </div>
     );
   }
-  if (data === null) return <p className="text-sm text-ink-3">There&apos;s no text to export yet.</p>;
+  if (data === null) return <p className="text-sm text-ink-3">Nothing to export yet.</p>;
 
   const download = () => {
     const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8" });
@@ -73,8 +73,8 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
       <h3 id="export-heading" className="heading-card">
         Export pack
       </h3>
-      <p className="text-sm text-ink-2">{data.pack.notice}</p>
-      {data.badge ? <p className="text-xs text-ink-3">Free exports include “{data.badge}”. Packages remove it.</p> : null}
+      <MessageText text={data.pack.notice} className="text-sm text-ink-2" />
+      {data.badge ? <p className="text-xs text-ink-3">Includes “{data.badge}” on free plan.</p> : null}
       <ul className="flex flex-col gap-4">
         {data.pack.items.map((it) => (
           <li key={it.platform} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-3">
@@ -84,12 +84,12 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
                 {it.platformLabel}
               </span>
               <Badge tone={it.withinLimit ? "green" : "red"} icon={it.withinLimit ? <Check /> : <TriangleAlert />}>
-                {it.charCount.toLocaleString("en-US")} / {it.limit.toLocaleString("en-US")} characters{it.withinLimit ? "" : " — too long"}
+                {it.charCount.toLocaleString("en-US")} / {it.limit.toLocaleString("en-US")} {it.withinLimit ? "" : " · too long"}
               </Badge>
             </div>
             {it.title ? <p className="text-sm font-medium text-ink">Title: {it.title}</p> : null}
             <p className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-line bg-surface p-3 text-sm text-ink">{it.text}</p>
-            {it.altText ? <p className="break-words text-sm text-ink-2">Image description: {it.altText}</p> : null}
+            {it.altText ? <p className="break-words text-sm text-ink-2">Alt text: {it.altText}</p> : null}
             {it.warnings.length > 0 ? (
               <ul className="flex flex-col gap-1 text-sm text-amber-800">
                 {it.warnings.map((w) => (
@@ -102,10 +102,10 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
             ) : null}
             <div className="flex flex-wrap gap-2">
               <CopyButton text={it.text} label={`Copy ${it.platformLabel} text`} />
-              {it.altText ? <CopyButton text={it.altText} label="Copy image description" /> : null}
+              {it.altText ? <CopyButton text={it.altText} label="Copy alt text" /> : null}
               {it.mediaUrls.map((u, i) => (
                 <a key={u} href={u} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "link", className: "h-9! text-ui" })}>
-                  Open image{it.mediaUrls.length > 1 ? ` ${i + 1}` : ""} (AI-generated illustration)
+                  Open image{it.mediaUrls.length > 1 ? ` ${i + 1}` : ""} (AI)
                 </a>
               ))}
             </div>
@@ -120,7 +120,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
           <ConfirmDialog
             trigger={<Button>Mark as exported</Button>}
             title="Mark as exported?"
-            description="This records that you copied or downloaded it to post yourself. ClimbOS can't see whether it was actually posted, so it will show “Exported for manual posting”, not “Accepted by platform”."
+            description="Records that you'll post it yourself. ClimbOS can't confirm it was posted."
             confirmLabel="Mark as exported"
             onConfirm={async () => {
               setError(null);
@@ -135,7 +135,7 @@ export function ExportPackPanel({ slug, artifact }: { slug: string; artifact: Ar
         ) : null}
       </div>
       {artifact.status === "exported" ? (
-        <Callout tone="info">Already marked as exported. You can copy it again any time.</Callout>
+        <Callout tone="info">Marked as exported.</Callout>
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}
     </section>

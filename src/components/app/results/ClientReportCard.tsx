@@ -34,7 +34,7 @@ export function ClientReportCard({ slug }: { slug: string }) {
     <Card>
       <CardContent className="flex flex-col gap-3">
         <p className="heading-card">Share with a client</p>
-        <p className="text-sm text-ink-3">A read-only results page in your agency&apos;s name. Outcomes only: no credits, drafts or settings. {b.whiteLabel ? "No ClimbOS branding." : "Packages remove the “Powered by ClimbOS” line."}</p>
+        <p className="text-xs text-ink-3">Read-only outcomes. No credits, drafts or settings.</p>
         {canShare ? (
         <>
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end">
@@ -49,16 +49,16 @@ export function ClientReportCard({ slug }: { slug: string }) {
         <div className="flex flex-wrap gap-2">
           {form ? (
             <Button variant="secondary" onClick={() => run(async () => { await save({ slug, brandName: f.name, brandColor: f.color, brandLogoUrl: f.logo }); setForm(null); }, "Branding saved")}>
-              Save branding
+              Save
             </Button>
           ) : null}
           <Button onClick={() => run(async () => copy(await create({ slug })))}>
-            <Link2 aria-hidden /> Create report link
+            <Link2 aria-hidden /> Create link
           </Button>
         </div>
         </>
         ) : (
-          <p className="text-xs text-ink-3">Sharing reports needs {PERMISSION_WHO.manage_team}.</p>
+          <p className="text-xs text-ink-3">Needs {PERMISSION_WHO.manage_team}.</p>
         )}
         {b.links.length ? (
           <ul className="flex flex-col divide-y divide-line text-sm">

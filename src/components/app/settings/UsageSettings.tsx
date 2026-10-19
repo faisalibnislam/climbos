@@ -30,21 +30,20 @@ export function UsageSettings({ slug }: { slug: string }) {
     <div className="flex flex-col gap-6">
       <SettingsHeader
         title="Usage details"
-        intro="The advanced view: which AI roles and models did the work in the last 31 days, with token counts and ClimbOS's own provider cost."
+        intro="Last 31 days"
       />
       <Callout tone="info">
-        Looking for how much of your plan is left? That&apos;s on <Link href={`/app/${slug}/settings/billing`}>Billing</Link>, shown as simple meters. The costs below
-        are what ClimbOS pays its AI providers — they are not extra charges to you.
+        Our provider costs, not extra charges. Credits left: <Link href={`/app/${slug}/settings/billing`}>Billing</Link>.
       </Callout>
       {data === undefined ? (
         <LoadingBlock label="Loading usage…" />
       ) : data === null ? (
-        <Callout tone="warning">Usage couldn&apos;t load. Refresh to try again.</Callout>
+        <Callout tone="warning">Usage didn&apos;t load. Refresh.</Callout>
       ) : (
         <>
           <StatGroup className="lg:grid-cols-3">
-            <Stat label="Credits used (last 31 days)" value={microsToCreditsLabel(data.totalCostMicros)} sublabel="Measured from each job" />
-            <Stat label="Recorded events" value={formatNumber(data.events)} sublabel="Model calls, searches, images and page reads" />
+            <Stat label="Credits used" value={microsToCreditsLabel(data.totalCostMicros)} />
+            <Stat label="Events" value={formatNumber(data.events)} />
             <Stat label="AI roles used" value={formatNumber(data.byRole.length)} />
           </StatGroup>
           <section aria-labelledby="by-role" className="flex flex-col gap-3">
@@ -56,7 +55,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               hideCaption
               rows={[...data.byRole].sort((a, b) => b.costMicros - a.costMicros)}
               rowKey={(r) => r.role}
-              emptyText="No AI work recorded in the last 31 days."
+              emptyText="None yet"
               columns={[
                 { key: "role", header: "Role", rowHeader: true, cell: (r) => (r.role === "system" ? "ClimbOS system" : roleTitle(r.role)), sortValue: (r) => r.role },
                 { key: "calls", header: "Model calls", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
@@ -75,7 +74,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               hideCaption
               rows={[...data.byModel].sort((a, b) => b.costMicros - a.costMicros)}
               rowKey={(r) => r.model}
-              emptyText="No usage recorded in the last 31 days."
+              emptyText="None yet"
               columns={[
                 { key: "model", header: "Model or service", rowHeader: true, cell: (r) => <span className="font-mono text-ui">{r.model}</span>, sortValue: (r) => r.model },
                 { key: "calls", header: "Events", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
@@ -83,9 +82,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               ]}
             />
           </section>
-          <p className="text-sm text-ink-3">
-            Tokens are the units AI models read and write — roughly ¾ of a word each. Input tokens are what ClimbOS sends; output tokens are what the model writes back.
-          </p>
+          <p className="text-sm text-ink-3">1 token ≈ ¾ word</p>
         </>
       )}
     </div>

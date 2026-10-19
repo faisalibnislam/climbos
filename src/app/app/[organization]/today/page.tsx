@@ -24,13 +24,14 @@ import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, Empty
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
-import { CHANNEL_LABELS, ROLE_META, roleTitle } from "@/components/app/roles";
+import { CHANNEL_LABELS } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
 import { ASK_KEY } from "@/components/app/CommandPalette";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { WishFeed } from "@/components/app/wish/WishFeed";
+import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
@@ -42,7 +43,7 @@ const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
 };
 
 
-function StatCard({ icon: Icon, tone, label, value, hint }: { icon: LucideIcon; tone: Tone; label: string; value: string | number; hint: string }) {
+function StatCard({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: Tone; label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-line bg-surface p-4">
       <div className="flex items-center justify-between">
@@ -50,7 +51,6 @@ function StatCard({ icon: Icon, tone, label, value, hint }: { icon: LucideIcon; 
         <IconTile icon={Icon} tone={tone} size="xs" />
       </div>
       <p className="metric mt-1">{value}</p>
-      <p className="mt-0.5 text-xs text-ink-3">{hint}</p>
     </div>
   );
 }
@@ -122,7 +122,6 @@ export default function TodayPage() {
             {firstName ? `, ${firstName}` : ""}
           </>
         }
-        intro={<>Here’s what your AI growth team is working on{data.org.name ? ` for ${data.org.name.replace(/ \(demo\)$/i, "")}` : ""}.</>}
       />
 
       {!data.canRunAi && data.accessMessage && (
@@ -143,7 +142,7 @@ export default function TodayPage() {
 
       {data.org.kind === "customer" && data.org.onboardingStep !== "done" && (data.role === "owner" || data.role === "admin") && (
         <Callout tone="info" title="Finish setting up" action={<Button asChild size="sm"><Link href={`/onboarding?workspace=${slug}`}>Continue setup</Link></Button>}>
-          A couple of steps are left before your team can plan properly.
+          A few steps left.
         </Callout>
       )}
 
@@ -162,13 +161,12 @@ export default function TodayPage() {
           <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
             <div className="px-5 pt-5">
               <h2 id="next-heading" className="heading-section flex items-center gap-2">
-                Do these next {data.next.length ? <Badge tone="brand">{data.next.length} to do</Badge> : null}
+                Do these next {data.next.length ? <Badge tone="brand">{data.next.length}</Badge> : null}
               </h2>
-              <p className="mt-0.5 text-sm text-ink-3">Your team lines these up. Nothing goes live until you approve it.</p>
             </div>
             {data.next.length === 0 ? (
               <div className="p-5">
-                <EmptyState icon={<CheckCircle2 aria-hidden />} title="You're all caught up" body="Nothing needs you right now. Make a wish above, or check Results." />
+                <EmptyState icon={<CheckCircle2 aria-hidden />} title="All caught up" />
               </div>
             ) : (
               <ol className="mt-3 divide-y divide-line border-t border-line">
@@ -178,10 +176,12 @@ export default function TodayPage() {
                     <li key={`${n.kind}-${i}`}>
                       <Link href={n.href} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
                         <IconTile icon={v.icon} tone={v.tone} size="sm" />
-                        <p className="min-w-0 flex-1 text-sm text-ink-3">
-                          <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
-                          <span className="font-medium text-ink">{n.title}</span> {n.why}
-                        </p>
+                        <Tooltip content={n.why}>
+                          <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                            <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
+                            {n.title}
+                          </p>
+                        </Tooltip>
                         <ArrowRight aria-hidden className="size-4 shrink-0 text-ink-3" />
                       </Link>
                     </li>
@@ -193,7 +193,7 @@ export default function TodayPage() {
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="rounded-xl border border-line bg-surface">
               <h2 id="suggested-heading" className="heading-section px-5 pt-4">
-                Ideas from your plan
+                Ideas
               </h2>
               <ul className="mt-2 divide-y divide-line border-t border-line">
                 {suggested.map((c) => (
@@ -213,7 +213,7 @@ export default function TodayPage() {
               <IconTile icon={Target} tone="brand" size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-overline">Your goal</p>
-                <p className="heading-card mt-0.5">{data.goal ? data.goal.statement : "No goal yet. Tell your team what you'd like to achieve."}</p>
+                <p className="heading-card mt-0.5">{data.goal ? data.goal.statement : "No goal yet"}</p>
                 {data.goal ? (
                   <p className="mt-2 flex flex-wrap gap-1.5">
                     <Badge tone="neutral">{data.goal.horizonDays} days</Badge>
@@ -242,9 +242,9 @@ export default function TodayPage() {
 
       {/* At a glance */}
       <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-3">
-        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} hint="Nothing goes live without you" />
-        <StatCard icon={Zap} tone="blue" label="Working now" value={running} hint={running ? "Jobs in progress" : "Your team is ready"} />
-        <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} hint="Finished jobs" />
+        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} />
+        <StatCard icon={Zap} tone="blue" label="Working now" value={running} />
+        <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} />
       </section>
       <AttentionStrip slug={slug} />
 
@@ -264,15 +264,13 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
   return (
     <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-ink">{card.title}</p>
+        <Tooltip content={card.description || card.proposedEffect}>
+          <p tabIndex={0} className="truncate text-sm font-medium text-ink">{card.title}</p>
+        </Tooltip>
         {status === "running" && card.runId ? (
           <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
         ) : (
-          <Tooltip content={card.proposedEffect}>
-            <p tabIndex={0} className="truncate text-xs text-ink-3">
-              {card.blockedReason && (status === "proposed" || status === "blocked") ? card.blockedReason : card.description}
-            </p>
-          </Tooltip>
+          card.blockedReason && (status === "proposed" || status === "blocked") ? <p className="truncate text-xs text-ink-3">{card.blockedReason}</p> : null
         )}
         {status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
       </div>
@@ -294,7 +292,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         ) : status === "failed" ? (
           card.runId ? (
             <Button asChild size="sm" variant="secondary">
-              <Link href={`/app/${slug}/work/${card.runId}`}>Didn’t finish: see why</Link>
+              <Link href={`/app/${slug}/work/${card.runId}`}>See why</Link>
             </Button>
           ) : (
             <Badge tone="red">Didn’t finish</Badge>
@@ -335,7 +333,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
     <section aria-labelledby="approvals-heading">
       <div className="flex items-center justify-between">
         <h2 id="approvals-heading" className="heading-section">Waiting for you</h2>
-        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount} to review</Badge>}
+        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount}</Badge>}
       </div>
       <Card className="mt-4">
         <CardContent className="p-0">
@@ -344,13 +342,13 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
               <RoleAvatar role="ceo" size="md" />
               <span className="flex-1">
                 <span className="block text-sm font-medium text-ink">Growth plan v{data.strategy.version}</span>
-                <span className="block text-xs text-ink-3">{roleTitle("ceo")} · needs your approval</span>
+                <span className="block text-xs text-ink-3">Needs approval</span>
               </span>
               <ArrowRight className="size-4 text-ink-3" aria-hidden />
             </Link>
           )}
           {data.approvals.length === 0 && data.strategy?.status !== "needs_approval" ? (
-            <p className="p-5 text-sm text-ink-2">Nothing waiting. New drafts will show up here before anything goes live.</p>
+            <p className="p-5 text-sm text-ink-3">Nothing waiting.</p>
           ) : (
             <ul>
               {data.approvals.map((a) => (
@@ -363,7 +361,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
                       </Tooltip>
                       <span className="flex flex-wrap items-center gap-x-1 text-xs text-ink-3">
                         <SocialIcon network={a.channel} size="xs" />
-                        {CHANNEL_LABELS[a.channel] ?? a.channel} · {roleTitle(a.createdByRole)} · {relativeTime(a.updatedAt)}
+                        {CHANNEL_LABELS[a.channel] ?? a.channel} · {relativeTime(a.updatedAt)}
                       </span>
                     </span>
                     <ArrowRight className="size-4 shrink-0 text-ink-3" aria-hidden />
@@ -383,7 +381,7 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
     <section aria-labelledby="recent-heading">
       <h2 id="recent-heading" className="heading-section">Latest work</h2>
       {data.recent.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-2">No work yet. Ask for something above to get started.</p>
+        <p className="mt-3 text-sm text-ink-3">No work yet.</p>
       ) : (
         <Card className="mt-4">
           <CardHeader className="sr-only">
@@ -396,16 +394,16 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
                 return (
                   <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />
-                    <span className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
                       <Link href={`/app/${slug}/work/${r.id}`} className="block text-sm font-medium text-ink after:absolute after:inset-0">
                         {r.title}
                       </Link>
                       <span className="block text-xs text-ink-3">
-                        {r.roles.map((x) => ROLE_META[x]?.short).join(", ")} · {relativeTime(r.createdAt)}
+                        {relativeTime(r.createdAt)}
                         {r.isFixture ? " · demo" : ""}
                       </span>
-                      {r.userMessage && r.status !== "verified" && <span className="mt-1 block text-ui text-ink-2">{r.userMessage}</span>}
-                    </span>
+                      {r.userMessage && r.status !== "verified" ? <Prose text={r.userMessage} max={1} tone="muted" className="relative z-10 mt-1 text-ui" /> : null}
+                    </div>
                     <Badge tone={s.tone}>{s.label}</Badge>
                   </li>
                 );

@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { Badge, Button, ConfirmDialog, Field, Input, toast } from "@/components/ui";
+import { StatBlocks } from "@/components/ds/content";
 import { microsToUsd } from "../money";
 import { opsError, OpsSection, type Dashboard } from "./opsShared";
 
@@ -32,7 +33,7 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
             <div>
               <ConfirmDialog
                 title="Resume the fleet?"
-                description="Scheduled and queued customer work will start running again straight away, within each workspace's own pause and approval rules."
+                description="Scheduled and queued customer work starts again straight away."
                 confirmLabel="Resume all customer work"
                 onConfirm={async () => {
                   try {
@@ -43,7 +44,9 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
                   }
                 }}
                 trigger={<Button>Resume fleet</Button>}
-              />
+              >
+                <p className="text-sm text-ink-2">Each workspace&apos;s own pause and approval rules still apply.</p>
+              </ConfirmDialog>
             </div>
           </>
         ) : (
@@ -72,7 +75,7 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
           onOpenChange={setStopOpen}
           tone="danger"
           title="Stop all customer work?"
-          description="Every workspace stops publishing, ad changes, emails and AI runs immediately. Runs already sent to a provider can't be recalled. Customers see a paused notice."
+          description="Every workspace stops immediately."
           confirmLabel="Stop all customer work"
           onConfirm={async () => {
             try {
@@ -83,12 +86,28 @@ export function FleetControls({ fleet }: { fleet: Dashboard["fleet"] }) {
               toast({ tone: "danger", title: "Couldn't stop the fleet", description: opsError(err) });
             }
           }}
-        />
+        >
+          <dl className="grid gap-2 text-sm">
+            <div>
+              <dt className="font-medium text-ink">Stops</dt>
+              <dd className="text-ink-2">Publishing, ad changes, emails and AI runs</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-red-800">Can&apos;t be recalled</dt>
+              <dd className="text-ink-2">Runs already sent to a provider</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Customers see</dt>
+              <dd className="text-ink-2">A paused notice</dd>
+            </div>
+          </dl>
+        </ConfirmDialog>
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-line p-4">
         <h3 className="heading-card">Preview budget</h3>
-        <p className="text-ui text-ink-2">Daily spend cap for anonymous website previews. Currently {microsToUsd(fleet.previewDailyBudgetMicros)} per day.</p>
+        <p className="text-ui text-ink-2">Daily spend cap for anonymous website previews.</p>
+        <StatBlocks className="max-w-sm" stats={[{ label: "Current cap", value: `${microsToUsd(fleet.previewDailyBudgetMicros)} / day`, tone: fleet.previewDailyBudgetMicros === 0 ? "warn" : "default", hint: fleet.previewDailyBudgetMicros === 0 ? "Previews off" : undefined }]} />
         <form
           className="grid gap-3 sm:grid-cols-[14rem_auto] sm:items-end"
           onSubmit={(e) => {

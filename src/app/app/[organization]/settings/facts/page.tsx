@@ -10,11 +10,21 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
-import { Badge, Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
+import { Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
 import { PERMISSION_WHO, useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 
 const CATEGORIES = ["product", "pricing", "offer", "audience", "proof", "brand", "competitor", "other"] as const;
+const CATEGORY_LABEL: Record<(typeof CATEGORIES)[number], string> = {
+  product: "Product",
+  pricing: "Pricing",
+  offer: "Offer",
+  audience: "Customers",
+  proof: "Proof",
+  brand: "Brand",
+  competitor: "Competitor",
+  other: "Other",
+};
 
 /** What your team knows about the business. Weekly site checks propose updates here. */
 export default function FactsPage() {
@@ -38,11 +48,10 @@ export default function FactsPage() {
     <div className="flex flex-col gap-6">
       <SettingsHeader
         title="Business facts"
-        intro="What your team uses in every plan, post, page and chat answer. We re-read your website weekly and suggest updates."
         actions={
           data.website && canEdit ? (
             <Button size="sm" variant="secondary" onClick={() => run(() => checkNow({ slug }), "Checking your site")}>
-              <RefreshCw aria-hidden /> Check site now
+              <RefreshCw aria-hidden /> Check site
             </Button>
           ) : null
         }
@@ -51,12 +60,25 @@ export default function FactsPage() {
       {pending.length ? (
         <Card>
           <CardContent className="flex flex-col gap-2">
-            <p className="heading-card">To confirm ({pending.length})</p>
+            <h2 className="heading-card">To confirm ({pending.length})</h2>
             {pending.map((f) => (
               <div key={f.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-ink">{f.statement}</p>
-                  {f.replaces ? <p className="text-xs text-ink-3">Replaces: {statementOf(f.replaces) ?? "an older fact"}</p> : null}
+                  {f.replaces ? (
+                    // An update: old and new side by side.
+                    <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                      <div className="rounded-lg bg-surface-2 px-3 py-2">
+                        <dt className="text-xs text-ink-3">Was</dt>
+                        <dd className="text-ink-2 line-through decoration-ink-3/50">{statementOf(f.replaces) ?? "an older fact"}</dd>
+                      </div>
+                      <div className="rounded-lg border border-line px-3 py-2">
+                        <dt className="text-xs text-ink-3">Now</dt>
+                        <dd className="text-ink">{f.statement}</dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="text-sm text-ink">{f.statement}</p>
+                  )}
                 </div>
                 {canEdit ? <div className="flex gap-1">
                   <Button size="sm" onClick={() => run(() => confirmUpdate({ slug, factId: f.id }), "Confirmed")}>
@@ -73,34 +95,41 @@ export default function FactsPage() {
       ) : null}
       <Card>
         <CardContent className="flex flex-col gap-2">
-          <p className="heading-card">Known facts ({known.length})</p>
-          {known.map((f) =>
-            editing?.id === f.id ? (
-              <div key={f.id} className="flex gap-2">
-                <Input value={editing.text} aria-label="Fact" onChange={(e) => setEditing({ ...editing, text: e.target.value })} />
-                <Button size="sm" onClick={() => run(async () => { await review({ slug, factId: f.id, action: "edit", statement: editing.text }); setEditing(null); }, "Saved")}>
-                  Save
-                </Button>
-              </div>
-            ) : (
-              <div key={f.id} className="flex items-start justify-between gap-2 text-sm">
-                <span className="min-w-0 text-ink-2">
-                  <Badge tone="neutral">{f.category}</Badge> {f.statement}
-                </span>
-                {canEdit ? <span className="flex shrink-0 gap-1">
-                  <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
-                    <Pencil aria-hidden />
-                  </Button>
-                  <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
-                    <X aria-hidden />
-                  </Button>
-                </span> : null}
-              </div>
-            ),
-          )}
+          <h2 className="heading-card">Known facts ({known.length})</h2>
+          {CATEGORIES.map((cat) => [cat, known.filter((f) => ((CATEGORIES as readonly string[]).includes(f.category) ? f.category : "other") === cat)] as const)
+            .filter(([, list]) => list.length)
+            .map(([cat, list]) => (
+              <section key={cat} aria-label={`${CATEGORY_LABEL[cat]} facts`} className="flex flex-col gap-1.5 border-t border-line pt-2 first-of-type:border-0 first-of-type:pt-0">
+                <h3 className="text-xs font-medium text-ink-3">
+                  {CATEGORY_LABEL[cat]} <span className="tabular-nums">{list.length}</span>
+                </h3>
+                {list.map((f) =>
+                  editing?.id === f.id ? (
+                    <div key={f.id} className="flex gap-2">
+                      <Input value={editing.text} aria-label="Fact" onChange={(e) => setEditing({ ...editing, text: e.target.value })} />
+                      <Button size="sm" onClick={() => run(async () => { await review({ slug, factId: f.id, action: "edit", statement: editing.text }); setEditing(null); }, "Saved")}>
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div key={f.id} className="flex items-start justify-between gap-2 text-sm">
+                      <span className="min-w-0 text-ink-2">{f.statement}</span>
+                      {canEdit ? <span className="flex shrink-0 gap-1">
+                        <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
+                          <Pencil aria-hidden />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
+                          <X aria-hidden />
+                        </Button>
+                      </span> : null}
+                    </div>
+                  ),
+                )}
+              </section>
+            ))}
           {canEdit ? <div className="mt-2 grid gap-2 border-t border-line pt-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
-            <Select options={CATEGORIES.map((c) => ({ value: c, label: c }))} value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v as (typeof CATEGORIES)[number] })} aria-label="Category" />
-            <Input value={draft.statement} placeholder="Add a fact (e.g. “Free plan: 3 forms, 100 responses a month”)" aria-label="New fact" onChange={(e) => setDraft({ ...draft, statement: e.target.value })} />
+            <Select options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))} value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v as (typeof CATEGORIES)[number] })} aria-label="Category" />
+            <Input value={draft.statement} placeholder="Add a fact" aria-label="New fact" onChange={(e) => setDraft({ ...draft, statement: e.target.value })} />
             <Button disabled={!draft.statement.trim()} onClick={() => run(async () => { await addFact({ slug, ...draft }); setDraft({ ...draft, statement: "" }); }, "Added")}>
               Add
             </Button>

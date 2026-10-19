@@ -7,8 +7,9 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
+import { Scannable, toBullets } from "@/components/ds/content";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Button, Card, CardContent, EmptyState, Input, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, EmptyState, Input, toast } from "@/components/ui";
 
 /** Competitor watch: their sites, checked weekly; only real changes reach you. */
 export default function CompetitorsPage() {
@@ -37,11 +38,11 @@ export default function CompetitorsPage() {
       <PageHeader
         section="competitors"
         title="Competitors"
-        intro={`We read their homepage and pricing every Monday and tell you only what really changed (prices, offers, new features). Watching ${data.watches.length} of ${data.limit}.`}
+        intro={`${data.watches.length} of ${data.limit} · checked Mondays`}
         actions={
           data.watches.length ? (
             <Button size="sm" variant="secondary" loading={busy === "check"} onClick={() => run("check", () => checkNow({ slug }), "Checking now")}>
-              <RefreshCw aria-hidden /> Check now
+              <RefreshCw aria-hidden /> Check
             </Button>
           ) : null
         }
@@ -54,9 +55,8 @@ export default function CompetitorsPage() {
                 <li key={w.id} className="flex items-center justify-between gap-3 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{w.name}</p>
-                    <p className="truncate text-xs text-ink-3">
-                      {w.url.replace(/^https?:\/\//, "")} · {w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "First read in progress"}
-                    </p>
+                    <p className="truncate text-xs text-ink-3">{w.url.replace(/^https?:\/\//, "")}</p>
+                    <p className={w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
                   </div>
                   <Button size="sm" variant="ghost" aria-label={`Stop watching ${w.name}`} onClick={() => run("rm", () => remove({ slug, id: w.id }))}>
                     <Trash2 aria-hidden />
@@ -67,7 +67,7 @@ export default function CompetitorsPage() {
           ) : null}
           {data.suggested.length && !full ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink-3">From your research:</span>
+              <span className="text-xs text-ink-3">Suggested:</span>
               {data.suggested.map((s) => (
                 <Button key={s.url} size="sm" variant="secondary" loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
                   <Plus aria-hidden /> {s.name}
@@ -91,30 +91,28 @@ export default function CompetitorsPage() {
               <Eye aria-hidden /> Watch
             </Button>
           </form>
-          {full && data.limit === 1 ? <p className="text-xs text-ink-3">Packages watch up to 5 competitors.</p> : null}
+          {full && data.limit === 1 ? <p className="text-xs text-ink-3">Packages watch up to 5.</p> : null}
         </CardContent>
       </Card>
       {data.changes.length === 0 ? (
-        <EmptyState icon={<Eye />} title="No changes yet" body="The first read sets a baseline. You'll hear from us when prices, offers or features change." />
+        <EmptyState icon={<Eye />} title="No changes yet" body="Price and offer changes show here." />
       ) : (
         <ul className="flex flex-col gap-3">
           {data.changes.map((c) => (
             <li key={c.id}>
               <Card>
                 <CardContent className="flex flex-col gap-2">
-                  <p className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-ink">{c.name}</span>
-                    <span className="text-xs text-ink-3">{relativeTime(c.at)}</span>
-                  </p>
-                  <p className="text-sm text-ink-2">{c.summary}</p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h2 className="text-sm font-semibold text-ink">{c.name}</h2>
+                    <span className="shrink-0 text-xs text-ink-3">{relativeTime(c.at)}</span>
+                  </div>
+                  {c.bullets.length || toBullets(c.summary).length < 2 ? <p className="max-w-[70ch] text-sm font-medium leading-relaxed text-ink">{c.summary}</p> : null}
                   {c.bullets.length ? (
-                    <ul className="list-disc space-y-0.5 pl-5 text-sm text-ink-2">
-                      {c.bullets.map((b, i) => (
-                        <li key={i}>{b}</li>
-                      ))}
-                    </ul>
+                    <Scannable text={c.bullets.map((b) => `- ${b}`).join("\n")} shape="bullets" max={3} tone="muted" />
+                  ) : toBullets(c.summary).length > 1 ? (
+                    <Scannable text={c.summary} max={3} tone="muted" />
                   ) : null}
-                  {c.soWhat ? <p className="rounded-lg bg-brand-50 p-2 text-sm text-brand-900">{c.soWhat}</p> : null}
+                  {c.soWhat ? <Callout tone="info">{c.soWhat}</Callout> : null}
                 </CardContent>
               </Card>
             </li>

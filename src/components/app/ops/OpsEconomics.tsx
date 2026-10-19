@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import { CircleAlert, CircleCheck, Download } from "@/components/icons"
 import { useEffect, useState } from "react";
 import { Badge, Button, DataTable, Field, Select, monthOptions } from "@/components/ui";
+import { Scannable, StatBlocks } from "@/components/ds/content";
 import { formatUsd } from "@/lib/utils";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { OpsSection } from "./opsShared";
@@ -125,7 +126,7 @@ export function ReconciliationSection() {
         <p className="text-ui text-ink-2">Couldn&apos;t load this month. {result?.error}</p>
       ) : (
         <>
-          <p className="text-ui text-ink-2">{data.note}</p>
+          <Scannable text={data.note} tone="muted" max={3} />
           <DataTable
             caption={`Realized variable margin by plan, ${data.month}`}
             rows={data.plans}
@@ -139,9 +140,7 @@ export function ReconciliationSection() {
               { key: "margin", header: "Variable margin", align: "right", cell: (r) => pct(r.variableMargin) },
             ]}
           />
-          <p className="text-ui text-ink-2">
-            Unresolved reservations held: <strong className="font-semibold text-ink">{usd(data.unresolvedReservationsUsd)}</strong>
-          </p>
+          <StatBlocks className="max-w-sm" stats={[{ label: "Unresolved reservations held", value: usd(data.unresolvedReservationsUsd), tone: data.unresolvedReservationsUsd > 0 ? "warn" : "default" }]} />
         </>
       )}
     </OpsSection>

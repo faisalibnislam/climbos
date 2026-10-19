@@ -24,7 +24,7 @@ export function LowCreditBanner({ slug }: { slug: string }) {
   return (
     <div role="status" className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 sm:px-6">
       <span>
-        {out ? "You're out of credits." : `${c.available} credits left.`}{" "}
+        {out ? "Out of credits." : `${c.available} credits left.`}{" "}
         <Link href={`/app/${slug}/settings/billing`} className="font-semibold underline underline-offset-2">
           {c.paid ? "Top up" : "Upgrade"}
         </Link>

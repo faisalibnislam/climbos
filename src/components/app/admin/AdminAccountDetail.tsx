@@ -48,9 +48,22 @@ export function AdminAccountDetail({ accountId, me }: { accountId: Id<"accounts"
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <WorkspaceActions orgId={w.id} slug={w.slug} me={me} suspended={w.suspended} cap={w.monthlyCreditCap} />
-            <p className="text-sm text-ink-2">
-              People: {w.people.map((p) => `${p.email ?? "?"} (${p.role}${p.status === "invited" ? ", invited" : ""})`).join(" · ") || "—"}
-            </p>
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-xs font-medium text-ink-3">People ({w.people.length})</h3>
+              {w.people.length ? (
+                <ul className="flex flex-wrap gap-1.5 text-sm">
+                  {w.people.map((p, i) => (
+                    <li key={`${p.email ?? "?"}-${i}`} className="inline-flex items-center gap-1.5 rounded-[var(--radius-badge)] bg-surface-2 px-2 py-0.5">
+                      <span className="text-ink">{p.email ?? "?"}</span>
+                      <span className="text-ink-3">{p.role}</span>
+                      {p.status === "invited" ? <Badge tone="amber">Invited</Badge> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-3">—</p>
+              )}
+            </div>
             <DataTable
               caption={`Recent jobs in ${w.name}`}
               rows={w.runs}
@@ -146,7 +159,10 @@ function CreditsCard({ accountId, me }: { accountId: Id<"accounts">; me: AdminMe
         <Action label={`Add ${formatNumber(n)}`} variant="primary" run={() => grant({ accountId, credits: n, reason })} />
         {can(me, "grant") ? <Action label={`Remove ${formatNumber(n)}`} run={() => remove({ accountId, credits: n, reason })} /> : null}
       </div>
-      <p className="text-xs text-ink-3">Added credits last 12 months.{me.role === "support" ? " Support can add up to 500 at a time." : ""}</p>
+      <ul className="flex flex-col gap-0.5 text-xs text-ink-3">
+        <li>Added credits last 12 months</li>
+        {me.role === "support" ? <li>Support: up to 500 at a time</li> : null}
+      </ul>
     </Panel>
   );
 }

@@ -42,20 +42,22 @@ export function AbTestPanel({ slug, kind, targetId, current, canEdit }: { slug: 
       </p>
       {running ? (
         <>
+          <ul aria-label="Versions" className="flex flex-col gap-2">
           {running.stats.map((s) => (
-            <div key={s.key} className="flex flex-col gap-1">
+            <li key={s.key} className="flex flex-col gap-1">
               <p className="flex justify-between gap-2 text-xs text-ink-2">
-                <span className="truncate">
+                <span className="truncate" title={text(running, s.key)}>
                   <strong>{s.key}</strong> · {text(running, s.key)}
                 </span>
                 <span className="shrink-0 tabular-nums">
-                  {s.rate}% · {s.wins}/{s.trials}
+                  <strong className="font-semibold text-ink">{s.rate}%</strong> · {s.wins}/{s.trials}
                 </span>
               </p>
               <Progress value={Math.min(100, s.rate * (kind === "landing" ? 5 : 3))} label={`Version ${s.key} ${metric}`} />
-            </div>
+            </li>
           ))}
-          <p className="text-xs text-ink-3">{running.note} The winner is applied automatically.</p>
+          </ul>
+          <p className="text-xs text-ink-3">{running.note} Winner auto-applied.</p>
           {canEdit ? (
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => run(() => stop({ slug, id: running.id, keep: "A" }))}>
@@ -75,11 +77,11 @@ export function AbTestPanel({ slug, kind, targetId, current, canEdit }: { slug: 
               {last.note}
             </p>
           ) : (
-            <p className="text-xs text-ink-3">Half your {kind === "landing" ? "visitors" : "prospects"} see a second {label}. We measure {metric} and keep the winner.</p>
+            <p className="text-xs text-ink-3">50/50 split by {metric}. Winner kept.</p>
           )}
           {canEdit ? (
             <div className="flex gap-2">
-              <Input value={b} placeholder={`Another ${label} (now: “${current.slice(0, 40)}”)`} aria-label={`Second ${label}`} onChange={(e) => setB(e.target.value)} />
+              <Input value={b} placeholder={`Now: “${current.slice(0, 40)}”`} aria-label={`Second ${label}`} onChange={(e) => setB(e.target.value)} />
               <Button
                 size="sm"
                 loading={busy}

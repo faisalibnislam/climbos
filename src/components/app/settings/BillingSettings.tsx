@@ -3,10 +3,11 @@
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { CircleCheck, ExternalLink, FlaskConical } from "@/components/icons"
+import { CircleCheck, Clock, Coins, ExternalLink, FlaskConical, Hourglass, Layers } from "@/components/icons"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Badge, Button, Callout, DataTable, Meter, toast } from "@/components/ui";
+import { StatBlocks, type Stat } from "@/components/ds/content";
 import { cn, formatNumber, formatUsd } from "@/lib/utils";
 import { errorMessage } from "../errors";
 import { ReferralCard } from "./ReferralCard";
@@ -62,7 +63,7 @@ export function BillingSettings({ slug }: { slug: string }) {
     setError(null);
     try {
       await changePlan({ slug, planKey });
-      toast({ tone: "success", title: "Package switched", description: "Polar adjusts the price for the rest of this month." });
+      toast({ tone: "success", title: "Package switched", description: "Polar prorates this month." });
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -77,11 +78,11 @@ export function BillingSettings({ slug }: { slug: string }) {
     <div className="flex flex-col gap-8">
       <SettingsHeader
         title="Billing"
-        intro="Your credits, package and top-ups. Credits are shared by every workspace on your account. Payments are handled by Polar."
+        intro="Credits shared across workspaces · paid via Polar"
         actions={
           data?.environment === "sandbox" && data.billingConfigured ? (
             <Badge tone="violet" icon={<FlaskConical />}>
-              Sandbox — test payments only
+              Sandbox: test payments
             </Badge>
           ) : null
         }
@@ -91,7 +92,7 @@ export function BillingSettings({ slug }: { slug: string }) {
       </Suspense>
       <div aria-live="polite">
         {error ? (
-          <Callout tone="danger" live="none" title="That didn't open">
+          <Callout tone="danger" live="none" title="Couldn't open">
             {error}
           </Callout>
         ) : null}
@@ -115,16 +116,28 @@ function CheckoutReturnNotice() {
     <Callout
       tone="info"
       live="status"
-      title="We're confirming your payment with Polar"
+      title="Confirming payment with Polar"
       action={
         <Button variant="secondary" size="sm" onClick={() => router.replace(pathname)}>
           Dismiss
         </Button>
       }
     >
-      Access starts as soon as Polar confirms (usually under a minute). This page updates by itself — you don&apos;t need to refresh or pay again.
+      Usually under a minute. Don&apos;t pay again.
     </Callout>
   );
+}
+
+/** The credit numbers that matter, as blocks: left, top-ups and this workspace's cap (monthly use is the meter below). */
+function creditStats(data: Billing): Stat[] {
+  const b = data.balance;
+  const out = b.available <= 0;
+  const stats: Stat[] = [
+    { label: "Left", value: formatNumber(b.available), tone: out ? "bad" : b.available < 20 ? "warn" : "default", hint: out ? "Top up or wait for reset" : undefined },
+    { label: "Top-ups", value: b.topup.left > 0 ? formatNumber(b.topup.left) : "None", hint: b.topup.nextExpiry ? `Oldest expire ${dateOnly(b.topup.nextExpiry)}` : undefined },
+  ];
+  if (b.workspace.cap !== null) stats.push({ label: "This workspace", value: `${formatNumber(b.workspace.used)} / ${formatNumber(b.workspace.cap)}`, hint: "Monthly cap", tone: b.workspace.used >= b.workspace.cap ? "warn" : "default" });
+  return stats;
 }
 
 function BillingBody({
@@ -149,38 +162,35 @@ function BillingBody({
         </Callout>
       ) : null}
 
-      <section aria-labelledby="credits-heading" className="rounded-xl border border-line bg-surface p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="credits-heading" className="heading-section">
-            Credits
-          </h2>
-          <span className="text-2xl font-semibold tabular-nums text-ink">{formatNumber(b.available)} left</span>
-        </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Meter
-            label={data.paid ? "This month" : "Free credits"}
-            used={b.monthly.used}
-            max={Math.max(b.monthly.total, 1)}
-            unit="credits"
-            fullText="Out of this month's credits. Add a top-up or wait for the reset."
-          />
-          <div className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-ink">Top-ups</span>
-            <span className="text-ink-2">{b.topup.left > 0 ? `${formatNumber(b.topup.left)} credits` : "None"}</span>
-            {b.topup.nextExpiry ? <span className="text-xs text-ink-3">Oldest expire {dateOnly(b.topup.nextExpiry)}</span> : null}
-          </div>
-        </div>
-        <p className="mt-4 text-xs text-ink-3">
-          {b.resetsAt ? `Monthly credits reset on ${dateOnly(b.resetsAt)}; unused ones don't carry over. ` : ""}Top-up credits last 12 months and are used after the month&apos;s credits. Every
-          job shows its credits before it starts and only charges what it used.
-          {b.workspace.cap !== null ? ` This workspace: ${formatNumber(b.workspace.used)} of its ${formatNumber(b.workspace.cap)} monthly cap used.` : ""}
-        </p>
+      <section aria-labelledby="credits-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+        <h2 id="credits-heading" className="heading-section flex items-center gap-2">
+          <Coins aria-hidden className="size-4 text-brand-800" /> Credits
+        </h2>
+        <StatBlocks stats={creditStats(data)} />
+        <Meter
+          label={data.paid ? "This month" : "Free credits"}
+          used={b.monthly.used}
+          max={Math.max(b.monthly.total, 1)}
+          unit="credits"
+          fullText="Out of credits. Top up or wait for reset."
+        />
+        <ul className="grid gap-2 text-xs text-ink-2 sm:grid-cols-3" aria-label="How credits work">
+          {[
+            { icon: Clock, text: b.resetsAt ? `Monthly credits reset ${dateOnly(b.resetsAt)}, no rollover` : "Monthly credits don't roll over" },
+            { icon: Layers, text: "Top-ups last 12 months, used after monthly credits" },
+            { icon: Hourglass, text: "Jobs charge only what they use" },
+          ].map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-2">
+              <Icon aria-hidden className="mt-px size-3.5 shrink-0 text-ink-3" /> {text}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section aria-labelledby="packages-heading">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="packages-heading" className="heading-section">
-            Monthly packages
+            Packages
           </h2>
           {sub ? (
             <span className="flex items-center gap-2 text-sm text-ink-2">
@@ -210,9 +220,9 @@ function BillingBody({
                 <ul className="flex flex-col gap-1 text-sm text-ink-2">
                   {[
                     "Climb AI Expert",
-                    "Autopilot, publishing and sending",
-                    `${p.seats} people across your workspaces`,
-                    "Top-ups when you need more",
+                    "Autopilot, publishing, sending",
+                    `${p.seats} people`,
+                    "Top-ups available",
                   ].map((h) => (
                     <li key={h} className="flex items-start gap-2">
                       <CircleCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-800" /> {h}
@@ -230,15 +240,24 @@ function BillingBody({
             );
           })}
         </div>
-        {!data.isDemo && !data.isAccountOwner ? <p className="mt-2 text-xs text-ink-3">Only the account owner can change the package or buy top-ups.</p> : null}
-        <p className="mt-2 text-xs text-ink-3">Free: {formatNumber(data.freeCredits)} credits once, 1 workspace, 1 person, Climb AI Basic, drafts you copy yourself.</p>
+        {!data.isDemo && !data.isAccountOwner ? <p className="mt-2 text-xs text-ink-3">Only the account owner can buy.</p> : null}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="font-medium text-ink-2">Free:</span>
+          <ul className="flex flex-wrap gap-1.5">
+            {[`${formatNumber(data.freeCredits)} credits once`, "1 workspace", "1 person", "Climb AI Basic", "Copy-only drafts"].map((f) => (
+              <li key={f} className="rounded-[var(--radius-badge)] bg-surface-2 px-2 py-0.5 text-ink-2">
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <section aria-labelledby="topups-heading">
         <h2 id="topups-heading" className="heading-section">
           Top-ups
         </h2>
-        <p className="mt-1 text-sm text-ink-3">{data.paid ? "One-time. Credits last 12 months." : "Top-ups add to a monthly package. Choose a package first."}</p>
+        <p className="mt-1 text-sm text-ink-3">{data.paid ? "One-time · last 12 months" : "Needs a package first."}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {data.topups.map((t) => (
             <div key={t.key} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">

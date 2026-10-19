@@ -6,21 +6,22 @@ import type { FunctionReturnType } from "convex/server";
 import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, type LucideIcon } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, SocialIcon, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, Tooltip, toast, type Tone } from "@/components/ui";
 import { minorToDisplay } from "../money";
-import { ChannelTag, ErrorCallout, PERMISSION_WHO, useWorkspaceMember } from "./shared";
+import { KeyTakeaways, StatBlocks } from "@/components/ds/content";
+import { ChannelTag, ErrorCallout, FactList, PERMISSION_WHO, useWorkspaceMember } from "./shared";
 
 export type AdsList = FunctionReturnType<typeof api.ads.list>;
 export type Campaign = AdsList["campaigns"][number];
 
 export const CAMPAIGN_STATUS: Record<string, { label: string; tone: Tone; help: string; Icon: LucideIcon }> = {
   draft: { label: "Not created", tone: "neutral", help: "Not sent to the ad platform.", Icon: Clock },
-  needs_approval: { label: "Needs your approval", tone: "amber", help: "Approve creating it (paused) in the ad platform.", Icon: Hourglass },
-  created_paused: { label: "Created, paused", tone: "blue", help: "It exists in the ad platform but isn't running or spending.", Icon: Pause },
-  active: { label: "Running", tone: "green", help: "Live in the ad platform and may be spending within your budget.", Icon: Play },
-  paused: { label: "Paused", tone: "neutral", help: "Not running. Platforms may still report a little spend from before the pause.", Icon: Pause },
+  needs_approval: { label: "Needs approval", tone: "amber", help: "Approve creating it (paused).", Icon: Hourglass },
+  created_paused: { label: "Created, paused", tone: "blue", help: "Not running or spending.", Icon: Pause },
+  active: { label: "Running", tone: "green", help: "May spend within budget.", Icon: Play },
+  paused: { label: "Paused", tone: "neutral", help: "Late spend may still be reported.", Icon: Pause },
   ended: { label: "Ended", tone: "neutral", help: "Past its end date.", Icon: CircleCheck },
-  uncertain: { label: "Outcome uncertain", tone: "amber", help: "We couldn't confirm the last change. Check the ad platform directly.", Icon: CircleQuestionMark },
+  uncertain: { label: "Outcome uncertain", tone: "amber", help: "Check the ad platform.", Icon: CircleQuestionMark },
 };
 
 function platformName(channel: string) {
@@ -40,13 +41,20 @@ function formatDay(d: string | null): string {
 
 export function CampaignStatusPill({ status }: { status: string }) {
   const meta = CAMPAIGN_STATUS[status] ?? { label: status, tone: "neutral" as Tone, help: "", Icon: CircleAlert };
-  return (
-    <span className="inline-flex flex-col items-start gap-1">
-      <Badge tone={meta.tone} icon={<meta.Icon />}>
-        {meta.label}
-      </Badge>
-      {meta.help ? <span className="text-xs text-ink-3">{meta.help}</span> : null}
-    </span>
+  const badge = (
+    <Badge tone={meta.tone} icon={<meta.Icon />}>
+      {meta.label}
+    </Badge>
+  );
+  return meta.help ? (
+    <Tooltip content={meta.help}>
+      <span tabIndex={0} className="inline-flex rounded-full">
+        {badge}
+        <span className="sr-only">: {meta.help}</span>
+      </span>
+    </Tooltip>
+  ) : (
+    badge
   );
 }
 
@@ -72,21 +80,14 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
   };
 
   const facts = (
-    <ul className="mt-2 flex flex-col gap-1 text-sm text-ink-2">
-      <li>
-        <strong className="font-semibold text-ink">Daily budget:</strong> {daily}
-      </li>
-      <li>
-        <strong className="font-semibold text-ink">Dates:</strong> {formatDay(c.startDate)} to {formatDay(c.endDate)}
-        {days ? ` (${days} day${days === 1 ? "" : "s"})` : ""}
-      </li>
-      <li>
-        <strong className="font-semibold text-ink">Most it can spend in total:</strong> {total}
-      </li>
-      <li className="break-words">
-        <strong className="font-semibold text-ink">Sends people to:</strong> {c.destinationUrl ?? "no link set"}
-      </li>
-    </ul>
+    <FactList
+      items={[
+        { term: "Daily budget", detail: daily },
+        { term: "Dates", detail: `${formatDay(c.startDate)} to ${formatDay(c.endDate)}${days ? ` (${days} day${days === 1 ? "" : "s"})` : ""}` },
+        { term: "Max total", detail: total },
+        { term: "Link", detail: c.destinationUrl ?? "none" },
+      ]}
+    />
   );
 
   return (
@@ -98,12 +99,12 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
       <H className="heading-card break-words">{c.name}</H>
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs text-ink-3">Daily budget</dt>
-          <dd className="font-medium text-ink">{daily} a day</dd>
+          <dt className="text-xs text-ink-3">Daily</dt>
+          <dd className="font-medium text-ink">{daily}</dd>
         </div>
         <div>
-          <dt className="text-xs text-ink-3">Most it can spend</dt>
-          <dd className="font-medium text-ink">{total} in total</dd>
+          <dt className="text-xs text-ink-3">Max total</dt>
+          <dd className="font-medium text-ink">{total}</dd>
         </div>
         <div>
           <dt className="text-xs text-ink-3">Dates</dt>
@@ -112,13 +113,13 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-xs text-ink-3">Sends people to</dt>
-          <dd className="break-words font-medium text-ink">{c.destinationUrl ?? "No link set"}</dd>
+          <dt className="text-xs text-ink-3">Link</dt>
+          <dd className="break-words font-medium text-ink">{c.destinationUrl ?? "None"}</dd>
         </div>
       </dl>
       {c.stopRules.length > 0 ? (
         <div>
-          <p className="text-sm font-medium text-ink">ClimbOS pauses it automatically if:</p>
+          <p className="text-sm font-medium text-ink">Auto-pauses if:</p>
           <ul className="mt-1 list-disc pl-5 text-sm text-ink-2">
             {c.stopRules.map((r) => (
               <li key={r}>{r}</li>
@@ -128,9 +129,8 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}
       {!c.accountConnected && (c.status === "needs_approval" || c.status === "created_paused" || c.status === "paused") ? (
-        <Callout tone="warning" title="Connect your ad account first">
-          ClimbOS can&apos;t create or start this campaign until your {platform} account is connected.{" "}
-          <Link href={`/app/${slug}/connections`}>Go to Connections</Link>
+        <Callout tone="warning" title={`Connect ${platform}`}>
+          Needed to launch. <Link href={`/app/${slug}/connections`}>Connections</Link>
         </Callout>
       ) : null}
       {c.status === "needs_approval" || c.status === "created_paused" || c.status === "paused" ? (
@@ -139,45 +139,44 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
             {c.status === "needs_approval" ? (
               <>
                 <ConfirmDialog
-                  trigger={<Button disabled={!c.accountConnected}>Create campaign (paused)</Button>}
+                  trigger={<Button disabled={!c.accountConnected}>Create paused</Button>}
                   title="Create this campaign, paused?"
-                  description={`ClimbOS will create the campaign in ${platform} switched OFF. Nothing runs and nothing is spent until you press Start.`}
-                  confirmLabel="Create paused campaign"
-                  onConfirm={() => run("create_paused", "Create request sent. Watch the status for the platform's confirmation.")}
+                  description={`Created in ${platform}, switched off. Nothing spent until you press Start.`}
+                  confirmLabel="Create paused"
+                  onConfirm={() => run("create_paused", "Create request sent.")}
                 >
                   {facts}
                   <p className="mt-3 text-sm text-ink-3">
-                    Ad spend is paid directly to {platform} from your own ad account, not to ClimbOS.
-                    {isDemo ? " Demo workspace: this is simulated and no real campaign is created." : ""}
+                    Spend is billed by {platform}, not ClimbOS.
+                    {isDemo ? " Demo: simulated." : ""}
                   </p>
                 </ConfirmDialog>
                 <ConfirmDialog
                   trigger={<Button variant="secondary">Don&apos;t create</Button>}
                   title="Don't create this campaign?"
-                  description="Nothing is sent to the ad platform. You can prepare a new campaign from the approved ad later."
-                  confirmLabel="Don't create it"
+                  description="Nothing is sent to the ad platform."
+                  confirmLabel="Don't create"
                   onConfirm={() => run("reject", "Campaign won't be created.")}
                 />
               </>
             ) : (
               <ConfirmDialog
-                trigger={<Button disabled={!c.accountConnected}>Start campaign</Button>}
+                trigger={<Button disabled={!c.accountConnected}>Start</Button>}
                 title="Start this campaign?"
-                description={`${platform} can start showing your ads and spending up to ${daily} a day between the dates below — up to ${total} in total.`}
-                confirmLabel={`Start campaign at ${daily} a day`}
-                onConfirm={() => run("activate", "Start request sent. Watch the status for the platform's confirmation.")}
+                description={`Spends up to ${daily}/day, max ${total} total.`}
+                confirmLabel={`Start at ${daily}/day`}
+                onConfirm={() => run("activate", "Start request sent.")}
               >
                 {facts}
                 <p className="mt-3 text-sm text-ink-3">
-                  Ad spend is billed by {platform} directly to your ad account, not by ClimbOS. If you pause later, platforms may still report a little spend from
-                  before the pause.
-                  {isDemo ? " Demo workspace: this is simulated and no money is spent." : ""}
+                  Spend is billed by {platform}, not ClimbOS.
+                  {isDemo ? " Demo: simulated, no money spent." : ""}
                 </p>
               </ConfirmDialog>
             )}
           </div>
         ) : member ? (
-          <p className="text-sm text-ink-2">Waiting for {PERMISSION_WHO.approve} to approve the next step.</p>
+          <p className="text-sm text-ink-2">Waiting for {PERMISSION_WHO.approve}.</p>
         ) : null
       ) : null}
     </article>
@@ -193,14 +192,10 @@ export function AdsPanel({ slug }: { slug: string }) {
       <h2 id="ads-heading" className="heading-section">
         Ad campaigns
       </h2>
-      <Callout tone="info" title="How ads work in ClimbOS">
-        <ul className="mt-1 list-disc pl-5">
-          <li>Campaigns are always created paused. They go live only when you explicitly approve starting them.</li>
-          <li>Ad spend is paid directly to Google or Meta from your own ad account — never to ClimbOS.</li>
-          <li>ClimbOS never raises a budget on its own and pauses campaigns under the stop rules you see on each one.</li>
-          <li>After a pause, platforms may still report a little spend from before it took effect.</li>
-        </ul>
-      </Callout>
+      <KeyTakeaways
+        title="How ads work"
+        items={["Created paused; live only when you start them", "Spend paid to Google/Meta, never ClimbOS", "No auto budget raises"]}
+      />
       {data === undefined ? (
         <div className="grid gap-4 md:grid-cols-2" aria-busy="true">
           <Skeleton className="h-48 w-full" />
@@ -208,35 +203,25 @@ export function AdsPanel({ slug }: { slug: string }) {
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-2 text-sm text-ink-2">
-            <li className="flex items-center gap-2">
-              <SocialIcon network="google_search_ad" size="sm" />
-              <span>
-                Google Ads: <strong className="font-semibold text-ink">{data.googleAdsConnected ? "Connected" : "Not connected"}</strong>
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <SocialIcon network="meta_ad" size="sm" />
-              <span>
-                Meta (Facebook &amp; Instagram) ads: <strong className="font-semibold text-ink">{data.metaAdsConnected ? "Connected" : "Not connected"}</strong>
-              </span>
-            </li>
-          </ul>
-          {!data.googleAdsConnected || !data.metaAdsConnected ? (
-            <p className="text-sm text-ink-3">
-              Connect an ad account in <Link href={`/app/${slug}/connections`}>Connections</Link> before ClimbOS can create campaigns there.
-            </p>
-          ) : null}
-          <p className="text-sm text-ink-2">
-            Your approved monthly ad budget:{" "}
-            <strong className="font-semibold text-ink">{data.monthlyEnvelopeMinor > 0 ? minorToDisplay(data.monthlyEnvelopeMinor, data.currency) : "not set"}</strong>. Campaigns
-            can&apos;t be planned above it.
-          </p>
+          <div className="flex flex-col gap-2">
+            <StatBlocks
+              stats={[
+                { label: "Google Ads", value: data.googleAdsConnected ? "Connected" : "Not connected", tone: data.googleAdsConnected ? "good" : "default" },
+                { label: "Meta ads", value: data.metaAdsConnected ? "Connected" : "Not connected", tone: data.metaAdsConnected ? "good" : "default" },
+                { label: "Monthly cap", value: data.monthlyEnvelopeMinor > 0 ? minorToDisplay(data.monthlyEnvelopeMinor, data.currency) : "Not set" },
+              ]}
+            />
+            {!data.googleAdsConnected || !data.metaAdsConnected ? (
+              <p className="text-sm text-ink-3">
+                <Link href={`/app/${slug}/connections`}>Connect an ad account</Link>
+              </p>
+            ) : null}
+          </div>
           {data.campaigns.length === 0 ? (
             <EmptyState
               icon={<Megaphone />}
               title="No ad campaigns yet"
-              body="Create ad drafts with “Create content” → Ads. After you approve an ad, open it to prepare a campaign — it stays paused until you start it."
+              body="Approve an ad, then prepare one."
             />
           ) : (
             <ul className="grid gap-4 md:grid-cols-2">

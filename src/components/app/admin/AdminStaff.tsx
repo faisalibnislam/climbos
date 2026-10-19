@@ -7,7 +7,13 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { errorMessage } from "../errors";
 import type { AdminMe } from "./AdminFrame";
 
-const ROLE_TEXT = { owner: "Owner: everything", admin: "Admin: everything except money settings and staff", support: "Support: read, view as user, retry jobs, add up to 500 credits" } as const;
+const ROLE_NAME = { owner: "Owner", admin: "Admin", support: "Support" } as const;
+/** What each staff role can do, shown as a definition list beside the form. */
+const ROLE_CAN: Record<keyof typeof ROLE_NAME, string> = {
+  owner: "Everything",
+  admin: "Everything except money settings and staff",
+  support: "Read, view as user, retry jobs, add up to 500 credits",
+};
 
 /** ClimbOS staff: owners (server setting or added), admins and support members. */
 export function AdminStaff({ me }: { me: AdminMe }) {
@@ -34,13 +40,21 @@ export function AdminStaff({ me }: { me: AdminMe }) {
             <CardDescription>They sign in with this email. Every staff action is logged.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3">
-            <Field label="Email" className="min-w-64 flex-1">
+            <Field label="Email" className="w-full flex-1 sm:min-w-64">
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="Role" className="w-64">
-              <Select value={role} onValueChange={(v) => setRole(v as typeof role)} options={(Object.keys(ROLE_TEXT) as (keyof typeof ROLE_TEXT)[]).map((k) => ({ value: k, label: ROLE_TEXT[k] }))} />
+            <Field label="Role" className="w-full sm:w-48">
+              <Select value={role} onValueChange={(v) => setRole(v as typeof role)} options={(Object.keys(ROLE_NAME) as (keyof typeof ROLE_NAME)[]).map((k) => ({ value: k, label: ROLE_NAME[k] }))} />
             </Field>
             <Button onClick={() => run({ email, role }).then(() => setEmail(""))}>Add</Button>
+            <dl className="grid w-full gap-2 text-sm sm:grid-cols-3" aria-label="What each role can do">
+              {(Object.keys(ROLE_CAN) as (keyof typeof ROLE_CAN)[]).map((k) => (
+                <div key={k} className={k === role ? "rounded-lg border border-brand-800 px-3 py-2" : "rounded-lg border border-line px-3 py-2"}>
+                  <dt className="font-medium text-ink">{ROLE_NAME[k]}</dt>
+                  <dd className="text-ink-2">{ROLE_CAN[k]}</dd>
+                </div>
+              ))}
+            </dl>
           </CardContent>
         </Card>
       ) : null}

@@ -5,6 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { ShieldCheck } from "@/components/icons";
 import { Button, Callout, ConfirmDialog, Field, Input, RadioCards, Switch, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
 import { relativeTime } from "../money";
@@ -16,58 +17,55 @@ type Policy = NonNullable<Policies["policy"]>;
 type Mode = "copilot" | "review" | "bounded_autopilot";
 
 const MODES: { value: Mode; title: string; description: string }[] = [
-  { value: "copilot", title: "Copilot", description: "ClimbOS drafts plans, posts and ads. You copy, post and launch everything yourself." },
-  { value: "review", title: "Review before execution", description: "ClimbOS prepares the work. Nothing goes live until someone with approval rights approves it." },
-  {
-    value: "bounded_autopilot",
-    title: "Bounded Autopilot",
-    description: "Only kinds of work you pre-approved run on their own — within your connected accounts, your time window and your spending limit.",
-  },
+  { value: "copilot", title: "Copilot", description: "We draft. You post and launch." },
+  { value: "review", title: "Review first", description: "Nothing goes live until approved." },
+  { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Pre-approved work runs within your limits." },
 ];
 
 const ALWAYS_APPROVE = [
-  "The first post on any channel",
-  "Any new ad or campaign",
-  "Any new audience",
-  "Any increase to an ad budget",
-  "Any discount or offer",
-  "Any change to your website",
+  "First post on a channel",
+  "New ads or campaigns",
+  "New audiences",
+  "Ad budget increases",
+  "Discounts or offers",
+  "Website changes",
 ];
 
 export function PoliciesSettings({ slug }: { slug: string }) {
   const data = useQuery(api.settings.policies, { slug });
   return (
     <div className="flex flex-col gap-8">
-      <SettingsHeader title="Policies" intro="Decide how much ClimbOS may do on its own. These rules are checked by ClimbOS before every action, not just shown here." />
+      <SettingsHeader title="Policies" />
       {data === undefined ? (
         <LoadingBlock label="Loading approval rules…" />
       ) : (
         <>
           {data.emergencyStop ? (
             <Callout tone="warning" title="Pause all is on">
-              Everything has been paused since {relativeTime(data.emergencyStop.at)}. Nothing runs, whatever the rules below say, until an owner or admin resumes.
+              Since {relativeTime(data.emergencyStop.at)}. Nothing runs until an owner or admin resumes.
             </Callout>
           ) : null}
           {!data.canManage ? (
             <Callout tone="info" title="View only">
-              Only owners and admins can change approval rules.
+              Owners and admins can edit.
             </Callout>
           ) : null}
           {data.policy ? (
             <PolicyForm key={data.policy.version} slug={slug} policy={data.policy} allowedModes={[...data.allowedModes]} canManage={data.canManage} />
           ) : (
             <Callout tone="info" title="No rules yet">
-              Approval rules are created when you finish setting up your workspace. <Link href="/onboarding">Continue setup</Link>.
+              Created when setup finishes. <Link href="/onboarding">Continue setup</Link>
             </Callout>
           )}
           <section aria-labelledby="always-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-            <h2 id="always-heading" className="heading-section">
-              Always needs your approval
+            <h2 id="always-heading" className="heading-section flex items-center gap-2">
+              <ShieldCheck aria-hidden className="size-4 text-brand-800" /> Always needs your approval
             </h2>
-            <p className="text-ink-2">Whatever mode you choose, these always wait for a person to approve them:</p>
-            <ul className="list-disc space-y-1 pl-5 text-ink-2">
+            <ul className="grid gap-2 text-sm text-ink-2 sm:grid-cols-2 lg:grid-cols-3">
               {ALWAYS_APPROVE.map((a) => (
-                <li key={a}>{a}</li>
+                <li key={a} className="rounded-lg bg-surface-2 px-3 py-2">
+                  {a}
+                </li>
               ))}
             </ul>
           </section>
@@ -123,7 +121,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
         maxMonthlyAdSpend: Number(budget),
         approvalTtlHours: Math.round(Number(ttl)),
       });
-      toast({ tone: "success", title: "Approval rules saved", description: res?.invalidated ? "Earlier approvals were cancelled and need to be approved again." : undefined });
+      toast({ tone: "success", title: "Rules saved", description: res?.invalidated ? "Earlier approvals cancelled." : undefined });
     } catch (err) {
       const info = errorInfo(err);
       setError(info.code === "PAYMENT_REQUIRED" ? `${info.message}` : info.message);
@@ -136,9 +134,9 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
         <section aria-labelledby="mode-heading" className="flex flex-col gap-3">
           <div>
             <h2 id="mode-heading" className="heading-section">
-              How ClimbOS works for you
+              Mode
             </h2>
-            <p className="mt-0.5 text-xs text-ink-3">Current rules: version {policy.version}</p>
+            <p className="mt-0.5 text-xs text-ink-3">Version {policy.version}</p>
           </div>
           <RadioCards
             aria-labelledby="mode-heading"
@@ -158,27 +156,27 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
           />
           {allowedModes.length < MODES.length ? (
             <p className="text-sm text-ink-3">
-              Some modes need a higher plan. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>See plans</Link>
+              <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>See plans</Link>
             </p>
           ) : null}
         </section>
 
         <section aria-labelledby="limits-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
           <h2 id="limits-heading" className="heading-section">
-            Limits and standing permissions
+            Limits
           </h2>
           <Switch
-            label="Let ClimbOS pause ads that break your rules"
-            description="For example, an ad spending faster than your budget allows. Pausing can only reduce spend; it never starts or raises anything."
+            label="Auto-pause ads that break your rules"
+            description="Only ever reduces spend."
             checked={adPause}
             onCheckedChange={setAdPause}
             disabled={!canManage}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={`Maximum monthly ad spend (${policy.currency})`} hint="ClimbOS will never plan or approve ads beyond this." error={fieldErrors.budget}>
+            <Field label={`Maximum monthly ad spend (${policy.currency})`} hint="Hard cap." error={fieldErrors.budget}>
               <Input type="number" inputMode="decimal" min="0" step="1" value={budget} onChange={(e) => setBudget(e.target.value)} />
             </Field>
-            <Field label="Approvals expire after (hours)" hint="An approval that isn't used in time must be given again." error={fieldErrors.ttl}>
+            <Field label="Approvals expire after (hours)" error={fieldErrors.ttl}>
               <Input type="number" inputMode="numeric" min="1" max="336" step="1" value={ttl} onChange={(e) => setTtl(e.target.value)} />
             </Field>
           </div>
@@ -187,7 +185,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
 
       <div aria-live="polite">
         {error ? (
-          <Callout tone="danger" live="none" title="Your rules weren't saved">
+          <Callout tone="danger" live="none" title="Rules not saved">
             {error}
           </Callout>
         ) : null}
@@ -196,18 +194,18 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
       {canManage ? (
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={!dirty}>
-            Save approval rules
+            Save
           </Button>
-          {!dirty ? <span className="text-sm text-ink-3">No changes yet.</span> : null}
+          {!dirty ? <span className="text-sm text-ink-3">No changes</span> : null}
         </div>
       ) : null}
 
       <ConfirmDialog
         open={confirm}
         onOpenChange={setConfirm}
-        title="Save new approval rules?"
-        description="Changing the mode, ad pausing or the ad budget cancels every existing approval. Anything approved but not yet live will need approving again."
-        confirmLabel="Save and cancel existing approvals"
+        title="Save new rules?"
+        description="This cancels all existing approvals. Anything not yet live needs approving again."
+        confirmLabel="Save and cancel approvals"
         onConfirm={save}
       />
     </form>

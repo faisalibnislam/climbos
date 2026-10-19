@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "@/components/icons"
 import { useId, useState } from "react";
+import { Scannable } from "@/components/ds/content";
 import { cn } from "@/lib/utils";
 import { RoleAvatar } from "./RoleAvatar";
 import { ROLE_META, roleTitle } from "./roles";
@@ -28,9 +29,9 @@ export function RoleExplainer({ role }: { role: string }) {
         {meta ? <ChevronDown aria-hidden className={cn("mt-0.5 size-4 shrink-0 text-ink-3 transition-transform", open && "rotate-180")} /> : null}
       </button>
       {meta ? (
-        <p id={id} hidden={!open} className="ml-8 mt-0.5 text-xs leading-5 text-ink-2">
-          {meta.more}
-        </p>
+        <div id={id} hidden={!open} className="ml-8 mt-0.5">
+          <Scannable text={meta.more} tone="muted" max={3} />
+        </div>
       ) : null}
     </div>
   );

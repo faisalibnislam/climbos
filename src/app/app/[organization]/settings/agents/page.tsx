@@ -65,10 +65,10 @@ function AgentsSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Agents & MCP" intro="Let AI agents you already use, like Claude Desktop, Claude Code or ChatGPT, work in this workspace through the Model Context Protocol. They act as you, only within what you tick here." />
+      <SettingsHeader title="Agents & MCP" intro="Claude, ChatGPT and other MCP agents" />
 
       <Callout tone="info" title="You stay in control">
-        Agents can read and prepare work. Anything that would publish, schedule, approve or change settings becomes a confirmation card in your Climb AI panel. Nothing happens until you tap Confirm.
+        Publishing, approvals and settings wait for your Confirm.
       </Callout>
 
       {fresh ? (
@@ -77,14 +77,14 @@ function AgentsSettings() {
             <CardTitle as="h2" className="flex items-center gap-2">
               <KeyRound aria-hidden className="size-4 text-brand-800" /> Your new agent token
             </CardTitle>
-            <CardDescription>Copy it now. For your safety we only show it once.</CardDescription>
+            <CardDescription>Shown once. Copy it now.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <CopyBlock label="Token" text={fresh} />
             <CopyBlock label="Claude Code (terminal)" text={codeCommand(fresh)} />
             <CopyBlock label="Claude Desktop (claude_desktop_config.json)" text={desktopConfig(fresh)} />
             <Button variant="secondary" className="self-start" onClick={() => setFresh(null)}>
-              I&apos;ve saved it
+              Done
             </Button>
           </CardContent>
         </Card>
@@ -100,9 +100,9 @@ function AgentsSettings() {
             </Field>
             <fieldset className="flex flex-col gap-1">
               <legend className="text-ui font-medium text-ink">What it may do</legend>
-              <Checkbox label="Read this workspace" description="Overview, content, plan, results, autopilot and images." checked disabled />
-              <Checkbox label="Prepare work" description="Draft posts, ads, emails and pages; refresh the plan; capture screenshots. Nothing is published." checked={draft} onCheckedChange={(v) => setDraft(Boolean(v))} />
-              <Checkbox label="Request approvals" description="Ask to approve, schedule or publish posts and change autopilot. You confirm each one in ClimbOS." checked={approvals} onCheckedChange={(v) => setApprovals(Boolean(v))} />
+              <Checkbox label="Read this workspace" checked disabled />
+              <Checkbox label="Prepare work" description="Drafts only. Nothing published." checked={draft} onCheckedChange={(v) => setDraft(Boolean(v))} />
+              <Checkbox label="Request approvals" description="You confirm each one." checked={approvals} onCheckedChange={(v) => setApprovals(Boolean(v))} />
             </fieldset>
             <fieldset className="flex flex-col gap-1.5">
               <legend className="text-ui font-medium text-ink">Expires after</legend>
@@ -124,7 +124,7 @@ function AgentsSettings() {
                 }
               }}
             >
-              <Bot aria-hidden /> Create agent token
+              <Bot aria-hidden /> Create token
             </Button>
           </CardContent>
         </Card>
@@ -135,7 +135,7 @@ function AgentsSettings() {
           Connected agents
         </h2>
         {data.tokens.length === 0 ? (
-          <EmptyState icon={<ShieldCheck />} title="No agents connected" body="Create a token above to connect Claude Desktop, Claude Code or another MCP client." />
+          <EmptyState icon={<ShieldCheck />} title="No agents connected" />
         ) : (
           <TableFrame>
             <Table>

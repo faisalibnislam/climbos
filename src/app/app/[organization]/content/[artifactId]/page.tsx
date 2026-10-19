@@ -33,7 +33,7 @@ import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/Ema
 import { PublishPanel } from "@/components/app/content/detail/PublishPanel";
 import { UncertainPanel } from "@/components/app/content/detail/UncertainPanel";
 import { isCampaignAd, type ArtifactView } from "@/components/app/content/detail/model";
-import { ArtifactStatus, ChannelTag, ErrorCallout, RoleName, SectionBoundary, useNow, useWorkspaceMember } from "@/components/app/content/shared";
+import { ArtifactStatus, ChannelTag, ErrorCallout, NoteList, SectionBoundary, useNow, useWorkspaceMember } from "@/components/app/content/shared";
 
 export default function ContentDetailPage() {
   const { organization: slug, artifactId } = useParams<{ organization: string; artifactId: string }>();
@@ -41,7 +41,7 @@ export default function ContentDetailPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <Button asChild variant="ghost" size="sm" className="-ml-2.5 self-start text-ink-2 hover:text-ink">
         <Link href={`/app/${slug}/content`}>
-          <ArrowLeft aria-hidden="true" /> Back to content
+          <ArrowLeft aria-hidden="true" /> Content
         </Link>
       </Button>
       <SectionBoundary pageHeading="This content isn't available" label="this content">
@@ -116,18 +116,14 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
         </div>
         <h1 className="heading-page break-words">{artifact.title}</h1>
         <ArtifactStatus status={artifact.status} showHelp />
-        <p className="text-xs text-ink-3">
-          Created by <RoleName role={artifact.createdByRole} className="text-ink-2" />
-          {now ? (
-            <>
-              {" · "}
-              <time dateTime={new Date(artifact.createdAt).toISOString()}>{formatDateTime(artifact.createdAt)}</time>
-              {" · updated "}
-              {relativeTime(artifact.updatedAt, now)}
-            </>
-          ) : null}
-        </p>
-        {artifact.isDemo ? <p className="text-sm text-violet-800">Demo workspace: publishing is simulated. Nothing is really posted, sent or spent.</p> : null}
+        {now ? (
+          <p className="text-xs text-ink-3">
+            <time dateTime={new Date(artifact.createdAt).toISOString()}>{formatDateTime(artifact.createdAt)}</time>
+            {" · updated "}
+            {relativeTime(artifact.updatedAt, now)}
+          </p>
+        ) : null}
+        {artifact.isDemo ? <p className="text-sm text-violet-800">Demo: publishing is simulated.</p> : null}
       </header>
 
       {artifact.status === "uncertain" ? <UncertainPanel slug={slug} artifact={artifact} /> : null}
@@ -145,14 +141,13 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
           ) : null}
 
           <Section id="preview-heading" title="Preview">
-            <p className="-mt-2 text-ui text-ink-3">An approximation of how it will look. Each platform displays text slightly differently.</p>
             {artifact.reel?.videoUrl ? (
               <video src={artifact.reel.videoUrl} controls playsInline className="aspect-[9/16] w-full max-w-xs rounded-lg bg-black" />
             ) : artifact.reel ? (
-              <p className="text-sm text-ink-3">Demo reel: no video was rendered.</p>
+              <p className="text-sm text-ink-3">Demo: no video.</p>
             ) : null}
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
-            {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check whether it was posted before editing." : "Published content can't be edited."}</p> : null}
+            {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check if it posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>
 
           <Section id="versions-heading" title="Version history">
@@ -183,11 +178,11 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             </Section>
           )}
 
-          <Section id="receipts-heading" title="What happened">
+          <Section id="receipts-heading" title="Activity">
             <ReceiptsTimeline receipts={artifact.receipts} now={now} />
           </Section>
 
-          <Section id="facts-heading" title="Facts this draft relies on">
+          <Section id="facts-heading" title="Facts used">
             <FactsList facts={artifact.facts} />
           </Section>
 
@@ -210,8 +205,8 @@ function RestoreButton({ slug, artifact }: { slug: string; artifact: ArtifactVie
           </Button>
         }
         title="Restore this?"
-        description="It goes back to your active list as a draft. It needs a new approval before it can go anywhere."
-        confirmLabel="Restore as draft"
+        description="Returns as a draft. Needs new approval."
+        confirmLabel="Restore"
         onConfirm={async () => {
           setError(null);
           try {
@@ -264,7 +259,7 @@ function MoreMenu({ slug, artifact }: { slug: string; artifact: ArtifactView }) 
         open={open}
         onOpenChange={setOpen}
         title="Archive this?"
-        description={`It's hidden from active lists${artifact.status === "scheduled" ? ", won't be sent at its scheduled time" : ""} and any approval is cancelled. Nothing already posted is removed from the platform.`}
+        description="Live posts stay up."
         confirmLabel="Archive"
         tone="danger"
         onConfirm={async () => {
@@ -276,7 +271,9 @@ function MoreMenu({ slug, artifact }: { slug: string; artifact: ArtifactView }) 
             setError(e);
           }
         }}
-      />
+      >
+        <NoteList items={["Hidden from lists", ...(artifact.status === "scheduled" ? ["Won't be sent"] : []), "Approval cancelled"]} />
+      </ConfirmDialog>
       {error ? (
         <div className="basis-full">
           <ErrorCallout error={error} />

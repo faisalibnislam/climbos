@@ -64,7 +64,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
   const connected = conn?.status === "connected";
   const expired = conn?.expiresAt ? isPast(conn.expiresAt) : false;
   const syncError = conn && "lastSyncError" in conn ? conn.lastSyncError : null;
-  const readOnlyReason = isDemo ? "Demo workspaces can't connect real accounts." : !canManage ? "Only owners and admins can change connections." : null;
+  const readOnlyReason = isDemo ? "Demo: no real accounts." : !canManage ? "Owners and admins only." : null;
 
   async function onConnect() {
     setBusy("connect");
@@ -77,11 +77,11 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       if (info.code === "UNAVAILABLE" && info.reason === "setup_needed") {
         setProblem({
           tone: "warning",
-          title: "ClimbOS hasn't finished setting up this integration yet",
-          body: "This is on our side, not yours. Drafts and export packs still work meanwhile, and we'll let you know when connecting is available.",
+          title: "Not available yet",
+          body: "Our side, not yours. Drafts and exports still work.",
         });
       } else {
-        setProblem({ tone: "danger", title: "We couldn't start connecting", body: info.message });
+        setProblem({ tone: "danger", title: "Couldn't connect", body: info.message });
       }
       setBusy(null);
     }
@@ -92,7 +92,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
     setProblem(null);
     try {
       await syncNow({ slug, provider: item.provider as Provider });
-      toast({ title: `${item.name} sync finished`, description: "The last-sync time and any problems are shown on the card." });
+      toast({ title: `${item.name} synced` });
     } catch (err) {
       setProblem({ tone: "danger", title: "Sync didn't run", body: errorInfo(err).message });
     } finally {
@@ -122,7 +122,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
           ) : item.connectMethod !== "none" ? (
             <Badge tone="neutral">Not connected</Badge>
           ) : null}
-          {conn?.isFixture ? <StatusPill status="demo">Demo connection</StatusPill> : null}
+          {conn?.isFixture ? <StatusPill status="demo">Demo</StatusPill> : null}
         </div>
       </div>
 
@@ -136,13 +136,13 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
           ) : null}
           <div className="flex gap-1.5">
             <dt className="text-ink-3">Last sync:</dt>
-            <dd className="text-ink">{conn.lastSyncAt ? relativeTime(conn.lastSyncAt) : "Not synced yet"}</dd>
+            <dd className="text-ink">{conn.lastSyncAt ? relativeTime(conn.lastSyncAt) : "Never"}</dd>
           </div>
           {conn.expiresAt ? (
             <div className="flex gap-1.5">
               <dt className="text-ink-3">Access:</dt>
               <dd className={expired ? "font-medium text-red-800" : "text-ink"}>
-                {expired ? `Expired ${relativeTime(conn.expiresAt)} — renews on next use, or reconnect` : `Valid until ${formatDateTime(conn.expiresAt)}`}
+                {expired ? `Expired ${relativeTime(conn.expiresAt)} · renews on use` : `Valid until ${formatDateTime(conn.expiresAt)}`}
               </dd>
             </div>
           ) : null}
@@ -150,13 +150,18 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       ) : null}
 
       {syncError ? (
-        <Callout tone="warning" title="The last sync had a problem">
+        <Callout tone="warning" title="Last sync failed">
           {syncError}
         </Callout>
       ) : null}
 
       <div>
-        <h4 className="text-ui font-semibold text-ink-2">What ClimbOS can do</h4>
+        <h4 className="flex items-baseline gap-2 text-ui font-semibold text-ink-2">
+          Can do{" "}
+          <span className="text-xs font-normal tabular-nums text-ink-3">
+            {item.capabilities.filter((c) => c.state === "ready").length}/{item.capabilities.length} ready
+          </span>
+        </h4>
         <ul className="mt-2 flex flex-col divide-y divide-line rounded-xl border border-line">
           {item.capabilities.map((c) => {
             const s = CAPABILITY_STATE[c.state as CapabilityState] ?? CAPABILITY_STATE.unavailable;
@@ -164,11 +169,21 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
               <li key={c.capability} className="flex flex-col gap-1.5 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0">
                   <p className="text-ui font-medium text-ink">{c.label}</p>
-                  {c.reason ? <p className="mt-0.5 text-ui text-ink-2">{c.reason}</p> : null}
-                  {c.fix && c.state !== "ready" ? (
-                    <p className="mt-0.5 text-ui text-ink-3">
-                      <span className="font-medium text-ink-2">What to do:</span> {c.fix}
-                    </p>
+                  {c.reason || (c.fix && c.state !== "ready") ? (
+                    <dl className="mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 text-ui">
+                      {c.reason ? (
+                        <>
+                          <dt className="text-xs font-medium leading-5 text-ink-3">Why</dt>
+                          <dd className="max-w-[70ch] text-ink-2">{c.reason}</dd>
+                        </>
+                      ) : null}
+                      {c.fix && c.state !== "ready" ? (
+                        <>
+                          <dt className="text-xs font-medium leading-5 text-ink-3">Fix</dt>
+                          <dd className="max-w-[70ch] font-medium text-ink">{c.fix}</dd>
+                        </>
+                      ) : null}
+                    </dl>
                   ) : null}
                 </div>
                 <Badge tone={s.tone} icon={s.icon} className="shrink-0 self-start">
@@ -201,9 +216,9 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
         onDisconnect={async () => {
           try {
             await disconnect({ slug, provider: item.provider as Provider });
-            toast({ tone: "success", title: `${item.name} disconnected`, description: "Access was removed from ClimbOS." });
+            toast({ tone: "success", title: `${item.name} disconnected` });
           } catch (err) {
-            setProblem({ tone: "danger", title: "We couldn't disconnect", body: errorInfo(err).message });
+            setProblem({ tone: "danger", title: "Couldn't disconnect", body: errorInfo(err).message });
           }
         }}
       />
@@ -236,8 +251,8 @@ function Actions({
 
   if (isOAuth(item.connectMethod)) {
     buttons.push(
-      <Button key="connect" variant="secondary" onClick={onConnect} loading={busy === "connect"} loadingText="Opening sign-in…" disabled={disabled}>
-        {connected ? "Reconnect" : `Connect ${item.name}`}
+      <Button key="connect" variant="secondary" onClick={onConnect} loading={busy === "connect"} loadingText="Opening…" disabled={disabled} aria-label={`${connected ? "Reconnect" : "Connect"} ${item.name}`}>
+        {connected ? "Reconnect" : "Connect"}
       </Button>,
     );
   } else if (item.connectMethod === "api_key" && (p === "email_resend" || p === "stripe_revenue")) {
@@ -248,7 +263,7 @@ function Actions({
         provider={p}
         trigger={
           <Button variant="secondary" disabled={disabled}>
-            {connected ? "Replace key" : "Connect with a key"}
+            {connected ? "Replace key" : "Add key"}
           </Button>
         }
       />,
@@ -260,7 +275,7 @@ function Actions({
         slug={slug}
         trigger={
           <Button variant="secondary" disabled={disabled}>
-            {connected ? "Upload another file" : "Upload a revenue file"}
+            {connected ? "Upload more" : "Upload CSV"}
           </Button>
         }
       />,
@@ -271,7 +286,7 @@ function Actions({
     buttons.push(
       <Button key="sync" variant="secondary" onClick={onSync} loading={busy === "sync"} loadingText="Syncing…" disabled={disabled}>
         <RefreshCw aria-hidden="true" />
-        Sync now
+        Sync
       </Button>,
     );
   }
@@ -282,8 +297,8 @@ function Actions({
         key="disconnect"
         tone="danger"
         title={`Disconnect ${item.name}?`}
-        description={`ClimbOS will ask ${item.name} to revoke its access and will delete the stored key or token. Scheduled work that needs this connection won't run. Numbers already imported stay in your reports. You can reconnect at any time.`}
-        confirmLabel={`Disconnect ${item.name}`}
+        description="Revokes access and deletes the key. Scheduled work using it stops. Imported numbers stay."
+        confirmLabel="Disconnect"
         onConfirm={onDisconnect}
         trigger={
           <Button variant="ghost" disabled={disabled}>
@@ -299,7 +314,7 @@ function Actions({
     buttons.push(
       <Button key="export" variant="secondary" asChild>
         <Link href={`/app/${slug}/content`}>
-          Open drafts and export packs
+          Drafts
           <ArrowRight aria-hidden="true" />
         </Link>
       </Button>,
@@ -313,7 +328,7 @@ function Actions({
         slug={slug}
         trigger={
           <Button variant="secondary" disabled={disabled}>
-            {item.connection ? "Upload another list" : "Upload a contact list"}
+            {item.connection ? "Upload more" : "Upload list"}
           </Button>
         }
       />,

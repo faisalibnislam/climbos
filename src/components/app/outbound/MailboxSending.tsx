@@ -10,6 +10,8 @@ import { Badge, Button, Callout, Dialog, DialogContent, DialogFooter, DialogTrig
 import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
 import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
+import { StatBlocks } from "@/components/ds/content";
+import { cn } from "@/lib/utils";
 
 /** Connect the owner's mailbox (app password; SMTP to send, IMAP to see replies). */
 export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug: string; label?: string }) {
@@ -30,7 +32,7 @@ export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug:
           <Mail aria-hidden /> {label}
         </Button>
       </DialogTrigger>
-      <DialogContent title="Connect your mailbox" description="Emails go out from your own address, a few at a time. ClimbOS reads only replies and bounces to stop sequences.">
+      <DialogContent title="Connect your mailbox" description="We read only replies and bounces.">
         <div className="flex flex-col gap-4">
           <Field label="Email provider">
             <Select value={preset} onValueChange={(v) => setPreset(v as MailboxPreset)} options={(Object.keys(MAILBOX_PRESETS) as MailboxPreset[]).map((k) => ({ value: k, label: MAILBOX_PRESETS[k].label }))} />
@@ -73,7 +75,7 @@ export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug:
               }
             }}
           >
-            Check and connect
+            Connect
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -127,8 +129,8 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
     <div className="flex flex-col gap-3">
       {!s.mailbox ? (
         <>
-          <p className="text-sm text-ink-3">Send from your own address. Warm-up limits keep your mailbox healthy (10 a day at first, up to 50).</p>
-          {s.can.connect ? <ConnectMailbox slug={slug} /> : <p className="text-xs text-ink-3">Ask an owner or admin to connect a mailbox.</p>}
+          <p className="text-sm text-ink-3">Warm-up: 10/day, up to 50.</p>
+          {s.can.connect ? <ConnectMailbox slug={slug} /> : <p className="text-xs text-ink-3">Ask an admin to connect one.</p>}
         </>
       ) : sending ? (
         <>
@@ -136,12 +138,17 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
             <Badge tone={sending.status === "on" ? "green" : sending.status === "paused" ? "amber" : "neutral"}>{sending.status === "on" ? "Sending" : sending.status === "paused" ? "Paused" : "Done"}</Badge>
             <span className="text-ink-2">from {s.mailbox.label}</span>
           </p>
-          {sending.status === "paused" && sending.pausedReason === "content_changed" ? <p className="text-sm text-amber-800">The emails changed after you started sending. Check them, then resume to approve this version.</p> : null}
-          <p className="text-sm text-ink-2">
-            Mailbox today {s.sentToday}/{s.capToday} · sent {s.counts.sent} · waiting {s.counts.queued}
-            {s.counts.bounced ? ` · bounced ${s.counts.bounced}` : ""}
-          </p>
-          {s.next && sending.status === "on" ? <p className="text-xs text-ink-3">Next email {relativeTime(s.next)}. Weekdays 8:00–17:00 your time.</p> : null}
+          {sending.status === "paused" && sending.pausedReason === "content_changed" ? <Callout tone="warning">Emails changed. Check, then resume.</Callout> : null}
+          <StatBlocks
+            className="grid-cols-2 sm:grid-cols-2 md:grid-cols-2"
+            stats={[
+              { label: "Mailbox today", value: `${s.sentToday}/${s.capToday}` },
+              { label: "Sent", value: s.counts.sent, tone: s.counts.sent ? "good" : "default" },
+              { label: "Waiting", value: s.counts.queued },
+              ...(s.counts.bounced ? [{ label: "Bounced", value: s.counts.bounced, tone: "bad" as const }] : []),
+            ]}
+          />
+          {s.next && sending.status === "on" ? <p className="text-xs text-ink-3">Next {relativeTime(s.next)} · weekdays 8–17</p> : null}
           <div className="flex flex-wrap gap-2">
             {own ? (
               <Button size="sm" variant="secondary" loading={busy === `t:${campaignId}`} onClick={own}>
@@ -155,28 +162,35 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                 onClick={() =>
                   run("add", async () => {
                     const r = await addApproved({ slug, campaignId });
-                    toast({ tone: "success", title: `Added ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.paused ? "They'll go out when you resume." : "Same emails, a few at a time." });
+                    toast({ tone: "success", title: `Added ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.paused ? "Sends when you resume." : undefined });
                   })
                 }
               >
-                <Mail aria-hidden /> Send to {s.newlyApproved} newly approved
+                <Mail aria-hidden /> Send {s.newlyApproved} new
               </Button>
             ) : null}
           </div>
           {s.recent.length ? (
-            <ul className="flex flex-col gap-1 text-xs text-ink-3">
-              {s.recent.slice(0, 6).map((r) => (
-                <li key={r.id}>
-                  {STATUS_TEXT[r.status] ?? r.status} · {r.to} · email {r.step + 1} · {relativeTime(r.at)}
-                </li>
-              ))}
-            </ul>
+            <div>
+              <h3 className="text-overline">Recent</h3>
+              <ul className="mt-1.5 flex flex-col divide-y divide-line text-xs">
+                {s.recent.slice(0, 6).map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 py-1.5">
+                    <span className={cn("w-20 shrink-0 font-medium", r.status === "sent" ? "text-green-800" : r.status === "canceled" ? "text-ink-3" : "text-red-800")}>{STATUS_TEXT[r.status] ?? r.status}</span>
+                    <span className="min-w-0 flex-1 truncate text-ink-2">{r.to}</span>
+                    <span className="shrink-0 tabular-nums text-ink-3">
+                      email {r.step + 1} · {relativeTime(r.at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </>
       ) : s.can.approve ? (
         <>
           <p className="text-sm text-ink-3">
-            Ready to email {approvedWithEmail} approved {approvedWithEmail === 1 ? "person" : "people"} with a published address, from {s.mailbox.label}. Replies stop their sequence.
+            {approvedWithEmail} ready · from {s.mailbox.label}
           </p>
           <Field label="Your name">
             <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} />
@@ -184,7 +198,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
           <Field label="Company">
             <Input value={company} onChange={(e) => setCompany(e.target.value)} />
           </Field>
-          <Field label="Postal address" hint="Required by anti-spam laws; shown in the footer.">
+          <Field label="Postal address" hint="Required by law; in footer.">
             <Input value={address} onChange={(e) => setAddress(e.target.value)} />
           </Field>
           <Button
@@ -194,7 +208,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
             onClick={() =>
               run("start", async () => {
                 const r = await start({ slug, campaignId, senderName, company, address, bookingUrl });
-                toast({ tone: "success", title: `Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: "A few at a time, on weekdays." });
+                toast({ tone: "success", title: `Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}` });
               })
             }
           >
@@ -202,7 +216,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
           </Button>
         </>
       ) : (
-        <p className="text-sm text-ink-3">An owner, admin or reviewer starts sending.</p>
+        <p className="text-sm text-ink-3">Needs an admin or reviewer.</p>
       )}
       {s.others.length ? (
         <div className="border-t border-line pt-3">
@@ -223,7 +237,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
               );
             })}
           </ul>
-          {s.others.some((o) => o.pausedReason === "archived") ? <p className="mt-1 text-xs text-ink-3">Paused when you started a new search. Resume to keep their follow-ups going.</p> : null}
+          {s.others.some((o) => o.pausedReason === "archived") ? <p className="mt-1 text-xs text-ink-3">Paused by your new search.</p> : null}
         </div>
       ) : null}
     </div>

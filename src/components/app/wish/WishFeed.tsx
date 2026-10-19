@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
+import { Prose } from "@/components/ds/content";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -69,7 +70,7 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
           </p>
           <p className="mt-0.5 text-xs text-ink-3">
             {relativeTime(ask.createdAt)}
-            {thinking ? " · Your team is reading your wish…" : allDone ? " · All done" : cards.some((c) => c.status === "running") ? " · Working on it" : ""}
+            {thinking ? " · Reading…" : allDone ? " · Done" : cards.some((c) => c.status === "running") ? " · Working" : ""}
           </p>
         </div>
       </header>
@@ -90,15 +91,6 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
           </div>
         ) : answer ? (
           <>
-            {answer.understood ? (
-              <p className="flex items-start gap-2 text-ui text-ink-2">
-                <Sparkles aria-hidden className="mt-0.5 size-3.5 shrink-0 text-sun-strong" />
-                <span>
-                  <span className="font-medium text-ink">Understood: </span>
-                  {answer.understood.replace(/^You want:?\s*/i, "")}
-                </span>
-              </p>
-            ) : null}
             {cards.length > 0 ? (
               <ol className="flex flex-col divide-y divide-line rounded-lg border border-line">
                 {cards.map((c) => (
@@ -108,12 +100,17 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
                 ))}
               </ol>
             ) : null}
-            <p className="whitespace-pre-line text-sm text-ink-2">{answer.text}</p>
+            {cards.length > 0 ? <AnswerNote text={answer.text} /> : <Prose text={answer.text} max={3} tone="muted" className="text-sm" />}
           </>
         ) : null}
       </div>
     </article>
   );
+}
+
+/** The team's note on a wish: one line, or bullets with the first one shown. */
+function AnswerNote({ text }: { text: string }) {
+  return <Prose text={text} max={1} tone="muted" className="text-sm" />;
 }
 
 /** Send the same wish again (a new job; the failed one stays in the history). */
@@ -165,8 +162,10 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
         </Tooltip>
         {network ? <SocialIcon network={network} size="sm" /> : card.kind === "note" ? <Lightbulb aria-hidden className="size-4 text-amber-800" /> : null}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-ui font-medium text-ink">{card.title}</p>
-          {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : <p className="truncate text-xs text-ink-3">{card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? card.blockedReason : card.description}</p>}
+          <Tooltip content={card.description}>
+            <p tabIndex={0} className="truncate text-ui font-medium text-ink">{card.title}</p>
+          </Tooltip>
+          {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? <p className="truncate text-xs text-ink-3">{card.blockedReason}</p> : null}
           {card.status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
         </div>
       </div>
@@ -191,7 +190,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           card.runId ? (
             <Button asChild size="sm" variant="secondary">
               <Link href={`/app/${slug}/work/${card.runId}`}>
-                <CircleX aria-hidden className="text-red-800" /> Didn’t finish: see why
+                <CircleX aria-hidden className="text-red-800" /> See why
               </Link>
             </Button>
           ) : (

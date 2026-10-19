@@ -1202,6 +1202,8 @@ export default defineSchema({
     generationCostMicros: v.number(),
     runId: v.optional(v.id("workflowRuns")),
     approvalId: v.optional(v.id("approvals")),
+    /** Set when the owner restored this version (all or some parts) from an older one. */
+    restoredFrom: v.optional(v.object({ version: v.number(), parts: v.array(v.string()) })),
     createdAt: v.number(),
   }).index("by_org", ["orgId"]),
 

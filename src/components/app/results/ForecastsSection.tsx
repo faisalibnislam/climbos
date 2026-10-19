@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, CircleCheck, CircleHelp } from "@/components/icons"
+import { ArrowRight, ChartLine, CircleCheck, CircleHelp } from "@/components/icons"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -22,7 +22,7 @@ export function ForecastStatusBadge({ status }: { status: string }) {
     </Badge>
   ) : (
     <Badge tone="amber" icon={<CircleHelp />}>
-      Not enough evidence
+      Low confidence
     </Badge>
   );
 }
@@ -51,52 +51,43 @@ export function ForecastsSection({ slug, data }: { slug: string; data: Overview 
 
   return (
     <section aria-labelledby="forecasts-heading" className="flex flex-col gap-4">
-      <div>
-        <h2 id="forecasts-heading" className="heading-section flex flex-wrap items-center gap-2">
-          Forecasts <ValueKind kind="projected" />
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-3">
-          Statistical projections from your own history. Every forecast is tested against past data first; if the test isn&apos;t convincing, we say so instead of
-          showing a range.
-        </p>
-      </div>
+      <h2 id="forecasts-heading" className="heading-section flex flex-wrap items-center gap-2">
+        <ChartLine aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Forecasts <ValueKind kind="projected" />
+      </h2>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5" aria-describedby="new-forecast-hint">
-        <div>
-          <h3 className="heading-card">New forecast</h3>
-          <p id="new-forecast-hint" className="mt-0.5 text-ui text-ink-3">
-            Uses all the daily history we have for that number. It takes a few seconds and costs nothing.
-          </p>
-        </div>
+      <form onSubmit={onSubmit} aria-label="New forecast" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+        <h3 className="heading-card">
+          New forecast <span className="text-ui font-normal text-ink-3">· free</span>
+        </h3>
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
-          <Field label="What to forecast">
+          <Field label="Metric">
             <Select
               value={metricKey}
               onValueChange={(v) => setMetricKey(v as MetricKey)}
               options={(Object.keys(METRIC_LABELS) as MetricKey[]).map((k) => ({
                 value: k,
-                label: hasData(k) ? METRIC_LABELS[k] : `${METRIC_LABELS[k]} (no data yet)`,
+                label: hasData(k) ? METRIC_LABELS[k] : `${METRIC_LABELS[k]} (no data)`,
               }))}
             />
           </Field>
-          <Field label="How far ahead">
+          <Field label="Horizon">
             <Select
               value={horizon}
               onValueChange={(v) => setHorizon(v as "7" | "30" | "90")}
               options={[
-                { value: "7", label: "Next 7 days" },
-                { value: "30", label: "Next 30 days" },
-                { value: "90", label: "Next 90 days" },
+                { value: "7", label: "7 days" },
+                { value: "30", label: "30 days" },
+                { value: "90", label: "90 days" },
               ]}
             />
           </Field>
           <Button type="submit" loading={busy} loadingText="Creating…">
-            Create forecast
+            Forecast
           </Button>
         </div>
         <div aria-live="polite">
           {error ? (
-            <Callout tone="danger" live="none" title="We couldn't create that forecast">
+            <Callout tone="danger" live="none" title="Couldn't create forecast">
               {error}{" "}
               {!hasData(metricKey) ? <Link href={`/app/${slug}/connections`}>Go to Connections</Link> : null}
             </Callout>
@@ -116,9 +107,9 @@ export function ForecastsSection({ slug, data }: { slug: string; data: Overview 
               >
                 <span className="flex flex-col">
                   <span className="text-sm font-medium text-ink">
-                    {METRIC_LABELS[f.metricKey] ?? f.metricKey} · next {f.horizonDays} days
+                    {METRIC_LABELS[f.metricKey] ?? f.metricKey} · {f.horizonDays} days
                   </span>
-                  <span className="text-xs text-ink-3">Created {relativeTime(f.createdAt)}</span>
+                  <span className="text-xs text-ink-3">{relativeTime(f.createdAt)}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-2">
                   <ForecastStatusBadge status={f.status} />

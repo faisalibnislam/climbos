@@ -41,7 +41,7 @@ export function NotificationBell({ slug }: { slug: string }) {
             })}
           </ul>
         ) : (
-          <p className="px-4 py-6 text-center text-sm text-ink-3">Nothing new. Mentions, assignments and approval requests show up here.</p>
+          <p className="px-4 py-6 text-center text-sm text-ink-3">Nothing new</p>
         )}
         <Link href={`/app/${slug}/settings/activity`} className="block border-t border-line px-4 py-2.5 text-center text-xs font-medium text-brand-800 hover:underline">
           All activity

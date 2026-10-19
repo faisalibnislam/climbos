@@ -27,7 +27,6 @@ export function DesignLibrary({ slug }: { slug: string }) {
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-8">
       <PageHeader
         title="Design studio"
-        intro="Image posts, carousels and documents in your brand. Saved here automatically."
         actions={
           data?.canEdit ? (
             <Button asChild>
@@ -51,7 +50,6 @@ export function DesignLibrary({ slug }: { slug: string }) {
           icon={<Palette />}
           headingLevel="h2"
           title="No designs yet"
-          body="Start from a template in your brand colours, then edit anything."
           action={
             data.canEdit ? (
               <Button asChild>
@@ -112,8 +110,8 @@ export function DesignLibrary({ slug }: { slug: string }) {
         open={Boolean(deleting)}
         onOpenChange={(o) => !o && setDeleting(null)}
         title={`Delete “${deleting?.title ?? ""}”?`}
-        description="It leaves your library. Posts that already use its image keep it."
-        confirmLabel="Delete design"
+        description="Posts using it keep the image."
+        confirmLabel="Delete"
         tone="danger"
         onConfirm={async () => {
           if (!deleting) return;

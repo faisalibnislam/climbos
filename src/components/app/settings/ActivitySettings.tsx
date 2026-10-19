@@ -21,14 +21,11 @@ export function ActivitySettings({ slug }: { slug: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader
-        title="Activity"
-        intro="A permanent record of what happened in this workspace and who did it — people, the AI team, ClimbOS itself and ClimbOS support."
-      />
+      <SettingsHeader title="Activity" />
       {status === "LoadingFirstPage" ? (
         <LoadingBlock label="Loading activity…" />
       ) : results.length === 0 ? (
-        <EmptyState title="No activity yet" body="Actions like approvals, connections and plan changes will appear here." headingLevel="h2" />
+        <EmptyState title="No activity yet" headingLevel="h2" />
       ) : (
         <section aria-labelledby="activity-heading" className="flex flex-col gap-3">
           <h2 id="activity-heading" className="sr-only">
@@ -58,14 +55,14 @@ export function ActivitySettings({ slug }: { slug: string }) {
           <div aria-live="polite" className="flex justify-center">
             {status === "CanLoadMore" ? (
               <Button variant="secondary" onClick={() => loadMore(30)}>
-                Show older activity
+                Show older
               </Button>
             ) : status === "LoadingMore" ? (
-              <Button variant="secondary" loading loadingText="Loading older activity…">
-                Show older activity
+              <Button variant="secondary" loading loadingText="Loading…">
+                Show older
               </Button>
             ) : (
-              <p className="text-sm text-ink-3">That&apos;s everything.</p>
+              <p className="text-sm text-ink-3">That&apos;s all</p>
             )}
           </div>
         </section>

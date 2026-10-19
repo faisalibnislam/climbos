@@ -6,6 +6,7 @@ import { FlaskConical } from "@/components/icons"
 import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
 import { Badge, Button, Card, CardContent, EmptyState, Progress, toast } from "@/components/ui";
+import { Scannable, StatBlocks, StepFlow } from "@/components/ds/content";
 
 const AGENT = { growth_plays: "Growth plays", growth_strategy: "Growth plan", business_insights: "Insights", channel_fit: "Channel fit" } as Record<string, string>;
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
@@ -21,40 +22,39 @@ export function EngineLab() {
   const live = d.proposals.filter((p) => p.status === "approved");
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex flex-col gap-4">
         <h1 className="heading-page">Engine lab</h1>
-        <p className="text-sm text-ink-3">Every Tuesday the engine proposes rules from anonymized reviewer feedback; a rule needs the same weakness in 5+ businesses. Test, then approve to ship.</p>
+        <StepFlow
+          steps={[
+            { title: "Propose", body: "Every Tuesday, from anonymized reviewer feedback" },
+            { title: "Qualify", body: "Same weakness in 5+ businesses" },
+            { title: "Test", body: "On the Formkit case" },
+            { title: "Approve", body: "Ships in the next plan" },
+          ]}
+        />
       </div>
       <Card>
-        <CardContent className="flex flex-col gap-2">
-          <p className="flex justify-between text-sm">
-            <span className="font-medium text-ink">Lab budget this month</span>
-            <span className="tabular-nums text-ink-2">
-              {usd(d.spentMicros)} / {usd(d.capMicros)}
-            </span>
-          </p>
+        <CardContent className="flex flex-col gap-3">
+          <StatBlocks
+            stats={[
+              { label: "Lab budget this month", value: `${usd(d.spentMicros)} / ${usd(d.capMicros)}`, tone: d.spentMicros >= d.capMicros ? "bad" : "default" },
+              { label: "Left", value: usd(Math.max(0, d.capMicros - d.spentMicros)) },
+            ]}
+          />
           <Progress value={Math.min(100, (d.spentMicros / d.capMicros) * 100)} label="Lab budget used" />
         </CardContent>
       </Card>
       {d.cost.modes.length ? (
-        <Card>
-          <CardContent className="flex flex-col gap-1.5 text-sm">
-            <p className="font-medium text-ink">Plan cost, last 14 days</p>
-            {d.cost.modes.map((m) => (
-              <p key={m.mode} className="flex justify-between tabular-nums text-ink-2">
-                <span>
-                  <span className="capitalize">{m.mode}</span> · {m.plans} plans
-                </span>
-                <span>
-                  avg {usd(m.meanMicros)} · p95 {usd(m.p95Micros)}
-                </span>
-              </p>
-            ))}
-            <p className={d.cost.overReservation || d.cost.stoppedAtCap ? "text-red-800" : "text-ink-3"}>
-              {d.cost.overReservation} over reservation · {d.cost.stoppedAtCap} stopped at the 1.5× cap
-            </p>
-          </CardContent>
-        </Card>
+        <section className="flex flex-col gap-3">
+          <h2 className="heading-section">Plan cost, last 14 days</h2>
+          <StatBlocks
+            stats={[
+              ...d.cost.modes.map((m) => ({ label: `${m.mode.charAt(0).toUpperCase()}${m.mode.slice(1)} · ${m.plans} plans`, value: `avg ${usd(m.meanMicros)}`, hint: `p95 ${usd(m.p95Micros)}` })),
+              { label: "Over reservation", value: d.cost.overReservation, tone: d.cost.overReservation ? ("bad" as const) : ("default" as const) },
+              { label: "Stopped at the 1.5× cap", value: d.cost.stoppedAtCap, tone: d.cost.stoppedAtCap ? ("bad" as const) : ("default" as const) },
+            ]}
+          />
+        </section>
       ) : null}
       {d.health.agents.length ? (
         <section className="flex flex-col gap-3">
@@ -94,21 +94,24 @@ export function EngineLab() {
         </section>
       ) : null}
       {d.health.decisions.approved + d.health.decisions.sentBack > 0 ? (
-        <Card>
-          <CardContent className="flex flex-col gap-1.5 text-sm">
-            <p className="flex justify-between">
-              <span className="font-medium text-ink">Owner verdicts, last 14 days</span>
-              <span className="tabular-nums text-ink-2">
-                {d.health.decisions.approved} approved · {d.health.decisions.sentBack} sent back
-              </span>
-            </p>
-            {d.health.decisions.notes.map((n, i) => (
-              <p key={i} className="text-ink-3">
-                “{n}”
-              </p>
-            ))}
-          </CardContent>
-        </Card>
+        <section className="flex flex-col gap-3">
+          <h2 className="heading-section">Owner verdicts, last 14 days</h2>
+          <StatBlocks
+            stats={[
+              { label: "Approved", value: d.health.decisions.approved, tone: "good" },
+              { label: "Sent back", value: d.health.decisions.sentBack, tone: d.health.decisions.sentBack ? "warn" : "default" },
+            ]}
+          />
+          {d.health.decisions.notes.length ? (
+            <ul className="flex flex-col gap-1.5 text-sm text-ink-2" aria-label="Owner notes">
+              {d.health.decisions.notes.map((n, i) => (
+                <li key={i} className="border-l-2 border-line-strong pl-3">
+                  “{n}”
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
       ) : null}
       <section className="flex flex-col gap-3">
         <h2 className="heading-section">Proposals</h2>
@@ -123,14 +126,28 @@ export function EngineLab() {
                   <span className="text-xs text-ink-3">{relativeTime(p.createdAt)}</span>
                 </p>
                 <pre className="whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-sm text-ink-2">{p.rules}</pre>
-                {p.rationale ? <p className="text-xs text-ink-3">Why: {p.rationale}</p> : null}
+                {p.rationale ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-medium text-ink-3">Why</p>
+                    <Scannable text={p.rationale} tone="muted" max={3} />
+                  </div>
+                ) : null}
                 {p.test ? (
-                  <p className="text-sm text-ink-2">
-                    {p.status === "testing" ? "Testing… " : ""}
-                    {p.test.baseline !== undefined ? `Now ${p.test.baseline.toFixed(2)}` : ""}
-                    {p.test.variant !== undefined ? ` → with rules ${p.test.variant.toFixed(2)}` : ""} (review score, 1–5) · {usd(p.test.costMicros)}
-                    {p.test.error ? <span className="text-red-800"> · {p.test.error}</span> : null}
-                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs font-medium text-ink-3">{p.status === "testing" ? "Testing… " : ""}Review score, 1–5</p>
+                    <StatBlocks
+                      stats={[
+                        { label: "Now", value: p.test.baseline !== undefined ? p.test.baseline.toFixed(2) : "—" },
+                        {
+                          label: "With rules",
+                          value: p.test.variant !== undefined ? p.test.variant.toFixed(2) : "—",
+                          tone: p.test.variant !== undefined && p.test.baseline !== undefined ? (p.test.variant > p.test.baseline ? "good" : p.test.variant < p.test.baseline ? "bad" : "default") : "default",
+                        },
+                        { label: "Test cost", value: usd(p.test.costMicros) },
+                      ]}
+                    />
+                    {p.test.error ? <p className="text-sm text-red-800">{p.test.error}</p> : null}
+                  </div>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
                   {p.agentId === "growth_plays" && p.status === "proposed" ? (
