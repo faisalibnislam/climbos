@@ -35,7 +35,7 @@ import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpe
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";
 import { skillPlaybook } from "../shared/skills";
-import { draftSystem, OPERATING_RULES, runAgent, type AgentDeps } from "../shared/agents/runtime";
+import { draftSystem, OPERATING_RULES, runAgent, runResearch, type AgentDeps } from "../shared/agents/runtime";
 import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
@@ -309,6 +309,8 @@ interface ArmResult {
   ms: number;
   rounds?: number;
   history?: unknown;
+  /** Wall time per phase (label → ms, start offset), to see where a run's time goes. */
+  phases?: { label: string; startMs: number; ms: number }[];
 }
 
 async function runV1(p: Prepared, t: BenchTask): Promise<ArmResult> {
@@ -364,15 +366,23 @@ const insightsOf = (p: Prepared) => fitJson(p.insights, 20_000, "insights").text
 /** Strategy as in production: channel scoring, then the plays agent, then the plan agent; both arms get the same stages. */
 async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   let cost = 0;
+  const t0 = Date.now();
+  const phases: NonNullable<ArmResult["phases"]> = [];
   const deps: AgentDeps = {
     turn: async (req) => {
       const r = await turnWithRetry(req);
       cost += r.costMicros;
       return r;
     },
-    phase: async (_key, _label, fn) => (await fn()).value,
+    phase: async (_key, label, fn) => {
+      const s = Date.now();
+      try {
+        return (await fn()).value;
+      } finally {
+        phases.push({ label, startMs: s - t0, ms: Date.now() - s });
+      }
+    },
   };
-  const t0 = Date.now();
   try {
     const base = inputFor(p, "strategy");
     // 0. Channel scoring (Acquisition Intelligence), exactly as the plan job runs it.
@@ -381,18 +391,25 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
     const mode: AiMode = arm === "expert" ? "expert" : "basic";
     const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode), drafts: draftsFor(spec.id, mode) });
-    const fit = await runAgent(
+    const insights = insightsOf(p);
+    // As production: plays research runs alongside channel scoring (it doesn't need the scorecard).
+    const playsSpec = withMode(growthPlaysSpec({ decisionContract: DC }, playCatalogsFor(p.c.type)));
+    const playsResearch = { website: p.c.website, businessName: p.c.name };
+    const researchRun = runResearch(playsSpec, { ...base, task: playsTask({ scorecard: "", insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", playsResearch) }, deps);
+    const fitRun = runAgent(
       withMode(channelFitSpec({ candidateIds: candidates.map((c) => c.id), typeKeys: BUSINESS_TYPES.map((t) => t.key), dims: Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values])) }, {})),
       { ...base, research: undefined, task: `Classify this business and score its candidate acquisition channels for the goal and budget. Types: one of ${BUSINESS_TYPES.map((t) => t.key).join(", ")}. Dimensions: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Deltas (−30…+30, factor order ${FACTORS.join(", ")}) only with evidence. CANDIDATES:\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}` },
       deps,
     );
-    const f = fit.output as ChannelFit;
+    const [fitR, resR] = await Promise.allSettled([fitRun, researchRun]);
+    if (fitR.status === "rejected") throw fitR.reason;
+    if (resR.status === "rejected") throw resR.reason;
+    const f = fitR.value.output as ChannelFit;
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
     // As production with decision_contract: owner time and capability limits apply before ranking (no connections in the bench).
     const scored = scoreChannels(profile, adjustmentsFrom(f), undefined, DC ? { ownerHoursPerWeek: base.constraints?.ownerHoursPerWeek, connected: [] } : undefined);
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
-    const insights = insightsOf(p);
-    const playsRun = await runAgent(withMode(growthPlaysSpec({ decisionContract: DC }, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
+    const playsRun = await runAgent(playsSpec, { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", playsResearch), ...(resR.value ? { precomputedResearch: resR.value } : {}) }, deps);
     const draft = playsRun.output as PlaysOutput;
     const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
     const checked = verifyTags(draft, { pages, searched: (playsRun.research?.sources ?? []).map((x) => urlKey(x.url)), fetchedAt: Date.now() });
@@ -410,9 +427,10 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
       output: { ...(plan.output as object), ...(DC && (plays.output as { decision?: unknown }).decision ? { decision: (plays.output as { decision?: unknown }).decision } : {}), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, economics: plays.output.economics, researchSources: (playsRun.research?.sources ?? []).map((x) => x.url), channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
       costMicros: cost,
       ms: Date.now() - t0,
+      phases,
     };
   } catch (e) {
-    return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0 };
+    return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0, phases };
   }
 }
 

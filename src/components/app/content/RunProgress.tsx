@@ -206,19 +206,7 @@ export function RunProgress({
           </div>
         </div>
       ) : null}
-      {run.preview && !finished ? (
-        <section aria-label="First take" className="rounded-lg border border-brand-200 bg-brand-50/60 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">First take · full version coming</p>
-          <p className="mt-1 text-sm font-medium text-ink">{run.preview.headline}</p>
-          <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
-            {run.preview.points.map((p) => (
-              <li key={p}>
-                <Highlight text={p} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {run.preview && !finished ? <EarlyPreview preview={run.preview} /> : null}
       {groups.length ? (
         <ol className="flex flex-col gap-4">
           {groups.map((g) => (
@@ -351,5 +339,59 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
         </div>
       ) : null}
     </div>
+  );
+}
+
+
+/** What the job already knows, shown while it keeps working: channels that fit, the first take, the chosen plays. */
+function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
+  const KIND: Record<string, string> = { bankable: "Bankable", creative: "Creative", moonshot: "Moonshot" };
+  return (
+    <section aria-label="Early preview" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-3">
+      <p className="text-overline text-brand-800">Early preview · full plan coming</p>
+      {preview.plays?.length ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium text-ink-2">Chosen plays</p>
+          <ul className="grid gap-1.5 sm:grid-cols-2">
+            {preview.plays.map((p) => (
+              <li key={p.name} className="flex flex-col gap-0.5 rounded-[var(--radius-control)] bg-surface px-2.5 py-2">
+                <span className="text-2xs font-medium uppercase tracking-wide text-ink-3">{KIND[p.kind] ?? p.kind}</span>
+                <span className="text-ui font-medium text-ink">{p.name}</span>
+                <span className="text-xs text-ink-2">
+                  <span className="font-semibold tabular-nums text-ink">~{p.p50}</span> {p.unit}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {preview.headline ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-ink">{preview.headline}</p>
+          {preview.points?.length ? (
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
+              {preview.points.map((p) => (
+                <li key={p}>
+                  <Highlight text={p} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+      {preview.channels?.length ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium text-ink-2">Channels that fit</p>
+          <ul className="flex flex-wrap gap-1.5">
+            {preview.channels.map((c, i) => (
+              <li key={c} className="inline-flex items-center gap-1 rounded-[var(--radius-badge)] bg-surface px-2 py-0.5 text-xs text-ink">
+                <span className="tabular-nums text-ink-3">{i + 1}</span> {c}
+              </li>
+            ))}
+          </ul>
+          {preview.budget ? <p className="text-xs text-ink-3">{preview.budget}</p> : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

@@ -184,43 +184,51 @@ async function both<A, B>(a: Promise<A>, b: Promise<B>): Promise<[A, B]> {
   if (rb.status === "rejected") throw rb.reason;
   return [ra.value, rb.value];
 }
+/**
+ * The research phase on its own: free-form notes plus sources collected from tool results.
+ * Exported so a job can run it in parallel with other work and pass the notes in as
+ * `input.precomputedResearch`.
+ */
+export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps: AgentDeps): Promise<AgentRunResult<T>["research"]> {
+  if (!input.research) return null;
+  checkDeadline(deps);
+  const r = input.research;
+  return deps.phase({ phase: "research", round: 0, index: 0 }, `${spec.label}: research`, async () => {
+    const req: TurnRequest = {
+      modelKey: spec.models.research,
+      system: [
+        { text: OPERATING_RULES },
+        {
+          text: `${ROLE_CHARTERS[spec.role]}\n\nYou are doing the research phase only. Use web search and web fetch to gather evidence, then write compact research notes for the colleague who will do the work. Prefer primary sources (the business's and competitors' own pages, review sites, forums, ad libraries) over SEO listicles. Quote customer language verbatim (short quotes) with the URL. Separate evidence from inference. Never pad: if something can't be found, say so.`,
+          cache: true,
+        },
+      ],
+      messages: [
+        {
+          role: "user",
+          content: `${inputBlock(input, null)}\n\nTHE JOB YOUR NOTES SUPPORT:\n${input.task}\n\nRESEARCH TO DO:\n${r.brief}\n\nWrite the notes as short headed sections with bullet points. End with a "Sources" list of the URLs you relied on.`,
+        },
+      ],
+      maxTokens: spec.maxTokens.research,
+      effort: spec.effort.research,
+      verbosity: "low",
+      cacheKey: `climbos:${spec.id}:research`,
+      webSearch: { maxUses: r.maxSearches, allowedDomains: r.allowedDomains, userLocation: r.userLocation },
+      webFetch: r.maxFetches > 0 ? { maxUses: r.maxFetches } : undefined,
+    };
+    const result = await deps.turn(req);
+    if (!result.ok) failure(result);
+    return {
+      value: { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.map((s) => ({ url: s.url, title: s.title })) },
+      record: { phase: "research", round: 0, modelKey: spec.models.research, result },
+    };
+  });
+
+}
+
 export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: AgentDeps): Promise<AgentRunResult<T>> {
-  // 1. Research (optional): free-form notes plus sources collected from tool results.
-  let research: AgentRunResult<T>["research"] = null;
-  if (input.research) {
-    checkDeadline(deps);
-    const r = input.research;
-    research = await deps.phase({ phase: "research", round: 0, index: 0 }, `${spec.label}: research`, async () => {
-      const req: TurnRequest = {
-        modelKey: spec.models.research,
-        system: [
-          { text: OPERATING_RULES },
-          {
-            text: `${ROLE_CHARTERS[spec.role]}\n\nYou are doing the research phase only. Use web search and web fetch to gather evidence, then write compact research notes for the colleague who will do the work. Prefer primary sources (the business's and competitors' own pages, review sites, forums, ad libraries) over SEO listicles. Quote customer language verbatim (short quotes) with the URL. Separate evidence from inference. Never pad: if something can't be found, say so.`,
-            cache: true,
-          },
-        ],
-        messages: [
-          {
-            role: "user",
-            content: `${inputBlock(input, null)}\n\nTHE JOB YOUR NOTES SUPPORT:\n${input.task}\n\nRESEARCH TO DO:\n${r.brief}\n\nWrite the notes as short headed sections with bullet points. End with a "Sources" list of the URLs you relied on.`,
-          },
-        ],
-        maxTokens: spec.maxTokens.research,
-        effort: spec.effort.research,
-        verbosity: "low",
-        cacheKey: `climbos:${spec.id}:research`,
-        webSearch: { maxUses: r.maxSearches, allowedDomains: r.allowedDomains, userLocation: r.userLocation },
-        webFetch: r.maxFetches > 0 ? { maxUses: r.maxFetches } : undefined,
-      };
-      const result = await deps.turn(req);
-      if (!result.ok) failure(result);
-      return {
-        value: { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.map((s) => ({ url: s.url, title: s.title })) },
-        record: { phase: "research", round: 0, modelKey: spec.models.research, result },
-      };
-    });
-  }
+  // 1. Research (optional): done here, or already done in parallel by the job.
+  const research: AgentRunResult<T>["research"] = input.precomputedResearch ?? (await runResearch(spec, input, deps));
 
   const system = draftSystem(spec);
   const baseUser = `${inputBlock(input, research?.notes ?? null)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;

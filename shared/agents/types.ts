@@ -75,6 +75,8 @@ export interface AgentInput {
   untrustedContext?: string;
   /** Research to do for this job (overrides nothing; omit for no research phase). */
   research?: ResearchSpec;
+  /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
+  precomputedResearch?: { notes: string; sources: { url: string; title?: string }[] };
   /** Facts the critic must check claims against (statements). */
   facts: string[];
   /** Hard limits the output is checked against in code (spec §13). */

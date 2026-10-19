@@ -648,7 +648,17 @@ export const recoverStuckRuns = internalMutation({
 export const setRunPreview = internalMutation({
   args: { runId: v.id("workflowRuns"), preview: v.string() },
   handler: async (ctx, { runId, preview }) => {
-    await ctx.db.patch(runId, { preview: preview.slice(0, 4000) });
+    // Previews arrive in pieces (channels, first take, plays): merge them into one object.
+    const run = await ctx.db.get(runId);
+    let merged = preview;
+    try {
+      const prev = run?.preview ? (JSON.parse(run.preview) as Record<string, unknown>) : {};
+      merged = JSON.stringify({ ...prev, ...(JSON.parse(preview) as Record<string, unknown>) });
+    } catch {
+      // Not JSON: keep the new value.
+    }
+    if (merged.length > 4000) merged = preview;
+    await ctx.db.patch(runId, { preview: merged.slice(0, 4000) });
   },
 });
 

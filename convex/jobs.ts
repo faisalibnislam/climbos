@@ -34,7 +34,7 @@ import { callModel, generateImage, type ModelResult } from "./ai/providers";
 import { fetchCitedPages, researchWebsite } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
-import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
+import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch } from "../shared/agents/runtime";
 import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
@@ -74,7 +74,7 @@ import {
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -310,7 +310,9 @@ async function runAgentTask<T>(
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
   meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[]; quality?: AgentQuality },
+  opts?: { researchOnly?: boolean },
 ): Promise<T> {
+  if (opts?.researchOnly && (job.run.isFixture || job.run.engine !== "v2")) return null as T;
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
   }
@@ -412,6 +414,8 @@ async function runAgentTask<T>(
     },
   };
   try {
+    // Research only (run in parallel with other work); the agent later gets it as precomputedResearch.
+    if (opts?.researchOnly) return (await runResearch(spec, input, deps)) as T;
     const result = await runAgent(spec, input, deps);
     if (meta) {
       meta.shipped = result.assessment?.ship ?? null;
@@ -629,6 +633,44 @@ async function consistencyStep(ctx: ActionCtx, job: JobCtx, index: number, plan:
   }
 }
 
+type PrecomputedResearch = { notes: string; sources: { url: string; title?: string }[] };
+
+/** The previous plan's channel scoring, when nothing it depended on has changed since. */
+function reusableChannelFit(job: JobCtx): { adjustments: Adjustment[]; summary: string[] } | null {
+  const prev = (job as { strategy?: Doc<"strategies"> | null }).strategy;
+  const acq = prev?.acquisition as { libraryVersion?: string; adjustments?: Adjustment[]; summary?: string[] } | undefined;
+  if (!prev || !acq || acq.libraryVersion !== LIBRARY_VERSION || !Array.isArray(acq.adjustments)) return null;
+  if (!job.goal || prev.goalId !== job.goal._id) return null;
+  // No research at all counts as unchanged; new research after the last plan means score again.
+  const researchedAt = (job.business?.insights as { generatedAt?: number } | undefined)?.generatedAt ?? 0;
+  if (researchedAt >= prev.createdAt) return null;
+  return { adjustments: acq.adjustments, summary: Array.isArray(acq.summary) ? acq.summary.slice(0, 3) : [] };
+}
+
+/** Instant preview from code: the channels that fit and the budget approach (merged with later previews). */
+async function previewChannels(ctx: ActionCtx, job: JobCtx, profile: AcquisitionProfile) {
+  try {
+    const top = scoreChannels(profile, [])
+      .filter((r) => r.status !== "ineligible")
+      .slice(0, 4)
+      .map((r) => r.name);
+    const band = budgetBand(profile.budgetUsd);
+    await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify({ channels: top, budget: `${band.label}: ${band.approach}`.slice(0, 220) }) });
+  } catch {
+    // A preview is a nice-to-have.
+  }
+}
+
+/** The chosen plays with forecasts computed in code, shown before the plan around them is written. */
+async function previewPlays(ctx: ActionCtx, job: JobCtx, plays: { plays: { name: string; kind: string; p50: number; unit: string; horizonDays?: number }[] }) {
+  try {
+    const list = plays.plays.slice(0, 4).map((p) => ({ name: p.name.slice(0, 80), kind: p.kind, p50: Math.round(p.p50 * 10) / 10, unit: p.unit.split(/[;(]/)[0].trim().slice(0, 60) }));
+    await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify({ plays: list }) });
+  } catch {
+    // A preview is a nice-to-have.
+  }
+}
+
 async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: string, task: string) {
   if (job.run.isFixture || job.run.engine !== "v2" || process.env.CLIMBOS_FAKE_LLM) return;
   try {
@@ -764,8 +806,8 @@ export const buildStrategy = internalAction({
       const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
       const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
-      // Speed: a first take in about a minute while the full plan is researched and reviewed.
-      await quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)"}`);
+      // Speed: a first take in about a minute, running alongside the real work (never blocking it).
+      const firstTake = quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)"}`);
       // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
       let profile = profileFrom({
         saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null,
@@ -775,13 +817,32 @@ export const buildStrategy = internalAction({
         legacyTypes: typesFromLegacy,
         priceUsdMonth: job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? entryPriceUsdMonth(job.facts),
       });
+      // Speed: something useful in seconds, from code alone (no model): the channels that fit and the budget approach.
+      if (v2) await previewChannels(ctx, job, profile);
       let adjustments: Adjustment[] = [];
       let channelSummary: string[] = [];
-      if (v2) {
+      // Plays research doesn't depend on channel scoring, so it runs alongside it.
+      const playsSpec = growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType));
+      const playsInput = (scorecard: string) =>
+        agentInput(
+          job,
+          playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities), decisionContract: hasFlag(job, "decision_contract") }),
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
+        );
+      const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
+      const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);
+      // Re-plans: when the channel library, goal and research haven't changed since the last plan, its
+      // evidence-based channel scoring still holds (budget and price fit are applied in code below).
+      const reused = v2 ? reusableChannelFit(job) : null;
+      if (reused) {
+        adjustments = reused.adjustments;
+        channelSummary = reused.summary;
+      }
+      if (v2 && !reused) {
         const candidates = candidatesFor(profile);
         const typeKeys = BUSINESS_TYPES.map((t) => t.key);
         const dimValues = Object.fromEntries(Object.entries(DIMENSIONS).map(([k, d]) => [k, d.values]));
-        const fit = await runAgentTask<ChannelFit>(
+        const fitRun = runAgentTask<ChannelFit>(
           ctx,
           job,
           200,
@@ -803,6 +864,10 @@ export const buildStrategy = internalAction({
           startedAt,
           { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },
         );
+        // Wait for both before going on (a pause to resume later must not lose the other's checkpoint).
+        const [fitR] = await Promise.allSettled([fitRun, researchRun]);
+        if (fitR.status === "rejected") throw fitR.reason;
+        const fit = fitR.value;
         profile = mergeFit(profile, fit, new Set(typeKeys));
         adjustments = adjustmentsFrom(fit);
         channelSummary = fit.summary.slice(0, 3);
@@ -814,25 +879,15 @@ export const buildStrategy = internalAction({
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const playsMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
       const planMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
+      const research = await researchRun;
       const playsDraft = v2
-        ? await runAgentTask<PlaysOutput>(
-            ctx,
-            job,
-            0,
-            growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType)),
-            agentInput(
-              job,
-              playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities), decisionContract: hasFlag(job, "decision_contract") }),
-              { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
-            ),
-            startedAt,
-            { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },
-            playsMeta,
-          )
+        ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, { ...playsInput(scorecard), ...(research ? { precomputedResearch: research } : {}) }, startedAt, fixtureIn, playsMeta)
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
       const plays = playsDraft ? withForecasts(await ownedAndChecked(playsDraft, job, playsMeta.sources ?? [])) : null;
+      // Speed: the chosen plays (with computed forecasts) show while the plan is written around them.
+      if (plays) await previewPlays(ctx, job, plays);
       // 2. The 90-day plan, built around those plays.
       const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null) : "";
       let strategy = await runAgentTask<StrategyOutput>(
@@ -865,6 +920,7 @@ export const buildStrategy = internalAction({
             { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null },
           )
         : null;
+      await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),

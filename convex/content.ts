@@ -3,6 +3,15 @@ import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { v } from "convex/values";
+
+/** A running job's early output, filled in as it arrives (first take, channels that fit, chosen plays). */
+export interface RunPreview {
+  headline?: string;
+  points?: string[];
+  channels?: string[];
+  budget?: string;
+  plays?: { name: string; kind: string; p50: number; unit: string }[];
+}
 import { recordVoiceSample } from "./brand";
 import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
@@ -534,7 +543,7 @@ export const runStatus = query({
       /** Quick first take while the full job works. */
       preview: (() => {
         try {
-          return run.preview ? (JSON.parse(run.preview) as { headline: string; points: string[] }) : null;
+          return run.preview ? (JSON.parse(run.preview) as RunPreview) : null;
         } catch {
           return null;
         }
