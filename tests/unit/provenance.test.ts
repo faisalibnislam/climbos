@@ -55,7 +55,7 @@ describe("input provenance", () => {
 
   it("owner-confirmed numbers become the owner's and stop being assumptions", () => {
     const e = applyOwnerEconomics(withDerivedAssumed(tagged), { grossMargin: 0.7, ownerHourUsd: 80 });
-    expect(economicsSources(e).margin).toEqual({ source: "owner", ref: "Owner confirmed", check: "owner_input" });
+    expect(economicsSources(e).margin).toMatchObject({ source: "owner", check: "owner_input" });
     expect(economicsSources(e).ownerHour.source).toBe("owner");
     expect(e.assumed).toEqual([]);
     expect(withDerivedAssumed(tagged).assumed).toEqual(["margin"]);
@@ -79,46 +79,115 @@ describe("input provenance", () => {
   it("research and benchmark numbers must name a source; research must be a page that was read", () => {
     const bad = { economics: { sources: { revenue: { source: "benchmark", ref: "" } } }, plays: [{ model: { reachSource: { source: "research", ref: "https://unknown.example.org/x" }, steps: [{ name: "reply", source: "assumption", ref: "" }] } }] };
     const issues = lintProvenance(bad, "Sources: https://formkit.app");
-    expect(issues.map((i) => i.path)).toEqual(["economics.sources.revenue", "plays[0].model.reachSource"]);
+    // Benchmark without a name; research from a page not read, and without a quote.
+    expect(issues.map((i) => i.path)).toEqual(["economics.sources.revenue", "plays[0].model.reachSource", "plays[0].model.reachSource"]);
     expect(lintProvenance({ economics: {}, plays: [{ model: { steps: [{ name: "reply" }] } }] }, "")).toEqual([]); // older outputs
   });
 });
 
-describe("checked tags", () => {
-  const notes = "## Pricing\n- Plans start at $29/month (https://formkit.app/pricing)\n- Trial to paid about 15% [formkit.app/pricing]\n\n## Elsewhere\n- Reply rates 1–4% (https://other.example.net)";
-  const draft = (over: Partial<ReturnType<typeof play>["model"]> = {}) => ({
-    economics: { ...tagged, sources: { revenue: { source: "research" as const, ref: "https://formkit.app/pricing" }, margin: { source: "owner" as const, ref: "brief" }, churn: { source: "benchmark" as const, ref: "Survey" } } },
-    plays: [{ ...play(), model: { ...play().model, spendSource: { source: "owner" as const, ref: "Budget $600" }, hoursSource: { source: "owner" as const, ref: "" }, ...over } }],
+describe("adversarial source checks", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type Loose = (out: unknown, ctx: { pages: Record<string, string | null>; owner?: Record<string, number> }) => any;
+  type Tag = { source: "owner" | "research" | "benchmark" | "planned" | "assumption"; ref: string; quote?: string };
+  const econ = (sources: Record<string, Tag>) => ({ revenuePerCustomerMonthUsd: 29, grossMargin: 0.8, monthlyChurn: 0.05, basis: "", sources });
+  const onePlay = (step: Partial<{ rate: number; low: number; high: number; source: Tag["source"]; ref: string; quote: string; name: string }>, extra: Record<string, unknown> = {}) => ({
+    economics: econ({}),
+    plays: [{ model: { weeklyReach: 250, weeklyReachLow: 200, weeklyReachHigh: 300, steps: [{ name: "trial to paid", rate: 0.15, low: 0.1, high: 0.2, source: "research" as const, ref: "https://formkit.app/pricing", quote: "", ...step }], monthlySpendUsd: 0, ownerHoursPerWeek: 0, ...extra } }],
+  });
+  const PAGE = "Pricing. Pro costs $29 per month. Trial to paid conversion is 15% for teams. 15% off annual plans. 80% of our customers are agencies. Serving 29 countries.";
+
+  it("owner: coincidental numbers in facts never confirm; only structured owner metrics do", async () => {
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    // Facts aren't even an input any more: the margin 80% "matching" a fact about agencies is an assumption.
+    const out = verifyTags({ economics: econ({ margin: { source: "owner", ref: "facts" }, revenue: { source: "owner", ref: "" } }), plays: [] }, { pages: {} });
+    expect(out.economics.sources?.margin?.source).toBe("assumption");
+    expect(out.economics.sources?.revenue?.source).toBe("assumption");
+    // With the owner's confirmed margin, the tag stays owner and the override stamps it.
+    const owned = verifyTags({ economics: econ({ margin: { source: "owner", ref: "" } }), plays: [] }, { pages: {}, owner: { grossMargin: 0.7 } });
+    expect(owned.economics.sources?.margin?.source).toBe("owner");
+    const e = applyOwnerEconomics(owned.economics, { grossMargin: 0.7, updatedAt: 1_700_000_000_000 });
+    expect(economicsSources(e).margin).toMatchObject({ source: "owner", check: "owner_input", confirmedAt: 1_700_000_000_000 });
+    expect(e.grossMargin).toBe(0.7);
   });
 
-  it("research is checked only when the number sits next to the cited page", async () => {
-    const { verifyTags } = await import("../../shared/agents/provenance");
-    const out = verifyTags(draft(), { notes, facts: [] });
-    expect(out.economics.sources?.revenue?.check).toBe("research_notes"); // $29 next to formkit.app/pricing
-    const steps = out.plays[0].model.steps;
-    expect(steps[1]).toMatchObject({ source: "research", check: "research_notes" }); // 15% near the pricing page
-    expect(out.economics.sources?.churn?.check).toBe("reported"); // benchmarks can't be checked
-    // A rate cited to a page whose notes don't contain it stays model-reported.
-    const wrong = verifyTags(draft({ steps: [{ name: "paid", rate: 0.4, low: 0.3, high: 0.5, source: "research", ref: "https://formkit.app/pricing" }] }), { notes, facts: [] });
-    expect(wrong.plays[0].model.steps[0].check).toBe("reported");
+  it("owner on a funnel rate or reach is never verifiable and becomes an assumption", async () => {
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    const out = verifyTags(onePlay({ source: "owner", ref: "" }, { reachSource: { source: "owner", ref: "" } }), { pages: {}, owner: { grossMargin: 0.7 } });
+    expect(out.plays[0].model.steps[0].source).toBe("assumption");
+    expect(out.plays[0].model.reachSource?.source).toBe("assumption");
   });
 
-  it("owner is kept only for numbers the owner gave; allocations become planned", async () => {
-    const { verifyTags } = await import("../../shared/agents/provenance");
-    const out = verifyTags(draft(), { notes, facts: ["Our margin is about 80% after hosting."] });
-    expect(out.economics.sources?.margin).toMatchObject({ source: "owner", check: "owner_facts" });
-    expect(out.plays[0].model.spendSource).toEqual({ source: "planned", ref: "Budget $600" });
+  it("research: verified only when the loaded page has the quote with the number and the metric", async () => {
+    const { urlKey } = await import("../../shared/agents/provenance");
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    const pages = { [urlKey("https://formkit.app/pricing")]: PAGE };
+    const check = (step: Parameters<typeof onePlay>[0]) => verifyTags(onePlay(step), { pages }).plays[0].model.steps[0].check;
+    expect(check({ quote: "Trial to paid conversion is 15% for teams." })).toBe("source_verified");
+    // Same number, unrelated passage (a discount): the metric isn't named.
+    expect(check({ quote: "15% off annual plans." })).toBe("retrieved");
+    // Coincidence: "80% of customers are agencies" for an 80% rate.
+    expect(check({ rate: 0.8, low: 0.7, high: 0.9, quote: "80% of our customers are agencies." })).toBe("retrieved");
+    // A quote the page doesn't contain (invented or paraphrased).
+    expect(check({ quote: "Trial to paid conversion is 15% for every plan." })).toBe("retrieved");
+    // Only one end of the range in the quote doesn't count.
+    expect(check({ rate: 0.12, low: 0.15, high: 0.2, quote: "Trial to paid conversion is 15% for teams." })).toBe("retrieved");
+    // No quote at all.
+    expect(check({ quote: "" })).toBe("reported");
+  });
+
+  it("research: mismatched units and periods don't verify", async () => {
+    const { urlKey } = await import("../../shared/agents/provenance");
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    const tag = (quote: string, page = PAGE) =>
+      verifyTags({ economics: econ({ revenue: { source: "research", ref: "https://formkit.app/pricing", quote } }), plays: [] }, { pages: { [urlKey("https://formkit.app/pricing")]: page } }).economics.sources?.revenue?.check;
+    expect(tag("Pro costs $29 per month.")).toBe("source_verified");
+    expect(tag("Serving 29 countries.")).toBe("retrieved"); // no currency, no period
+    expect(tag("Pro costs $29 per year.", "Pro costs $29 per year.")).toBe("retrieved"); // yearly, not monthly
+    expect(tag("Trial to paid conversion is 15% for teams.")).toBe("retrieved"); // a percent, not a price
+  });
+
+  it("stale or invented citations: pages the search didn't return aren't loaded, and unloaded pages don't verify", async () => {
+    const { urlKey, citedUrls } = await import("../../shared/agents/provenance");
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    const { fetchCitedPages } = await import("../../convex/ai/research");
+    const draft = onePlay({ ref: "https://formkit.app/old-pricing", quote: "Trial to paid conversion is 15% for teams." });
+    // Not among the searched URLs: nothing is fetched (no network call happens).
+    expect(await fetchCitedPages(citedUrls(draft as never), ["https://formkit.app/pricing"], urlKey)).toEqual({});
+    expect(verifyTags(draft, { pages: {} }).plays[0].model.steps[0].check).toBe("reported");
+    // Loaded but failed (null): still not verified.
+    expect(verifyTags(draft, { pages: { [urlKey("https://formkit.app/old-pricing")]: null } }).plays[0].model.steps[0].check).toBe("reported");
+    // Same domain, different page: no match.
+    expect(verifyTags(draft, { pages: { [urlKey("https://formkit.app/pricing")]: PAGE } }).plays[0].model.steps[0].check).toBe("reported");
+  });
+
+  it("missing notes or failed research: research stays not checked", async () => {
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    expect(verifyTags(onePlay({ quote: "Trial to paid conversion is 15% for teams." }), { pages: {} }).plays[0].model.steps[0].check).toBe("reported");
+  });
+
+  it("forged or legacy checks read as not checked; ownerHour needs a stamped owner input", () => {
+    const forged: Economics = { revenuePerCustomerMonthUsd: 29, grossMargin: 0.8, basis: "", sources: { revenue: { source: "research", ref: "x", check: "source_verified" }, margin: { source: "owner", ref: "", check: "owner_input" } } };
+    expect(economicsSources(forged).revenue.check).toBe("reported");
+    expect(economicsSources(forged).margin.check).toBe("reported");
+    const legacy = { revenuePerCustomerMonthUsd: 29, grossMargin: 0.8, basis: "", sources: { revenue: { source: "research", ref: "x", check: "research_notes", checkedBy: "climbos-provenance-1" } } } as unknown as Economics;
+    expect(economicsSources(legacy).revenue.check).toBe("reported"); // retired check value
+    expect(economicsSources({ revenuePerCustomerMonthUsd: 1, grossMargin: 0.5, basis: "", ownerHourUsd: 50 }).ownerHour).toMatchObject({ source: "owner", check: "reported" });
+    const confirmed = applyOwnerEconomics({ revenuePerCustomerMonthUsd: 1, grossMargin: 0.5, basis: "" }, { ownerHourUsd: 80 });
+    expect(economicsSources(confirmed).ownerHour).toMatchObject({ source: "owner", check: "owner_input" });
+  });
+
+  it("allocations are planned, never owner", async () => {
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
+    const out = verifyTags(onePlay({}, { spendSource: { source: "owner", ref: "Budget $600" }, hoursSource: { source: "owner", ref: "" } }), { pages: {}, owner: { ownerHoursPerWeek: 3 } });
+    expect(out.plays[0].model.spendSource?.source).toBe("planned");
     expect(out.plays[0].model.hoursSource?.source).toBe("planned");
-    const noFacts = verifyTags(draft(), { notes, facts: [] });
-    expect(noFacts.economics.sources?.margin?.source).toBe("assumption");
   });
 
-  it("unchecked sources are named in the basis, and the cost line always has a basis", async () => {
-    const { forecastBasis, verifyTags, COST_BASIS_LABEL } = await import("../../shared/agents/provenance");
-    const out = verifyTags(draft(), { notes, facts: [] });
-    const b = forecastBasis(out.plays[0] as never, out.economics);
-    expect(b.customers.unchecked).toEqual(["Weekly reach", "reply"]); // reach: research not in notes; reply: benchmark
-    expect(Object.keys(COST_BASIS_LABEL).sort()).toEqual(["assumption_scenario", "sourced_estimate", "unlabelled_scenario"]);
+  it("the cost line always has a basis, and unverified sources are named", async () => {
+    const { COST_BASIS_LABEL, forecastBasis, urlKey } = await import("../../shared/agents/provenance");
+    const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
     expect(COST_BASIS_LABEL.sourced_estimate).toMatch(/not yet your results/);
+    const out = verifyTags(onePlay({ quote: "15% off annual plans." }, { reachSource: { source: "benchmark", ref: "Survey" } }), { pages: { [urlKey("https://formkit.app/pricing")]: PAGE } });
+    expect(forecastBasis(out.plays[0] as never, out.economics).customers.unchecked).toEqual(["Weekly reach", "trial to paid"]);
   });
 });

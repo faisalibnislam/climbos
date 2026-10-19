@@ -27,7 +27,7 @@ import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type Busines
 import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
 import { fitJson } from "../shared/agents/context";
 import { planTask, playsTask } from "../shared/agents/planTasks";
-import { verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { reconcile } from "../shared/agents/consistency";
 import { lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
@@ -40,7 +40,7 @@ import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { callModel } from "../convex/ai/providers";
-import { researchWebsite } from "../convex/ai/research";
+import { fetchCitedPages, researchWebsite } from "../convex/ai/research";
 import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 
 // ---------- env & args ----------
@@ -87,6 +87,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Hard spend cap for the whole run (--max-usd); no new model call starts once it's reached. */
 const maxMicros = arg("max-usd") ? Math.round(Number(arg("max-usd")) * 1e6) : Infinity;
 let spentMicros = 0;
+/** Source-check stats per arm (pages cited, loaded, and returned by search). */
+const provenanceLog: { arm: string; cited: number; fetched: number; searched: number }[] = [];
 
 async function turnWithRetry(input: TurnRequest): Promise<TurnResult> {
   if (spentMicros >= maxMicros) throw new Error(`Budget cap reached ($${(spentMicros / 1e6).toFixed(2)} of $${(maxMicros / 1e6).toFixed(2)})`);
@@ -368,7 +370,10 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
     const insights = insightsOf(p);
     const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
-    const checked = verifyTags(playsRun.output as PlaysOutput, { notes: [playsRun.research?.notes ?? "", ...(playsRun.research?.sources ?? []).map((x) => x.url)].join("\n"), facts: base.facts });
+    const draft = playsRun.output as PlaysOutput;
+    const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
+    const checked = verifyTags(draft, { pages });
+    provenanceLog.push({ arm, cited: citedUrls(draft).length, fetched: Object.values(pages).filter(Boolean).length, searched: playsRun.research?.sources?.length ?? 0 });
     const plays = { output: withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) }) };
     const locked = lockedNumbers(plays.output);
     const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output) } };
@@ -378,7 +383,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     return {
       arm,
       ok: true,
-      output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
+      output: { ...(plan.output as object), plays: (plays.output as { plays: unknown }).plays, portfolioNote: (plays.output as { portfolioNote: string }).portfolioNote, economics: plays.output.economics, researchSources: (playsRun.research?.sources ?? []).map((x) => x.url), channels: scored.filter((r) => r.status !== "ineligible").slice(0, 8).map((r) => ({ name: r.name, score: r.score, status: r.status, why: r.why })) },
       costMicros: cost,
       ms: Date.now() - t0,
     };
@@ -416,8 +421,8 @@ async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   });
   if (!r.ok) return { arm, ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
   const out = r.output as { portfolio: PlaysOutput; plan: object };
-  // One call: no separate research notes, so research tags stay model-reported.
-  const checked = verifyTags(out.portfolio, { notes: "", facts: base.facts });
+  const pages = await fetchCitedPages(citedUrls(out.portfolio), (r.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
+  const checked = verifyTags(out.portfolio, { pages });
   const plays = withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) });
   return { arm, ok: true, output: { ...out.plan, plays: plays.plays, portfolioNote: plays.portfolioNote, economics: plays.economics }, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
@@ -615,6 +620,7 @@ async function main() {
     writeFileSync(`${base}-blind-key.json`, JSON.stringify(key, null, 1));
     console.log(`Blind review packet: ${base}-blind.md (key kept separately)`);
   }
+  if (provenanceLog.length) console.log("Source checks:", JSON.stringify(provenanceLog));
   console.log(`Spent $${(spentMicros / 1e6).toFixed(2)}${Number.isFinite(maxMicros) ? ` of $${(maxMicros / 1e6).toFixed(2)} cap` : ""}`);
   console.log(`\nWrote ${base}.md and .json`);
   console.log(summarize(results).split("\n").slice(0, 40).join("\n"));

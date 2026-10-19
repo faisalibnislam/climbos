@@ -223,6 +223,7 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
               {SOURCE_LABEL[r.tag.source]}
               {r.tag.ref && r.tag.source !== "assumption" && r.tag.check !== "owner_input" ? ` · ${r.tag.ref.replace(/^https?:\/\/(www\.)?/, "")}` : ""}
               {r.tag.check ? ` · ${CHECK_LABEL[r.tag.check]}` : ""}
+              {r.tag.confirmedAt ? ` (${new Date(r.tag.confirmedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })})` : ""}
             </span>
           </li>
         ))}

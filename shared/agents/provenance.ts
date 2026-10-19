@@ -2,11 +2,15 @@
  * Where every number behind a growth play comes from (spec §05): the owner,
  * research the writer read, a named benchmark, an allocation the planner
  * proposes, or an assumption. The writer's tags are model-reported; code then
- * checks them: "owner" survives only when the number is one the owner gave
- * (confirmed unit economics or confirmed facts), research counts as checked
- * only when the number sits next to the cited page in the research notes, and
- * benchmarks stay reported. Forecasts built on any assumed input are labelled
- * assumption-based scenarios; none is presented as calibrated to the
+ * checks them and stamps the result:
+ * - owner: kept only for metrics the owner confirmed in structured unit
+ *   economics (fixed metric, unit and period); anything else is an assumption;
+ * - research: verified only when ClimbOS loads the cited page itself (a page
+ *   this run's search actually returned) and finds the writer's quote there,
+ *   with the number in the right unit and the metric named;
+ * - benchmarks stay model-reported.
+ * Checks without ClimbOS's stamp read as "not checked". Forecasts built on any
+ * assumed input are assumption-based scenarios; none is calibrated to the
  * business's own results. Older plans without tags read as "not labelled".
  */
 import type { Economics, OwnerEconomics, PlayLike, PlayModel } from "./economics";
@@ -16,13 +20,20 @@ export const PROVENANCE = ["owner", "research", "benchmark", "planned", "assumpt
 export type Provenance = (typeof PROVENANCE)[number];
 
 /** Set by code, never by the writer: how far a tag was verified. */
-export type TagCheck = "owner_input" | "owner_facts" | "research_notes" | "reported";
+export type TagCheck = "owner_input" | "source_verified" | "retrieved" | "reported";
+/** Marks checks ClimbOS set; a check without it (forged, or from older code) reads as "not checked". */
+export const CHECK_STAMP = "climbos-provenance-1";
 
 export interface SourceTag {
   source: Provenance;
-  /** Page (URL or domain), benchmark name, or owner fact the number came from; "" for assumptions. */
+  /** Page URL, benchmark name, or owner input the number came from; "" for assumptions. */
   ref: string;
+  /** Research only: the exact sentence from the page that states the number. */
+  quote?: string;
   check?: TagCheck;
+  checkedBy?: string;
+  /** Owner inputs: when the owner confirmed the value. */
+  confirmedAt?: number;
 }
 /** As read from a saved plan: older plans have no tag. */
 export type InputSource = Provenance | "unlabelled";
@@ -31,6 +42,7 @@ export interface ReadTag {
   ref: string;
   /** Owner, research and benchmark tags carry how they were checked ("reported" when unchecked or older). */
   check?: TagCheck;
+  confirmedAt?: number;
 }
 
 export type EconomicsKey = "revenue" | "margin" | "churn";
@@ -38,14 +50,22 @@ export type EconomicsSources = Partial<Record<EconomicsKey | "ownerHour", Source
 
 const UNLABELLED: ReadTag = { source: "unlabelled", ref: "" };
 const CLAIMS = new Set<InputSource>(["owner", "research", "benchmark"]);
-const CHECKS = new Set<string>(["owner_input", "owner_facts", "research_notes", "reported"]);
+const CHECKS = new Set<string>(["owner_input", "source_verified", "retrieved", "reported"]);
+
+/** Stamps a check as ClimbOS's own. */
+function stamped(t: SourceTag, check: TagCheck): SourceTag {
+  return { ...t, check, checkedBy: CHECK_STAMP };
+}
 
 function read(t: Partial<SourceTag> | undefined): ReadTag {
   if (!t || !(PROVENANCE as readonly string[]).includes(t.source ?? "")) return UNLABELLED;
   const source = t.source as Provenance;
   const tag: ReadTag = { source, ref: (t.ref ?? "").slice(0, 200) };
-  // A claim nobody verified is model-reported, including tags saved before checks existed.
-  if (CLAIMS.has(source)) tag.check = t.check && CHECKS.has(t.check) ? t.check : "reported";
+  // A claim counts as checked only with ClimbOS's stamp; anything else (older plans, forged values) is model-reported.
+  if (CLAIMS.has(source)) tag.check = t.checkedBy === CHECK_STAMP && t.check && CHECKS.has(t.check) ? t.check : "reported";
+  // "Owner" without a stamped owner input was never confirmed.
+  if (source === "owner" && tag.check !== "owner_input") tag.check = "reported";
+  if (tag.check === "owner_input" && typeof t.confirmedAt === "number") tag.confirmedAt = t.confirmedAt;
   return tag;
 }
 
@@ -57,8 +77,8 @@ export function economicsSources(e: Economics): Record<EconomicsKey | "ownerHour
     revenue: legacy("revenue"),
     margin: legacy("margin"),
     churn: legacy("churn"),
-    // The owner's hourly value is the owner's when they set it; otherwise ClimbOS's default.
-    ownerHour: e.ownerHourUsd && e.ownerHourUsd > 0 ? { source: "owner", ref: "Owner confirmed", check: "owner_input" } : { source: "assumption", ref: `$${OWNER_HOUR_USD}/hour default` },
+    // The owner's hourly value counts as theirs only with a stamped owner input; a bare value is unconfirmed.
+    ownerHour: s.ownerHour ? read(s.ownerHour) : e.ownerHourUsd && e.ownerHourUsd > 0 ? { source: "owner", ref: "", check: "reported" } : { source: "assumption", ref: `$${OWNER_HOUR_USD}/hour default` },
   };
 }
 
@@ -71,72 +91,91 @@ export function withDerivedAssumed(e: Economics): Economics {
 
 /* ---------------- Code checks ---------------- */
 
-type Unit = "share" | "count" | "usd";
+type Unit = "share" | "count" | "usd_month";
 
-/** Ways a number is commonly written ("4%", "4.0%", "$29", "1,200"), normalised without commas or spaces. */
-function forms(v: number, unit: Unit): string[] {
-  if (!Number.isFinite(v)) return [];
-  const trim = (x: number, d: number) => String(Math.round(x * 10 ** d) / 10 ** d);
-  if (unit === "share") {
-    const p = v * 100;
-    return [...new Set([trim(p, 0), trim(p, 1), trim(p, 2)].map((x) => `${x}%`))];
+const norm = (s: string) => s.toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\s+/g, " ").trim();
+
+/** A cited URL in comparable form: no scheme, www, hash, query or trailing slash. */
+export function urlKey(u: string): string {
+  return u.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "");
+}
+
+/** Numbers written in the quote with the unit the metric needs. */
+function quoteNumbers(quote: string, unit: Unit): number[] {
+  const q = quote.toLowerCase().replace(/(\d),(\d{3})/g, "$1$2");
+  if (unit === "share") return [...q.matchAll(/(\d+(?:\.\d+)?)\s?(?:%|percent\b)/g)].map((m) => Number(m[1]) / 100);
+  if (unit === "usd_month") {
+    // A price only counts with a currency and a monthly period; yearly prices don't match a monthly metric.
+    if (/(per|a|\/)\s?(year|yr|annum)|annual(ly)?|yearly/.test(q) && !/(per|a|\/)\s?(month|mo)\b|monthly/.test(q)) return [];
+    if (!/(per|a|\/)\s?(month|mo)\b|monthly|\/mo\b/.test(q)) return [];
+    return [...q.matchAll(/(?:[$£€]\s?(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s?(?:usd|dollars|eur|gbp))/g)].map((m) => Number(m[1] ?? m[2]));
   }
-  const out = new Set([trim(v, 0), trim(v, 2)]);
-  if (unit === "usd") for (const x of [...out]) out.add(`$${x}`);
-  return [...out];
+  return [...q.matchAll(/(?<![\d.$£€])(\d+(?:\.\d+)?)\s?(k\b)?(?!\s?%)/g)].map((m) => Number(m[1]) * (m[2] ? 1000 : 1));
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[,\s]/g, "");
+const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 0.005);
 
-/** True when one of the values appears in the text as a whole number (not part of a bigger one). */
-export function numberIn(text: string, values: (number | undefined)[], unit: Unit): boolean {
-  const t = norm(text);
-  return values.some((v) => v !== undefined && forms(v, unit).some((f) => new RegExp(`(?<![\\d.])${f.replace(/[$.%]/g, "\\$&")}(?![\\d])`).test(t)));
+/** The quote states the value itself, or both ends of its range (one end alone isn't enough). */
+function quoteHasValue(quote: string, unit: Unit, value: number, low?: number, high?: number): boolean {
+  const ns = quoteNumbers(quote, unit);
+  if (ns.some((n) => close(n, value))) return true;
+  return low !== undefined && high !== undefined && low !== high && ns.some((n) => close(n, low)) && ns.some((n) => close(n, high));
 }
 
-function domainOf(ref: string): string | null {
-  return ref.toLowerCase().replace(/https?:\/\/(www\.)?/, "").match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0]?.replace(/^www\./, "") ?? null;
+const STOP = new Set(["to", "the", "a", "an", "of", "and", "or", "per", "from", "rate", "step"]);
+/** The quote names the metric: a word from the step's name, or the metric's own words. */
+function quoteNamesMetric(quote: string, metricWords: string[]): boolean {
+  const q = ` ${norm(quote).replace(/[^a-z0-9%$ ]/g, " ")} `;
+  return metricWords.some((w) => w.length >= 4 && q.includes(` ${w}`));
 }
 
-/** The research notes around each mention of the cited page (3 lines either side). */
-function notesNear(notes: string, ref: string): string {
-  const d = domainOf(ref);
-  if (!d) return "";
-  const lines = notes.split("\n");
-  const keep = new Set<number>();
-  lines.forEach((l, i) => {
-    if (l.toLowerCase().includes(d)) for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 3); j++) keep.add(j);
-  });
-  return [...keep].map((i) => lines[i]).join("\n");
+function wordsOf(name: string): string[] {
+  return norm(name).replace(/[^a-z ]/g, " ").split(" ").filter((w) => w && !STOP.has(w)).map((w) => (w.length > 5 ? w.slice(0, 5) : w));
 }
 
 export interface VerifyContext {
-  /** This run's research notes (with their Sources list). */
-  notes: string;
-  /** The owner's confirmed business facts. */
-  facts: string[];
-  /** Unit economics the owner confirmed. */
+  /** Text of cited pages ClimbOS loaded itself, by `urlKey`; null when the page couldn't be loaded. */
+  pages: Record<string, string | null>;
+  /** Unit economics the owner confirmed (the only basis for an "owner" tag). */
   owner?: OwnerEconomics | null;
 }
 
-/**
- * Turns the writer's tags into checked ones. "owner" stays only for numbers the
- * owner gave; proposed spend and hours become "planned"; research is checked
- * against the notes beside the cited page; benchmarks stay reported.
- */
-function verifyTag(t: SourceTag | undefined, values: (number | undefined)[], unit: Unit, ctx: VerifyContext, kind: "input" | "allocation"): SourceTag | undefined {
+const ECON_OWNER_KEY: Record<EconomicsKey, keyof OwnerEconomics> = { revenue: "revenuePerCustomerMonthUsd", margin: "grossMargin", churn: "monthlyChurn" };
+
+interface Claim {
+  values: [number, number | undefined, number | undefined];
+  unit: Unit;
+  metricWords: string[];
+  kind: "input" | "allocation";
+  /** Economics metric this is, for the owner check. */
+  econ?: EconomicsKey;
+}
+
+/** Research: verified only when the loaded page contains the quote, and the quote states this number for this metric. */
+function checkResearch(t: SourceTag, c: Claim, ctx: VerifyContext): SourceTag {
+  const page = ctx.pages[urlKey(t.ref)];
+  const quote = (t.quote ?? "").trim();
+  if (!page || !quote) return stamped(t, "reported");
+  if (!norm(page).includes(norm(quote))) return stamped(t, "retrieved");
+  const [v, low, high] = c.values;
+  return stamped(t, quoteHasValue(quote, c.unit, v, low, high) && quoteNamesMetric(quote, c.metricWords) ? "source_verified" : "retrieved");
+}
+
+function verifyTag(t: SourceTag | undefined, c: Claim, ctx: VerifyContext): SourceTag | undefined {
   if (!t) return t;
-  const facts = ctx.facts.join("\n");
+  const base: SourceTag = { source: t.source, ref: t.ref, ...(t.quote ? { quote: t.quote.slice(0, 300) } : {}) };
   switch (t.source) {
-    case "owner":
+    case "owner": {
       // A budget cap or time limit isn't the owner choosing this allocation.
-      if (kind === "allocation") return { source: "planned", ref: t.ref };
-      if (numberIn(facts, values, unit)) return { ...t, check: "owner_facts" };
-      return { source: "assumption", ref: "Tagged as yours, but not found in what you gave" };
+      if (c.kind === "allocation") return { source: "planned", ref: t.ref };
+      // Only structured, confirmed owner metrics count; applyOwnerEconomics stamps them.
+      if (c.econ && typeof ctx.owner?.[ECON_OWNER_KEY[c.econ]] === "number") return base;
+      return { source: "assumption", ref: "Not confirmed by you. Add it under Sharpen this plan." };
+    }
     case "research":
-      return { ...t, check: numberIn(notesNear(ctx.notes, t.ref), values, unit) ? "research_notes" : "reported" };
+      return checkResearch(base, c, ctx);
     case "benchmark":
-      return { ...t, check: "reported" };
+      return stamped(base, "reported");
     default:
       return { source: t.source, ref: t.ref };
   }
@@ -144,16 +183,30 @@ function verifyTag(t: SourceTag | undefined, values: (number | undefined)[], uni
 
 type PlaysLike = { economics: Economics; plays: { model?: PlayModel }[] };
 
+/** Research URLs with quotes that need their page loaded (only ones this run's search returned are fetched). */
+export function citedUrls(out: PlaysLike): string[] {
+  const urls = new Set<string>();
+  const add = (t?: { source?: string; ref?: string; quote?: string }) => {
+    if (t?.source === "research" && t.ref && t.quote?.trim()) urls.add(t.ref.trim());
+  };
+  for (const t of Object.values(out.economics.sources ?? {})) add(t);
+  for (const p of out.plays) {
+    add(p.model?.reachSource);
+    for (const st of p.model?.steps ?? []) add(st);
+  }
+  return [...urls];
+}
+
 export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
   const e = out.economics;
   const s = e.sources ?? {};
   const econ: EconomicsSources = { ...s };
-  const pairs: [EconomicsKey, number | undefined, Unit][] = [
-    ["revenue", e.revenuePerCustomerMonthUsd, "usd"],
-    ["margin", e.grossMargin, "share"],
-    ["churn", e.monthlyChurn, "share"],
+  const pairs: [EconomicsKey, number | undefined, Unit, string[]][] = [
+    ["revenue", e.revenuePerCustomerMonthUsd, "usd_month", ["price", "plan", "month", "revenue", "costs"]],
+    ["margin", e.grossMargin, "share", ["margin", "gross"]],
+    ["churn", e.monthlyChurn, "share", ["churn", "cancel", "retention", "retain"]],
   ];
-  for (const [k, v, unit] of pairs) if (s[k]) econ[k] = verifyTag(s[k], [v], unit, ctx, "input");
+  for (const [k, v, unit, words] of pairs) if (s[k] && v !== undefined) econ[k] = verifyTag(s[k], { values: [v, undefined, undefined], unit, metricWords: words, kind: "input", econ: k }, ctx);
   const plays = out.plays.map((p) => {
     const m = p.model;
     if (!m?.steps?.length) return p;
@@ -161,14 +214,14 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
       ...p,
       model: {
         ...m,
-        reachSource: verifyTag(m.reachSource, [m.weeklyReach, m.weeklyReachLow, m.weeklyReachHigh], "count", ctx, "input"),
+        reachSource: verifyTag(m.reachSource, { values: [m.weeklyReach, m.weeklyReachLow, m.weeklyReachHigh], unit: "count", metricWords: ["visit", "users", "member", "subsc", "follo", "reach", "audie", "searc", "month", "week"], kind: "input" }, ctx),
         steps: m.steps.map((st) => {
           if (!st.source) return st;
-          const t = verifyTag({ source: st.source, ref: st.ref ?? "" }, [st.rate, st.low, st.high], "share", ctx, "input")!;
-          return { ...st, source: t.source, ref: t.ref, check: t.check };
+          const t = verifyTag({ source: st.source, ref: st.ref ?? "", quote: st.quote }, { values: [st.rate, st.low, st.high], unit: "share", metricWords: [...wordsOf(st.name), "conve", "rate", "reply", "open", "click", "signu", "trial", "close", "book"], kind: "input" }, ctx)!;
+          return { ...st, source: t.source, ref: t.ref, quote: t.quote, check: t.check, checkedBy: t.checkedBy };
         }),
-        spendSource: verifyTag(m.spendSource, [m.monthlySpendUsd], "usd", ctx, "allocation"),
-        hoursSource: verifyTag(m.hoursSource, [m.ownerHoursPerWeek], "count", ctx, "allocation"),
+        spendSource: verifyTag(m.spendSource, { values: [m.monthlySpendUsd, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx),
+        hoursSource: verifyTag(m.hoursSource, { values: [m.ownerHoursPerWeek, undefined, undefined], unit: "count", metricWords: [], kind: "allocation" }, ctx),
       },
     };
   });
@@ -197,7 +250,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
   const econ = economicsSources(e);
   const rows: InputRow[] = [
     { key: "reach", label: "Weekly reach", value: m.weeklyReach, low: m.weeklyReachLow, high: m.weeklyReachHigh, unit: "people_week", tag: read(m.reachSource), drives: "customers" },
-    ...m.steps.map((s, i): InputRow => ({ key: `step${i}`, label: s.name, value: s.rate, low: s.low, high: s.high, unit: "share", tag: read(s.source ? { source: s.source, ref: s.ref ?? "", check: s.check } : undefined), drives: "customers" })),
+    ...m.steps.map((s, i): InputRow => ({ key: `step${i}`, label: s.name, value: s.rate, low: s.low, high: s.high, unit: "share", tag: read(s.source ? { source: s.source, ref: s.ref ?? "", check: s.check, checkedBy: s.checkedBy } : undefined), drives: "customers" })),
     { key: "spend", label: "Monthly spend", value: m.monthlySpendUsd, unit: "usd_month", tag: read(m.spendSource), drives: "cost" },
     { key: "hours", label: "Your hours a week", value: m.ownerHoursPerWeek, unit: "hours_week", tag: read(m.hoursSource), drives: "cost" },
     { key: "revenue", label: "Revenue per customer", value: e.revenuePerCustomerMonthUsd, unit: "usd_month", tag: econ.revenue, drives: "cost" },
@@ -213,13 +266,13 @@ export interface ForecastBasis {
   kind: BasisKind;
   /** Labels of the assumed inputs, for "assumed: …". */
   assumed: string[];
-  /** Labels of sourced inputs nobody could check (model-reported research, benchmarks). */
+  /** Labels of sourced inputs not verified (model-reported research, unmatched pages, benchmarks, unconfirmed owner values). */
   unchecked: string[];
 }
 
 function basisOf(rows: InputRow[]): ForecastBasis {
   const assumed = rows.filter((r) => r.tag.source === "assumption").map((r) => r.label);
-  const unchecked = rows.filter((r) => r.tag.check === "reported").map((r) => r.label);
+  const unchecked = rows.filter((r) => r.tag.check === "reported" || r.tag.check === "retrieved").map((r) => r.label);
   if (assumed.length) return { kind: "assumption_scenario", assumed, unchecked };
   if (rows.some((r) => r.tag.source === "unlabelled")) return { kind: "unlabelled_scenario", assumed: [], unchecked };
   return { kind: "sourced_estimate", assumed: [], unchecked };
@@ -248,7 +301,7 @@ export const SOURCE_LABEL: Record<InputSource, string> = { owner: "You", researc
 
 export const CHECK_LABEL: Record<TagCheck, string> = {
   owner_input: "confirmed by you",
-  owner_facts: "in your facts",
-  research_notes: "in research notes",
+  source_verified: "verified on page",
+  retrieved: "page retrieved, claim not matched",
   reported: "not checked",
 };

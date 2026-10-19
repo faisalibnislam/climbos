@@ -52,7 +52,8 @@ export type InsightsV2 = z.infer<typeof InsightsV2Schema>;
  * limits, e.g. spend or hours), or an assumption (ref = ""). ClimbOS checks these tags after writing.
  */
 export const ProvenanceSchema = z.enum(PROVENANCE);
-export const SourceTagSchema = z.object({ source: ProvenanceSchema, ref: z.string() });
+/** quote: for research, the exact sentence from the page that states the number (≤ 200 characters); "" otherwise. */
+export const SourceTagSchema = z.object({ source: ProvenanceSchema, ref: z.string(), quote: z.string() });
 
 export const PlaySchema = z.object({
   name: z.string(),
@@ -89,7 +90,7 @@ export const PlaySchema = z.object({
     weeklyReachHigh: z.number(),
     reachSource: SourceTagSchema,
     /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from. */
-    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string() })),
+    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string(), quote: z.string() })),
     monthlySpendUsd: z.number(),
     spendSource: SourceTagSchema,
     ownerHoursPerWeek: z.number(),
@@ -128,7 +129,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v2.5-provenance";
+export const ENGINE_VERSION = "v2.6-provenance-checked";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -290,13 +291,15 @@ export function lintCitations(plays: { funnel: string[] }[], evidence: string): 
 }
 
 /** Every sourced number names its source; research must be a page the writer actually read. */
-export function lintProvenance(out: { economics: { sources?: Record<string, { source: string; ref: string }> }; plays: { model?: { reachSource?: { source: string; ref: string }; spendSource?: { source: string; ref: string }; hoursSource?: { source: string; ref: string }; steps?: { name: string; source?: string; ref?: string }[] } }[] }, evidence: string): LintIssue[] {
+type LintTag = { source: string; ref: string; quote?: string };
+export function lintProvenance(out: { economics: { sources?: Record<string, LintTag> }; plays: { model?: { reachSource?: LintTag; spendSource?: LintTag; hoursSource?: LintTag; steps?: { name: string; source?: string; ref?: string; quote?: string }[] } }[] }, evidence: string): LintIssue[] {
   const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
   const issues: LintIssue[] = [];
-  const check = (t: { source?: string; ref?: string } | undefined, path: string, what: string) => {
+  const check = (t: { source?: string; ref?: string; quote?: string } | undefined, path: string, what: string) => {
     if (!t?.source) return; // older outputs carry no tags
     const ref = (t.ref ?? "").trim();
     if ((t.source === "research" || t.source === "benchmark") && !ref) issues.push({ severity: "error", rule: "provenance", message: `${what}: name the ${t.source === "research" ? "page" : "benchmark"} it came from, or mark it as an assumption.`, path });
+    if (t.source === "research" && ref && !(t.quote ?? "").trim()) issues.push({ severity: "error", rule: "provenance", message: `${what}: copy the exact sentence from the page that states this number into "quote", or mark it as an assumption.`, path });
     if (t.source === "research" && ref) {
       const domain = ref.toLowerCase().replace(/https?:\/\/(www\.)?/, "").match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0];
       if (domain && !ev.includes(domain)) issues.push({ severity: "error", rule: "provenance", message: `${what}: "${domain}" isn't in your research notes. Cite a page you read, call it a benchmark with its name, or mark it as an assumption.`, path });

@@ -14,7 +14,9 @@ import {
 /**
  * Bounded public-website research. Untrusted content: the caller wraps every
  * page in <untrusted_content> before it reaches a model. URLs suggested by
- * models are never fetched; only the owner's site and same-origin links.
+ * models are never fetched on a model's say-so: only the owner's site and
+ * same-origin links, plus (for source checks) pages this run's web search
+ * itself returned. Fetched text is only string-matched, never sent to a model.
  */
 
 export interface ResearchedPage {
@@ -135,4 +137,32 @@ export async function researchWebsite(website: string, extraPages: number): Prom
     fetched++;
   }
   return { pages, pagesFetched: fetched };
+}
+
+/**
+ * Source checks: load cited pages so a quoted number can be verified against the
+ * page itself. Only URLs the run's web search returned are fetched (a citation
+ * outside them is stale or invented); robots.txt is honoured; at most 8 pages.
+ */
+export async function fetchCitedPages(cited: string[], searched: string[], key: (u: string) => string): Promise<Record<string, string | null>> {
+  const allowed = new Set(searched.map(key));
+  const out: Record<string, string | null> = {};
+  const targets = [...new Set(cited.map((u) => u.trim()))].filter((u) => allowed.has(key(u))).slice(0, 8);
+  const robots = new Map<string, string | null>();
+  await Promise.all(
+    targets.map(async (u) => {
+      const url = normalizeWebsite(u);
+      if (!url) return;
+      const origin = new URL(url).origin;
+      if (!robots.has(origin)) robots.set(origin, await robotsFor(origin).catch(() => null));
+      const r = robots.get(origin);
+      if (r && !isPathAllowed(r, RESEARCH_USER_AGENT, new URL(url).pathname || "/")) {
+        out[key(u)] = null;
+        return;
+      }
+      const page = await fetchOne(url).catch(() => null);
+      out[key(u)] = page?.status === "ok" ? `${page.text}\n${page.prices.join("\n")}` : null;
+    }),
+  );
+  return out;
 }

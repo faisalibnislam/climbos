@@ -31,7 +31,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { type ActionCtx, internalAction } from "./_generated/server";
 import { fixtureOutput, type FixtureContext } from "./ai/fixtures";
 import { callModel, generateImage, type ModelResult } from "./ai/providers";
-import { researchWebsite } from "./ai/research";
+import { fetchCitedPages, researchWebsite } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 import { AgentFailure, AgentYield, runAgent, type AgentDeps } from "../shared/agents/runtime";
@@ -41,7 +41,7 @@ import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { applyOwnerEconomics, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
-import { verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -307,7 +307,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
-  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string },
+  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[] },
 ): Promise<T> {
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
@@ -414,7 +414,6 @@ async function runAgentTask<T>(
     if (meta) {
       meta.shipped = result.assessment?.ship ?? null;
       meta.sources = result.research?.sources ?? [];
-      meta.notes = [result.research?.notes ?? "", ...(result.research?.sources ?? []).map((x) => x.url)].join("\n");
     }
     if (result.quality) {
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
@@ -497,12 +496,15 @@ function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
 }
 
 /**
- * The writer's source tags, checked by code: "owner" only for numbers the owner gave, proposed spend and
- * hours as "planned", research against this run's notes. Then the owner's confirmed economics win.
+ * The writer's source tags, checked by code: "owner" only for metrics the owner confirmed, proposed spend
+ * and hours as "planned", research against the cited pages ClimbOS loads itself (only pages this run's search
+ * returned). Then the owner's confirmed economics win and are stamped as theirs.
  */
-function ownedAndChecked(draft: PlaysOutput, job: JobCtx, notes: string): PlaysOutput {
+async function ownedAndChecked(draft: PlaysOutput, job: JobCtx, searched: { url: string }[]): Promise<PlaysOutput> {
   const owner = job.business?.unitEconomics;
-  const checked = verifyTags(draft, { notes, facts: job.facts.map((f) => f.statement), owner });
+  // Tests and fixtures never touch the network.
+  const pages = process.env.CLIMBOS_FAKE_LLM || job.run.isFixture ? {} : await fetchCitedPages(citedUrls(draft), searched.map((x) => x.url), urlKey).catch(() => ({}));
+  const checked = verifyTags(draft, { pages, owner });
   return { ...checked, economics: applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"] };
 }
 
@@ -797,7 +799,7 @@ export const buildStrategy = internalAction({
       const scored = scoreChannels(profile, adjustments);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
-      const playsMeta: { sources?: { url: string; title?: string }[]; notes?: string } = {};
+      const playsMeta: { sources?: { url: string; title?: string }[] } = {};
       const planMeta: { sources?: { url: string; title?: string }[] } = {};
       const playsDraft = v2
         ? await runAgentTask<PlaysOutput>(
@@ -817,7 +819,7 @@ export const buildStrategy = internalAction({
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
-      const plays = playsDraft ? withForecasts(ownedAndChecked(playsDraft, job, playsMeta.notes ?? "")) : null;
+      const plays = playsDraft ? withForecasts(await ownedAndChecked(playsDraft, job, playsMeta.sources ?? [])) : null;
       // 2. The 90-day plan, built around those plays.
       const locked = plays ? lockedNumbers(plays) : "";
       let strategy = await runAgentTask<StrategyOutput>(

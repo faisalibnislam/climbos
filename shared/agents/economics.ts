@@ -1,5 +1,5 @@
 import type { LintIssue } from "./types";
-import { economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
+import { CHECK_STAMP, economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 
@@ -21,7 +21,9 @@ export interface PlayStep {
   /** Where the rate came from (newer plans); `check` is set by code, never by the writer. */
   source?: Provenance;
   ref?: string;
+  quote?: string;
   check?: TagCheck;
+  checkedBy?: string;
 }
 export interface PlayModel {
   weeklyReach: number;
@@ -59,6 +61,8 @@ export interface OwnerEconomics {
   ownerHourUsd?: number;
   /** Hours a week the owner can give growth work (a constraint, not a price). */
   ownerHoursPerWeek?: number;
+  /** When the owner last confirmed these numbers. */
+  updatedAt?: number;
 }
 export interface PlayLike {
   name: string;
@@ -265,6 +269,11 @@ function basisNote(p: PlayLike, e: Economics): string {
 
 const KEY_OF = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" } as const;
 
+/** A value the owner confirmed in their unit economics: the only stamped "owner" source. */
+function ownerTag(owner: OwnerEconomics): SourceTag {
+  return { source: "owner", ref: "Confirmed by you", check: "owner_input", checkedBy: CHECK_STAMP, ...(owner.updatedAt ? { confirmedAt: owner.updatedAt } : {}) };
+}
+
 /** The owner's confirmed numbers replace the model's; they stop being assumptions. */
 export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null | undefined): Economics {
   if (!owner) return e;
@@ -275,13 +284,13 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
     if (typeof v === "number" && v > 0) {
       out[k] = v;
       out.assumed = out.assumed!.filter((a) => a !== KEY_OF[k]);
-      out.sources![KEY_OF[k]] = { source: "owner", ref: "Owner confirmed", check: "owner_input" };
+      out.sources![KEY_OF[k]] = ownerTag(owner);
       confirmed.push(KEY_OF[k]);
     }
   }
   if (typeof owner.ownerHourUsd === "number" && owner.ownerHourUsd > 0) {
     out.ownerHourUsd = owner.ownerHourUsd;
-    out.sources!.ownerHour = { source: "owner", ref: "Owner confirmed", check: "owner_input" };
+    out.sources!.ownerHour = ownerTag(owner);
     confirmed.push("owner hour");
   }
   if (confirmed.length) out.basis = `Owner confirmed ${confirmed.join(", ")}.${e.basis ? ` ${e.basis}` : ""}`.slice(0, 400);
