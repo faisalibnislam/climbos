@@ -267,3 +267,27 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 **Fixes made (not yet re-evaluated):**
 - **Price fit** (`shared/acquisition/scoring.ts`): the entry price comes from owner revenue per customer, else the pricing facts. Below $25/month (unless sales-led), per-customer selling and partner or creator recruitment rank lower, and self-serve channels rank higher. The scorecard says why, and the plays task gets a PRICE FIT line.
 - **Verified assets** (`lintAssets` in `shared/agents/specs.ts`, plus the plays task): an existing page, integration or list needs a URL the writer read, and a claimed count needs that many URLs. Otherwise the play says "To build" and building it is the first action today.
+
+### Run 5 (2026-10-19, separately approved cap of $2.50): price-aware channels + verified assets
+
+**What ran:** B1 at `6417aba` (price-aware channel scoring, plays only build on verified assets; decision contract off) against the saved B0 outputs.
+
+**Files:** `bench/results/2026-10-19-09-16-regress-b1fix3.*` and `2026-10-19-09-38-regress-judge5.*`, including the blind packet.
+
+| | B0 | B1 run 5 |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.14 |
+| Pairwise | — | **3 wins** (Involets, Taskeni, Formkit), 2 losses (Meetrao, Folevi) |
+| Pointwise overall (mean) | 4.2 | 3.8 |
+
+**Spend:** $1.68 of $2.50 for this run; $9.66 across all five runs.
+
+**Trend:** 2–3, 1–1–3, 3–2, 1–1–3, 3–2. Ties the best run; the release rule (at least 4 of 5) is still not met.
+
+**Why it won:** forecast honesty. Assumptions are labelled, and it says when the activity can't reach the goal (Involets, Taskeni, Formkit).
+
+**Why it lost:**
+- **Meetrao:** commits to four new comparison pages with no demand baseline; B0 starts from the existing Cal.com page.
+- **Folevi:** too passive, mostly "collect data, pause growth"; B0 runs two concrete tests on existing trial and comparison pages.
+
+**Next fixes (deterministic, no spend):** improve existing verified assets before building new ones; never return a data-only plan, so there is always at least one concrete test on an existing asset inside the horizon.
