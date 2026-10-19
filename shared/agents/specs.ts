@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { lintEconomics, withForecasts, type Economics } from "./economics";
+import { PROVENANCE } from "./provenance";
 import type { PlanConstraints } from "./types";
 import type { Effort } from "../ai/types";
 import {
@@ -45,6 +46,10 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
 export type InsightsV2 = z.infer<typeof InsightsV2Schema>;
 
 /** A growth play card (skills/growth-plays): creative, forecast with base rates, testable. */
+/** Where a number came from: the owner (brief/facts), research the writer read (ref = URL or domain), a named benchmark (ref = its name), or an assumption (ref = ""). */
+export const ProvenanceSchema = z.enum(PROVENANCE);
+export const SourceTagSchema = z.object({ source: ProvenanceSchema, ref: z.string() });
+
 export const PlaySchema = z.object({
   name: z.string(),
   oneLiner: z.string(),
@@ -78,10 +83,13 @@ export const PlaySchema = z.object({
     weeklyReach: z.number(),
     weeklyReachLow: z.number(),
     weeklyReachHigh: z.number(),
-    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range. */
-    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number() })),
+    reachSource: SourceTagSchema,
+    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from. */
+    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string() })),
     monthlySpendUsd: z.number(),
+    spendSource: SourceTagSchema,
     ownerHoursPerWeek: z.number(),
+    hoursSource: SourceTagSchema,
   }),
 });
 export type Play = z.infer<typeof PlaySchema>;
@@ -116,7 +124,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v2.4-calc";
+export const ENGINE_VERSION = "v2.5-provenance";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -130,8 +138,8 @@ export const PlaysOutputSchema = z.object({
     /** Share of customers lost per month, 0–1. */
     monthlyChurn: z.number(),
     basis: z.string(),
-    /** Which inputs are assumptions, not facts. */
-    assumed: z.array(z.enum(["revenue", "margin", "churn"])),
+    /** Where revenue, margin and churn came from. ClimbOS derives the "assumed" list from these. */
+    sources: z.object({ revenue: SourceTagSchema, margin: SourceTagSchema, churn: SourceTagSchema }),
   }),
   plays: z.array(PlayDraftSchema),
 });
@@ -274,6 +282,29 @@ export function lintCitations(plays: { funnel: string[] }[], evidence: string): 
         issues.push({ severity: "error", rule: "citation", message: `${missing.map((d) => `"${d}"`).join(", ")} isn't in your research notes or the brief. Cite a source you actually read, or mark the rate "assumption, grade D".`, path: `plays[${i}].funnel[${j}]` });
     }),
   );
+  return issues;
+}
+
+/** Every sourced number names its source; research must be a page the writer actually read. */
+export function lintProvenance(out: { economics: { sources?: Record<string, { source: string; ref: string }> }; plays: { model?: { reachSource?: { source: string; ref: string }; spendSource?: { source: string; ref: string }; hoursSource?: { source: string; ref: string }; steps?: { name: string; source?: string; ref?: string }[] } }[] }, evidence: string): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const issues: LintIssue[] = [];
+  const check = (t: { source?: string; ref?: string } | undefined, path: string, what: string) => {
+    if (!t?.source) return; // older outputs carry no tags
+    const ref = (t.ref ?? "").trim();
+    if ((t.source === "research" || t.source === "benchmark") && !ref) issues.push({ severity: "error", rule: "provenance", message: `${what}: name the ${t.source === "research" ? "page" : "benchmark"} it came from, or mark it as an assumption.`, path });
+    if (t.source === "research" && ref) {
+      const domain = ref.toLowerCase().replace(/https?:\/\/(www\.)?/, "").match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0];
+      if (domain && !ev.includes(domain)) issues.push({ severity: "error", rule: "provenance", message: `${what}: "${domain}" isn't in your research notes. Cite a page you read, call it a benchmark with its name, or mark it as an assumption.`, path });
+    }
+  };
+  for (const k of ["revenue", "margin", "churn"]) check(out.economics.sources?.[k], `economics.sources.${k}`, `Economics ${k}`);
+  out.plays.forEach((p, i) => {
+    check(p.model?.reachSource, `plays[${i}].model.reachSource`, "Weekly reach");
+    check(p.model?.spendSource, `plays[${i}].model.spendSource`, "Spend");
+    check(p.model?.hoursSource, `plays[${i}].model.hoursSource`, "Owner hours");
+    p.model?.steps?.forEach((st, j) => check(st, `plays[${i}].model.steps[${j}]`, `"${st.name}" rate`));
+  });
   return issues;
 }
 
@@ -483,7 +514,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

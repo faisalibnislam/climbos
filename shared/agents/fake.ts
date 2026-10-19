@@ -85,7 +85,20 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         unit: "booked jobs",
         horizonDays: 90,
         // Numbers that add up and pay back (100 a week × 13 weeks × 10% × 10% ≈ 13).
-        model: { weeklyReach: 100, weeklyReachLow: 70, weeklyReachHigh: 130, steps: [{ name: "reply", rate: 0.1, low: 0.05, high: 0.15 }, { name: "paid", rate: 0.1, low: 0.05, high: 0.2 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 },
+        model: {
+          weeklyReach: 100,
+          weeklyReachLow: 70,
+          weeklyReachHigh: 130,
+          reachSource: { source: "assumption", ref: "" },
+          steps: [
+            { name: "reply", rate: 0.1, low: 0.05, high: 0.15, source: "research", ref: "https://example.com" },
+            { name: "paid", rate: 0.1, low: 0.05, high: 0.2, source: "assumption", ref: "" },
+          ],
+          monthlySpendUsd: 0,
+          spendSource: { source: "owner", ref: "No ad budget in the brief" },
+          ownerHoursPerWeek: 1,
+          hoursSource: { source: "assumption", ref: "" },
+        },
         confidence: "medium",
         test: "a hundred contacts · small budget · three weeks",
         killIf: "no replies",
@@ -93,7 +106,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         scores: [4, predictability, 3, 3, 3, 4, 5, distinctiveness],
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
-      (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", assumed: ["margin", "churn"] };
+      (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com" }, margin: { source: "assumption", ref: "" }, churn: { source: "assumption", ref: "" } } };
     }
     // Channel scoring: valid library types and the candidates named in the prompt.
     const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };

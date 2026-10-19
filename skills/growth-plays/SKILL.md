@@ -43,6 +43,7 @@ Use the segment catalog's plays as a library of proven mechanics with sourced ra
   - **D:** an anecdote or your own assumption.
 - **Plan on the lower half of vendor ranges** (vendors sell the channel).
 - **Fill the model, not the forecast.** Give weekly reach and every step's likely rate, each with the low and high of the cited range. ClimbOS simulates the P10/P50/P90 forecast from those ranges; the low/high must be the real cited spread, not a guess at symmetry.
+- **Tag every number's source:** owner (said in the brief or facts), research (a page you read, with its URL), benchmark (name it) or assumption. An honest assumption is fine; a fake citation is not. Plays resting on assumptions are shown to the owner as scenarios.
 - **State outcomes in business units** (booked jobs, members, paying customers, revenue), never impressions or "awareness".
 - **Confidence** = the lowest grade in the funnel, adjusted for fit (high = all A/B; medium = any C; low = any D).
 - **Where there is no benchmark** (partnership acceptance, marketplace share, event attendance), label the rate "assumption, grade D", give a wide range, and make the first test measure it.

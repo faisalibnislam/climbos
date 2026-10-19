@@ -1,4 +1,5 @@
 import type { LintIssue } from "./types";
+import { economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag } from "./provenance";
 import { createRng } from "../forecasting/prng";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 
@@ -17,6 +18,9 @@ export interface PlayStep {
   rate: number;
   low?: number;
   high?: number;
+  /** Where the rate came from (newer plans). */
+  source?: Provenance;
+  ref?: string;
 }
 export interface PlayModel {
   weeklyReach: number;
@@ -25,6 +29,10 @@ export interface PlayModel {
   steps: PlayStep[];
   monthlySpendUsd: number;
   ownerHoursPerWeek: number;
+  /** Where reach, spend and owner hours came from (newer plans). */
+  reachSource?: SourceTag;
+  spendSource?: SourceTag;
+  hoursSource?: SourceTag;
 }
 export interface Economics {
   revenuePerCustomerMonthUsd: number;
@@ -34,8 +42,10 @@ export interface Economics {
   monthlyChurn?: number;
   monthsRetained?: number;
   basis: string;
-  /** Which of revenue / margin / churn are assumptions rather than facts. */
+  /** Which of revenue / margin / churn are assumptions rather than facts (derived from `sources` on newer plans). */
   assumed?: string[];
+  /** Where each economics input came from (owner, research, benchmark, assumption). */
+  sources?: EconomicsSources;
   /** Value of an owner hour; $50 when unknown. */
   ownerHourUsd?: number;
 }
@@ -194,7 +204,7 @@ const usd = (n: number | null) => (n === null ? "n/a" : n < 10 ? `$${n.toFixed(2
 export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }): LintIssue[] {
   const issues: LintIssue[] = [];
   const e = out.economics;
-  if (!(e.revenuePerCustomerMonthUsd > 0) || churnOf(e) === null) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, contribution margin and monthly churn (facts first, else assumptions listed in `assumed`).", path: "economics" });
+  if (!(e.revenuePerCustomerMonthUsd > 0) || churnOf(e) === null) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, contribution margin and monthly churn (facts first, else tagged as assumptions).", path: "economics" });
   if (!(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
   out.plays.forEach((p, i) => {
     const path = `plays[${i}]`;
@@ -229,11 +239,26 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }):
   const churn = churnOf(e);
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
-    `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}${e.assumed?.length ? `; assumed: ${e.assumed.join(", ")}` : ""}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.range.p50)} customers in ${p.horizonDays || 90} days (range ${roundCount(m.range.p10)}–${roundCount(m.range.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)}, payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}.`),
+    `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.range.p50)} customers in ${p.horizonDays || 90} days (range ${roundCount(m.range.p10)}–${roundCount(m.range.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)}, payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
+    "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} customers in 90 days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     `- North Star target = ≈${Math.round(total)} customers by day 90 (an estimate from these plays).`,
   ].join("\n");
+}
+
+/** "revenue: research (formkit.app/pricing), margin: assumption, …" for the locked numbers. */
+function sourcesLine(e: Economics): string {
+  const s = economicsSources(e);
+  return (["revenue", "margin", "churn"] as const).map((k) => `${k} ${s[k].source === "unlabelled" ? "not labelled" : s[k].source}${s[k].ref ? ` (${s[k].ref})` : ""}`).join(", ");
+}
+
+/** How a play's forecast should be described in the plan. */
+function basisNote(p: PlayLike, e: Economics): string {
+  const b = forecastBasis(p, e).customers;
+  if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).`;
+  if (b.kind === "sourced_estimate") return "Forecast basis: estimate from cited sources, not yet from this business's results.";
+  return "Forecast basis: scenario from the play's own inputs (sources not labelled).";
 }
 
 const KEY_OF = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" } as const;
@@ -241,18 +266,20 @@ const KEY_OF = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", m
 /** The owner's confirmed numbers replace the model's; they stop being assumptions. */
 export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null | undefined): Economics {
   if (!owner) return e;
-  const out: Economics = { ...e, assumed: [...(e.assumed ?? [])] };
+  const out: Economics = { ...e, assumed: [...(e.assumed ?? [])], sources: { ...(e.sources ?? {}) } };
   const confirmed: string[] = [];
   for (const k of ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn"] as const) {
     const v = owner[k];
     if (typeof v === "number" && v > 0) {
       out[k] = v;
       out.assumed = out.assumed!.filter((a) => a !== KEY_OF[k]);
+      out.sources![KEY_OF[k]] = { source: "owner", ref: "Owner confirmed" };
       confirmed.push(KEY_OF[k]);
     }
   }
   if (typeof owner.ownerHourUsd === "number" && owner.ownerHourUsd > 0) {
     out.ownerHourUsd = owner.ownerHourUsd;
+    out.sources!.ownerHour = { source: "owner", ref: "Owner confirmed" };
     confirmed.push("owner hour");
   }
   if (confirmed.length) out.basis = `Owner confirmed ${confirmed.join(", ")}.${e.basis ? ` ${e.basis}` : ""}`.slice(0, 400);

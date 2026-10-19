@@ -27,6 +27,7 @@ import { factsBlock, ROLE_CHARTERS, systemPrompt, TASKS, untrusted, type Busines
 import { CLIMBOS_ENGINES } from "../shared/agents/capacity";
 import { fitJson } from "../shared/agents/context";
 import { planTask, playsTask } from "../shared/agents/planTasks";
+import { withDerivedAssumed } from "../shared/agents/provenance";
 import { reconcile } from "../shared/agents/consistency";
 import { lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
@@ -367,7 +368,8 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}`;
     const insights = insightsOf(p);
     const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
-    const plays = { output: withForecasts(playsRun.output as PlaysOutput) };
+    const draft = playsRun.output as PlaysOutput;
+    const plays = { output: withForecasts({ ...draft, economics: withDerivedAssumed(draft.economics) }) };
     const locked = lockedNumbers(plays.output);
     const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output) } };
     const planRun = await runAgent(withMode(strategySpec({})), planInput, deps);
@@ -414,7 +416,7 @@ async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   });
   if (!r.ok) return { arm, ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
   const out = r.output as { portfolio: PlaysOutput; plan: object };
-  const plays = withForecasts(out.portfolio);
+  const plays = withForecasts({ ...out.portfolio, economics: withDerivedAssumed(out.portfolio.economics) });
   return { arm, ok: true, output: { ...out.plan, plays: plays.plays, portfolioNote: plays.portfolioNote, economics: plays.economics }, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
 

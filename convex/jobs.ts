@@ -41,6 +41,7 @@ import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { applyOwnerEconomics, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
+import { withDerivedAssumed } from "../shared/agents/provenance";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -805,7 +806,7 @@ export const buildStrategy = internalAction({
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
-      const plays = playsDraft ? withForecasts({ ...playsDraft, economics: applyOwnerEconomics(playsDraft.economics, job.business?.unitEconomics) }) : null;
+      const plays = playsDraft ? withForecasts({ ...playsDraft, economics: applyOwnerEconomics(withDerivedAssumed(playsDraft.economics), job.business?.unitEconomics) }) : null;
       // 2. The 90-day plan, built around those plays.
       const locked = plays ? lockedNumbers(plays) : "";
       let strategy = await runAgentTask<StrategyOutput>(

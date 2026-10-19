@@ -12,6 +12,7 @@ import { Badge, Button, Card, CardContent, Tooltip, toast, type Tone } from "@/c
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { churnOf, OWNER_HOUR_USD, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
+import { BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { PlanSection } from "./PlanSections";
 import { climbTarget } from "@/components/climb/context";
 
@@ -134,19 +135,24 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
   );
 }
 
-/** P10–P90 range bar with the most-likely marker. */
-function ForecastBar({ f }: { f: PlayView }) {
+/** Neutral economics for plays saved without any (customer forecasts don't use them). */
+const NO_ECONOMICS: Economics = { revenuePerCustomerMonthUsd: 0, grossMargin: 0, basis: "" };
+
+/** P10–P90 range bar with the middle marker, labelled with what it rests on. */
+function ForecastBar({ f, economics }: { f: PlayView; economics?: Economics }) {
   const max = Math.max(f.p90, 1) * 1.15;
   const pos = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
+  const basis = f.model?.steps?.length ? forecastBasis({ ...f, model: f.model }, economics ?? NO_ECONOMICS).customers : null;
+  const scenario = basis?.kind !== "sourced_estimate";
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-ui text-ink-3">Expected in {f.horizonDays} days</span>
+        <span className="text-ui text-ink-3">{scenario ? "Scenario" : "Expected"} for {f.horizonDays} days</span>
         <span className="text-ui text-ink-2">
-          <span className="metric text-xl leading-6">{f.p50}</span> {f.unit} <span className="text-ink-3">most likely</span>
+          <span className="metric text-xl leading-6">{f.p50}</span> {f.unit} <span className="text-ink-3">{scenario ? "middle case" : "most likely"}</span>
         </span>
       </div>
-      <div className="relative h-6" role="img" aria-label={`Forecast: ${f.p10} to ${f.p90} ${f.unit}, most likely ${f.p50}`}>
+      <div className="relative h-6" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: ${f.p10} to ${f.p90} ${f.unit}, middle ${f.p50}`}>
         <span className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-3" />
         <span className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-brand-200" style={{ left: pos(f.p10), right: `calc(100% - ${pos(f.p90)})` }} />
         <span className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-brand-800" style={{ left: pos(f.p50) }} />
@@ -156,6 +162,12 @@ function ForecastBar({ f }: { f: PlayView }) {
         <span className="capitalize">{f.confidence} confidence</span>
         <span>High {f.p90}</span>
       </div>
+      {basis ? (
+        <p className={cn("text-xs", basis.kind === "assumption_scenario" ? "text-amber-800" : "text-ink-3")}>
+          {BASIS_LABEL[basis.kind]}
+          {basis.assumed.length ? <span className="text-ink-3"> · assumed: {basis.assumed.join(", ")}</span> : null}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -163,12 +175,57 @@ function ForecastBar({ f }: { f: PlayView }) {
 /** The play's maths, computed in code from its own numbers. */
 function PlayEconomics({ play, economics }: { play: PlayView; economics: Economics }) {
   const m = playMaths({ ...play, model: play.model! }, economics);
+  const cost = forecastBasis({ ...play, model: play.model! }, economics).cost;
   const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
   return (
     <p className={cn("text-xs", m.profitable ? "text-ink-3" : "text-red-800")}>
       Cost per customer <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {usd(m.valueUsd)} a year
       {m.paybackMonths !== null ? ` · pays back in ${Math.max(0.1, Math.round(m.paybackMonths * 10) / 10)} months` : ""}
+      {cost.kind === "assumption_scenario" ? <span className="text-amber-800"> · rests on assumptions</span> : null}
     </p>
+  );
+}
+
+const fmtInput = (r: InputRow): string => {
+  const n = (v: number) => {
+    switch (r.unit) {
+      case "share":
+      case "share_month":
+        return `${Math.round(v * 1000) / 10}%`;
+      case "usd_month":
+        return `$${Math.round(v).toLocaleString("en-US")}`;
+      case "usd_hour":
+        return `$${Math.round(v)}`;
+      default:
+        return Math.round(v).toLocaleString("en-US");
+    }
+  };
+  const suffix = { people_week: "/week", share: "", share_month: "/month", usd_month: "/month", hours_week: " h/week", usd_hour: "/hour" }[r.unit];
+  const range = r.low !== undefined && r.high !== undefined && (r.low !== r.value || r.high !== r.value) ? ` (${n(r.low)}–${n(r.high)})` : "";
+  return `${n(r.value)}${suffix}${range}`;
+};
+
+/** Every number behind the play and where it came from. */
+function PlayInputs({ play, economics }: { play: PlayView; economics: Economics }) {
+  const rows = playInputs({ ...play, model: play.model! }, economics);
+  if (!rows.length) return null;
+  return (
+    <div>
+      <p className="text-overline">The numbers and where they come from</p>
+      <ul className="mt-2 flex flex-col gap-1">
+        {rows.map((r) => (
+          <li key={r.key} className="grid grid-cols-[1fr_auto] items-start gap-2 text-ui">
+            <span className="min-w-0 text-ink-2">
+              {r.label} <span className="font-medium text-ink">{fmtInput(r)}</span>
+            </span>
+            <span className={cn("max-w-[12rem] truncate text-right text-xs", r.tag.source === "assumption" ? "text-amber-800" : "text-ink-3")} title={r.tag.ref || undefined}>
+              {SOURCE_LABEL[r.tag.source]}
+              {r.tag.ref && r.tag.source !== "assumption" ? ` · ${r.tag.ref.replace(/^https?:\/\/(www\.)?/, "")}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -233,12 +290,13 @@ function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: st
           ) : null}
         </dl>
 
-        <ForecastBar f={play} />
+        <ForecastBar f={play} economics={economics} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} canEdit={results.canEdit} /> : null}
 
         {open ? (
           <div className="flex flex-col gap-4">
+            {play.model?.steps?.length ? <PlayInputs play={play} economics={economics ?? NO_ECONOMICS} /> : null}
             <div>
               <p className="text-overline">How we estimate it</p>
               <ol className="mt-2 flex flex-col gap-1.5">
@@ -328,22 +386,22 @@ function PlayCard({ play, slug, economics, results }: { play: PlayView; slug: st
 /** The unit economics every play's numbers rest on, with what's assumed called out (spec §25). */
 function EconomicsLine({ economics: e }: { economics: Economics }) {
   const churn = churnOf(e);
-  const assumed = new Set(e.assumed ?? []);
-  const part = (label: string, value: string, key: string) => (
+  const src = economicsSources(e);
+  const part = (label: string, value: string, key: keyof typeof src) => (
     <span>
       {label} <span className="font-medium text-ink">{value}</span>
-      {assumed.has(key) ? <span className="text-amber-800"> (assumed)</span> : null}
+      <span className={src[key].source === "assumption" ? "text-amber-800" : undefined} title={src[key].ref || undefined}>
+        {" "}({SOURCE_LABEL[src[key].source].toLowerCase()})
+      </span>
     </span>
   );
   return (
     <p className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
       <span>Each play is costed on:</span>
       {part("revenue", `$${Math.round(e.revenuePerCustomerMonthUsd * 100) / 100}/month`, "revenue")}
-      {part("margin", `${Math.round((e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100))}%`, "margin")}
+      {part("margin", `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
       {churn !== null ? part("churn", `${Math.round(churn * 1000) / 10}%/month`, "churn") : null}
-      <span>
-        owner time <span className="font-medium text-ink">${e.ownerHourUsd || OWNER_HOUR_USD}/hour</span>
-      </span>
+      {part("owner time", `$${e.ownerHourUsd || OWNER_HOUR_USD}/hour`, "ownerHour")}
     </p>
   );
 }
