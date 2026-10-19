@@ -19,7 +19,7 @@ export function Checkbox({ label, description, id, className, ...props }: Checkb
   const descId = description ? `${cid}-desc` : undefined;
   return (
     <div className={cn("flex items-start gap-3", className)}>
-      <span className="flex min-h-9 items-center">
+      <span className={cn("flex items-center", label && "min-h-[var(--h-md)]")}>
         <RCheckbox.Root
           id={cid}
           aria-describedby={descId}
@@ -36,7 +36,7 @@ export function Checkbox({ label, description, id, className, ...props }: Checkb
         </RCheckbox.Root>
       </span>
       {label ? (
-        <span className="flex min-h-9 flex-col justify-center py-2">
+        <span className="flex min-h-[var(--h-md)] flex-col justify-center py-2">
           <label htmlFor={cid} className="cursor-pointer text-ui font-medium text-ink">
             {label}
           </label>

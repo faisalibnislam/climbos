@@ -141,7 +141,7 @@ export function DatePicker({ value, onChange, min, max, placeholder = "Pick a da
         aria-invalid={wiring["aria-invalid"]}
         aria-haspopup="dialog"
         disabled={disabled}
-        className={cn(controlClasses, "flex h-9 items-center justify-between gap-2 text-left", !d && "text-ink-3", className)}
+        className={cn(controlClasses, "flex h-[var(--h-md)] items-center justify-between gap-2 text-left", !d && "text-ink-3", className)}
       >
         <span className="truncate">{d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : placeholder}</span>
         <CalendarDays aria-hidden className="size-4 shrink-0 text-ink-3" />

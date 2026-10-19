@@ -27,7 +27,7 @@ export function FileInput({ buttonLabel = "Choose file", hint, className, onChan
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
       <label
         htmlFor={inputId}
-        className="relative inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3.5 text-ui font-medium text-ink transition-colors hover:bg-surface-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-600"
+        className="relative inline-flex h-[var(--h-md)] shrink-0 cursor-pointer items-center gap-1.5 rounded-[var(--radius-control)] border border-line-strong bg-surface px-3.5 text-ui font-medium text-ink transition-colors hover:bg-surface-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-600"
       >
         <Upload aria-hidden="true" className="size-4" />
         {buttonLabel}

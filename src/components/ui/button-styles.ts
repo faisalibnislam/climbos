@@ -23,9 +23,9 @@ const variants: Record<ButtonVariant, string> = {
  * Labels are 13px medium (text-ui); lg uses 14px.
  */
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 rounded-[var(--radius-control)] px-2.5 text-ui [&_svg]:size-4",
-  md: "h-9 rounded-[var(--radius-control)] px-3.5 text-ui [&_svg]:size-4",
-  lg: "h-10 rounded-[var(--radius-control)] px-4 text-sm [&_svg]:size-[18px]",
+  sm: "h-[var(--h-sm)] rounded-[var(--radius-control)] px-2.5 text-ui [&_svg]:size-4",
+  md: "h-[var(--h-md)] rounded-[var(--radius-control)] px-3.5 text-ui [&_svg]:size-4",
+  lg: "h-[var(--h-lg)] rounded-[var(--radius-control)] px-4 text-sm [&_svg]:size-[18px]",
 };
 
 /** Shared class builder so links and other elements can look like buttons. */

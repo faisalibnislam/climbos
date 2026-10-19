@@ -71,7 +71,7 @@ export function DotForecast({ series, periods, todayIndex, projected, unitPerDot
         })}
         <div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{ left: `${((todayIndex + 1) / periods.length) * 100}%` }} aria-hidden>
           <span className="absolute -top-1 -left-[3px] size-[7px] bg-ink" />
-          {projectionLabel ? <span className="text-annotation absolute -top-2 left-3 whitespace-nowrap rounded-[var(--radius-badge)] bg-surface px-2 py-0.5 text-ink-2 shadow-sm ring-1 ring-line">{projectionLabel}</span> : null}
+          {projectionLabel ? <span className={cn("text-annotation absolute -top-2 whitespace-nowrap", (todayIndex + 1) / periods.length > 0.6 ? "right-3" : "left-3", " rounded-[var(--radius-badge)] bg-surface px-2 py-0.5 text-ink-2 shadow-sm ring-1 ring-line")}>{projectionLabel}</span> : null}
         </div>
       </div>
       <div className="mt-3 flex justify-between text-xs text-ink-3">

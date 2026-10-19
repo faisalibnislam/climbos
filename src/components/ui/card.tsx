@@ -10,7 +10,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 
 /** Top area of a card: title, description and optional actions. */
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1 p-5 pb-0", className)} {...props} />;
+  return <div className={cn("flex flex-col gap-1 p-[var(--card-p)] pb-0", className)} {...props} />;
 }
 
 export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
@@ -30,7 +30,7 @@ export function CardDescription({ className, ...props }: HTMLAttributes<HTMLPara
 
 /** Main card body. */
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5", className)} {...props} />;
+  return <div className={cn("p-[var(--card-p)]", className)} {...props} />;
 }
 
 /** Bottom row for actions or meta information. */

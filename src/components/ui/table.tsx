@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * Use <DataTable> for simple sortable lists; compose these for anything custom.
  */
 export function TableFrame({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("w-full overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface", className)} {...props} />;
+  return <div className={cn("relative w-full overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface", className)} {...props} />;
 }
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
@@ -36,14 +36,14 @@ export function Th({ className, numeric, ...props }: ThHTMLAttributes<HTMLTableC
   return (
     <th
       scope={props.scope ?? "col"}
-      className={cn("h-9 whitespace-nowrap px-4 text-xs font-medium text-ink-3", numeric && "text-right", className)}
+      className={cn("h-[var(--h-md)] whitespace-nowrap px-4 text-xs font-medium text-ink-3", numeric && "text-right", className)}
       {...props}
     />
   );
 }
 
 export function Td({ className, numeric, ...props }: TdHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean }) {
-  return <td className={cn("h-11 px-4 py-2 align-middle", numeric && "text-right tabular-nums", className)} {...props} />;
+  return <td className={cn("h-[var(--cell-h)] px-4 py-1.5 align-middle", numeric && "text-right tabular-nums", className)} {...props} />;
 }
 
 /** A cell's primary line plus a muted second line (e.g. name + email). */

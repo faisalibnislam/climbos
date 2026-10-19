@@ -121,7 +121,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const wiring = useFieldControl({ id, required, "aria-describedby": describedBy });
-  return <input ref={ref} className={cn(controlClasses, size === "sm" ? "h-8 px-2.5" : size === "lg" ? "h-10 text-sm" : "h-9", className)} {...wiring} {...props} />;
+  return <input ref={ref} className={cn(controlClasses, size === "sm" ? "h-[var(--h-sm)] px-2.5" : size === "lg" ? "h-[var(--h-lg)] text-sm" : "h-[var(--h-md)]", className)} {...wiring} {...props} />;
 });
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

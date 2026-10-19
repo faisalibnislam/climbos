@@ -100,6 +100,20 @@
   --radius-field: 6px;
   --radius-card: 8px;
   --font-body: var(--font-sans-ui);
+  /* Density (comfortable default; [data-density="compact"] tightens). */
+  --h-sm: 32px;
+  --h-md: 36px;
+  --h-lg: 40px;
+  --cell-h: 44px;
+  --card-p: 20px;
+  /* Motion (documented on /design-system/v2/foundations/motion). */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-deliberate: 420ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   /* Type hierarchy tokens (Summit values; Signal overrides). */
   --fs-page: 28px;
   --lh-page: 36px;
@@ -300,6 +314,14 @@
   --fs-empty: 22px;
   --lh-empty: 28px;
 }
+/* Compact density: shorter controls and rows, tighter cards (any theme). */
+[data-density="compact"] {
+  --h-sm: 28px;
+  --h-md: 32px;
+  --h-lg: 36px;
+  --cell-h: 34px;
+  --card-p: 14px;
+}
 /* Marketing CTAs take the pill shape in themes that set one. */
 .marketing {
   --radius-control: var(--radius-cta);
@@ -432,11 +454,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Visible, consistent focus for keyboard users. */
-:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* Visible, consistent focus for keyboard users. In the base layer so component
+   focus utilities win; the outline follows each element's own corners. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  a:focus-visible {
+    border-radius: var(--radius-control);
+  }
 }
 
 ::selection {
