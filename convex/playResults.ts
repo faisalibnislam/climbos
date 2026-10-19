@@ -21,7 +21,7 @@ export function weekOf(t: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - day * DAY;
 }
 
-type SavedPlay = { name: string; model?: PlayModel; p10?: number; p50?: number; p90?: number; horizonDays?: number };
+type SavedPlay = { name: string; id?: string; model?: PlayModel; p10?: number; p50?: number; p90?: number; horizonDays?: number };
 
 function playsOf(s: Doc<"strategies">): SavedPlay[] {
   return ((s.expert?.plays ?? []) as SavedPlay[]).filter((p) => p.model?.steps?.length);
@@ -29,10 +29,12 @@ function playsOf(s: Doc<"strategies">): SavedPlay[] {
 
 async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; actuals: PlayActuals; entries: Doc<"playResults">[] }[]> {
   const out = [];
+  const all = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400);
   for (const p of playsOf(s)) {
-    const entries = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id).eq("playName", p.name)).take(60);
+    // By stable ID when both have one; older rows by name.
+    const entries = all.filter((e) => (p.id && e.playId ? e.playId === p.id : e.playName === p.name)).slice(0, 60);
     if (!entries.length) continue;
-    const weeks = Math.max(1, Math.round((p.horizonDays || 90) / 7));
+    const weeks = (p.horizonDays || 90) / 7;
     out.push({ name: p.name, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks) });
   }
   return out;
@@ -65,10 +67,10 @@ export const log = mutation({
     if (chain.some((n, i) => i > 0 && n > chain[i - 1])) throw appError("INVALID", "Each step can't be bigger than the one before it.");
     const weekStart = weekOf(a.weekStart ?? Date.now());
     if (weekStart > Date.now()) throw appError("INVALID", "That week hasn't started yet.");
-    const existing = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id).eq("playName", a.playName).eq("weekStart", weekStart)).first();
+    const existing = (await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400)).find((e) => e.weekStart === weekStart && (play.id && e.playId ? e.playId === play.id : e.playName === a.playName));
     const row = { reach: Math.round(a.reach), steps: a.steps.map(Math.round), spendUsd: a.spendUsd, ownerHours: a.ownerHours, enteredBy: user._id, updatedAt: Date.now() };
     if (existing) await ctx.db.patch(existing._id, row);
-    else await ctx.db.insert("playResults", { orgId: org._id, strategyId: s._id, playName: a.playName, weekStart, ...row });
+    else await ctx.db.insert("playResults", { orgId: org._id, strategyId: s._id, playName: a.playName, ...(play.id ? { playId: play.id } : {}), weekStart, ...row });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "play.results_logged", subjectType: "strategy", subjectId: s._id, summary: `Logged results for “${a.playName}”.` });
   },
 });
@@ -78,7 +80,7 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(4);
   const lines: string[] = [];
   for (const s of plans) for (const r of await actualsFor(ctx, s)) if (lines.length < 6) lines.push(`- ${resultsLine(r.name, r.actuals)}`);
-  return lines.length ? `RESULTS SO FAR (logged by the owner; first-party, grade A — prefer these rates over benchmarks):\n${lines.join("\n")}` : "";
+  return lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "";
 }
 
 export const briefFor = internalQuery({

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
+import { LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
 
 /**
  * Loop 2 — learn from results. Weekly, every workspace's real outcomes
@@ -12,44 +13,44 @@ import { internalAction, internalMutation, internalQuery, type QueryCtx } from "
 
 const K_ANON = 5;
 const DAY = 86_400_000;
-const WINDOW = 120 * DAY;
+const WINDOW = LEARN_WINDOW_DAYS * DAY;
 
-export const METRICS: Record<string, { label: string; minTrials: number }> = {
-  outreach_reply: { label: "Outreach emails → replies", minTrials: 30 },
-  outreach_booking: { label: "Outreach replies → booked calls", minTrials: 5 },
-  landing_lead: { label: "Landing page views → leads", minTrials: 50 },
-  chat_lead: { label: "Website chats → email captured", minTrials: 10 },
-  review_click: { label: "Review requests → opened review link", minTrials: 10 },
-  bio_signup: { label: "Link-in-bio views → sign-ups", minTrials: 50 },
-};
+/** Kept for callers: label and minimum sample per metric (definitions live in shared/growth/learnedMetrics). */
+export const METRICS: Record<string, { label: string; minTrials: number }> = Object.fromEntries(Object.entries(METRIC_DEFS).map(([k, d]) => [k, { label: d.label, minTrials: d.minTrials }]));
 
-type Counts = Record<string, { trials: number; successes: number }>;
-
-async function orgCounts(ctx: QueryCtx, orgId: Id<"organizations">, since: number): Promise<Counts> {
-  const c: Counts = {};
-  const add = (m: string, t: number, s: number) => {
-    c[m] = { trials: (c[m]?.trials ?? 0) + t, successes: (c[m]?.successes ?? 0) + s };
-  };
+/** Raw counts with each window stated (REQ-LEARN-01): lifetime counters are only divided by lifetime counts. */
+async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: number): Promise<RawLearningInputs> {
+  const outreach: RawLearningInputs["outreach"] = [];
   for (const camp of await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).take(50)) {
     const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", camp._id).gte("createdAt", since)).take(3000);
     const contacted = new Set(sends.filter((s) => s.status === "sent" && s.step === 0).map((s) => s.prospectId));
     if (!contacted.size) continue;
-    const prospects = await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", camp._id)).take(500);
-    const replied = prospects.filter((p) => contacted.has(p._id) && ["replied", "booked", "won"].includes(p.stage));
-    add("outreach_reply", contacted.size, replied.length);
-    add("outreach_booking", replied.length, replied.filter((p) => p.stage === "booked" || p.stage === "won").length);
+    const prospects = (await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", camp._id)).take(500)).filter((p) => contacted.has(p._id));
+    outreach.push({
+      contacted: contacted.size,
+      replied: prospects.filter((p) => ["replied", "booked", "won"].includes(p.stage)).length,
+      booked: prospects.filter((p) => p.stage === "booked" || p.stage === "won").length,
+    });
   }
-  for (const p of await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)) add("landing_lead", p.views, p.leads);
+  const bookings = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", orgId).gte("startAt", since).lte("startAt", Date.now())).take(2000);
+  const landing = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)).map((p) => ({ views: p.views, leads: p.leads }));
   const threads = await ctx.db.query("chatThreads").withIndex("by_org_last", (q) => q.eq("orgId", orgId).gte("lastAt", since)).take(2000);
-  add("chat_lead", threads.length, threads.filter((t) => t.email).length);
   const reqs = (await ctx.db.query("reviewRequests").withIndex("by_org_created", (q) => q.eq("orgId", orgId).gte("createdAt", since)).take(1000)).filter((r) => r.status === "sent");
-  add("review_click", reqs.length, reqs.filter((r) => r.clickedAt).length);
-  const bio = await ctx.db.query("bioPages").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
-  if (bio) {
-    const signups = (await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", orgId).gte("receivedAt", since)).take(2000)).filter((m) => m.channel === "link_in_bio").length;
-    add("bio_signup", bio.views, signups);
-  }
-  return c;
+  const bioPage = await ctx.db.query("bioPages").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
+  // Bio views are an all-time counter, so sign-ups are counted all-time too.
+  const bioSignups = bioPage ? (await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", orgId)).take(5000)).filter((m) => m.channel === "link_in_bio").length : 0;
+  return {
+    outreach,
+    bookingOutcomes: bookings.filter((b) => b.status === "confirmed" && b.outcome).map((b) => b.outcome!),
+    landing,
+    chats: { total: threads.length, withEmail: threads.filter((t) => t.email).length },
+    reviews: { sent: reqs.length, clicked: reqs.filter((r) => r.clickedAt).length },
+    bio: bioPage ? { views: bioPage.views, signups: bioSignups } : null,
+  };
+}
+
+async function orgCounts(ctx: QueryCtx, orgId: Id<"organizations">, since: number): Promise<Counts> {
+  return learningCounts(await orgInputs(ctx, orgId, since));
 }
 
 export const orgIds = internalQuery({
@@ -115,13 +116,12 @@ export const contextFor = internalQuery({
   handler: async (ctx, { orgId }): Promise<string> => {
     const type = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first())?.businessType ?? "other";
     const lines: string[] = [];
-    const pct = (r: number) => `${Math.round(r * 1000) / 10}%`;
-    for (const [metric, m] of Object.entries(METRICS)) {
+    for (const metric of Object.keys(METRIC_DEFS)) {
       const own = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `org:${orgId}`).eq("metric", metric)).first();
       const pool = (await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `type:${type}`).eq("metric", metric)).first()) ?? (await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", "all").eq("metric", metric)).first());
-      if (own) lines.push(`- ${m.label}: THIS BUSINESS ${pct(own.rate)} (${own.successes}/${own.trials}, last 120 days) [first-party, grade A]`);
-      if (pool) lines.push(`- ${m.label}: ClimbOS ${pool.scope === "all" ? "all businesses" : `${type} businesses`} ${pct(pool.rate)} (${pool.workspaces} workspaces, n=${pool.trials}) [ClimbOS aggregate, grade A/B]`);
+      if (own) lines.push(rateLine(metric, "own", own));
+      if (pool) lines.push(rateLine(metric, { workspaces: pool.workspaces, label: pool.scope === "all" ? "all businesses" : `${type} businesses` }, pool));
     }
-    return lines.length ? `RESULTS CLIMBOS HAS MEASURED (use these before vendor benchmarks; this business's own rate wins):\n${lines.join("\n")}` : "";
+    return lines.length ? `RESULTS CLIMBOS HAS MEASURED (counts, not causes; prefer them to vendor benchmarks when the offer and channel match; a small sample's range is wide):\n${lines.join("\n")}` : "";
   },
 });

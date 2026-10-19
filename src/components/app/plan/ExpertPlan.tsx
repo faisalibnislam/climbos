@@ -196,7 +196,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
   const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
   return (
     <p className={cn("text-xs", m.profitable === false ? "text-red-800" : "text-ink-3")}>
-      Cost per customer <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {m.valueUsd === null ? "unknown (add price, margin and churn)" : `${usd(m.valueUsd)} a year`}
+      <span title="At the most-likely rates, not the simulated range">Cost per customer</span> <span className="font-medium text-ink">{usd(m.cacUsd)}</span> · worth {m.valueUsd === null ? "unknown (add price, margin and churn)" : `${usd(m.valueUsd)} a year`}
       {m.paybackMonths !== null ? ` · pays back in ${Math.max(0.1, Math.round(m.paybackMonths * 10) / 10)} months` : ""}
       <span className={cost.kind === "assumption_scenario" ? "text-amber-800" : undefined}> · {COST_BASIS_LABEL[cost.kind]}</span>
     </p>

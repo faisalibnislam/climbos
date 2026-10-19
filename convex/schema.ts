@@ -749,6 +749,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     strategyId: v.id("strategies"),
     playName: v.string(),
+    /** Stable play ID (REQ-LEARN-04); results follow it when the play is renamed. Older rows match by name. */
+    playId: v.optional(v.string()),
     weekStart: v.number(),
     reach: v.number(),
     /** People passing each funnel step of the play's model, in order. */

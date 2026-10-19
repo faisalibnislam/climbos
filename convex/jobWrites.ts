@@ -216,6 +216,23 @@ export const saveInsights = internalMutation({
   },
 });
 
+/**
+ * Stable play IDs (REQ-LEARN-04): a play keeps its ID across plan versions when
+ * its name matches an earlier plan's play, so logged results follow the play,
+ * not its wording; a later rename keeps the ID.
+ */
+export function withPlayIds<P extends { name: string; id?: string }>(plays: P[], prior: Doc<"strategies">[]): (P & { id: string })[] {
+  const known = new Map<string, string>();
+  for (const s of [...prior].reverse()) for (const p of (s.expert?.plays ?? []) as { name?: string; id?: string }[]) if (p.id && p.name) known.set(p.name.trim().toLowerCase(), p.id);
+  const used = new Set<string>();
+  return plays.map((p) => {
+    let id = p.id ?? known.get(p.name.trim().toLowerCase());
+    if (!id || used.has(id)) id = `pl_${Math.random().toString(36).slice(2, 10)}`;
+    used.add(id);
+    return { ...p, id };
+  });
+}
+
 export const saveStrategy = internalMutation({
   args: { runId: v.id("workflowRuns"), strategy: v.string(), factIds: v.array(v.id("businessFacts")), acquisition: v.optional(v.string()) },
   handler: async (ctx, { runId, strategy, factIds, acquisition }) => {
@@ -273,7 +290,7 @@ export const saveStrategy = internalMutation({
               c.key === "search_ads" || c.key === "meta_ads"
                 ? "Ads are created paused and only go live after you approve the exact campaign and budget."
                 : c.key === "sales_outreach"
-                  ? "Uses only leads you already have. ClimbOS has no contact database."
+                  ? "Follow-ups for leads you already have. To find new ones, use Find customers (published business emails only)."
                   : undefined,
           };
         }),
@@ -292,7 +309,7 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: (x.plays ?? []).slice(0, 4),
+                plays: withPlayIds((x.plays ?? []).slice(0, 4), prior),
                 economics: x.economics,
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
                 ...(x.quality ? { quality: x.quality } : {}),

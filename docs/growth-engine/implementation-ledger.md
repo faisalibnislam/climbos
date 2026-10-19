@@ -23,7 +23,11 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 **Next:**
 1. **S2 remainder.** Add an old-plan read adapter with schema versioning (REQ-ENG-03), stored from `expert.version`. Add the population, period and denominator binding for research tags (REQ-EVID-02). Files: `shared/agents/provenance.ts`, `convex/workspace.ts` (read path).
 2. **S3 remainder.** Make the CAC and the headline use the same basis (REQ-MATH-06). Add a sensitivity line per play (REQ-MATH-07). Add a currency field to economics, no mixing (REQ-MATH-08). Model ramp and sales lag (REQ-MATH-04). Files: `shared/agents/economics.ts`, `ExpertPlan.tsx`.
-3. **S4.** Fix the time windows and denominators in `convex/learning.ts:38-50`. Key `playResults` by a stable play ID instead of `playName` (`schema.ts:746`).
+3. **S4 remainder.**
+   - Shrink a workspace's own rates toward the pooled rate when its sample is small (REQ-LEARN-05).
+   - Audit the k-anonymity of pooled rates (REQ-LEARN-06).
+   - Recalculate scenarios, or show they're stale, after an owner edit (REQ-LEARN-07, REQ-UX-07).
+   - Classify replies as positive or negative (REQ-LEARN-02).
 4. **S5.** Remove the mandatory bankable/creative shape (`specs.ts:162-177`, `planTasks.ts:12`). Generate the capacity text from live capabilities (`shared/agents/capacity.ts`).
 
 **Paid check:** a proposal is ready in [evaluation-and-cost.md](evaluation-and-cost.md) §6 ($5 cap). The approved budget is still $0.
@@ -41,7 +45,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | S1 Quality states | done-fixture | `d22a639` | Yes. A failing lint case is saved as `failed` and can't be approved (`tests/convex/plan-approval.test.ts`). A provisional plan stays inspectable |
 | S2 Evidence lineage | partial, done-fixture | `13476ed` (pre-V2 F1–F4), `746e350` | Partly. The negative provenance fixtures fail safely and owner input survives. The legacy read adapter and schema version are still to do |
 | S3 Calculations and goal | partial, done-fixture | `746e350`, `9b4c2ab`, `1bf428d` | Partly. The reference fixture passes, the goal stays intact and the gap is explained. Ramp/lag, currency and the CAC basis are still to do |
-| S4 Measurement integrity | missing | — | — |
+| S4 Measurement integrity | partial, done-fixture | S4 commit | Yes. A cumulative-views fixture isn't reported as a 120-day rate, and a play rename keeps its observations. Shrinkage, privacy audit and recalculation are still to do |
 | S5 Decision-centred strategy | missing (small parts in S3) | `1bf428d` (task text) | — |
 | S6 Targets in plan | missing | — | — |
 | S7 Competitor discovery | missing | — | — |
@@ -97,7 +101,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-MATH-03 | done-fixture | S3 | `economics.ts` `rateOf` | Ratios above 1 are rejected and listed in `invalidInputs`. Never read as percents |
 | REQ-MATH-04 | partial | S3 | `playMaths`, `portfolioRange`, `planTasks.ts` | Fractional horizon (3 days = 3/7 week); spend by calendar month; totals at the goal horizon. **Gap:** ramp time, sales lag, seasonality and fulfilment capacity |
 | REQ-MATH-05 | partial | S3 | `lockedNumbers` | The text says forecasts aren't calibrated and are scenarios. **Gap:** the UI doesn't separate operational and statistical uncertainty |
-| REQ-MATH-06 | missing | S3 | `playMaths` | CAC uses the point estimate while the headline uses the P50. The difference isn't explained |
+| REQ-MATH-06 | partial | S3 | `lockedNumbers`, `ExpertPlan.tsx` | The point-estimate basis of CAC is now stated ("at the most-likely rates, ≈N customers; the range is the simulation"). **Gap:** no expected CAC under uncertainty |
 | REQ-MATH-07 | partial | S3 | `playMaths.profitable` (nullable), lint | Never "profitable" on unknown economics. Break-even shown. **Gap:** no sensitivity or decision state per play |
 | REQ-MATH-08 | partial | S3 | `portfolioRange` | Periods aren't mixed. **Gap:** economics assume USD with no currency field; attributed vs incremental revenue isn't separated |
 
@@ -170,10 +174,10 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-KNOW-03 | partial | S13 | `schema.ts:734` | No source or applicability |
 | REQ-KNOW-04 | partial | S13 | `engineLab.ts:159-199` | No holdout |
 | REQ-KNOW-05 | partial | S13 | `playCatalogsFor` | No retrieval or citations |
-| REQ-LEARN-01 | missing | S4 | `learning.ts:42,47-50` | Cumulative views mixed with 120-day windows |
-| REQ-LEARN-02 | missing | S4 | `learning.ts:38` | Any reply counts. Booked isn't checked against attended |
-| REQ-LEARN-03 | missing | S4 | `learning.ts:122`, `playResults.ts:81` | "Grade A" label |
-| REQ-LEARN-04 | partial | S4 | `schema.ts:746` | Keyed by `playName` |
+| REQ-LEARN-01 | done-fixture | S4 | `shared/growth/learnedMetrics.ts`, `convex/learning.ts` | Each metric states its window. Lifetime view counters are divided only by lifetime conversions; landing and bio are now "all time" (`learned-metrics.test.ts`) |
+| REQ-LEARN-02 | partial | S4 | `learnedMetrics.ts` | "Any reply" is labelled as such. Added emails→booked and booked→attended (`bookings.outcome`). **Gap:** no positive/negative reply classification; revenue/contribution per customer not tracked |
+| REQ-LEARN-03 | done-fixture | S4 | `learnedMetrics.ts` `rateLine`, `playResults.ts` | Counts, window, 90% Wilson range and "observed, not proof of cause". No "grade A". **Gap:** attribution method and lag aren't shown |
+| REQ-LEARN-04 | done-fixture | S4 | `convex/jobWrites.ts` `withPlayIds`, `convex/playResults.ts`, `playResults.playId` | Plays get stable IDs, carried to the next plan version by name. Results match by ID, so a rename keeps them (`play-results.test.ts`). Older rows match by name |
 | REQ-LEARN-05 | missing | S4 | `learning.ts:17` | minTrials only |
 | REQ-LEARN-06 | partial | S4 | `learning.ts:13` (K_ANON=5) | Not audited |
 | REQ-LEARN-07 | missing | S4 | `workspace.ts:425` | No recalculation |
