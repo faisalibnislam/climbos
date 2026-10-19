@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
 import { recordReferral } from "./referrals";
 import { activePackage } from "./lib/access";
@@ -320,7 +321,7 @@ export const onboardingState = query({
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
-        ? { kind: goal.kind, statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
+        ? { kind: goal.kind, statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
       autonomy: policy?.mode ?? "review",
       /** The ad budget editors may set without an owner or admin (raising it needs one). */
@@ -455,11 +456,21 @@ export const saveBusinessDetails = mutation({
   },
 });
 
+/** A goal target with real numbers only: blanks stay null, never zero. */
+function cleanTarget(t: GoalTarget): GoalTarget | undefined {
+  const num = (n: number | null) => (n !== null && Number.isFinite(n) && n >= 0 && n <= 1e12 ? n : null);
+  const out = { metric: t.metric, mode: t.mode, baseline: num(t.baseline), desired: num(t.desired) };
+  if (out.desired !== null && out.desired <= 0) throw appError("INVALID", "The goal number must be above 0.");
+  if (out.mode === "total" && out.desired !== null && out.baseline !== null && out.desired <= out.baseline) throw appError("INVALID", "Your goal total must be higher than today's number.");
+  return out.desired === null && out.baseline === null ? undefined : out;
+}
+
 export const setGoal = mutation({
   args: {
     slug: v.string(),
     kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")),
     statement: v.string(),
+    target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
     horizonDays: v.number(),
     monthlyAdBudget: v.number(),
     reviewDay: v.optional(v.string()),
@@ -478,6 +489,7 @@ export const setGoal = mutation({
     const statement = args.statement.trim().slice(0, 300);
     if (!statement) throw appError("INVALID", "Tell us your goal in a sentence.");
     const budgetMinor = Math.round(args.monthlyAdBudget * 100);
+    const target = args.target ? cleanTarget(args.target) : undefined;
     // The ad budget is also the spending cap: anyone who edits may lower it, only an owner or admin may raise it.
     const policy = await ctx.db
       .query("autonomyPolicies")
@@ -496,6 +508,7 @@ export const setGoal = mutation({
       businessId: business._id,
       kind: args.kind,
       statement,
+      ...(target ? { target } : {}),
       horizonDays,
       monthlyAdBudgetMinor: budgetMinor,
       currency: business.currency,

@@ -39,7 +39,7 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
-import { applyOwnerEconomics, churnOf, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, type AgentQuality } from "../shared/agents/quality";
@@ -494,6 +494,7 @@ function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
     facts: job.facts.length,
     insightsChars,
     ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
+    ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
   };
 }
 
@@ -823,7 +824,7 @@ export const buildStrategy = internalAction({
       // The owner's confirmed unit economics always replace the planner's assumptions.
       const plays = playsDraft ? withForecasts(await ownedAndChecked(playsDraft, job, playsMeta.sources ?? [])) : null;
       // 2. The 90-day plan, built around those plays.
-      const locked = plays ? lockedNumbers(plays) : "";
+      const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null) : "";
       let strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
@@ -832,7 +833,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief }),
-          plays ? { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) } : {},
+          plays ? { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) } : {},
         ),
         startedAt,
         {
@@ -845,18 +846,18 @@ export const buildStrategy = internalAction({
         planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
-      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) }));
+      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) }));
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.
       const quality = plays
         ? planQuality(
             [playsMeta.quality, planMeta.quality].filter((q): q is AgentQuality => Boolean(q)),
-            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
+            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
             { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null },
           )
         : null;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });

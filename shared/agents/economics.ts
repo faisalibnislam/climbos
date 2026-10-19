@@ -1,6 +1,7 @@
 import type { LintIssue } from "./types";
 import { CHECK_STAMP, economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
+import { goalGap, goalLines, type GoalGap, type GoalTarget } from "./goal";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 
 /**
@@ -240,23 +241,39 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
     if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
     const m = playMaths(p, e);
     if (m.profitable === false && p.kind !== "moonshot")
-      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${e.ownerHourUsd || OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
+      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${e.ownerHourUsd || OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
   });
   return issues;
 }
 
 /** Portfolio customers (P50, after overlap): the number the plan's North Star must use. */
-export function portfolioP50(out: { economics: Economics; plays: PlayLike[] }): number {
-  return portfolioCustomers(out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(p, out.economics).range.p50), PLAY_OVERLAP) ?? 0;
+/** The portfolio's new customers over one shared horizon (each play re-run at that horizon, so periods aren't mixed). */
+export function portfolioRange(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): { p10: number; p50: number; p90: number } {
+  const ms = out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(horizonDays ? { ...p, horizonDays } : p, out.economics).range);
+  const sum = (k: "p10" | "p50" | "p90") => portfolioCustomers(ms.map((m) => m[k]), PLAY_OVERLAP) ?? 0;
+  return { p10: sum("p10"), p50: sum("p50"), p90: sum("p90") };
+}
+
+export function portfolioP50(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): number {
+  return portfolioRange(out, horizonDays).p50;
+}
+
+/** The goal gap for a plays output (null-safe: unknown target or economics give an unknown gap). */
+export function playsGoalGap(out: { economics: Economics; plays: PlayLike[] }, goal: { target?: GoalTarget | null; horizonDays?: number } | null | undefined): GoalGap {
+  const h = goal?.horizonDays || 90;
+  const rev = out.economics.revenuePerCustomerMonthUsd;
+  return goalGap(goal?.target, h, out.plays.some((p) => p.model?.steps?.length) ? portfolioRange(out, h) : null, { churn: churnOf(out.economics), revenuePerCustomerMonth: rev >= 0 ? rev : null });
 }
 
 /** The numbers the plan must use, computed here so it can't contradict them. */
-export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }): string {
+export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, goal?: { statement?: string; target?: GoalTarget | null; horizonDays?: number } | null): string {
   const rows = out.plays.map((p) => ({ p, m: playMaths(p, out.economics) }));
-  const total = portfolioCustomers(rows.map((r) => r.m.range.p50), PLAY_OVERLAP) ?? 0;
-  const low = portfolioCustomers(rows.map((r) => r.m.range.p10), PLAY_OVERLAP) ?? 0;
-  const high = portfolioCustomers(rows.map((r) => r.m.range.p90), PLAY_OVERLAP) ?? 0;
-  const cost = rows.reduce((s, r) => s + r.m.costUsd, 0);
+  // The total uses the goal's horizon for every play, so it never mixes periods.
+  const own = [...new Set(out.plays.map((p) => p.horizonDays).filter((d) => d > 0))];
+  const h = goal?.horizonDays || (own.length === 1 ? own[0] : 90);
+  const atH = out.plays.map((p) => playMaths({ ...p, horizonDays: h }, out.economics));
+  const { p50: total, p10: low, p90: high } = portfolioRange(out, h);
+  const cost = atH.reduce((s, m) => s + m.costUsd, 0);
   const spend = out.plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
   const e = out.economics;
   const churn = churnOf(e);
@@ -265,8 +282,9 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }):
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
     ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.range.p50)} customers in ${p.horizonDays || 90} days (range ${roundCount(m.range.p10)}–${roundCount(m.range.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)}, payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
-    `- TOTAL: ≈${roundCount(total)} customers in 90 days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
-    `- North Star target = ≈${Math.round(total)} customers by day 90 (an estimate from these plays).`,
+    `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
+    `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,
+    ...(goal ? goalLines(goal.statement, playsGoalGap(out, goal)) : []),
   ].join("\n");
 }
 

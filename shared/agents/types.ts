@@ -88,6 +88,8 @@ export interface PlanConstraints {
   ownerHoursPerWeek?: number;
   /** The plays' computed P50 customers total, which the plan's North Star must match. */
   lockedCustomers?: number;
+  /** The goal's horizon in days (the period lockedCustomers covers). */
+  horizonDays?: number;
 }
 
 export interface CritiqueResult {

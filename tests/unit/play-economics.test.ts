@@ -46,10 +46,10 @@ describe("growth maths in code", () => {
 
   it("hands the plan locked totals with overlap", () => {
     const one = lockedNumbers({ economics: econ, plays: [play()] });
-    expect(one).toContain("TOTAL: ≈9.8 customers");
-    expect(one).toContain("North Star target = ≈10 customers");
+    expect(one).toContain("TOTAL: ≈9.8 new customers in 91 days");
+    expect(one).toContain("North Star target = ≈10 new customers by day 91");
     const two = lockedNumbers({ economics: econ, plays: [play(), play({ kind: "creative" })] });
-    expect(two).toContain("TOTAL: ≈16 customers"); // 2 × 9.75 × (1 − 0.2)
+    expect(two).toContain("TOTAL: ≈16 new customers"); // 2 × 9.75 × (1 − 0.2)
     expect(two).toContain("20% overlap");
   });
 });

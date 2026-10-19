@@ -3,6 +3,7 @@ import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { lintEconomics, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
 import type { PlanQuality } from "./quality";
+import type { GoalGap, GoalTarget } from "./goal";
 import type { PlanConstraints } from "./types";
 import type { Effort } from "../ai/types";
 import {
@@ -127,8 +128,8 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null };
-export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown }
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
+export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v2.6-provenance-checked";
 
@@ -338,10 +339,10 @@ export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdS
   const spend = out.channels.reduce((s, ch) => s + Math.max(0, ch.suggestedMonthlyAdSpend || 0), 0);
   if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001) issues.push({ severity: "error", rule: "budget", message: `Channels suggest $${Math.round(spend)}/month in ads; the budget is $${Math.round(c.monthlyAdBudgetUsd)}.`, path: "channels" });
   if (c.lockedCustomers !== undefined && c.lockedCustomers > 0 && out.northStar?.target) {
-    const nums = [...out.northStar.target.replace(/,/g, "").matchAll(/(?<![A-Za-z\d.-])\d+(?:\.\d+)?/g)].map((m) => Number(m[0])).filter((n) => n > 0 && n !== 90 && n !== 30 && n !== 60);
+    const nums = [...out.northStar.target.replace(/,/g, "").matchAll(/(?<![A-Za-z\d.-])\d+(?:\.\d+)?/g)].map((m) => Number(m[0])).filter((n) => n > 0 && n !== 90 && n !== 30 && n !== 60 && n !== c.horizonDays);
     const want = c.lockedCustomers;
     if (nums.length && !nums.some((n) => Math.abs(n - want) <= Math.max(1, want * 0.15)))
-      issues.push({ severity: "error", rule: "consistency", message: `The North Star target doesn't match the plays: they add up to ≈${Math.round(want)} customers by day 90. Use that number.`, path: "northStar.target" });
+      issues.push({ severity: "error", rule: "consistency", message: `The North Star target doesn't match the plays: they add up to ≈${Math.round(want)} customers by day ${c.horizonDays ?? 90}. Use that number.`, path: "northStar.target" });
   }
   return issues;
 }

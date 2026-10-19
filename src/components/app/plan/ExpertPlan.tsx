@@ -1,5 +1,6 @@
 "use client";
 
+import { GAP_LABEL, type GoalGap } from "../../../../shared/agents/goal";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -54,6 +55,9 @@ export interface ExpertView {
   weekOneChecklist: string[];
   risks: { risk: string; mitigation: string }[];
   plays?: PlayView[];
+  /** Owner goal vs what the plays support (computed in code). */
+  goalGap?: GoalGap | null;
+  snapshot?: { goal?: string };
 }
 
 const KIND: Record<PlayView["kind"], { label: string; tone: Tone; icon: LucideIcon; hint: string }> = {
@@ -105,11 +109,23 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
               <dt className="text-xs text-ink-3">Now</dt>
               <dd className="break-words text-sm text-ink-2">{expert.northStar.baseline}</dd>
             </div>
+            {expert.goalGap && expert.snapshot?.goal ? (
+              <div className="min-w-0">
+                <dt className="text-xs text-ink-3">Your goal</dt>
+                <dd className="break-words text-sm text-ink-2">{expert.snapshot.goal}</dd>
+              </div>
+            ) : null}
             <div className="min-w-0">
-              <dt className="text-xs text-ink-3">Target</dt>
+              <dt className="text-xs text-ink-3">{expert.goalGap ? "Plays support" : "Target"}</dt>
               <dd className={cn("break-words", isShort(expert.northStar.target) ? "metric text-xl leading-6" : "text-sm font-medium text-ink")}>{expert.northStar.target}</dd>
             </div>
           </dl>
+          {expert.goalGap ? (
+            <p className={cn("rounded-md px-2.5 py-2 text-xs", expert.goalGap.state === "met" ? "bg-green-50 text-green-900" : expert.goalGap.state === "short" || expert.goalGap.state === "out_of_reach" ? "bg-amber-50 text-amber-900" : "bg-surface-2 text-ink-3")}>
+              <span className="font-medium">{GAP_LABEL[expert.goalGap.state]}. </span>
+              {expert.goalGap.note}
+            </p>
+          ) : null}
           {expert.leadingIndicators.length ? (
             <ul className="mt-1 flex min-w-0 flex-col gap-2 border-t border-line pt-2">
               {expert.leadingIndicators.map((l) => (

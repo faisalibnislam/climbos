@@ -485,6 +485,8 @@ export default defineSchema({
       v.literal("custom"),
     ),
     statement: v.string(),
+    /** Structured target (spec §8.1): kept as the owner stated it, never rewritten to match a forecast. */
+    target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
     horizonDays: v.number(),
     monthlyAdBudgetMinor: v.number(),
     currency: v.string(),
@@ -1199,8 +1201,11 @@ export default defineSchema({
             facts: v.number(),
             insightsChars: v.number(),
             ownerEconomics: v.optional(v.any()),
+            goalTarget: v.optional(v.any()),
           }),
         ),
+        /** Owner goal vs what the plays support (computed in code; spec §8.1). */
+        goalGap: v.optional(v.any()),
         /** Web pages the research phases actually read (spec §07): what the plan's citations can point to. */
         webSources: v.optional(v.array(v.object({ url: v.string(), title: v.optional(v.string()) }))),
       }),

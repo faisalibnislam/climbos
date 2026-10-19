@@ -52,6 +52,12 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const [horizon, setHorizon] = useState(String(state.goal?.horizonDays ?? 90));
   const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? 0));
   const [reviewDay, setReviewDay] = useState(state.goal?.reviewDay ?? "Friday");
+  const t = state.goal?.target;
+  const [metric, setMetric] = useState<"customers" | "revenue_month" | "other">(t?.metric ?? "customers");
+  const [mode, setMode] = useState<"total" | "incremental">(t?.mode ?? "total");
+  const [baseline, setBaseline] = useState(t?.baseline != null ? String(t.baseline) : "");
+  const [desired, setDesired] = useState(t?.desired != null ? String(t.desired) : "");
+  const numOrNull = (s: string) => (s.trim() === "" ? null : Number(s));
   const [busy, setBusy] = useState(false);
   const currency = state.business?.currency ?? state.org.currency;
   const over = !canRaise && Number(budget || 0) > state.adCap;
@@ -79,6 +85,20 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
         <Field label="Your goal in a sentence" className="sm:col-span-2">
           <Textarea value={statement} disabled={!canEdit} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
         </Field>
+        <Field label="Measure" hint="Plays forecast customers; revenue uses your price.">
+          <Select value={metric} disabled={!canEdit} onValueChange={(v) => setMetric(v as typeof metric)} options={[{ value: "customers", label: "Customers" }, { value: "revenue_month", label: `Monthly revenue (${currency})` }, { value: "other", label: "Something else" }]} />
+        </Field>
+        <Field label="Goal counts as">
+          <Select value={mode} disabled={!canEdit} onValueChange={(v) => setMode(v as typeof mode)} options={[{ value: "total", label: "A total to reach" }, { value: "incremental", label: "More on top of today" }]} />
+        </Field>
+        {mode === "total" ? (
+          <Field label="Today" hint="Leave blank if unsure.">
+            <Input inputMode="decimal" disabled={!canEdit} value={baseline} onChange={(e) => setBaseline(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 20" />
+          </Field>
+        ) : null}
+        <Field label={mode === "total" ? "Goal" : "How many more"} hint="ClimbOS keeps this as you set it and shows the gap.">
+          <Input inputMode="decimal" disabled={!canEdit} value={desired} onChange={(e) => setDesired(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 50" />
+        </Field>
         <Field
           label={`Monthly ad budget (${currency})`}
           hint={canRaise ? "Paid directly to Google or Meta, never to ClimbOS. 0 means no ads." : `Up to ${majorToDisplay(state.adCap, currency)}. Raising it needs ${PERMISSION_WHO.manage_team}.`}
@@ -97,7 +117,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await setGoal({ slug, kind, statement: statement.trim() || defaults[kind] || "Grow the business", horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
+                  await setGoal({ slug, kind, statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
                   toast({ tone: "success", title: "Goal saved.", description: state.strategy ? "Refresh your plan to use it." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
