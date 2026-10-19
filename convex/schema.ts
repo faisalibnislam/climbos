@@ -1211,12 +1211,33 @@ export default defineSchema({
         ),
         /** Owner goal vs what the plays support (computed in code; spec §8.1). */
         goalGap: v.optional(v.any()),
+        /** decision_contract plans: the structured decision the plays rest on (shared/agents/decision.ts, REQ-STRAT-01/02). */
+        decision: v.optional(
+          v.object({
+            observations: v.array(v.object({ observation: v.string(), source: v.string() })),
+            constraint: v.string(),
+            explanations: v.array(v.object({ explanation: v.string(), evidenceFor: v.string(), evidenceAgainst: v.string() })),
+            limits: v.string(),
+            options: v.array(v.object({ name: v.string(), kind: v.string(), plays: v.array(v.string()), chosen: v.boolean(), whyNot: v.string() })),
+            guidingPolicy: v.string(),
+            falsifier: v.string(),
+          }),
+        ),
         /** Web pages the research phases actually read (spec §07): what the plan's citations can point to. */
         webSources: v.optional(v.array(v.object({ url: v.string(), title: v.optional(v.string()) }))),
       }),
     ),
     /** Acquisition Intelligence: the profile used and the agent's evidence-backed adjustments (scores are recomputed on read). */
-    acquisition: v.optional(v.object({ libraryVersion: v.string(), profile: v.any(), adjustments: v.any(), summary: v.array(v.string()) })),
+    acquisition: v.optional(
+      v.object({
+        libraryVersion: v.string(),
+        profile: v.any(),
+        adjustments: v.any(),
+        summary: v.array(v.string()),
+        /** decision_contract plans: the limits applied before ranking (REQ-STRAT-03); connections are read live. */
+        limits: v.optional(v.object({ ownerHoursPerWeek: v.union(v.number(), v.null()) })),
+      }),
+    ),
     reviewDate: v.string(),
     sourceFactIds: v.array(v.id("businessFacts")),
     generationCostMicros: v.number(),

@@ -47,7 +47,10 @@ export const view = query({
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
     const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, dims: business.acquisition.dims } : planned ? { types: planned.profile.types, dims: planned.profile.dims } : null;
     const profile = profileFrom({ saved, legacyType: business.businessType, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy });
-    const rows = scoreChannels(profile, (planned?.adjustments as Adjustment[] | undefined) ?? []);
+    // decision_contract plans: the same hard limits as the plan, with today's connections.
+    const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
+    const limits = planned?.limits ? { ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined, connected } : undefined;
+    const rows = scoreChannels(profile, (planned?.adjustments as Adjustment[] | undefined) ?? [], undefined, limits);
     const band = budgetBand(profile.budgetUsd);
     return {
       canEdit: role !== "viewer",
@@ -85,6 +88,7 @@ export const view = query({
         tactic: r.tactic ?? null,
         audience: r.audienceName ?? null,
         caution: r.caution ?? null,
+        limits: r.limits ?? [],
       })),
     };
   },

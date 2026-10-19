@@ -2,6 +2,7 @@ import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { lintEconomics, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
+import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
 import type { GoalGap, GoalTarget } from "./goal";
 import type { PlanConstraints } from "./types";
@@ -128,7 +129,7 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v2.6-provenance-checked";
@@ -150,7 +151,9 @@ export const PlaysOutputSchema = z.object({
   }),
   plays: z.array(PlayDraftSchema),
 });
-export type PlaysOutput = z.infer<typeof PlaysOutputSchema>;
+/** With the decision_contract flag, the plays agent also writes the structured decision the plays rest on (REQ-STRAT-01/02). */
+export const PlaysDecisionOutputSchema = PlaysOutputSchema.extend({ decision: DecisionSchema });
+export type PlaysOutput = z.infer<typeof PlaysOutputSchema> & { decision?: Decision };
 /** Saved portfolio: the agent's plays plus the forecast ClimbOS computed. */
 export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: Play[] };
 
@@ -357,7 +360,7 @@ export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdS
 
 /** Plans and plays: numbers trace to any input or the output's own model; labelled assumptions and targets pass. */
 function lintPlanning(out: unknown, input: AgentInput): LintIssue[] {
-  return lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|days$|weeklyTarget|target$/i.test(p) });
+  return lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|falsifier|days$|weeklyTarget|target$/i.test(p) });
 }
 
 function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
@@ -528,11 +531,11 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       role: "cmo",
       label: "Growth plays",
       skills: ["owner-brevity", "growth-plays", ...catalogs],
-      schema: PlaysOutputSchema,
+      schema: (o.decisionContract ? PlaysDecisionOutputSchema : PlaysOutputSchema) as z.ZodType<PlaysOutput>,
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",

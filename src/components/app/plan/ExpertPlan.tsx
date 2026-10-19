@@ -1,6 +1,7 @@
 "use client";
 
 import { GAP_LABEL, type GoalGap } from "../../../../shared/agents/goal";
+import { CONSTRAINT_LABEL, type BindingConstraint, type Decision } from "../../../../shared/agents/decision";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -58,6 +59,8 @@ export interface ExpertView {
   /** Owner goal vs what the plays support (computed in code). */
   goalGap?: GoalGap | null;
   snapshot?: { goal?: string };
+  /** decision_contract plans: the structured decision (shared/agents/decision.ts). */
+  decision?: Decision | null;
 }
 
 const KIND: Record<PlayView["kind"], { label: string; tone: Tone; icon: LucideIcon; hint: string }> = {
@@ -88,6 +91,7 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
       <Card>
         <CardContent className="flex flex-col gap-2">
           <p className="text-overline">Diagnosis</p>
+          {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
           <p className="text-sm text-ink-2">{expert.diagnosis}</p>
           {expert.affordableCac ? (
             <p className="mt-1 text-ui text-ink-3">
@@ -147,6 +151,85 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
           ) : null}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+const SOURCE_WORD: Record<string, string> = { owner: "you", site: "your site", research: "research", results: "your results", inference: "inferred" };
+
+/** The decision first; observations, explanations and the options that lost behind a toggle (REQ-STRAT-01/02, REQ-UX-01). */
+function DecisionSummary({ d }: { d: Decision }) {
+  const [open, setOpen] = useState(false);
+  const chosen = d.options.find((o) => o.chosen);
+  const lost = d.options.filter((o) => !o.chosen);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="heading-card">{CONSTRAINT_LABEL[d.constraint as BindingConstraint] ?? d.constraint}</p>
+      <p className="text-ui text-ink">
+        <span className="font-medium">Approach: </span>
+        {d.guidingPolicy}
+      </p>
+      <p className="text-ui text-ink-2">
+        <span className="font-medium text-ink">We&apos;re wrong if: </span>
+        {d.falsifier}
+      </p>
+      {open ? (
+        <div className="mt-1 flex flex-col gap-3 border-t border-line pt-2 text-ui">
+          {d.observations.length ? (
+            <div>
+              <p className="text-overline">What we saw</p>
+              <ul className="mt-1 flex flex-col gap-1">
+                {d.observations.map((o, i) => (
+                  <li key={i} className="text-ink-2">
+                    {o.observation} <span className="text-xs text-ink-3">· {SOURCE_WORD[o.source] ?? o.source}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {d.explanations.length ? (
+            <div>
+              <p className="text-overline">Other explanations</p>
+              <ul className="mt-1 flex flex-col gap-1.5">
+                {d.explanations.map((e, i) => (
+                  <li key={i}>
+                    <span className="text-ink">{e.explanation}</span>
+                    {e.evidenceFor ? <span className="block text-xs text-ink-3">For: {e.evidenceFor}</span> : null}
+                    {e.evidenceAgainst ? <span className="block text-xs text-ink-3">Against: {e.evidenceAgainst}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {chosen || lost.length ? (
+            <div>
+              <p className="text-overline">Options</p>
+              <ul className="mt-1 flex flex-col gap-1.5">
+                {chosen ? (
+                  <li className="flex items-start gap-1 text-ink">
+                    <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-brand-800" />
+                    <span>
+                      <span className="font-medium">{chosen.name}</span> <span className="text-xs text-ink-3">· chosen</span>
+                    </span>
+                  </li>
+                ) : null}
+                {lost.map((o, i) => (
+                  <li key={i} className="flex items-start gap-1 text-ink-2">
+                    <X aria-hidden className="mt-0.5 size-3.5 shrink-0 text-ink-3" />
+                    <span>
+                      {o.name} <span className="block text-xs text-ink-3">{o.whyNot}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {d.limits ? <p className="text-xs text-ink-3">Not known yet: {d.limits}</p> : null}
+        </div>
+      ) : null}
+      <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {open ? "Hide the reasoning" : "Why this, not something else"}
+      </Button>
     </div>
   );
 }
@@ -432,14 +515,14 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-export function GrowthPlays({ plays, slug, economics, strategyId, canEdit = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; canEdit?: boolean }) {
+export function GrowthPlays({ plays, slug, economics, strategyId, canEdit = false, focused = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; canEdit?: boolean; focused?: boolean }) {
   const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
   if (!plays.length) return null;
   const results = strategyId ? { strategyId, canEdit, byPlay: (byPlay ?? {}) as Record<string, PlayActuals | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
   return (
-    <PlanSection id="plays" title="Growth plays" intro="One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Forecasts are computed from cited rates and their ranges; each play is tested before it scales.">
+    <PlanSection id="plays" title="Growth plays" intro={focused ? "The few plays that attack the constraint above. Forecasts are computed from cited rates and their ranges; each play is tested before it scales." : "One bankable play, one or two creative ones with proven mechanics, and at most one capped moonshot. Forecasts are computed from cited rates and their ranges; each play is tested before it scales."}>
       {economics ? <EconomicsLine economics={economics} /> : null}
       <div className={cn("grid gap-4", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (

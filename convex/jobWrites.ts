@@ -260,13 +260,13 @@ export const saveStrategy = internalMutation({
     const version = (prior[0]?.version ?? 0) + 1;
     const now = Date.now();
     const contentPlans = CHANNEL_JOBS;
-    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[] }) : null;
+    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null } }) : null;
     if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
     const strategyId = await ctx.db.insert("strategies", {
       orgId: run.orgId,
       businessId: business._id,
       goalId: goal._id,
-      ...(acq ? { acquisition: { libraryVersion: acq.libraryVersion, profile: acq.profile, adjustments: acq.adjustments, summary: acq.summary } } : {}),
+      ...(acq ? { acquisition: { libraryVersion: acq.libraryVersion, profile: acq.profile, adjustments: acq.adjustments, summary: acq.summary, ...(acq.limits ? { limits: acq.limits } : {}) } } : {}),
       version,
       status: "needs_approval",
       summary: s.summary,
@@ -315,6 +315,7 @@ export const saveStrategy = internalMutation({
                 risks: x.risks.slice(0, 6),
                 plays: withPlayIds((x.plays ?? []).slice(0, 4), prior),
                 economics: x.economics,
+                ...(x.decision ? { decision: x.decision } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
                 ...(x.quality ? { quality: x.quality } : {}),
                 ...(x.goalGap ? { goalGap: x.goalGap } : {}),

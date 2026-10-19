@@ -1,4 +1,4 @@
-import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Requirement, type Stage } from "./library";
+import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
 
 /**
  * Acquisition Intelligence: hard eligibility checks, rule-based priors for the
@@ -207,6 +207,58 @@ export function priors(c: Channel, p: AcquisitionProfile): Record<Factor, number
   };
 }
 
+/* ---------------- hard limits before ranking (REQ-STRAT-03) ---------------- */
+
+/** The owner's real limits, applied in code before any channel is ranked. */
+export interface ChannelLimits {
+  /** Hours a week the owner gives growth work (only when they said). */
+  ownerHoursPerWeek?: number;
+  /** Providers with status "connected" (null when unknown). */
+  connected?: readonly string[] | null;
+}
+
+export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability";
+/** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs a connection first. */
+export interface LimitCheck {
+  kind: LimitKind;
+  verdict: "blocked" | "late" | "setup";
+  reason: string;
+}
+
+/** Days until a channel can show whether it works. */
+const LEARN_DAYS: Record<Channel["learn"], number> = { days: 7, weeks: 28, months: 90 };
+/** Days from first conversation to a paying customer. */
+const CYCLE_DAYS: Record<string, number> = { immediate: 0, short: 14, medium: 45, long: 120 };
+/** Owner hours a week a channel needs at its smallest readable test. */
+const MIN_OWNER_HOURS: Record<Execution, number> = { auto: 0, partial: 1, human: 3 };
+/** What ClimbOS needs connected to run a family itself; without it the owner does that step by hand. */
+const MAILBOX = { any: ["email_mailbox"], label: "the owner's mailbox for sending" };
+const NEEDS_BY_ID: Record<string, { any: string[]; label: string }> = { D01: MAILBOX, D16: MAILBOX };
+const NEEDS: Partial<Record<Channel["family"], { any: string[]; label: string }>> = {
+  paid_search: { any: ["google_ads"], label: "a Google Ads account" },
+  paid_social: { any: ["meta_ads"], label: "a Meta ads account" },
+  organic_social: { any: ["instagram", "facebook_pages", "linkedin", "x"], label: "a social account for direct posting" },
+};
+/** Channels that work on existing customers don't wait on a new buyer's sales cycle. */
+const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st === "returning");
+
+/** Cash, owner time, sales cycle and capability, checked before ranking. Pure and deterministic. */
+export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}): LimitCheck[] {
+  const out: LimitCheck[] = [];
+  if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least $${c.minMonthly}/month to learn anything; the budget is $${p.budgetUsd}.` });
+  else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
+  const need = MIN_OWNER_HOURS[c.exec];
+  if (l.ownerHoursPerWeek !== undefined && need > l.ownerHoursPerWeek) out.push({ kind: "owner_time", verdict: "blocked", reason: `Needs about ${need} of your hours a week; you have ${l.ownerHoursPerWeek}.` });
+  const cycle = CYCLE_DAYS[dim(p, "salesCycle") ?? ""];
+  if (cycle !== undefined && !ownBase(c)) {
+    const first = LEARN_DAYS[c.learn] + cycle;
+    if (first > p.horizonDays) out.push({ kind: "sales_cycle", verdict: "late", reason: `First revenue around day ${first} (${c.learn} to learn + ${cycle}-day sales cycle); the goal date is day ${p.horizonDays}.` });
+  }
+  const needs = NEEDS_BY_ID[c.id] ?? NEEDS[c.family];
+  if (needs && l.connected && !needs.any.some((x) => l.connected!.includes(x))) out.push({ kind: "capability", verdict: "setup", reason: `Connect ${needs.label} first, or do that step by hand.` });
+  return out;
+}
+
 /* ---------------- AI adjustments and final scores ---------------- */
 
 export interface Adjustment {
@@ -240,11 +292,13 @@ export interface ScoredChannel {
   tactic?: string;
   audienceName?: string;
   caution?: string;
+  /** Hard-limit findings, when limits were applied (decision_contract plans). */
+  limits?: LimitCheck[];
 }
 
 const PAID_FAMILIES = new Set(["paid_search", "paid_social", "traditional"]);
 
-export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS): ScoredChannel[] {
+export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits): ScoredChannel[] {
   const adj = new Map(adjustments.map((a) => [a.channelId, a]));
   const regulated = p.types.map((k) => TYPE_BY_KEY[k]?.regulated).find(Boolean) ?? (dim(p, "regulation") === "high" ? "Regulated industry: check advertising rules before running this." : undefined);
   const rows = CHANNELS.map((c): ScoredChannel => {
@@ -270,6 +324,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       tactic: a?.tactic,
       audienceName: a?.audienceName,
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
+      ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
     };
   });
   return select(rows, p);
@@ -279,11 +334,21 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
 function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
   const band = budgetBand(p.budgetUsd);
   const ranked = rows.filter((r) => r.status !== "ineligible").sort((a, b) => b.score - a.score);
+  // Hard limits come before rank: a blocked channel is never picked; a late one only fills a slot no on-time channel can.
+  const blocked = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "blocked");
+  const late = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "late");
   let paid = 0;
   let spend = 0;
   let picked = 0;
-  for (const r of ranked) {
+  for (const r of [...ranked.filter((x) => !late(x)), ...ranked.filter((x) => late(x))]) {
     const affordable = !r.paid || (paid < band.maxPaid && spend + r.minMonthly <= p.budgetUsd);
+    const stop = blocked(r);
+    if (stop) {
+      r.status = "not_now";
+      r.why = stop.reason;
+      continue;
+    }
+    if (late(r) && !r.why) r.why = late(r)!.reason;
     if (picked < band.maxChannels && affordable && r.score >= 50) {
       r.status = picked === 0 ? "primary" : "in_plan";
       picked++;
@@ -360,6 +425,6 @@ export function scorecardText(rows: ScoredChannel[], n = 14): string {
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n");
 }

@@ -221,6 +221,12 @@ function ChannelRow({ r, rank, labels }: { r: Row; rank: number; labels: View["f
                 {r.caution}
               </p>
             ) : null}
+            {r.limits.map((l) => (
+              <p key={l.kind} className={cn("flex items-start gap-1", l.verdict === "setup" ? "text-ink-3" : "text-amber-800")}>
+                <ShieldAlert aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                {l.reason}
+              </p>
+            ))}
           </div>
         </div>
       ) : null}

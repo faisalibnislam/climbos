@@ -806,7 +806,9 @@ export const buildStrategy = internalAction({
         adjustments = adjustmentsFrom(fit);
         channelSummary = fit.summary.slice(0, 3);
       }
-      const scored = scoreChannels(profile, adjustments);
+      // S5 flag (REQ-STRAT-03): cash, owner time, sales cycle and capability limits apply before ranking.
+      const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
+      const scored = scoreChannels(profile, adjustments, undefined, limits);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const playsMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
@@ -864,9 +866,9 @@ export const buildStrategy = internalAction({
         : null;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),
         factIds: job.facts.map((f) => f.id),
-        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
+        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null } } : {}) }),
       });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
     }, undefined, resumeAs(ctx, "buildStrategy", { runId }));
