@@ -1,5 +1,7 @@
 "use client";
 
+import { isUnlimited } from "../../../../shared/economics/credits";
+
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -45,7 +47,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
           />
           <section aria-labelledby="people-heading" className="flex flex-col gap-3">
             <h2 id="people-heading" className="heading-section">
-              People ({formatNumber(data.seats.used)} of {formatNumber(data.seats.limit)} seats)
+              People ({formatNumber(data.seats.used)}{isUnlimited(data.seats.limit) ? ", unlimited seats" : ` of ${formatNumber(data.seats.limit)} seats`})
             </h2>
             <DataTable
               caption="People across your workspaces"

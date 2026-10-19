@@ -27,11 +27,11 @@ const METHODS: PaymentMethod[] = [
 ];
 
 const INVOICES: Invoice[] = [
-  { id: "INV-2026-0142", date: "1 Oct 2026", description: "Pro plan · October", amount: 39, status: "paid" },
+  { id: "INV-2026-0142", date: "1 Oct 2026", description: "Pro plan · October", amount: 40, status: "paid" },
   { id: "INV-2026-0139", date: "24 Sep 2026", description: "Top-up · 1,800 credits", amount: 25, status: "paid" },
-  { id: "INV-2026-0121", date: "1 Sep 2026", description: "Pro plan · September", amount: 39, status: "paid" },
+  { id: "INV-2026-0121", date: "1 Sep 2026", description: "Pro plan · September", amount: 40, status: "paid" },
   { id: "INV-2026-0117", date: "19 Aug 2026", description: "Top-up · 700 credits", amount: 10, status: "refunded" },
-  { id: "INV-2026-0104", date: "1 Aug 2026", description: "Pro plan · August", amount: 39, status: "paid" },
+  { id: "INV-2026-0104", date: "1 Aug 2026", description: "Pro plan · August", amount: 40, status: "paid" },
   { id: "INV-2026-0088", date: "1 Jul 2026", description: "Starter plan · July", amount: 15, status: "failed" },
   { id: "INV-2026-0061", date: "1 Jun 2026", description: "Starter plan · June", amount: 15, status: "paid" },
 ];
@@ -79,7 +79,7 @@ export function BillingContent() {
             toast({ title: `Switched to ${planOf(id).name}`, tone: "success" });
           }}
         />
-        <Spec items={[["Prices", "Starter $15 / 1,100 credits, Pro $39 / 3,000 credits, Free 50 credits once"], ["Yearly", "10× monthly (2 months free)"]]} />
+        <Spec items={[["Prices", "Starter $15 / 1,100 credits, Pro $40 / 3,000 credits, Free 50 credits once"], ["Yearly", "10× monthly (2 months free)"]]} />
       </Specimen>
 
       <Specimen title="Upgrade button" description="Lime, once per screen. The confirm states the prorated charge.">
@@ -162,7 +162,7 @@ export function BillingContent() {
 
       <Specimen title="Renewal date">
         <Stage className="max-w-xl">
-          <RenewalDate date="1 Nov 2026" amount={39} />
+          <RenewalDate date="1 Nov 2026" amount={40} />
         </Stage>
       </Specimen>
 

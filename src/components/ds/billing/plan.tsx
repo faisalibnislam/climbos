@@ -3,7 +3,7 @@
 /*
  * Plans: PLANS data, CurrentPlanCard, PlanComparisonTable, UpgradeButton,
  * SubscriptionStatus, BillingCycleSelector, TrialCountdown and RenewalDate.
- * Credits pricing: Free 50 credits once, Starter $15 = 1,100/mo, Pro $39 = 3,000/mo.
+ * Credits pricing: Free 50 credits once, Starter $15 = 1,100/mo, Pro $40 = 3,000/mo (unlimited people and workspaces).
  */
 import { useEffect, useState } from "react";
 import { ArrowRight, CalendarDays, Check, CircleAlert, CircleCheck, Clock, CirclePause, Minus, Sparkles, X } from "@/components/icons";
@@ -26,7 +26,7 @@ export interface Plan {
 export const PLANS: Plan[] = [
   { id: "free", name: "Free", monthly: 0, credits: 50, oneOff: true, blurb: "Try a growth plan and a few posts." },
   { id: "starter", name: "Starter", monthly: 15, credits: 1100, blurb: "One business posting every week." },
-  { id: "pro", name: "Pro", monthly: 39, credits: 3000, blurb: "Autopilot, outbound and Expert drafts." },
+  { id: "pro", name: "Pro", monthly: 40, credits: 3000, blurb: "Autopilot, outbound and Expert drafts." },
 ];
 
 /** Yearly billing = 10 months (2 free). Returns the per-month price shown. */
@@ -102,8 +102,8 @@ export function CurrentPlanCard({ plan, cycle, renews, creditsLeft, onChangePlan
 type Cell = boolean | string;
 const FEATURES: { label: string; values: Record<PlanId, Cell> }[] = [
   { label: "Credits", values: { free: "50 once", starter: "1,100 / mo", pro: "3,000 / mo" } },
-  { label: "Workspaces", values: { free: "1", starter: "2", pro: "10" } },
-  { label: "Team seats", values: { free: "1", starter: "3", pro: "10" } },
+  { label: "Workspaces", values: { free: "1", starter: "3", pro: "Unlimited" } },
+  { label: "Team seats", values: { free: "1", starter: "3", pro: "Unlimited" } },
   { label: "Growth plan and posts", values: { free: true, starter: true, pro: true } },
   { label: "Weekly autopilot", values: { free: false, starter: true, pro: true } },
   { label: "Lead finder and cold email", values: { free: false, starter: false, pro: true } },

@@ -1,5 +1,7 @@
 "use client";
 
+import { isUnlimited } from "../../../../shared/economics/credits";
+
 import { ApprovalLimit, InviteLinks } from "./TeamLinks";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -37,18 +39,24 @@ export function TeamSettings({ slug }: { slug: string }) {
             <h2 id="seats-heading" className="heading-section">
               Seats
             </h2>
-            <Meter
-              label="Seats used"
-              used={team.seatsUsed}
-              max={team.seatLimit}
-              unit="seats"
-              fullText="All seats in use."
-              footnote={
-                <>
-                  Shared across workspaces; invites count. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Add seats</Link>
-                </>
-              }
-            />
+            {isUnlimited(team.seatLimit) ? (
+              <p className="text-sm text-ink-2">
+                <span className="font-semibold tabular-nums text-ink">{team.seatsUsed}</span> people · unlimited seats
+              </p>
+            ) : (
+              <Meter
+                label="Seats used"
+                used={team.seatsUsed}
+                max={team.seatLimit}
+                unit="seats"
+                fullText="All seats in use."
+                footnote={
+                  <>
+                    Shared across workspaces; invites count. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/settings/billing`}>Add seats</Link>
+                  </>
+                }
+              />
+            )}
           </section>
 
           {team.canManage ? <InviteLinks slug={slug} canInviteAdmins={team.yourRole === "owner"} /> : null}
@@ -101,7 +109,7 @@ function InviteForm({ slug, team }: { slug: string; team: Team }) {
   const [role, setRole] = useState<Role>("editor");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; limit: boolean } | null>(null);
-  const full = team.seatsUsed >= team.seatLimit;
+  const full = !isUnlimited(team.seatLimit) && team.seatsUsed >= team.seatLimit;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

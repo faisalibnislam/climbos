@@ -1,3 +1,4 @@
+import { isUnlimited } from "../shared/economics/credits";
 import { v } from "convex/values";
 import { microsToCredits } from "../shared/economics";
 import { sha256Hex } from "../shared/policy";
@@ -173,7 +174,7 @@ export async function acceptInviteLink(ctx: MutationCtx, user: Doc<"users">, tok
   if (existing?.status === "active") return { slug: org.slug };
   const seats = await seatState(ctx, org);
   const email = user.email?.toLowerCase() ?? "";
-  if (!seats.emails.has(email) && seats.used >= seats.limit) throw appError("LIMIT_REACHED", "This workspace has no free seats. Ask its owner to upgrade.");
+  if (!seats.emails.has(email) && !isUnlimited(seats.limit) && seats.used >= seats.limit) throw appError("LIMIT_REACHED", "This workspace has no free seats. Ask its owner to upgrade.");
   if (existing) await ctx.db.patch(existing._id, { status: "active", role: row.role, userId: user._id, inviteTokenHash: undefined });
   else await ctx.db.insert("memberships", { orgId: org._id, userId: user._id, role: row.role, status: "active", invitedBy: row.createdBy, createdAt: Date.now() });
   await ctx.db.patch(row._id, { uses: row.uses + 1 });

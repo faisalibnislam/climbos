@@ -1,3 +1,4 @@
+import { limitText } from "../../../shared/economics/credits";
 import { CREDIT_PACKAGES, CREDIT_TOPUPS, FREE_CREDITS, type PackageKey } from "@shared/economics";
 import { formatNumber, formatUsd } from "@/lib/utils";
 
@@ -52,8 +53,8 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   { label: "Publishing", value: (t) => (paid(t) ? "Direct to your accounts, scheduled" : "Copy and post yourself") },
   { label: "Find customers", value: (t) => (paid(t) ? "Prospects, emails sent, booking page" : "Prospect list and drafts") },
   { label: "Ads", value: (t) => (paid(t) ? "Published to your ad accounts" : "Drafts") },
-  { label: "People", value: (t) => formatNumber(t.people) },
-  { label: "Workspaces", value: (t) => formatNumber(t.workspaces) },
+  { label: "People", value: (t) => limitText(t.people) },
+  { label: "Workspaces", value: (t) => limitText(t.workspaces) },
   { label: "Agents & MCP access", value: (t) => (paid(t) ? "Yes" : "—") },
   { label: "Results history", value: (t) => (paid(t) ? "Full" : "30 days") },
   { label: "\"Made with ClimbOS\" badge", value: (t) => (paid(t) ? "Removed" : "On exports and booking page") },

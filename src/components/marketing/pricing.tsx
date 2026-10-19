@@ -1,3 +1,4 @@
+import { isUnlimited } from "../../../shared/economics/credits";
 import Link from "next/link";
 import { Check } from "@/components/icons"
 import { CREDIT_EXAMPLES } from "@shared/economics";
@@ -19,7 +20,7 @@ export function RecommendedBadge() {
 const TIER_POINTS: Record<Tier["key"], string[]> = {
   free: ["All 10 AI roles on Climb AI Basic", "Business research and a growth plan", "Drafts you copy and post"],
   starter: ["Climb AI Expert", "Autopilot, publishing and sending", "Top-ups when you need more"],
-  pro: ["Everything in Starter", "More credits, people and workspaces", "For agencies and several brands"],
+  pro: ["Everything in Starter", "Unlimited people and workspaces", "For agencies and several brands"],
 };
 
 function TierCard({ tier }: { tier: Tier }) {
@@ -40,7 +41,7 @@ function TierCard({ tier }: { tier: Tier }) {
         {tier.key === "free" ? "Start free" : `Choose ${tier.name}`}
       </Link>
       <ul className="mt-5 flex flex-col gap-2 text-sm text-ink-2">
-        {[...TIER_POINTS[tier.key], `${tier.people} ${tier.people === 1 ? "person" : "people"} · ${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`].map((h) => (
+        {[...TIER_POINTS[tier.key], `${isUnlimited(tier.people) ? "Unlimited people" : `${tier.people} ${tier.people === 1 ? "person" : "people"}`} · ${isUnlimited(tier.workspaces) ? "unlimited workspaces" : `${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`}`].map((h) => (
           <li key={h} className="flex items-start gap-2">
             <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
             {h}

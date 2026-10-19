@@ -1,5 +1,7 @@
 "use client";
 
+import { isUnlimited } from "../../../../shared/economics/credits";
+
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
@@ -221,7 +223,7 @@ function BillingBody({
                   {[
                     "Climb AI Expert",
                     "Autopilot, publishing, sending",
-                    `${p.seats} people`,
+                    isUnlimited(p.seats) ? "Unlimited people and workspaces" : `${p.seats} people`,
                     "Top-ups available",
                   ].map((h) => (
                     <li key={h} className="flex items-start gap-2">

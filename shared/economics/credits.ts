@@ -31,9 +31,16 @@ export interface CreditPackage {
   tagline: string;
 }
 
+/** Seats or workspaces at or above this count are unlimited (the live config's own ceiling). */
+export const UNLIMITED = 1000;
+export const isUnlimited = (n: number) => n >= UNLIMITED;
+/** "Unlimited" or the number, for limits shown to owners. */
+export const limitText = (n: number) => (isUnlimited(n) ? "Unlimited" : n.toLocaleString("en-US"));
+
 export const CREDIT_PACKAGES: Record<PackageKey, CreditPackage> = {
   starter: { key: "starter", name: "Starter", priceUsd: 15, credits: 1_100, seats: 3, workspaces: 3, tagline: "For one business growing steadily." },
-  pro: { key: "pro", name: "Pro", priceUsd: 39, credits: 3_000, seats: 10, workspaces: 10, tagline: "For busy teams and several brands." },
+  // Owner, 2026-10-19: Pro is $40 with unlimited people and workspaces.
+  pro: { key: "pro", name: "Pro", priceUsd: 40, credits: 3_000, seats: UNLIMITED, workspaces: UNLIMITED, tagline: "For busy teams, agencies and several brands." },
 };
 
 export interface CreditTopup {

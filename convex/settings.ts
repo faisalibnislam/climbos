@@ -1,3 +1,4 @@
+import { isUnlimited } from "../shared/economics/credits";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS } from "../shared/economics";
@@ -68,7 +69,7 @@ export const invite = mutation({
     const active = members.filter((m) => m.status !== "removed");
     // Seats are per account: someone already on another of the account's workspaces doesn't take a new seat.
     const seats = await seatState(ctx, org);
-    if (!seats.emails.has(clean) && seats.used >= seats.limit) {
+    if (!seats.emails.has(clean) && !isUnlimited(seats.limit) && seats.used >= seats.limit) {
       throw appError(seats.limit <= 1 ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", seats.limit <= 1 ? "Free accounts are for one person. Choose a package to invite your team." : `Your package includes ${seats.limit} people. Upgrade to add more.`);
     }
     const now = Date.now();
