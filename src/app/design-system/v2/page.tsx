@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BodyFonts } from "./BodyFonts";
 import { SignalPreview } from "./SignalPreview";
 
 export const metadata: Metadata = {
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 
 /** Proposed "Signal" theme (after the WAct reference), previewed before it replaces Summit. */
 export default function SignalDesignSystemPage() {
-  return <SignalPreview />;
+  return <SignalPreview bodyFonts={<BodyFonts />} />;
 }

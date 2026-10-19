@@ -20,8 +20,7 @@ import {
   LogOut,
   Megaphone,
   MessageCircle,
-  Mountain,
-  MoreVertical,
+    MoreVertical,
   MousePointerClick,
   PanelLeft,
   Plug,
@@ -43,6 +42,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Segmented, SocialIcon, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { LogoMark, Wordmark as BrandWordmark } from "@/components/brand/Logo";
 import { DesignSystemReference } from "../DesignSystemReference";
 
 /** Applies the proposed theme to the whole document (so dialogs and menus preview it too) while this page is open. */
@@ -62,15 +62,13 @@ function useSignalTheme() {
 /* Brand                                                               */
 /* ------------------------------------------------------------------ */
 
-function Wordmark({ tone = "ink", size = "md" }: { tone?: "ink" | "lime" | "white"; size?: "sm" | "md" | "lg" }) {
-  const color = tone === "lime" ? "text-lime border-lime" : tone === "white" ? "text-white border-white" : "text-ink border-ink";
-  const s = size === "lg" ? { ring: "size-14 border-[5px]", icon: "size-7", text: "text-5xl" } : size === "sm" ? { ring: "size-7 border-[2.5px]", icon: "size-3.5", text: "text-lg" } : { ring: "size-8 border-[3px]", icon: "size-4", text: "text-[22px]" };
+function Wordmark({ tone = "ink", size = "md" }: { tone?: "ink" | "lime" | "white" | "onLime"; size?: "sm" | "md" | "lg" }) {
+  const s = size === "lg" ? { mark: "size-16", text: "text-5xl" } : size === "sm" ? { mark: "size-6", text: "text-base" } : { mark: "size-8", text: "text-xl" };
+  const color = tone === "lime" ? "text-lime" : tone === "white" ? "text-white" : "text-ink";
   return (
-    <span className={cn("inline-flex items-center gap-2 font-semibold tracking-[-0.035em]", color, s.text)}>
-      <span className={cn("grid place-items-center rounded-full", color, s.ring)}>
-        <Mountain className={s.icon} strokeWidth={2.75} aria-hidden />
-      </span>
-      ClimbOS
+    <span role="img" aria-label="ClimbOS" className={cn("inline-flex items-center gap-2", s.text, color)}>
+      <LogoMark className={s.mark} mono={tone === "onLime"} />
+      <BrandWordmark />
     </span>
   );
 }
@@ -648,7 +646,7 @@ function Hero() {
     <div className="marketing bg-hero-grid relative overflow-hidden rounded-[24px] px-4 pt-4 sm:px-8">
       <nav className="flex items-center justify-between gap-4 border-b border-ink/10 pb-4">
         <Wordmark />
-        <div className="hidden items-center gap-8 text-[15px] text-ink md:flex">
+        <div className="hidden items-center gap-8 whitespace-nowrap text-[15px] text-ink lg:flex">
           <span>How it works</span>
           <span>Use cases</span>
           <span>Integrations</span>
@@ -807,7 +805,8 @@ const PALETTE: { group: string; colors: { name: string; hex: string; token: stri
       { name: "Sage", hex: "#7C8F6E", token: "sage", role: "Gradient base, upsell card", dark: true },
       { name: "Sage ink", hex: "#687C5C", token: "sage-ink", role: "Pills with white text", dark: true },
       { name: "Sage 800", hex: "#55694A", token: "brand-800", role: "Links, focus, chart line", dark: true },
-      { name: "Lime", hex: "#C5F08A", token: "lime", role: "Upgrade, CTA, outcome bar" },
+      { name: "Lime", hex: "#C3EF88", token: "lime", role: "Logo, Upgrade, CTA, outcome bar" },
+      { name: "Lime deep", hex: "#94C256", token: "lime-deep", role: "Logo shading, decorative only" },
     ],
   },
   {
@@ -844,7 +843,7 @@ function ColourSection() {
       ))}
       <div className="grid gap-3 md:grid-cols-2">
         <div className="bg-hero-grid grid h-64 place-items-center rounded-[var(--radius-card)]"><Wordmark tone="lime" size="lg" /></div>
-        <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-lime"><Wordmark size="lg" /></div>
+        <div className="grid h-64 place-items-center rounded-[var(--radius-card)] bg-lime"><Wordmark size="lg" tone="onLime" /></div>
       </div>
     </section>
   );
@@ -932,7 +931,7 @@ function TypeSection() {
   );
 }
 
-export function SignalPreview() {
+export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
   useSignalTheme();
   return (
     <div className="min-h-dvh bg-bg">
@@ -956,6 +955,12 @@ export function SignalPreview() {
         </section>
         <ColourSection />
         <TypeSection />
+        {bodyFonts ? (
+          <section className="flex flex-col gap-6">
+            <SectionTitle title="Body font options" intro="Reckless Neue stays for titles. Pick the body and UI font: the same title, copy, number, table figures and buttons in each." />
+            {bodyFonts}
+          </section>
+        ) : null}
         <ControlsSection />
         <section className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--card-shadow)]">
           <p className="heading-card flex items-center gap-2"><Send className="size-4" aria-hidden /> Every component in this theme</p>
