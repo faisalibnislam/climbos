@@ -350,7 +350,19 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (round > 0 && best.round !== round) break;
     checkDeadline(deps);
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1))) break;
+    const previous = current;
     current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint });
+    // fast_review: the last revision is kept without another review if it's no worse on lint and keeps every number.
+    if (spec.skipFinalReview && round + 1 === reviews - 1) {
+      const errs = (l: LintIssue[]) => l.filter((x) => x.severity === "error").length;
+      const nextLint = lintOf(current);
+      const kept = numbersIn(current);
+      if (errs(nextLint) <= errs(lint) && [...numbersIn(previous)].every((n) => kept.has(n))) {
+        history.push({ round: round + 1, average: a.average, gatesPassed: a.gatesPassed, lintErrors: errs(nextLint) });
+        best = { output: current, assessment: { ...a, lint: nextLint }, round: round + 1 };
+      }
+      break;
+    }
   }
 
   const finalLint = best.assessment?.lint ?? lintOf(best.output);

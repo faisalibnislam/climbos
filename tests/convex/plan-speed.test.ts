@@ -58,6 +58,22 @@ describe("Plan speed", () => {
     expect(third).toBeGreaterThan(0);
   });
 
+  it("runs the plan with the speed flags on (fast_review, lean_plan)", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "flags-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Flags Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
+    await makePaid(t, orgId);
+    await t.mutation(internal.engineFlags.setEngineFlag, { orgId: orgId as Id<"organizations">, flag: "fast_review", on: true });
+    await t.mutation(internal.engineFlags.setEngineFlag, { orgId: orgId as Id<"organizations">, flag: "lean_plan", on: true });
+    await owner.client.mutation(api.orgs.generatePlan, { slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId as Id<"organizations">)).collect()).find((r) => r.kind === "strategy")!);
+    expect(run.status).toBe("verified");
+    const plan = await t.run(async (ctx) => (await ctx.db.query("strategies").collect()).find((s) => s.orgId === orgId));
+    expect(plan?.status).toBe("needs_approval");
+  });
+
   it("merges preview pieces instead of replacing them", async () => {
     const t = setup();
     const owner = await asNewUser(t, "preview-owner@example.com");

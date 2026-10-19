@@ -64,6 +64,9 @@ const pointwise = arg("pointwise") !== "off";
 /** --flags decision_contract[,…]: run the strategy arms with these engine flags on (as a flagged workspace would). */
 const engineFlags = new Set((arg("flags") ?? "").split(",").filter(Boolean));
 const DC = engineFlags.has("decision_contract");
+/** Speed flags, as a flagged workspace would run them (see convex/jobs.ts). */
+const FAST_REVIEW = engineFlags.has("fast_review");
+const LEAN_PLAN = engineFlags.has("lean_plan");
 /**
  * --import-arm name=results.json:sourceArm[,name2=…] loads arms' outputs from earlier runs
  * (e.g. the same bench run at another git ref), so two code versions can be judged
@@ -390,7 +393,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const candidates = candidatesFor(profile);
     // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
     const mode: AiMode = arm === "expert" ? "expert" : "basic";
-    const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode), drafts: draftsFor(spec.id, mode) });
+    const withMode = <S extends { id: string; models: unknown }>(spec: S): S => ({ ...spec, models: routeModels(spec.id, mode), drafts: draftsFor(spec.id, mode), ...(FAST_REVIEW ? { skipFinalReview: true } : {}) });
     const insights = insightsOf(p);
     // As production: plays research runs alongside channel scoring (it doesn't need the scorecard).
     const playsSpec = withMode(growthPlaysSpec({ decisionContract: DC }, playCatalogsFor(p.c.type)));
@@ -418,7 +421,8 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     // As production: the goal stays as stated and its horizon drives totals and checks.
     const locked = lockedNumbers(plays.output, { statement: p.c.goal, target: null, horizonDays: p.c.horizonDays });
     const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights, horizonDays: p.c.horizonDays }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output, p.c.horizonDays), horizonDays: p.c.horizonDays } };
-    const planRun = await runAgent(withMode(strategySpec({})), planInput, deps);
+    const planSpec = withMode(strategySpec({}));
+    const planRun = await runAgent(LEAN_PLAN ? { ...planSpec, drafts: 1, effort: { ...planSpec.effort, draft: "medium" } } : planSpec, planInput, deps);
     const sspec = strategySpec({});
     const plan = { output: (await reconcile({ turn: deps.turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, planInput) ?? [], caps: capsHint(PLAN_CAPS) })).plan };
     return {

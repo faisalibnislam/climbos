@@ -58,6 +58,11 @@ export interface AgentSpec<T> {
   maxRevisions: number;
   /** Write this many first drafts (different angles) and keep the one the reviewer rates higher. Default 1. */
   drafts?: number;
+  /**
+   * Speed (engine flag "fast_review"): keep the last revision without a second review when it has no
+   * more lint errors than the version it replaces and drops none of its numbers.
+   */
+  skipFinalReview?: boolean;
   /** What must pass to stop revising: hard gates + lint only ("gates", lean) or the full rubric ("rubric", default). */
   shipOn?: "gates" | "rubric";
   /** Owner-facing analysis (plans, insights, audits): drafted with low verbosity. Publishable copy keeps the default. */

@@ -321,8 +321,10 @@ async function runAgentTask<T>(
   const addendum: string = await ctx.runQuery(internal.engineLab.addendumFor, { agentId: spec.id });
   if (addendum) spec = { ...spec, addendum };
   if (job.run.aiMode === "expert") spec = { ...spec, models: routeModels(spec.id, "expert") };
-  // Climb AI Basic: best of two drafts for the strategy agents.
-  else if (draftsFor(spec.id, "basic") > 1) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };
+  // Climb AI Basic: best of two drafts for the strategy agents (unless the spec fixed its own count).
+  else if (draftsFor(spec.id, "basic") > 1 && spec.drafts === undefined) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };
+  // Speed flags (off by default; benchmark before turning on).
+  if (hasFlag(job, "fast_review")) spec = { ...spec, skipFinalReview: true };
   const rates = getRateVersion(job.run.rateVersionId);
   // Each phase runs in its own async context, so parallel phases (best-of-two) meter to their own step.
   const stepScope = new AsyncLocalStorage<Id<"workflowSteps">>();
@@ -894,7 +896,8 @@ export const buildStrategy = internalAction({
         ctx,
         job,
         100,
-        strategySpec(),
+        // lean_plan (speed flag, off by default): the plan agent mostly arranges fixed plays and locked numbers.
+        hasFlag(job, "lean_plan") ? { ...strategySpec(), drafts: 1, effort: { ...strategySpec().effort, draft: "medium" } } : strategySpec(),
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
