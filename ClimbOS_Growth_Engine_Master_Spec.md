@@ -59,7 +59,7 @@ Every action connects diagnosis → effect → evidence → target or asset → 
 
 ## 5. Ordered program
 
-S0 → S15 as in V2 §21. The ledger tracks status and done-when criteria. Current position: S0 done. S1 is done (fixture-tested). S2 and S3 are partly done (fixture-tested). S4 is next.
+S0 → S15 as in V2 §21. The ledger tracks status and done-when criteria. Current position: S0 and S1 are done. S2–S5 are partly done; S6 is done in fixtures behind a flag. All of it is fixture-tested. S7 is next.
 
 ## 6. Open owner decisions
 

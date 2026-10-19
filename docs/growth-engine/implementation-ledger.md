@@ -14,11 +14,13 @@ Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs a
 
 Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 
-## Resumption note (2026-10-19)
+## Resumption note (2026-10-19, after S5 remainder and S6)
 
 **Done:**
-- S0, S1, S2/S3 (deterministic), S4 (core) and S5 (capability context, flagged decision contract) on `growth-engine-v2`. Not pushed, not deployed.
-- 686 tests pass. `tsc` is clean (app and convex). ESLint shows 0 errors.
+- S0, S1, S2/S3 (deterministic), S4 (core), S5 (capability context, decision contract, structured decision, hard limits before ranking) and S6 (plan targets) on `growth-engine-v2`. Not deployed.
+- New behaviour is behind two per-workspace flags: `decision_contract` (S5) and `plan_targets` (S6). No workspace is opted in.
+- 727 tests pass. `tsc` is clean (app and convex). ESLint shows 0 errors (15 older warnings).
+- Everything here is fixture-tested only. No real model run, no live search, no browser check against a live backend.
 
 **Next:**
 1. **S2 remainder.** Add an old-plan read adapter with schema versioning (REQ-ENG-03), stored from `expert.version`. Add the population, period and denominator binding for research tags (REQ-EVID-02). Files: `shared/agents/provenance.ts`, `convex/workspace.ts` (read path).
@@ -28,18 +30,21 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
    - Audit the k-anonymity of pooled rates (REQ-LEARN-06).
    - Recalculate scenarios, or show they're stale, after an owner edit (REQ-LEARN-07, REQ-UX-07).
    - Classify replies as positive or negative (REQ-LEARN-02).
-4. **S5 remainder.**
-   - Under `decision_contract`, add structured `decision` fields to StrategyV2: observations, competing explanations, options considered and why each lost, the chosen guiding policy, and a falsifier (REQ-STRAT-01/02).
-   - Add a deterministic pre-ranking filter for cash, time, sales cycle and capability (REQ-STRAT-03).
-   - Files: `shared/agents/specs.ts`, `planTasks.ts`, `ExpertPlan.tsx`.
-5. **Opting in a workspace:** `npx convex run engineFlags:setEngineFlag '{"orgId":"…","flag":"decision_contract","on":true}'`. Owner approval needed; this runs against the deployment.
+4. **S5 gaps.** Fulfilment capacity, minimum evidence and financial viability aren't in the pre-ranking filter yet (REQ-STRAT-03). Strategy-level best-of-two still compares drafts, not options (REQ-STRAT-02). Contrasting-business evidence from real runs needs the paid check.
+5. **S6 gaps.**
+   - Only one target search runs at a time (the one-campaign pipeline). Approval auto-starts the first target-heavy play; the others start from the play card.
+   - Partnerships, communities, podcasts and directories reuse the company/creator search; they have no dedicated schemas (REQ-TARGET-01 table).
+   - Creator records lack content language, audience numbers with a source, and collaboration tracking (REQ-CREATOR-01/05/06). Today doesn't list targets yet (REQ-UX-08).
+6. **S7** competitor discovery is next in program order.
+7. **Opting in a workspace:** run `npx convex run engineFlags:setEngineFlag '{"orgId":"…","flag":"decision_contract","on":true}'` (and the same with `"plan_targets"`). This needs owner approval because it runs against the deployment.
 
 **Paid check:** a proposal is ready in [evaluation-and-cost.md](evaluation-and-cost.md) §6 ($5 cap). The approved budget is still $0.
 
 **Owner decisions pending:**
 - release of this branch;
 - funding for the §6 check;
-- a staleness policy for owner confirmations.
+- a staleness policy for owner confirmations;
+- which workspaces to opt into the flags.
 
 ## Slices
 
@@ -50,8 +55,8 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | S2 Evidence lineage | partial, done-fixture | `13476ed` (pre-V2 F1–F4), `746e350` | Partly. The negative provenance fixtures fail safely and owner input survives. The legacy read adapter and schema version are still to do |
 | S3 Calculations and goal | partial, done-fixture | `746e350`, `9b4c2ab`, `1bf428d` | Partly. The reference fixture passes, the goal stays intact and the gap is explained. Ramp/lag, currency and the CAC basis are still to do |
 | S4 Measurement integrity | partial, done-fixture | S4 commit | Yes. A cumulative-views fixture isn't reported as a 120-day rate, and a play rename keeps its observations. Shrinkage, privacy audit and recalculation are still to do |
-| S5 Decision-centred strategy | partial, done-fixture | `1bf428d`, `3d44c75`, `3dd664c` | Partly. Capability context is live per run; the decision contract is behind a flag. Structured diagnosis, options and falsifier are still to do, and contrasting-business evidence needs the paid check |
-| S6 Targets in plan | missing | — | — |
+| S5 Decision-centred strategy | partial, done-fixture (flagged) | `1bf428d`, `3d44c75`, `3dd664c`, `171c252` | Mostly. Capability context is live per run. Under `decision_contract`: the decision contract, a structured decision (observations, competing explanations, options and why each lost, guiding policy, falsifier) and hard limits before ranking. Contrasting fixtures produce different channel agendas, and retention outranks acquisition on a long cycle (`channel-limits.test.ts`). Real-run evidence needs the paid check |
+| S6 Targets in plan | done-fixture (flagged) | `0329044` | Yes, in fixtures. Under `plan_targets`, approving a plan starts the first creator or outbound play's search, linked by play ID. The play card shows named targets or a truthful state: researching, none found, needs your input, needs connection, waiting or failed (`plan-targets.test.ts`). No live search was run |
 | S7 Competitor discovery | missing | — | — |
 | S8 Content briefs | missing | — | — |
 | S9 SEO inventory | missing | — | — |
@@ -74,9 +79,9 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-OUT-04 | partial | S3/S5 | `shared/agents/goal.ts`, `planTasks.ts` | The goal gap states short or out of reach in code (`goal-gap.test.ts`). The plan doesn't yet name the binding constraint in a structured way |
 | REQ-OUT-05 | partial | S5 | `shared/agents/quality.ts` | Plan-level provisional/needs_input only. Actions aren't split into safe-now vs depends-on |
 | REQ-CTX-01 | partial | S5 | `convex/jobs.ts` `planSnapshot` | Snapshot holds counts, goal and goal target. Not versioned, no contradictions or freshness, not reused by content jobs |
-| REQ-STRAT-01 | partial | S5 | StrategyV2 `diagnosis` | Free text. No observations, competing explanations or falsifier |
-| REQ-STRAT-02 | missing | S5 | `routes.ts:39` | Best-of-two compares drafts, not strategies |
-| REQ-STRAT-03 | partial | S5 | `specs.ts:320,335` | Budget and owner hours are linted after drafting. No sales cycle, fulfilment or capability check before ranking |
+| REQ-STRAT-01 | done-fixture (flagged) | S5 | `shared/agents/decision.ts`, `specs.ts` `PlaysDecisionOutputSchema`, `jobWrites.ts` `expert.decision`, `ExpertPlan.tsx` `DecisionSummary` | Under `decision_contract`: observations with sources, a binding constraint (demand, activation, conversion, offer, positioning, retention, delivery or economics), at least 2 competing explanations with evidence for and against, what's unknown, and a falsifier with a number and a date. The plays agent fills it in the same call; code checks it. An incomplete decision makes the plan provisional (`decision-structured.test.ts`, `decision-save.test.ts`) |
+| REQ-STRAT-02 | partial (flagged) | S5 | `decision.ts` `options` | 1 to 4 options, exactly one chosen, and each loser says why it lost; one option is allowed for a trivial choice. **Gap:** best-of-two still compares drafts, not options (`routes.ts:39`) |
+| REQ-STRAT-03 | partial (flagged) | S5 | `shared/acquisition/scoring.ts` `limitChecks`, `select`; `convex/acquisition.ts` | Before ranking: cash (minimum spend vs budget, upfront cash with no budget), owner time (hours a channel needs vs hours given), sales cycle (time to learn plus the cycle vs the goal date; existing-customer channels exempt) and capability (missing connection = setup, never blocked). Blocked channels are never picked; late ones only fill slots no on-time channel can. Off by default, so the default scorecard is unchanged (`channel-limits.test.ts`). **Gap:** fulfilment capacity, minimum evidence and viability aren't checked here |
 | REQ-STRAT-04 | partial | S5 | `specs.ts:544`, `DECISION_CONTRACT` | Flagged task asks for one primary motion, a supporting move and maintenance. No structured guiding policy yet |
 | REQ-STRAT-05 | done-fixture (flagged) | S5 | as REQ-OUT-03 | The flag replaces the mandatory shape. The default path keeps it until evaluated (§6 proposal) |
 | REQ-STRAT-06 | partial | S3 | `economics.ts` lint, `planTasks.ts` | The money-loser remedy no longer says "raise volume or conversion". The task says never raise reach or rates. Measured effect: not measured |
@@ -113,12 +118,12 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
-| REQ-TARGET-01 | partial | S6 | `schema.ts:634,696` | Prospects and campaigns exist but aren't linked to plays or actions |
+| REQ-TARGET-01 | done-fixture (flagged) | S6 | `outboundCampaigns.playId/strategyId`, `prospects.playIds`, `convex/targets.ts` | Reuses prospects and campaigns (no parallel tables). Each campaign links to a play's stable ID; each prospect lists the plays it serves. A shortlist of 10 is requested; fewer are kept when evidence is thin. **Gap:** partnerships, communities and podcasts use the company/creator schema |
 | REQ-TARGET-02 | partial | S6 | `convex/ai/prospectCheck.ts` | Site and MX checks; fit is a model score |
-| REQ-TARGET-03 | partial | S6 | `outbound.ts:435,457` | Profile path key. No platform ID, exclusions or refresh |
-| REQ-TARGET-04 | missing | S6 | `convex/lib/cards.ts:12-31` | The plan never starts finding customers or creators |
-| REQ-TARGET-05 | missing | S6 | — | Readiness isn't tied to targets |
-| REQ-TARGET-06 | partial | S6 | `outbound.ts:459`, `outboundSending.ts:31` | Domain dedupe and suppressions. No merging across plans |
+| REQ-TARGET-03 | partial | S6 | `shared/growth/targets.ts` `creatorIdentity`, `outbound.ts` `saveResult` | Creators are keyed by platform and handle (or YouTube channel ID), never by a shared domain. URL variants match, and post URLs name no account. Older records with a profile-path key are still matched. Platform and handle are stored. Unflagged, because it is a dedupe fix (`targets.test.ts`). **Gap:** no refresh schedule |
+| REQ-TARGET-04 | done-fixture (flagged) | S6 | `convex/targets.ts` `autoStartPlanTargets`, `workspace.ts` `decidePlan` | Approval starts the first target-heavy play's search within credits. It never archives an open search or pauses sending by itself; then the play waits for the owner. The rest start from the play card (`startForPlay`) |
+| REQ-TARGET-05 | done-fixture (flagged) | S6 | `targets.ts` `targetReadiness`, `convex/targets.ts` `forStrategy` | The states are not started, waiting, researching, failed, none found, needs your input (no public contact route), needs connection (no mailbox) and ready. The plan itself isn't held back by a search |
+| REQ-TARGET-06 | done-fixture (flagged) | S6 | `outbound.ts` `saveResult`, `targets.ts` | There is one record per entity across plans and campaigns. A re-found target is linked to the play and keeps its stage. Declined, lost, contacted and opted-out targets never count as contactable. Play IDs carry over, so a refreshed plan keeps its targets and starts no duplicate search |
 | REQ-COMP-01 | missing | S7 | `competitors.ts:27` | Suggestions only; the owner adds each one |
 | REQ-COMP-02 | partial | S7 | `specs.ts:40` | Kind enum. No exclusion rules |
 | REQ-COMP-03 | missing | S7 | — | No verification |
@@ -126,7 +131,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-COMP-05 | exists | S7 | `shared/competitors/index.ts`, `competitorActions.ts:63-87` | Diff first, then Luna. Tracking and nav noise aren't filtered |
 | REQ-COMP-06 | partial | S7 | `competitors.ts:116` | Doesn't rewrite the strategy. Creates no proposed action |
 | REQ-COMP-07 | missing | S7 | — | |
-| REQ-CREATOR-01 | partial | S6 | `specs.ts:901`, outbound `kind:"creators"` | Not linked to plays. Uses the company schema |
+| REQ-CREATOR-01 | partial (flagged) | S6 | `targets.ts` `targetKindOf`, `creatorScoutSpec` | Creator plays now trigger the existing creator search, linked by play ID. Records keep platform and handle, and "contact route not found" is shown. **Gap:** content language, audience numbers with a source, and collaboration concept fields |
 | REQ-CREATOR-02 | partial | S6 | `specs.ts:895` | Location and audience aren't separated |
 | REQ-CREATOR-03 | missing | S6 | — | |
 | REQ-CREATOR-04 | missing | S6 | — | (No fraud claims are made either) |
@@ -205,8 +210,8 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
 | REQ-UX-01 | partial | S15 | `ExpertPlan.tsx`, `PlanSections.tsx` | The North Star card now shows goal / plays support / gap |
-| REQ-UX-02 | partial | S6 | outbound page | Not linked from plays |
-| REQ-UX-03 | missing | S6 | `ExpertPlan.tsx:374` | "Make it happen" builds a prose message |
+| REQ-UX-02 | done-fixture (flagged) | S6 | `ExpertPlan.tsx` `PlayTargetsBlock`, outbound page `?campaign=` | Each play card shows up to 5 targets: name, profile link, fit reason, contact route or "contact route not found", and stage. It also shows a state badge and a link to the full list. Not checked in a browser |
+| REQ-UX-03 | done-fixture | S6 | `workspace.ts` `startPlay`, `targets.startForPlay` | "Make it happen" sends the plan and play IDs, and the server builds the request from the stored play. Older plays without an ID use the old text path. "Find targets" also uses IDs |
 | REQ-UX-04 | partial | S15 | actionCards status | |
 | REQ-UX-05 | partial | S15 | `workspace.ts:460`, `lib/approvals.ts` | A failed-quality plan can't be approved (S1) |
 | REQ-UX-06 | partial | S2 | `ExpertPlan.tsx` | Source, check and page-access labels plus replaced values. No source inspection drawer |
@@ -219,7 +224,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
-| REQ-ENG-01 | done-fixture | S5 | `organizations.engineFlags`, `convex/engineFlags.ts` (internal, audited), `planSnapshot.flags` | Per-workspace, staff-set flags; plans record which were on (`engine-flags.test.ts`) |
+| REQ-ENG-01 | done-fixture | S5 | `organizations.engineFlags`, `convex/engineFlags.ts` (internal, audited), `planSnapshot.flags` | Flags are per workspace and set by staff; plans record which were on (`engine-flags.test.ts`). The flags are `decision_contract` and `plan_targets` |
 | REQ-ENG-02 | done-fixture | S1 | `shared/agents/quality.ts`, `convex/jobs.ts`, `convex/schema.ts`, `convex/workspace.ts`, `PlanActions.tsx` | `plan-quality.test.ts` (8 cases), `plan-approval.test.ts` |
 | REQ-ENG-03 | partial | S2 | `openai.ts` `normalizeNulls`, zod at output | Strict-schema nulls preserved (`openai-nulls.test.ts`). `expert.plays`/`economics` are still `v.any()`; no read adapter |
 | REQ-ENG-04 | partial | S4 | `learning.ts:93` | Sequential loop over every org |
