@@ -6,6 +6,7 @@ import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./de
 import type { PlanQuality } from "./quality";
 import type { GoalGap, GoalTarget } from "./goal";
 import type { PlanConstraints } from "./types";
+import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -619,6 +620,61 @@ export function lintPlanDistribution(out: { phases?: { name: string; days: strin
   return [{ severity: "error", rule: "distribution", message: `The plan edits or builds pages but no dated phase or week-one item sends qualified people to them. Add each play's route as an action inside ${h} days (e.g. "Pitch 10 coaching creators the comparison page") in the week-one checklist and a dated phase.`, path: "weekOneChecklist" }];
 }
 
+/** Paid traffic (search, social or sponsored placements). */
+const PAID_ROUTE = /\b(?:search |google |meta |reddit |linkedin |tiktok |paid )?ads\b|\bppc\b|\bpaid (?:social|search|traffic)\b|\bsponsor\w*|\bboost\w*/i;
+/** A route that costs nothing but time. */
+const FREE_ROUTE = /\bfree\b|\bno (?:ad |cash |media )?(?:spend|cost)\b|\bunpaid\b|\bzero (?:spend|cost)\b|\$\s?0(?![\d.,])/i;
+/** Spend that waits for the free test ("only after the page converts", "once …", "gated on …"). */
+const GATED_SPEND = /\b(?:after|once|only (?:if|when|after)|gated on|unless|until|if (?:the |it |that |this )?[^.;]{0,50}\b(?:passes|works|converts|hits|beats|clears|reaches))\b/i;
+
+/**
+ * Bench Run 7 (Meetrao, $30 a year): the plays bought search traffic for a low-price product; B0 improved the existing
+ * buyer-intent page and tested a free creator route first, and won. For low-price products the first play improves an
+ * existing high-intent page (confirmed URL, changed today) and reaches people with a free route; any play that spends
+ * money waits for that result.
+ */
+export function lintLowPriceFirst(
+  plays: { name?: string; assetUsed: string; firstActionToday: string; route?: string; test?: string; scaleIf?: string; model?: { monthlySpendUsd: number } }[],
+  economics: { revenuePerCustomerMonthUsd?: number } | undefined,
+  evidence: string,
+): LintIssue[] {
+  const price = economics?.revenuePerCustomerMonthUsd ?? 0;
+  if (!(price > 0 && price < LOW_TICKET_USD_MONTH) || !plays.length) return [];
+  const issues: LintIssue[] = [];
+  const priceText = `about $${Math.round(price * 100) / 100} a month per customer`;
+  const first = plays[0];
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const urls = urlKeysIn(first.assetUsed ?? "").filter((u) => ev.includes(u));
+  if (urlKeysIn(evidence).length && (!urls.length || !improvesFirst(first.firstActionToday ?? "", urls))) {
+    issues.push({ severity: "error", rule: "low_price_first", message: `At ${priceText}, start with what already brings buyers: make the first play improve an existing high-intent page (comparison, alternative, pricing or signup page, its URL from the research in assetUsed) and make that change the first action today.`, path: "plays[0].assetUsed" });
+  }
+  const route = first.route ?? "";
+  if ((first.model?.monthlySpendUsd ?? 0) > 0 || (PAID_ROUTE.test(route) && !FREE_ROUTE.test(route))) {
+    issues.push({ severity: "error", rule: "low_price_first", message: `At ${priceText}, the first play reaches people for free (creators, communities, existing users, a partner's newsletter, directories). Paid traffic comes later, only after that test reads out.`, path: "plays[0].route" });
+  }
+  plays.slice(1).forEach((p, i) => {
+    const spend = p.model?.monthlySpendUsd ?? 0;
+    if (spend > 0 && !GATED_SPEND.test(`${p.test ?? ""} ${p.firstActionToday ?? ""} ${p.scaleIf ?? ""}`)) {
+      issues.push({ severity: "error", rule: "low_price_first", message: `"${p.name ?? `Play ${i + 2}`}" spends $${Math.round(spend)} a month before the free test reads out. At ${priceText}, start paid traffic only after the first play's result; say so in its test (e.g. "Run search ads only once the page converts ≥2% from creator visits").`, path: `plays[${i + 1}].test` });
+    }
+  });
+  return issues;
+}
+
+/** Success tied to one paid tier ("Pro customers", "Business plan upgrades"). */
+const ONE_TIER = /\b(?:pro|premium|business|team|teams|plus|growth|enterprise|advanced|professional|core|scale|max)\s+(?:plan|tier|subscri\w*|customers?|accounts?|upgrades?|users?|seats?|members?)\b/i;
+const ANY_PAID = /\b(?:any|all|every)\s+paid\b|\bpaid (?:customers?|accounts?|sign-?ups|subscribers|users)\b(?![^.;]{0,20}\bon (?:the )?(?:pro|premium|business|team))/i;
+
+/**
+ * Bench Run 7 (Folevi): success was narrowed to one paid tier (Pro); B0 counted conversion to any paid plan with a
+ * conservative revenue proxy and won. Plays and the North Star count new customers on any paid plan.
+ */
+export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIssue[] {
+  return items
+    .filter((x) => ONE_TIER.test(x.text) && !ANY_PAID.test(x.text))
+    .map((x) => ({ severity: "error" as const, rule: "any_paid_plan", message: `"${x.text.slice(0, 80)}" counts only one paid tier. Count new customers on any paid plan, and use the lowest paid price as revenue per customer unless the owner gives a mix.`, path: x.path }));
+}
+
 /** Spec §13: the portfolio must fit the owner's cash and time. */
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
@@ -826,7 +882,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, out.economics, evidenceOf(input)), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -844,7 +900,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays)];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

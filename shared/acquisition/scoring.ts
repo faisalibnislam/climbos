@@ -143,7 +143,7 @@ export function priceFitReason(c: Channel, p: AcquisitionProfile): string | unde
 export function priceFitText(p: AcquisitionProfile): string {
   if (!lowTicket(p)) return "";
   const price = p.priceUsdMonth ? `about $${p.priceUsdMonth} per customer per month` : "a low price per customer";
-  return `PRICE FIT: ${price}, self-serve. A play that needs a person per customer or per partner (cold or social outreach, demos, creator or partner recruitment) can't pay back; build the bankable play on self-serve channels: comparison and SEO pages, onboarding and activation, in-product virality and referral. Use a labour-heavy play only as a capped test, with owner hours priced in.`;
+  return `PRICE FIT: ${price}, self-serve. A play that needs a person per customer or per partner (cold or social outreach, demos, creator or partner recruitment) can't pay back; build the bankable play on self-serve channels: comparison and SEO pages, onboarding and activation, in-product virality and referral. Use a labour-heavy play only as a capped test, with owner hours priced in. The first play improves an existing high-intent page (comparison, alternative, pricing or signup) and reaches people for free (creators, communities, existing users, a partner's newsletter); paid traffic starts only after that test reads out.`;
 }
 
 /** Dimensions worth asking the owner about: unknown or low confidence and decision-relevant. */

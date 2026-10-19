@@ -350,3 +350,5 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Folevi:** narrows success to one paid plan (Pro) instead of converting across paid plans with a conservative revenue proxy.
 
 **Next:** for low-price products, require the first play to improve an existing high-intent page plus a no-spend distribution test before any paid traffic; and count conversion to any paid plan. Re-evaluating needs a new cap.
+
+**Built after Run 7 (not yet evaluated):** `lintLowPriceFirst` (below $25/month per customer the first play improves an existing high-intent page with a free route; any spend waits for that result) and `lintAnyPaidPlan` (plays and the North Star count new customers on any paid plan, lowest paid price as the revenue proxy), with matching guidance in the plays and plan tasks and the PRICE FIT line.
