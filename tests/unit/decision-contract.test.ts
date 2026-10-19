@@ -82,7 +82,10 @@ describe("plan checks from the regression run", () => {
     expect(issue(lintPlays([a, b], econ, { decisionContract: true }), /repeats/)).toBe(true);
   });
 
-  it("the default plays task requires a real volume engine and distinct moves", () => {
-    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/at least one play must be a real volume engine/);
+  it("the default plays task keeps the ambition that won the first check, with distinct moves and an honest gap", () => {
+    const t = playsTask({ scorecard: "", insights: "" });
+    expect(t).toMatch(/Be ambitious/);
+    expect(t).toMatch(/distinct move/);
+    expect(t).toMatch(/ClimbOS shows the owner the gap/);
   });
 });

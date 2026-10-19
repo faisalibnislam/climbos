@@ -89,6 +89,12 @@ export interface PlayMaths {
   customers: number;
   /** Simulated range from the input ranges; equals `customers` when no ranges are given. */
   range: { p10: number; p50: number; p90: number };
+  /**
+   * What the plan headlines (REQ-MATH-06): customers at the most-likely rates, the same basis as
+   * cost per customer, so anyone redoing the arithmetic from the inputs gets the same number.
+   * The simulation gives its range, widened to include it.
+   */
+  headline: { p10: number; p50: number; p90: number };
   costUsd: number;
   cacUsd: number | null;
   /** Contribution one customer earns within the payback horizon (the allowable cost per customer); null when price, margin or churn is unknown. */
@@ -194,6 +200,7 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
     kind: p.kind,
     customers,
     range,
+    headline: { p10: Math.min(range.p10, customers), p50: customers, p90: Math.max(range.p90, customers) },
     costUsd,
     cacUsd,
     valueUsd,
@@ -217,7 +224,7 @@ export function withForecasts<O extends { economics: Economics; plays: PlayLike[
       // Older plays without a model keep the forecast they were saved with.
       if (!p.model?.steps?.length) return p as O["plays"][number] & { p10: number; p50: number; p90: number };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.range.p10), p50: roundCount(m.range.p50), p90: roundCount(m.range.p90) };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90) };
     }),
   };
 }
@@ -249,7 +256,7 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
 /** Portfolio customers (P50, after overlap): the number the plan's North Star must use. */
 /** The portfolio's new customers over one shared horizon (each play re-run at that horizon, so periods aren't mixed). */
 export function portfolioRange(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): { p10: number; p50: number; p90: number } {
-  const ms = out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(horizonDays ? { ...p, horizonDays } : p, out.economics).range);
+  const ms = out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(horizonDays ? { ...p, horizonDays } : p, out.economics).headline);
   const sum = (k: "p10" | "p50" | "p90") => portfolioCustomers(ms.map((m) => m[k]), PLAY_OVERLAP) ?? 0;
   return { p10: sum("p10"), p50: sum("p50"), p90: sum("p90") };
 }
@@ -280,7 +287,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.range.p50)} customers in ${p.horizonDays || 90} days (range ${roundCount(m.range.p10)}–${roundCount(m.range.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (at the most-likely rates, ≈${roundCount(m.customers)} customers; the range above is the simulation), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,

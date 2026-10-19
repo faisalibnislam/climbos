@@ -124,3 +124,17 @@ describe("edge cases", () => {
     expect(issues.some((l) => l.rule === "capacity" && l.severity === "error")).toBe(true);
   });
 });
+
+describe("headline basis (REQ-MATH-06, regression check 2026-10-19)", () => {
+  it("the headline is the most-likely-rates number, inside its simulated range, even with skewed ranges", async () => {
+    const { withForecasts } = await import("../../shared/agents/economics");
+    const skewed = { ...refPlay(), model: { ...refPlay().model, steps: [{ name: "signup", rate: 0.03, low: 0.02, high: 0.2 }, { name: "paid", rate: 0.03, low: 0.02, high: 0.2 }] } };
+    const m = playMaths(skewed, ref);
+    expect(m.range.p50).toBeGreaterThan(m.customers * 1.5); // the simulation median drifts up
+    expect(m.headline.p50).toBe(m.customers);
+    expect(m.headline.p10).toBeLessThanOrEqual(m.customers);
+    expect(m.headline.p90).toBeGreaterThanOrEqual(m.customers);
+    const out = withForecasts({ economics: ref, plays: [skewed] });
+    expect(out.plays[0].p50).toBeCloseTo(m.customers, 1);
+  });
+});

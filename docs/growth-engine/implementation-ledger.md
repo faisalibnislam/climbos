@@ -110,7 +110,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-MATH-03 | done-fixture | S3 | `economics.ts` `rateOf` | Ratios above 1 are rejected and listed in `invalidInputs`. Never read as percents |
 | REQ-MATH-04 | partial | S3 | `playMaths`, `portfolioRange`, `planTasks.ts` | Fractional horizon (3 days = 3/7 week); spend by calendar month; totals at the goal horizon. **Gap:** ramp time, sales lag, seasonality and fulfilment capacity |
 | REQ-MATH-05 | partial | S3 | `lockedNumbers` | The text says forecasts aren't calibrated and are scenarios. **Gap:** the UI doesn't separate operational and statistical uncertainty |
-| REQ-MATH-06 | partial | S3 | `lockedNumbers`, `ExpertPlan.tsx` | The point-estimate basis of CAC is now stated ("at the most-likely rates, ≈N customers; the range is the simulation"). **Gap:** no expected CAC under uncertainty |
+| REQ-MATH-06 | done-fixture | S3 | `economics.ts` `PlayMaths.headline`, `withForecasts`, `portfolioRange`, `lockedNumbers` | The headline and CAC share the most-likely basis. The simulation gives the range, widened to include the headline (`economics-fixtures.test.ts`). Prompted by the paid check, where the judge flagged the mismatch. **Gap:** no expected CAC under uncertainty |
 | REQ-MATH-07 | partial | S3 | `playMaths.profitable` (nullable), lint | Never "profitable" on unknown economics. Break-even shown. **Gap:** no sensitivity or decision state per play |
 | REQ-MATH-08 | partial | S3 | `portfolioRange` | Periods aren't mixed. **Gap:** economics assume USD with no currency field; attributed vs incremental revenue isn't separated |
 
@@ -193,7 +193,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-COST-01 | partial | all | this ledger | Decision records are written per slice in commit messages. No formal record per workflow yet |
 | REQ-COST-02 | missing | S14 | run `actualMicros` | No $ per accepted output |
 | REQ-COST-03 | partial | S12/S14 | reservation, `jobs.ts:95`, `engine.ts:192` | No per-automation ceiling |
-| REQ-COST-04 | partial | S14 | bench arms, `bench/run.ts --import-arm` | First paid Basic regression run 2026-10-19 ($2.79): B1 lost 2–3 to B0. Causes fixed with deterministic checks; re-run pending owner OK |
+| REQ-COST-04 | partial | S14 | bench arms, `bench/run.ts --import-arm` | Two paid Basic runs on 2026-10-19 ($4.62 of a $5 cap): B1 lost 2–3, then 1–1–3, to B0. Causes: timid inputs from the softened wording, and a headline/CAC basis mismatch. Both fixed (ambition restored, headline on the most-likely basis). Another run needs new funding (cap $2.50) |
 | REQ-COST-05 | missing | S14 | `routes.ts` | Mode-based only. Explicit Expert choice preserved |
 | REQ-COST-06 | missing | S14 | — | |
 | REQ-COST-07 | partial | S14 | cache blocks, `prompt_cache_key` | Hits not measured |

@@ -186,4 +186,34 @@ pnpm bench --cases formkit,meetrao,involets,taskeni,folevi --tasks strategy --ar
 
 **Re-checked offline** against the saved outputs: the new checks flag the Folevi and Formkit failures and none of the other 8 plans. The Meetrao duplicate is semantic, and word overlap doesn't catch it (known gap).
 
-**Next decision-changing step:** re-run B1 with the fixes against B0, using the remaining $2.21 of this cap (about $1.70 expected). It needs the owner's OK.
+### Run 2 (2026-10-19, approved within the same cap)
+
+**What ran:** B1 at `5c0d2cd` (the fixes above; the S5/S6 flags were off) against the saved B0 outputs. Same cases, same judge.
+
+**Files:** `bench/results/2026-10-19-03-31-regress-b1fix.*` and `2026-10-19-03-57-regress-judge2.*`, including the blind packet.
+
+| | B0 | B1 run 2 |
+|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.27 |
+| Pairwise | — | 1 win (Involets), 1 tie (Formkit), 3 losses |
+| Pointwise overall (mean) | 4.0 | 3.6 |
+
+**Cumulative spend:** $4.62 of the $5 cap. $0.38 is left, which isn't enough for another round.
+
+**Decision rule:** not met (2 of 5 wins or ties). B1 stays unreleased.
+
+**Why it still lost** (maths recomputed offline, `playMaths` over the saved outputs):
+1. **Timid inputs.** The writers chose tiny reach. Folevi was 10–50 people a week, against B0's 50–500, which gives about 0 customers and plays that lose money, so the plan says "don't run them". Meetrao was similar. This came from the softened task wording ("never raise reach…", "only reach you can buy"). B0's "be ambitious" wording got better-judged plans.
+2. **Headline vs inputs (REQ-MATH-06).** Formkit's headline was the simulation's P50 (6.6) while its inputs give 2.7 at the most-likely rates. Skewed ranges cause this, and the judge counted it as an arithmetic error. B0 has the same latent issue (Taskeni: point 19, P50 26).
+
+**Fixes since (free; 733 tests pass):**
+- **Ambition restored.** The default plays task again says "Be ambitious… move the goal" with weekly engines, keeps "each play a distinct move", takes rates from the evidence and volume from ClimbOS engines, and adds "if it can't reach the goal, say so; ClimbOS shows the gap".
+- **Headline basis.** Headline customers (the saved `p50`, the locked numbers, totals and the goal gap) now use the most-likely rates, the same basis as cost per customer. The simulation supplies the range, widened to include the headline.
+
+**What holds up across both runs:**
+- B1 is more honest about goal gaps; the judge rewarded this in Involets (both runs) and Taskeni (run 1).
+- Its truth scores were higher in 3 of 5 cases in run 1.
+
+**What doesn't hold up:** less ambitious inputs lose to B0.
+
+**Next decision-changing step:** one more B1 run against the saved B0 outputs (Basic, same 5 cases). Expect about $1.30 for plans and $0.60 for the judge; **cap $2.50**. It needs new funding beyond the $5 already approved.
