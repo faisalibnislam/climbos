@@ -12,14 +12,15 @@
  */
 import { forwardRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { Icon, IconProps } from "./index";
+import type { Icon, IconProps } from "./types";
 
-type Part = string | { c: [number, number, number] } | { sq: [number, number, number] };
+type Part = string | { c: [number, number, number] } | { sq: [number, number, number] } | { cd: [number, number, number] };
 
 function draw(parts: Part[]): ReactNode {
   return parts.map((p, i) => {
     if (typeof p === "string") return <path key={i} d={p} />;
     if ("c" in p) return <circle key={i} cx={p.c[0]} cy={p.c[1]} r={p.c[2]} />;
+    if ("cd" in p) return <circle key={i} cx={p.cd[0]} cy={p.cd[1]} r={p.cd[2]} strokeDasharray="3 2.35" strokeLinecap="butt" />;
     const [x, y, s] = p.sq;
     return <rect key={i} x={x} y={y} width={s} height={s} fill="currentColor" stroke="none" />;
   });
@@ -149,12 +150,133 @@ export const Globe = sharp("Globe", [{ c: [12, 12, 8.5] }, "M3.5 12h17", "M12 3.
 export const Gift = sharp("Gift", ["M4 9h16v4H4z", "M5.5 13v7h13v-7", "M12 9v11", "M12 9L9 5.5H6.5V9", "M12 9l3-3.5h2.5V9"]);
 export const Rocket = sharp("Rocket", ["M12 3l4 5v8H8V8z", "M8 12l-3 3v4l3-2", "M16 12l3 3v4l-3-2", "M10.5 19.5h3", { sq: [11, 8.5, 2] }]);
 
+/* ---- Text and layout ---- */
+export const AlignLeft = sharp("AlignLeft", ["M4 6h16", "M4 10h10", "M4 14h16", "M4 18h10"]);
+export const AlignCenter = sharp("AlignCenter", ["M4 6h16", "M7 10h10", "M4 14h16", "M7 18h10"]);
+export const AlignRight = sharp("AlignRight", ["M4 6h16", "M10 10h10", "M4 14h16", "M10 18h10"]);
+export const AlignHorizontalJustifyCenter = sharp("AlignHorizontalJustifyCenter", ["M12 3v18", "M6.5 6h11v4h-11z", "M8.5 14h7v4h-7z"]);
+export const AlignVerticalJustifyCenter = sharp("AlignVerticalJustifyCenter", ["M3 12h18", "M6 6.5h4v11H6z", "M14 8.5h4v7h-4z"]);
+export const Bold = sharp("Bold", ["M7 4.5h6.5L16 7v3l-2 2 2.5 2.5v3L14 20H7z", "M7 12h7"]);
+export const Italic = sharp("Italic", ["M10 4.5h8", "M6 19.5h8", "M14.5 4.5l-5 15"]);
+export const Underline = sharp("Underline", ["M7 4v7l2 3h6l2-3V4", "M5 20h14"]);
+export const Type = sharp("Type", ["M5 7.5v-3h14v3", "M12 4.5v15", "M9 19.5h6"]);
+export const CaseUpper = sharp("CaseUpper", ["M3 8V6h10v2", "M8 6v12", "M13.5 12v-1.5h7.5V12", "M17.25 10.5V18"]);
+export const LayoutTemplate = sharp("LayoutTemplate", ["M3.5 4h17v16h-17z", "M3.5 9h17", "M10 9v11"]);
+export const PanelsTopLeft = sharp("PanelsTopLeft", ["M3.5 4.5h17v15h-17z", "M3.5 9.5h17", "M9.5 9.5v10"]);
+export const PanelLeftClose = sharp("PanelLeftClose", ["M3.5 4.5h17v15h-17z", "M9.5 4.5v15", "M16 9.5L13.5 12l2.5 2.5"]);
+export const PanelLeftOpen = sharp("PanelLeftOpen", ["M3.5 4.5h17v15h-17z", "M9.5 4.5v15", "M13.5 9.5L16 12l-2.5 2.5"]);
+export const Table2 = sharp("Table2", ["M3.5 4.5h17v15h-17z", "M3.5 9.5h17", "M3.5 14.5h17", "M10 4.5v15"]);
+export const Layers = sharp("Layers", ["M12 4L3 8.5l9 4.5 9-4.5z", "M3 12.5l9 4.5 9-4.5", "M3 16.5l9 4.5 9-4.5"]);
+export const Maximize2 = sharp("Maximize2", ["M14 4h6v6", "M10 20H4v-6", "M20 4l-6.5 6.5", "M4 20l6.5-6.5"]);
+
+/* ---- Editing (design studio) ---- */
+export const BringToFront = sharp("BringToFront", ["M4 4h9v9H4z", "M15 11h5v9h-9v-5"]);
+export const SendToBack = sharp("SendToBack", ["M11 11h9v9h-9z", "M4 13V4h9v5"]);
+export const Group = sharp("Group", ["M3.5 7V3.5H7", "M17 3.5h3.5V7", "M20.5 17v3.5H17", "M7 20.5H3.5V17", "M7 7h6v5H7z", "M11 12h6v5h-6z"]);
+export const Ungroup = sharp("Ungroup", ["M4 4h8v7H4z", "M12 13h8v7h-8z"]);
+export const FlipHorizontal2 = sharp("FlipHorizontal2", ["M12 3v18", "M9 7L3.5 17H9z", "M15 7l5.5 10H15z"]);
+export const Palette = sharp("Palette", ["M12 3.5L18 6l2.5 5.5-2 3h-3.5L13.5 16l1.5 2.5-3 2L6 18l-2.5-6L6 6z", { sq: [7.5, 8, 2] }, { sq: [11, 6.25, 2] }, { sq: [14.5, 8, 2] }, { sq: [6.75, 12, 2] }]);
+export const PenTool = sharp("PenTool", ["M12 3.5l6 8.5-3 7H9l-3-7z", "M12 3.5v7", "M8.5 20.5h7", { sq: [11, 10.5, 2] }]);
+export const Shapes = sharp("Shapes", ["M7.5 3.5L12 11H3z", { c: [16.75, 7.25, 3.75] }, "M8.5 13.5H16V21H8.5z"]);
+export const Wand2 = sharp("Wand2", ["M4 20L15.5 8.5", "M13.5 6.5l4 4", "M19 3v3", "M17.5 4.5h3", "M6.5 3.5V6", "M5.25 4.75h2.5", "M19.5 14v3", "M18 15.5h3"]);
+export const Undo2 = sharp("Undo2", ["M4.5 9h11L19 12.5V16l-3.5 3.5H11", "M8.5 5L4.5 9l4 4"]);
+export const Redo2 = sharp("Redo2", ["M19.5 9h-11L5 12.5V16l3.5 3.5H13", "M15.5 5l4 4-4 4"]);
+export const RotateCcw = sharp("RotateCcw", ["M4 4.5V9h4.5", "M4.5 9L8 5h8l4 4v6l-4 4H8l-3-3"]);
+export const Repeat2 = sharp("Repeat2", ["M4 11V8l2-2h13", "M16 3l3 3-3 3", "M20 13v3l-2 2H5", "M8 21l-3-3 3-3"]);
+
+/* ---- Files and media ---- */
+export const FileText = sharp("FileText", ["M14 3.5H5.5v17h13V8z", "M14 3.5V8h4.5", "M8.5 12h7", "M8.5 15h7", "M8.5 18h4"]);
+export const FileCheck2 = sharp("FileCheck2", ["M14 3.5H5.5v17h13V8z", "M14 3.5V8h4.5", "M8.5 14l2.5 2.5 4.5-4.5"]);
+export const FileSpreadsheet = sharp("FileSpreadsheet", ["M14 3.5H5.5v17h13V8z", "M14 3.5V8h4.5", "M8.5 11.5h7v6h-7z", "M12 11.5v6", "M8.5 14.5h7"]);
+export const ClipboardList = sharp("ClipboardList", ["M6 5h12v15.5H6z", "M9 3.5h6v3H9z", "M9.5 10.5h5", "M9.5 13.5h5", "M9.5 16.5h3"]);
+export const ClipboardPen = sharp("ClipboardPen", ["M13.5 20.5H6V5h12v5", "M9 3.5h6v3H9z", "M18.5 12l2 2-5 5h-2v-2z"]);
+export const Archive = sharp("Archive", ["M3.5 4.5h17v4h-17z", "M5 8.5v11h14v-11", "M10 12h4"]);
+export const ArchiveRestore = sharp("ArchiveRestore", ["M3.5 4.5h17v4h-17z", "M5 8.5v11h14v-11", "M12 18v-6", "M9.5 14.5L12 12l2.5 2.5"]);
+export const Image = sharp("Image", ["M3.5 5h17v14h-17z", "M3.5 16.5l5-5.5 4 4.5 2.5-2.5 5.5 5", { sq: [14.5, 7.5, 2.5] }]);
+export const ImageIcon = Image;
+export const ImageDown = sharp("ImageDown", ["M13.5 5h-10v14h17v-5", "M3.5 16.5l5-5.5 4 4.5 2.5-2.5 5.5 5", "M18 3.5V10", "M15.5 7.5L18 10l2.5-2.5"]);
+export const ImagePlus = sharp("ImagePlus", ["M13 5H3.5v14h17v-6.5", "M3.5 16.5l5-5.5 4 4.5 2.5-2.5 5.5 5", "M18 3v6", "M15 6h6"]);
+export const Images = sharp("Images", ["M7 7h13.5v12H7z", "M3.5 16V3.5H17", "M7 17l3.5-4 3 3 2-2 5 4.5"]);
+export const Clapperboard = sharp("Clapperboard", ["M3.5 5.5l16-2 .5 4-16 2z", "M8.5 4.9l2 3.6", "M13.5 4.3l2 3.6", "M4 9.5h16v10H4z"]);
+export const Video = sharp("Video", ["M3.5 6h12v12h-12z", "M15.5 10l5-3v10l-5-3"]);
+export const Mic = sharp("Mic", ["M9 3.5h6v10H9z", "M5.5 10.5v3L8 17h8l2.5-3.5v-3", "M12 17v3.5", "M9 20.5h6"]);
+export const Play = sharp("Play", ["M7 4.5l12 7.5-12 7.5z"]);
+export const Pause = sharp("Pause", ["M8 5v14", "M16 5v14"]);
+export const SkipForward = sharp("SkipForward", ["M5 5l10 7-10 7z", "M19 5v14"]);
+export const PlayCircle = sharp("PlayCircle", [{ c: [12, 12, 8.5] }, "M10 8.5l5.5 3.5-5.5 3.5z"]);
+export const PauseCircle = sharp("PauseCircle", [{ c: [12, 12, 8.5] }, "M10 9v6", "M14 9v6"]);
+export const CirclePause = PauseCircle;
+export const QrCode = sharp("QrCode", ["M4 4h6v6H4z", "M14 4h6v6h-6z", "M4 14h6v6H4z", { sq: [6, 6, 2] }, { sq: [16, 6, 2] }, { sq: [6, 16, 2] }, { sq: [14, 14, 2] }, { sq: [18, 14, 2] }, { sq: [16, 16, 2] }, { sq: [14, 18, 2] }, { sq: [18, 18, 2] }]);
+export const Printer = sharp("Printer", ["M7 9V3.5h10V9", "M6.5 17h-3V9h17v8h-3", "M7 14h10v6.5H7z"]);
+export const Monitor = sharp("Monitor", ["M3 4.5h18v12H3z", "M8 20.5h8", "M12 16.5v4"]);
+export const Smartphone = sharp("Smartphone", ["M7 2.5h10v19H7z", "M10.5 18.5h3"]);
+
+/* ---- Status and shapes ---- */
+export const Ban = sharp("Ban", [{ c: [12, 12, 8.5] }, "M6 6l12 12"]);
+export const CircleSlash = sharp("CircleSlash", [{ c: [12, 12, 8.5] }, "M9 15l6-6"]);
+export const CircleMinus = sharp("CircleMinus", [{ c: [12, 12, 8.5] }, "M8 12h8"]);
+export const CircleDashed = sharp("CircleDashed", [{ cd: [12, 12, 8.5] }]);
+export const CircleHelp = sharp("CircleHelp", [{ c: [12, 12, 8.5] }, "M9.5 9.5V8l1-1.5h3l1 1.5v2L12 12v1.5", { sq: [11.1, 15.6, 1.8] }]);
+export const CircleQuestionMark = CircleHelp;
+export const ShieldCheck = sharp("ShieldCheck", ["M12 3l8 3v6l-3 5-5 4-5-4-3-5V6z", "M8.5 12l2.5 2.5 4.5-4.5"]);
+export const ShieldAlert = sharp("ShieldAlert", ["M12 3l8 3v6l-3 5-5 4-5-4-3-5V6z", "M12 8v5", { sq: [11.1, 15, 1.8] }]);
+export const SearchX = sharp("SearchX", [{ c: [10.5, 10.5, 6.5] }, "M15.5 15.5l4.5 4.5", "M8.5 8.5l4 4", "M12.5 8.5l-4 4"]);
+export const WifiOff = sharp("WifiOff", ["M3 9l3-2.5h12L21 9", "M6 12.5l2-1.5h8l2 1.5", "M9 16l1.5-1h3L15 16", { sq: [11, 18.5, 2] }, "M4 3.5l16 17"]);
+export const Unplug = sharp("Unplug", ["M9 3.5v4", "M15 3.5v4", "M6 7.5h12v4l-3 4H9l-3-4z", "M12 15.5v5", "M4 4l16 16"]);
+export const PlugZap = sharp("PlugZap", ["M8 3.5v4", "M14 3.5v4", "M5 7.5h12v4l-3 4H8l-3-4z", "M11 15.5v5", "M20.5 11l-2 3h2.5l-2 3.5"]);
+export const Hourglass = sharp("Hourglass", ["M6 3.5h12", "M6 20.5h12", "M7.5 3.5v3L12 12l4.5-5.5v-3", "M7.5 20.5v-3L12 12l4.5 5.5v3"]);
+export const Clock3 = sharp("Clock3", [{ c: [12, 12, 8.5] }, "M12 7v5h4.5"]);
+export const Gauge = sharp("Gauge", ["M3.5 17a8.5 8.5 0 1 1 17 0", "M12 17l4-5", { sq: [11, 16, 2] }]);
+export const Crosshair = sharp("Crosshair", [{ c: [12, 12, 8.5] }, "M12 2.5v5", "M12 16.5v5", "M2.5 12h5", "M16.5 12h5"]);
+export const Compass = sharp("Compass", [{ c: [12, 12, 8.5] }, "M15.5 8.5l-2 5-5 2 2-5z"]);
+export const BellRing = sharp("BellRing", ["M6 16.5v-5.5L8.5 5.5h7L18 11v5.5", "M4 16.5h16", "M10 20h4", "M3 9l2-3", "M21 9l-2-3"]);
+export const TrendingDown = sharp("TrendingDown", ["M3.5 6.5l6 6 4-4 7 7.5", "M15 16h5.5v-5.5"]);
+export const ArrowDownToLine = sharp("ArrowDownToLine", ["M12 4v11", "M7.5 10.5L12 15l4.5-4.5", "M5 19.5h14"]);
+export const ArrowUpToLine = sharp("ArrowUpToLine", ["M12 20V9", "M7.5 13.5L12 9l4.5 4.5", "M5 4.5h14"]);
+export const ListChecks = sharp("ListChecks", ["M3.5 6.5l2 2 3.5-3.5", "M3.5 15.5l2 2 3.5-3.5", "M12 7h8.5", "M12 16h8.5"]);
+
+/* ---- People, messages and places ---- */
+export const User = UserRound;
+export const UserSearch = sharp("UserSearch", [{ c: [10, 7.5, 3.5] }, "M3.5 20v-2L6 15.5h5.5", { c: [17, 16, 2.75] }, "M19 18l2 2"]);
+export const Contact = sharp("Contact", ["M3.5 5h17v14h-17z", { c: [9, 10.25, 2] }, "M5.75 16l1-1.5h4.5l1 1.5", "M15 10h3", "M15 13h3"]);
+export const Headset = sharp("Headset", ["M4.5 14v-3.5L7.5 5h9l3 5.5V14", "M3.5 13h3.5v6H3.5z", "M17 13h3.5v6H17z", "M20.5 19l-2 2H14"]);
+export const MailOpen = sharp("MailOpen", ["M3.5 10L12 4l8.5 6v10h-17z", "M3.5 10l8.5 6 8.5-6"]);
+export const MessageSquareReply = sharp("MessageSquareReply", ["M4 4.5h16v11h-8.5L7 20v-4.5H4z", "M10.5 7L8 9.5l2.5 2.5", "M8 9.5h6.5l1.5 1.5v1.5"]);
+export const AtSign = sharp("AtSign", ["M9.5 9h6.5v6H9.5z", "M16 15h2.5l1.5-1.5V8l-4-4H8L4 8v8l4 4h7.5"]);
+export const Languages = sharp("Languages", ["M3.5 5h9", "M8 3.5V5", "M6 5l4 7", "M10.5 5L5 12.5", "M12.5 20.5l4-9 4 9", "M14 17h5"]);
+export const Bot = sharp("Bot", ["M5 8h14v11H5z", "M12 4v4", "M10.5 4h3", { sq: [8.25, 11.5, 2] }, { sq: [13.75, 11.5, 2] }, "M9.5 16h5", "M3 12v3", "M21 12v3"]);
+export const Building2 = sharp("Building2", ["M5 20.5V3.5h9v17", "M14 9h5v11.5", "M3 20.5h18", { sq: [7.25, 6.25, 1.5] }, { sq: [10.75, 6.25, 1.5] }, { sq: [7.25, 9.75, 1.5] }, { sq: [10.75, 9.75, 1.5] }, { sq: [7.25, 13.25, 1.5] }, { sq: [10.75, 13.25, 1.5] }, "M8.5 20.5v-3h2.5v3"]);
+export const ShoppingBag = sharp("ShoppingBag", ["M4.5 7.5h15l-1 13h-13z", "M9 10V6l1.5-2.5h3L15 6v4"]);
+export const Mountain = sharp("Mountain", ["M2.5 19.5L9 8l3.5 5.5L15 10l6.5 9.5z"]);
+export const Plane = sharp("Plane", ["M21 3L3 11l7 2.5L12.5 21z", "M10 13.5L21 3"]);
+
+/* ---- Money and business ---- */
+export const Calculator = sharp("Calculator", ["M5 3.5h14v17H5z", "M8 7h8v3H8z", { sq: [7.75, 12.5, 2] }, { sq: [11, 12.5, 2] }, { sq: [14.25, 12.5, 2] }, { sq: [7.75, 16, 2] }, { sq: [11, 16, 2] }, { sq: [14.25, 16, 2] }]);
+export const Wallet = sharp("Wallet", ["M3.5 6.5h15v13h-15z", "M3.5 6.5l12-3v3", "M14 10.5h6.5v5H14z", { sq: [15.75, 12.25, 1.5] }]);
+export const Coins = sharp("Coins", [{ c: [9, 9, 5.5] }, "M14.5 9.4a5.5 5.5 0 1 1-5.1 5.1"]);
+export const HandCoins = sharp("HandCoins", ["M3 15.5h3l3-2h5v2h-4", "M6 15.5v5", "M14 15.5l5-2.5 2 1.5-6 5.5H6", { c: [15.5, 6.5, 3] }]);
+export const ReceiptText = sharp("ReceiptText", ["M5 3.5h14v17l-2.5-1.5-2.5 1.5-2-1.5-2 1.5-2.5-1.5L5 20.5z", "M8.5 8h7", "M8.5 11.5h7", "M8.5 15h4"]);
+export const Scale = sharp("Scale", ["M12 4v16.5", "M8 20.5h8", "M4.5 6.5h15", "M2.5 14l3-7 3 7z", "M15.5 14l3-7 3 7z"]);
+export const Tag = sharp("Tag", ["M3.5 3.5H12l8.5 8.5-8.5 8.5L3.5 12z", { sq: [6.5, 6.5, 2] }]);
+export const Bookmark = sharp("Bookmark", ["M6 3.5h12v17l-6-4.5-6 4.5z"]);
+export const Crown = sharp("Crown", ["M4.5 18.5L3.5 7.5l5 4.5L12 5l3.5 7 5-4.5-1 11z"]);
+export const Gem = sharp("Gem", ["M7 4.5h10l3.5 5L12 20 3.5 9.5z", "M3.5 9.5h17", "M9.5 4.5L8 9.5l4 10.5 4-10.5-1.5-5"]);
+export const KeyRound = sharp("KeyRound", ["M3.5 12.5h7v7h-7z", "M10.5 16h10", "M17 16v3", "M19.5 16v2.5"]);
+export const Lightbulb = sharp("Lightbulb", ["M9 17v-3.5L6 10V7l3-3.5h6L18 7v3l-3 3.5V17z", "M9.5 20.5h5", "M9 17h6"]);
+export const FlaskConical = sharp("FlaskConical", ["M9.5 3.5v6l-5 10.5h15l-5-10.5v-6", "M8 3.5h8", "M7 15h10"]);
+export const Heart = sharp("Heart", ["M12 20.5L3.5 12V7.5l3-3h3L12 7l2.5-2.5h3l3 3V12z"]);
+export const HeartHandshake = sharp("HeartHandshake", ["M12 20.5L3.5 12V7.5l3-3h3L12 7l2.5-2.5h3l3 3V12z", "M12 7L8.5 10.5l2 2 3-3 3 3"]);
+export const Hand = sharp("Hand", ["M8 14V6h2v5V4h2v7V5h2v6V7h2v8l-2.5 5.5h-5L5 16l1.5-1.5L8 16"]);
+export const Calendar = sharp("Calendar", ["M4 6h16v14H4z", "M4 10h16", "M8 3.5v4", "M16 3.5v4"]);
+export const CalendarPlus = sharp("CalendarPlus", ["M4 6h16v14H4z", "M4 10h16", "M8 3.5v4", "M16 3.5v4", "M12 12.5v5", "M9.5 15h5"]);
+export const CalendarClock = sharp("CalendarClock", ["M20 9.5V6H4v14h6.5", "M4 10h6", "M8 3.5v4", "M16 3.5v4", { c: [16.5, 16.5, 4] }, "M16.5 14.5v2h1.5"]);
+export const BookOpenCheck = sharp("BookOpenCheck", ["M12 6.5v13", "M12 6.5L9.5 4.5h-6v13h6l2.5 2", "M12 6.5l2.5-2h6v13h-6L12 19.5", "M14.5 11l1.5 1.5 3-3"]);
+export const Share2 = sharp("Share2", ["M15 3.5h4.5V8H15z", "M4 9.75h4.5v4.5H4z", "M15 16h4.5v4.5H15z", "M8.5 11l6.5-4", "M8.5 13l6.5 4"]);
+export const Webhook = sharp("Webhook", ["M10 3.5h4v4h-4z", "M3.5 15.5h4v4h-4z", "M16.5 15.5h4v4h-4z", "M11 7.5l-4.5 8", "M13 7.5l4.5 8", "M7.5 17.5h9"]);
+export const Workflow = sharp("Workflow", ["M3.5 4h6v6h-6z", "M14.5 14h6v6h-6z", "M6.5 10v7h8"]);
+export const MousePointerClick = sharp("MousePointerClick", ["M9 9l11 3.5-4.5 1.5 4 4-1.5 1.5-4-4L12.5 20z", "M7 3.5V6", "M3.5 7H6", "M4.5 4.5l1.75 1.75"]);
+
 /** Every ClimbOS Sharp icon, for the design system. */
 export const SHARP_ICONS = {
-  Plus, Minus, X, Check, Search, Download, Upload, Copy, Pencil, Trash2, ExternalLink, Link2, Send, LogOut, RefreshCw, Filter,
-  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsUpDown, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ArrowUpDown, Menu, MoreHorizontal, MoreVertical, PanelLeft, Home, LayoutGrid, Settings, SlidersHorizontal,
-  UserRound, Users, MessageCircle, MessageSquareText, Mail, Inbox, Bell, Megaphone,
-  Clock, CalendarDays, CalendarCheck, ChartLine, BarChart3, TrendingUp, Activity, Target,
-  Info, CircleAlert, TriangleAlert, CircleCheck, CircleX, Lock, Unlock, Eye, EyeOff, Flag, Loader2, Circle,
-  Star, Sparkle, Sparkles, Zap, Plug, Store, CreditCard, CircleDollarSign, Globe, Gift, Rocket,
+  Plus, Minus, X, Check, Search, Download, Upload, Copy, Pencil, Trash2, ExternalLink, Link2, Send, LogOut, RefreshCw, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsUpDown, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ArrowUpDown, Menu, MoreHorizontal, Ellipsis, MoreVertical, PanelLeft, Home, LayoutGrid, Settings, Cog, SlidersHorizontal, Settings2, UserRound, Users, UsersRound, MessageCircle, MessageSquare, MessageSquareText, Mail, Inbox, Bell, Megaphone, Clock, CalendarDays, CalendarCheck, ChartLine, BarChart3, TrendingUp, Activity, Target, Info, CircleAlert, TriangleAlert, CircleCheck, CheckCircle2, CircleX, Lock, Unlock, Eye, EyeOff, Flag, Loader2, Circle, Star, Sparkle, Sparkles, Zap, Plug, Store, CreditCard, CircleDollarSign, Globe, Gift, Rocket, AlignLeft, AlignCenter, AlignRight, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Bold, Italic, Underline, Type, CaseUpper, LayoutTemplate, PanelsTopLeft, PanelLeftClose, PanelLeftOpen, Table2, Layers, Maximize2, BringToFront, SendToBack, Group, Ungroup, FlipHorizontal2, Palette, PenTool, Shapes, Wand2, Undo2, Redo2, RotateCcw, Repeat2, FileText, FileCheck2, FileSpreadsheet, ClipboardList, ClipboardPen, Archive, ArchiveRestore, Image, ImageIcon, ImageDown, ImagePlus, Images, Clapperboard, Video, Mic, Play, Pause, SkipForward, PlayCircle, PauseCircle, CirclePause, QrCode, Printer, Monitor, Smartphone, Ban, CircleSlash, CircleMinus, CircleDashed, CircleHelp, CircleQuestionMark, ShieldCheck, ShieldAlert, SearchX, WifiOff, Unplug, PlugZap, Hourglass, Clock3, Gauge, Crosshair, Compass, BellRing, TrendingDown, ArrowDownToLine, ArrowUpToLine, ListChecks, User, UserSearch, Contact, Headset, MailOpen, MessageSquareReply, AtSign, Languages, Bot, Building2, ShoppingBag, Mountain, Plane, Calculator, Wallet, Coins, HandCoins, ReceiptText, Scale, Tag, Bookmark, Crown, Gem, KeyRound, Lightbulb, FlaskConical, Heart, HeartHandshake, Hand, Calendar, CalendarPlus, CalendarClock, BookOpenCheck, Share2, Webhook, Workflow, MousePointerClick,
 };

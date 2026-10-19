@@ -970,7 +970,7 @@ function IconsSection() {
   const entries = Object.entries(SHARP_ICONS).filter(([name], i, all) => all.findIndex(([, c]) => c === SHARP_ICONS[name as keyof typeof SHARP_ICONS]) === i);
   return (
     <section className="flex flex-col gap-6">
-      <SectionTitle title="Icons" intro="ClimbOS Sharp: our own set, drawn on a 24px grid with a 1.5px stroke, square caps, mitred joins and hard corners. Small marks are squares. Core set below; the rest follow in the same style." />
+      <SectionTitle title="Icons" intro="ClimbOS Sharp: our own set, drawn on a 24px grid with a 1.5px stroke, square caps, mitred joins and hard corners. Small marks are squares. The full set (every UI icon in ClimbOS) is below." />
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line sm:grid-cols-5 md:grid-cols-7 xl:grid-cols-9">
           {entries.map(([name, I]) => (
