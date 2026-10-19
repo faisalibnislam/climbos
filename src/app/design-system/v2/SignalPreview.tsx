@@ -44,6 +44,7 @@ import { Badge, Button, Segmented, SocialIcon, Tabs, TabsList, TabsTrigger } fro
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark as BrandWordmark } from "@/components/brand/Logo";
 import { SHARP_ICONS } from "@/components/icons";
+import { ComparisonColumns, TrendBars } from "@/components/analytics";
 import { DesignSystemReference } from "../DesignSystemReference";
 import { AnalyticsShowcase } from "./AnalyticsShowcase";
 
@@ -127,26 +128,6 @@ function DropButton({ children, white }: { children: ReactNode; white?: boolean 
   );
 }
 
-/** Sparkline with soft area, a dotted end marker and a dot, as on the reference KPI cards. */
-function Spark({ values, good }: { values: number[]; good: boolean }) {
-  const w = 150;
-  const h = 64;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 8), h - 4 - ((v - min) / (max - min || 1)) * (h - 14)] as const);
-  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const color = good ? "var(--chart-1)" : "var(--red-500)";
-  const [lx, ly] = pts[pts.length - 1];
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-14 w-28 xl:w-32" aria-hidden>
-      <path d={`${line} L${lx},${h} L0,${h} Z`} fill={color} fillOpacity="0.08" />
-      <path d={line} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
-      <line x1={lx} x2={lx} y1={ly} y2={h} stroke="var(--line-strong)" strokeDasharray="2 3" />
-      <circle cx={lx + 3} cy={ly - 3} r="2" fill="var(--ink-3)" />
-    </svg>
-  );
-}
-
 function Kpi({ icon, value, label, delta, good, values }: { icon: ReactNode; value: string; label: string; delta: string; good: boolean; values: number[] }) {
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--card-shadow)]">
@@ -156,9 +137,9 @@ function Kpi({ icon, value, label, delta, good, values }: { icon: ReactNode; val
           <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">{value}</p>
           <p className="whitespace-nowrap text-ui text-ink-2">{label}</p>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end gap-1.5">
           <Delta value={delta} good={good} />
-          <Spark values={values} good={good} />
+          <TrendBars label={label} values={values} previous={values.map((v, i) => v * (good ? 0.86 : 1.12) + (i % 3) * (values[0] * 0.03))} good={good} />
         </div>
       </div>
     </div>
@@ -520,29 +501,6 @@ function DashboardScreen() {
 const CUR = [2.5, 3.2, 2.2, 4, 3.3, 5, 4.2, 3.4, 5.6, 6.6, 4.5, 5.5, 6.5, 7.5, 5.8, 6.7, 5.9, 7.8, 8.6, 6.8, 7.4, 8.4, 7.6, 9.6, 8.9, 7.8, 9.9, 10.9, 9.1, 9.8];
 const PREV = [1.2, 2, 2.6, 1.5, 2.5, 1.6, 3.3, 2.7, 2.1, 3.9, 2.3, 3.4, 2.8, 4.1, 3.6, 3.3, 5.2, 3.5, 4.5, 3.7, 5, 4.2, 3.6, 5.3, 4.6, 3.8, 5.4, 4.9, 6.7, 5.9];
 
-function LineChart() {
-  const w = 1000;
-  const h = 200;
-  const max = 12;
-  const path = (vals: number[]) => vals.map((v, i) => `${i ? "L" : "M"}${((i / (vals.length - 1)) * w).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`).join(" ");
-  return (
-    <div className="mt-6 grid grid-cols-[24px_1fr] gap-x-2">
-      <div className="flex h-[200px] flex-col justify-between text-right text-2xs text-ink-3">
-        {[12, 8, 4, 0].map((t) => <span key={t}>{t}</span>)}
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-[200px] w-full" role="img" aria-label="Qualified leads per day, last 30 days vs previous 30 days">
-        {[0, 1, 2, 3].map((i) => <line key={i} x1="0" x2={w} y1={(i * h) / 3} y2={(i * h) / 3} stroke="var(--chart-grid)" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />)}
-        <path d={path(PREV)} fill="none" stroke="var(--chart-6)" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
-        <path d={path(CUR)} fill="none" stroke="var(--chart-1)" strokeWidth="2.25" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <span />
-      <div className="mt-3 flex justify-between text-xs text-ink-3">
-        {["Apr 1", "Apr 4", "Apr 8", "Apr 12", "Apr 16", "Apr 20", "Apr 24", "Apr 28"].map((d) => <span key={d}>{d}</span>)}
-      </div>
-    </div>
-  );
-}
-
 const WEEKS: [string, number, number, number, number][] = [
   ["Cold email", 32, 38, 41, 45],
   ["Google Ads", 18, 22, 19, 24],
@@ -590,10 +548,14 @@ function ReportsScreen() {
           >
             <p className="mt-4 text-[32px] font-semibold leading-10 tracking-[-0.02em]">258</p>
             <p className="text-sm text-ink-2">qualified leads</p>
-            <LineChart />
-            <div className="mt-4 flex gap-6 text-ui">
-              <span className="flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm bg-chart-1" /> Last 30d <b className="font-medium">258</b></span>
-              <span className="flex items-center gap-2 text-ink-2"><span className="h-2.5 w-5 rounded-sm bg-chart-6" /> Previous 30d <b className="font-medium text-ink">218</b></span>
+            <div className="mt-5">
+              <ComparisonColumns
+                values={CUR.map((v) => Math.round(v))}
+                previous={PREV.map((v) => Math.round(v))}
+                labels={Array.from({ length: 30 }, (_, i) => `Apr ${i + 1}`)}
+                currentLabel="Last 30 days"
+                previousLabel="Previous 30 days"
+              />
             </div>
           </Panel>
         </div>
@@ -762,7 +724,7 @@ function MobileScreens() {
                 <p className="text-[32px] font-semibold leading-10">180</p>
                 <p className="text-xs text-ink-2">Qualified leads</p>
               </div>
-              <div className="flex flex-col items-end"><Delta value="↑ 5.6%" good /><Spark values={[40, 46, 47, 60, 64, 66, 82, 96]} good /></div>
+              <div className="flex flex-col items-end"><Delta value="↑ 5.6%" good /><TrendBars label="Qualified leads" values={[40, 46, 47, 60, 64, 66, 82, 96]} previous={[34, 40, 42, 50, 55, 58, 66, 74]} /></div>
             </div>
           </div>
         </div>

@@ -22,7 +22,7 @@ import {
   ClimbRoute,
   DotBars,
   DotForecast,
-  DotMap,
+  DotGlobe,
   FlowNetwork,
   GoalStaircase,
   PolarRose,
@@ -402,10 +402,12 @@ export function AnalyticsShowcase() {
           sub="Last 30 days"
           actions={<Globe className="size-4 text-ink-3" />}
         >
-          <DotMap
+          <DotGlobe
             unit="leads"
+            home={{ label: "San Francisco", lon: -122.4, lat: 37.8, value: 64 }}
+            stats={[["172", "Leads"], ["12.1%", "Growth / mo"], ["46%", "From the US"]]}
             places={[
-              { label: "San Francisco", lon: -122, lat: 37.7, value: 64 },
+              { label: "San Francisco", lon: -122.4, lat: 37.8, value: 64 },
               { label: "New York", lon: -74, lat: 40.7, value: 41 },
               { label: "London", lon: -0.1, lat: 51.5, value: 28 },
               { label: "Lisbon", lon: -9.1, lat: 38.7, value: 9 },
@@ -414,18 +416,6 @@ export function AnalyticsShowcase() {
               { label: "São Paulo", lon: -46.6, lat: -23.5, value: 11 },
             ]}
           />
-          <div className="grid grid-cols-3 divide-x divide-line">
-            {[
-              ["172", "Leads"],
-              ["12.1%", "Growth / mo"],
-              ["46%", "From the US"],
-            ].map(([v, l]) => (
-              <div key={l} className="px-3 first:pl-0">
-                <p className="text-lg font-semibold tabular-nums">{v}</p>
-                <p className="text-xs text-ink-3">{l}</p>
-              </div>
-            ))}
-          </div>
         </ChartCard>
         <ChartCard
           title="How a lead moves"

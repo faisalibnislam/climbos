@@ -6,3 +6,5 @@ export * from "./dots";
 export * from "./calendar";
 export * from "./polar";
 export * from "./map-flow";
+export * from "./compare";
+export * from "./globe";

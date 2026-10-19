@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { DataTable, TipLayer, fmt, r2, useEntered, type Tip } from "./shared";
 
 type Poly = [number, number][];
-const LAND: Poly[] = [
+export const LAND: Poly[] = [
   [[-168, 66], [-162, 70], [-140, 70], [-120, 72], [-95, 74], [-80, 70], [-62, 60], [-56, 52], [-66, 45], [-75, 38], [-80, 31], [-81, 25], [-90, 29], [-97, 26], [-97, 20], [-90, 16], [-84, 10], [-79, 8], [-86, 14], [-105, 20], [-115, 30], [-124, 40], [-125, 48], [-135, 57], [-150, 60], [-165, 60]],
   [[-55, 60], [-45, 60], [-20, 70], [-20, 80], [-60, 82], [-72, 78], [-58, 70]],
   [[-80, 10], [-60, 11], [-50, 0], [-35, -6], [-40, -22], [-48, -28], [-58, -38], [-65, -55], [-74, -50], [-72, -30], [-70, -18], [-81, -5]],
@@ -27,7 +27,7 @@ const LAND: Poly[] = [
   [[167, -46], [172, -41], [178, -38], [175, -36], [171, -40]],
 ];
 
-function inside([x, y]: [number, number], poly: Poly) {
+export function inside([x, y]: [number, number], poly: Poly) {
   let c = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
     const [xi, yi] = poly[i];
