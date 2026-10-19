@@ -181,6 +181,42 @@
   --lh-empty: 28px;
 }
 
+/* Dark green surface (Climb AI panel): every token re-pointed so components adapt. Lime is the accent. */
+.surface-pine {
+  --bg: #1b2416;
+  --surface: #222d1c;
+  --surface-2: #2c3925;
+  --surface-3: #37462f;
+  --ink: #f2f5ee;
+  --ink-2: #d2dacb;
+  --ink-3: #aeb9a4;
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.18);
+  --control-border: rgb(255 255 255 / 0.36);
+  --control-border-hover: rgb(255 255 255 / 0.56);
+  --brand-950: #f0fbe2;
+  --brand-900: #e3f7c4;
+  --brand-800: #c3ef88;
+  --brand-700: #b3e273;
+  --brand-600: #a2d462;
+  --brand-200: rgb(195 239 136 / 0.28);
+  --brand-100: rgb(195 239 136 / 0.16);
+  --brand-50: rgb(195 239 136 / 0.08);
+  --sun-strong: #c3ef88;
+  --action: #c3ef88;
+  --action-hover: #d4f5a6;
+  --action-active: #b3e273;
+  --action-ink: #161815;
+  --btn-2-bg: rgb(255 255 255 / 0.06);
+  --btn-2-border: rgb(255 255 255 / 0.14);
+  --btn-2-shadow: none;
+  --card-shadow: none;
+  --focus-ring: #c3ef88;
+  color: var(--ink);
+  background: var(--surface);
+  color-scheme: dark;
+}
+
 /* Compact density: shorter controls and rows, tighter cards. */
 [data-density="compact"] {
   --h-sm: 28px;

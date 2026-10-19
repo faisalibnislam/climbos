@@ -3,7 +3,7 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MessageCircle, MousePointerClick, RotateCcw, ShieldCheck, Sparkles, X } from "@/components/icons"
+import { ArrowUp, CircleCheck, CircleX, ExternalLink, ListChecks, Loader2, MessageCircle, MessageSquarePlus, MousePointerClick, ShieldCheck, Sparkles, X } from "@/components/icons"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -102,15 +102,15 @@ export function ClimbPanel({ slug }: { slug: string }) {
     <aside
       data-climb-panel
       aria-label="Climb AI"
-      className="fixed bottom-0 right-0 top-0 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
+      className="surface-pine fixed bottom-0 right-0 top-0 z-40 flex w-full flex-col border-l border-line bg-surface sm:w-[400px]"
     >
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3">
-        <span aria-hidden className="grid size-7 place-items-center rounded-lg bg-brand-800 text-white">
+        <span aria-hidden className="grid size-7 place-items-center rounded-[var(--radius-control)] bg-lime text-ink">
           <Sparkles className="size-4" />
         </span>
         <h2 className="heading-card">Climb AI</h2>
         <span className="ml-auto flex items-center gap-1">
-          <IconButton size="sm" aria-label="New conversation" icon={<RotateCcw />} onClick={() => clear({ slug }).catch(() => undefined)} />
+          <IconButton size="sm" aria-label="New conversation" icon={<MessageSquarePlus />} onClick={() => clear({ slug }).catch(() => undefined)} />
           <IconButton size="sm" aria-label="Close Climb AI" icon={<X />} onClick={() => climb.setOpen(false)} />
         </span>
       </header>
@@ -257,7 +257,7 @@ function ScreenPicker() {
                     onClick={() => (on ? climb.removeSelection(e.id) : climb.addSelection(e))}
                     className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-ui hover:bg-surface-2 focus-visible:bg-surface-2"
                   >
-                    <span aria-hidden className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] border-[1.5px]", on ? "border-brand-800 bg-brand-800 text-white" : "border-control")}>
+                    <span aria-hidden className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] border-[1.5px]", on ? "border-brand-800 bg-brand-800 text-[var(--action-ink)]" : "border-control")}>
                       {on ? <CircleCheck className="size-3" /> : null}
                     </span>
                     <span className="min-w-0">
@@ -492,7 +492,7 @@ function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<
             ))}
           </span>
         ) : null}
-        <p className="max-w-[88%] whitespace-pre-line rounded-xl rounded-br-md bg-brand-800 px-3 py-2 text-sm text-white">{m.text}</p>
+        <p className="max-w-[88%] whitespace-pre-line rounded-xl rounded-br-md bg-lime px-3 py-2 text-sm text-[var(--action-ink)]">{m.text}</p>
       </div>
     );
   }
