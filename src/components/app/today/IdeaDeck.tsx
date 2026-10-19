@@ -194,10 +194,10 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
           style={{ transform: `translateX(${x}px) rotate(${rot}deg)` }}
         >
           {/* Swipe labels */}
-          <span aria-hidden className="pointer-events-none absolute right-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-brand-800 bg-lime px-2 py-0.5 text-xs font-bold tracking-wide text-ink" style={{ opacity: yes, transform: "rotate(8deg)" }}>
+          <span aria-hidden className="pointer-events-none absolute right-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-brand-800 bg-lime px-2 py-0.5 text-xs font-semibold tracking-wide text-ink" style={{ opacity: yes, transform: "rotate(8deg)" }}>
             {note ? "GOT IT" : "DO IT"}
           </span>
-          <span aria-hidden className="pointer-events-none absolute left-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-ink-3 bg-surface px-2 py-0.5 text-xs font-bold tracking-wide text-ink-2" style={{ opacity: no, transform: "rotate(-8deg)" }}>
+          <span aria-hidden className="pointer-events-none absolute left-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-ink-3 bg-surface px-2 py-0.5 text-xs font-semibold tracking-wide text-ink-2" style={{ opacity: no, transform: "rotate(-8deg)" }}>
             NOT NOW
           </span>
           <CardFace card={top} />
