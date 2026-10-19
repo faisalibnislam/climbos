@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark as BrandWordmark } from "@/components/brand/Logo";
 import { SHARP_ICONS } from "@/components/icons";
 import { DesignSystemReference } from "../DesignSystemReference";
+import { AnalyticsShowcase } from "./AnalyticsShowcase";
 
 /** Applies the proposed theme to the whole document (so dialogs and menus preview it too) while this page is open. */
 function useSignalTheme() {
@@ -810,6 +811,16 @@ const PALETTE: { group: string; colors: { name: string; hex: string; token: stri
       { name: "Warn", hex: "#FBF0C4", token: "amber-100 / 800", role: "Paused, not a fit" },
       { name: "Alert", hex: "#FBE1E6", token: "red-100 / 800", role: "Stopped, Rejected, ↓" },
       { name: "Pending", hex: "#FCEBDD", token: "orange-100 / 800", role: "Unverified" },
+    ],
+  },
+  {
+    group: "Charts",
+    colors: [
+      { name: "Series 1", hex: "#627656", token: "chart-1 · sage", role: "Primary series (5.0:1)", dark: true },
+      { name: "Series 2", hex: "#161815", token: "chart-2 · ink", role: "Second series (17.9:1)", dark: true },
+      { name: "Series 3", hex: "#3E6478", token: "chart-3 · slate", role: "Third series (6.4:1)", dark: true },
+      { name: "Series 4", hex: "#B0592B", token: "chart-4 · clay", role: "Fourth series (4.9:1)", dark: true },
+      { name: "Series 5", hex: "#93700F", token: "chart-5 · ochre", role: "Fifth series (4.6:1)", dark: true },
       { name: "Previous", hex: "#8A9084", token: "chart-6", role: "Comparison line (3.3:1)", dark: true },
     ],
   },
@@ -837,7 +848,7 @@ const CONTRAST: [string, string, string, string][] = [
   ["White on ink", "Primary buttons, active segment", "17.9", "AAA"],
   ["Status inks on their fills", "Active, Paused, Stopped, Unverified", "5.6–6.1", "AA"],
   ["Control border on white", "Inputs, checkboxes", "3.4", "AA (UI 3:1)"],
-  ["Chart line / previous line on white", "Charts", "5.0 / 3.3", "AA (graphics 3:1)"],
+  ["Chart series / previous line on white", "Charts", "4.6–17.9 / 3.3", "AA (graphics 3:1)"],
 ];
 
 function ColourSection() {
@@ -1048,6 +1059,10 @@ export function SignalPreview({ bodyFonts }: { bodyFonts?: ReactNode }) {
         <section className="flex flex-col gap-6">
           <SectionTitle title="Mobile" intro="Marketing on phones: Reckless titles, white cards on the ground, sage and cream pills, a cream closing card." />
           <MobileScreens />
+        </section>
+        <section className="flex flex-col gap-6">
+          <SectionTitle title="Analytics" intro="Distinctive, flat data visuals: one ink hero per screen (the route to your goal), then capsules, bubbles, dot matrices, staircases, gauges, calendars, strip plots, roses, strips, maps and flows. Shapes carry the data; colour stays in the Signal palette." />
+          <AnalyticsShowcase />
         </section>
         <ColourSection />
         <TypeSection />

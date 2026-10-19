@@ -189,11 +189,13 @@
   --orange-500: #e3955c;
   --orange-100: #fcebdd;
 
+  /* Chart series (earthy, distinct in lightness, all ≥4.6:1 on white): sage, ink, slate, clay, ochre;
+     chart-6 is the comparison/previous line. Lime stays a highlight, not a series. */
   --chart-1: #627656;
-  --chart-2: #6a9a2a;
-  --chart-3: #4a8593;
-  --chart-4: #8a7bbe;
-  --chart-5: #b98a2e;
+  --chart-2: #161815;
+  --chart-3: #3e6478;
+  --chart-4: #b0592b;
+  --chart-5: #93700f;
   --chart-6: #8a9084;
   --chart-grid: rgb(22 24 21 / 0.07);
 
