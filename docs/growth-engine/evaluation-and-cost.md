@@ -291,3 +291,5 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 - **Folevi:** too passive, mostly "collect data, pause growth"; B0 runs two concrete tests on existing trial and comparison pages.
 
 **Next fixes (deterministic, no spend):** improve existing verified assets before building new ones; never return a data-only plan, so there is always at least one concrete test on an existing asset inside the horizon.
+
+**Done (no spend, not yet benched):** plays lint `assets_first` (a new asset of a kind the business already has needs some play to improve the existing one first; more than one new asset at once needs a demand baseline or goes in scaleIf) and `existing_test` (at least one play tests a confirmed existing asset inside the horizon); plan lint `data_only` ("keep plays paused" / "should not launch", export-only experiments, no dated action). Replayed on Run 5 outputs: flags Meetrao, Folevi and Formkit; Involets and Taskeni pass.

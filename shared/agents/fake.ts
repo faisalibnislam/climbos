@@ -60,7 +60,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   const lastUser = String(req.messages[req.messages.length - 1]?.content ?? "");
   let output: unknown;
   if (!req.schema) {
-    output = "FAKE RESEARCH NOTES\n- Competitor A: example.com\nSources: https://example.com";
+    output = "FAKE RESEARCH NOTES\n- Competitor A: example.com\n- Existing comparison page: https://example.com/compare\nSources: https://example.com";
   } else if (system.includes("HARD GATES")) {
     const { gates, criteria } = rubricIds(system);
     const reviewingFirstDraft = lastUser.includes("fake-v1");
@@ -101,6 +101,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
           hoursSource: { source: "assumption", ref: "", quote: "" },
         },
         confidence: "medium",
+        // A concrete test on an existing, researched asset (plays lint: existing assets first, never data-only).
+        assetUsed: "Existing comparison page: https://example.com/compare",
+        firstActionToday: "Update the comparison page with the referral offer.",
         test: "a hundred contacts · small budget · three weeks",
         killIf: "no replies",
         scaleIf: "several replies",
@@ -109,6 +112,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
       (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month." }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
+    // Growth plan: a dated action, not only measurement (plan lint: never data-only).
+    const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown };
+    if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer."];
     // Channel scoring: valid library types and the candidates named in the prompt.
     const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };
     if (cf && typeof cf === "object" && Array.isArray(cf.types) && Array.isArray(cf.dimensions) && Array.isArray(cf.channels)) {

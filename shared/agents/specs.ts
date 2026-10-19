@@ -395,6 +395,155 @@ export function lintAssets(plays: { assetUsed: string; firstActionToday: string 
   return issues;
 }
 
+/** Own-asset kinds a play can extend: a new asset of a kind the business already has starts from the existing one. */
+const ASSET_KINDS: { kind: string; url: RegExp; text: RegExp }[] = [
+  { kind: "comparison", url: /\/(?:vs|versus|compare|comparisons?|alternatives?)(?:[/-]|$)|-vs-|-alternatives?(?:\/|$)/, text: /\b(?:comparisons?|compare|alternatives?|vs\.?|versus|switch(?:ing)?|competitor)\b/i },
+  // A listing page (zapier.com/apps/x, slack.com/marketplace/x, /integrations/slack), not a general integrations page.
+  { kind: "integration", url: /\/(?:integrations?|apps|marketplace)\/[^/]+/, text: /\b(?:integrations?|listings?|marketplace|app store|directory)\b/i },
+  { kind: "trial", url: /\/(?:trial|free-trial|signup|sign-up|get-started|start|pricing)(?:\/|$)/, text: /\b(?:trial|sign-?up|pricing|checkout|upgrade)\s+(?:pages?|flow)\b/i },
+  { kind: "landing", url: /\/(?:for|use-cases?|solutions?|industries)(?:\/|$)/, text: /\b(?:role|use-case|industry|persona|landing|audience)\s+pages?\b/i },
+];
+const kindOfUrl = (key: string) => (key.includes("/") ? ASSET_KINDS.find((k) => k.url.test(key.slice(key.indexOf("/"))))?.kind : undefined);
+const kindOfText = (s: string) => ASSET_KINDS.find((k) => k.text.test(s))?.kind;
+const COUNT_WORD = `\\d+|${Object.keys(NUMBER_WORDS).join("|")}|one|an?`;
+/** "build four comparison pages", "drafts five SEO pages", "Publish a Calendly alternative page". */
+const NEW_ASSET = new RegExp(`\\b(?:build|create|write|draft|publish|launch|ship|add)(?:s|es|ed|ing)?\\s+(?:(${COUNT_WORD})\\s+)?(?:new\\s+)?((?:[\\w.-]+\\s+){0,3}?)(pages?|comparisons?|alternatives?|listings?|posts?|articles?|guides?)\\b`, "gi");
+/** A sentence that puts more assets after a result ("if it converts, add five"), not now. */
+const GATED = /\b(?:if|once|only (?:after|when|if)|after (?:the|it|its|this|that|day|week)\b|later|expand|scale)/i;
+const IMPROVE = /\b(?:update|refresh|improve|rewrite|re-write|edit|fix|tighten|retitle|optimi[sz]e|add|test|a\/b|change|swap|shorten|correct|adapt)\b/i;
+/** "Collect data / pause growth": measurement dressed up as the plan. */
+const DATA_ONLY = /\b(?:collect(?:ing)?|gather(?:ing)?)\s+(?:data|baselines?|inputs)\b|\b(?:keep|leave|hold)\s+(?:both\s+|all\s+|the\s+)?(?:acquisition\s+|growth\s+)?(?:plays?|tests?|acquisition|growth)\s+(?:paused|on hold)\b|\bpause[sd]?\s+(?:growth|acquisition|(?:all|both|the)\s+(?:plays|tests))\b|\b(?:should not|shouldn't|do not|don't)\s+(?:launch|start|run)\b/i;
+/** A baseline is a number of searches or impressions, not "search demand is unknown". */
+const DEMAND = /\d[\d,.]*\s*k?\+?\s*(?:monthly\s+|a month\s+)?(?:searches|impressions)\b|\b(?:search|keyword) volume\b[^.;]{0,30}\d|\d[^.;]{0,30}\b(?:search|keyword) volume\b/i;
+const NEGATED = /\b(?:unknown|no|not|missing|unverified|unmeasured)\b/i;
+const sentences = (s: string) => s.split(/(?<=[.;!?])\s+/).filter(Boolean);
+const countOf = (w: string | undefined) => (!w || /^(?:an?|one)$/i.test(w) ? 1 : (NUMBER_WORDS[w.toLowerCase()] ?? (Number(w) || 1)));
+/** URLs written as links (with a protocol) or with a path; a bare "Cal.com" is a name, not a link. */
+const urlKeysIn = (s: string) => [...new Set((s.match(/https?:\/\/[^\s,;)\]]+|(?:[a-z0-9-]+\.)+[a-z]{2,}\/[^\s,;)\]]*/gi) ?? []).map(urlKeyOf))];
+const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** New assets a play commits to now (gated sentences don't count), each with its count and kind. */
+function newAssetsOf(p: { assetUsed: string; test: string; firstActionToday: string; mechanic?: string }): { count: number; kind?: string; noun: string }[] {
+  const found: { count: number; kind?: string; noun: string }[] = [];
+  // "To build: a Calendly alternative page" or "listing to build".
+  for (const part of (p.assetUsed ?? "").split(/;\s*|\.\s+/).filter((x) => /\bto build\b/i.test(x))) {
+    const noun = part.replace(/\bto build\b:?/i, "").trim() || "asset";
+    found.push({ count: 1, kind: kindOfText(part), noun });
+  }
+  for (const s of [p.assetUsed, p.test, p.firstActionToday, p.mechanic ?? ""].flatMap((t) => sentences(t ?? ""))) {
+    if (GATED.test(s)) continue;
+    for (const m of s.matchAll(NEW_ASSET)) {
+      if (/\b(?:existing|current|live)\b/i.test(m[2])) continue;
+      found.push({ count: countOf(m[1]), kind: kindOfText(m[0]), noun: `${m[2]}${m[3]}`.trim() });
+    }
+  }
+  return found;
+}
+
+/** The first action works on an existing asset (names it, or improves before building anything new) and isn't data-only. */
+function improvesFirst(action: string, urls: string[]): boolean {
+  if (!action || DATA_ONLY.test(action)) return false;
+  const a = alnum(action);
+  const named = urls.some((u) => {
+    const slug = alnum(u.split("/").filter(Boolean).at(-1) ?? "");
+    return u.includes("/") && slug.length >= 3 && a.includes(slug);
+  });
+  if (named || /\bexisting\b/i.test(action)) return true;
+  const improve = action.search(IMPROVE);
+  const build = action.search(new RegExp(NEW_ASSET.source, "i"));
+  return improve >= 0 && (build < 0 || improve < build);
+}
+
+/** Longest duration a test names, in days ("45 days", "four weeks", "six-week", "day 90"). */
+export function durationDays(text: string): number | undefined {
+  let max: number | undefined;
+  for (const m of text.matchAll(new RegExp(`\\b(${COUNT_WORD})[\\s-]+(day|week|month)s?\\b|\\bday\\s+(\\d+)\\b`, "gi"))) {
+    const d = m[3] ? Number(m[3]) : countOf(m[1]) * (/week/i.test(m[2]) ? 7 : /month/i.test(m[2]) ? 30 : 1);
+    max = Math.max(max ?? 0, d);
+  }
+  return max;
+}
+
+/**
+ * Bench Run 5 (Meetrao): a play committed to four new comparison pages with no demand baseline while an existing
+ * Cal.com comparison page sat unused. A play that adds an asset of a kind the business already has starts from the
+ * existing one (some play improves it first), and more than one new asset at once needs a demand baseline; otherwise
+ * the rest goes in scaleIf, gated on the first one's result.
+ */
+export function lintAssetsFirst(plays: { assetUsed: string; test: string; firstActionToday: string; mechanic?: string; funnel?: string[]; model?: { reachSource?: LintTag } }[], evidence: string): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const cited = plays.map((p) => urlKeysIn(p.assetUsed ?? "").filter((u) => ev.includes(u)));
+  const own = new Set(cited.flat().map((u) => u.split("/")[0]));
+  const existing = [...new Set([...cited.flat(), ...urlKeysIn(evidence).filter((u) => own.has(u.split("/")[0]))])].filter((u) => u.split("/")[1]);
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) => {
+    const added = newAssetsOf(p);
+    if (!added.length) return;
+    for (const kind of new Set(added.map((a) => a.kind).filter(Boolean))) {
+      const same = existing.filter((u) => kindOfUrl(u) === kind);
+      if (!same.length) continue;
+      const started = plays.some((q, j) => {
+        const urls = cited[j].filter((u) => kindOfUrl(u) === kind);
+        return urls.length > 0 && improvesFirst(q.firstActionToday, urls);
+      });
+      if (!started) issues.push({ severity: "error", rule: "assets_first", message: `Research shows an existing ${kind} page (${same.slice(0, 2).join(", ")}). Start from it: cite it in assetUsed, make improving it the first action today and the test, and add new ${kind} pages only in scaleIf, gated on its result.`, path: `plays[${i}].firstActionToday` });
+    }
+    const most = added.reduce((a, b) => (b.count > a.count ? b : a));
+    if (most.count < 2) return;
+    const baseline = [p.assetUsed, p.test, p.mechanic ?? "", ...(p.funnel ?? []).filter((l) => !/assumption/i.test(l)), ...(p.model?.reachSource && ["owner", "research"].includes(p.model.reachSource.source) ? [p.model.reachSource.quote ?? ""] : [])]
+      .flatMap((t) => sentences(t ?? ""))
+      .some((s) => DEMAND.test(s) && !NEGATED.test(s));
+    if (!baseline) {
+      const start = existing.find((u) => kindOfUrl(u) === most.kind) ?? existing.find((u) => added.some((x) => x.kind && kindOfUrl(u) === x.kind));
+      issues.push({ severity: "error", rule: "assets_first", message: `Commits to ${most.count} new ${most.noun} at once with no demand baseline. Start with ${start ? `the existing ${start}` : "one"}, put the rest in scaleIf, gated on its result, or cite each one's search demand (searches or impressions a month).`, path: `plays[${i}].test` });
+    }
+  });
+  return issues;
+}
+
+/**
+ * Bench Run 5 (Folevi): the plays built only new assets and the plan said "collect data, keep plays paused". At least
+ * one play must be a concrete test on an existing asset: it cites a confirmed URL, its first action improves that
+ * asset, and its test names a duration inside the horizon. Measurement can run alongside, never instead.
+ */
+export function lintExistingTest(plays: { assetUsed: string; test: string; firstActionToday: string; horizonDays?: number }[], evidence: string, horizonDays?: number): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  if (!plays.length || !urlKeysIn(evidence).length) return [];
+  const ok = plays.some((p) => {
+    const urls = urlKeysIn(p.assetUsed ?? "").filter((u) => ev.includes(u));
+    const h = horizonDays ?? (p.horizonDays || 90);
+    const d = durationDays(p.test ?? "");
+    return urls.length > 0 && !DATA_ONLY.test(p.test ?? "") && d !== undefined && d <= h && improvesFirst(p.firstActionToday, urls);
+  });
+  if (ok) return [];
+  const h = horizonDays ?? (plays[0].horizonDays || 90);
+  return [{ severity: "error", rule: "existing_test", message: `No play runs a concrete test on an existing asset within ${h} days. Keep data collection as a parallel step, but make at least one play improve a confirmed page, listing or flow (its URL in assetUsed), make that change the first action today, and give its test a size and a duration of ${h} days or less.`, path: "plays" }];
+}
+
+/** Week-one items and phase work that change or test something (not measurement alone). */
+const PLAN_ACTION = /\b(?:update|refresh|improve|rewrite|edit|fix|publish|launch|send|ship|test|draft|post|submit|swap|adapt|run (?:the|a|an|both|all) (?:tests?|plays?|experiments?))\b|\bapprove\b[^.;]{0,40}\b(?:edits?|copy|page|draft|listing|changes?)\b/i;
+/** Last day a phase covers ("0–14", "Days 15–45", "Week one", "Through day 90"); undefined when it has no date. */
+export function phaseEndDay(days: string): number | undefined {
+  const weeks = days.match(new RegExp(`\\bweeks?\\s+(${COUNT_WORD})(?:\\s*[–-]\\s*(${COUNT_WORD}))?`, "i"));
+  if (weeks) return countOf(weeks[2] ?? weeks[1]) * 7;
+  const nums = (days.match(/\d+/g) ?? []).map(Number);
+  return nums.length ? Math.max(...nums) : undefined;
+}
+
+/** The plan side of Bench Run 5 (Folevi): never a data-only plan; one concrete test on an existing asset runs inside the horizon. */
+export function lintActionPlan(out: { summary?: string; phases?: { name: string; days: string; focus: string }[]; weekOneChecklist?: string[]; experiments?: { method: string; durationDays: number; stoppingRule: string }[] }, horizonDays?: number): LintIssue[] {
+  const h = horizonDays || 90;
+  const issues: LintIssue[] = [];
+  const parallel = "Collecting data can run in parallel, but at least one concrete test on an existing asset (a page, listing or flow the research confirmed) must run inside the horizon.";
+  const paused = [["summary", out.summary ?? ""] as const, ...(out.phases ?? []).map((p, i) => [`phases[${i}].focus`, p.focus] as const), ...(out.experiments ?? []).map((e, i) => [`experiments[${i}].stoppingRule`, e.stoppingRule] as const)].find(([, t]) => DATA_ONLY.test(t));
+  if (paused) issues.push({ severity: "error", rule: "data_only", message: `"${paused[1].match(DATA_ONLY)![0]}" makes the plan data-only. ${parallel}`, path: paused[0] });
+  const exps = out.experiments ?? [];
+  if (exps.length && !exps.some((e) => e.method !== "export_instructions" && e.durationDays > 0 && e.durationDays <= h)) issues.push({ severity: "error", rule: "data_only", message: `No experiment is a live test within ${h} days. Add one A/B, holdout or before/after test on an existing asset. ${parallel}`, path: "experiments" });
+  const acts = (out.phases ?? []).some((p) => PLAN_ACTION.test(p.focus) && (phaseEndDay(p.days) ?? Infinity) <= h) || (out.weekOneChecklist ?? []).some((t) => PLAN_ACTION.test(t));
+  if (!acts) issues.push({ severity: "error", rule: "data_only", message: `No phase (with days) or week-one item changes or tests anything. ${parallel} Name it in a dated phase and the week-one checklist.`, path: "phases" });
+  return issues;
+}
+
 /** Spec §13: the portfolio must fit the owner's cash and time. */
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
@@ -602,7 +751,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -620,7 +769,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints)];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
