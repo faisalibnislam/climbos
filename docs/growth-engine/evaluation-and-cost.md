@@ -325,3 +325,28 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 - owner time.
 
 Search or existing traffic counts only with a measured number. `lintPlanDistribution` needs a dated route action in the plan. When every picked channel is a page channel, the scorecard names a channel that sends people. Replay flags both Run 6 Meetrao plays and its plan.
+
+### Run 7 (2026-10-19, approved cap $4.50): distribution routes, and the speed flags
+
+**What ran:** B1 at `c356c00` (every asset play names its distribution route; also the faster pipeline: research in parallel with channel scoring) and B2 = the same with `--flags fast_review,lean_plan`, both against the saved B0 outputs.
+
+**Files:** `bench/results/2026-10-19-14-25-regress-b1route.*`, `2026-10-19-14-25-regress-b1fast.*` and `2026-10-19-16-19-regress-judge7.*`, including the blind packet.
+
+| | B0 | B1 (c356c00) | B2 (+ fast_review, lean_plan) |
+|---|---|---|---|
+| Model cost (5 plans) | $1.07 | $1.06 | $0.95 |
+| Mean time per plan | 1228 s | 1077 s | 887 s |
+| Pairwise vs B0 | — | **3 wins**, 2 losses (Meetrao, Folevi) | 2 wins, 3 losses |
+| Pointwise overall (mean) | 4.0 | 3.4 | 3.2 |
+
+**Spend:** $3.03 of $4.50 (plans $2.01, judge $1.02); $14.38 across all seven runs.
+
+**Trend for B1:** 2–3, 1–1–3, 3–2, 1–1–3, 3–2, 3–1–1, 3–2. Still short of the release rule (at least 4 of 5).
+
+**Speed:** the parallel research saved about 12% (1077 s vs ~1230 s). The speed flags save another ~18% but cost quality (2–3), so they stay off. Where the time goes (B1, mean per phase): plays draft A/B 226/183 s, plan draft A/B 186/175 s, plays and plan revisions 139/146 s, channel scoring 112 s, research 64–68 s each, reviews ~30 s. Drafting effort, not review, is the cost.
+
+**Why B1 still loses:**
+- **Meetrao:** still proposes building/buying traffic for a $30/year product. B0 improves the existing buyer-intent page and tests creator distribution before any spend.
+- **Folevi:** narrows success to one paid plan (Pro) instead of converting across paid plans with a conservative revenue proxy.
+
+**Next:** for low-price products, require the first play to improve an existing high-intent page plus a no-spend distribution test before any paid traffic; and count conversion to any paid plan. Re-evaluating needs a new cap.
