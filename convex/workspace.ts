@@ -15,6 +15,7 @@ import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
+import { canDriveWork, type QualityState } from "../shared/agents/quality";
 import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
 
 /** Everything the Today screen needs, in one bounded query. */
@@ -462,6 +463,8 @@ export const decidePlan = mutation({
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "approve");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
+    // A plan that failed ClimbOS's hard checks can be read and sent back, never approved into work.
+    if (decision === "approve" && !canDriveWork((s.expert as { quality?: { state: QualityState } } | undefined)?.quality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
     const now = Date.now();
     // The decision follows the current approval rules: who may approve, and a binding that hasn't expired.
     const policy = await ctx.db

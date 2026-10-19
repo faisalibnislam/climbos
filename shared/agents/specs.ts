@@ -2,6 +2,7 @@ import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { lintEconomics, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
+import type { PlanQuality } from "./quality";
 import type { PlanConstraints } from "./types";
 import type { Effort } from "../ai/types";
 import {
@@ -126,7 +127,7 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot };
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v2.6-provenance-checked";

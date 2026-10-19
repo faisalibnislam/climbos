@@ -295,6 +295,7 @@ export const saveStrategy = internalMutation({
                 plays: (x.plays ?? []).slice(0, 4),
                 economics: x.economics,
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
+                ...(x.quality ? { quality: x.quality } : {}),
                 ...(x.webSources?.length ? { webSources: x.webSources.slice(0, 40).map((w) => ({ url: w.url.slice(0, 500), ...(w.title ? { title: w.title.slice(0, 200) } : {}) })) } : {}),
               };
             })(),

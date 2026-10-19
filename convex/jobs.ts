@@ -39,9 +39,10 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
-import { applyOwnerEconomics, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, lockedNumbers, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { agentQuality, HARD_RULES, planQuality, type AgentQuality } from "../shared/agents/quality";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
@@ -307,7 +308,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
-  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[] },
+  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[]; quality?: AgentQuality },
 ): Promise<T> {
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
@@ -414,6 +415,7 @@ async function runAgentTask<T>(
     if (meta) {
       meta.shipped = result.assessment?.ship ?? null;
       meta.sources = result.research?.sources ?? [];
+      meta.quality = agentQuality(spec.id, result.assessment, result.rounds, result.research ? result.research.sources.length : null);
     }
     if (result.quality) {
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
@@ -799,8 +801,8 @@ export const buildStrategy = internalAction({
       const scored = scoreChannels(profile, adjustments);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
-      const playsMeta: { sources?: { url: string; title?: string }[] } = {};
-      const planMeta: { sources?: { url: string; title?: string }[] } = {};
+      const playsMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
+      const planMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
       const playsDraft = v2
         ? await runAgentTask<PlaysOutput>(
             ctx,
@@ -844,9 +846,17 @@ export const buildStrategy = internalAction({
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
       if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) }));
+      // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.
+      const quality = plays
+        ? planQuality(
+            [playsMeta.quality, planMeta.quality].filter((q): q is AgentQuality => Boolean(q)),
+            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays) }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
+            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null },
+          )
+        : null;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length) } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary }),
       });

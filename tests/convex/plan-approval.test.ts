@@ -38,6 +38,36 @@ async function exhaustCredits(t: T, orgId: Id<"organizations">) {
   });
 }
 
+describe("Plan quality is separate from the run finishing (S1)", () => {
+  beforeEach(() => {
+    process.env.CLIMBOS_ENGINE = "v2";
+    process.env.CLIMBOS_FAKE_LLM = "ship";
+  });
+  afterEach(() => {
+    delete process.env.CLIMBOS_ENGINE;
+    delete process.env.CLIMBOS_FAKE_LLM;
+  });
+
+  it("saves a quality record, and a plan that failed hard checks can be read and sent back but not approved", async () => {
+    const t = setup();
+    const w = await workspace(t, "quality-owner@example.com");
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const q = (s.expert as { quality?: { state: string; agents: unknown[] } }).quality;
+    expect(["passed", "provisional", "needs_input", "failed"]).toContain(q?.state);
+    expect(q?.agents.length).toBe(2); // growth plays + plan
+    // The run finished either way; quality is its own field.
+    const run = await t.run(async (ctx) => ctx.db.get(s.runId!));
+    expect(run?.status).toBe("verified");
+    await t.run(async (ctx) => ctx.db.patch(s._id, { expert: { ...s.expert!, quality: { version: 1, state: "failed", reasons: ["Checks failed: the numbers behind a play don't add up or it loses money."], hard: ["growth_plays: economics ×1"], agents: [] } } }));
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "approve" })).rejects.toThrow(/didn't pass ClimbOS checks/);
+    await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "reject" });
+    expect((await latestStrategy(t, w.orgId)).status).toBe("draft");
+  });
+});
+
 describe("Plan approval starts the work", () => {
   beforeEach(() => {
     process.env.CLIMBOS_ENGINE = "v2";

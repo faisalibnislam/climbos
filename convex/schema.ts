@@ -1178,6 +1178,16 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
+        /** Plan quality, separate from the run finishing (passed / provisional / needs_input / failed). */
+        quality: v.optional(
+          v.object({
+            version: v.number(),
+            state: v.union(v.literal("passed"), v.literal("provisional"), v.literal("needs_input"), v.literal("failed")),
+            reasons: v.array(v.string()),
+            hard: v.array(v.string()),
+            agents: v.any(),
+          }),
+        ),
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({

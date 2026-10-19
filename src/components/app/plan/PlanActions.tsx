@@ -1,5 +1,7 @@
 "use client";
 
+import { QUALITY_LABEL, type QualityState } from "../../../../shared/agents/quality";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -121,7 +123,8 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void }) {
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[] } | null }) {
+  const blocked = quality?.state === "failed";
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -145,10 +148,21 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
         Approving lets your team start drafting content for the active channels below. Every post, email and ad still needs its own approval before it goes
         anywhere, and approving the plan spends no money.
       </p>
+      {quality && quality.state !== "passed" ? (
+        <div className={cn("mt-3 rounded-lg border p-3 text-sm", blocked ? "border-red-500/30 bg-red-100/60 text-red-900" : "border-line bg-surface text-ink-2")}>
+          <p className="font-medium">{QUALITY_LABEL[quality.state]}</p>
+          <ul className="mt-1 list-disc pl-5">
+            {quality.reasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+          {blocked ? <p className="mt-1">It can&apos;t start work. Refresh the plan, or send it back with what to change.</p> : null}
+        </div>
+      ) : null}
       {canApprove ? (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <ConfirmDialog
-            trigger={<Button>Approve plan</Button>}
+            trigger={<Button disabled={blocked}>Approve plan</Button>}
             title={`Approve plan version ${version}?`}
             description="Proposed channels become active and the team starts preparing drafts for them. Any earlier approved plan is marked superseded. Nothing is posted, sent or spent without a separate approval."
             confirmLabel="Approve plan"

@@ -15,6 +15,7 @@ import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/compon
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import type { Economics } from "../../../../../shared/agents/economics";
 import { SharpenPlan } from "@/components/app/plan/SharpenPlan";
+import type { QualityState } from "../../../../../shared/agents/quality";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
 import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunProgress";
@@ -222,7 +223,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} /> : null}
+          {s.status === "needs_approval" ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[] } } | null)?.quality ?? null} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="This plan was sent back">
               No work starts from it. {plan.canEdit ? "Use “Refresh plan” to get a new version." : `Ask ${PERMISSION_WHO.edit} to refresh it.`}
