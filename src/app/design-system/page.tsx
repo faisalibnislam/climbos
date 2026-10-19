@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { DesignSystemReference } from "./DesignSystemReference";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Design system",
-  robots: { index: false, follow: false },
-};
-
-/** Living reference for docs/DesignSystem.md: every token and component in one place. */
+/** The design system lives at /design-system/v2 (Signal). */
 export default function DesignSystemPage() {
-  return <DesignSystemReference />;
+  redirect("/design-system/v2");
 }

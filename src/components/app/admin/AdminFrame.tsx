@@ -43,7 +43,7 @@ export function AdminFrame({ children }: { children: (me: AdminMe) => ReactNode 
           {TABS.filter((t) => (me.powers as readonly string[]).includes(t.power)).map((t) => {
             const active = t.href === "/ops" ? path === "/ops" : path.startsWith(t.href);
             return (
-              <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined} className={cn("rounded-lg px-3 py-1.5 text-ui", active ? "bg-brand-50 font-medium text-brand-800" : "text-ink-2 hover:bg-surface-2")}>
+              <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined} className={cn("rounded-[var(--radius-control)] px-3 py-1.5 text-ui", active ? "bg-ink font-medium text-white" : "text-ink-2 hover:bg-surface")}>
                 {t.label}
               </Link>
             );

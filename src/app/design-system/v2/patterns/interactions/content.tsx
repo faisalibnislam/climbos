@@ -445,7 +445,7 @@ function RealtimeDemo() {
           <span aria-hidden className={cn("size-2 rounded-full", live ? "bg-green-500 animate-soft-pulse" : "bg-ink-3")} />
           {live ? "Live" : "Paused"}
         </span>
-        <p className="text-[32px] font-semibold leading-10 tabular-nums">{visits}</p>
+        <p className="text-kpi font-semibold leading-10 tabular-nums">{visits}</p>
         <p className="-mt-2 text-ui text-ink-2">Visitors today</p>
         <Button size="sm" variant="secondary" onClick={() => setLive((v) => !v)}>{live ? "Pause updates" : "Resume"}</Button>
       </div>

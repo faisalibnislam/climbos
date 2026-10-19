@@ -22,7 +22,7 @@ export interface Person {
 }
 
 const SIZE: Record<AvatarSize, { box: string; text: string; dot: string }> = {
-  xs: { box: "size-5", text: "text-[9px]", dot: "size-1.5 ring-1" },
+  xs: { box: "size-5", text: "text-2xs", dot: "size-1.5 ring-1" },
   sm: { box: "size-6", text: "text-2xs", dot: "size-2 ring-[1.5px]" },
   md: { box: "size-8", text: "text-xs", dot: "size-2.5 ring-2" },
   lg: { box: "size-10", text: "text-sm", dot: "size-3 ring-2" },

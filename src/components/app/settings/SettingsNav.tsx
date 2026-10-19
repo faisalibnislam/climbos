@@ -48,8 +48,8 @@ export function SettingsNav({ slug }: { slug: string }) {
                 href={`/app/${slug}/settings/${s.key}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink",
-                  active && "bg-surface-3/70 font-medium text-ink",
+                  "flex h-[var(--h-sm)] items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-ui text-ink-2 transition-colors hover:bg-surface/60 hover:text-ink",
+                  active && "bg-surface font-medium text-ink shadow-[var(--card-shadow)]",
                 )}
               >
                 <s.icon aria-hidden="true" className="size-4 shrink-0" />

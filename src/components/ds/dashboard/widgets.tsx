@@ -30,7 +30,7 @@ function Big({ value, label, trend }: { value: string; label: string; trend?: nu
   return (
     <div className="flex items-end justify-between gap-3">
       <div>
-        <p className="text-[28px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{value}</p>
+        <p className="text-3xl font-semibold leading-8 tracking-[-0.02em] tabular-nums">{value}</p>
         <p className="text-xs text-ink-3">{label}</p>
       </div>
       {trend ? <Sparkline values={trend} height={28} className="max-w-24" /> : null}
@@ -50,7 +50,7 @@ export const WIDGETS: WidgetDef[] = [
       <div className="flex items-center gap-4">
         <ProgressRing value={14 / 20} size={56} label="Booked calls goal" />
         <div>
-          <p className="text-[28px] font-semibold leading-8 tabular-nums">14</p>
+          <p className="text-3xl font-semibold leading-8 tabular-nums">14</p>
           <p className="text-xs text-ink-3">of 20 this month</p>
         </div>
       </div>
@@ -65,7 +65,7 @@ export const WIDGETS: WidgetDef[] = [
     span: 1,
     render: () => (
       <div className="flex flex-col gap-2">
-        <p className="text-[28px] font-semibold leading-8 tabular-nums">1,840</p>
+        <p className="text-3xl font-semibold leading-8 tabular-nums">1,840</p>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
           <div className="h-full w-[62%] rounded-full bg-ink" />
         </div>
@@ -103,7 +103,7 @@ export const WIDGETS: WidgetDef[] = [
       <div className="flex items-center gap-3">
         <Star aria-hidden className="size-7 fill-sun text-ink" />
         <div>
-          <p className="text-[28px] font-semibold leading-8 tabular-nums">4.8</p>
+          <p className="text-3xl font-semibold leading-8 tabular-nums">4.8</p>
           <p className="text-xs text-ink-3">212 reviews · 9 new</p>
         </div>
       </div>

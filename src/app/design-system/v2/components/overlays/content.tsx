@@ -525,7 +525,7 @@ function OnboardingDemo() {
           <OnboardingTarget id="kpi">
             <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--card-shadow)]">
               <p className="text-ui text-ink-2">Booked calls</p>
-              <p className="text-[32px] font-semibold leading-10 tabular-nums">42</p>
+              <p className="text-kpi font-semibold leading-10 tabular-nums">42</p>
               <p className="text-xs text-ink-3">Plan: 35 this month</p>
             </div>
           </OnboardingTarget>

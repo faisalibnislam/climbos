@@ -1,105 +1,105 @@
 @import "tailwindcss";
 
 /*
- * ClimbOS design tokens ("Summit"). Layout and sizing follow Apollo.io;
- * the surface language follows Airly's own taskeni.app and Meetrao: a
- * sage-grey ground, white panels with hairlines instead of shadows, tight
- * corners (6px controls, 8px cards) and a Reckless Neue / Inter pairing.
- * Pine is the brand and primary action colour; sunrise is a highlight that
- * never carries small text. Text/background pairs meet WCAG 2.2 AA. Status
- * is never conveyed by colour alone.
+ * ClimbOS design tokens ("Signal", adopted product-wide 2026-10-19; documented at
+ * /design-system/v2). A sage-grey ground (#E8ECE5), white panels with a soft shadow,
+ * black actions, sage as the brand colour, lime for the one thing that matters on a
+ * screen, Reckless Neue for titles and voice, Hanken Grotesk for everything else.
+ * Corners stop at 8px; no gradients or grid patterns. Text pairs meet WCAG 2.2 AA
+ * (body text AAA); lime never carries small text on white; status is never colour alone.
  */
 :root {
-  --bg: #eef0ee;
+  --bg: #e8ece5;
   --surface: #ffffff;
-  --surface-2: #f5f6f5;
-  --surface-3: #e3e7e4;
-  --ink: #1c2220;
-  --ink-2: #434b47;
-  --ink-3: #59615c;
-  /* Hairlines are translucent ink: panels 9%, controls 17%. */
-  --line: rgb(28 34 32 / 0.09);
-  --line-strong: rgb(28 34 32 / 0.17);
+  --surface-2: #f2f4f0;
+  --surface-3: #e2e6de;
+  --ink: #161815;
+  --ink-2: #444841;
+  --ink-3: #575c53;
+  /* Hairlines are translucent ink. */
+  --line: rgb(22 24 21 / 0.07);
+  --line-strong: rgb(22 24 21 / 0.12);
   /* Borders that identify a control (inputs, checkboxes, switch tracks): 3:1+ (WCAG 1.4.11). */
-  --control-border: rgb(28 34 32 / 0.52);
-  --control-border-hover: rgb(28 34 32 / 0.7);
+  --control-border: rgb(22 24 21 / 0.5);
+  --control-border-hover: rgb(22 24 21 / 0.7);
 
-  /* Pine: primary actions, links, focus, feature panels. 800 on white = 7.9:1. */
-  --brand-950: #052e22;
-  --brand-900: #073f2f;
-  --brand-800: #0b5d46;
-  --brand-700: #0f6e53;
-  --brand-600: #158a67;
-  --brand-200: #c6dfd3;
-  --brand-100: #e3efe8;
-  --brand-50: #f1f7f3;
+  /* Sage: brand, links, focus, chart lines. 800: 6.8:1 on white, 5.7:1 on the ground. */
+  --brand-950: #1e2719;
+  --brand-900: #2f3c29;
+  --brand-800: #4d6043;
+  --brand-700: #627656;
+  --brand-600: #798b6b;
+  --brand-300: #a9b89c;
+  --brand-200: #d3dccb;
+  --brand-100: #dfe6d8;
+  --brand-50: #f0f3ec;
 
-  /* Sunrise: highlights, active markers and focus glow; dark text only. */
-  --sun: #ec8b5e;
-  --sun-soft: #f8e8df;
-  /* Sunrise when it carries meaning (markers, meters, chart marks): 3:1+ on panels. */
-  --sun-strong: #c56a3e;
-  --pine: #0b3b2e;
-  --coral: #cf7656;
+  /* Lime ("sun" tokens): the one CTA, the outcome bar and workspace tile; dark text only. */
+  --sun: #c3ef88;
+  --sun-soft: #eef9dd;
+  /* Lime when it carries meaning (markers, meters): 3:1+ on panels. */
+  --sun-strong: #659328;
+  --pine: #2f3c29;
+  --coral: #d0705a;
 
-  /* Status: soft fills with deep inks (taskeni palette discipline). */
-  --amber-800: #7a5a12;
-  --amber-500: #e2b55a;
-  --amber-100: #f8f1df;
-  --red-800: #a23f28;
-  --red-500: #cf5f45;
-  --red-100: #fbede8;
+  /* Status: soft fills with deep inks. */
+  --amber-800: #725506;
+  --amber-500: #e0ae36;
+  --amber-100: #fbf0c4;
+  --red-800: #a12f4b;
+  --red-500: #d9667b;
+  --red-100: #fbe1e6;
   --blue-800: #2f6670;
   --blue-500: #6aa8b0;
   --blue-100: #e8f2f3;
   --violet-800: #574a8f;
   --violet-500: #9488c9;
   --violet-100: #efedf8;
-  --green-800: #476428;
-  --green-500: #8db766;
-  --green-100: #edf4e5;
+  --green-800: #3d6824;
+  --green-500: #86b85c;
+  --green-100: #e2f1d6;
   --teal-800: #20666a;
   --teal-500: #5fb0b1;
   --teal-100: #e4f2f1;
   --pink-800: #8f3a5a;
   --pink-500: #d98aa6;
   --pink-100: #f9eaf0;
-  --orange-800: #8a4512;
+  --orange-800: #934710;
   --orange-500: #e3955c;
-  --orange-100: #f9ece1;
+  --orange-100: #fcebdd;
 
-  /* Data visualisation palette: ordered, colour-blind-aware, calm. */
-  --chart-1: #0b5d46;
-  --chart-2: #c56a3e;
-  --chart-3: #4a8593;
-  --chart-4: #6f62b5;
-  --chart-5: #a8761a;
-  --chart-6: #5d8a37;
-  --chart-grid: rgb(28 34 32 / 0.07);
+  /* Chart series: sage, ink, slate, clay, ochre; chart-6 is the previous period. */
+  --chart-1: #627656;
+  --chart-2: #161815;
+  --chart-3: #3e6478;
+  --chart-4: #b0592b;
+  --chart-5: #93700f;
+  --chart-6: #82877c;
+  --chart-grid: rgb(22 24 21 / 0.07);
 
-  /* Feature panels: flat deep pine. */
-  --gradient-hero: linear-gradient(160deg, #0b3b2e 0%, #0b5d46 100%);
-  --gradient-soft: linear-gradient(160deg, #f5f6f5 0%, #f1f7f3 100%);
+  /* No gradients: feature surfaces are flat cream. */
+  --gradient-hero: #eae3ce;
+  --gradient-soft: #f4f0e3;
 
   --radius-sm: 4px;
   --radius: 6px;
   --radius-lg: 8px;
   --radius-xl: 10px;
-  /* Almost flat: panels separate by hairline; only floating layers cast a shadow. */
-  --shadow-sm: 0 1px 1px rgb(28 34 32 / 0.03);
-  --shadow: 0 1px 2px rgb(28 34 32 / 0.05);
-  --shadow-lg: 0 2px 6px rgb(28 34 32 / 0.05), 0 14px 34px -10px rgb(28 34 32 / 0.18);
+  /* Soft shadows: panels lift slightly off the ground; floating layers more. */
+  --shadow-sm: 0 1px 2px rgb(22 24 21 / 0.06);
+  --shadow: 0 1px 3px rgb(22 24 21 / 0.06);
+  --shadow-lg: 0 2px 8px rgb(22 24 21 / 0.06), 0 20px 40px -12px rgb(22 24 21 / 0.2);
 
-  /* Themeable structure (values here keep the current look; a theme overrides them). */
-  --action: var(--brand-800);
-  --action-hover: var(--brand-900);
-  --action-active: var(--brand-950);
+  /* Structure: black actions; corners 8px max (cards 5, CTAs 7, pills 4, controls 3). */
+  --action: #161815;
+  --action-hover: #000000;
+  --action-active: #000000;
   --action-ink: #ffffff;
-  --radius-app: 6px;
+  --radius-app: 3px;
   --radius-control: var(--radius-app);
-  --radius-field: 6px;
-  --radius-card: 8px;
-  --font-body: var(--font-sans-ui);
+  --radius-field: 3px;
+  --radius-card: 5px;
+  --font-body: var(--font-hanken-ui);
   /* Density (comfortable default; [data-density="compact"] tightens). */
   --h-sm: 32px;
   --h-md: 36px;
@@ -114,181 +114,7 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  /* Type hierarchy tokens (Summit values; Signal overrides). */
-  --fs-page: 28px;
-  --lh-page: 36px;
-  --font-section: var(--font-body);
-  --fw-section: 600;
-  --fs-section: 16px;
-  --lh-section: 24px;
-  --ls-section: -0.01em;
-  --font-card: var(--font-body);
-  --fw-card: 600;
-  --fs-card: 14px;
-  --lh-card: 20px;
-  --ls-card: -0.005em;
-  --font-dialog: var(--font-body);
-  --fw-dialog: 600;
-  --fs-dialog: 18px;
-  --lh-dialog: 26px;
-  --font-voice: var(--font-body);
-  --fs-voice: 14px;
-  --lh-voice: 20px;
-  --font-hero-num: var(--font-metric);
-  --font-metric: var(--font-display-serif);
-  --metric-weight: 500;
-  --seg-track: var(--surface-2);
-  --seg-active: var(--surface);
-  --seg-active-ink: var(--ink);
-  --seg-track-border: var(--line);
-  --seg-gap: 2px;
-  --seg-item: transparent;
-  --seg-item-shadow: none;
-  --tabs-track: var(--surface-2);
-  --tabs-track-border: var(--line);
-  --tab-active: var(--surface);
-  --tab-active-ink: var(--ink);
-  --btn-2-bg: var(--surface);
-  --btn-2-border: var(--line-strong);
-  --btn-2-shadow: none;
-  --radius-badge: 5px;
-  --radius-cta: 6px;
-  --card-shadow: none;
-  --grid-pattern: none;
-
-  /* Extra brand colours (Signal); unused by Summit screens. */
-  --cream: #eae3ce;
-  --cream-soft: #f4f0e3;
-  --sage: #7c8f6e;
-  --sage-ink: #5b6e50;
-  --lime: #c3ef88;
-  --focus-ring: var(--brand-600);
-  /* Tailwind rounded-* scale (themeable). */
-  --r-sm: 4px;
-  --r-md: 5px;
-  --r-lg: 6px;
-  --r-xl: 8px;
-  --r-2xl: 10px;
-  --r-3xl: 12px;
-}
-
-/*
- * "Signal" theme (proposal, 2026-10-19), after the WAct reference: a warm cream-to-sage
- * ground, white panels on a light stone ground, black pill actions, a lime accent
- * for the one thing that matters, sage as the brand colour and Reckless Neue for
- * headlines. Text pairs meet WCAG 2.2 AA; lime never carries small text on white.
- * Preview at /design-system/v2; promote by moving these values into :root.
- */
-[data-theme="wact"] {
-  /* Ground: soft sage-grey; white panels sit on it. */
-  --bg: #e8ece5;
-  --surface: #ffffff;
-  --surface-2: #f2f4f0;
-  --surface-3: #e2e6de;
-  --ink: #161815;
-  --ink-2: #444841;
-  --ink-3: #575c53;
-  --line: rgb(22 24 21 / 0.07);
-  --line-strong: rgb(22 24 21 / 0.12);
-  --control-border: rgb(22 24 21 / 0.5);
-  --control-border-hover: rgb(22 24 21 / 0.7);
-
-  /* Sage: brand, links, focus, chart lines. 800: 6.8:1 on white, 5.7:1 on the ground. */
-  --brand-950: #1e2719;
-  --brand-900: #2f3c29;
-  --brand-800: #4d6043;
-  --brand-700: #627656;
-  --brand-600: #7c8f6e;
-  --brand-200: #d3dccb;
-  --brand-100: #dfe6d8;
-  --brand-50: #f0f3ec;
-
-  /* Lime: the one CTA (Upgrade, Start), the outcome bar and workspace tile. */
-  --sun: #c3ef88;
-  --sun-soft: #eef9dd;
-  --sun-strong: #6a9a2a;
-  --pine: #2f3c29;
-  --coral: #d0705a;
-
-  /* Status: soft pill fills with deep inks, as in the reference tables. */
-  --green-800: #3d6824;
-  --green-500: #86b85c;
-  --green-100: #e2f1d6;
-  --red-800: #a12f4b;
-  --red-500: #d9667b;
-  --red-100: #fbe1e6;
-  --amber-800: #725506;
-  --amber-500: #e0ae36;
-  --amber-100: #fbf0c4;
-  --orange-800: #934710;
-  --orange-500: #e3955c;
-  --orange-100: #fcebdd;
-
-  /* Chart series (earthy, distinct in lightness, all ≥4.6:1 on white): sage, ink, slate, clay, ochre;
-     chart-6 is the comparison/previous line. Lime stays a highlight, not a series. */
-  --chart-1: #627656;
-  --chart-2: #161815;
-  --chart-3: #3e6478;
-  --chart-4: #b0592b;
-  --chart-5: #93700f;
-  --chart-6: #8a9084;
-  --chart-grid: rgb(22 24 21 / 0.07);
-
-  /* No gradients (owner, 2026-10-19): feature surfaces are flat cream. */
-  --gradient-hero: #eae3ce;
-  --gradient-soft: #f4f0e3;
-  /* Chart areas: one flat tint instead of a fade. */
-  --area-top: 0.08;
-  --area-bottom: 0.08;
-  /* No grid pattern (owner, 2026-10-19). */
-  --grid-pattern: none;
-
-  --shadow-sm: 0 1px 2px rgb(22 24 21 / 0.06);
-  --shadow: 0 1px 3px rgb(22 24 21 / 0.06);
-  --shadow-lg: 0 2px 8px rgb(22 24 21 / 0.06), 0 20px 40px -12px rgb(22 24 21 / 0.2);
-  --card-shadow: 0 1px 2px rgb(22 24 21 / 0.04);
-
-  /* Corners (owner, 2026-10-19): 8px is the largest (page-level frames); everything scales down from it: cards 5px, CTAs 7px, pills 4px, controls and fields 3px. */
-  --action: #161815;
-  --action-hover: #000000;
-  --action-active: #000000;
-  --action-ink: #ffffff;
-  --radius-app: 3px;
-  --radius-control: var(--radius-app);
-  --radius-cta: 7px;
-  --radius-field: 3px;
-  --radius-card: 5px;
-  --radius-badge: 4px;
-  --btn-2-bg: #ffffff;
-  --btn-2-border: rgb(22 24 21 / 0.06);
-  --btn-2-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
-  --font-body: var(--font-hanken-ui);
-  --font-metric: var(--font-body);
-  --metric-weight: 600;
-  --seg-track: transparent;
-  --seg-track-border: transparent;
-  --seg-gap: 6px;
-  --seg-item: #ffffff;
-  --seg-item-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
-  --seg-active: #161815;
-  --seg-active-ink: #ffffff;
-  --tabs-track: transparent;
-  --tabs-track-border: transparent;
-  --tab-active: #161815;
-  --tab-active-ink: #ffffff;
-  /* Contrast (WCAG 2.2, owner rules 2026-10-19): body text ink/ink-2 ≥ 7:1 (AAA); meta, links,
-     status inks and placeholders ≥ 5.3:1 on every surface; chart lines, icons, borders and
-     focus ≥ 3:1. Sage-ink carries white text (5.5:1). */
-  --sage-ink: #5b6e50;
-  --focus-ring: #4d6043;
-  --r-sm: 1.5px;
-  --r-md: 2px;
-  --r-lg: 2px;
-  --r-xl: 3px;
-  --r-2xl: 3.5px;
-  --r-3xl: 4px;
-  /* Editorial type hierarchy (owner, 2026-10-19): Reckless for every title level, the AI's voice,
-     annotations, quotes, trust lines and hero numbers; Hanken Grotesk for body, UI, tables and KPI numbers. */
+  /* Type hierarchy: Reckless for titles, voice and hero numbers; Hanken for the rest. */
   --fs-page: 36px;
   --lh-page: 40px;
   --font-section: var(--font-display-serif);
@@ -309,12 +135,53 @@
   --fs-voice: 16px;
   --lh-voice: 24px;
   --font-hero-num: var(--font-display-serif);
+  --font-metric: var(--font-body);
+  --metric-weight: 600;
+  --seg-track: transparent;
+  --seg-active: #161815;
+  --seg-active-ink: #ffffff;
+  --seg-track-border: transparent;
+  --seg-gap: 6px;
+  --seg-item: #ffffff;
+  --seg-item-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
+  --tabs-track: transparent;
+  --tabs-track-border: transparent;
+  --tab-active: #161815;
+  --tab-active-ink: #ffffff;
+  --btn-2-bg: #ffffff;
+  --btn-2-border: rgb(22 24 21 / 0.06);
+  --btn-2-shadow: 0 1px 2px rgb(22 24 21 / 0.07);
+  --radius-badge: 4px;
+  --radius-cta: 7px;
+  --card-shadow: 0 1px 2px rgb(22 24 21 / 0.04);
+  --grid-pattern: none;
+
+  /* Extra brand colours. */
+  --cream: #eae3ce;
+  --cream-soft: #f4f0e3;
+  /* Darker creams for goal rings and staircase steps (decorative, ink text only). */
+  --cream-strong: #d8ccab;
+  --cream-deep: #bfb59a;
+  --sage: #7c8f6e;
+  --sage-ink: #5b6e50;
+  --lime: #c3ef88;
+  --focus-ring: #4d6043;
+  /* Tailwind rounded-* scale (themeable). */
+  --r-sm: 1.5px;
+  --r-md: 2px;
+  --r-lg: 2px;
+  --r-xl: 3px;
+  --r-2xl: 3.5px;
+  --r-3xl: 4px;
+  --area-top: 0.08;
+  --area-bottom: 0.08;
   --font-empty: var(--font-display-serif);
   --fw-empty: 500;
   --fs-empty: 22px;
   --lh-empty: 28px;
 }
-/* Compact density: shorter controls and rows, tighter cards (any theme). */
+
+/* Compact density: shorter controls and rows, tighter cards. */
 [data-density="compact"] {
   --h-sm: 28px;
   --h-md: 32px;
@@ -322,7 +189,7 @@
   --cell-h: 34px;
   --card-p: 14px;
 }
-/* Marketing CTAs take the pill shape in themes that set one. */
+/* Marketing CTAs take the CTA radius. */
 .marketing {
   --radius-control: var(--radius-cta);
 }
@@ -346,6 +213,7 @@
   --color-brand-800: var(--brand-800);
   --color-brand-700: var(--brand-700);
   --color-brand-600: var(--brand-600);
+  --color-brand-300: var(--brand-300);
   --color-brand-200: var(--brand-200);
   --color-brand-100: var(--brand-100);
   --color-brand-50: var(--brand-50);
@@ -387,6 +255,8 @@
   --color-pine: var(--pine);
   --color-coral: var(--coral);
   --color-cream: var(--cream);
+  --color-cream-strong: var(--cream-strong);
+  --color-cream-deep: var(--cream-deep);
   --color-cream-soft: var(--cream-soft);
   --color-sage: var(--sage);
   --color-sage-ink: var(--sage-ink);
@@ -416,6 +286,9 @@
   --text-xl--line-height: 26px;
   --text-2xl: 22px;
   --text-2xl--line-height: 30px;
+  /* KPI numbers (Hanken 600, tabular). */
+  --text-kpi: 32px;
+  --text-kpi--line-height: 40px;
   --text-3xl: 28px;
   --text-3xl--line-height: 36px;
   --text-4xl: 36px;
@@ -427,7 +300,7 @@
   --text-7xl: 72px;
   --text-7xl--line-height: 76px;
 
-  /* Tight corners: controls 6px, cards 8px. */
+  /* Corners: 8px max; the r-* scale maps Tailwind rounded-* onto it. */
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);
@@ -720,7 +593,7 @@ body {
 }
 
 /*
- * Signal voice styles (Reckless). In Summit they fall back to the body face.
+ * Voice styles (Reckless).
  *   heading-empty   empty states and onboarding prompts
  *   text-voice      ClimbOS's own narrative: diagnosis, insights, "why this play"
  *   text-annotation short italic notes on charts
@@ -730,7 +603,7 @@ body {
  *   text-display    marketing display headlines
  */
 @utility heading-empty {
-  /* Summit: same as a section title; Signal: Reckless 22/28. */
+  /* Reckless 22/28. */
   font-family: var(--font-empty, var(--font-section)), ui-sans-serif, system-ui, sans-serif;
   font-size: var(--fs-empty, var(--fs-section));
   line-height: var(--lh-empty, var(--lh-section));

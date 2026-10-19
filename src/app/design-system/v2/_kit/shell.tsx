@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Design-system shell: Signal theme scope, grouped sidebar (drawer on mobile),
+ * Design-system shell: grouped sidebar (drawer on mobile),
  * top bar with breadcrumbs, ⌘K search across pages and element names, and a
  * comfortable/compact density toggle (remembered per browser).
  */
@@ -16,16 +16,8 @@ import { ALL_ITEMS, NAV, slugify } from "../nav";
 
 type Density = "comfortable" | "compact";
 
-function useThemeScope(density: Density) {
-  useEffect(() => {
-    const root = document.documentElement;
-    const prev = root.dataset.theme;
-    root.dataset.theme = "wact";
-    return () => {
-      if (prev) root.dataset.theme = prev;
-      else delete root.dataset.theme;
-    };
-  }, []);
+/** Applies the density to <html> too, so portals (dialogs, menus) follow it. */
+function useDensity(density: Density) {
   useEffect(() => {
     const root = document.documentElement;
     if (density === "compact") root.dataset.density = "compact";
@@ -164,7 +156,7 @@ export function DesignShell({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>("comfortable");
   const [cmdk, setCmdk] = useState(false);
   const [drawer, setDrawer] = useState(false);
-  useThemeScope(density);
+  useDensity(density);
   useEffect(() => {
     try {
       const d = localStorage.getItem("ds-density");
@@ -189,9 +181,7 @@ export function DesignShell({ children }: { children: ReactNode }) {
   }, []);
   const current = ALL_ITEMS.find((i) => i.href === path);
   return (
-    // data-theme here too so the server-rendered page is already Signal (no flash);
-    // the effect sets it on <html> for portals (dialogs, menus, toasts).
-    <div data-theme="wact" data-density={density === "compact" ? "compact" : undefined} className="min-h-dvh bg-bg text-ink" style={{ fontFamily: "var(--font-body)" }}>
+    <div data-density={density === "compact" ? "compact" : undefined} className="min-h-dvh bg-bg text-ink">
       <Toaster />
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col gap-6 overflow-y-auto border-r border-line bg-bg px-3 py-5 lg:flex">
         <Link href="/design-system/v2" className="px-2.5">

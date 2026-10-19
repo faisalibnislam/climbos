@@ -279,8 +279,7 @@ export function StatTrend({ label, value, delta, upIsGood = true, deltaLabel = "
           <span
             className={cn(
               "inline-flex h-5 items-center rounded-[var(--radius-badge)] border px-1.5 text-xs font-medium",
-              // Signal outlines the change pill; Summit keeps a plain soft fill.
-              "border-transparent [[data-theme=wact]_&]:border-current/25",
+              "border-current/25",
               good === null ? "bg-surface-2 text-ink-2" : good ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800",
             )}
             title={deltaLabel}

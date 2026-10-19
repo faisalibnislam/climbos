@@ -37,7 +37,7 @@ function Price({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
   const v = priceFor(plan, cycle);
   return (
     <span className="flex items-baseline gap-1">
-      <span className="text-[28px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{formatUsd(v, { cents: v % 1 !== 0 })}</span>
+      <span className="text-3xl font-semibold leading-8 tracking-[-0.02em] tabular-nums">{formatUsd(v, { cents: v % 1 !== 0 })}</span>
       <span className="text-ui text-ink-3">{plan.monthly ? "/ month" : "forever"}</span>
     </span>
   );

@@ -27,7 +27,7 @@ export interface PaymentMethod {
 export function PaymentMethodCard({ method, onMakeDefault, onRemove }: { method: PaymentMethod; onMakeDefault?: () => void; onRemove?: () => void }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border bg-surface px-4 py-3", method.isDefault ? "border-ink/40" : "border-line")}>
-      <span aria-hidden className="grid h-8 w-12 place-items-center rounded-[3px] bg-ink text-2xs font-bold uppercase tracking-wide text-white">
+      <span aria-hidden className="grid h-8 w-12 place-items-center rounded-[3px] bg-ink text-2xs font-semibold uppercase tracking-wide text-white">
         {method.brand === "Mastercard" ? "MC" : method.brand}
       </span>
       <div className="min-w-0 flex-1 basis-40">
@@ -267,7 +267,7 @@ export function PaymentConfirmation({ state, amount, item, method, receipt, onRe
     <section role="status" aria-live="polite" className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-6 text-center shadow-[var(--card-shadow)]">
       {state === "processing" ? (
         <>
-          <Spinner className="text-[32px] text-ink-3" />
+          <Spinner className="text-kpi text-ink-3" />
           <p className="heading-card">Processing payment…</p>
           <p className="text-ui text-ink-3">Don’t close this window. It takes a few seconds.</p>
         </>

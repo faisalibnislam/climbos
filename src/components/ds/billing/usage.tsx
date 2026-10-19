@@ -87,7 +87,7 @@ export function CreditBalance({ plan, topUp, resetsOn, onTopUp }: CreditBalanceP
           <p className="flex items-center gap-1.5 text-ui text-ink-2">
             <Coins aria-hidden className="size-4" /> Credits available
           </p>
-          <p className="text-[40px] font-semibold leading-[48px] tracking-[-0.02em] tabular-nums">{formatNumber(total)}</p>
+          <p className="text-4xl font-semibold leading-[48px] tracking-[-0.02em] tabular-nums">{formatNumber(total)}</p>
           <p className="text-xs text-ink-3">Shared by every workspace on this account</p>
         </div>
         <Button size="sm" onClick={onTopUp}>

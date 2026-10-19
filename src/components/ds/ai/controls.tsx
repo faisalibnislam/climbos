@@ -188,7 +188,7 @@ export function AIUsageTracker({ used, total, resetsOn, daily, byAgent, classNam
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs text-ink-3">Credits left</p>
-          <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">{left.toLocaleString("en-US")}</p>
+          <p className="text-kpi font-semibold leading-10 tracking-[-0.02em] tabular-nums">{left.toLocaleString("en-US")}</p>
           <p className="text-xs text-ink-3">
             of {total.toLocaleString("en-US")} · resets {resetsOn}
           </p>

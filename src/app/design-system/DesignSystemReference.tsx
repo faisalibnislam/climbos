@@ -173,7 +173,7 @@ export function DesignSystemReference({ theme }: { theme?: "signal" } = {}) {
       <Toaster />
       <main className="mx-auto max-w-6xl px-6 py-10 lg:px-8">
         <PageHeader
-          eyebrow={theme === "signal" ? "ClimbOS · Signal (proposal)" : "ClimbOS · Summit"}
+          eyebrow="ClimbOS · Signal"
           title={theme === "signal" ? "Components" : "Design system"}
           intro="Every token and component the product uses. If a screen needs something that isn't here, add it here first (docs/DesignSystem.md)."
           actions={

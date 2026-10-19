@@ -184,8 +184,8 @@ export function BigNumber({
             : cn(
                 "font-semibold tabular-nums tracking-[-0.03em]",
                 size === "xl"
-                  ? "text-[72px] leading-[72px]"
-                  : "text-[40px] leading-[44px]",
+                  ? "text-7xl leading-[72px]"
+                  : "text-4xl leading-[44px]",
               ),
         )}
       >

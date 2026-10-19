@@ -120,7 +120,7 @@ export function SyncStatus({ state }: { state: SyncState }) {
   const { Icon, text, cls } = map[state];
   return (
     <span role="status" className={cn("inline-flex items-center gap-1.5 text-xs", cls)}>
-      {Icon ? <Icon aria-hidden className="size-3.5" /> : <Spinner className="text-[14px]" />}
+      {Icon ? <Icon aria-hidden className="size-3.5" /> : <Spinner className="text-sm" />}
       {text}
     </span>
   );

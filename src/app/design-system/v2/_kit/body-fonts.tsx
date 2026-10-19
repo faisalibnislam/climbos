@@ -1,13 +1,14 @@
-import { DM_Sans, Geist, Hanken_Grotesk, Instrument_Sans } from "next/font/google";
+import { DM_Sans, Geist, Hanken_Grotesk, Instrument_Sans, Inter } from "next/font/google";
 
-/* Body font candidates, loaded only on this preview page. Inter is the current body font. */
+/* Body font candidates, loaded only on this page. Hanken Grotesk is the body font. */
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 const geist = Geist({ subsets: ["latin"], display: "swap" });
 const instrument = Instrument_Sans({ subsets: ["latin"], display: "swap" });
 const dmSans = DM_Sans({ subsets: ["latin"], display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], display: "swap" });
 
 const CANDIDATES: { name: string; family: string; note: string }[] = [
-  { name: "Inter (Summit)", family: "var(--font-sans-ui)", note: "Neutral, very legible at 13–14px, everywhere in SaaS." },
+  { name: "Inter (previous)", family: inter.style.fontFamily, note: "Neutral, very legible at 13–14px, everywhere in SaaS." },
   { name: "Geist", family: geist.style.fontFamily, note: "Crisp and modern with tight numbers; closest to the reference dashboards." },
   { name: "Instrument Sans", family: instrument.style.fontFamily, note: "Slightly condensed with warm curves; pairs closely with Reckless." },
   { name: "DM Sans", family: dmSans.style.fontFamily, note: "Soft geometric and friendly; rounder, less corporate." },

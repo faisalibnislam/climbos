@@ -33,7 +33,7 @@ export function MobileBottomNav({ items, active, onSelect, className }: { items:
                   {it.icon}
                   {it.badge !== undefined ? (
                     <span className="absolute -right-2.5 -top-1.5">
-                      <NavBadge tone={it.badgeTone ?? "attention"} className="h-4 min-w-4 px-1 text-[10px]">{it.badge}</NavBadge>
+                      <NavBadge tone={it.badgeTone ?? "attention"} className="h-4 min-w-4 px-1 text-2xs">{it.badge}</NavBadge>
                     </span>
                   ) : null}
                 </span>

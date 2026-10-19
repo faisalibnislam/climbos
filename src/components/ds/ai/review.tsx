@@ -529,7 +529,7 @@ export function AISourceCitations({ text, sources, className }: { text: string; 
               onMouseLeave={() => setHi(null)}
               onFocus={() => setHi(n)}
               onBlur={() => setHi(null)}
-              className={cn("mx-0.5 inline-grid h-4 min-w-4 -translate-y-1 place-items-center rounded-[3px] px-1 align-baseline font-sans text-[10px] font-semibold not-italic leading-none transition-colors", hi === n ? "bg-ink text-white" : "bg-surface-3 text-ink-2")}
+              className={cn("mx-0.5 inline-grid h-4 min-w-4 -translate-y-1 place-items-center rounded-[3px] px-1 align-baseline font-sans text-2xs font-semibold not-italic leading-none transition-colors", hi === n ? "bg-ink text-white" : "bg-surface-3 text-ink-2")}
             >
               {n}
             </a>

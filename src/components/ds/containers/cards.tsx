@@ -349,7 +349,7 @@ export function PricingCard({ name, price, period = "/ month", blurb, features, 
           {current ? <Badge tone="green">Current plan</Badge> : null}
         </div>
         <p className="flex items-baseline gap-1">
-          <span className="text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{price}</span>
+          <span className="text-kpi font-semibold leading-none tracking-[-0.02em] tabular-nums">{price}</span>
           <span className="text-ui text-ink-3">{period}</span>
         </p>
         <p className="text-ui text-ink-2">{blurb}</p>

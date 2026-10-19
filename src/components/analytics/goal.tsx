@@ -24,7 +24,7 @@ export function TargetCapsules({ past, current, target, pastLabel = "30 days ago
   return (
     <div ref={ref} className="relative h-44" role="img" aria-label={`${fmt(current)}${unit} now against a target of ${fmt(target)}${unit}; ${pastLabel} ${fmt(past)}${unit}`}>
       {ring("bg-cream", w(target), "100%", 0)}
-      {ring("bg-[#d8ccab]", w(current), "72%", 120)}
+      {ring("bg-cream-strong", w(current), "72%", 120)}
       {ring("bg-lime", w(past), "44%", 240)}
       <div className="absolute inset-x-0 top-1/2 h-px bg-ink/25" aria-hidden />
       <Label left={w(past)} value={past} sub={pastLabel} unit={unit} small />
@@ -38,7 +38,7 @@ export function TargetCapsules({ past, current, target, pastLabel = "30 days ago
 function Label({ left, value, sub, unit, small, big }: { left: string; value: number; sub: string; unit: string; small?: boolean; big?: boolean }) {
   return (
     <div className="absolute top-1/2 -translate-x-[calc(100%+14px)] -translate-y-1/2 text-right" style={{ left }} aria-hidden>
-      <p className={cn("font-semibold tabular-nums leading-none tracking-[-0.02em]", big ? "text-[28px]" : small ? "text-base" : "text-xl")}>{fmt(value)}{unit}</p>
+      <p className={cn("font-semibold tabular-nums leading-none tracking-[-0.02em]", big ? "text-3xl" : small ? "text-base" : "text-xl")}>{fmt(value)}{unit}</p>
       <p className="mt-1 whitespace-nowrap text-xs text-ink-2">{sub}</p>
     </div>
   );
@@ -69,7 +69,7 @@ export function BubbleTimeline({ items, unit = "" }: { items: Bubble[]; unit?: s
             <div
               className={cn(
                 "grid aspect-square w-[94%] place-items-center rounded-full text-center transition-transform duration-500",
-                b.highlight ? "bg-lime text-ink" : i === items.length - 1 ? "bg-sage-ink text-white" : i % 2 ? "bg-surface text-ink ring-1 ring-line" : "bg-[#bfb59a] text-ink",
+                b.highlight ? "bg-lime text-ink" : i === items.length - 1 ? "bg-sage-ink text-white" : i % 2 ? "bg-surface text-ink ring-1 ring-line" : "bg-cream-deep text-ink",
                 entered ? "scale-100" : "scale-50",
               )}
               style={{ transitionDelay: `${i * 90}ms` }}

@@ -195,7 +195,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                 <Link
                   href={`/app/${slug}/${item.key}`}
                   aria-current={active ? "page" : undefined}
-                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-brand-800" : "text-ink-3 hover:text-ink")}
+                  className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-ink" : "text-ink-3 hover:text-ink")}
                 >
                   <item.icon className="size-5" aria-hidden />
                   {item.key === "plan" ? "Plan" : item.label}
@@ -228,8 +228,8 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                         href={item.key === "studio" ? `/studio/${slug}` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
                         aria-current={section === item.key ? "page" : undefined}
                         className={cn(
-                          "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 text-center text-ui font-medium",
-                          section === item.key ? "border-brand-800 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink hover:bg-surface-2",
+                          "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-2 text-center text-ui font-medium",
+                          section === item.key ? "border-ink bg-surface text-ink shadow-[var(--card-shadow)]" : "border-line bg-surface text-ink hover:bg-surface-2",
                         )}
                       >
                         <item.icon className="size-5" aria-hidden />
@@ -274,15 +274,15 @@ function NavLink({ href, active, icon, children, compact = false, badge }: { hre
       aria-current={active ? "page" : undefined}
       aria-label={compact && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex h-8 items-center gap-2.5 rounded-lg text-ui transition-colors",
+        "relative flex h-[var(--h-sm)] items-center gap-2.5 rounded-[var(--radius-control)] text-ui transition-colors",
         compact ? "w-9 justify-center px-0" : "px-2",
-        active ? "bg-surface-3/70 font-medium text-ink [&_svg]:text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+        active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:bg-surface/60 hover:text-ink",
       )}
     >
       {icon}
       {compact ? null : children}
       {badge ? (
-        <span className={cn("rounded-full bg-brand-700 px-1.5 text-2xs font-semibold leading-4 text-white tabular-nums", compact ? "absolute -right-1 -top-1" : "ml-auto")} aria-label={`${badge} unread`}>
+        <span className={cn("rounded-[var(--radius-badge)] bg-ink px-1.5 text-2xs font-semibold leading-4 text-white tabular-nums", compact ? "absolute -right-1 -top-1" : "ml-auto")} aria-label={`${badge} unread`}>
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -305,8 +305,8 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-surface-2">
-          <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-800 text-xs font-semibold text-white">
+        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 text-left hover:bg-surface/60">
+          <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-lime text-xs font-semibold text-ink">
             {(current?.name ?? "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">
@@ -365,7 +365,7 @@ function DemoBanner({ slug }: { slug: string }) {
   const reset = useMutation(api.demo.resetDemo);
   const router = useRouter();
   return (
-    <div className="bg-hero-gradient px-4 py-2 text-sm text-white" role="note">
+    <div className="bg-ink px-4 py-2 text-sm text-white" role="note">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1">
         <span className="inline-flex h-5 items-center rounded-md bg-white/20 px-1.5 text-xs font-medium">Demo data</span>
         <span>

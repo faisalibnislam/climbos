@@ -397,7 +397,7 @@ export function AIExecutionLogs({ lines, className }: { lines: LogLine[]; classN
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <div role="log" aria-label="Run log" tabIndex={0} className="max-h-64 overflow-auto p-3 font-mono text-[12px] leading-5 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none">
+      <div role="log" aria-label="Run log" tabIndex={0} className="max-h-64 overflow-auto p-3 font-mono text-xs leading-5 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none">
         {shown.map((l, i) => (
           <div key={`${l.t}-${i}`} className="flex gap-3 whitespace-pre">
             <span className="text-white/45">{l.t}</span>

@@ -203,7 +203,7 @@ export function Kpi({
       <IconTile>{icon}</IconTile>
       <div className="flex items-end justify-between gap-2">
         <div>
-          <p className="text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums">
+          <p className="text-kpi font-semibold leading-10 tracking-[-0.02em] tabular-nums">
             {value}
           </p>
           <p className="whitespace-nowrap text-ui text-ink-2">{label}</p>
@@ -298,7 +298,7 @@ export function NavGroup({
   return (
     <div className="flex flex-col gap-0.5 border-t border-line pt-3">
       <p className="flex items-center gap-1.5 px-3 pb-1 text-ui text-ink-3">
-        <span aria-hidden className="text-[9px]">
+        <span aria-hidden className="text-2xs">
           ▼
         </span>{" "}
         {label}
@@ -990,7 +990,7 @@ export function ReportsScreen() {
               </div>
             }
           >
-            <p className="mt-4 text-[32px] font-semibold leading-10 tracking-[-0.02em]">
+            <p className="mt-4 text-kpi font-semibold leading-10 tracking-[-0.02em]">
               258
             </p>
             <p className="text-sm text-ink-2">qualified leads</p>
@@ -1304,7 +1304,7 @@ export function MobileScreens() {
             </IconTile>
             <div className="mt-2 flex items-end justify-between">
               <div>
-                <p className="text-[32px] font-semibold leading-10">180</p>
+                <p className="text-kpi font-semibold leading-10">180</p>
                 <p className="text-xs text-ink-2">Qualified leads</p>
               </div>
               <div className="flex flex-col items-end">
@@ -1485,7 +1485,7 @@ export const PALETTE: {
       },
       {
         name: "Previous",
-        hex: "#8A9084",
+        hex: "#82877C",
         token: "chart-6",
         role: "Comparison line (3.3:1)",
         dark: true,
@@ -1940,7 +1940,7 @@ export const HIERARCHY: {
   },
   {
     role: "KPI number",
-    cls: "text-[32px] font-semibold leading-10 tracking-[-0.02em] tabular-nums",
+    cls: "text-kpi font-semibold leading-10 tracking-[-0.02em] tabular-nums",
     spec: "Hanken 600 · 32 / 40 tabular",
     sample: "180 · $4.20 · 63.8%",
     serif: false,
@@ -2071,7 +2071,7 @@ export function TypeInContext() {
         </p>
         <div className="flex items-end justify-between border-t border-line pt-3">
           <div>
-            <p className="text-[32px] font-semibold leading-10 tabular-nums">
+            <p className="text-kpi font-semibold leading-10 tabular-nums">
               68%
             </p>
             <p className="text-ui text-ink-2">Replies answered after 24h</p>

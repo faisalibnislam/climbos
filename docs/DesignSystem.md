@@ -1,14 +1,8 @@
-# ClimbOS design system ("Summit")
+# ClimbOS design system ("Signal")
 
-One system for every screen. When a screen needs something this file doesn't cover, add it here and to `src/components/ui` first, then use it. Never style a one-off.
+One system for every screen. When a screen needs something this file doesn't cover, add it to the design system first (`src/components/ui` or `src/components/ds`), then use it. Never style a one-off.
 
-**Inspiration.**
-- Layout, sizing and density: Apollo.io.
-- Surfaces: Airly's own taskeni.app (sage-grey ground, flat panels, tight corners).
-- Type pairing: Meetrao (serif titles, sans UI).
-- Identity: ClimbOS pine.
-
-**The living reference** is `/design-system` (noindex). It renders every token and component. Check it after any change here.
+**The living reference** is `/design-system/v2` (noindex): foundations, 15 component pages, patterns and screens, with ⌘K search and a comfortable/compact density toggle. Check it after any change here. Adopted product-wide on 2026-10-19 (replaces "Summit").
 
 ## 1. Foundations
 
@@ -16,70 +10,54 @@ One system for every screen. When a screen needs something this file doesn't cov
 
 | Role | Token | Use |
 |---|---|---|
-| Ground | `bg` #EEF0EE | App background behind panels. Marketing sections alternate `bg` and `surface`. |
-| Panel | `surface` #FFF | Cards, tables, menus, dialogs, inputs. |
-| Subtle fill | `surface-2` #F5F6F5 | Table header, hover, segmented-control track, wells. |
-| Strong fill | `surface-3` #E3E7E4 | Progress tracks, pressed states, neutral badge. |
-| Ink | `ink` #1C2220, `ink-2` #434B47, `ink-3` #59615C | Primary text, secondary text, meta, placeholders and labels. All pass AA on `bg` and `surface`. |
-| Hairlines | `line` (9% ink), `line-strong` (17% ink) | Panel borders and dividers, control borders. |
-| Brand | `brand-800` #0B5D46 (pine) with ramp 50–950 | Primary buttons, links, focus, selected nav, progress, success-in-context. |
-| Highlight | `sun` #EC8B5E, `sun-soft` | Small highlights: active markers, the trust ladder, selection. **Never small text on sun.** Accent buttons use `ink` text. |
-| Status | `green/amber/red/blue/violet/teal/pink/orange` 100 (fill), 500 (graphic), 800 (text) | Badges, callouts, icon tiles, charts. Always pair a fill with its 800 ink. |
+| Ground | `bg` #E8ECE5 | App and marketing background. |
+| Panel | `surface` #FFF | Cards, tables, menus, dialogs, inputs. Soft `card-shadow`. |
+| Fills | `surface-2` #F2F4F0, `surface-3` #E2E6DE | Table header, hover, tracks, pressed. |
+| Ink | `ink` #161815, `ink-2` #444841, `ink-3` #575C53 | Text, secondary text, meta. Body text is AAA. |
+| Action | `action` = ink | Primary buttons and active segmented/tab items are black. |
+| Brand | `brand-800` #4D6043 (sage), ramp 50–950, `sage-ink` #5B6E50 | Links, focus, selected states, chart line. `sage-ink` carries white text. |
+| Lime | `lime` / `sun` #C3EF88, `sun-strong` | The one most important thing on a screen (Upgrade, outcome bar, workspace tile). **Never small text on lime over white.** |
+| Cream | `cream` #EAE3CE (+ soft, strong, deep) | Feature and upsell surfaces. Flat, no gradients. |
+| Status | `green/amber/red/orange…` 100 / 500 / 800 | Soft fill + deep ink. Never colour alone. |
+| Charts | `chart-1…6` | Sage, ink, slate, clay, ochre; `chart-6` grey is always the previous period. |
 
 Rules:
-- Colour never carries meaning alone. Every status has text and usually an icon.
-- No raw hex values in components. Use tokens. If a token is missing, add it to `globals.css`.
+- No raw hex in components; no gradients; no grid or cross patterns.
+- Contrast is tested in CI (`tests/unit/contrast.test.ts`).
 
 ### Type
 
-Fonts:
-- **Inter** for all UI.
-- **Reckless Neue** (our serif) for page titles, big numbers and marketing headlines.
-  - Self-hosted from `src/app/fonts/reckless/` in Regular, Medium and SemiBold, each with its italic.
-  - Commercial font from Displaay: the web licence must cover climbos.app.
+- **Reckless Neue** (licensed, self-hosted in `src/app/fonts/reckless/`): every title level and ClimbOS's voice.
+- **Hanken Grotesk**: body, UI, tables and KPI numbers.
 
-| Style | Class | Spec | Use |
-|---|---|---|---|
-| Display | `.marketing h1` + `text-5xl`–`7xl` | Reckless Neue 500 | Marketing hero only. |
-| Headline | `.marketing h2` + `text-4xl` | Reckless Neue 500 | Marketing section titles. |
-| Page title | `heading-page` (all `h1` default to Reckless Neue) | Reckless Neue 28/36 500 | One per screen, via `PageHeader`. |
-| Section title | `heading-section` | Inter 16/24 600 | `h2` inside a page: groups of cards, settings sections, empty-state titles. |
-| Card title | `heading-card` / `CardTitle` | Inter 14/20 600 | `h3` on cards, panels, list items, toasts. |
-| Dialog title | `text-xl font-semibold` | Inter 18/26 600 | Dialog and sheet titles (built into `DialogContent`). |
-| Body | `text-sm` (default) | Inter 14/20 400 | Paragraphs and descriptions in the app. |
-| Long-form | `text-base` | Inter 15/24 | Marketing body, legal and help pages. |
-| UI | `text-ui` | Inter 13/18 | Buttons, inputs, labels, nav, table cells, tabs, menu items. |
-| Caption | `text-xs` | Inter 12/16 | Meta, timestamps, table headers, badges, hints. |
-| Overline | `text-overline` | Inter 11/16 600 caps +0.06em | Group labels in nav, menus and above titles. |
-| Metric | `metric` | Reckless Neue 28/32 tabular | Big numbers on stat cards and pricing. |
+| Style | Class | Spec |
+|---|---|---|
+| Display | `text-display` | Reckless 500 · 44–72 |
+| Page title | `heading-page` (all `h1`) | Reckless 500 · 36/40 |
+| Section title | `heading-section` | Reckless 500 · 24/30 |
+| Card title | `heading-card` | Reckless 500 · 17/22 |
+| Dialog / empty state | `heading-dialog`, `heading-empty` | Reckless 500 · 22/28 |
+| AI voice | `text-voice` | Reckless 400 · 16/24 |
+| Chart note / quote / trust | `text-annotation`, `text-quote`, `text-trust` | Reckless (italic for notes and quotes) |
+| Hero number | `metric-hero` | Reckless 400 · 60 (one per screen) |
+| KPI number | `text-kpi font-semibold tabular-nums` | Hanken 600 · 32/40 |
+| Body / long-form | `text-sm` / `text-base` | Hanken 14/20, 15/24 |
+| UI / caption / overline | `text-ui`, `text-xs`, `text-overline` | Hanken 13/18, 12/16, 11/16 caps |
 
 Rules:
-- Use only three weights: 400 (text), 500 (UI labels and buttons), 600 (headings and emphasis). No bold or extrabold.
-- Don't use arbitrary `text-[Npx]` sizes. Only the scale above exists.
-- Use sentence case everywhere: buttons, titles, table headers. Uppercase is only for `text-overline`.
+- Reckless never on buttons, labels, inputs or table cells. At most one Reckless italic line per card.
+- Weights 400/500/600 only. Only the scale above; no `text-[Npx]`.
+- Sentence case everywhere.
 
-### Space, size, shape
+### Space, size, shape, motion
 
-- Spacing uses a 4px grid. Tailwind steps 1, 1.5, 2, 3, 4, 5, 6, 8, 10 and 12 are allowed.
-  - Inside a card: 20px padding (`p-5`), or 16px (`p-4`) when compact.
-  - Between cards: 12px (`gap-3`) in dense grids, 16px (`gap-4`) otherwise.
-  - Between page sections: 24–32px (`gap-6`/`gap-8`).
-  - Page gutter: 24px (`px-6`), 32px at `lg`.
-- **Control heights**, the same for every control:
-  - sm is 32px (`h-8`).
-  - md is 36px (`h-9`), the default.
-  - lg is 40px (`h-10`).
-  - Icon buttons are square at the same heights.
-- **Corners:**
-  - 4px: checkboxes, kbd.
-  - 5px (`rounded-md`): badges, menu items, tabs.
-  - 6px (`rounded-lg`): buttons, inputs, selects.
-  - 8px (`rounded-xl`): cards, tables, menus, popovers, toasts, callouts.
-  - 10px (`rounded-2xl`): dialogs, sheets.
-  - `rounded-full`: avatars, dots, switches, progress bars.
-- **Elevation:** panels are flat (hairline only). Only floating layers cast a shadow: menus, selects, popovers, dialogs and toasts use `shadow-lg`. The selected tab uses `shadow-sm`.
-- **Icons:** Lucide at 16px in controls, 14px in badges, 20px in empty states and tiles. Icons are decorative (`aria-hidden`) unless they are the only content of a control, which then needs `aria-label`.
-- **Focus:** a 2px pine outline with a 2px offset on everything. Never remove it.
+- 4px spacing grid.
+- **Density tokens** (comfortable default; `data-density="compact"` tightens): `--h-sm/md/lg` 32/36/40 (compact 28/32/36), `--cell-h` 44 (34), `--card-p` 20 (14). Controls, rows and cards use them.
+- **Corners, 8px max:** cards 5px (`--radius-card`), CTAs 7px (`--radius-cta`), pills 4px (`--radius-badge`), controls and fields 3px (`--radius-control`). Circles only for avatars, dots and switches. Tailwind `rounded-*` maps onto this scale.
+- **Elevation:** panels use `card-shadow`; secondary buttons `btn-2-shadow`; floating layers `shadow-lg`.
+- **Icons:** ClimbOS Sharp (`@/components/icons`), our own set: 24px grid, 1.5 stroke, square caps. 16px in controls, 20px in nav, 24px standalone.
+- **Motion:** `--dur-fast/base/slow/deliberate` (120/200/300/420ms), `--ease-standard/enter/exit`. Respect `prefers-reduced-motion`.
+- **Focus:** 2px `--focus-ring` outline, 2px offset, on everything.
 
 ## 2. Components (`@/components/ui`)
 
@@ -92,23 +70,24 @@ Rules:
 | Inline link | `text-link` utility | Links inside sentences. Buttons that navigate use `Button asChild` or `variant="link"`. |
 | Networks | `SocialIcon`, `NetworkLabel`, `networkName()` | Real platform marks. Always paired with the network's name, visible or `labelled`. |
 | Charts | `AreaChart`, `BarChart`, `LineChart`, `DonutChart`, `FunnelChart`, `BarList`, `Heatmap`, `StatTrend`, `Sparkline`, `ProgressRing` | All inside `ChartFrame`: title, takeaway, source, a 'View as table' option, and hover plus keyboard values. |
-| Status | `Badge`, `StatusPill` | 20px, 5px corners, text always explicit. |
-| Panel | `Card` (+ `CardHeader/Title/Description/Content/Footer`) | Flat, hairline, 8px. |
+| Status | `Badge`, `StatusPill` | 20px, badge corners, text always explicit. |
+| Panel | `Card` (+ `CardHeader/Title/Description/Content/Footer`) | White, card shadow, 5px. |
 | Numbers | `Stat` in `StatGroup` | Label, metric, change and provenance. |
 | Tabular data | `DataTable`, or `TableFrame/Table/THead/TBody/Tr/Th/Td/CellStack` | Header 36px at 12px. Rows 44px at 13px. Numbers right-aligned. |
-| Views within a page | `Tabs` | Segmented look: 32px track, 28px tabs. |
-| Overlays | `Dialog`/`DialogContent`, `ConfirmDialog`, `Sheet` | Title 18px. Footer buttons right-aligned, primary last. |
+| Views within a page | `Tabs`, `Segmented` | White items, black active item. |
+| Overlays | `Dialog`/`DialogContent`, `ConfirmDialog`, `Sheet` | Reckless dialog title. Footer buttons right-aligned, primary last. |
 | Menus | `DropdownMenu*`, `Tooltip` | 32px items at 13px. Group labels use `text-overline`. |
 | Messages | `Callout` (info/success/warning/danger), `toast()` | A callout for persistent context, a toast for confirmations. |
 | Nothing yet | `EmptyState` | Always offers the next step. |
 | Progress | `Progress`, `Meter`, `StepList` | |
 | Small things | `Avatar`, `Kbd`, `Separator`, `IconTile` | |
+| Everything else | `src/components/ds/<area>` | Navigation, forms, data grid, charts, filters, feedback, overlays, accounts, billing, collaboration, AI, onboarding. See `/design-system/v2`. |
 | Page scaffold | `PageHeader` (`components/app/results/QueryBoundary.tsx`) | Every app screen starts with it: optional overline, Reckless Neue title, one-line description, actions on the right. |
 
 ## 3. Accessibility (non-negotiable)
 
-- **Contrast is tested in CI** (`tests/unit/contrast.test.ts`): 4.5:1 for all text pairs, 3:1 for control borders (`border-control`), focus outlines, meaningful sunrise (`sun-strong`) and chart colours. Plain `sun` is decorative only.
-- **Axe scans** (WCAG 2.2 AA) run in e2e on the landing page, pricing, the demo app and `/design-system`.
+- **Contrast is tested in CI** (`tests/unit/contrast.test.ts`): 4.5:1 for all text pairs, 3:1 for control borders (`border-control`), focus outlines, meaningful lime (`sun-strong`) and chart colours. Plain `sun`/`lime` is decorative only.
+- **Axe scans** (WCAG 2.2 AA) run in e2e on the landing page, pricing, the demo app and `/design-system/v2`.
 - Never put text below `text-ink-3`, and never lower text opacity (`text-ink/60`). Use `text-2xs` only for overlines, axis labels and kbd.
 - Every icon-only control has an `aria-label`, and `IconButton` shows it as a tooltip. Hover-only information must also be reachable by keyboard: charts support arrow keys, and tooltips open on focus.
 - Targets are at least 24×24px (WCAG 2.5.8). Controls are 32px or larger.

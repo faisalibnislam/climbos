@@ -50,7 +50,7 @@ export function NotificationCenter({
           >
             {unread ? <BellRing aria-hidden className="size-[18px]" /> : <Bell aria-hidden className="size-[18px]" />}
             {unread ? (
-              <span aria-hidden className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-[var(--radius-badge)] bg-ink px-1 text-[10px] font-semibold tabular-nums text-white">
+              <span aria-hidden className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-[var(--radius-badge)] bg-ink px-1 text-2xs font-semibold tabular-nums text-white">
                 {unread > 9 ? "9+" : unread}
               </span>
             ) : null}

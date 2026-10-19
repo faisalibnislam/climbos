@@ -295,7 +295,7 @@ function inline(text: string, key: string): ReactNode[] {
     if (at > last) out.push(text.slice(last, at));
     const t = m[0];
     const k = `${key}.${i++}`;
-    if (m[1]) out.push(<code key={k} className="rounded-[3px] bg-surface-2 px-1 py-0.5 font-mono text-[0.85em]">{t.slice(1, -1)}</code>);
+    if (m[1]) out.push(<code key={k} className="rounded-[3px] bg-surface-2 px-1 py-0.5 font-mono text-xs">{t.slice(1, -1)}</code>);
     else if (m[2]) out.push(<strong key={k} className="font-semibold">{inline(t.slice(2, -2), k)}</strong>);
     else if (m[3]) out.push(<em key={k}>{inline(t.slice(1, -1), k)}</em>);
     else {
@@ -473,7 +473,7 @@ export function MarkdownEditor({ value, onValueChange, placeholder = "Write in m
               wrap("[", "](https://)", "link text");
             }
           }}
-          className="block w-full resize-y bg-transparent px-3 py-2.5 font-mono text-[13px] leading-6 text-ink placeholder:text-ink-3 focus-visible:outline-none!"
+          className="block w-full resize-y bg-transparent px-3 py-2.5 font-mono text-ui leading-6 text-ink placeholder:text-ink-3 focus-visible:outline-none!"
         />
       </TabsContent>
       <TabsContent value="preview" className="mt-0 px-3 py-2.5" style={{ minHeight: rows * 24 + 20 }}>

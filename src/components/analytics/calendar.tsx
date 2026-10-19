@@ -13,7 +13,7 @@ import { DataTable, TipLayer, useEntered, type Tip } from "./shared";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS_IN = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-const STEPS = ["bg-surface-2 text-ink-2", "bg-brand-100 text-ink", "bg-brand-200 text-ink", "bg-[#a9b89c] text-ink", "bg-brand-700 text-white", "bg-brand-900 text-white"];
+const STEPS = ["bg-surface-2 text-ink-2", "bg-brand-100 text-ink", "bg-brand-200 text-ink", "bg-brand-300 text-ink", "bg-brand-700 text-white", "bg-brand-900 text-white"];
 
 /** `value(month, day)` returns 0..1 (null for days that don't exist). */
 export function CalendarHeat({ value, months = MONTHS.map((_, i) => i), selected, onSelect, label }: { value: (m: number, d: number) => number; months?: number[]; selected?: [number, number]; onSelect?: (m: number, d: number) => void; label: string }) {

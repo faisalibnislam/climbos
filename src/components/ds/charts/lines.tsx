@@ -175,7 +175,7 @@ export function RealtimeChart({ label = "Visitors on site", windowSize = 40, int
             <span aria-hidden className={cn("size-2 rounded-full", paused ? "bg-chart-6" : "animate-pulse bg-chart-1")} />
             {paused ? "Paused" : "Live"} · every {secs}s
           </p>
-          <p className="text-[32px] font-semibold leading-9 tabular-nums tracking-[-0.03em] text-ink">
+          <p className="text-kpi font-semibold leading-9 tabular-nums tracking-[-0.03em] text-ink">
             {fmt(now)} <span className="text-sm font-medium tracking-normal text-ink-3">{unit} now</span>
             <span className={cn("ml-2 text-xs font-medium tracking-normal", now >= prev ? "text-green-800" : "text-red-800")}>{now >= prev ? "+" : "−"}{Math.abs(now - prev)}</span>
           </p>
