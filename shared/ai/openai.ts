@@ -43,7 +43,37 @@ export function strictSchema(node: unknown): unknown {
   return s;
 }
 
-/** Nulls stand in for omitted optional keys in strict mode; drop them before zod parses. */
+/**
+ * Strict mode makes every key required, so the model sends null for an omitted optional key. Using the
+ * original (pre-strict) schema, drop nulls only on optional keys; keep them where the field itself is
+ * nullable, so a genuine "unknown" (null) survives to the application schema (REQ-EVID-08).
+ */
+export function normalizeNulls(v: unknown, schema: unknown, defs: Json = {}): unknown {
+  let s = (schema ?? {}) as Json;
+  // Resolve local references ("#/$defs/X") against the root's definitions.
+  if (typeof s.$ref === "string") s = (defs[s.$ref.replace(/^#\/(\$defs|definitions)\//, "")] ?? {}) as Json;
+  const root = { ...defs, ...((s.$defs ?? s.definitions ?? {}) as Json) };
+  const variants = (s.anyOf ?? s.oneOf) as unknown[] | undefined;
+  if (variants?.length) {
+    if (v === null) return null;
+    const concrete = variants.filter((x) => (x as Json).type !== "null");
+    return concrete.length === 1 ? normalizeNulls(v, concrete[0], root) : v;
+  }
+  if (Array.isArray(v)) return v.map((x) => normalizeNulls(x, s.items, root));
+  if (v && typeof v === "object") {
+    const props = (s.properties ?? {}) as Json;
+    const required = new Set((s.required as string[] | undefined) ?? []);
+    const out: Json = {};
+    for (const [k, x] of Object.entries(v as Json)) {
+      if (x === null && !required.has(k)) continue; // an omitted optional key
+      out[k] = normalizeNulls(x, props[k], root);
+    }
+    return out;
+  }
+  return v;
+}
+
+/** Nulls stand in for omitted optional keys in strict mode; drop them (tool arguments have no app schema here). */
 export function dropNulls(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(dropNulls);
   if (v && typeof v === "object") return Object.fromEntries(Object.entries(v as Json).filter(([, x]) => x !== null).map(([k, x]) => [k, dropNulls(x)]));
@@ -260,7 +290,7 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
   let parsed: unknown = text;
   if (req.schema) {
     try {
-      parsed = (req.schema as z.ZodType).parse(dropNulls(parseJsonText(text)));
+      parsed = (req.schema as z.ZodType).parse(normalizeNulls(parseJsonText(text), jsonSchemaFor(req.schema)));
     } catch (e) {
       return { ok: false, kind: "invalid_output", message: (e as Error).message.slice(0, 400), ...base, text };
     }

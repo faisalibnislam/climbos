@@ -372,7 +372,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const playsRun = await runAgent(withMode(growthPlaysSpec({}, playCatalogsFor(p.c.type))), { ...base, task: playsTask({ scorecard, insights }), research: researchFor("growth_strategy", { website: p.c.website, businessName: p.c.name }) }, deps);
     const draft = playsRun.output as PlaysOutput;
     const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
-    const checked = verifyTags(draft, { pages });
+    const checked = verifyTags(draft, { pages, searched: (playsRun.research?.sources ?? []).map((x) => urlKey(x.url)), fetchedAt: Date.now() });
     provenanceLog.push({ arm, cited: citedUrls(draft).length, fetched: Object.values(pages).filter(Boolean).length, searched: playsRun.research?.sources?.length ?? 0 });
     const plays = { output: withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) }) };
     const locked = lockedNumbers(plays.output);

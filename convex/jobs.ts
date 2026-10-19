@@ -506,7 +506,7 @@ async function ownedAndChecked(draft: PlaysOutput, job: JobCtx, searched: { url:
   const owner = job.business?.unitEconomics;
   // Tests and fixtures never touch the network.
   const pages = process.env.CLIMBOS_FAKE_LLM || job.run.isFixture ? {} : await fetchCitedPages(citedUrls(draft), searched.map((x) => x.url), urlKey).catch(() => ({}));
-  const checked = verifyTags(draft, { pages, owner });
+  const checked = verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() });
   return { ...checked, economics: applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"] };
 }
 

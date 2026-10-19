@@ -24,6 +24,8 @@ export interface PlayStep {
   quote?: string;
   check?: TagCheck;
   checkedBy?: string;
+  access?: SourceTag["access"];
+  receipt?: SourceTag["receipt"];
 }
 export interface PlayModel {
   weeklyReach: number;
@@ -88,31 +90,38 @@ export interface PlayMaths {
   range: { p10: number; p50: number; p90: number };
   costUsd: number;
   cacUsd: number | null;
-  /** Contribution one customer earns within the payback horizon (the allowable cost per customer). */
-  valueUsd: number;
+  /** Contribution one customer earns within the payback horizon (the allowable cost per customer); null when price, margin or churn is unknown. */
+  valueUsd: number | null;
   /** Months to earn back the cost per customer, with churn; null if it never pays back. */
   paybackMonths: number | null;
   /** Most you can pay per right-fit person reached and still break even. */
   breakevenPerReachUsd: number | null;
-  profitable: boolean;
+  /** Pays back within the horizon; null when it can't be known (unknown economics or no customers). */
+  profitable: boolean | null;
+  /** A rate or margin outside 0–1 (rejected, never reinterpreted as a percent). */
+  invalidInputs: string[];
 }
 
-const share = (r: number) => Math.min(Math.max(r > 1 ? r / 100 : r, 0), 1);
+/** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
+const rateOf = (r: number | undefined | null): number => (typeof r === "number" && Number.isFinite(r) && r >= 0 && r <= 1 ? r : NaN);
+const DAYS_PER_MONTH = 365.25 / 12;
 
+/** Monthly churn: a known value (zero included), else from months retained, else unknown (null), never zero by default (REQ-MATH-02). */
 export function churnOf(e: Economics): number | null {
-  if (typeof e.monthlyChurn === "number" && e.monthlyChurn > 0) return share(e.monthlyChurn);
+  if (typeof e.monthlyChurn === "number") return Number.isNaN(rateOf(e.monthlyChurn)) ? null : e.monthlyChurn;
   return churnFromLifetime(e.monthsRetained ?? null);
 }
 
-/** Contribution per customer per month. */
-export function monthlyContribution(e: Economics): number {
-  return contributionMonth(Math.max(0, e.revenuePerCustomerMonthUsd), share(e.grossMargin)) ?? 0;
+/** Contribution per customer per month; null when price or margin is unknown or invalid. */
+export function monthlyContribution(e: Economics): number | null {
+  const margin = rateOf(e.grossMargin);
+  if (!(e.revenuePerCustomerMonthUsd >= 0) || Number.isNaN(margin)) return null;
+  return contributionMonth(e.revenuePerCustomerMonthUsd, margin);
 }
 
-/** Contribution one customer earns within the payback horizon. */
-export function customerValue(e: Economics): number {
-  const churn = churnOf(e);
-  return allowableCac(monthlyContribution(e), churn ?? 0, PAYBACK_HORIZON_MONTHS) ?? 0;
+/** Contribution one customer earns within the payback horizon; null when any input is unknown. */
+export function customerValue(e: Economics): number | null {
+  return allowableCac(monthlyContribution(e), churnOf(e), PAYBACK_HORIZON_MONTHS);
 }
 
 function seedOf(s: string): number {
@@ -138,7 +147,9 @@ function quantile(sorted: number[], q: number): number {
 /** Customers over the horizon: P10/P50/P90 from triangular input ranges (seeded, reproducible). */
 export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { p10: number; p50: number; p90: number } {
   const reach = Math.max(0, m.weeklyReach);
-  const point = (funnelCustomers(reach, m.steps.map((s) => share(s.rate))) ?? 0) * weeks;
+  // Invalid rates give no forecast (lint reports them); nothing is reinterpreted.
+  if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return { p10: 0, p50: 0, p90: 0 };
+  const point = (funnelCustomers(reach, m.steps.map((s) => s.rate)) ?? 0) * weeks;
   const ranged = m.weeklyReachLow !== undefined || m.steps.some((s) => s.low !== undefined || s.high !== undefined);
   if (!ranged) return { p10: point, p50: point, p90: point };
   const rng = createRng(seedOf(seed));
@@ -148,8 +159,10 @@ export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { 
   for (let i = 0; i < RUNS; i++) {
     let c = tri(rng.next(), rL, reach, rH) * weeks;
     for (const s of m.steps) {
-      const mode = share(s.rate);
-      c *= tri(rng.next(), Math.min(share(s.low ?? mode), mode), mode, Math.max(share(s.high ?? mode), mode));
+      const mode = s.rate;
+      const low = Number.isNaN(rateOf(s.low)) ? mode : (s.low as number);
+      const high = Number.isNaN(rateOf(s.high)) ? mode : (s.high as number);
+      c *= tri(rng.next(), Math.min(low, mode), mode, Math.max(high, mode));
     }
     out.push(c);
   }
@@ -159,18 +172,22 @@ export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { 
 
 export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   if (!p.model?.steps) p = { ...p, model: { weeklyReach: 0, steps: [], monthlySpendUsd: 0, ownerHoursPerWeek: 0 } };
-  const weeks = Math.max(1, Math.round((p.horizonDays || 90) / 7));
-  const rates = p.model.steps.map((s) => share(s.rate));
-  const customers = (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks;
+  // The actual horizon: 3 days is 3/7 of a week of reach, not a full week (REQ-MATH-04).
+  const days = p.horizonDays > 0 ? p.horizonDays : 90;
+  const weeks = days / 7;
+  const invalidInputs = [...p.model.steps.filter((s) => Number.isNaN(rateOf(s.rate))).map((s) => s.name), ...(Number.isNaN(rateOf(e.grossMargin)) ? ["margin"] : [])];
+  const rates = p.model.steps.map((s) => rateOf(s.rate));
+  const customers = invalidInputs.some((n) => n !== "margin") ? 0 : (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks;
   const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
-  const spend = Math.max(0, p.model.monthlySpendUsd) * (weeks / 4.33);
+  const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
   const hourUsd = e.ownerHourUsd && e.ownerHourUsd > 0 ? e.ownerHourUsd : OWNER_HOUR_USD;
   const costUsd = spend + hours * hourUsd;
   const cacUsd = cacFull(spend, hours, hourUsd, 0, customers);
   const cm = monthlyContribution(e);
-  const churn = churnOf(e) ?? 0;
-  const valueUsd = contributionOver(cm, churn, PAYBACK_HORIZON_MONTHS) ?? 0;
+  const churn = churnOf(e);
+  // Unknown churn stays unknown: no value, payback or verdict is invented from it.
+  const valueUsd = contributionOver(cm, churn, PAYBACK_HORIZON_MONTHS);
   return {
     name: p.name,
     kind: p.kind,
@@ -181,7 +198,8 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
     valueUsd,
     paybackMonths: cacUsd === null ? null : paybackWithChurn(cacUsd, cm, churn),
     breakevenPerReachUsd: breakevenPerReach(valueUsd, rates),
-    profitable: cacUsd !== null && cacUsd <= valueUsd,
+    profitable: cacUsd === null || valueUsd === null ? null : cacUsd <= valueUsd,
+    invalidInputs,
   };
 }
 
@@ -221,7 +239,7 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
     if (p.model.steps.some((s) => s.low !== undefined && s.high !== undefined && !(s.low <= s.rate && s.rate <= s.high))) issues.push({ severity: "error", rule: "economics", message: "Each step needs low ≤ rate ≤ high.", path: `${path}.model.steps` });
     if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
     const m = playMaths(p, e);
-    if (!m.profitable && p.kind !== "moonshot")
+    if (m.profitable === false && p.kind !== "moonshot")
       issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${e.ownerHourUsd || OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Raise volume or conversion, cut cost, target higher-value customers, or drop it.`, path });
   });
   return issues;
@@ -281,10 +299,12 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
   const confirmed: string[] = [];
   for (const k of ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn"] as const) {
     const v = owner[k];
-    if (typeof v === "number" && v > 0) {
+    if (typeof v === "number" && (v > 0 || (k === "monthlyChurn" && v === 0))) {
+      const prior = e.sources?.[KEY_OF[k]];
+      const was = e[k];
       out[k] = v;
       out.assumed = out.assumed!.filter((a) => a !== KEY_OF[k]);
-      out.sources![KEY_OF[k]] = ownerTag(owner);
+      out.sources![KEY_OF[k]] = { ...ownerTag(owner), ...(typeof was === "number" && was !== v ? { replaced: { value: was, source: prior?.source ?? "unlabelled" } } : {}) };
       confirmed.push(KEY_OF[k]);
     }
   }

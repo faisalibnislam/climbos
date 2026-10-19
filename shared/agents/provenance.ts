@@ -34,6 +34,12 @@ export interface SourceTag {
   checkedBy?: string;
   /** Owner inputs: when the owner confirmed the value. */
   confirmedAt?: number;
+  /** Research: how the cited page was reached. "search_only" = returned by search but not loaded; "not_in_search" = stale or invented. */
+  access?: "read" | "search_only" | "unavailable" | "not_in_search";
+  /** Research read by ClimbOS: when, and a hash of the page text (no full page kept). */
+  receipt?: { fetchedAt: number; contentHash: string };
+  /** Owner override: the value and source it replaced, so lineage survives (REQ-EVID-06). */
+  replaced?: { value: number; source: string };
 }
 /** As read from a saved plan: older plans have no tag. */
 export type InputSource = Provenance | "unlabelled";
@@ -43,6 +49,9 @@ export interface ReadTag {
   /** Owner, research and benchmark tags carry how they were checked ("reported" when unchecked or older). */
   check?: TagCheck;
   confirmedAt?: number;
+  access?: SourceTag["access"];
+  /** The value an owner confirmation replaced (lineage). */
+  replaced?: SourceTag["replaced"];
 }
 
 export type EconomicsKey = "revenue" | "margin" | "churn";
@@ -66,6 +75,8 @@ function read(t: Partial<SourceTag> | undefined): ReadTag {
   // "Owner" without a stamped owner input was never confirmed.
   if (source === "owner" && tag.check !== "owner_input") tag.check = "reported";
   if (tag.check === "owner_input" && typeof t.confirmedAt === "number") tag.confirmedAt = t.confirmedAt;
+  if (tag.check === "owner_input" && typeof t.replaced?.value === "number") tag.replaced = { value: t.replaced.value, source: String(t.replaced.source ?? "").slice(0, 20) };
+  if (source === "research" && t.checkedBy === CHECK_STAMP && t.access) tag.access = t.access;
   return tag;
 }
 
@@ -113,7 +124,8 @@ function quoteNumbers(quote: string, unit: Unit): number[] {
   return [...q.matchAll(/(?<![\d.$£€])(\d+(?:\.\d+)?)\s?(k\b)?(?!\s?%)/g)].map((m) => Number(m[1]) * (m[2] ? 1000 : 1));
 }
 
-const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 0.005);
+/** Exact match only: "$30" doesn't support 29.99, and 15% doesn't support 0.149 (shares compared as percents). */
+const close = (a: number, b: number) => Math.abs(a - b) <= 1e-9 + Math.abs(b) * 1e-9;
 
 /** The quote states the value itself, or both ends of its range (one end alone isn't enough). */
 function quoteHasValue(quote: string, unit: Unit, value: number, low?: number, high?: number): boolean {
@@ -133,9 +145,20 @@ function wordsOf(name: string): string[] {
   return norm(name).replace(/[^a-z ]/g, " ").split(" ").filter((w) => w && !STOP.has(w)).map((w) => (w.length > 5 ? w.slice(0, 5) : w));
 }
 
+/** A small stable hash of page text (FNV-1a), for receipts; no full page is stored. */
+export function textHash(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
 export interface VerifyContext {
   /** Text of cited pages ClimbOS loaded itself, by `urlKey`; null when the page couldn't be loaded. */
   pages: Record<string, string | null>;
+  /** `urlKey`s of pages this run's search returned (to tell search-only results from stale citations). */
+  searched?: string[];
+  /** When the pages were fetched (for receipts). */
+  fetchedAt?: number;
   /** Unit economics the owner confirmed (the only basis for an "owner" tag). */
   owner?: OwnerEconomics | null;
 }
@@ -153,12 +176,15 @@ interface Claim {
 
 /** Research: verified only when the loaded page contains the quote, and the quote states this number for this metric. */
 function checkResearch(t: SourceTag, c: Claim, ctx: VerifyContext): SourceTag {
-  const page = ctx.pages[urlKey(t.ref)];
+  const key = urlKey(t.ref);
+  const page = ctx.pages[key];
   const quote = (t.quote ?? "").trim();
-  if (!page || !quote) return stamped(t, "reported");
-  if (!norm(page).includes(norm(quote))) return stamped(t, "retrieved");
+  const access: SourceTag["access"] = typeof page === "string" ? "read" : page === null ? "unavailable" : ctx.searched?.includes(key) ? "search_only" : "not_in_search";
+  const withAccess: SourceTag = { ...t, access, ...(typeof page === "string" ? { receipt: { fetchedAt: ctx.fetchedAt ?? 0, contentHash: textHash(page) } } : {}) };
+  if (!page || !quote) return stamped(withAccess, "reported");
+  if (!norm(page).includes(norm(quote))) return stamped(withAccess, "retrieved");
   const [v, low, high] = c.values;
-  return stamped(t, quoteHasValue(quote, c.unit, v, low, high) && quoteNamesMetric(quote, c.metricWords) ? "source_verified" : "retrieved");
+  return stamped(withAccess, quoteHasValue(quote, c.unit, v, low, high) && quoteNamesMetric(quote, c.metricWords) ? "source_verified" : "retrieved");
 }
 
 function verifyTag(t: SourceTag | undefined, c: Claim, ctx: VerifyContext): SourceTag | undefined {
@@ -218,7 +244,7 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
         steps: m.steps.map((st) => {
           if (!st.source) return st;
           const t = verifyTag({ source: st.source, ref: st.ref ?? "", quote: st.quote }, { values: [st.rate, st.low, st.high], unit: "share", metricWords: [...wordsOf(st.name), "conve", "rate", "reply", "open", "click", "signu", "trial", "close", "book"], kind: "input" }, ctx)!;
-          return { ...st, source: t.source, ref: t.ref, quote: t.quote, check: t.check, checkedBy: t.checkedBy };
+          return { ...st, source: t.source, ref: t.ref, quote: t.quote, check: t.check, checkedBy: t.checkedBy, access: t.access, receipt: t.receipt };
         }),
         spendSource: verifyTag(m.spendSource, { values: [m.monthlySpendUsd, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx),
         hoursSource: verifyTag(m.hoursSource, { values: [m.ownerHoursPerWeek, undefined, undefined], unit: "count", metricWords: [], kind: "allocation" }, ctx),
@@ -298,6 +324,13 @@ export const COST_BASIS_LABEL: Record<BasisKind, string> = {
 };
 
 export const SOURCE_LABEL: Record<InputSource, string> = { owner: "You", research: "Research", benchmark: "Benchmark", planned: "Planned", assumption: "Assumed", unlabelled: "Not labelled" };
+
+export const ACCESS_LABEL: Record<NonNullable<SourceTag["access"]>, string> = {
+  read: "page read",
+  search_only: "search result only",
+  unavailable: "page couldn't be loaded",
+  not_in_search: "not among the pages searched",
+};
 
 export const CHECK_LABEL: Record<TagCheck, string> = {
   owner_input: "confirmed by you",
