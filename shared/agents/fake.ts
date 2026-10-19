@@ -104,6 +104,8 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         // A concrete test on an existing, researched asset (plays lint: existing assets first, never data-only).
         assetUsed: "Existing comparison page: https://example.com/compare",
         firstActionToday: "Update the comparison page with the referral offer.",
+        // How visitors reach the page (plays lint: distribution route).
+        route: "Partner newsletter test: 10 pitches a week (planned), ~100 visits a week (assumption); $0, 1 owner hour a week.",
         test: "a hundred contacts · small budget · three weeks",
         killIf: "no replies",
         scaleIf: "several replies",
@@ -112,9 +114,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
       (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month." }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
-    // Growth plan: a dated action, not only measurement (plan lint: never data-only).
+    // Growth plan: a dated action, not only measurement, and a route to the page (plan lint: never data-only, distribution).
     const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown };
-    if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer."];
+    if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];
     // Channel scoring: valid library types and the candidates named in the prompt.
     const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };
     if (cf && typeof cf === "object" && Array.isArray(cf.types) && Array.isArray(cf.dimensions) && Array.isArray(cf.channels)) {

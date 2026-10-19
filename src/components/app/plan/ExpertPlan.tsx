@@ -34,6 +34,7 @@ import {
   UsersRound,
   Wallet,
   X,
+  Megaphone,
   Zap,
   type LucideIcon,
 } from "@/components/icons";
@@ -64,6 +65,8 @@ export interface PlayView {
   hook: string;
   mechanic: string;
   assetUsed: string;
+  /** How qualified visitors reach the asset (older plans lack it). */
+  route?: string;
   funnel: string[];
   unit: string;
   p10: number;
@@ -875,6 +878,11 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
                   ))}
                 </span>
               ) : null}
+            </Row>
+          ) : null}
+          {play.route ? (
+            <Row icon={Megaphone} label="Route">
+              <Lead text={play.route} open={open} />
             </Row>
           ) : null}
         </dl>

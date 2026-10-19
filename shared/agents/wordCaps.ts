@@ -41,6 +41,7 @@ export const PLAYS_CAPS: WordCaps = {
   "plays[].hook": 20,
   "plays[].mechanic": 15,
   "plays[].assetUsed": 12,
+  "plays[].route": 30,
   "plays[].funnel[]": 20,
   "plays[].biggestUnknown": 15,
   "plays[].test": 15,

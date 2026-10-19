@@ -68,6 +68,12 @@ export const PlaySchema = z.object({
   hook: z.string(),
   mechanic: z.string(),
   assetUsed: z.string(),
+  /**
+   * How qualified people reach the asset this play changes or builds: channel, expected visitors a week with its source
+   * (or how it's measured when unknown), cost and owner time, e.g. "Creator test: 10 coaching YouTubers pitched
+   * (planned), ~40 visits a week (assumption); $0, 1 owner hour a week". "" for a play that is itself the channel.
+   */
+  route: z.string(),
   /** One step per line: "500 postcards → calls: 1–4.5%, plan 2% [source.com, C]". */
   funnel: z.array(z.string()),
   unit: z.string(),
@@ -544,6 +550,75 @@ export function lintActionPlan(out: { summary?: string; phases?: { name: string;
   return issues;
 }
 
+/** What an asset play changes or builds: a page, listing, hub, flow or its parts. */
+const CHANGED_ASSET = /\b(?:pages?|comparisons?|alternatives?|landing|listings?|hub|onboarding|sign-?ups?|trial|checkout|pricing|hero|cta|headline|(?:upgrade|email|welcome|nurture|onboarding)[\s-](?:flow|sequence|emails?|prompts?))\b/i;
+const ASSET_VERB = new RegExp(`${IMPROVE.source}|\\b(?:build|create|write|draft|publish|launch|ship|revise|replace|rework|redesign|define)\\b`, "i");
+/** Channels that send people somewhere (people the business reaches, borrows or pays for). */
+const ACTIVE_ROUTE = /\b(?:creators?|influencers?|youtub\w*|podcasts?|newsletters?|communit(?:y|ies)|forums?|reddit|subreddits?|r\/\w+|slack|discord|facebook groups?|linkedin|x posts?|twitter|tiktok|instagram|threads|quora|cold email|outbound|outreach|email (?:list|subscribers|blast|campaign|sequence)|emails? (?:to|past|existing)|partners?|partnerships?|affiliates?|referrals?|marketplaces?|app stores?|directories|directory|product hunt|g2|capterra|alternativeto|zapier|(?<!\bno\s(?:search |google |meta |reddit |linkedin |paid )?)(?:search |google |meta |reddit |linkedin |paid )?ads|paid (?:social|search)|ppc|retarget\w*|sponsor\w*|(?:live|in-person|industry|local) events?|conferences?|webinars?|meetups?|in-app|(?:new|weekly|existing|current) (?:sign-?ups|trials?|users|customers|accounts)|trial (?:starts|users)|lifecycle|press)\b/i;
+/** Channels that wait for people to arrive: fine with measured numbers, a hope without them (bench Run 6, Meetrao). */
+const PASSIVE_ROUTE = /\b(?:organic|seo|search|google|bing|rankings?|existing (?:traffic|visitors)|current (?:traffic|visitors)|direct traffic|site traffic|ai (?:search|answers))\b/i;
+/** A number per week ("40 visits a week", "~300 visitors/week", "weekly: 25"). */
+const WEEKLY = /(?<![$\d,.])\d[\d,.]*(?![\d,.])(?!\s*(?:owner\s+)?(?:h|hrs?|hours?|mins?|minutes?)\b)\s*k?\+?\s*(?:[\w-]+\s+){0,3}?(?:(?:a|per|each|\/)\s*(?:week|wk)\b|weekly\b)|\bweekly\b[^.;]{0,30}\d|\d[^.;]{0,20}\/\s*w(?:ee)?k\b/i;
+/** Volume not known yet, with how it will be counted ("unknown; measured with UTM visits in week 1"). */
+const MEASURED_LATER = /\b(?:unknown|unmeasured|not known|no data|tbd)\b[^.]{0,80}\b(?:measur|track|count|log|read|utm|analytics)\w*|\bmeasured? (?:by|with|via|in|from|weekly|through)\b/i;
+/** A volume's source tag (owner, research, benchmark, planned, assumption); "owner time" isn't one. */
+const VOLUME_LABEL = /[([]\s*(?:owner|research|benchmark|planned|assum\w*|estimate\w*)\b|\b(?:benchmark|planned|assum(?:ption|ed)|estimated?)\b|\b(?:owner|research)\s*(?:data|analytics|reported|:)/i;
+/** Measured numbers: the owner's data or a page that was read. */
+const MEASURED_LABEL = /[([]\s*(?:owner|research)\b|\b(?:owner|research)\s*(?:data|analytics|reported|:)|\b(?:search console|google analytics|ga4|plausible|ahrefs|semrush)\b/i;
+const ROUTE_COST = /\$\s?\d|\b\d[\d,.]*\s*(?:usd|dollars)\b|\bfree\b|\bno (?:ad |cash |media )?(?:spend|cost)\b|\bunpaid\b|\bzero (?:spend|cost)\b/i;
+const ROUTE_TIME = /\b\d+(?:\.\d+)?\s*(?:[–-]\s*\d+(?:\.\d+)?\s*)?(?:owner\s+)?(?:h|hrs?|hours?|mins?|minutes?)\b|\b(?:one|two|three|four|five|half an?|an?)\s+(?:owner\s+)?hours?\b|\bno owner time\b/i;
+
+/** The play changes or builds an asset (page, listing, flow), so visitors have to reach it. */
+export function changesAsset(p: { assetUsed: string; firstActionToday: string; mechanic?: string }): boolean {
+  const toBuild = (p.assetUsed ?? "").split(/;\s*|\.\s+/).some((x) => /\bto build\b/i.test(x) && CHANGED_ASSET.test(x));
+  return toBuild || [p.firstActionToday, p.mechanic ?? ""].flatMap((t) => sentences(t ?? "")).some((s) => ASSET_VERB.test(s) && CHANGED_ASSET.test(s));
+}
+
+/** What a route is missing (empty when it's complete). */
+export function routeGaps(route: string): string[] {
+  const r = (route ?? "").trim();
+  if (!r || /^(?:none|n\/a|-|tbd)\.?$/i.test(r)) return ["names no route"];
+  const gaps: string[] = [];
+  const active = ACTIVE_ROUTE.test(r);
+  if (!active && !PASSIVE_ROUTE.test(r)) gaps.push("names no channel");
+  const weekly = WEEKLY.test(r);
+  if (!weekly && !MEASURED_LATER.test(r)) gaps.push("gives no weekly volume (or how it will be measured)");
+  else if (weekly && !VOLUME_LABEL.test(r)) gaps.push("doesn't label where its weekly volume comes from");
+  if (!active && PASSIVE_ROUTE.test(r) && !MEASURED_LABEL.test(r)) gaps.push("waits for search or existing traffic with no measured number (pair it with an active test: creators, a community, outbound, a partner or search ads)");
+  if (!ROUTE_COST.test(r)) gaps.push("gives no cost");
+  if (!ROUTE_TIME.test(r)) gaps.push("gives no owner time");
+  return gaps;
+}
+
+/**
+ * Bench Run 6 (Meetrao): the plays edited two existing pages but never said how qualified visitors reach them; B0
+ * paired its comparison page with a creator test and won. Every play that changes or builds an asset names its route:
+ * a channel, expected visitors a week with its source tag (or how it will be measured), cost and owner time.
+ */
+export function lintDistribution(plays: { name?: string; route?: string; assetUsed: string; firstActionToday: string; mechanic?: string }[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) => {
+    if (!changesAsset(p)) return;
+    const gaps = routeGaps(p.route ?? "");
+    if (gaps.length) issues.push({ severity: "error", rule: "distribution", message: `"${p.name ?? `Play ${i + 1}`}" changes or builds an asset, but its route ${gaps.join("; ")}. In route, name how qualified visitors reach it: the channel (e.g. a creator, community, outbound or search-ads test pointed at the page), expected visitors a week tagged owner, research, benchmark, planned or assumption (or how you'll measure it if unknown), cost and owner time.`, path: `plays[${i}].route` });
+  });
+  return issues;
+}
+
+/** Plan items that send people to an asset (not just edit it). */
+const PLAN_DISTRIBUTION = /\b(?:pitch\w*|promot\w*|submit\w*|invite\w*|announce\w*|sponsor\w*|boost\w*|outreach|reach out|share (?:it|the|both|each)|post(?:s|ing)?\b[^.;]{0,40}\b(?:groups?|communit(?:y|ies)|forums?|subreddits?|r\/\w+|slack|discord|reddit|linkedin|newsletters?)\b|(?:email|dm|message)(?:s|ing)? (?:the |your |past |existing |\d)|send (?:\d|the|a|an|it)[^.;]{0,40}\b(?:emails?|pitch(?:es)?|messages?|invites?|links?|newsletters?)|run (?:the |a |an )?(?:search |paid |google )?ads)\b|\b(?:start|run|launch|begin|book|test)\b[^.;]{0,30}\b(?:creators?|communit(?:y|ies)|partners?|newsletters?|affiliates?|ads|outreach|outbound|cold email)\b/i;
+const PLAN_ASSET_CHANGE = (s: string) => ASSET_VERB.test(s) && CHANGED_ASSET.test(s);
+
+/** The plan side of Run 6: dated work that edits pages also sends qualified people to them inside the horizon. */
+export function lintPlanDistribution(out: { phases?: { name: string; days: string; focus: string }[]; weekOneChecklist?: string[] }, horizonDays?: number): LintIssue[] {
+  const h = horizonDays || 90;
+  const dated = [...(out.phases ?? []).filter((p) => (phaseEndDay(p.days) ?? Infinity) <= h).map((p) => p.focus), ...(out.weekOneChecklist ?? [])];
+  const all = [...(out.phases ?? []).map((p) => p.focus), ...(out.weekOneChecklist ?? [])];
+  if (!all.some(PLAN_ASSET_CHANGE)) return [];
+  if (dated.some((t) => PLAN_DISTRIBUTION.test(t))) return [];
+  return [{ severity: "error", rule: "distribution", message: `The plan edits or builds pages but no dated phase or week-one item sends qualified people to them. Add each play's route as an action inside ${h} days (e.g. "Pitch 10 coaching creators the comparison page") in the week-one checklist and a dated phase.`, path: "weekOneChecklist" }];
+}
+
 /** Spec §13: the portfolio must fit the owner's cash and time. */
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
@@ -751,7 +826,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -769,7 +844,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays)];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays)];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

@@ -13,6 +13,7 @@ const play = (o: Partial<PlayDraft> = {}): PlayDraft => ({
   hook: "Your old favourite is back",
   mechanic: "Win-back email with a one-week offer",
   assetUsed: "Customer list",
+  route: "",
   funnel: ["300 emails → opens: 30–50%, plan 40% [assumption, grade D]", "opens → orders: 5–10%, plan 7% [assumption, grade D]"],
   unit: "returning customers",
   horizonDays: 30,

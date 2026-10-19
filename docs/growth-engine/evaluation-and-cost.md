@@ -317,3 +317,11 @@ These losses are about strategy specificity, not maths. The S5 decision contract
 - **Pointwise gap (3.4 vs 4.2):** absolute scores reward B0's more ambitious, concrete plays, so honesty alone isn't winning the absolute rubric.
 
 **Next fix (deterministic):** every play that improves an asset must also name its distribution route to qualified visitors (channel, volume, cost). Re-evaluating needs a new cap.
+
+**Done (not yet re-evaluated):** plays have a `route` field. `lintDistribution` sends back any play that changes or builds a page, listing or flow when its route lacks:
+- a channel;
+- visitors a week with a source tag, or how it will be measured;
+- cost;
+- owner time.
+
+Search or existing traffic counts only with a measured number. `lintPlanDistribution` needs a dated route action in the plan. When every picked channel is a page channel, the scorecard names a channel that sends people. Replay flags both Run 6 Meetrao plays and its plan.

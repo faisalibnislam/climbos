@@ -484,11 +484,27 @@ export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[];
   }));
 }
 
+/** Channels that publish a page or article and wait for visitors (search and content), as opposed to ones that send people. */
+export const needsTraffic = (r: Pick<ScoredChannel, "family" | "paid">) => (r.family === "organic_search" || r.family === "content") && !r.paid;
+
+/**
+ * Bench Run 6 (Meetrao): the picks were two page channels and nothing that sends people to the pages. When every
+ * picked channel needs traffic, name the best-scoring channel that sends people (unpaid first) to pair with them.
+ */
+export function distributionPair(rows: ScoredChannel[]): ScoredChannel | undefined {
+  const picked = rows.filter((r) => r.status === "primary" || r.status === "in_plan");
+  if (!picked.length || !picked.every(needsTraffic)) return undefined;
+  const senders = rows.filter((r) => r.status !== "ineligible" && !needsTraffic(r) && r.score >= 50 && !r.limits?.some((x) => x.verdict === "blocked"));
+  return senders.find((r) => !r.paid) ?? senders[0];
+}
+
 /** A compact scorecard for agent prompts. */
 export function scorecardText(rows: ScoredChannel[], n = 14): string {
+  const pair = distributionPair(rows);
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
     .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
-    .join("\n");
+    .join("\n")
+    .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

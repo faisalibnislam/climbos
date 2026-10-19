@@ -125,6 +125,7 @@ Before writing any play, decide in this order:
 - The exact hook or offer.
 - The mechanic.
 - The asset only this business has.
+- The route, when the play changes or builds an asset (page, listing, flow): how qualified visitors reach it, with channel, visitors a week (tagged with its source, or how it will be measured), cost and owner time. A page with no route is a page nobody sees.
 - The forecast funnel (steps with low, likely and high rates, plus source and grade) and a confidence level. ClimbOS computes the P10/P50/P90 outcome.
 - The test: size, budget, duration, leading metric, kill-if and scale-if.
 - The scores.
