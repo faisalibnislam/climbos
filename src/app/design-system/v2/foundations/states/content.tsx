@@ -448,7 +448,7 @@ function ReadOnly() {
         <Stage tone="white" label="Key–value display">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-ui">
             {[
-              ["Plan", "Pro · $39/mo"],
+              ["Plan", "Pro · $40/mo"],
               ["Credits", "590 left"],
               ["Model", "Sol (Expert)"],
               ["Owner", "Liz Prueitt"],

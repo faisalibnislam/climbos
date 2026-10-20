@@ -326,7 +326,7 @@ export function AIContent() {
 
       <Specimen title="AI model selector" description="Luna is Basic on every plan. Sol is Expert on paid plans. Cost per draft is always shown.">
         <AIModelSelector value={model} onChange={setModel} />
-        <AIModelSelector value="luna" onChange={() => undefined} canUseSol={false} onUpgrade={() => toast({ title: "Pro unlocks Sol", description: "$39 a month, 3,000 credits." })} />
+        <AIModelSelector value="luna" onChange={() => undefined} canUseSol={false} onUpgrade={() => toast({ title: "Pro unlocks Sol", description: "$40 a month, 3,000 credits." })} />
         <Stage>
           <div className="flex items-center gap-3">
             <span className="text-xs text-ink-3">Compact, inside a prompt bar:</span>

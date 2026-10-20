@@ -1,4 +1,5 @@
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
+import { isUnlimited } from "../shared/economics/credits";
 import { v } from "convex/values";
 import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
@@ -113,7 +114,7 @@ export const createWorkspace = mutation({
     const sub = await activePackage(ctx, { _id: owned[0]?._id ?? (accountId as unknown as Id<"organizations">), accountId });
     const config = await getLiveConfig(ctx);
     const allowed = sub ? config.workspaces[packageOf(sub.planKey)] : config.workspaces.free;
-    if (owned.length >= allowed) {
+    if (!isUnlimited(allowed) && owned.length >= allowed) {
       throw appError(sub ? "LIMIT_REACHED" : "PAYMENT_REQUIRED", sub ? `Your package includes ${allowed} workspaces. Upgrade to add more.` : "Free accounts have one workspace. Choose a package to add more.");
     }
     const now = Date.now();

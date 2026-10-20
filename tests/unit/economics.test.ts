@@ -1,3 +1,4 @@
+import { UNLIMITED } from "../../shared/economics/credits";
 import { describe, expect, it } from "vitest";
 import {
   cheapestPolarPlan,
@@ -304,7 +305,7 @@ describe("CSV export", () => {
 describe("credits (18 Oct 2026)", () => {
   it("packages and top-ups match the owner's numbers and margins", () => {
     expect(CREDIT_PACKAGES.starter).toMatchObject({ priceUsd: 15, credits: 1_100 });
-    expect(CREDIT_PACKAGES.pro).toMatchObject({ priceUsd: 39, credits: 3_000 });
+    expect(CREDIT_PACKAGES.pro).toMatchObject({ priceUsd: 40, credits: 3_000, seats: UNLIMITED, workspaces: UNLIMITED });
     expect(CREDIT_TOPUPS.map((t) => [t.priceUsd, t.credits])).toEqual([[10, 700], [25, 1_800], [50, 4_000]]);
     // Packages keep ≥10% and the small top-ups ≥12% after fees and the 5% hosting allowance (worst case: all international cards).
     for (const p of Object.values(CREDIT_PACKAGES)) expect(creditMargin(p.priceUsd, p.credits)).toBeGreaterThanOrEqual(0.1);

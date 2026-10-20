@@ -179,7 +179,7 @@ export function ContainersContent() {
           <div className="grid gap-3 md:grid-cols-3">
             <PricingCard name="Free" price="$0" blurb="Try ClimbOS on one workspace." features={["50 credits", "1 workspace", "Weekly plan"]} cta="Current" current />
             <PricingCard name="Starter" price="$15" blurb="For one small business." features={["1,100 credits / month", "Autopilot posts", "Email outreach"]} cta="Choose Starter" />
-            <PricingCard name="Pro" price="$39" blurb="Outbound, ads and approvals for a team." features={["3,000 credits / month", "Cold email + calls booked", "Ad drafts", "Team roles"]} cta="Upgrade to Pro" featured />
+            <PricingCard name="Pro" price="$40" blurb="Outbound, ads and approvals for a team." features={["3,000 credits / month", "Cold email + calls booked", "Ad drafts", "Team roles"]} cta="Upgrade to Pro" featured />
           </div>
         </Stage>
       </Specimen>
