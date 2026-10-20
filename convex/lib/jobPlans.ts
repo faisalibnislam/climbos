@@ -3,7 +3,7 @@ import type { PartialMeters } from "../../shared/economics/ledger";
 import type { RoleKey } from "../../shared/economics/roles";
 import { MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
-import { estimateRun, type PlannedStep } from "../engine";
+import { estimateRun, type PlannedStep } from "./estimate";
 import type { AgentSpec } from "../../shared/agents/types";
 import { CALL_ROUTES, draftsFor, routeModels, type AiMode } from "../../shared/agents/routes";
 import {

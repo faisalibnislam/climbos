@@ -1,17 +1,9 @@
 import type { FunctionReference } from "convex/server";
 import { v } from "convex/values";
-import {
-  CURRENT_ENTITLEMENTS,
-  CURRENT_ROUTING,
-  currentRateVersion,
-  getRateVersion,
-  microsToCredits,
-  stressedDeliveryCostMicros,
-  usdToMicrosCeil,
-} from "../shared/economics";
+import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, currentRateVersion, microsToCredits } from "../shared/economics";
 import type { PartialMeters } from "../shared/economics/ledger";
-import { VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import { assertTransition, type RunStatus } from "../shared/policy";
+import { estimateRun, type PlannedStep } from "./lib/estimate";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -79,53 +71,7 @@ const QUIET_KINDS = new Set(["climb_chat", "chat_intent"]);
 
 const MAX_ACTIVE_RUNS = CURRENT_ENTITLEMENTS.limits.interactiveAiJobs + CURRENT_ENTITLEMENTS.limits.queuedBackgroundJobs;
 
-export interface PlannedStep {
-  kind: "model" | "research" | "image" | "provider_write" | "compute";
-  role?: Doc<"workflowSteps">["role"];
-  modelKey?: string;
-  inputBudget?: number;
-  outputBudget?: number;
-  webSearches?: number;
-  scrapeCredits?: number;
-  imageAttempts?: number;
-  /** AI video seconds (Veo), priced per second. */
-  videoSeconds?: number;
-}
-
-/**
- * Worst-case µUSD estimate for a plan of steps. v1 single-call jobs also
- * reserve one repair of the costliest model step; Engine v2 agents reserve
- * each revision round separately when it starts, so they pass repair: false.
- */
-export function estimateRun(steps: PlannedStep[], rateVersionId: string, opts: { repair?: boolean } = {}) {
-  const rates = getRateVersion(rateVersionId);
-  let ai = 0;
-  let image = 0;
-  let research = 0;
-  let maxModelStep = 0;
-  let modelSteps = 0;
-  for (const s of steps) {
-    if (s.kind === "model" && s.modelKey) {
-      const c = worstCaseStepMicros(s.modelKey as never, s.inputBudget ?? 0, s.outputBudget ?? 0, rates);
-      ai += c;
-      maxModelStep = Math.max(maxModelStep, c);
-      modelSteps++;
-    }
-    if (s.webSearches) research += usdToMicrosCeil(s.webSearches * rates.services.searchCall);
-    if (s.scrapeCredits) research += usdToMicrosCeil(s.scrapeCredits * rates.services.scrapeCredit);
-    if (s.imageAttempts) image += usdToMicrosCeil(s.imageAttempts * rates.services.imageAttempt);
-    if (s.videoSeconds) image += usdToMicrosCeil(s.videoSeconds * VIDEO_ROUTE.perSecondUsd);
-  }
-  const repair = opts.repair === false ? 0 : maxModelStep;
-  const costMicros = ai + repair + image + research;
-  const topupCostMicros = stressedDeliveryCostMicros({
-    aiMicros: ai + repair,
-    imageMicros: image,
-    researchMicros: research,
-    modelSteps: modelSteps + 1,
-  });
-  return { costMicros, topupCostMicros, modelSteps };
-}
+export { estimateRun, type PlannedStep } from "./lib/estimate";
 
 async function patchRunStatus(ctx: MutationCtx, run: Doc<"workflowRuns">, to: RunStatus, extra: Partial<Doc<"workflowRuns">> = {}) {
   if (run.status !== to) assertTransition(run.status, to);
