@@ -7,6 +7,7 @@ import type { PlanQuality } from "./quality";
 import type { GoalGap, GoalTarget } from "./goal";
 import type { PlanConstraints } from "./types";
 import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
+import { formatMoney, toUsd } from "../economics/currency";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -22,7 +23,7 @@ import {
 } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillRubric } from "../skills";
-import { hookBeforeFold, lintCopy, maxItems, maxLength, minItems } from "./lint";
+import { hookBeforeFold, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 
 /**
@@ -137,9 +138,9 @@ export const StrategyV2Schema = StrategySchema.extend({
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
-export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
+export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v2.6-provenance-checked";
+export const ENGINE_VERSION = "v2.7-grounded-numbers";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -160,7 +161,8 @@ export const PlaysOutputSchema = z.object({
 });
 /** With the decision_contract flag, the plays agent also writes the structured decision the plays rest on (REQ-STRAT-01/02). */
 export const PlaysDecisionOutputSchema = PlaysOutputSchema.extend({ decision: DecisionSchema });
-export type PlaysOutput = z.infer<typeof PlaysOutputSchema> & { decision?: Decision };
+/** `economics.currency` is set by code after the agent (the workspace currency every amount is in). */
+export type PlaysOutput = Omit<z.infer<typeof PlaysOutputSchema>, "economics"> & { economics: z.infer<typeof PlaysOutputSchema>["economics"] & { currency?: string }; decision?: Decision };
 /** Saved portfolio: the agent's plays plus the forecast ClimbOS computed. */
 export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: Play[] };
 
@@ -635,13 +637,14 @@ const GATED_SPEND = /\b(?:after|once|only (?:if|when|after)|gated on|unless|unti
  */
 export function lintLowPriceFirst(
   plays: { name?: string; assetUsed: string; firstActionToday: string; route?: string; test?: string; scaleIf?: string; model?: { monthlySpendUsd: number } }[],
-  economics: { revenuePerCustomerMonthUsd?: number } | undefined,
+  economics: { revenuePerCustomerMonthUsd?: number; currency?: string } | undefined,
   evidence: string,
 ): LintIssue[] {
   const price = economics?.revenuePerCustomerMonthUsd ?? 0;
-  if (!(price > 0 && price < LOW_TICKET_USD_MONTH) || !plays.length) return [];
+  const cur = economics?.currency;
+  if (!(price > 0 && toUsd(price, cur) < LOW_TICKET_USD_MONTH) || !plays.length) return [];
   const issues: LintIssue[] = [];
-  const priceText = `about $${Math.round(price * 100) / 100} a month per customer`;
+  const priceText = `about ${formatMoney(price, cur)} a month per customer`;
   const first = plays[0];
   const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
   const urls = urlKeysIn(first.assetUsed ?? "").filter((u) => ev.includes(u));
@@ -655,7 +658,7 @@ export function lintLowPriceFirst(
   plays.slice(1).forEach((p, i) => {
     const spend = p.model?.monthlySpendUsd ?? 0;
     if (spend > 0 && !GATED_SPEND.test(`${p.test ?? ""} ${p.firstActionToday ?? ""} ${p.scaleIf ?? ""}`)) {
-      issues.push({ severity: "error", rule: "low_price_first", message: `"${p.name ?? `Play ${i + 2}`}" spends $${Math.round(spend)} a month before the free test reads out. At ${priceText}, start paid traffic only after the first play's result; say so in its test (e.g. "Run search ads only once the page converts ≥2% from creator visits").`, path: `plays[${i + 1}].test` });
+      issues.push({ severity: "error", rule: "low_price_first", message: `"${p.name ?? `Play ${i + 2}`}" spends ${formatMoney(spend, cur)} a month before the free test reads out. At ${priceText}, start paid traffic only after the first play's result; say so in its test (e.g. "Run search ads only once the page converts ≥2% from creator visits").`, path: `plays[${i + 1}].test` });
     }
   });
   return issues;
@@ -763,10 +766,11 @@ export function lintReferralDrivers(plays: LensPlay[]): LintIssue[] {
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
   const issues: LintIssue[] = [];
+  const m = (n: number) => formatMoney(n, c.currency);
   const spend = plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
   const hours = plays.reduce((s, p) => s + Math.max(0, p.model?.ownerHoursPerWeek ?? 0), 0);
   if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001)
-    issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend $${Math.round(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend $${Math.round(spend)}/month; the budget is $${Math.round(c.monthlyAdBudgetUsd)}. Cut or drop a play.`, path: "plays" });
+    issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend ${m(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend ${m(spend)}/month; the budget is ${m(c.monthlyAdBudgetUsd)}. Cut or drop a play.`, path: "plays" });
   if (c.ownerHoursPerWeek !== undefined && hours > c.ownerHoursPerWeek + 0.01)
     issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.`, path: "plays" });
   else if (c.ownerHoursPerWeek === undefined && hours > 10)
@@ -779,12 +783,56 @@ export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdS
   if (!c) return [];
   const issues: LintIssue[] = [];
   const spend = out.channels.reduce((s, ch) => s + Math.max(0, ch.suggestedMonthlyAdSpend || 0), 0);
-  if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001) issues.push({ severity: "error", rule: "budget", message: `Channels suggest $${Math.round(spend)}/month in ads; the budget is $${Math.round(c.monthlyAdBudgetUsd)}.`, path: "channels" });
+  if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001) issues.push({ severity: "error", rule: "budget", message: `Channels suggest ${formatMoney(spend, c.currency)}/month in ads; the budget is ${formatMoney(c.monthlyAdBudgetUsd, c.currency)}.`, path: "channels" });
   if (c.lockedCustomers !== undefined && c.lockedCustomers > 0 && out.northStar?.target) {
     const nums = [...out.northStar.target.replace(/,/g, "").matchAll(/(?<![A-Za-z\d.-])\d+(?:\.\d+)?/g)].map((m) => Number(m[0])).filter((n) => n > 0 && n !== 90 && n !== 30 && n !== 60 && n !== c.horizonDays);
     const want = c.lockedCustomers;
     if (nums.length && !nums.some((n) => Math.abs(n - want) <= Math.max(1, want * 0.15)))
       issues.push({ severity: "error", rule: "consistency", message: `The North Star target doesn't match the plays: they add up to ≈${Math.round(want)} customers by day ${c.horizonDays ?? 90}. Use that number.`, path: "northStar.target" });
+  }
+  return issues;
+}
+
+/** Sending to a list the business already has ("email your list", "newsletter subscribers"). Building a list doesn't match. */
+const USES_LIST = /\b(?:your|existing|current)\s+(?:email\s+|mailing\s+|newsletter\s+)?(?:list|subscribers?|newsletter)\b|\bnewsletter\s+subscribers?\b|\b(?:email|broadcast|send)\w*\s+(?:to\s+)?(?:your|the|existing)\s+(?:\d[\d,]*\s+)?(?:subscribers?|list)\b/i;
+const BUILDS_LIST = /\b(?:start|launch|build|create|grow|set up|collect)\w*\b[^.]{0,40}\b(?:list|newsletter|subscribers?)\b/i;
+const LIST_IN_EVIDENCE = /\b(subscribers?|newsletter|mailing list|email list|contacts?)\b/i;
+
+/**
+ * Book 14 §4: no audience is assumed. With no consented contacts in ClimbOS and
+ * no fact about a list, a play or channel can't rely on emailing one.
+ */
+export function lintNoAudience(out: unknown, c: PlanConstraints | undefined, evidence: string): LintIssue[] {
+  if (c?.emailAudience === undefined || c.emailAudience > 0 || LIST_IN_EVIDENCE.test(evidence)) return [];
+  return stringFields(out)
+    .filter(({ path, text }) => !/url|sourceUrl|notDoing|risks/i.test(path) && USES_LIST.test(text) && !BUILDS_LIST.test(text))
+    .slice(0, 3)
+    .map(({ path }) => ({ severity: "error" as const, rule: "no_audience", message: "This relies on an email list, but the business has no consented contacts in ClimbOS and no fact says it has a list. Build the list first (a signup or lead magnet), or reach people another way.", path }));
+}
+
+/** "40 new customers", "120–200 paying users": a count of outcomes over the plan's horizon. Interviews, calls and per-week rates are not. */
+const OUTCOME_COUNT = /(?<![\d.,$£€\w])(\d[\d,]*)(?:\s*(?:-|–|to)\s*(\d[\d,]*))?\s+(?:(?:new|more|extra|additional|paying|paid|first|net)\s+){0,2}(?:customers?|clients?|subscribers?|members?|accounts?|teams?|users?|buyers?)\b(?!\s+(?:interviews?|calls?|conversations?|reviews?|stories|story|quotes?|testimonials?|case|studies|study|emails?|names?))(?!\s*(?:a|per|\/|each|every)\s*(?:week|day|month))/gi;
+
+/**
+ * Book 14 §7: every customer count in the plan's prose must be one the code
+ * calculated (any play's or the portfolio's P10/P50/P90), the owner's goal, or
+ * a number in the facts. A rewrite can't quietly promise more than the maths.
+ */
+export function lintOutcomeNumbers(out: unknown, c: PlanConstraints | undefined, evidence: string): LintIssue[] {
+  const calc = c?.forecastCustomers ?? [];
+  if (!calc.length) return [];
+  const allowed = [...calc, ...(c?.goalNumbers ?? [])].filter((n) => Number.isFinite(n));
+  const ev = ` ${evidence.replace(/(\d),(\d)/g, "$1$2")} `;
+  const ok = (n: number) => n <= 2 || allowed.some((a) => Math.abs(a - n) <= Math.max(1, a * 0.15)) || new RegExp(`(?<![\\d.])${n}(?![\\d])`).test(ev);
+  const issues: LintIssue[] = [];
+  for (const { path, text } of stringFields(out)) {
+    // The North Star target has its own check; baselines and weekly indicators aren't horizon totals.
+    if (/^northStar\.(target|baseline)$|^leadingIndicators|^notDoing|url|sourceUrl/i.test(path)) continue;
+    const bad = [...text.matchAll(OUTCOME_COUNT)].flatMap((m) => [m[1], m[2]].filter(Boolean).map((d) => Number(d.replace(/,/g, "")))).filter((n) => !ok(n));
+    if (bad.length) {
+      const p50 = c?.lockedCustomers;
+      issues.push({ severity: "error", rule: "consistency", message: `Customer count ${[...new Set(bad)].join(", ")} isn't one the plays calculate${p50 ? ` (they add up to ≈${Math.round(p50)})` : ""}, the goal, or a fact. Use the calculated number or drop it.`, path });
+    }
   }
   return issues;
 }
@@ -966,7 +1014,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, out.economics, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",
@@ -984,7 +1032,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

@@ -14,7 +14,8 @@
  * business's own results. Older plans without tags read as "not labelled".
  */
 import type { Economics, OwnerEconomics, PlayLike, PlayModel } from "./economics";
-import { OWNER_HOUR_USD } from "./economics";
+import { ownerHourOf } from "./economics";
+import { formatMoney } from "../economics/currency";
 
 export const PROVENANCE = ["owner", "research", "benchmark", "planned", "assumption"] as const;
 export type Provenance = (typeof PROVENANCE)[number];
@@ -89,7 +90,7 @@ export function economicsSources(e: Economics): Record<EconomicsKey | "ownerHour
     margin: legacy("margin"),
     churn: legacy("churn"),
     // The owner's hourly value counts as theirs only with a stamped owner input; a bare value is unconfirmed.
-    ownerHour: s.ownerHour ? read(s.ownerHour) : e.ownerHourUsd && e.ownerHourUsd > 0 ? { source: "owner", ref: "", check: "reported" } : { source: "assumption", ref: `$${OWNER_HOUR_USD}/hour default` },
+    ownerHour: s.ownerHour ? read(s.ownerHour) : e.ownerHourUsd && e.ownerHourUsd > 0 ? { source: "owner", ref: "", check: "reported" } : { source: "assumption", ref: `${formatMoney(ownerHourOf(e), e.currency)}/hour default` },
   };
 }
 
@@ -283,7 +284,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
     { key: "margin", label: "Margin", value: e.grossMargin, unit: "share", tag: econ.margin, drives: "cost" },
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
-  if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: e.ownerHourUsd && e.ownerHourUsd > 0 ? e.ownerHourUsd : OWNER_HOUR_USD, unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
+  if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: ownerHourOf(e), unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
   return rows;
 }
 

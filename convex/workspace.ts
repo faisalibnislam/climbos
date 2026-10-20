@@ -1,3 +1,5 @@
+import { legacyPlanHash, planContentHash } from "./lib/planHash";
+import { minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -127,7 +129,7 @@ export const today = query({
       role,
       userName: user.name ?? user.email ?? null,
       emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at, reason: org.emergencyStop.reason ?? null } : null,
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, createdAt: goal.createdAt } : null,
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, createdAt: goal.createdAt } : null,
       business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null, type: business.businessType ?? null } : null,
       next: next.slice(0, 3),
       approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
@@ -406,7 +408,7 @@ export const plan = query({
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
       canEdit: ["owner", "admin", "editor"].includes(role),
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency } : null,
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency } : null,
       strategy: strategy
         ? {
             id: strategy._id,
@@ -421,7 +423,7 @@ export const plan = query({
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
             // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
-            expert: strategy.expert ? { ...strategy.expert, economics: strategy.expert.economics ? applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics) : undefined } : null,
+            expert: strategy.expert ? { ...strategy.expert, economics: strategy.expert.economics ? { currency: goal?.currency ?? business?.currency, ...applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics) } : undefined } : null,
           }
         : null,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
@@ -494,7 +496,8 @@ export const decidePlan = mutation({
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
     if (policy && !policy.approvalRoles.includes(role)) throw appError("FORBIDDEN", "Your approval rules don't let your role approve plans.");
-    if (s.approvalId) await refreshPlanApproval(ctx, s, user._id);
+    // Approving needs a binding to this exact content; sending back doesn't.
+    if (s.approvalId && decision === "approve") await refreshPlanApproval(ctx, s, user._id);
     let work: PlanWorkResult | null = null;
     if (decision === "approve") {
       const prior = await ctx.db
@@ -545,8 +548,9 @@ export const decidePlan = mutation({
 async function refreshPlanApproval(ctx: MutationCtx, s: Doc<"strategies">, userId: Id<"users">) {
   const a = s.approvalId ? await ctx.db.get(s.approvalId) : null;
   if (!a) return;
-  const hash = `strategy:${s._id}:v${s.version}`;
-  if (a.orgId !== s.orgId || a.subjectId !== s._id || a.contentHash !== hash) throw appError("INVALID", "This approval doesn't match the plan. Refresh the plan.");
+  // Bound to the plan's content (older plans: to its id and version). A changed plan needs a new review.
+  const hash = a.contentHash.startsWith("plan:") ? await planContentHash(s) : legacyPlanHash(s);
+  if (a.orgId !== s.orgId || a.subjectId !== s._id || a.contentHash !== hash) throw appError("INVALID", "This plan changed after it was sent for review. Refresh the plan.");
   const now = Date.now();
   const policyVersion = await activePolicyVersion(ctx, s.orgId);
   if (a.status === "pending" && a.expiresAt > now && a.policyVersion === policyVersion) return;

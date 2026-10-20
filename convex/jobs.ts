@@ -39,10 +39,12 @@ import { type TurnResult } from "../shared/ai/types";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
-import { applyOwnerEconomics, churnOf, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { formatMoney, minorToMajor } from "../shared/economics/currency";
+import { buildPlanEvidence } from "../shared/agents/evidence";
+import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
-import { agentQuality, HARD_RULES, planQuality, type AgentQuality } from "../shared/agents/quality";
+import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
 import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
@@ -309,7 +311,7 @@ async function runAgentTask<T>(
   input: AgentInput,
   startedAt: number,
   fixture: { task: TaskType; text: string; context: string; ctx: FixtureContext },
-  meta?: { shipped?: boolean | null; sources?: { url: string; title?: string }[]; quality?: AgentQuality },
+  meta?: AgentMeta,
   opts?: { researchOnly?: boolean },
 ): Promise<T> {
   if (opts?.researchOnly && (job.run.isFixture || job.run.engine !== "v2")) return null as T;
@@ -422,6 +424,9 @@ async function runAgentTask<T>(
     if (meta) {
       meta.shipped = result.assessment?.ship ?? null;
       meta.sources = result.research?.sources ?? [];
+      meta.notes = result.research?.notes;
+      meta.skills = [...spec.skills, ...(spec.criticSkills ?? [])];
+      meta.models = spec.models;
       meta.quality = agentQuality(spec.id, result.assessment, result.rounds, result.research ? result.research.sources.length : null);
     }
     if (result.quality) {
@@ -460,12 +465,42 @@ function hasFlag(job: JobCtx, flag: string): boolean {
   return Boolean(job.org.engineFlags?.includes(flag));
 }
 
+/** The currency every plan amount is in: the business's, else the workspace's. */
+function workspaceCurrency(job: JobCtx): string {
+  return job.goal?.currency ?? job.business?.currency ?? job.org.currency ?? "USD";
+}
+
 function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanConstraints {
   return {
-    ...(job.goal ? { monthlyAdBudgetUsd: job.goal.monthlyAdBudgetMinor / 100 } : {}),
+    ...(job.goal ? { monthlyAdBudgetUsd: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : {}),
+    currency: workspaceCurrency(job),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
+    ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...extra,
   };
+}
+
+/** Inputs the plan worked without, shown to the owner (the plan is bounded instead of assuming them). */
+function planUnknowns(job: JobCtx): string[] {
+  return [
+    job.business?.unitEconomics?.ownerHoursPerWeek === undefined ? "Hours you can give growth work each week" : "",
+    job.audience && job.audience.consented === 0 ? "Who you can email (no consented contacts in ClimbOS)" : "",
+  ].filter(Boolean);
+}
+
+/** What an agent run reports back for quality and the plan's evidence record. */
+type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
+
+/** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
+function lockedConstraints(job: JobCtx, plays: PlaysOutput): PlanConstraints {
+  const h = job.goal?.horizonDays ?? 90;
+  const t = job.goal?.target;
+  return constraintsOf(job, {
+    lockedCustomers: portfolioP50(plays, job.goal?.horizonDays),
+    horizonDays: h,
+    forecastCustomers: forecastCustomers(plays, h),
+    goalNumbers: [t?.baseline, t?.desired, t && t.baseline !== null && t.desired !== null ? t.desired - t.baseline : null].filter((n): n is number => typeof n === "number" && n > 0),
+  });
 }
 
 function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureContext {
@@ -484,11 +519,13 @@ function businessBrief(job: JobCtx): string {
     `BUSINESS: ${b?.name ?? job.org.name}${b?.website ? ` (${b.website})` : ""}`,
     b?.summary ? `SUMMARY: ${b.summary}` : "",
     `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
-    job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${(job.goal.monthlyAdBudgetMinor / 100).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
+    job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
-    ownerEconomicsLine(b?.unitEconomics),
+    ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
+    job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
+    audienceLine(job.audience),
     job.resultsText ?? "",
     factsBlock(job.facts),
   ]
@@ -502,7 +539,8 @@ function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
     aiMode: job.run.aiMode ?? "basic",
     goal: (job.goal?.statement ?? "").slice(0, 300),
     horizonDays: job.goal?.horizonDays ?? 90,
-    monthlyAdBudget: (job.goal?.monthlyAdBudgetMinor ?? 0) / 100,
+    monthlyAdBudget: minorToMajor(job.goal?.monthlyAdBudgetMinor ?? 0, workspaceCurrency(job)),
+    currency: workspaceCurrency(job),
     facts: job.facts.length,
     insightsChars,
     ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
@@ -521,7 +559,7 @@ async function ownedAndChecked(draft: PlaysOutput, job: JobCtx, searched: { url:
   // Tests and fixtures never touch the network.
   const pages = process.env.CLIMBOS_FAKE_LLM || job.run.isFixture ? {} : await fetchCitedPages(citedUrls(draft), searched.map((x) => x.url), urlKey).catch(() => ({}));
   const checked = verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() });
-  return { ...checked, economics: applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"] };
+  return { ...checked, economics: { ...(applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"]), currency: workspaceCurrency(job) } };
 }
 
 function uniqueSources(xs: { url: string; title?: string }[]): { url: string; title?: string }[] {
@@ -530,13 +568,21 @@ function uniqueSources(xs: { url: string; title?: string }[]): { url: string; ti
 }
 
 /** Owner-confirmed unit economics, stated as facts in the brief. */
-function ownerEconomicsLine(u: OwnerEconomics | undefined): string {
+/** Who the business can email, from ClimbOS's contacts and consent records (never assumed). */
+function audienceLine(a: { contacts: number; consented: number } | undefined): string {
+  if (!a) return "";
+  const n = (x: number) => (x >= 1000 ? "1,000+" : x.toLocaleString("en-US"));
+  if (!a.contacts) return "EMAIL AUDIENCE: none in ClimbOS (no imported contacts or consented subscribers). Don't plan sends to a list the owner hasn't shown; building one is fine.";
+  return `EMAIL AUDIENCE: ${n(a.contacts)} contacts in ClimbOS, ${n(a.consented)} with marketing-email consent.${a.consented ? "" : " Only consented contacts may get marketing email."}`;
+}
+
+function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): string {
   if (!u) return "";
   const parts = [
-    u.revenuePerCustomerMonthUsd ? `revenue per customer $${u.revenuePerCustomerMonthUsd}/month` : "",
+    u.revenuePerCustomerMonthUsd ? `revenue per customer ${formatMoney(u.revenuePerCustomerMonthUsd, currency)}/month` : "",
     u.grossMargin ? `contribution margin ${Math.round(u.grossMargin * 100)}%` : "",
     u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
-    u.ownerHourUsd ? `owner's time $${u.ownerHourUsd}/hour` : "",
+    u.ownerHourUsd ? `owner's time ${formatMoney(u.ownerHourUsd, currency)}/hour` : "",
     u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
   ].filter(Boolean);
   return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
@@ -818,6 +864,7 @@ export const buildStrategy = internalAction({
         horizonDays: job.goal?.horizonDays ?? 90,
         legacyTypes: typesFromLegacy,
         priceUsdMonth: job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? entryPriceUsdMonth(job.facts),
+        currency: workspaceCurrency(job),
       });
       // Speed: something useful in seconds, from code alone (no model): the channels that fit and the budget approach.
       if (v2) await previewChannels(ctx, job, profile);
@@ -877,10 +924,10 @@ export const buildStrategy = internalAction({
       // S5 flag (REQ-STRAT-03): cash, owner time, sales cycle and capability limits apply before ranking.
       const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
       const scored = scoreChannels(profile, adjustments, undefined, limits);
-      const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
+      const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
-      const playsMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
-      const planMeta: { sources?: { url: string; title?: string }[]; quality?: AgentQuality } = {};
+      const playsMeta: AgentMeta = {};
+      const planMeta: AgentMeta = {};
       const research = await researchRun;
       const playsDraft = v2
         ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, { ...playsInput(scorecard), ...(research ? { precomputedResearch: research } : {}) }, startedAt, fixtureIn, playsMeta)
@@ -901,7 +948,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
-          plays ? { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) } : {},
+          plays ? { constraints: lockedConstraints(job, plays) } : {},
         ),
         startedAt,
         {
@@ -914,13 +961,14 @@ export const buildStrategy = internalAction({
         planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
-      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) }));
+      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) }));
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.
       const quality = plays
         ? planQuality(
-            [playsMeta.quality, planMeta.quality].filter((q): q is AgentQuality => Boolean(q)),
-            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: constraintsOf(job, { lockedCustomers: portfolioP50(plays, job.goal?.horizonDays), horizonDays: job.goal?.horizonDays ?? 90 }) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
-            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null },
+            // The plan agent's hard checks are re-run on the final plan below (after the consistency pass may have fixed them).
+            [playsMeta.quality, planMeta.quality && withoutHard(planMeta.quality)].filter((q): q is AgentQuality => Boolean(q)),
+            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
+            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job) },
           )
         : null;
       await firstTake;
@@ -929,6 +977,21 @@ export const buildStrategy = internalAction({
         strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null } } : {}) }),
+        evidence: JSON.stringify(
+          buildPlanEvidence({
+            skillIds: [...(playsMeta.skills ?? []), ...(planMeta.skills ?? [])],
+            models: { ...(playsMeta.models ? { growth_plays: playsMeta.models } : {}), ...(planMeta.models ? { growth_strategy: planMeta.models } : {}) },
+            currency: workspaceCurrency(job),
+            goal: job.goal ? { statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudget: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency), ...(job.goal.target ? { target: job.goal.target } : {}) } : null,
+            facts: job.facts.map((f) => ({ id: String(f.id), statement: f.statement, ...(f.category ? { category: f.category } : {}) })),
+            ownerEconomics: job.business?.unitEconomics,
+            insights: insightsBrief,
+            research: [
+              { agentId: "growth_plays", notes: playsMeta.notes ?? research?.notes, sources: playsMeta.sources },
+              { agentId: "growth_strategy", notes: planMeta.notes, sources: planMeta.sources },
+            ],
+          }),
+        ),
       });
       await finish(ctx, runId, "verified", { output: { channels: strategy.channels.length } });
     }, undefined, resumeAs(ctx, "buildStrategy", { runId }));

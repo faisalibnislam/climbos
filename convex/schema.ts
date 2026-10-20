@@ -1199,6 +1199,10 @@ export default defineSchema({
             state: v.union(v.literal("passed"), v.literal("provisional"), v.literal("needs_input"), v.literal("failed")),
             reasons: v.array(v.string()),
             hard: v.array(v.string()),
+            /** Hard findings with where they sit, so the owner knows what to fix. */
+            fixes: v.optional(v.array(v.object({ rule: v.string(), path: v.optional(v.string()), message: v.string() }))),
+            /** Inputs the plan worked without (hours, email audience). */
+            unknowns: v.optional(v.array(v.string())),
             agents: v.any(),
           }),
         ),
@@ -1210,6 +1214,7 @@ export default defineSchema({
             goal: v.string(),
             horizonDays: v.number(),
             monthlyAdBudget: v.number(),
+            currency: v.optional(v.string()),
             facts: v.number(),
             insightsChars: v.number(),
             ownerEconomics: v.optional(v.any()),
@@ -1255,6 +1260,23 @@ export default defineSchema({
     restoredFrom: v.optional(v.object({ version: v.number(), parts: v.array(v.string()) })),
     createdAt: v.number(),
   }).index("by_org", ["orgId"]),
+
+  /**
+   * What a plan version knew when it was written (Book 14 §4–5): the facts,
+   * insights and research notes it was given, plus engine, skill and model
+   * versions. Kept apart from the plan so the plan page stays small; immutable.
+   * `data` is JSON (shared/agents/evidence.ts PlanEvidence), `hash` its SHA-256.
+   */
+  planEvidence: defineTable({
+    orgId: v.id("organizations"),
+    strategyId: v.id("strategies"),
+    runId: v.id("workflowRuns"),
+    data: v.string(),
+    hash: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_strategy", ["strategyId"])
+    .index("by_org", ["orgId"]),
 
   experiments: defineTable({
     orgId: v.id("organizations"),

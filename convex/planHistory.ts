@@ -1,3 +1,4 @@
+import { planContentHash } from "./lib/planHash";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
@@ -152,7 +153,8 @@ export const restore = mutation({
 
     // Same approval binding as a refreshed plan.
     const policyVersion = await activePolicyVersion(ctx, org._id);
-    const hash = `strategy:${strategyId}:v${version}`;
+    const saved = await ctx.db.get(strategyId);
+    const hash = saved ? await planContentHash(saved) : `strategy:${strategyId}:v${version}`;
     const expiresAt = now + 14 * DAY;
     const binding = { orgId: org._id, subjectType: "strategy", subjectId: strategyId, actionKind: "approve_plan", contentHash: hash, scope: {}, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {

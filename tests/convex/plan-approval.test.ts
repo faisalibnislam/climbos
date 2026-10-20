@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { localWeek } from "../../shared/report/weekly";
+import { planContentHash } from "../../convex/lib/planHash";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /**
@@ -127,6 +128,11 @@ describe("Plan approval starts the work", () => {
     const s = await latestStrategy(t, w.orgId);
     // Make sure there is one channel with a job that the first win didn't cover.
     await t.run(async (ctx) => ctx.db.patch(s._id, { channels: [{ ...s.channels[0], key: "seo_content", name: "SEO pages", status: "proposed" as const }] }));
+    // The approval binds to the plan's content: re-bind it as if the plan had been saved with this channel.
+    await t.run(async (ctx) => {
+      const doc = (await ctx.db.get(s._id))!;
+      await ctx.db.patch(doc.approvalId!, { contentHash: await planContentHash(doc) });
+    });
     await exhaustCredits(t, w.orgId);
     const work = await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "approve" });
     expect(work!.started).toEqual([]);

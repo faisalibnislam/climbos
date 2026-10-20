@@ -1,3 +1,4 @@
+import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
@@ -321,7 +322,7 @@ export const onboardingState = query({
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
-        ? { kind: goal.kind, statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: goal.monthlyAdBudgetMinor / 100, currency: goal.currency, reviewDay: goal.reviewDay ?? null }
+        ? { kind: goal.kind, statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
       autonomy: policy?.mode ?? "review",
       /** The ad budget editors may set without an owner or admin (raising it needs one). */
@@ -488,7 +489,7 @@ export const setGoal = mutation({
     const horizonDays = Math.max(14, Math.min(365, Math.round(args.horizonDays)));
     const statement = args.statement.trim().slice(0, 300);
     if (!statement) throw appError("INVALID", "Tell us your goal in a sentence.");
-    const budgetMinor = Math.round(args.monthlyAdBudget * 100);
+    const budgetMinor = majorToMinor(args.monthlyAdBudget, business.currency);
     const target = args.target ? cleanTarget(args.target) : undefined;
     // The ad budget is also the spending cap: anyone who edits may lower it, only an owner or admin may raise it.
     const policy = await ctx.db

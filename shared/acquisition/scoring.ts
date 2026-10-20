@@ -1,3 +1,4 @@
+import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
 import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
 
 /**
@@ -85,13 +86,20 @@ export interface AcquisitionProfile {
   /** Business type keys from the library (multi-label). */
   types: string[];
   dims: Partial<Record<DimensionKey, DimensionValue>>;
-  /** Monthly marketing budget in USD (owner's goal setting). */
+  /** Monthly marketing budget in USD terms (the owner's budget scaled by a reference rate), to compare with the library's USD thresholds. */
   budgetUsd: number;
   /** Goal horizon in days. */
   horizonDays: number;
-  /** Lowest paid price per customer per month in USD: the owner's revenue per customer, else the website's pricing facts. */
+  /** Lowest paid price per customer per month in USD terms: the owner's revenue per customer, else the website's pricing facts. */
   priceUsdMonth?: number;
+  /** Workspace currency (ISO code) the owner's amounts are in; absent means USD. Text shown to the owner uses it. */
+  currency?: string;
 }
+
+/** A USD-terms amount from the profile, shown in the owner's currency. */
+const shown = (p: AcquisitionProfile, usd: number) => formatMoney(fromUsd(usd, p.currency), p.currency);
+/** A library threshold (written in USD), shown as a round amount in the owner's currency. */
+const shownThreshold = (p: AcquisitionProfile, usd: number) => formatMoney(thresholdIn(usd, p.currency), p.currency);
 
 const dim = (p: AcquisitionProfile, k: DimensionKey) => p.dims[k]?.value;
 
@@ -135,14 +143,14 @@ export function entryPriceUsdMonth(facts: { statement: string; category?: string
 /** Why a channel ranks lower on price, for the scorecard; undefined when price doesn't change it. */
 export function priceFitReason(c: Channel, p: AcquisitionProfile): string | undefined {
   if (!lowTicket(p) || !(perCustomer(c) || perPartner(c))) return undefined;
-  const price = p.priceUsdMonth ? `about $${p.priceUsdMonth}/month` : "a low price";
+  const price = p.priceUsdMonth ? `about ${shown(p, p.priceUsdMonth)}/month` : "a low price";
   return perCustomer(c) ? `Selling one customer at a time doesn't pay back at ${price}; self-serve channels first.` : `Recruiting partners one by one rarely pays back at ${price}; self-serve channels first.`;
 }
 
 /** One line for the plays agent: what the price allows. Empty when the price isn't low. */
 export function priceFitText(p: AcquisitionProfile): string {
   if (!lowTicket(p)) return "";
-  const price = p.priceUsdMonth ? `about $${p.priceUsdMonth} per customer per month` : "a low price per customer";
+  const price = p.priceUsdMonth ? `about ${shown(p, p.priceUsdMonth)} per customer per month` : "a low price per customer";
   return `PRICE FIT: ${price}, self-serve. A play that needs a person per customer or per partner (cold or social outreach, demos, creator or partner recruitment) can't pay back; build the bankable play on self-serve channels: comparison and SEO pages, onboarding and activation, in-product virality and referral. Use a labour-heavy play only as a capped test, with owner hours priced in. The first play improves an existing high-intent page (comparison, alternative, pricing or signup) and reaches people for free (creators, communities, existing users, a partner's newsletter); paid traffic starts only after that test reads out.`;
 }
 
@@ -304,7 +312,7 @@ const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st =
 /** Cash, owner time, sales cycle and capability, checked before ranking. Pure and deterministic. */
 export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}): LimitCheck[] {
   const out: LimitCheck[] = [];
-  if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least $${c.minMonthly}/month to learn anything; the budget is $${p.budgetUsd}.` });
+  if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least ${shownThreshold(p, c.minMonthly)}/month to learn anything; the budget is ${shown(p, p.budgetUsd)}.` });
   else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
   const need = MIN_OWNER_HOURS[c.exec];
   if (l.ownerHoursPerWeek !== undefined && need > l.ownerHoursPerWeek) out.push({ kind: "owner_time", verdict: "blocked", reason: `Needs about ${need} of your hours a week; you have ${l.ownerHoursPerWeek}.` });
@@ -422,9 +430,9 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
       if (!r.why) r.why = picked === 1 ? "Highest score for your business, goal and budget." : "Strong fit that the budget can support alongside the primary channel.";
     } else if (r.score >= 60) {
       r.status = "later";
-      if (!r.why) r.why = !affordable ? `Needs about $${r.minMonthly}/month on top of the plan.` : "Good fit; add once the first channels show results.";
+      if (!r.why) r.why = !affordable ? `Needs about ${shownThreshold(p, r.minMonthly)}/month on top of the plan.` : "Good fit; add once the first channels show results.";
     } else if (!r.why) {
-      r.why = r.minMonthly > p.budgetUsd ? `Needs at least $${r.minMonthly}/month to learn anything.` : "Weaker fit for this business right now.";
+      r.why = r.minMonthly > p.budgetUsd ? `Needs at least ${shownThreshold(p, r.minMonthly)}/month to learn anything.` : "Weaker fit for this business right now.";
     }
   }
   const ineligible = rows.filter((r) => r.status === "ineligible");
@@ -448,13 +456,16 @@ export interface SavedAcquisition {
 }
 
 /** Profile from what's saved, the onboarding type guess and the goal. */
-export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: string | null; budgetMinor: number; horizonDays: number; legacyTypes: (t: string | null | undefined) => string[]; priceUsdMonth?: number }): AcquisitionProfile {
+/** `budgetMinor` and `priceUsdMonth` are in `currency` (the workspace's); the profile holds them in USD terms for the library's thresholds. */
+export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: string | null; budgetMinor: number; horizonDays: number; legacyTypes: (t: string | null | undefined) => string[]; priceUsdMonth?: number; currency?: string }): AcquisitionProfile {
+  const cur = p.currency;
   return {
     types: p.saved?.types.length ? p.saved.types : p.legacyTypes(p.legacyType),
     dims: { ...(p.saved?.dims ?? {}) },
-    budgetUsd: Math.max(0, Math.round(p.budgetMinor / 100)),
+    budgetUsd: Math.max(0, Math.round(toUsd(minorToMajor(p.budgetMinor, cur), cur))),
     horizonDays: p.horizonDays,
-    ...(p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? { priceUsdMonth: p.priceUsdMonth } : {}),
+    ...(p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? { priceUsdMonth: Math.round(toUsd(p.priceUsdMonth, cur) * 100) / 100 } : {}),
+    ...(cur && cur.toUpperCase() !== "USD" ? { currency: cur } : {}),
   };
 }
 
@@ -499,12 +510,12 @@ export function distributionPair(rows: ScoredChannel[]): ScoredChannel | undefin
 }
 
 /** A compact scorecard for agent prompts. */
-export function scorecardText(rows: ScoredChannel[], n = 14): string {
+export function scorecardText(rows: ScoredChannel[], n = 14, currency?: string): string {
   const pair = distributionPair(rows);
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min $${r.minMonthly}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n")
     .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

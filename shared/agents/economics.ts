@@ -1,3 +1,4 @@
+import { formatMoney, thresholdIn } from "../economics/currency";
 import type { LintIssue } from "./types";
 import { CHECK_STAMP, economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
@@ -52,8 +53,10 @@ export interface Economics {
   assumed?: string[];
   /** Where each economics input came from (owner, research, benchmark, assumption). */
   sources?: EconomicsSources;
-  /** Value of an owner hour; $50 when unknown. */
+  /** Value of an owner hour; $50 (scaled to the currency) when unknown. */
   ownerHourUsd?: number;
+  /** Workspace currency (ISO code), set by code. Every "Usd" amount here is in this currency; absent means USD. */
+  currency?: string;
 }
 
 /** Numbers the owner confirmed (businesses.unitEconomics); they always beat the model's assumptions. */
@@ -76,6 +79,11 @@ export interface PlayLike {
 }
 
 export const OWNER_HOUR_USD = 50;
+
+/** The owner's hour value: their number, else the $50 default scaled to the workspace currency. */
+export function ownerHourOf(e: Pick<Economics, "ownerHourUsd" | "currency">): number {
+  return e.ownerHourUsd && e.ownerHourUsd > 0 ? e.ownerHourUsd : thresholdIn(OWNER_HOUR_USD, e.currency);
+}
 /** Months a customer has to earn back their cost (owner's default payback horizon). */
 export const PAYBACK_HORIZON_MONTHS = 12;
 /** Stated share of customers two or more plays would both reach. */
@@ -188,7 +196,7 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
-  const hourUsd = e.ownerHourUsd && e.ownerHourUsd > 0 ? e.ownerHourUsd : OWNER_HOUR_USD;
+  const hourUsd = ownerHourOf(e);
   const costUsd = spend + hours * hourUsd;
   const cacUsd = cacFull(spend, hours, hourUsd, 0, customers);
   const cm = monthlyContribution(e);
@@ -230,11 +238,11 @@ export function withForecasts<O extends { economics: Economics; plays: PlayLike[
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
-const usd = (n: number | null) => (n === null ? "n/a" : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n).toLocaleString("en-US")}`);
 
 export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }): LintIssue[] {
   const issues: LintIssue[] = [];
   const e = out.economics;
+  const usd = (n: number | null) => formatMoney(n, e.currency);
   if (!(e.revenuePerCustomerMonthUsd > 0) || churnOf(e) === null) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, contribution margin and monthly churn (facts first, else tagged as assumptions).", path: "economics" });
   if (!(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
   out.plays.forEach((p, i) => {
@@ -248,7 +256,7 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
     if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
     const m = playMaths(p, e);
     if (m.profitable === false && p.kind !== "moonshot")
-      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at $${e.ownerHourUsd || OWNER_HOUR_USD}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
+      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at ${usd(ownerHourOf(e))}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
   });
   return issues;
 }
@@ -259,6 +267,18 @@ export function portfolioRange(out: { economics: Economics; plays: PlayLike[] },
   const ms = out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(horizonDays ? { ...p, horizonDays } : p, out.economics).headline);
   const sum = (k: "p10" | "p50" | "p90") => portfolioCustomers(ms.map((m) => m[k]), PLAY_OVERLAP) ?? 0;
   return { p10: sum("p10"), p50: sum("p50"), p90: sum("p90") };
+}
+
+/** Every customer count the calculations produce: portfolio and each play's P10/P50/P90, at the goal's horizon and each play's own. */
+export function forecastCustomers(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): number[] {
+  const nums: number[] = [];
+  const add = (r: { p10: number; p50: number; p90: number } | null | undefined) => r && nums.push(r.p10, r.p50, r.p90);
+  add(portfolioRange(out, horizonDays));
+  for (const p of out.plays.filter((x) => x.model?.steps?.length)) {
+    add(playMaths(p, out.economics).headline);
+    if (horizonDays) add(playMaths({ ...p, horizonDays }, out.economics).headline);
+  }
+  return [...new Set(nums.filter((n) => Number.isFinite(n) && n > 0).flatMap((n) => [Math.round(n), roundCount(n)]))];
 }
 
 export function portfolioP50(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): number {
@@ -283,6 +303,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   const cost = atH.reduce((s, m) => s + m.costUsd, 0);
   const spend = out.plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
   const e = out.economics;
+  const usd = (n: number | null) => formatMoney(n, e.currency);
   const churn = churnOf(e);
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
@@ -379,7 +400,7 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   if (assumed.has("margin")) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
   const churn = churnOf(e) ?? 0.05;
   if (assumed.has("churn")) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
-  if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: OWNER_HOUR_USD, low: 20, high: 150 });
+  if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: ownerHourOf(e), low: thresholdIn(20, e.currency), high: thresholdIn(150, e.currency) });
   const scored = candidates.map((c) => {
     let flips = 0;
     let paybackSwing = 0;

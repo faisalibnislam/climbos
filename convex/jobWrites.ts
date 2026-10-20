@@ -1,3 +1,5 @@
+import { planContentHash } from "./lib/planHash";
+import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { shortenable, utmFor, withUtm } from "../shared/links";
@@ -64,7 +66,15 @@ export const jobContext = internalQuery({
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
+    // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
+    const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
+    const consented = new Set(
+      (await ctx.db.query("consentRecords").withIndex("by_org_contact", (q) => q.eq("orgId", org._id)).take(1000))
+        .filter((r) => r.purpose === "marketing_email" && !r.withdrawnAt)
+        .map((r) => r.contactId),
+    ).size;
     return {
+      audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       org,
@@ -238,8 +248,8 @@ export function withPlayIds<P extends { name: string; id?: string }>(plays: P[],
 }
 
 export const saveStrategy = internalMutation({
-  args: { runId: v.id("workflowRuns"), strategy: v.string(), factIds: v.array(v.id("businessFacts")), acquisition: v.optional(v.string()) },
-  handler: async (ctx, { runId, strategy, factIds, acquisition }) => {
+  args: { runId: v.id("workflowRuns"), strategy: v.string(), factIds: v.array(v.id("businessFacts")), acquisition: v.optional(v.string()), evidence: v.optional(v.string()) },
+  handler: async (ctx, { runId, strategy, factIds, acquisition, evidence }) => {
     const run = await ensureRunOrg(ctx, runId);
     const s = JSON.parse(strategy) as StrategyOutput;
     const business = await ctx.db
@@ -326,7 +336,8 @@ export const saveStrategy = internalMutation({
         : {}),
       reviewDate: new Date(now + 14 * DAY).toISOString().slice(0, 10),
       sourceFactIds: factIds.slice(0, 40),
-      generationCostMicros: 0,
+      // What the run had spent when the plan was written (usage still settling after this is small: the final checks).
+      generationCostMicros: run.actualMicros,
       runId,
       createdAt: now,
     });
@@ -348,7 +359,10 @@ export const saveStrategy = internalMutation({
     }
     // Approval request for the initial plan (always required).
     const policyVersion = await activePolicyVersion(ctx, run.orgId);
-    const hash = `strategy:${strategyId}:v${version}`;
+    const saved = await ctx.db.get(strategyId);
+    const hash = saved ? await planContentHash(saved) : `strategy:${strategyId}:v${version}`;
+    // What this version knew (facts, insights, research, versions), kept apart from the plan.
+    if (evidence && evidence.length < 900_000) await ctx.db.insert("planEvidence", { orgId: run.orgId, strategyId, runId, data: evidence, hash: await sha256Hex(evidence), createdAt: now });
     const expiresAt = now + 14 * DAY;
     const binding = { orgId: run.orgId, subjectType: "strategy", subjectId: strategyId, actionKind: "approve_plan", contentHash: hash, scope: {}, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {

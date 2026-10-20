@@ -354,3 +354,13 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 **Built after Run 7 (not yet evaluated):** `lintLowPriceFirst` (below $25/month per customer the first play improves an existing high-intent page with a free route; any spend waits for that result) and `lintAnyPaidPlan` (plays and the North Star count new customers on any paid plan, lowest paid price as the revenue proxy), with matching guidance in the plays and plan tasks and the PRICE FIT line.
 
 **Built (not yet evaluated): five lenses from marketing books**, summarised in our own words in `skills/growth-plays` ("Five lenses") and `skills/growth-strategy` ("North Star by stage"), with a reviewer criterion (Q8 "Pull and positioning") and fallback SaaS funnel ranges in the plays base rates. Code checks: `lintSelfServeFunnel` (product-led growth: low-price products get a funnel play), `lintComparisonPositioning` (positioning: alternative, difference, segment), `lintOfferClaims` (offers: no unconfirmed guarantees), `lintStageMetric` (stage metrics: no vanity North Star), `lintReferralDrivers` (word of mouth: trigger and share mechanism).
+
+**Built (not yet evaluated): P0 grounding slice from the Growth Intelligence Library (Books 13 and 14), `ENGINE_VERSION` v2.7-grounded-numbers.** Gap review and backlog: `docs/growth-engine/library-gap-plan.md`.
+- **Unsourced numbers are a hard failure:** `invented_fact` is in `HARD_RULES`. A failed plan lists each finding and where it is (`quality.fixes`).
+- **Customer counts checked everywhere:** every count in the prose must be calculated by code, the goal or a fact (`lintOutcomeNumbers`, ±15%). Previously only the North Star was checked.
+- **Consistency pass sees the failures:** it gets the failing checks in its prompt (no extra call). The plan agent's hard checks are judged on the final plan only.
+- **Workspace currency throughout:** minor units follow the currency (`shared/economics/currency.ts`). The library's USD thresholds are scaled by dated reference rates.
+- **Evidence record per version:** `planEvidence` stores facts, insights, research notes, skill hashes, models, engine and currency.
+- **Approval bound to content:** the approval binds to the plan's content hash, and approving re-checks it. `generationCostMicros` is now the run's cost at save.
+- **Unknowns stated:** owner hours and email audience go in the brief and in `quality.unknowns`. `lintNoAudience` blocks sends to a list that isn't there.
+- **Bench parity:** the bench applies the same customer-count check.

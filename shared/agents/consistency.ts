@@ -15,12 +15,18 @@ const RULES = `You are the final editor of a small-business growth plan. Make it
 - Change only what's needed. Keep facts, sources and the plan's choices. Stay within the word limits. Return the full plan as JSON.`;
 
 export async function reconcile<T>(p: { turn: (req: TurnRequest) => Promise<TurnResult>; plan: T; locked: string; schema: z.ZodType<T>; lint: (o: T) => LintIssue[]; caps?: string }): Promise<{ plan: T; changed: boolean }> {
+  const failing = p
+    .lint(p.plan)
+    .filter((l) => l.severity === "error")
+    .slice(0, 12)
+    .map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`)
+    .join("\n");
   const r = await p.turn({
     modelKey: CALL_ROUTES.chat_intent,
     cacheKey: "climbos:plan_consistency",
     verbosity: "low",
     system: [{ text: RULES, cache: true }],
-    messages: [{ role: "user", content: `${p.locked}${p.caps ? `\n\n${p.caps}` : ""}\n\nTHE PLAN (JSON):\n${JSON.stringify(p.plan)}` }],
+    messages: [{ role: "user", content: `${p.locked}${p.caps ? `\n\n${p.caps}` : ""}${failing ? `\n\nCHECKS FAILING NOW (fix each; for a number with no source, use a locked number, label it an estimate or target, or drop it):\n${failing}` : ""}\n\nTHE PLAN (JSON):\n${JSON.stringify(p.plan)}` }],
     schema: p.schema,
     maxTokens: 16_000,
     effort: "medium",

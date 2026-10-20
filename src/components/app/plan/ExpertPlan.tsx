@@ -46,7 +46,8 @@ import { Badge, Button, Callout, Card, CardContent, Segmented, Tooltip, toast, t
 import { ChartTooltip, CHART, ScatterPlot, SrTable, XTicks, focusRing, niceScale, useKeyNav } from "@/components/ds/charts";
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
-import { churnOf, OWNER_HOUR_USD, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
+import { formatMoney } from "../../../../shared/economics/currency";
+import { churnOf, ownerHourOf, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
 import { ProseBullets } from "@/components/app/ProseBullets";
@@ -167,7 +168,8 @@ function score(sc: number[]) {
 const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
 
 const isShort = (s: string) => s.length <= 24;
-const usd = (n: number | null) => (n === null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
+/** Whole amounts in the plan's currency (economics.currency; older plans are USD). */
+const usd = (n: number | null, currency?: string) => (n === null ? "—" : formatMoney(Math.round(n), currency, "—"));
 
 /* ---------------- North star ---------------- */
 
@@ -508,11 +510,11 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         stats={[
           {
             label: "Cost / customer",
-            value: usd(m.cacUsd),
+            value: usd(m.cacUsd, economics.currency),
             tone: m.profitable === true ? "good" : m.profitable === false ? "bad" : "default",
             hint: m.profitable === true ? "Below worth" : m.profitable === false ? "Above worth" : undefined,
           },
-          m.valueUsd === null ? { label: "Worth / year", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Worth / year", value: usd(m.valueUsd) },
+          m.valueUsd === null ? { label: "Worth / year", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Worth / year", value: usd(m.valueUsd, economics.currency) },
           {
             label: "Payback",
             value: pb === null ? "—" : `${pb} mo`,
@@ -529,16 +531,15 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
   );
 }
 
-const fmtInput = (r: InputRow): string => {
+const fmtInput = (r: InputRow, currency?: string): string => {
   const n = (v: number) => {
     switch (r.unit) {
       case "share":
       case "share_month":
         return `${Math.round(v * 1000) / 10}%`;
       case "usd_month":
-        return `$${Math.round(v).toLocaleString("en-US")}`;
       case "usd_hour":
-        return `$${Math.round(v)}`;
+        return usd(v, currency);
       default:
         return Math.round(v).toLocaleString("en-US");
     }
@@ -561,7 +562,7 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
         {rows.map((r) => (
           <li key={r.key} className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2.5 py-1.5 text-ui">
             <span className="min-w-0 text-ink-2">
-              {r.label} <span className="font-semibold tabular-nums text-ink">{fmtInput(r)}</span>
+              {r.label} <span className="font-semibold tabular-nums text-ink">{fmtInput(r, economics.currency)}</span>
             </span>
             <span className="flex min-w-0 flex-wrap items-center gap-1" title={r.tag.ref || undefined}>
               <Badge tone={SOURCE_TONE[r.tag.source] ?? "neutral"}>{SOURCE_LABEL[r.tag.source]}</Badge>
@@ -578,7 +579,7 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
             {(r.tag.access && r.tag.check !== "source_verified") || r.tag.replaced ? (
               <span className="basis-full text-xs text-ink-3">
                 {r.tag.access && r.tag.check !== "source_verified" ? ACCESS_LABEL[r.tag.access] : ""}
-                {r.tag.replaced ? `Replaced ${fmtInput({ ...r, value: r.tag.replaced.value })} (${r.tag.replaced.source === "unlabelled" ? "not labelled" : r.tag.replaced.source})` : ""}
+                {r.tag.replaced ? `Replaced ${fmtInput({ ...r, value: r.tag.replaced.value }, economics.currency)} (${r.tag.replaced.source === "unlabelled" ? "not labelled" : r.tag.replaced.source})` : ""}
               </span>
             ) : null}
           </li>
@@ -980,7 +981,7 @@ function PlayRangeChart({ plays, economics }: { plays: PlayView[]; economics?: E
                         { label: "Low", value: String(p.p10), color: k.chart, shape: "dot" },
                         { label: "Likely", value: String(p.p50), color: k.chart, shape: "dot", strong: true },
                         { label: "High", value: String(p.p90), color: k.chart, shape: "dot" },
-                        ...(cac !== null ? [{ label: "Cost / customer", value: usd(cac) }] : []),
+                        ...(cac !== null ? [{ label: "Cost / customer", value: usd(cac, economics?.currency) }] : []),
                       ],
                       note: `${kindOf(p.kind).label} · ${CONFIDENCE[p.confidence]?.label ?? p.confidence} · ${p.horizonDays} days`,
                     }}
@@ -1042,7 +1043,7 @@ function PlaysChart({ plays, economics }: { plays: PlayView[]; economics?: Econo
             groups={kinds.map((k) => ({ key: k, label: KIND[k].label, color: KIND[k].chart }))}
             xLabel="Expected customers"
             yLabel="Cost per customer"
-            formatY={(n) => `$${Math.round(n).toLocaleString("en-US")}`}
+            formatY={(n) => usd(n, economics?.currency)}
             height={200}
           />
         ) : null}
@@ -1082,10 +1083,10 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-xs font-medium text-ink-3">Costed on</span>
       <ul className="flex flex-wrap gap-1.5">
-        {part("Revenue", `$${Math.round(e.revenuePerCustomerMonthUsd * 100) / 100}/mo`, "revenue")}
+        {part("Revenue", `${formatMoney(Math.round(e.revenuePerCustomerMonthUsd * 100) / 100, e.currency)}/mo`, "revenue")}
         {part("Margin", `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
         {churn !== null ? part("Churn", `${Math.round(churn * 1000) / 10}%/mo`, "churn") : null}
-        {part("Your time", `$${e.ownerHourUsd || OWNER_HOUR_USD}/h`, "ownerHour")}
+        {part("Your time", `${usd(ownerHourOf(e), e.currency)}/h`, "ownerHour")}
       </ul>
     </div>
   );

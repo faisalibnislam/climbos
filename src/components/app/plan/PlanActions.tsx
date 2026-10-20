@@ -1,6 +1,7 @@
 "use client";
 
-import { QUALITY_LABEL, type QualityState } from "../../../../shared/agents/quality";
+import Link from "next/link";
+import { fixWhere, QUALITY_LABEL, type QualityFix, type QualityState } from "../../../../shared/agents/quality";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -123,7 +124,7 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[] } | null }) {
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[] } | null }) {
   const blocked = quality?.state === "failed";
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
@@ -166,8 +167,29 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
               ))}
             </ul>
           ) : null}
-          {blocked ? <p className="mt-1.5 font-medium text-red-800">Can&apos;t start work. Refresh the plan, or send it back with what to change.</p> : null}
+          {blocked && quality.fixes?.length ? (
+            <div className="mt-2">
+              <p className="text-xs font-semibold text-red-800">What to fix</p>
+              <ul className="mt-1 flex flex-col gap-1 text-sm">
+                {quality.fixes.map((f) => (
+                  <li key={`${f.rule}|${f.path ?? ""}|${f.message}`} className="min-w-0">
+                    <span className="font-medium">{fixWhere(f.path)}:</span> {f.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {blocked ? (
+            <p className="mt-1.5 font-medium text-red-800">
+              Can&apos;t start work. Add a missing number in <Link href={`/app/${slug}/settings/facts`} className="underline">Business facts</Link>, then refresh the plan. Or send it back.
+            </p>
+          ) : null}
         </Callout>
+      ) : null}
+      {quality?.unknowns?.length ? (
+        <p className="text-sm text-amber-800">
+          <span className="font-semibold">Unknown:</span> {quality.unknowns.join(" · ")}. The plan stays within what&apos;s known.
+        </p>
       ) : null}
       {canApprove ? (
         <div className="flex flex-col gap-2 sm:flex-row">

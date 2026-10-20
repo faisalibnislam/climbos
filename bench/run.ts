@@ -29,7 +29,7 @@ import { fitJson } from "../shared/agents/context";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { reconcile } from "../shared/agents/consistency";
-import { lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
+import { forecastCustomers, lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
 import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, type PlaysOutput, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
@@ -420,7 +420,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     const plays = { output: withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) }) };
     // As production: the goal stays as stated and its horizon drives totals and checks.
     const locked = lockedNumbers(plays.output, { statement: p.c.goal, target: null, horizonDays: p.c.horizonDays });
-    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights, horizonDays: p.c.horizonDays }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output, p.c.horizonDays), horizonDays: p.c.horizonDays } };
+    const planInput = { ...base, task: planTask({ locked, plays: plays.output, scorecard, insights, horizonDays: p.c.horizonDays }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays.output, p.c.horizonDays), horizonDays: p.c.horizonDays, forecastCustomers: forecastCustomers(plays.output, p.c.horizonDays) } };
     const planSpec = withMode(strategySpec({}));
     const planRun = await runAgent(LEAN_PLAN ? { ...planSpec, drafts: 1, effort: { ...planSpec.effort, draft: "medium" } } : planSpec, planInput, deps);
     const sspec = strategySpec({});

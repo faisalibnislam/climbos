@@ -89,14 +89,22 @@ export interface AgentInput {
 }
 
 export interface PlanConstraints {
-  /** Cash the owner will pay ad platforms each month. */
+  /** Cash the owner will pay ad platforms each month, in `currency` (the name predates currencies). */
   monthlyAdBudgetUsd?: number;
+  /** Workspace currency (ISO code) for every amount here; absent means USD. */
+  currency?: string;
   /** Hours a week the owner can give growth work (when they said). */
   ownerHoursPerWeek?: number;
   /** The plays' computed P50 customers total, which the plan's North Star must match. */
   lockedCustomers?: number;
   /** The goal's horizon in days (the period lockedCustomers covers). */
   horizonDays?: number;
+  /** Every customer count the calculations produced (portfolio and per-play P10/P50/P90); plan prose may only use these, the goal or a fact. */
+  forecastCustomers?: number[];
+  /** The owner's goal numbers (baseline and desired), which prose may restate. */
+  goalNumbers?: number[];
+  /** Contacts with marketing-email consent in ClimbOS (capped at 1,000); 0 = no list to send to. */
+  emailAudience?: number;
 }
 
 export interface CritiqueResult {
