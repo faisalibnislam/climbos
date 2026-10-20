@@ -35,6 +35,37 @@ export const DISCOURAGED_WORDS: readonly string[] = [
 ];
 
 const SUPERLATIVES = /\b(best|#1|number one|leading|top-rated|fastest|cheapest|most trusted|no\.?\s?1)\b/i;
+
+/**
+ * Claim ledger (expansion slice 5; BK03 Ch 2 "your opinion isn't proof", BK02
+ * Ch 10 "don't headline advantages you can't prove"): capability, scale and
+ * leadership claims a buyer would rely on. Each needs the same claim in the
+ * facts or research; otherwise it's an unsupported claim. `key` finds the
+ * claim in the evidence.
+ */
+const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }[] = [
+  { kind: "a speed or cost multiplier", re: /\b(\d+(?:\.\d+)?)\s?[x×]\s+(?:faster|quicker|cheaper|more|better|easier|less)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(".", "\\.")}\\s?[x×]`, "i") },
+  { kind: "round-the-clock availability", re: /\b24\/7\b|\bround[- ]the[- ]clock\b|\baround the clock\b/i, key: () => /\b24\/7\b|round[- ]the[- ]clock|around the clock/i },
+  { kind: "market leadership", re: /\b(?:the )?(leading|#1|number one|no\.?\s?1|top-rated|best|most trusted|market[- ]leading)\s+(?:\w+\s+){0,2}(?:platform|tool|app|software|solution|service|agency|provider|company|choice|option)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(/[#.]/g, "\\$&")}\\b`, "i") },
+  { kind: "a user count", re: /\b(?:trusted|used|loved|chosen)\s+by\s+(thousands|millions|hundreds|\d[\d,.]*\s*(?:k|\+)?)/i, key: (m) => new RegExp(m[1].replace(/[.+]/g, "\\$&"), "i") },
+  { kind: "an award or certification", re: /\baward[- ]winning\b|\b(?:soc ?2|iso ?27001|hipaa|gdpr)[- ]?(?:compliant|certified)\b|\bcertified\b/i, key: (m) => new RegExp(m[0].split(/[\s-]/)[0], "i") },
+  { kind: "full automation", re: /\bfully[- ]automat\w+\b|\bhands[- ]free\b|\bno human\b/i, key: () => /fully[- ]automat|hands[- ]free|no human|automat/i },
+];
+
+/** Unsupported capability, scale or leadership claims in customer-facing text. */
+export function lintClaims(fields: { path: string; text: string }[], evidence: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  for (const { path, text } of fields) {
+    for (const c of CLAIMS) {
+      const m = text.match(c.re);
+      if (m && !c.key(m).test(evidence)) {
+        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no fact or research supports. Say what the product verifiably does, or drop it.`, path });
+        break;
+      }
+    }
+  }
+  return issues;
+}
 const EMOJI = /\p{Extended_Pictographic}/gu;
 
 export interface StringField {
@@ -133,6 +164,7 @@ export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue
       issues.push({ severity: "warn", rule: "superlative", message: "Superlative claim (best, #1, leading…) needs a cited source or should go.", path });
     }
     if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
+    if (opts.publishable && opts.evidence !== undefined) issues.push(...lintClaims([{ path, text }], opts.evidence));
     if (opts.evidence !== undefined) {
       const untraced = untracedNumbers(text, opts.evidence, { labelled: opts.labelled });
       if (untraced.length)
