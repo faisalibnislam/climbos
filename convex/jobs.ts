@@ -41,6 +41,7 @@ import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
+import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
@@ -526,6 +527,7 @@ function businessBrief(job: JobCtx): string {
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
+    conflictsLine(job),
     job.resultsText ?? "",
     factsBlock(job.facts),
   ]
@@ -568,6 +570,12 @@ function uniqueSources(xs: { url: string; title?: string }[]): { url: string; ti
 }
 
 /** Owner-confirmed unit economics, stated as facts in the brief. */
+/** Confirmed facts that disagree (Book 14 §5): both stay, and the writer must not pick one silently. */
+function conflictsLine(job: JobCtx): string {
+  const lines = conflictLines(findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category }))));
+  return lines.length ? `CONFLICTING FACTS (both confirmed; don't state either as settled, say which one a number uses or that the owner must confirm): ${lines.join("; ")}.` : "";
+}
+
 /** Who the business can email, from ClimbOS's contacts and consent records (never assumed). */
 function audienceLine(a: { contacts: number; consented: number } | undefined): string {
   if (!a) return "";
@@ -961,14 +969,18 @@ export const buildStrategy = internalAction({
         planMeta,
       );
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
-      if (plays && locked) strategy = await consistencyStep(ctx, job, 190, strategy, locked, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) }));
+      // The final checks see what the writers read (research notes and pages), so cited pages resolve.
+      const planLintInput = plays
+        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
+        : null;
+      if (plays && locked && planLintInput) strategy = await consistencyStep(ctx, job, 190, strategy, locked, planLintInput);
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.
       const quality = plays
         ? planQuality(
             // The plan agent's hard checks are re-run on the final plan below (after the consistency pass may have fixed them).
             [playsMeta.quality, planMeta.quality && withoutHard(planMeta.quality)].filter((q): q is AgentQuality => Boolean(q)),
-            (strategySpec().lint?.(strategy as never, agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) })) ?? []).filter((l) => HARD_RULES.has(l.rule)),
-            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job) },
+            (strategySpec().lint?.(strategy as never, planLintInput!) ?? []).filter((l) => HARD_RULES.has(l.rule)),
+            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job), conflicts: conflictLines(findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category })))) },
           )
         : null;
       await firstTake;
@@ -986,6 +998,7 @@ export const buildStrategy = internalAction({
             facts: job.facts.map((f) => ({ id: String(f.id), statement: f.statement, ...(f.category ? { category: f.category } : {}) })),
             ownerEconomics: job.business?.unitEconomics,
             insights: insightsBrief,
+            conflicts: findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category }))),
             research: [
               { agentId: "growth_plays", notes: playsMeta.notes ?? research?.notes, sources: playsMeta.sources },
               { agentId: "growth_strategy", notes: planMeta.notes, sources: planMeta.sources },

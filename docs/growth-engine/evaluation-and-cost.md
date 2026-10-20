@@ -364,3 +364,11 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Approval bound to content:** the approval binds to the plan's content hash, and approving re-checks it. `generationCostMicros` is now the run's cost at save.
 - **Unknowns stated:** owner hours and email audience go in the brief and in `quality.unknowns`. `lintNoAudience` blocks sends to a list that isn't there.
 - **Bench parity:** the bench applies the same customer-count check.
+
+**Built (not yet evaluated): items 8 and 9, `ENGINE_VERSION` v2.8-cited-sources.**
+- **Cites:** channels and audiences carry `cites` ("fact:N" or a URL the research read). `lintCites` fails cites that don't resolve as `citation`, a hard rule.
+- **Sources saved and shown:** cites resolve at save to fact ids or titled pages (`sources`) and show as chips on each channel and audience.
+- **Final checks see the research:** the final plan checks now get the research notes and pages, so cited URLs resolve.
+- **Conflicting facts:** `findConflicts` covers two prices for one tier (same currency and period) and two trial lengths. Both values go in the brief, the evidence record and on the review card.
+- **Also fixed:** a channel's ad spend is saved in the currency's own minor units.
+- **Cost:** no extra model calls. The plan output adds a few tokens per channel.

@@ -1,4 +1,6 @@
 import { planContentHash } from "./lib/planHash";
+import { resolveCites } from "../shared/agents/evidence";
+import { majorToMinor } from "../shared/economics/currency";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
@@ -272,6 +274,8 @@ export const saveStrategy = internalMutation({
     const contentPlans = CHANNEL_JOBS;
     const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null } }) : null;
     if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
+    // Pages the run read, so cited URLs keep their titles.
+    const webSources = ((s as { webSources?: { url: string; title?: string }[] }).webSources ?? []).slice(0, 40);
     const strategyId = await ctx.db.insert("strategies", {
       orgId: run.orgId,
       businessId: business._id,
@@ -280,14 +284,18 @@ export const saveStrategy = internalMutation({
       version,
       status: "needs_approval",
       summary: s.summary,
-      audiences: s.audiences.slice(0, 5),
+      audiences: s.audiences.slice(0, 5).map((a) => {
+        const sources = resolveCites((a as { cites?: string[] }).cites, factIds, webSources);
+        return { name: a.name, hypothesis: a.hypothesis, evidence: a.evidence, ...(sources.length ? { sources } : {}) };
+      }),
       positioning: s.positioning,
       channels: s.channels
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)
         .map((c, i) => {
           const job = contentPlans[c.key];
-          const adSpend = Math.max(0, Math.round(c.suggestedMonthlyAdSpend * 100));
+          const adSpend = Math.max(0, majorToMinor(c.suggestedMonthlyAdSpend, goal.currency));
+          const sources = resolveCites((c as { cites?: string[] }).cites, factIds, webSources);
           return {
             key: c.key,
             name: c.name,
@@ -300,6 +308,7 @@ export const saveStrategy = internalMutation({
             deliverables: c.deliverables.slice(0, 6),
             dependencies: c.dependencies.slice(0, 6),
             measurement: c.measurement,
+            ...(sources.length ? { sources } : {}),
             capabilityNote:
               c.key === "search_ads" || c.key === "meta_ads"
                 ? "Ads are created paused and only go live after you approve the exact campaign and budget."

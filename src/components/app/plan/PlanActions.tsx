@@ -124,7 +124,7 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[] } | null }) {
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null }) {
   const blocked = quality?.state === "failed";
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
@@ -185,6 +185,15 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
             </p>
           ) : null}
         </Callout>
+      ) : null}
+      {quality?.conflicts?.length ? (
+        <p className="text-sm text-amber-800">
+          <span className="font-semibold">Facts disagree:</span> {quality.conflicts.join(" · ")}. Settle them in{" "}
+          <Link href={`/app/${slug}/settings/facts`} className="underline">
+            Business facts
+          </Link>
+          .
+        </p>
       ) : null}
       {quality?.unknowns?.length ? (
         <p className="text-sm text-amber-800">

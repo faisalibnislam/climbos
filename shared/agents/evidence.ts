@@ -9,6 +9,7 @@
  */
 import { skillVersion } from "../skills";
 import { ENGINE_VERSION } from "./specs";
+import type { FactConflict } from "./conflicts";
 
 export const EVIDENCE_VERSION = 1;
 
@@ -29,6 +30,8 @@ export interface PlanEvidence {
   /** Owner-confirmed unit economics at the time. */
   ownerEconomics?: unknown;
   insights: string;
+  /** Confirmed facts that disagree, kept side by side. */
+  conflicts?: FactConflict[];
   /** Each agent's research, as it reached the writer. */
   research: { agentId: string; notes: string; sources: { url: string; title?: string }[] }[];
   /** True where a cap cut something (so a reader knows the record is partial). */
@@ -43,6 +46,7 @@ export function buildPlanEvidence(p: {
   facts: { id: string; statement: string; category?: string }[];
   ownerEconomics?: unknown;
   insights: string;
+  conflicts?: FactConflict[];
   research: { agentId: string; notes?: string; sources?: { url: string; title?: string }[] }[];
 }): PlanEvidence {
   const truncated: string[] = [];
@@ -62,9 +66,40 @@ export function buildPlanEvidence(p: {
     facts: p.facts.slice(0, CAP.facts).map((f) => ({ id: f.id, statement: cut(f.statement, CAP.fact, `fact ${f.id}`), ...(f.category ? { category: f.category } : {}) })),
     ...(p.ownerEconomics ? { ownerEconomics: p.ownerEconomics } : {}),
     insights: cut(p.insights, CAP.insights, "insights"),
+    ...(p.conflicts?.length ? { conflicts: p.conflicts } : {}),
     research: p.research
       .filter((r) => r.notes || r.sources?.length)
       .map((r) => ({ agentId: r.agentId, notes: cut(r.notes ?? "", CAP.notes, `research ${r.agentId}`), sources: (r.sources ?? []).slice(0, CAP.sources).map((x) => ({ url: x.url.slice(0, 500), ...(x.title ? { title: x.title.slice(0, 200) } : {}) })) })),
     truncated,
   };
+}
+
+/** A source a channel or audience rests on, resolved from the writer's cites at save time. */
+export type EvidenceRef = { kind: "fact"; factId: string } | { kind: "web"; url: string; title?: string };
+
+/**
+ * "fact:N" → the Nth confirmed fact the writer was given (same order as `factIds`);
+ * a URL → that page (titled when the run's sources know it). Unresolvable cites are dropped:
+ * the plan's lint already failed them.
+ */
+export function resolveCites(cites: string[] | undefined, factIds: string[], sources: { url: string; title?: string }[] = []): EvidenceRef[] {
+  const out: EvidenceRef[] = [];
+  const seen = new Set<string>();
+  const key = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[#?].*$/, "").replace(/\/+$/, "");
+  for (const c of cites ?? []) {
+    const f = /^fact:(\d+)$/i.exec(c.trim());
+    if (f) {
+      const id = factIds[Number(f[1])];
+      if (id && !seen.has(id)) out.push({ kind: "fact", factId: id });
+      if (id) seen.add(id);
+    } else if (/^https?:\/\//i.test(c.trim())) {
+      const k = key(c);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const title = sources.find((s) => key(s.url) === k)?.title;
+      out.push({ kind: "web", url: c.trim().slice(0, 500), ...(title ? { title: title.slice(0, 200) } : {}) });
+    }
+    if (out.length >= 6) break;
+  }
+  return out;
 }

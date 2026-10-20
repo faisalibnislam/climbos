@@ -255,7 +255,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[] } } | null)?.quality ?? null} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="Sent back">
               {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
@@ -266,8 +266,8 @@ function PlanScreen({ slug }: { slug: string }) {
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} /> : null}
           {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
-          <Audiences strategy={s} />
-          <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} />
+          <Audiences strategy={s} facts={plan.sources} />
+          <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} facts={plan.sources} />
           <Experiments experiments={plan.experiments} />
           <PlanBasics strategy={s} />
         </>

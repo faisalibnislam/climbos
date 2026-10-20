@@ -1156,7 +1156,8 @@ export default defineSchema({
       v.literal("superseded"),
     ),
     summary: v.string(),
-    audiences: v.array(v.object({ name: v.string(), hypothesis: v.string(), evidence: v.string() })),
+    /** `sources`: what each audience rests on (confirmed facts or pages the research read), resolved at save. */
+    audiences: v.array(v.object({ name: v.string(), hypothesis: v.string(), evidence: v.string(), sources: v.optional(v.array(v.union(v.object({ kind: v.literal("fact"), factId: v.string() }), v.object({ kind: v.literal("web"), url: v.string(), title: v.optional(v.string()) })))) })),
     positioning: v.string(),
     channels: v.array(
       v.object({
@@ -1171,6 +1172,8 @@ export default defineSchema({
         dependencies: v.array(v.string()),
         measurement: v.string(),
         capabilityNote: v.optional(v.string()),
+        /** What this channel rests on (confirmed facts or pages the research read), resolved at save. */
+        sources: v.optional(v.array(v.union(v.object({ kind: v.literal("fact"), factId: v.string() }), v.object({ kind: v.literal("web"), url: v.string(), title: v.optional(v.string()) })))),
         /** The action card that runs this channel's work once the plan is approved. */
         cardId: v.optional(v.id("actionCards")),
       }),
@@ -1203,6 +1206,8 @@ export default defineSchema({
             fixes: v.optional(v.array(v.object({ rule: v.string(), path: v.optional(v.string()), message: v.string() }))),
             /** Inputs the plan worked without (hours, email audience). */
             unknowns: v.optional(v.array(v.string())),
+            /** Confirmed facts that disagree, for the owner to settle. */
+            conflicts: v.optional(v.array(v.string())),
             agents: v.any(),
           }),
         ),

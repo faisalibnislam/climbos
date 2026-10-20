@@ -54,6 +54,22 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     expect(q?.unknowns).toEqual(expect.arrayContaining([expect.stringMatching(/Hours/), expect.stringMatching(/email/)]));
   });
 
+  it("conflicting confirmed facts are kept, briefed and shown on the plan (item 9)", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-conflict@example.com");
+    await t.run(async (ctx) => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      for (const statement of ["Pro plan costs $19/month", "Pro is $24 per month"])
+        await ctx.db.insert("businessFacts", { orgId: w.orgId, businessId: b._id, category: "pricing", statement, confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+    });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    expect((s.expert as { quality?: { conflicts?: string[] } }).quality?.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    const ev = await t.run(async (ctx) => ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first());
+    expect((JSON.parse(ev!.data) as PlanEvidence).conflicts?.[0].factIds).toHaveLength(2);
+  });
+
   it("a plan changed after review can't be approved, but can be sent back; parking a channel doesn't void it", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-change@example.com");

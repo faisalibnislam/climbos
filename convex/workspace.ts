@@ -399,7 +399,7 @@ export const plan = query({
         ).filter((e) => e.strategyId === strategy._id)
       : [];
     const facts = [];
-    for (const id of (strategy?.sourceFactIds ?? []).slice(0, 30)) {
+    for (const id of (strategy?.sourceFactIds ?? []).slice(0, 40)) {
       const f = await ctx.db.get(id);
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
     }

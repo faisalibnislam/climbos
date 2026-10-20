@@ -236,6 +236,28 @@ export function LinkChip({ url, label }: { url: string; label?: string }) {
   );
 }
 
+type SourceRef = { kind: "fact"; factId: string } | { kind: "web"; url: string; title?: string };
+type FactLite = { id: string; statement: string };
+
+/** What a channel or audience rests on: confirmed facts and pages the research read (Book 14 §5). */
+function SourceChips({ refs, facts }: { refs?: SourceRef[]; facts: FactLite[] }) {
+  if (!refs?.length) return null;
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5" aria-label="Sources">
+      {refs.map((r) => {
+        if (r.kind === "web") return <LinkChip key={r.url} url={r.url} label={r.title ? r.title.slice(0, 40) : undefined} />;
+        const f = facts.find((x) => x.id === r.factId);
+        return (
+          <span key={r.factId} title={f?.statement ?? "Confirmed fact"} className="inline-flex h-6 min-w-0 max-w-[16rem] items-center gap-1 rounded-[var(--radius-badge)] border border-line bg-surface px-1.5 text-xs text-ink-2">
+            <BookOpenCheck aria-hidden className="size-3 shrink-0 text-brand-700" />
+            <span className="truncate">{f ? f.statement : "Confirmed fact"}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 /** AI text with its links pulled out into chips. */
 function LinkedText({ text, lines = 1, className }: { text: string; lines?: keyof typeof CLAMP; className?: string }) {
   const s = splitLinks(text);
@@ -324,7 +346,7 @@ const PERSONA: { tile: Tone; rail: string }[] = [
   { tile: "amber", rail: "bg-chart-5" },
 ];
 
-function PersonaCard({ name, hypothesis, evidence, i }: { name: string; hypothesis: string; evidence: string; i: number }) {
+function PersonaCard({ name, hypothesis, evidence, sources, facts, i }: { name: string; hypothesis: string; evidence: string; sources?: SourceRef[]; facts: FactLite[]; i: number }) {
   const [open, setOpen] = useState(false);
   const p = PERSONA[i % PERSONA.length];
   const ev = splitLinks(evidence);
@@ -353,6 +375,7 @@ function PersonaCard({ name, hypothesis, evidence, i }: { name: string; hypothes
         {ev.urls.map((u) => (
           <LinkChip key={u} url={u} />
         ))}
+        <SourceChips refs={sources?.filter((r) => r.kind === "fact" || !ev.urls.includes(r.url))} facts={facts} />
       </div>
       {open ? (
         <p id={panel} className="text-xs text-ink-2">
@@ -363,7 +386,7 @@ function PersonaCard({ name, hypothesis, evidence, i }: { name: string; hypothes
   );
 }
 
-export function Audiences({ strategy }: { strategy: Strategy }) {
+export function Audiences({ strategy, facts = [] }: { strategy: Strategy; facts?: FactLite[] }) {
   return (
     <PlanSection id="audiences-heading" title="Who to reach" icon={UsersRound} bare meta={strategy.audiences.length ? <Badge>{`${strategy.audiences.length} audiences`}</Badge> : null}>
       {strategy.audiences.length === 0 ? (
@@ -375,7 +398,7 @@ export function Audiences({ strategy }: { strategy: Strategy }) {
       ) : (
         <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {strategy.audiences.map((a, i) => (
-            <PersonaCard key={a.name} name={a.name} hypothesis={a.hypothesis} evidence={a.evidence} i={i} />
+            <PersonaCard key={a.name} name={a.name} hypothesis={a.hypothesis} evidence={a.evidence} sources={(a as { sources?: SourceRef[] }).sources} facts={facts} i={i} />
           ))}
         </ul>
       )}
@@ -429,7 +452,7 @@ function ChannelToggle({ slug, strategyId, channelKey, status, name, approved }:
   );
 }
 
-function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency }: { c: Strategy["channels"][number]; rank: number; slug: string; strategy: Strategy; canEdit: boolean; editable: boolean; currency: string }) {
+function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency, facts }: { c: Strategy["channels"][number]; rank: number; slug: string; strategy: Strategy; canEdit: boolean; editable: boolean; currency: string; facts: FactLite[] }) {
   const [open, setOpen] = useState(false);
   const st = CHANNEL_STATUS[c.status] ?? { label: c.status, tone: "neutral" as Tone, icon: Info };
   const panel = useId();
@@ -462,6 +485,7 @@ function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency }: {
         </dl>
       </div>
       <ProseBullets text={c.why} max={1} tone="muted" />
+      <SourceChips refs={(c as { sources?: SourceRef[] }).sources} facts={facts} />
       {c.capabilityNote ? (
         <p className="flex items-start gap-1.5 rounded-[var(--radius-control)] bg-blue-100 px-2 py-1.5 text-xs text-blue-800">
           <Info aria-hidden className="mt-px size-3.5 shrink-0" />
@@ -505,7 +529,7 @@ function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency }: {
   );
 }
 
-export function Channels({ slug, strategy, canEdit, currency }: { slug: string; strategy: Strategy; canEdit: boolean; currency: string }) {
+export function Channels({ slug, strategy, canEdit, currency, facts = [] }: { slug: string; strategy: Strategy; canEdit: boolean; currency: string; facts?: FactLite[] }) {
   const channels = [...strategy.channels].sort((a, b) => a.priority - b.priority);
   const editable = canEdit && strategy.status !== "superseded";
   const credits = channels.reduce((t, c) => t + microsToCredits(c.monthlyCostMicros), 0);
@@ -555,7 +579,7 @@ export function Channels({ slug, strategy, canEdit, currency }: { slug: string; 
           ) : null}
           <ol className="flex flex-col gap-3">
             {channels.map((c, i) => (
-              <ChannelCard key={c.key} c={c} rank={i + 1} slug={slug} strategy={strategy} canEdit={canEdit} editable={editable} currency={currency} />
+              <ChannelCard key={c.key} c={c} rank={i + 1} slug={slug} strategy={strategy} canEdit={canEdit} editable={editable} currency={currency} facts={facts} />
             ))}
           </ol>
         </>

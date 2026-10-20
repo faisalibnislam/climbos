@@ -52,6 +52,8 @@ export interface PlanQuality {
   fixes?: QualityFix[];
   /** Inputs the plan had to work without (Book 14 §4: unknown is a state, not a default). Doesn't change the state. */
   unknowns?: string[];
+  /** Confirmed facts that disagree (e.g. two prices for one plan); the owner should settle them. */
+  conflicts?: string[];
   agents: AgentQuality[];
 }
 
@@ -86,8 +88,8 @@ const LABEL: Record<string, string> = {
 };
 
 /** Combine the plays and plan agents' results (plus any extra hard lint on the final plan) into one quality state. */
-export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [], opts: { economicsMissing?: boolean; unknowns?: string[] } = {}): PlanQuality {
-  const u = opts.unknowns?.length ? { unknowns: opts.unknowns } : {};
+export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [], opts: { economicsMissing?: boolean; unknowns?: string[]; conflicts?: string[] } = {}): PlanQuality {
+  const u = { ...(opts.unknowns?.length ? { unknowns: opts.unknowns } : {}), ...(opts.conflicts?.length ? { conflicts: opts.conflicts } : {}) };
   const hard: string[] = [];
   const hardRules = new Set<string>();
   const fixes: QualityFix[] = [];

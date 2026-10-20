@@ -13,8 +13,8 @@ Reviewed 2026-10-20 against `growth-engine-v2`. Evidence is file:line at that ti
 | 6 | `generationCostMicros` was always 0 | 14 §9 | Built |
 | 7 | Hours and email audience were assumed, not marked unknown | 14 §4 | Built |
 | **P1: decision quality** | | | |
-| 8 | Claims don't link to evidence ids; only play inputs have a URL and quote | 13 §3, 14 §5 | Backlog |
-| 9 | No register of conflicting sources (e.g. two prices) | 14 §5 | Backlog |
+| 8 | Claims don't link to evidence ids; only play inputs have a URL and quote | 13 §3, 14 §5 | Built: channels and audiences |
+| 9 | No register of conflicting sources (e.g. two prices) | 14 §5 | Built: prices and trial length |
 | 10 | Whole skill files go into every prompt; nothing is selected by business type, stage or channel | 14 §6 | Backlog (needs a bench check) |
 | 11 | `webFetch` is requested but never sent to OpenAI; the model sees search snippets only | 13 §3 | Backlog |
 | **P1: evaluation** | | | |

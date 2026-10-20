@@ -126,7 +126,12 @@ export function playScore(p: Pick<Play, "scores">): number {
   return Math.round(20 * (0.25 * s.fit + 0.2 * s.predictability + 0.15 * s.leverage + 0.1 * s.timeToSignal + 0.1 * s.compounding + 0.1 * s.cost + 0.1 * s.risk));
 }
 
+/** What a channel or audience rests on (Book 14 §5): "fact:N" (a confirmed fact's index) or a research URL; [] for a judgment call. */
+const CITES = z.array(z.string());
+
 export const StrategyV2Schema = StrategySchema.extend({
+  audiences: z.array(StrategySchema.shape.audiences.element.extend({ cites: CITES })),
+  channels: z.array(StrategySchema.shape.channels.element.extend({ cites: CITES })),
   diagnosis: z.string(),
   affordableCac: z.string(),
   notDoing: z.array(z.object({ channel: z.string(), why: z.string() })),
@@ -140,7 +145,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v2.7-grounded-numbers";
+export const ENGINE_VERSION = "v2.8-cited-sources";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -793,6 +798,32 @@ export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdS
   return issues;
 }
 
+/** "https://www.x.com/a/" → "x.com/a": how cited URLs are matched against what the writer was given. */
+const citeKey = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[#?].*$/, "").replace(/\/+$/, "");
+
+/**
+ * Book 14 §5: channel and audience cites must resolve. "fact:N" must be a
+ * confirmed fact the writer was given; a URL must be one it read (research,
+ * facts, brief or plays). An unresolvable cite is a fabricated citation.
+ */
+export function lintCites(out: { channels: { name: string; priority: number; cites?: string[] }[]; audiences: { name: string; cites?: string[] }[] }, factCount: number, evidence: string): LintIssue[] {
+  const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
+  const issues: LintIssue[] = [];
+  const check = (cites: string[] | undefined, path: string, label: string) => {
+    for (const c of cites ?? []) {
+      const f = /^fact:(\d+)$/i.exec(c.trim());
+      const ok = f ? Number(f[1]) < factCount : /^https?:\/\//i.test(c.trim()) && ev.includes(citeKey(c));
+      if (!ok) issues.push({ severity: "error", rule: "citation", message: `${label} cites "${c.slice(0, 80)}", which isn't a confirmed fact (fact:0–${Math.max(0, factCount - 1)}) or a page the research read. Cite a real one or leave cites empty.`, path: `${path}.cites` });
+    }
+  };
+  out.channels.forEach((ch, i) => {
+    check(ch.cites, `channels[${i}]`, `Channel "${ch.name}"`);
+    if (ch.priority === 1 && ch.cites && !ch.cites.length && factCount + ev.length > 0) issues.push({ severity: "warn", rule: "uncited", message: `The top channel "${ch.name}" cites nothing. Name the fact or page it rests on.`, path: `channels[${i}].cites` });
+  });
+  out.audiences.forEach((a, i) => check(a.cites, `audiences[${i}]`, `Audience "${a.name}"`));
+  return issues;
+}
+
 /** Sending to a list the business already has ("email your list", "newsletter subscribers"). Building a list doesn't match. */
 const USES_LIST = /\b(?:your|existing|current)\s+(?:email\s+|mailing\s+|newsletter\s+)?(?:list|subscribers?|newsletter)\b|\bnewsletter\s+subscribers?\b|\b(?:email|broadcast|send)\w*\s+(?:to\s+)?(?:your|the|existing)\s+(?:\d[\d,]*\s+)?(?:subscribers?|list)\b/i;
 const BUILDS_LIST = /\b(?:start|launch|build|create|grow|set up|collect)\w*\b[^.]{0,40}\b(?:list|newsletter|subscribers?)\b/i;
@@ -1032,7 +1063,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
