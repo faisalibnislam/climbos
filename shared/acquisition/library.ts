@@ -384,6 +384,15 @@ export const BUSINESS_TYPES: BusinessType[] = [
 export const TYPE_BY_KEY: Record<string, BusinessType> = Object.fromEntries(BUSINESS_TYPES.map((t) => [t.key, t]));
 
 /** Best guess from the onboarding classifier's coarse type (refined by the agent). */
+/** Library types whose delivery is people's time: new customers are limited by capacity, not just demand. */
+export const SERVICE_TYPES = new Set(["agency", "consulting", "professional_services", "local_services", "healthcare", "hospitality", "events", "education"]);
+
+/** Whether a business (saved acquisition types, else its legacy type) delivers through people's time. */
+export function isServiceBusiness(types: string[] | undefined, legacy?: string | null): boolean {
+  const ts = types?.length ? types : typesFromLegacy(legacy);
+  return ts.some((t) => SERVICE_TYPES.has(t));
+}
+
 export function typesFromLegacy(t: string | null | undefined): string[] {
   switch (t) {
     case "saas":

@@ -76,7 +76,7 @@ import {
 } from "../shared/agents/specs";
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
-import { BUSINESS_TYPES, budgetBand, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
+import { BUSINESS_TYPES, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
@@ -477,6 +477,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     currency: workspaceCurrency(job),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
+    ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
     ...extra,
   };
 }
@@ -486,6 +487,7 @@ function planUnknowns(job: JobCtx): string[] {
   return [
     job.business?.unitEconomics?.ownerHoursPerWeek === undefined ? "Hours you can give growth work each week" : "",
     job.audience && job.audience.consented === 0 ? "Who you can email (no consented contacts in ClimbOS)" : "",
+    isServiceBusiness((job.business as { acquisition?: { types?: string[] } } | null)?.acquisition?.types, job.business?.businessType) && job.business?.unitEconomics?.newCustomersPerMonth === undefined ? "How many new customers you can serve each month" : "",
   ].filter(Boolean);
 }
 
@@ -493,12 +495,13 @@ function planUnknowns(job: JobCtx): string[] {
 type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
-function lockedConstraints(job: JobCtx, plays: PlaysOutput): PlanConstraints {
+function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string): PlanConstraints {
   const h = job.goal?.horizonDays ?? 90;
   const t = job.goal?.target;
   return constraintsOf(job, {
     lockedCustomers: portfolioP50(plays, job.goal?.horizonDays),
     horizonDays: h,
+    ...(serviceArea ? { serviceArea } : {}),
     forecastCustomers: forecastCustomers(plays, h),
     goalNumbers: [t?.baseline, t?.desired, t && t.baseline !== null && t.desired !== null ? t.desired - t.baseline : null].filter((n): n is number => typeof n === "number" && n > 0),
   });
@@ -592,6 +595,7 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
     u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
     u.ownerHourUsd ? `owner's time ${formatMoney(u.ownerHourUsd, currency)}/hour` : "",
     u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
+    u.newCustomersPerMonth !== undefined ? `the business can take on at most ${u.newCustomersPerMonth} new customers a month (don't plan more demand than that; fill it first)` : "",
   ].filter(Boolean);
   return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
 }
@@ -884,7 +888,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities), decisionContract: hasFlag(job, "decision_contract") }),
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }) },
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}) } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
       const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);
@@ -956,7 +960,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
-          plays ? { constraints: lockedConstraints(job, plays) } : {},
+          plays ? { constraints: lockedConstraints(job, plays, profile.dims.geography?.value) } : {},
         ),
         startedAt,
         {
@@ -971,7 +975,7 @@ export const buildStrategy = internalAction({
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
       // The final checks see what the writers read (research notes and pages), so cited pages resolve.
       const planLintInput = plays
-        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
+        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays, profile.dims.geography?.value) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
         : null;
       if (plays && locked && planLintInput) strategy = await consistencyStep(ctx, job, 190, strategy, locked, planLintInput);
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.

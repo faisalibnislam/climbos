@@ -1,3 +1,4 @@
+import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
 import { minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
@@ -427,7 +428,7 @@ export const plan = query({
           }
         : null,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
-      questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics) : [],
+      questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
@@ -454,6 +455,7 @@ export const setUnitEconomics = mutation({
     monthlyChurn: v.optional(v.number()),
     ownerHourUsd: v.optional(v.number()),
     ownerHoursPerWeek: v.optional(v.number()),
+    newCustomersPerMonth: v.optional(v.number()),
   },
   handler: async (ctx, { slug, ...vals }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
@@ -467,6 +469,7 @@ export const setUnitEconomics = mutation({
     check(vals.monthlyChurn, 0.001, 0.95, "Monthly churn");
     check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
     check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
+    check(vals.newCustomersPerMonth, 0, 100_000, "New customers a month");
     const prev = business.unitEconomics;
     const next = {
       revenuePerCustomerMonthUsd: vals.revenuePerCustomerMonthUsd ?? prev?.revenuePerCustomerMonthUsd,
@@ -474,6 +477,7 @@ export const setUnitEconomics = mutation({
       monthlyChurn: vals.monthlyChurn ?? prev?.monthlyChurn,
       ownerHourUsd: vals.ownerHourUsd ?? prev?.ownerHourUsd,
       ownerHoursPerWeek: vals.ownerHoursPerWeek ?? prev?.ownerHoursPerWeek,
+      newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
       updatedAt: Date.now(),
     };
     await ctx.db.patch(business._id, { unitEconomics: next });

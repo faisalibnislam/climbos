@@ -67,6 +67,8 @@ export interface OwnerEconomics {
   ownerHourUsd?: number;
   /** Hours a week the owner can give growth work (a constraint, not a price). */
   ownerHoursPerWeek?: number;
+  /** Most new customers (clients, bookings, projects) the business can take on a month: a delivery limit. */
+  newCustomersPerMonth?: number;
   /** When the owner last confirmed these numbers. */
   updatedAt?: number;
 }
@@ -363,13 +365,13 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
   return out;
 }
 
-export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd" | "ownerHoursPerWeek";
+export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd" | "ownerHoursPerWeek" | "newCustomersPerMonth";
 export interface OwnerQuestion {
   key: QuestionKey;
   question: string;
   /** The value the plan assumed, for the input's placeholder. */
   assumed: number;
-  unit: "usd_month" | "share" | "share_month" | "usd_hour" | "hours_week";
+  unit: "usd_month" | "share" | "share_month" | "usd_hour" | "hours_week" | "count_month";
   /** Why it matters: which plays' verdicts flip across a plausible range. */
   why: string;
 }
@@ -380,6 +382,7 @@ const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> 
   monthlyChurn: { q: "What share of customers leave each month?", unit: "share_month" },
   ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
   ownerHoursPerWeek: { q: "How many hours a week can you give growth work?", unit: "hours_week" },
+  newCustomersPerMonth: { q: "How many new customers can you take on each month?", unit: "count_month" },
 };
 
 /**
@@ -387,7 +390,7 @@ const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> 
  * input is moved across a plausible range; it is asked only if some play's
  * pays-back verdict flips or the main play's payback moves by half or more.
  */
-export function decisionQuestions(out: { economics: Economics; plays: PlayLike[] }, owner?: OwnerEconomics | null, max = 3): OwnerQuestion[] {
+export function decisionQuestions(out: { economics: Economics; plays: PlayLike[] }, owner?: OwnerEconomics | null, max = 3, opts: { serviceBusiness?: boolean; horizonDays?: number } = {}): OwnerQuestion[] {
   const e = applyOwnerEconomics(out.economics, owner);
   const plays = out.plays.filter((p) => p.model?.steps?.length);
   if (!plays.length) return [];
@@ -418,7 +421,13 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const hours = plays.reduce((t, p) => t + Math.max(0, p.model.ownerHoursPerWeek), 0);
   const capacity: OwnerQuestion[] =
     owner?.ownerHoursPerWeek === undefined && hours > 3 ? [{ key: "ownerHoursPerWeek", question: QUESTION.ownerHoursPerWeek.q, assumed: Math.round(hours * 10) / 10, unit: "hours_week", why: `The plays need about ${Math.round(hours)} hours a week from you.` }] : [];
+  // Delivery: a service business can only take so many new clients; ask when the plays forecast any.
+  const months = (opts.horizonDays || 90) / 30;
+  const perMonth = portfolioP50(out, opts.horizonDays || 90) / months;
+  const delivery: OwnerQuestion[] =
+    opts.serviceBusiness && owner?.newCustomersPerMonth === undefined && perMonth >= 1 ? [{ key: "newCustomersPerMonth", question: QUESTION.newCustomersPerMonth.q, assumed: Math.round(perMonth), unit: "count_month", why: `The plays forecast about ${Math.round(perMonth)} new customers a month; more than you can serve wastes the work.` }] : [];
   return [
+    ...delivery,
     ...capacity,
     ...scored
     .filter((x) => x.flips > 0 || x.paybackSwing >= 0.5)

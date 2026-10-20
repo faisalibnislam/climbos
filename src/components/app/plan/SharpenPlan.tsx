@@ -15,6 +15,7 @@ const UNIT: Record<OwnerQuestion["unit"], { suffix: string; toInput: (v: number)
   hours_week: { suffix: "hours / week", toInput: (v) => String(Math.round(v * 10) / 10), fromInput: Number },
   share: { suffix: "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100 },
   share_month: { suffix: "% / month", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100 },
+  count_month: { suffix: "/ month", toInput: (v) => String(Math.round(v)), fromInput: Number },
 };
 
 /** Short labels; the full question stays available to screen readers and in the tooltip. */
@@ -24,6 +25,7 @@ const SHORT: Record<string, string> = {
   monthlyChurn: "Customers lost / month",
   ownerHourUsd: "Your hour is worth",
   ownerHoursPerWeek: "Your hours / week",
+  newCustomersPerMonth: "New customers you can take",
 };
 
 /** Up to 3 questions whose answers would change the plan's verdicts; answers update every number at once. */

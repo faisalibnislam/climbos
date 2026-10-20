@@ -369,6 +369,8 @@ export default defineSchema({
         monthlyChurn: v.optional(v.number()),
         ownerHourUsd: v.optional(v.number()),
         ownerHoursPerWeek: v.optional(v.number()),
+        /** The most new customers (clients, bookings, projects) the business can take on each month. */
+        newCustomersPerMonth: v.optional(v.number()),
         updatedAt: v.number(),
       }),
     ),

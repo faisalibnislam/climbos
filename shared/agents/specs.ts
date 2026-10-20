@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics, withForecasts, type Economics } from "./economics";
+import { lintEconomics, portfolioP50, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -866,6 +866,32 @@ export function lintExperimentFeasibility(out: { experiments?: { name: string; m
   return issues;
 }
 
+/** Words that keep paid reach inside a service area. */
+const GEO_TARGETED = /\b(radius|within \d|km|kilomet|miles?|mi\b|neighbou?rhoods?|nearby|local(ly)?|city|town|county|borough|suburbs?|zip|post ?codes?|service area|geo-?target\w*|geo-?fenc\w*|location target\w*)\b/i;
+
+/**
+ * Expansion slice 4 (BK01 Ch 8 chain-link; pack BT-03/BT-05): demand the
+ * business can't deliver is waste. Forecast new customers can't exceed the
+ * owner's monthly delivery limit (a hard capacity check), and a local or
+ * regional business's paid reach must target its service area.
+ */
+export function lintDeliveryCapacity(customers: number, c: PlanConstraints | undefined, path = "plays"): LintIssue[] {
+  const cap = c?.newCustomersPerMonth;
+  if (cap === undefined || !(customers > 0)) return [];
+  const months = (c?.horizonDays ?? 90) / 30;
+  const limit = cap * months;
+  return customers > limit * 1.001
+    ? [{ severity: "error", rule: "capacity", message: `The plays forecast about ${Math.round(customers)} new customers in ${c?.horizonDays ?? 90} days; the business can take about ${Math.round(limit)} (${cap} a month). Fill the capacity you have (pricing, selectivity, a waitlist) or add capacity before adding demand.`, path }]
+    : [];
+}
+
+export function lintServiceArea(items: { path: string; spend: number; text: string }[], c: PlanConstraints | undefined): LintIssue[] {
+  if (c?.serviceArea !== "local" && c?.serviceArea !== "regional") return [];
+  return items
+    .filter((x) => x.spend > 0 && !GEO_TARGETED.test(x.text))
+    .map((x) => ({ severity: "error" as const, rule: "service_area", message: `This spends on paid reach for a ${c.serviceArea} business without limiting it to the service area. Target only where you can serve (radius, neighbourhoods, postcodes).`, path: x.path }));
+}
+
 /** Sending to a list the business already has ("email your list", "newsletter subscribers"). Building a list doesn't match. */
 const USES_LIST = /\b(?:your|existing|current)\s+(?:email\s+|mailing\s+|newsletter\s+)?(?:list|subscribers?|newsletter)\b|\bnewsletter\s+subscribers?\b|\b(?:email|broadcast|send)\w*\s+(?:to\s+)?(?:your|the|existing)\s+(?:\d[\d,]*\s+)?(?:subscribers?|list)\b/i;
 const BUILDS_LIST = /\b(?:start|launch|build|create|grow|set up|collect)\w*\b[^.]{0,40}\b(?:list|newsletter|subscribers?)\b/i;
@@ -1087,7 +1113,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",
@@ -1105,7 +1131,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintExperimentFeasibility(out), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintExperimentFeasibility(out), ...lintDeliveryCapacity(input.constraints?.lockedCustomers ?? 0, input.constraints, "northStar.target"), ...lintServiceArea(out.channels.map((ch, i) => ({ path: `channels[${i}]`, spend: ch.suggestedMonthlyAdSpend, text: `${ch.name} ${ch.why} ${ch.deliverables.join(" ")} ${ch.measurement}` })), input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
