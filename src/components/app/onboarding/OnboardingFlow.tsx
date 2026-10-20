@@ -223,6 +223,11 @@ function BusinessStep({
   const create = useMutation(api.orgs.createWorkspace);
   const startResearch = useMutation(api.orgs.startResearch);
   const claim = useMutation(api.preview.claim);
+  const aiView = useQuery(api.orgs.newWorkspaceAiMode, {});
+  const expertUnlocked = Boolean(aiView?.expertUnlocked);
+  const [picked, setAiMode] = useState<"basic" | "expert" | null>(null);
+  // Paid accounts default to Expert, like the workspace picker; free ones stay on Basic.
+  const aiMode: "basic" | "expert" = expertUnlocked ? (picked ?? "expert") : "basic";
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
@@ -253,7 +258,7 @@ function BusinessStep({
       }
       if (previewToken) await claim({ token: previewToken, orgId: orgId as Id<"organizations"> }).catch(() => undefined);
       try {
-        await startResearch({ slug, website: fields.website, ownerText: fields.ownerText });
+        await startResearch({ slug, website: fields.website, ownerText: fields.ownerText, aiMode });
       } catch (e) {
         // The workspace exists: carry on to it, where research can be started again.
         toast({ tone: "danger", title: errorMessage(e) });
@@ -384,9 +389,9 @@ function BusinessStep({
           </CardContent>
         </Card>
       )}
-      {/* New workspaces start free: Basic runs everything; Expert unlocks with a paid plan. */}
+      {/* Expert unlocks when the owner's account has a paid (or comped) package; new workspaces join that account. */}
       <div className="mt-6">
-        <AiModeChoice unlocked={false} value="basic" onChange={() => undefined} label="Your team" />
+        <AiModeChoice unlocked={expertUnlocked} value={aiMode} onChange={setAiMode} label="Your team" />
       </div>
       <p className="mt-6 text-sm text-ink-3">
         <Link href="/demo" className={buttonClasses({ variant: "link" })}>Try the demo first</Link>

@@ -69,6 +69,15 @@ describe("admin panel", () => {
     expect(detail!.audit.some((a: { action: string }) => a.action === "admin.comp_changed")).toBe(true);
   });
 
+  it("onboarding step 1 unlocks Expert for an account with a comped package (new workspaces join that account)", async () => {
+    const t = setup();
+    const c = await customer(t, "step1@example.com");
+    expect(await c.client.query(api.orgs.newWorkspaceAiMode, {})).toEqual({ expertUnlocked: false });
+    const ops = await asNewUser(t, "ops@example.com");
+    await ops.client.mutation(api.admin.compPackage, { accountId: c.accountId, planKey: "pro", months: 1, reason: "owner" });
+    expect(await c.client.query(api.orgs.newWorkspaceAiMode, {})).toEqual({ expertUnlocked: true });
+  });
+
   it("live feature locks: setting autopilot free unlocks it for free accounts; admins can't change money settings", async () => {
     const t = setup();
     const c = await customer(t, "lock@example.com");

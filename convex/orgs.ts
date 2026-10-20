@@ -62,6 +62,22 @@ function normalizeWebsite(input?: string): string | undefined {
 }
 
 /** Signed-in user, their workspaces and whether they're an operator. */
+/**
+ * Before a new workspace exists (onboarding step 1): can its first research run on Expert?
+ * New workspaces join the owner's account, so the account's package decides (comps included).
+ */
+export const newWorkspaceAiMode = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await optionalUser(ctx);
+    if (!user) return { expertUnlocked: false };
+    const account = await ctx.db.query("accounts").withIndex("by_owner", (q) => q.eq("ownerUserId", user._id)).first();
+    if (!account || account.suspendedAt) return { expertUnlocked: false };
+    const first = (await accountWorkspaces(ctx, account._id))[0];
+    return { expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false };
+  },
+});
+
 export const me = query({
   args: {},
   handler: async (ctx) => {
