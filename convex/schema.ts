@@ -1301,8 +1301,43 @@ export default defineSchema({
       v.literal("concluded"),
     ),
     resultNote: v.optional(v.string()),
+    /**
+     * Structured outcomes (Book 14 §14). The hypothesis, metric and stopping
+     * rule above stay as written; an analysis on a changed definition is
+     * appended, never written over. Last = current. `inference` is computed
+     * (shared/growth/experimentOutcome.ts), never entered.
+     */
+    analyses: v.optional(
+      v.array(
+        v.object({
+          n: v.number(),
+          executed: v.boolean(),
+          source: v.union(v.literal("owner_report"), v.literal("integration"), v.literal("platform_report")),
+          design: v.union(v.literal("none"), v.literal("before_after"), v.literal("holdout"), v.literal("randomized")),
+          eligible: v.optional(v.number()),
+          exposed: v.optional(v.number()),
+          conversions: v.optional(v.number()),
+          controlSize: v.optional(v.number()),
+          controlConversions: v.optional(v.number()),
+          windowStart: v.optional(v.string()),
+          windowEnd: v.optional(v.string()),
+          metric: v.string(),
+          successRule: v.string(),
+          result: v.union(v.literal("met"), v.literal("missed"), v.literal("unclear")),
+          stopRuleHit: v.boolean(),
+          note: v.optional(v.string()),
+          inference: v.union(v.literal("observed"), v.literal("attributed"), v.literal("incremental"), v.literal("not_run")),
+          /** Judged on a metric or rule other than the experiment's original. */
+          redefined: v.boolean(),
+          reviewedBy: v.id("users"),
+          reviewedAt: v.number(),
+        }),
+      ),
+    ),
     createdAt: v.number(),
-  }).index("by_org", ["orgId"]),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_strategy", ["strategyId"]),
 
   campaigns: defineTable({
     orgId: v.id("organizations"),

@@ -437,7 +437,7 @@ export const plan = query({
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
       planEstimateMicros: estimateJobMicros(planJob("strategy")),
-      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status })),
+      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: facts,
       currency: org.currency,

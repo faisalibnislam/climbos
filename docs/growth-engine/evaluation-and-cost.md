@@ -364,3 +364,11 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Approval bound to content:** the approval binds to the plan's content hash, and approving re-checks it. `generationCostMicros` is now the run's cost at save.
 - **Unknowns stated:** owner hours and email audience go in the brief and in `quality.unknowns`. `lintNoAudience` blocks sends to a list that isn't there.
 - **Bench parity:** the bench applies the same customer-count check.
+
+**Built (not yet evaluated): structured experiment outcomes (gap item 16, Book 14 §14, Book 13 §9).**
+- **Outcome per test:** `experiments.analyses` holds eligible, exposed and converted counts, the comparison group, window, source, design, result against the metric and stop rule, and whether the test ran.
+- **Label set in code:** `inferenceOf` (`shared/growth/experimentOutcome.ts`). Platform report → attributed. Holdout or randomized with both groups → incremental. Anything else → observed. Not carried out → not_run.
+- **No overwrite on redefinition:** a changed metric or rule after results is appended and marked `redefined`. The same definition corrects the latest analysis. The original hypothesis, metric and stop rule are never edited.
+- **Owner form:** on each experiment card (`ExperimentOutcome.tsx`) via `playResults.recordExperimentOutcome`. It previews the label before saving.
+- **Learning:** `resultsBrief` adds EXPERIMENT OUTCOMES. Only incremental lines may say "incremental"; observed and attributed lines say they are not proof of cause. Tests that weren't run sit under TESTS NOT RUN, out of the lessons. A redefined result is exploratory and keeps the original verdict.
+- **Not done:** forecast and backtest runs still aren't linked to plays. The UI hasn't been checked in a browser against a live backend.

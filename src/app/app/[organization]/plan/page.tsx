@@ -268,7 +268,7 @@ function PlanScreen({ slug }: { slug: string }) {
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} />
           <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} />
-          <Experiments experiments={plan.experiments} />
+          <Experiments experiments={plan.experiments} slug={slug} canEdit={plan.canEdit} />
           <PlanBasics strategy={s} />
         </>
       )}

@@ -147,7 +147,8 @@ export const restore = mutation({
         .take(200)
     ).filter((e) => e.strategyId === expSource._id);
     for (const e of experiments.slice(0, 4)) {
-      const { _id, _creationTime, resultNote: _note, ...rest } = e;
+      // A new version starts the test fresh: its results stay with the version that ran it.
+      const { _id, _creationTime, resultNote: _note, analyses: _analyses, ...rest } = e;
       await ctx.db.insert("experiments", { ...rest, strategyId, status: "proposed", createdAt: now });
     }
 

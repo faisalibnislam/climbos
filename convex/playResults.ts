@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { playActuals, resultsLine, type PlayActuals } from "../shared/growth/actuals";
+import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
 import type { PlayModel } from "../shared/agents/economics";
 
 /**
@@ -75,12 +76,88 @@ export const log = mutation({
   },
 });
 
+type Analysis = NonNullable<Doc<"experiments">["analyses"]>[number];
+const MAX_ANALYSES = 12;
+
+/**
+ * Record a test's outcome (Book 14 §14). Code labels what it can claim. A
+ * change of metric or success rule is saved as a new analysis; the same
+ * definition corrects the latest one.
+ */
+export const recordExperimentOutcome = mutation({
+  args: {
+    slug: v.string(),
+    experimentId: v.id("experiments"),
+    executed: v.boolean(),
+    source: v.union(v.literal("owner_report"), v.literal("integration"), v.literal("platform_report")),
+    design: v.union(v.literal("none"), v.literal("before_after"), v.literal("holdout"), v.literal("randomized")),
+    eligible: v.optional(v.number()),
+    exposed: v.optional(v.number()),
+    conversions: v.optional(v.number()),
+    controlSize: v.optional(v.number()),
+    controlConversions: v.optional(v.number()),
+    windowStart: v.optional(v.string()),
+    windowEnd: v.optional(v.string()),
+    metric: v.optional(v.string()),
+    successRule: v.optional(v.string()),
+    result: v.union(v.literal("met"), v.literal("missed"), v.literal("unclear")),
+    stopRuleHit: v.boolean(),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, { slug, experimentId, ...a }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const e = assertSameOrg(await ctx.db.get(experimentId), org._id, "experiment");
+    const input = { ...a, metric: (a.metric ?? e.primaryMetric).trim(), successRule: (a.successRule ?? e.stoppingRule).trim(), note: a.note?.trim() || undefined };
+    const problems = outcomeProblems(input, new Date().toISOString().slice(0, 10));
+    if (problems.length) throw appError("INVALID", problems[0]);
+    const prior = e.analyses ?? [];
+    const last = prior.at(-1);
+    const correction = Boolean(last && sameDefinition(last, input));
+    if (!correction && prior.length >= MAX_ANALYSES) throw appError("INVALID", "Too many analyses on this test.");
+    const row: Analysis = {
+      ...input,
+      n: correction ? last!.n : (last?.n ?? 0) + 1,
+      inference: inferenceOf(input),
+      redefined: isRedefined(input, e),
+      reviewedBy: user._id,
+      reviewedAt: Date.now(),
+    };
+    const analyses = correction ? [...prior.slice(0, -1), row] : [...prior, row];
+    await ctx.db.patch(e._id, { analyses, status: a.executed ? "concluded" : "stopped" });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.outcome_recorded", subjectType: "experiment", subjectId: e._id, summary: `Recorded “${e.name}” (analysis ${row.n}, ${row.inference}).` });
+    return { n: row.n, inference: row.inference, newAnalysis: !correction };
+  },
+});
+
+/** Reviewed test outcomes from the given plans: tested ones as lessons, untested ones kept apart. */
+async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<{ tested: string[]; notRun: string[] }> {
+  const tested: string[] = [];
+  const notRun: string[] = [];
+  for (const s of plans) {
+    for (const e of await ctx.db.query("experiments").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(10)) {
+      const latest = e.analyses?.at(-1);
+      if (!latest?.reviewedAt) continue;
+      const original = e.analyses!.find((x) => !x.redefined && x.inference !== "not_run")?.result;
+      const line = `- ${outcomeLine(e.name, latest, latest.redefined ? original : undefined)}`;
+      if (latest.inference === "not_run") notRun.push(line);
+      else tested.push(line);
+    }
+  }
+  return { tested: tested.slice(0, 6), notRun: notRun.slice(0, 4) };
+}
+
 /** First-party results from the last plans, as facts for the next plan's brief. */
 export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(4);
   const lines: string[] = [];
   for (const s of plans) for (const r of await actualsFor(ctx, s)) if (lines.length < 6) lines.push(`- ${resultsLine(r.name, r.actuals)}`);
-  return lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "";
+  const { tested, notRun } = await outcomeLines(ctx, plans);
+  const parts = [
+    lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",
+    tested.length ? `EXPERIMENT OUTCOMES (owner-reviewed; each label says what it can claim: OBSERVED and ATTRIBUTED are not proof of cause; only INCREMENTAL compared with a group that didn't get the change, so only those may be called incremental):\n${tested.join("\n")}` : "",
+    notRun.length ? `TESTS NOT RUN (the plan wasn't carried out; draw no lesson about these channels):\n${notRun.join("\n")}` : "",
+  ];
+  return parts.filter(Boolean).join("\n\n");
 }
 
 export const briefFor = internalQuery({
