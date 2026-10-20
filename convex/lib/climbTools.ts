@@ -4,6 +4,7 @@ import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { microsToCredits } from "../../shared/economics";
 import { estimateJobMicros, planJob } from "./jobPlans";
+import { CalcToolInput, calculate } from "../../shared/analysis/decisions";
 
 /**
  * Climb AI's tools: one registry for the in-app side panel and the MCP server.
@@ -36,6 +37,8 @@ export interface ClimbTool<I extends z.ZodType = z.ZodType> {
   /** Narration while it runs, e.g. "Looking at your drafts". */
   doing: string;
   run?: (c: Caller, slug: string, input: z.infer<I>) => Promise<unknown>;
+  /** Pure tools (no workspace data): the same function runs here, in MCP and in the evaluation harness. */
+  local?: (input: z.infer<I>) => unknown;
 }
 
 const artifactId = z.string().describe("Draft id (from list_drafts or the screen selection)");
@@ -59,6 +62,17 @@ export function localTime(ms: number, timeZone = "UTC"): string {
 
 export const CLIMB_TOOLS: ClimbTool[] = [
   /* ---------------- read ---------------- */
+  tool({
+    name: "calculate",
+    title: "Calculate",
+    description:
+      "Exact maths for money and test questions: margin (contribution and margin at a price under listed costs), price_floor (lowest price for a target margin vs stated willingness to pay), compare_rates (two conversion rates: percentage points, relative change, p-value, verdict), sample_ratio (does an A/B split match its plan), sample_size (visitors and weeks a test needs), before_after (an observed change and what else changed). Use it instead of doing the arithmetic yourself, and say what the result can't show.",
+    risk: "read",
+    doing: "Working out the numbers",
+    input: CalcToolInput,
+    local: calculate,
+    run: async (_c, _slug, input) => calculate(input),
+  }),
   tool({
     name: "get_overview",
     title: "Workspace overview",
