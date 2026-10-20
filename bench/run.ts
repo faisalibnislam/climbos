@@ -40,7 +40,7 @@ import type { AgentInput, AgentSpec } from "../shared/agents/types";
 import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { callModel } from "../convex/ai/providers";
-import { fetchCitedPages, researchWebsite } from "../convex/ai/research";
+import { fetchCitedPages, researchWebsite, resolveHost } from "../convex/ai/research";
 import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 
 // ---------- env & args ----------
@@ -119,7 +119,9 @@ async function turnWithRetry(input: TurnRequest): Promise<TurnResult> {
   return r;
 }
 
-async function turnOnce(input: TurnRequest): Promise<TurnResult> {
+async function turnOnce(asked: TurnRequest): Promise<TurnResult> {
+  // As in production, page reads get the server DNS lookup (private addresses refused).
+  const input: TurnRequest = asked.webFetch ? { ...asked, webFetch: { ...asked.webFetch, resolveHost } } : asked;
   // Long Sol/large turns run in background mode, as in production.
   // As in production, a pending background answer is resumed (polled again by its id), never restarted.
   let responseId: string | undefined;
@@ -127,8 +129,14 @@ async function turnOnce(input: TurnRequest): Promise<TurnResult> {
   const reqFor = () => (bg ? { ...input, background: { pollUntil: Date.now() + 15 * 60_000, resumeResponseId: responseId, onStarted: async (id: string) => { responseId = id; } } } : input);
   const req = reqFor();
   let r = await modelTurn(req, rates);
-  for (let i = 0; i < 3 && !r.ok && r.kind === "pending" && responseId; i++) r = await modelTurn(reqFor(), rates);
-  if (process.env.BENCH_DEBUG) console.log(`[turn] ${req.modelKey} max=${req.maxTokens} search=${req.webSearch?.maxUses ?? 0} schema=${Boolean(req.schema)} → ${r.ok ? "ok" : r.kind} out=${r.usage.outputTokens} reasoning=${r.usage.thinkingTokens} searches=${r.usage.webSearches}`);
+  // A pending page-reading turn carries the calls it already made: keep their cost.
+  let carried = 0;
+  for (let i = 0; i < 3 && !r.ok && r.kind === "pending" && responseId; i++) {
+    carried += r.costMicros;
+    r = await modelTurn(reqFor(), rates);
+  }
+  if (carried) r = { ...r, costMicros: r.costMicros + carried };
+  if (process.env.BENCH_DEBUG) console.log(`[turn] ${req.modelKey} max=${req.maxTokens} search=${req.webSearch?.maxUses ?? 0} schema=${Boolean(req.schema)} → ${r.ok ? "ok" : r.kind} out=${r.usage.outputTokens} reasoning=${r.usage.thinkingTokens} searches=${r.usage.webSearches} fetches=${r.usage.webFetches}`);
   for (let attempt = 1; attempt <= 4 && !r.ok && ["rate_limited", "provider_error", "timeout"].includes(r.kind); attempt++) {
     await sleep((r.ok ? 0 : (r.retryAfterMs ?? 0)) + 5000 * attempt + Math.random() * 3000);
     r = await modelTurn(req, rates);

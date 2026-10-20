@@ -16,7 +16,7 @@ Reviewed 2026-10-20 against `growth-engine-v2`. Evidence is file:line at that ti
 | 8 | Claims don't link to evidence ids; only play inputs have a URL and quote | 13 §3, 14 §5 | Backlog |
 | 9 | No register of conflicting sources (e.g. two prices) | 14 §5 | Backlog |
 | 10 | Whole skill files go into every prompt; nothing is selected by business type, stage or channel | 14 §6 | Backlog (needs a bench check) |
-| 11 | `webFetch` is requested but never sent to OpenAI; the model sees search snippets only | 13 §3 | Backlog |
+| 11 | `webFetch` is requested but never sent to OpenAI; the model sees search snippets only | 13 §3 | Built (`fetch_page` tool, not yet evaluated) |
 | **P1: evaluation** | | | |
 | 12 | All 5 bench cases are B2B SaaS. bench/cache already has 8 others | 14 §13 | Backlog (paid) |
 | 13 | Hard failures aren't part of the bench score | 13 §11 | Backlog |
