@@ -101,7 +101,7 @@ describe("evidence pack per plan version (Book 13 §3)", () => {
     });
     expect(Object.keys(ev.skills)).toEqual(["growth-plays", "owner-brevity"]);
     expect(ev.skills["growth-plays"]).not.toBe("missing");
-    expect(ev.engine).toMatch(/^v2/);
+    expect(ev.engine).toMatch(/^v\d/);
     expect(ev.facts[0]).toEqual({ id: "f1", statement: "Pro plan is $19/month", category: "pricing" });
     expect(ev.research).toHaveLength(1);
     expect(ev.insights.length).toBe(24_000);

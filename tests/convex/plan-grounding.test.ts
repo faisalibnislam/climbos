@@ -41,7 +41,7 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     }));
     expect(evidence).not.toBeNull();
     const data = JSON.parse(evidence!.data) as PlanEvidence;
-    expect(data.engine).toMatch(/^v2/);
+    expect(data.engine).toMatch(/^v\d/);
     expect(data.currency).toBe("USD");
     expect(data.goal?.monthlyAdBudget).toBe(300);
     expect(Object.keys(data.skills)).toEqual(expect.arrayContaining(["growth-plays", "growth-strategy"]));

@@ -14,8 +14,13 @@ export interface OwnerFunnel {
   visitors?: number;
   /** Signups, trials, leads or inquiries. */
   leads?: number;
-  /** Leads who reached first value (activated, booked, attended, completed setup). */
+  /** Leads who reached first value: got the result they came for (booked, attended, first report used), not just finished setup. */
   activated?: number;
+  /**
+   * What the owner counted as "activated" (blog research BRP-07, Elena Verna: activation is value
+   * received, not setup finished). "setup" or "unknown" makes the activation link a weaker reading.
+   */
+  activationKind?: "value" | "habit" | "setup" | "unknown";
   /** New paying customers (or completed paid jobs). */
   newCustomers?: number;
 }
@@ -116,7 +121,10 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   const capR = readings.find((r) => r.stage === "capacity");
   const retR = readings.find((r) => r.stage === "retention");
   const measuredLinks = [lead, act, buyFromActive].filter(Boolean).length + (overall !== null && !buyFromActive ? 1 : 0);
-  const basis: Diagnosis["basis"] = measuredLinks >= 2 ? "measured" : measuredLinks === 1 || capR || retR ? "partial" : "none";
+  // A setup count isn't value received: it can't make the diagnosis "measured" on its own (BRP-07).
+  const setupCount = f.activated !== undefined && (f.activationKind === "setup" || f.activationKind === "unknown");
+  if (setupCount) missing.push("a first-value event (the count given is setup or unclear, not value received)");
+  const basis: Diagnosis["basis"] = measuredLinks >= 2 && !setupCount ? "measured" : measuredLinks >= 1 || capR || retR ? "partial" : "none";
   const out = (constraint: Diagnosis["constraint"]): Diagnosis => ({ constraint, basis, readings, competing: COMPETING[constraint], missing });
 
   if (capR?.verdict === "weak") return out("delivery");
@@ -147,7 +155,8 @@ export function playStage(text: string): BindingConstraint {
   const t = text.toLowerCase();
   if (/\b(onboard\w*|activat\w*|first value|setup|set-up|getting started|aha|empty state|time to value)\b/.test(t)) return "activation";
   if (/\b(churn\w*|retention|retain\w*|renewal|win-?back|cancel\w*|re-?engage\w*|repeat purchase|loyalty)\b/.test(t)) return "retention";
-  if (/\b(waitlist|capacity|hire|hiring|scheduling|selectiv\w*|raise (?:the )?price|price increase|fully booked)\b/.test(t)) return "delivery";
+  if (/\b(price increase|raise (?:the |our )?prices?|increase (?:the |our )?prices?|reprice|repricing)\b/.test(t)) return "economics";
+  if (/\b(waitlist|capacity|hire|hiring|scheduling|selectiv\w*|fully booked)\b/.test(t)) return "delivery";
   if (/\b(checkout|pricing page|trial[- ]to[- ]paid|upgrade|paywall|plan page|sales call|proposal|close rate)\b/.test(t)) return "conversion";
   if (/\b(package|bundle|offer|guarantee|tier)\b/.test(t)) return "offer";
   if (/\b(positioning|homepage message|headline|comparison page|alternatives? page)\b/.test(t)) return "positioning";
@@ -163,4 +172,12 @@ export function lintDiagnosisFit(plays: { name?: string; kind?: string; oneLiner
   if (!d || d.basis === "none" || !["activation", "conversion", "retention", "delivery"].includes(d.constraint)) return [];
   const hits = plays.some((p) => playStage(`${p.name ?? ""} ${p.oneLiner ?? ""} ${p.mechanic ?? ""} ${p.firstActionToday ?? ""} ${p.test ?? ""}`) === d.constraint);
   return hits ? [] : [{ severity: "error" as const, rule: "diagnosis_fit", message: `The owner's numbers show ${d.constraint} is the weak link, but no play works on it. Make the bankable play fix ${d.constraint} first; adding people at the top would feed the leak.`, path: "plays" }];
+}
+
+/** The owner's measured rates by stage, for sizing tests on real baselines (plan experiment lint). */
+export function funnelRatesOf(d: Diagnosis | undefined): { lead?: number; activation?: number; purchase?: number } | undefined {
+  if (!d) return undefined;
+  const out: { lead?: number; activation?: number; purchase?: number } = {};
+  for (const r of d.readings) if (r.rate !== null && (r.stage === "lead" || r.stage === "activation" || r.stage === "purchase")) out[r.stage] = r.rate;
+  return Object.keys(out).length ? out : undefined;
 }

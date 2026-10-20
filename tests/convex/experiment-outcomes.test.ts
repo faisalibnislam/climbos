@@ -65,7 +65,9 @@ describe("experiment outcomes", () => {
     const line = (name: string) => brief.split("\n").find((l) => l.startsWith(`- ${name}`))!;
     expect(line("Referral ask")).toContain("OBSERVED: 6 conversions from 120 exposed of 300 eligible; no comparison group, so not proof of cause.");
     expect(line("Referral ask")).not.toMatch(/incremental/i);
-    expect(line("Win-back email")).toContain("INCREMENTAL (holdout): 20/200 exposed (10%) vs 5/100 in the comparison group (5%): about 10 incremental conversions");
+    // Not significant (p ≈ 0.18), so the brief compares without claiming extra conversions.
+    expect(line("Win-back email")).toContain("COMPARED (holdout): 20/200 exposed (10%) vs 5/100 in the comparison group (5%): No reliable difference");
+    expect(line("Win-back email")).not.toMatch(/incremental conversions/);
     // An unexecuted test is kept out of the lessons.
     const [lessons, notRun] = brief.split("TESTS NOT RUN");
     expect(lessons).not.toContain("Cold email");

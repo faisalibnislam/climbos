@@ -459,3 +459,12 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
   - Shown on play and channel cards.
 - **Cost:** no extra model calls.
 - **Release:** needs the 32-case comparison and the end-to-end bench (owner cap). UI not yet checked in a browser.
+
+**Built (not yet evaluated): blog-research backlog P1, `ENGINE_VERSION` v3.1-trust-checks.** See `docs/growth-expansion/blog-research/BACKLOG.md`.
+- **Experiment outcomes:** a comparison is called "incremental conversions" only with a valid split and a significant difference. Otherwise it reads "no reliable difference", or that the split doesn't match its plan. A planned share can now be recorded.
+- **Split check:** a warning band (p < 0.01) with the over-represented arm and a stage checklist; the block stays at p < 0.001.
+- **Plan experiments:** need a whole week and 1–3 numeric guardrails. Stopping early for harm is allowed. Feasibility is sized on the owner's measured rate for the metric when known.
+- **Cost per customer:** includes a play's other monthly costs (tools, freelancers, creative). The margin question asks for the costs to deliver and keep a customer.
+- **Payback:** labelled "with churn", and the per-surviving-customer figure is shown alongside.
+- **Activation kind:** a setup-only count makes the diagnosis partial.
+- **Price increases:** classed under economics, with a new PB-price-increase contract.

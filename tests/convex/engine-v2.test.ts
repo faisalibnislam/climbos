@@ -79,7 +79,7 @@ describe("Engine v2 wiring", () => {
     }
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
-    expect(strategy?.expert?.snapshot?.engine).toMatch(/^v2/);
+    expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
     // Every input keeps its source; the "assumed" list is derived from the tags.
     const econ = strategy?.expert?.economics as { sources: Record<string, { source: string }>; assumed: string[] };
     expect(econ.sources.revenue.source).toBe("research");

@@ -4,6 +4,8 @@ Edition 2026-10-20, against `growth-engine-v2` at 1f28e6d. File and line referen
 
 ## P1: correctness fixes in existing checks (deterministic, small, no model cost)
 
+**Status: built on 2026-10-20 (`ENGINE_VERSION` v3.1-trust-checks), with unit tests in `tests/unit/blog-research-p1.test.ts` and updated tests elsewhere. Not yet evaluated with a paid run.**
+
 | # | Change | Where (verified) | Why | Playbook | Test |
 |---|---|---|---|---|---|
 | 1 | "Incremental" wording only after a valid split and a significant read. Keep the design label, but word the claim from `compareRates` and `sampleRatio` results. | `shared/growth/experimentOutcome.ts:48` (`inferenceOf`), `:113` (prints "about N incremental conversions") | 18/120 vs 12/120 prints "about 6 incremental" while the two-proportion test gives p = 0.2416 | BRP-21 | Unit: that case reads "no reliable difference". |

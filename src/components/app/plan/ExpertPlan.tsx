@@ -543,7 +543,8 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
             label: "Payback",
             value: pb === null ? "—" : `${pb} mo`,
             tone: pb === null ? "default" : pb <= 6 ? "good" : pb <= 12 ? "warn" : "bad",
-            hint: pb === null ? undefined : pb <= 6 ? "Fast" : pb <= 12 ? "Within a year" : "Over a year",
+            // Churn-weighted payback (longer than "per surviving customer"); named so it isn't compared with other definitions.
+            hint: pb === null ? undefined : `${pb <= 6 ? "Fast" : pb <= 12 ? "Within a year" : "Over a year"} · with churn`,
           },
         ]}
       />

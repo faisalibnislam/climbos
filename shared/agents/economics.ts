@@ -36,6 +36,8 @@ export interface PlayModel {
   steps: PlayStep[];
   monthlySpendUsd: number;
   ownerHoursPerWeek: number;
+  /** Monthly non-media costs (tools, freelancers, creative); part of cost per customer (blog research BRP-17, Skok's fully loaded CAC). */
+  otherMonthlyUsd?: number;
   /** Where reach, spend and owner hours came from (newer plans). */
   reachSource?: SourceTag;
   spendSource?: SourceTag;
@@ -199,8 +201,10 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
   const hourUsd = ownerHourOf(e);
-  const costUsd = spend + hours * hourUsd;
-  const cacUsd = cacFull(spend, hours, hourUsd, 0, customers);
+  // Fully loaded: media, owner time and other costs over the same period (Skok; blog research BRP-17).
+  const other = Math.max(0, p.model.otherMonthlyUsd ?? 0) * (days / DAYS_PER_MONTH);
+  const costUsd = spend + hours * hourUsd + other;
+  const cacUsd = cacFull(spend, hours, hourUsd, other, customers);
   const cm = monthlyContribution(e);
   const churn = churnOf(e);
   // Unknown churn stays unknown: no value, payback or verdict is invented from it.
@@ -307,10 +311,12 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   const e = out.economics;
   const usd = (n: number | null) => formatMoney(n, e.currency);
   const churn = churnOf(e);
+  // Two payback definitions give different months for the same play: name both (Skok's per-surviving-customer vs ClimbOS's churn-weighted; blog research BRP-17).
+  const cmOf = monthlyContribution(e) ?? 0;
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months`}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,
@@ -378,7 +384,7 @@ export interface OwnerQuestion {
 
 const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> = {
   revenuePerCustomerMonthUsd: { q: "What does an average customer pay you per month?", unit: "usd_month" },
-  grossMargin: { q: "What share of that do you keep after delivery costs?", unit: "share" },
+  grossMargin: { q: "What share of that do you keep after the costs to deliver and keep a customer?", unit: "share" },
   monthlyChurn: { q: "What share of customers leave each month?", unit: "share_month" },
   ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
   ownerHoursPerWeek: { q: "How many hours a week can you give growth work?", unit: "hours_week" },

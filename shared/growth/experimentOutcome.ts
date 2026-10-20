@@ -7,6 +7,7 @@
  * - "incremental": randomized or holdout design with both groups measured.
  * - "not_run": the test wasn't carried out, so it says nothing about the channel.
  */
+import { compareRates, sampleRatio } from "../analysis/decisions";
 
 export const OUTCOME_SOURCES = ["owner_report", "integration", "platform_report"] as const;
 export const OUTCOME_DESIGNS = ["none", "before_after", "holdout", "randomized"] as const;
@@ -32,6 +33,8 @@ export interface OutcomeInput {
   controlSize?: number;
   /** Conversions in the comparison group. */
   controlConversions?: number;
+  /** Planned share (%) of people in the changed version, e.g. 50; lets the split be checked. */
+  plannedSharePct?: number;
   /** Observation window, ISO dates. */
   windowStart?: string;
   windowEnd?: string;
@@ -53,6 +56,50 @@ export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "desig
   return "observed";
 }
 
+/**
+ * What an incremental design's numbers can actually claim (blog research BRP-21:
+ * Microsoft ExP, Kohavi): a split that doesn't match its plan can't be read,
+ * and only a significant difference may be called extra conversions.
+ */
+export type Reading =
+  | { kind: "no_counts" }
+  | { kind: "split_mismatch"; splitP: number }
+  | { kind: "split_warning"; splitP: number; pValue: number }
+  | { kind: "no_difference"; pValue: number }
+  | { kind: "difference"; pValue: number; extra: number };
+
+export function readingOf(o: Pick<OutcomeInput, "exposed" | "conversions" | "controlSize" | "controlConversions" | "plannedSharePct">): Reading {
+  if (!o.exposed || !o.controlSize || o.conversions === undefined || o.controlConversions === undefined) return { kind: "no_counts" };
+  let splitWarn: number | null = null;
+  if (o.plannedSharePct !== undefined && o.plannedSharePct > 0 && o.plannedSharePct < 100) {
+    const srm = sampleRatio({ planned: [o.plannedSharePct, 100 - o.plannedSharePct], observed: [o.exposed, o.controlSize] });
+    if (srm.mismatch) return { kind: "split_mismatch", splitP: srm.pValue };
+    if (srm.warning) splitWarn = srm.pValue;
+  }
+  const r = compareRates({ control: { visitors: o.controlSize, conversions: o.controlConversions }, treatment: { visitors: o.exposed, conversions: o.conversions } });
+  if (splitWarn !== null) return { kind: "split_warning", splitP: splitWarn, pValue: r.pValue };
+  if (r.verdict !== "difference_detected") return { kind: "no_difference", pValue: r.pValue };
+  return { kind: "difference", pValue: r.pValue, extra: lift(o)?.extra ?? 0 };
+}
+
+const fmtP = (p: number) => (p < 0.001 ? "p < 0.001" : `p = ${Math.round(p * 1000) / 1000}`);
+
+/** One owner-facing phrase for a reading. */
+export function readingText(r: Reading): string {
+  switch (r.kind) {
+    case "no_counts":
+      return "Counts missing for one arm: nothing can be read yet.";
+    case "split_mismatch":
+      return `The split doesn't match the plan (${fmtP(r.splitP)}): find the cause before reading the result.`;
+    case "split_warning":
+      return `The split looks off (${fmtP(r.splitP)}): check it before calling a winner.`;
+    case "no_difference":
+      return `No reliable difference (${fmtP(r.pValue)}): not proof it worked, or that it didn't.`;
+    case "difference":
+      return `A difference the data can tell apart (${fmtP(r.pValue)}).`;
+  }
+}
+
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Problems with an outcome, in plain words; empty when it can be saved. */
@@ -61,6 +108,7 @@ export function outcomeProblems(o: OutcomeInput, today: string): string[] {
   const counts = [o.eligible, o.exposed, o.conversions, o.controlSize, o.controlConversions];
   if (counts.some((n) => n !== undefined && (!Number.isInteger(n) || n < 0 || n > 100_000_000))) out.push("Counts must be whole numbers, zero or more.");
   if (o.eligible !== undefined && (o.exposed ?? 0) + (o.controlSize ?? 0) > o.eligible) out.push("Exposed plus comparison can't be more than eligible.");
+  if (o.plannedSharePct !== undefined && !(o.plannedSharePct > 0 && o.plannedSharePct < 100)) out.push("The planned share must be between 1 and 99%.");
   if (o.exposed !== undefined && o.conversions !== undefined && o.conversions > o.exposed) out.push("Conversions can't be more than exposed.");
   if (o.controlSize !== undefined && o.controlConversions !== undefined && o.controlConversions > o.controlSize) out.push("Comparison conversions can't be more than the group.");
   if ((o.design === "holdout" || o.design === "randomized") && o.executed && o.source !== "platform_report" && o.controlSize === undefined) out.push("Give the comparison group size.");
@@ -107,10 +155,11 @@ export function outcomeLine(name: string, o: OutcomeInput & { inference: Inferen
   const of = o.eligible !== undefined ? ` of ${o.eligible} eligible` : "";
   if (o.inference === "incremental") {
     const l = lift(o);
-    const nums = l
-      ? `${o.conversions}/${o.exposed} exposed (${pct(l.exposedRate)}) vs ${o.controlConversions}/${o.controlSize} in the comparison group (${pct(l.controlRate)}): about ${l.extra} incremental conversions`
-      : `comparison group of ${o.controlSize}`;
-    return `${head}. INCREMENTAL (${o.design}): ${nums}.${redefined}`;
+    const r = readingOf(o);
+    const counts = l ? `${o.conversions}/${o.exposed} exposed (${pct(l.exposedRate)}) vs ${o.controlConversions}/${o.controlSize} in the comparison group (${pct(l.controlRate)})` : `comparison group of ${o.controlSize}`;
+    // Only a valid split with a significant difference may speak of extra conversions.
+    const claim = r.kind === "difference" ? `about ${r.extra} incremental conversions (${fmtP(r.pValue)})` : readingText(r);
+    return `${head}. ${r.kind === "difference" ? "INCREMENTAL" : "COMPARED"} (${o.design}): ${counts}: ${claim}${redefined}`;
   }
   const counts = o.exposed !== undefined ? `${o.conversions ?? "?"} conversions from ${o.exposed} exposed${of}` : o.conversions !== undefined ? `${o.conversions} conversions` : "no counts";
   if (o.inference === "attributed") return `${head}. ATTRIBUTED by the platform: ${counts}. The platform's attribution, not a measured lift.${redefined}`;

@@ -382,6 +382,8 @@ export default defineSchema({
         leads: v.optional(v.number()),
         activated: v.optional(v.number()),
         newCustomers: v.optional(v.number()),
+        /** What was counted as activated: value received, a habit, setup only, or unclear. */
+        activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))),
         updatedAt: v.number(),
       }),
     ),
@@ -1374,6 +1376,8 @@ export default defineSchema({
           conversions: v.optional(v.number()),
           controlSize: v.optional(v.number()),
           controlConversions: v.optional(v.number()),
+          /** Planned % in the changed version, so the split can be checked. */
+          plannedSharePct: v.optional(v.number()),
           windowStart: v.optional(v.string()),
           windowEnd: v.optional(v.string()),
           metric: v.string(),

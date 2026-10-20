@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, CircleDashed, ClipboardPen, Scale, type Lucid
 import { useState } from "react";
 import { Badge, Button, Checkbox, DatePicker, Field, Input, Segmented, Select, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
-import { inferenceOf, isRedefined, type Inference, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
+import { inferenceOf, isRedefined, readingOf, readingText, type Inference, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
 
 export type Analysis = OutcomeInput & { n: number; inference: Inference; redefined: boolean; reviewedAt: number };
 
@@ -59,6 +59,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     conversions: str(latest?.conversions),
     controlSize: str(latest?.controlSize),
     controlConversions: str(latest?.controlConversions),
+    plannedSharePct: str(latest?.plannedSharePct ?? (latest ? undefined : 50)),
     windowStart: latest?.windowStart ?? "",
     windowEnd: latest?.windowEnd ?? "",
     result: latest?.result ?? ("unclear" as OutcomeResult),
@@ -76,6 +77,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     conversions: num(f.conversions),
     controlSize: comparative ? num(f.controlSize) : undefined,
     controlConversions: comparative ? num(f.controlConversions) : undefined,
+    plannedSharePct: comparative ? num(f.plannedSharePct) : undefined,
   };
   const preview = inferenceOf({ ...f, ...counts });
   const redefines = Boolean(latest) && (f.metric.trim() !== latest!.metric || f.successRule.trim() !== latest!.successRule);
@@ -166,6 +168,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                   <>
                     <NumField label="Comparison group" value={f.controlSize} onChange={(v) => set("controlSize", v)} disabled={busy} />
                     <NumField label="Comparison converted" value={f.controlConversions} onChange={(v) => set("controlConversions", v)} disabled={busy} />
+                    <NumField label="Planned % in new version" value={f.plannedSharePct} onChange={(v) => set("plannedSharePct", v)} disabled={busy} />
                   </>
                 ) : null}
               </div>
@@ -233,10 +236,14 @@ function OutcomeNumbers({ a }: { a: Analysis }) {
   if (a.eligible !== undefined) parts.push(`${a.eligible} eligible`);
   if (a.windowStart && a.windowEnd) parts.push(`${a.windowStart} → ${a.windowEnd}`);
   if (!parts.length) return null;
+  const reading = a.inference === "incremental" ? readingText(readingOf(a)) : null;
   return (
-    <p className="flex items-center gap-1.5 text-xs tabular-nums text-ink-2">
-      <CircleCheck aria-hidden className="size-3.5 text-ink-3" />
-      {parts.join(" · ")}
-    </p>
+    <div className="flex flex-col gap-0.5">
+      <p className="flex items-center gap-1.5 text-xs tabular-nums text-ink-2">
+        <CircleCheck aria-hidden className="size-3.5 text-ink-3" />
+        {parts.join(" · ")}
+      </p>
+      {reading ? <p className="text-xs text-ink-2">{reading}</p> : null}
+    </div>
   );
 }

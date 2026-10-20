@@ -109,7 +109,18 @@ export function compareRates(p: { control: { visitors: number; conversions: numb
   };
 }
 
-/** Sample-ratio mismatch: do the arm counts fit the planned split? p < 0.001 means the result can't be trusted yet. */
+/** Where a split usually goes wrong, in order (Microsoft ExP, "Diagnosing Sample Ratio Mismatch"): check each before reading any lift. */
+export const SPLIT_CHECKLIST = [
+  "Assignment: does every eligible person get an arm, in the planned shares?",
+  "Exposure: did people in each arm actually see their version (a broken page, slow load or redirect can drop one arm)?",
+  "Logging: are both arms counted the same way, with the same events and filters?",
+  "Analysis: were people or bots removed from one arm only, or the window changed for one arm?",
+];
+
+/**
+ * Sample-ratio mismatch: do the arm counts fit the planned split?
+ * p < 0.001 blocks any reading; p < 0.01 warns (no winner wording until checked).
+ */
 export function sampleRatio(p: { planned: number[]; observed: number[] }) {
   if (p.planned.length !== p.observed.length || p.planned.length < 2) throw new RangeError("planned and observed need the same 2+ arms");
   const total = p.observed.reduce((s, n) => s + n, 0);
@@ -118,12 +129,22 @@ export function sampleRatio(p: { planned: number[]; observed: number[] }) {
   const chi = p.observed.reduce((s, o, i) => s + (o - expected[i]) ** 2 / expected[i], 0);
   const pValue = chiSquareSf(chi, p.planned.length - 1);
   const mismatch = pValue < 0.001;
+  const warning = !mismatch && pValue < 0.01;
+  // The arm furthest above its expected count (where to look first).
+  const over = p.observed.map((o, i) => (o - expected[i]) / expected[i]).reduce((best, x, i, arr) => (x > arr[best] ? i : best), 0);
   return {
     expected: expected.map((e) => round(e, 1)),
     chiSquare: round(chi, 2),
     pValue,
     mismatch,
-    notes: mismatch ? ["The split doesn't match the plan: find the cause (assignment, logging, filtering, bots) before reading any lift. Don't trim arms to make them match."] : ["The split fits the plan."],
+    warning,
+    overArm: mismatch || warning ? over : null,
+    checklist: mismatch || warning ? SPLIT_CHECKLIST : [],
+    notes: mismatch
+      ? [`The split doesn't match the plan (arm ${over + 1} has too many): find the cause before reading any lift. Don't trim arms to make them match.`]
+      : warning
+        ? [`The split is suspicious (arm ${over + 1} has more than expected): check it before calling a winner.`]
+        : ["The split fits the plan."],
   };
 }
 

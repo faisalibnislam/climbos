@@ -49,7 +49,17 @@ describe("outcome checks and wording", () => {
     expect(att).toContain("ATTRIBUTED");
     expect(att).not.toMatch(/incremental/i);
     const inc = outcomeLine("Holdout email", { ...base, design: "holdout", exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, inference: "incremental", redefined: false });
-    expect(inc).toContain("about 10 incremental conversions");
+    // 20/200 vs 5/100 isn't significant (Fisher p ≈ 0.18): no "incremental conversions" claim (blog research BRP-21).
+    expect(inc).toContain("COMPARED (holdout)");
+    expect(inc).toContain("No reliable difference");
+    expect(inc).not.toMatch(/incremental conversions/);
+    const sig = outcomeLine("Holdout email", { ...base, design: "holdout", exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15, plannedSharePct: 50, inference: "incremental", redefined: false });
+    expect(sig).toContain("INCREMENTAL (holdout)");
+    expect(sig).toMatch(/about 45 incremental conversions \(p < 0\.001\)/);
+    // A split far from its plan can't be read at all.
+    const bad = outcomeLine("Holdout email", { ...base, design: "randomized", exposed: 300, conversions: 60, controlSize: 100, controlConversions: 5, plannedSharePct: 50, inference: "incremental", redefined: false });
+    expect(bad).toContain("doesn't match the plan");
+    expect(bad).not.toMatch(/incremental conversions/);
     expect(outcomeLine("Cold email", { ...base, executed: false, inference: "not_run", redefined: false })).toContain("NOT RUN");
   });
   it("marks a changed definition as exploratory and keeps the original result", () => {

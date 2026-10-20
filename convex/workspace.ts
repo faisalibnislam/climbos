@@ -488,8 +488,8 @@ export const setUnitEconomics = mutation({
 
 /** The owner's last-period funnel: the plan's diagnosis reads the weakest link from it (shared/agents/diagnosis.ts). */
 export const setFunnel = mutation({
-  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()) },
-  handler: async (ctx, { slug, periodDays, ...counts }) => {
+  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))) },
+  handler: async (ctx, { slug, periodDays, activationKind, ...counts }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
@@ -502,7 +502,7 @@ export const setFunnel = mutation({
       const prev = order.slice(0, i).reverse().find((x) => x !== undefined);
       if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ activated ≥ new customers).");
     }
-    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, updatedAt: Date.now() } });
+    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, ...(activationKind ? { activationKind } : {}), updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.funnel", subjectType: "business", subjectId: business._id, summary: "Funnel numbers updated." });
   },
 });

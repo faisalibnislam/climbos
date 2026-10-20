@@ -43,7 +43,7 @@ import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
-import { diagnose, diagnosisBrief, type Diagnosis } from "../shared/agents/diagnosis";
+import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis } from "../shared/agents/diagnosis";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
@@ -521,7 +521,8 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
 type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
-function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[]): PlanConstraints {
+function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[], diagnosis?: Diagnosis): PlanConstraints {
+  const funnelRates = funnelRatesOf(diagnosis);
   const h = job.goal?.horizonDays ?? 90;
   const t = job.goal?.target;
   return constraintsOf(job, {
@@ -529,6 +530,7 @@ function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string
     horizonDays: h,
     ...(serviceArea ? { serviceArea } : {}),
     ...(businessTypes?.length ? { businessTypes } : {}),
+    ...(funnelRates ? { funnelRates } : {}),
     forecastCustomers: forecastCustomers(plays, h),
     goalNumbers: [t?.baseline, t?.desired, t && t.baseline !== null && t.desired !== null ? t.desired - t.baseline : null].filter((n): n is number => typeof n === "number" && n > 0),
   });
@@ -994,7 +996,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}` }),
-          plays ? { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types) } : {},
+          plays ? { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types, decided.diagnosis) } : {},
         ),
         startedAt,
         {
@@ -1009,7 +1011,7 @@ export const buildStrategy = internalAction({
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
       // The final checks see what the writers read (research notes and pages), so cited pages resolve.
       const planLintInput = plays
-        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}` }), { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
+        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}` }), { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types, decided.diagnosis) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
         : null;
       if (plays && locked && planLintInput) strategy = await consistencyStep(ctx, job, 190, strategy, locked, planLintInput);
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.

@@ -97,6 +97,7 @@ export const recordExperimentOutcome = mutation({
     conversions: v.optional(v.number()),
     controlSize: v.optional(v.number()),
     controlConversions: v.optional(v.number()),
+    plannedSharePct: v.optional(v.number()),
     windowStart: v.optional(v.string()),
     windowEnd: v.optional(v.string()),
     metric: v.optional(v.string()),

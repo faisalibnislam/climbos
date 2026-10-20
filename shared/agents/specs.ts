@@ -110,6 +110,8 @@ export const PlaySchema = z.object({
     monthlySpendUsd: z.number(),
     spendSource: SourceTagSchema,
     ownerHoursPerWeek: z.number(),
+    /** Monthly non-media costs for this play (tools, freelancers, creative); 0 when none. Counted in cost per customer. */
+    otherMonthlyUsd: z.number().optional(),
     hoursSource: SourceTagSchema,
   }),
 });
@@ -150,7 +152,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.0-diagnosis-playbooks";
+export const ENGINE_VERSION = "v3.1-trust-checks";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -838,34 +840,60 @@ function eligibleCount(population: string): { n: number; per: "week" | "month" |
   return { n, per };
 }
 
-/** Assumed big-swing test for the feasibility gate: 10% → 15% (a 50% relative lift). Generous on purpose: only clearly impossible tests fail. */
+/** Assumed big-swing test for the feasibility gate when the metric's baseline is unknown: 10% → 15%. Generous on purpose. */
 const FEASIBILITY_BASELINE = 0.1;
 const FEASIBILITY_MDE = 0.05;
 /** "Stop when it's significant": peeking, which makes a fixed-horizon p-value meaningless (BK06 Ch 3). */
 const PEEKING = /\b(as soon as|once|when|until)\b[^.]{0,40}\bsignifican/i;
+/** A stop rule about harm (a guardrail) may stop early: Microsoft ExP auto-stops for harm (blog research BRP-21). */
+const HARM_STOP = /\b(complain\w*|refund\w*|unsubscrib\w*|cancel\w*|churn\w*|errors?|crash\w*|bounce\w*|spam|chargebacks?|support tickets?|harm)\b/i;
+const STOP_WORD = /\b(stop|pause|halt|switch off|turn off|roll back)\b/i;
+
+/** The owner's measured funnel rates, by the kind of metric a test targets (shared/agents/diagnosis.ts readings). */
+export type FunnelRates = { lead?: number; activation?: number; purchase?: number };
+
+/** Which owner-measured rate a test's primary metric is about, if any. */
+function baselineFor(metric: string, rates: FunnelRates | undefined): { rate: number; kind: string } | null {
+  if (!rates) return null;
+  const m = metric.toLowerCase();
+  const pick = /\b(activat\w*|first value|onboard\w*|set ?up)\b/.test(m) ? "activation" : /\b(paid|pay\w*|purchas\w*|customers?|bookings?|booked|sales?|subscri\w*|orders?|upgrade\w*)\b/.test(m) ? "purchase" : /\b(sign-?ups?|leads?|trials?|inquir\w*|enquir\w*|registrations?)\b/.test(m) ? "lead" : null;
+  const rate = pick ? rates[pick as keyof FunnelRates] : undefined;
+  return pick && rate !== undefined && rate > 0 && rate < 1 ? { rate, kind: pick } : null;
+}
 
 /**
- * Expansion slice 3 (BK06 Ch 2, 3, 10–11; BK04 card requirements): an A/B or
- * holdout test must name how many are eligible, be able to finish in its
- * duration even for a big swing, and not stop on significance. Otherwise use
- * a before/after (labelled observational), interviews or an assisted pilot.
+ * Expansion slice 3 + blog research BRP-21/22 (BK06 Ch 2, 3, 10–11; Microsoft ExP;
+ * BK04 card requirements): a split or holdout test must name how many are
+ * eligible, run at least a week, set 1–3 guardrails with a number, and be able
+ * to finish even for a big swing, sized on the metric's real baseline when the
+ * owner measured it. It must not stop on significance; stopping for harm is allowed.
  */
-export function lintExperimentFeasibility(out: { experiments?: { name: string; method: string; population: string; durationDays: number; stoppingRule: string }[] }): LintIssue[] {
+export function lintExperimentFeasibility(out: { experiments?: { name: string; method: string; population: string; durationDays: number; stoppingRule: string; primaryMetric?: string; guardrails?: string[] }[] }, c?: { funnelRates?: FunnelRates }): LintIssue[] {
   const issues: LintIssue[] = [];
   (out.experiments ?? []).forEach((e, i) => {
     const path = `experiments[${i}]`;
-    if (PEEKING.test(e.stoppingRule)) issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" stops when the result looks significant. Fix the end date or sample in advance and read it once then.`, path: `${path}.stoppingRule` });
+    const harmStop = HARM_STOP.test(e.stoppingRule) && STOP_WORD.test(e.stoppingRule);
+    if (PEEKING.test(e.stoppingRule) && !harmStop) issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" stops when the result looks significant. Fix the end date or sample in advance and read it once then (stopping early for harm, like complaints or refunds, is fine).`, path: `${path}.stoppingRule` });
     if (e.method !== "ab_split" && e.method !== "holdout") return;
-    const c = eligibleCount(e.population);
-    if (!c) {
+    if (e.durationDays < 7) issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" runs ${e.durationDays} days. Run at least one whole week so weekdays and weekends both count.`, path: `${path}.durationDays` });
+    const guards = (e.guardrails ?? []).filter((g) => g.trim());
+    if (!guards.length || guards.length > 3 || !guards.every((g) => /\d/.test(g)))
+      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" needs 1–3 guardrails, each with a number that marks harm (e.g. "unsubscribes above 1%", "refunds above 3%").`, path: `${path}.guardrails` });
+    const cnt = eligibleCount(e.population);
+    if (!cnt) {
       issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" is a ${e.method === "ab_split" ? "split" : "holdout"} test but doesn't say how many people are eligible (e.g. "about 400 visitors a week"). Without it, nobody can tell if it can finish.`, path: `${path}.population` });
       return;
     }
     const days = Math.max(1, e.durationDays);
-    const available = c.per === "week" ? c.n * (days / 7) : c.n === 0 ? 0 : c.per === "month" ? c.n * (days / 30) : c.n;
-    const need = sampleSize({ baseline: FEASIBILITY_BASELINE, minDetectable: FEASIBILITY_MDE }).total;
+    const available = cnt.per === "week" ? cnt.n * (days / 7) : cnt.n === 0 ? 0 : cnt.per === "month" ? cnt.n * (days / 30) : cnt.n;
+    // Sized on the owner's measured rate for this kind of metric when known (a 50% relative swing); otherwise the generous default.
+    const base = baselineFor(e.primaryMetric ?? "", c?.funnelRates);
+    const p0 = base ? base.rate : FEASIBILITY_BASELINE;
+    const mde = base ? Math.min(base.rate * 0.5, 0.99 - base.rate) : FEASIBILITY_MDE;
+    const need = sampleSize({ baseline: p0, minDetectable: mde }).total;
+    const swing = `${Math.round(p0 * 1000) / 10}% → ${Math.round((p0 + mde) * 1000) / 10}%`;
     if (available < need)
-      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available)} people in ${days} days; even a big swing (10% → 15%) needs about ${need}. Use a before/after labelled observational, interviews or an assisted pilot, or one bigger change measured longer.`, path });
+      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available)} people in ${days} days; even a big swing (${swing}${base ? `, from your measured ${base.kind} rate` : ""}) needs about ${need}. Use a before/after labelled observational, interviews or an assisted pilot, or test a step with more volume.`, path });
   });
   return issues;
 }
@@ -1157,7 +1185,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintExperimentFeasibility(out), ...lintBorrowedUplift([], [{ path: "summary", text: out.summary }, { path: "diagnosis", text: out.diagnosis }, ...(out.phases ?? []).map((p, i) => ({ path: `phases[${i}].focus`, text: p.focus }))]), ...lintClaims([{ path: "positioning", text: out.positioning }], evidenceOf(input)), ...lintPlatformEligibility([...out.channels.map((ch, i) => ({ path: `channels[${i}]`, text: `${ch.name} ${ch.why} ${(ch.deliverables ?? []).join(" ")}` })), ...(out.experiments ?? []).map((e, i) => ({ path: `experiments[${i}]`, text: `${e.name} ${e.hypothesis}` })), ...(out.phases ?? []).map((p, i) => ({ path: `phases[${i}].focus`, text: p.focus }))], input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength([{ path: "summary", text: out.summary }, { path: "diagnosis", text: out.diagnosis }, { path: "positioning", text: out.positioning }, ...(out.audiences ?? []).map((x, i) => ({ path: `audiences[${i}].evidence`, text: x.evidence }))], input.constraints.factKinds) : []), ...lintDeliveryCapacity(input.constraints?.lockedCustomers ?? 0, input.constraints, "northStar.target"), ...lintServiceArea(out.channels.map((ch, i) => ({ path: `channels[${i}]`, spend: ch.suggestedMonthlyAdSpend, text: `${ch.name} ${ch.why} ${(ch.deliverables ?? []).join(" ")} ${ch.measurement ?? ""}` })), input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintExperimentFeasibility(out, input.constraints), ...lintBorrowedUplift([], [{ path: "summary", text: out.summary }, { path: "diagnosis", text: out.diagnosis }, ...(out.phases ?? []).map((p, i) => ({ path: `phases[${i}].focus`, text: p.focus }))]), ...lintClaims([{ path: "positioning", text: out.positioning }], evidenceOf(input)), ...lintPlatformEligibility([...out.channels.map((ch, i) => ({ path: `channels[${i}]`, text: `${ch.name} ${ch.why} ${(ch.deliverables ?? []).join(" ")}` })), ...(out.experiments ?? []).map((e, i) => ({ path: `experiments[${i}]`, text: `${e.name} ${e.hypothesis}` })), ...(out.phases ?? []).map((p, i) => ({ path: `phases[${i}].focus`, text: p.focus }))], input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength([{ path: "summary", text: out.summary }, { path: "diagnosis", text: out.diagnosis }, { path: "positioning", text: out.positioning }, ...(out.audiences ?? []).map((x, i) => ({ path: `audiences[${i}].evidence`, text: x.evidence }))], input.constraints.factKinds) : []), ...lintDeliveryCapacity(input.constraints?.lockedCustomers ?? 0, input.constraints, "northStar.target"), ...lintServiceArea(out.channels.map((ch, i) => ({ path: `channels[${i}]`, spend: ch.suggestedMonthlyAdSpend, text: `${ch.name} ${ch.why} ${(ch.deliverables ?? []).join(" ")} ${ch.measurement ?? ""}` })), input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.

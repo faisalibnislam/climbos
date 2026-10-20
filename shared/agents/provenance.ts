@@ -284,6 +284,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
     { key: "margin", label: "Margin", value: e.grossMargin, unit: "share", tag: econ.margin, drives: "cost" },
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
+  if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(undefined), drives: "cost" });
   if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: ownerHourOf(e), unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
   return rows;
 }

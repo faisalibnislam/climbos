@@ -129,7 +129,7 @@ Before writing any play, decide in this order:
 1. **The binding constraint.** What actually limits growth right now (demand, conversion, price/value, retention, reach)? Plays attack it.
 2. **Where the money is.** Which segment has the best value × reachability? Prefer customers worth more (teams, agencies, annual plans) when cheap ones can't pay for acquisition.
 3. **The offer.** What would make that segment act now (trigger, risk reversal, a reason to switch)?
-4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach with low/high, step rates as shares 0–1 with low/high, monthly spend, owner hours); ClimbOS computes customers (P10/P50/P90), cost per customer and payback with churn from it, and rejects plays that lose money.
+4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach with low/high, step rates as shares 0–1 with low/high, monthly spend, owner hours, and other monthly costs such as tools, freelancers or creative, 0 when none); ClimbOS computes customers (P10/P50/P90), cost per customer and payback with churn from it, and rejects plays that lose money.
 5. **What we won't do,** and why.
 
 ## Ambition (a plan, not a validation exercise)

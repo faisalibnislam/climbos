@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { CircleHelp, Target } from "@/components/icons"
 import { useState } from "react";
-import { Button, Callout, Card, CardContent, Input, Tooltip, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, ChoiceChips, Input, Tooltip, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { OwnerQuestion } from "../../../../shared/agents/economics";
 
@@ -105,8 +105,14 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
   );
 }
 
-type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number };
-const FUNNEL_FIELDS: { key: Exclude<keyof Funnel, "periodDays">; label: string }[] = [
+type ActivationKind = "value" | "habit" | "setup" | "unknown";
+type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number; activationKind?: ActivationKind };
+const ACTIVATION_KINDS = [
+  { value: "value", label: "Got the result" },
+  { value: "setup", label: "Finished setup" },
+  { value: "unknown", label: "Not sure" },
+];
+const FUNNEL_FIELDS: { key: "visitors" | "leads" | "activated" | "newCustomers"; label: string }[] = [
   { key: "visitors", label: "Visitors" },
   { key: "leads", label: "Signups or leads" },
   { key: "activated", label: "Got first value" },
@@ -118,6 +124,7 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
   const save = useMutation(api.workspace.setFunnel);
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FUNNEL_FIELDS.map((f) => [f.key, funnel?.[f.key] !== undefined ? String(funnel[f.key]) : ""])));
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState<ActivationKind>(funnel?.activationKind ?? "value");
   const submit = async () => {
     const args: Record<string, number> = {};
     for (const f of FUNNEL_FIELDS) {
@@ -129,7 +136,7 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
     }
     setBusy(true);
     try {
-      await save({ slug, periodDays: 30, ...args });
+      await save({ slug, periodDays: 30, ...args, ...(args.activated !== undefined ? { activationKind: kind } : {}) });
       toast({ tone: "success", title: "Numbers saved. Refresh the plan to use them." });
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
@@ -155,6 +162,12 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
             </div>
           ))}
         </div>
+        {vals.activated?.trim() ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-2">&quot;Got first value&quot; counts people who…</span>
+            <ChoiceChips aria-label="What was counted as first value" options={ACTIVATION_KINDS} value={kind} onValueChange={(v) => setKind(v as ActivationKind)} disabled={!canEdit || busy} />
+          </div>
+        ) : null}
         {canEdit ? (
           <div>
             <Button size="sm" onClick={submit} disabled={busy}>
