@@ -58,6 +58,17 @@ Plan on the conservative end. Grades: A (large dataset or first-party), B (vendo
 | Show HN front page | ~2.2k–11k visitors; 20–300+ signups [indiehackers.com] | D |
 | Health & fitness app trial → paid | Median 39.9% [revenuecat via thesocialoutline.com] | B |
 
+## Self-serve SaaS funnel (fallbacks; prefer the owner's numbers)
+
+These are commonly reported practitioner ranges, grade C at best. Use them only when research finds nothing better, and say so.
+
+| Step | Typical range | Grade |
+|---|---|---|
+| Free plan user → paid | 2–5% [practitioner benchmark, e.g. Lean Analytics] | C |
+| Free trial, no card → paid | 15–25% [practitioner benchmark, product-led growth literature] | C |
+| Free trial, card required → paid | 40–60% of trials, but far fewer trial starts [same] | C |
+| Small-business SaaS monthly churn | 3–7% [practitioner benchmark] | C |
+
 ## No reliable benchmark exists for
 
 Marketplace-listing share of signups, partnership acceptance, local event attendance, and Nextdoor or Facebook Group post conversion. Label these "assumption, grade D", use a wide range, and make the first test measure them.

@@ -81,7 +81,12 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         ...tmpl,
         name: `${marker} ${kind} play`,
         kind,
-        mechanic: kind === "bankable" ? "Personal email to past customers asking for a referral" : "Co-hosted workshop with a complementary local business",
+        // Five lenses (plays lint): positioning on the comparison page, a referral trigger and link, and a funnel play.
+        oneLiner: "Comparison page vs Acme for small studios, via a partner newsletter.",
+        hook: "Unlike Acme, no per-seat fees for small studios.",
+        audience: "Owners of small design studios switching from spreadsheets",
+        trigger: "Right after a customer's first booked job",
+        mechanic: kind === "bankable" ? "Personal email with a referral link, sent right after a customer's first booked job" : "Onboarding checklist getting new sign-ups to a first booked job, co-promoted locally",
         funnel: ["a hundred contacted → replies: low to high [example.com, C]", "replies → booked: about a third [example.com, C]"],
         unit: "booked jobs",
         horizonDays: 90,

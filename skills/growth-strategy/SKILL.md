@@ -78,6 +78,10 @@ When something is missing:
 - **Current:** adjusted for AI search, platform automation and measurement loss.
 - **Linked to positioning:** channels and creative carry the chosen position and VoC language.
 
+## North Star by stage
+
+Pick the one number the business is paid for at its stage: activated accounts and trial → paid for an early self-serve product, net new paying customers (on any paid plan) and churn once it grows, booked jobs for a local service. Visits, followers and impressions are leading indicators only.
+
 ## Never do
 
 - Recommend a channel buffet ("omnichannel presence" across 6+ channels).

@@ -8,7 +8,7 @@
     },
     {
       "id": "P2",
-      "text": "Portfolio: at most 4 plays; exactly one bankable play (predictability ≥ 4); at least one creative play with distinctiveness ≥ 4 and predictability ≥ 3; at most one moonshot, capped at ≤ 10% of budget with a kill rule."
+      "text": "Portfolio: at most 4 plays; exactly one bankable play (predictability \u2265 4); at least one creative play with distinctiveness \u2265 4 and predictability \u2265 3; at most one moonshot, capped at \u2264 10% of budget with a kill rule."
     },
     {
       "id": "P3",
@@ -77,6 +77,15 @@
         "1": "A validation framework: tiny tests, combined P50 under one customer, budget held back until economics are 'known'.",
         "3": "Some volume, but the main bet can't move the goal in 90 days or has no weekly number.",
         "5": "At least one play has a real volume engine (who runs it, weekly reach) and the portfolio's P50 credibly moves the goal in 90 days; tests say how they scale at day 21."
+      }
+    },
+    {
+      "id": "Q8",
+      "name": "Pull and positioning",
+      "anchors": {
+        "1": "Hooks pull no lever (no bigger outcome, confidence, speed or ease); comparison pages list features with no named alternative or best-fit segment; referral asks have no trigger.",
+        "3": "Some hooks name a lever and some pages name the alternative, but the best-fit segment or the share moment is vague.",
+        "5": "Every hook names the lever it pulls in the customer's words; comparison pages lead with one strength for a named segment against a named alternative; referral plays have a trigger and a built-in share moment; self-serve products get a funnel play."
       }
     }
   ],

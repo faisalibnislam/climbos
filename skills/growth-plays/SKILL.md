@@ -94,6 +94,35 @@ Score each play 1–5 on:
 - **No more than 4 active plays** for a business with fewer than 10 people, and no two plays in the same channel unless one follows on from the other.
 - **No generic fallback:** if nothing reaches distinctiveness ≥ 4 with predictability ≥ 3, recombine and transplant again before accepting a generic plan.
 
+## Five lenses every portfolio passes through
+
+Summarised in our own words from five well-known marketing books. Apply each lens where it fits the business; the code checks the parts marked **(checked)**.
+
+### 1. Self-serve funnel (product-led growth)
+- For products sold without a salesperson, the product is the main channel. Below about $25 a month per customer, at least one play works on the product's own funnel: signup → first value → habit → upgrade **(checked)**.
+- Name the "first value" moment (the first result a new user gets, e.g. first invoice sent, first booking taken) and how long it takes today; a play that shortens it usually beats a play that adds traffic.
+- Choose the model from price and complexity: a free plan when the product spreads by use and costs little to serve; a time-boxed trial when value shows quickly and the product is complex; ask for a card up front only when intent is already high.
+- Upgrade prompts sit where the free plan's limit is felt (a seat, a project, a feature), not on a timer.
+
+### 2. Positioning for comparison and alternative pages
+- Positioning starts from what customers would do if this product didn't exist (the real alternatives, including spreadsheets or doing nothing), not from the category name.
+- A comparison or alternative page play names the alternative, what this product does that the alternative doesn't, why that matters, and who it matters most to (the best-fit segment) **(checked)**. Lead with that one strength for that segment; a feature grid comes second.
+- All four come from research or the owner's facts; never invent a weakness of a competitor.
+
+### 3. Offer levers
+- People buy when the outcome they want feels big, likely, quick and easy. A strong hook moves at least one lever: a bigger outcome, more confidence it will work (proof, a guarantee the owner offers), a faster first result, or less effort to start. Say which lever the hook pulls, in the customer's words.
+- Improving the offer (trial terms, onboarding help, bonus templates, a guarantee) is a play type of its own, often cheaper than more traffic.
+- Never promise a guarantee, refund or result the owner hasn't confirmed **(checked)**.
+
+### 4. Stage-appropriate metrics
+- Pick the one number that matters for the business's stage and model: early self-serve products watch activation and trial → paid; growing ones watch net new paying customers and churn; local services watch booked jobs.
+- Followers, impressions, views and visits are leading signals, never the North Star or a play's outcome unit **(checked)**.
+- Use the funnel benchmarks in base rates as fallbacks only, labelled by grade; prefer the owner's numbers.
+
+### 5. Word of mouth
+- People share what makes them look good, what they're reminded of often, what moves them, what others can see, what's useful to pass on, and stories that carry the product inside them.
+- A referral or word-of-mouth play names its trigger (the moment a customer thinks of it, e.g. after sending a client their first invoice) and the share mechanism built into that moment (a link, invite or template in the product) **(checked)**. "Ask customers to share us" with no trigger or mechanism isn't a play.
+
 ## Think like a CMO with 20 years' experience
 
 Before writing any play, decide in this order:

@@ -675,6 +675,90 @@ export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIs
     .map((x) => ({ severity: "error" as const, rule: "any_paid_plan", message: `"${x.text.slice(0, 80)}" counts only one paid tier. Count new customers on any paid plan, and use the lowest paid price as revenue per customer unless the owner gives a mix.`, path: x.path }));
 }
 
+/* ---------------- Five lenses (marketing books, in our own words; skills/growth-plays "Five lenses") ---------------- */
+
+type LensPlay = { name?: string; oneLiner?: string; audience?: string; trigger?: string; hook?: string; mechanic?: string; assetUsed?: string; unit?: string; route?: string; test?: string; firstActionToday?: string };
+const playText = (p: LensPlay, keys: (keyof LensPlay)[]) => keys.map((k) => p[k] ?? "").join(" ");
+const lowPrice = (economics: { revenuePerCustomerMonthUsd?: number } | undefined) => {
+  const price = economics?.revenuePerCustomerMonthUsd ?? 0;
+  return price > 0 && price < LOW_TICKET_USD_MONTH;
+};
+
+/** Work on the product's own funnel: signup, first value, trial, upgrade. */
+const FUNNEL_PLAY = /\b(?:onboarding|activation|activate[sd]?|first[- ]run|first value|time[- ]to[- ]value|sign-?up (?:flow|page|form|step)|trial(?:[- ]to[- ]paid| flow| emails?| length| terms| users)|upgrade (?:prompt|flow|path|page|moment)|paywall|free plan|freemium|in-app|empty states?|welcome (?:emails?|flow|screen)|setup (?:wizard|checklist)|pricing page|checkout)\b/i;
+
+/** Lens 1 (product-led growth): a low-price self-serve product gets at least one play on its own funnel. */
+export function lintSelfServeFunnel(plays: LensPlay[], economics: { revenuePerCustomerMonthUsd?: number } | undefined): LintIssue[] {
+  if (!lowPrice(economics) || !plays.length) return [];
+  if (plays.some((p) => FUNNEL_PLAY.test(playText(p, ["name", "oneLiner", "mechanic", "assetUsed", "firstActionToday", "test"])))) return [];
+  return [{ severity: "error", rule: "self_serve_funnel", message: "At this price the product is the main channel: add a play on its own funnel (signup → first value → upgrade), e.g. shorten the time to the first result or move the upgrade prompt to where the free limit is felt.", path: "plays" }];
+}
+
+const COMPARISON_PLAY = /\b(?:comparison|compare|alternatives?|vs\.?|versus|switch(?:ing)? from)\b/i;
+/** A named alternative: "vs Calendly", "alternative to Google Analytics", or the status quo (spreadsheets, doing it by hand). */
+const ALT_LEAD = /\b(?:vs\.?|versus|alternative to|compared (?:to|with)|instead of|switch(?:ing)? from|than|unlike|replaces?)\s+(?:the\s+|a\s+)?(\S+)/gi;
+const STATUS_QUO = /\b(?:spreadsheets?|excel|pen and paper|paper|doing nothing|by hand|manual(?:ly)?|email threads|whatsapp)\b/i;
+/** A named alternative: "vs Calendly", "alternative to Google Analytics", "unlike Acme", or the status quo. */
+const namesAlternative = (t: string) => STATUS_QUO.test(t) || [...t.matchAll(ALT_LEAD)].some((m) => /^[A-Z0-9]/.test(m[1]));
+const DIFFERENTIATOR = /\b(?:only|unlike|without|instead of|no (?:need|cookies?|setup|code|contracts?|per-seat|ads)|cheaper|faster|simpler|lighter|privacy|private|built for|doesn'?t|does not|fewer|less|more (?:control|privacy)|one[- ]click|in minutes)\b/i;
+const SEGMENT = /\bfor (?:[\w'-]+ ){0,4}(?:teams?|owners?|freelancers?|agencies|founders?|studios?|shops?|clinics?|coaches?|consultants?|businesses|companies|creators?|marketers?|developers?|designers?|accountants?|sites?|stores?|bloggers?|[a-z]+(?:ers|ists|ants))\b|\b(?:solo|small|indie|local|eu|european|privacy-conscious|growing)\s+[\w-]+/i;
+
+/** Lens 2 (positioning): a comparison or alternative page names the alternative, what's different and for whom. */
+export function lintComparisonPositioning(plays: LensPlay[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) => {
+    if (!COMPARISON_PLAY.test(playText(p, ["name", "assetUsed", "mechanic", "firstActionToday"]))) return;
+    const text = playText(p, ["oneLiner", "hook", "mechanic", "audience", "firstActionToday", "name"]);
+    const gaps = [
+      namesAlternative(text) ? "" : "the alternative it's compared with (a competitor or what people do instead)",
+      DIFFERENTIATOR.test(text) ? "" : "what this product does that the alternative doesn't",
+      SEGMENT.test(`${p.audience ?? ""} ${text}`) ? "" : "who that matters most to (the best-fit segment)",
+    ].filter(Boolean);
+    if (gaps.length) issues.push({ severity: "error", rule: "positioning", message: `"${p.name ?? `Play ${i + 1}`}" is a comparison or alternative page but doesn't say ${gaps.join("; ")}. Lead with one strength for one segment against a named alternative, from research.`, path: `plays[${i}].hook` });
+  });
+  return issues;
+}
+
+const GUARANTEE = /\b(?:money[- ]back|refunds? (?:if|guarantee)|guarantee[sd]?|risk[- ]free|no[- ]risk|or (?:it'?s|your money) (?:free|back)|results? guaranteed)\b/i;
+
+/** Lens 3 (offers): a guarantee or refund promise only when the owner's facts or the research confirm it. */
+export function lintOfferClaims(plays: LensPlay[], evidence: string): LintIssue[] {
+  if (GUARANTEE.test(evidence)) return [];
+  return plays.flatMap((p, i) =>
+    GUARANTEE.test(playText(p, ["oneLiner", "hook", "mechanic"]))
+      ? [{ severity: "error" as const, rule: "offer_claim", message: `"${p.name ?? `Play ${i + 1}`}" promises a guarantee or refund the owner hasn't confirmed. Use another lever (a faster first result, less effort to start, proof from real customers), or ask the owner first.`, path: `plays[${i}].hook` }]
+      : [],
+  );
+}
+
+const VANITY_METRIC = /\b(?:followers?|impressions?|views?|likes?|reach|traffic|visits?|visitors?|sessions?|page ?views?|clicks?|engagement|downloads?|subscribers?)\b/i;
+const OUTCOME = /\b(?:customers?|clients?|paying|paid|revenue|sales?|orders?|bookings?|booked|jobs?|accounts?|subscriptions?|sign-?ups|trials?|activated|activation|leads?|mrr|arr|members?|patients?|students?|deals?|contracts?)\b/i;
+
+/** Lens 4 (stage metrics): an outcome, never a vanity number, as the North Star (plays' units are checked in lintPlays). */
+export function lintStageMetric(items: { text: string; path: string }[]): LintIssue[] {
+  return items
+    .filter((x) => x.text.trim() && VANITY_METRIC.test(x.text) && !OUTCOME.test(x.text))
+    .map((x) => ({ severity: "error" as const, rule: "vanity_metric", message: `"${x.text.slice(0, 80)}" is a leading signal, not an outcome. Count what the business is paid for (new paying customers, booked jobs, activated accounts) and keep visits or followers as a leading indicator.`, path: x.path }));
+}
+
+const REFERRAL_PLAY = /\b(?:referr\w*|word[- ]of[- ]mouth|invite (?:a |your )?(?:friends?|colleagues?|teammates?|clients?)|tell a friend|ambassadors?|share (?:with|it|us))\b/i;
+const SHARE_TRIGGER = /\b(?:after|when|right after|each time|every time|the moment|at the moment|once (?:they|a|the|their)|on (?:first|their)|at (?:checkout|signup|renewal|delivery))\b/i;
+const SHARE_MECHANISM = /\b(?:links?|invites?|buttons?|in-app|in the app|templates?|codes?|widgets?|badges?|signatures?|footers?|powered by|share (?:screens?|cards?|pages?)|qr)\b/i;
+
+/** Lens 5 (word of mouth): a referral play names the moment people think of it and the share mechanism in that moment. */
+export function lintReferralDrivers(plays: LensPlay[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  plays.forEach((p, i) => {
+    if (!REFERRAL_PLAY.test(playText(p, ["name", "oneLiner", "mechanic", "hook"]))) return;
+    const gaps = [
+      SHARE_TRIGGER.test(playText(p, ["trigger", "mechanic", "hook"])) ? "" : "the trigger (the moment a customer thinks of it)",
+      SHARE_MECHANISM.test(playText(p, ["mechanic", "firstActionToday", "route", "assetUsed"])) ? "" : "the share mechanism built into that moment (a link, invite or template in the product)",
+    ].filter(Boolean);
+    if (gaps.length) issues.push({ severity: "error", rule: "referral_drivers", message: `"${p.name ?? `Play ${i + 1}`}" asks people to share but doesn't name ${gaps.join(" or ")}.`, path: `plays[${i}].mechanic` });
+  });
+  return issues;
+}
+
 /** Spec §13: the portfolio must fit the owner's cash and time. */
 export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
@@ -882,7 +966,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, out.economics, evidenceOf(input)), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, out.economics, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintEconomics(out)],
     },
     o,
     "expert",
@@ -900,7 +984,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
