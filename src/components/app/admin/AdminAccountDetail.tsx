@@ -167,34 +167,48 @@ function CreditsCard({ accountId, me }: { accountId: Id<"accounts">; me: AdminMe
   );
 }
 
-function CompCard({ accountId, subs }: { accountId: Id<"accounts">; subs: { id: Id<"subscriptions">; status: string; comp: { until: number } | null }[] }) {
+function CompCard({ accountId, subs }: { accountId: Id<"accounts">; subs: { id: Id<"subscriptions">; planKey: string; plan: string; status: string; comp: { until: number } | null }[] }) {
   const packages = useQuery(api.admin.packages, {});
   const comp = useMutation(api.admin.compPackage);
+  const change = useMutation(api.admin.changeComp);
   const end = useMutation(api.admin.endComp);
-  const [plan, setPlan] = useState<"starter" | "pro">("pro");
+  const activeComp = subs.find((s) => s.comp && s.status === "active");
+  const [plan, setPlan] = useState<"starter" | "pro">(activeComp?.planKey === "starter" ? "starter" : "pro");
   const [months, setMonths] = useState("12");
   const [reason, setReason] = useState("");
-  const activeComp = subs.find((s) => s.comp && s.status === "active");
+  const options = (packages ?? []).map((p) => ({ value: p.key, label: `${p.name} · ${formatNumber(p.credits)}/mo` }));
+  const fields = (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Field label="Package">
+        <Select value={plan} onValueChange={(v) => setPlan(v as "starter" | "pro")} options={options} />
+      </Field>
+      <Field label="Months">
+        <Input inputMode="numeric" value={months} onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ""))} />
+      </Field>
+      <Field label="Reason">
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. partner" />
+      </Field>
+    </div>
+  );
   return (
-    <Panel title="Free package (comp)">
+    <Panel title="Package (free / manual)">
       {activeComp ? (
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span>Comped until {new Date(activeComp.comp!.until).toLocaleDateString()}</span>
-          <Action label="End comp" variant="danger" run={() => end({ subscriptionId: activeComp.id })} />
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span>
+              <span className="font-medium text-ink">{activeComp.plan}</span> free until {new Date(activeComp.comp!.until).toLocaleDateString()}
+            </span>
+            <Action label="End comp" variant="danger" run={() => end({ subscriptionId: activeComp.id })} />
+          </div>
+          {fields}
+          <div className="flex flex-col gap-1">
+            <Action label="Change package" variant="primary" run={() => change({ subscriptionId: activeComp.id, planKey: plan, months: Number(months) || 1, reason })} />
+            <p className="text-xs text-ink-3">Months count from today. An upgrade adds the new package&apos;s credits this month; a downgrade applies from the next renewal.</p>
+          </div>
+        </>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Package">
-              <Select value={plan} onValueChange={(v) => setPlan(v as "starter" | "pro")} options={(packages ?? []).map((p) => ({ value: p.key, label: `${p.name} · ${formatNumber(p.credits)}/mo` }))} />
-            </Field>
-            <Field label="Months">
-              <Input inputMode="numeric" value={months} onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ""))} />
-            </Field>
-            <Field label="Reason">
-              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. partner" />
-            </Field>
-          </div>
+          {fields}
           <Action label="Give package" variant="primary" run={() => comp({ accountId, planKey: plan, months: Number(months) || 1, reason })} />
         </>
       )}

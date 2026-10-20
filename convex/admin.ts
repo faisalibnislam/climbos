@@ -290,7 +290,7 @@ export const accountDetail = query({
       suspendedReason: account.suspendedReason ?? null,
       period: period ? { source: period.source, endsAt: period.endsAt, monthlyTotal: microsToCredits(period.walletCapMicros), monthlyUsed: microsToCredits(period.walletSpentMicros + period.walletReservedMicros) } : null,
       topupLots: pool.lots.map((l) => ({ id: l._id, key: l.topupKey, left: microsToCredits(l.remainingMicros ?? 0), expiresAt: l.expiresAt ?? null })),
-      subscriptions: subs.map((s) => ({ id: s._id, plan: CURRENT_ENTITLEMENTS.plans[s.planKey].name, status: s.status, access: subscriptionAccess(s, Date.now()), comp: s.comp ? { until: s.comp.until, reason: s.comp.reason } : null, currentPeriodEnd: s.currentPeriodEnd })),
+      subscriptions: subs.map((s) => ({ id: s._id, planKey: s.planKey, plan: CURRENT_ENTITLEMENTS.plans[s.planKey].name, status: s.status, access: subscriptionAccess(s, Date.now()), comp: s.comp ? { until: s.comp.until, reason: s.comp.reason } : null, currentPeriodEnd: s.currentPeriodEnd })),
       orders: orders.map((o) => ({ id: o._id, product: o.productKey, status: o.status, amountMinor: o.amountMinor, currency: o.currency, createdAt: o.createdAt })),
       workspaces: ws,
       audit: auditRows.map((a) => ({ id: a._id, action: a.action, summary: a.summary, actorType: a.actorType, createdAt: a.createdAt })),
@@ -416,6 +416,29 @@ export const compPackage = mutation({
     });
     await grantCompPeriod(ctx, (await ctx.db.get(subId))!, now, now + 30 * DAY);
     await auditAccount(ctx, accountId, user._id, "comp", `${CURRENT_ENTITLEMENTS.plans[planKey].name} given free for ${months} month${months === 1 ? "" : "s"} by ClimbOS (${reason.slice(0, 120)}).`);
+  },
+});
+
+/**
+ * Change an active comp's package and/or length without ending it. An upgrade raises this month's
+ * credits to the new package now (the current period is upgraded in place, usage kept); a downgrade
+ * keeps this month's credits and applies from the next renewal. The new length counts from today.
+ */
+export const changeComp = mutation({
+  args: { subscriptionId: v.id("subscriptions"), planKey: v.union(v.literal("starter"), v.literal("pro")), months: v.number(), reason: v.string() },
+  handler: async (ctx, { subscriptionId, planKey, months, reason }) => {
+    const { user } = await requireStaff(ctx, "grant");
+    if (!(months >= 1 && months <= 36)) throw appError("INVALID", "Comp between 1 and 36 months.");
+    const sub = await ctx.db.get(subscriptionId);
+    if (!sub?.comp || sub.status !== "active") throw appError("INVALID", "That isn't an active complimentary package.");
+    const now = Date.now();
+    const from = CURRENT_ENTITLEMENTS.plans[sub.planKey].name;
+    const to = CURRENT_ENTITLEMENTS.plans[planKey].name;
+    await ctx.db.patch(sub._id, { planKey, comp: { until: now + months * 30 * DAY, by: user._id, reason: reason.slice(0, 200) || sub.comp.reason }, updatedAt: now });
+    // Same period key, so the current month is upgraded in place (credits raised, never lowered mid-month).
+    await grantCompPeriod(ctx, (await ctx.db.get(sub._id))!, sub.currentPeriodStart, sub.currentPeriodEnd);
+    if (sub.accountId)
+      await auditAccount(ctx, sub.accountId, user._id, "comp_changed", `${from === to ? to : `${from} → ${to}`}, free for ${months} month${months === 1 ? "" : "s"} from today, by ClimbOS (${reason.slice(0, 120) || "no reason given"}).`);
   },
 });
 

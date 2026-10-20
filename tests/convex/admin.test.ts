@@ -49,6 +49,26 @@ describe("admin panel", () => {
     expect(await t.mutation(internal.admin.renewComps, {})).toBe(1);
   });
 
+  it("an active comp can be upgraded in place: Pro credits this month, new length from today, audited", async () => {
+    const t = setup();
+    const c = await customer(t, "upgrade@example.com");
+    const ops = await asNewUser(t, "ops@example.com");
+    await ops.client.mutation(api.admin.compPackage, { accountId: c.accountId, planKey: "starter", months: 1, reason: "trial" });
+    expect((await c.client.query(api.workspace.credits, { slug: c.slug })).monthly.total).toBe(1_100);
+    const sub = await t.run(async (ctx) => (await ctx.db.query("subscriptions").collect())[0]);
+    await ops.client.mutation(api.admin.changeComp, { subscriptionId: sub._id, planKey: "pro", months: 6, reason: "owner testing" });
+    expect((await c.client.query(api.workspace.credits, { slug: c.slug })).monthly.total).toBe(3_000);
+    const after = await t.run(async (ctx) => (await ctx.db.get(sub._id))!);
+    expect(after.planKey).toBe("pro");
+    expect(after.comp!.until).toBeGreaterThan(Date.now() + 170 * 86_400_000);
+    // A downgrade keeps this month's credits (applies at renewal); customers can't call it.
+    await ops.client.mutation(api.admin.changeComp, { subscriptionId: sub._id, planKey: "starter", months: 6, reason: "back to starter" });
+    expect((await c.client.query(api.workspace.credits, { slug: c.slug })).monthly.total).toBe(3_000);
+    await expect(c.client.mutation(api.admin.changeComp, { subscriptionId: sub._id, planKey: "pro", months: 6, reason: "x" })).rejects.toThrow(/Not found/);
+    const detail = await ops.client.query(api.admin.accountDetail, { accountId: c.accountId });
+    expect(detail!.audit.some((a: { action: string }) => a.action === "admin.comp_changed")).toBe(true);
+  });
+
   it("live feature locks: setting autopilot free unlocks it for free accounts; admins can't change money settings", async () => {
     const t = setup();
     const c = await customer(t, "lock@example.com");
