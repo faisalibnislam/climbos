@@ -37,7 +37,8 @@ async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: 
     const entries = all.filter((e) => (p.id && e.playId ? e.playId === p.id : e.playName === p.name)).slice(0, 60);
     if (!entries.length) continue;
     const weeks = (p.horizonDays || 90) / 7;
-    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks) });
+    // Time zero is the week the plan was made: earlier weeks aren't this play's results (Hernán & Robins Ch 22).
+    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks, { startWeek: weekOf(s._creationTime) }) });
   }
   return out;
 }
@@ -69,6 +70,7 @@ export const log = mutation({
     if (chain.some((n, i) => i > 0 && n > chain[i - 1])) throw appError("INVALID", "Each step can't be bigger than the one before it.");
     const weekStart = weekOf(a.weekStart ?? Date.now());
     if (weekStart > Date.now()) throw appError("INVALID", "That week hasn't started yet.");
+    if (weekStart < weekOf(s._creationTime)) throw appError("INVALID", "That week is before this plan was made, so it isn't this play's result.");
     const existing = (await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400)).find((e) => e.weekStart === weekStart && (play.id && e.playId ? e.playId === play.id : e.playName === a.playName));
     const row = { reach: Math.round(a.reach), steps: a.steps.map(Math.round), spendUsd: a.spendUsd, ownerHours: a.ownerHours, enteredBy: user._id, updatedAt: Date.now() };
     if (existing) await ctx.db.patch(existing._id, row);
@@ -98,6 +100,7 @@ export const recordExperimentOutcome = mutation({
     controlSize: v.optional(v.number()),
     controlConversions: v.optional(v.number()),
     plannedSharePct: v.optional(v.number()),
+    assignment: v.optional(v.union(v.literal("random"), v.literal("rule"), v.literal("owner_choice"))),
     windowStart: v.optional(v.string()),
     windowEnd: v.optional(v.string()),
     metric: v.optional(v.string()),

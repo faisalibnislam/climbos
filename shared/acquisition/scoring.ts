@@ -295,7 +295,7 @@ export interface LimitCheck {
 /** Days until a channel can show whether it works. */
 const LEARN_DAYS: Record<Channel["learn"], number> = { days: 7, weeks: 28, months: 90 };
 /** Days from first conversation to a paying customer. */
-const CYCLE_DAYS: Record<string, number> = { immediate: 0, short: 14, medium: 45, long: 120 };
+export const CYCLE_DAYS: Record<string, number> = { immediate: 0, short: 14, medium: 45, long: 120 };
 /** Owner hours a week a channel needs at its smallest readable test. */
 const MIN_OWNER_HOURS: Record<Execution, number> = { auto: 0, partial: 1, human: 3 };
 /** What ClimbOS needs connected to run a family itself; without it the owner does that step by hand. */

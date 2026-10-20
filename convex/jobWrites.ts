@@ -342,6 +342,7 @@ export const saveStrategy = internalMutation({
                 ...(x.goalGap ? { goalGap: x.goalGap } : {}),
                 ...(x.constraintDiagnosis ? { constraintDiagnosis: x.constraintDiagnosis } : {}),
                 ...(x.playbooks ? { playbooks: x.playbooks } : {}),
+                ...(x.portfolio ? { portfolio: x.portfolio } : {}),
                 ...(x.webSources?.length ? { webSources: x.webSources.slice(0, 40).map((w) => ({ url: w.url.slice(0, 500), ...(w.title ? { title: w.title.slice(0, 200) } : {}) })) } : {}),
               };
             })(),

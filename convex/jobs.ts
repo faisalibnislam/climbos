@@ -45,7 +45,7 @@ import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis } from "../shared/agents/diagnosis";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
-import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
@@ -80,7 +80,7 @@ import {
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, CYCLE_DAYS, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -512,6 +512,10 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
     connected: job.capabilities.connected,
     ...(profile.priceUsdMonth !== undefined ? { priceUsdMonth: profile.priceUsdMonth } : {}),
     constraint: d.constraint,
+    ...(d.status ? { constraintStatus: d.status } : {}),
+    ...(funnelRatesOf(d)?.lead !== undefined ? { leadRate: funnelRatesOf(d)!.lead } : {}),
+    // Current customers, when the goal counts them as a total (the only place the owner states the base).
+    ...(job.goal?.target?.metric === "customers" && job.goal.target.mode === "total" && typeof job.goal.target.baseline === "number" ? { customers: job.goal.target.baseline } : {}),
     ...(profile.dims.geography?.value ? { geography: profile.dims.geography.value } : {}),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
   };
@@ -968,7 +972,8 @@ export const buildStrategy = internalAction({
       const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
       const scored = scoreChannels(profile, adjustments, undefined, limits);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
-      const diagnosis = diagnose({ funnel: job.business?.funnel, monthlyChurn: job.business?.unitEconomics?.monthlyChurn, newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth, types: profile.types });
+      const cycleDays = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
+      const diagnosis = diagnose({ funnel: job.business?.funnel, monthlyChurn: job.business?.unitEconomics?.monthlyChurn, newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth, types: profile.types, ...(cycleDays !== undefined ? { salesCycleDays: cycleDays } : {}) });
       const playbookChoice = choosePlaybooks(playbookContext(job, profile, diagnosis));
       decided.diagnosis = diagnosis;
       decided.ineligible = playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, reasons }));
@@ -986,7 +991,11 @@ export const buildStrategy = internalAction({
       // Speed: the chosen plays (with computed forecasts) show while the plan is written around them.
       if (plays) await previewPlays(ctx, job, plays);
       // 2. The 90-day plan, built around those plays.
-      const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null) : "";
+      // The owner's joint limits: the locked numbers name the best feasible set and the strongest alternative (selectPortfolio).
+      const lim = constraintsOf(job);
+      const ownerLimits = { ...(lim.monthlyAdBudgetUsd !== undefined ? { monthlyBudgetUsd: lim.monthlyAdBudgetUsd } : {}), ...(lim.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: lim.ownerHoursPerWeek } : {}), ...(lim.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: lim.newCustomersPerMonth } : {}) };
+      const portfolio = plays ? selectPortfolio(plays, { ...ownerLimits, horizonDays: job.goal?.horizonDays }) : null;
+      const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null, ownerLimits) : "";
       let strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
@@ -1026,7 +1035,7 @@ export const buildStrategy = internalAction({
       await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown }) => ({ id: pb.id, name: pb.name, unknown })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null } } : {}) }),
         evidence: JSON.stringify(

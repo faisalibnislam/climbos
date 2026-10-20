@@ -59,7 +59,7 @@ describe("experiment outcomes", () => {
     const { owner, slug, orgId, referral, holdout, cold } = await planWithTests(t, "brief@example.com");
     expect(await t.query(internal.playResults.briefFor, { orgId })).toBe("");
     await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 6, result: "met", stopRuleHit: false });
-    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, result: "met", stopRuleHit: false });
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", assignment: "random", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, result: "met", stopRuleHit: false });
     await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: cold, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "No time" });
     const brief = await t.query(internal.playResults.briefFor, { orgId });
     const line = (name: string) => brief.split("\n").find((l) => l.startsWith(`- ${name}`))!;

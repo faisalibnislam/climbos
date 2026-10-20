@@ -78,13 +78,41 @@ export interface RateComparison {
   pValue: number;
   method: "fisher_exact" | "two_proportion_z";
   verdict: "no_reliable_difference" | "difference_detected" | "too_early";
+  /** 95% interval for treatment − control (Newcombe hybrid score), in rate units. */
+  differenceInterval: [number, number];
+  /**
+   * The interval read against the smallest change worth acting on, set before the test (Kohavi Ch 2's
+   * six cases): worth_acting, harmful, flat (precise and small), small_but_real, inconclusive. Absent without `practicalChange`.
+   */
+  practical?: "worth_acting" | "harmful" | "flat" | "small_but_real" | "inconclusive";
   notes: string[];
 }
 
+/** Wilson 95% score interval for x of n. */
+function wilson(x: number, n: number, z = 1.959964): [number, number] {
+  const p = x / n;
+  const d = 1 + (z * z) / n;
+  const c = p + (z * z) / (2 * n);
+  const h = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  return [Math.max(0, (c - h) / d), Math.min(1, (c + h) / d)];
+}
+
+/** Newcombe's hybrid score interval for p2 − p1 (method 10): good coverage at small counts, unlike Wald. */
+export function differenceInterval(x1: number, n1: number, x2: number, n2: number): [number, number] {
+  const p1 = x1 / n1;
+  const p2 = x2 / n2;
+  const [l1, u1] = wilson(x1, n1);
+  const [l2, u2] = wilson(x2, n2);
+  const d = p2 - p1;
+  return [d - Math.sqrt((p2 - l2) ** 2 + (u1 - p1) ** 2), d + Math.sqrt((u2 - p2) ** 2 + (p1 - l1) ** 2)];
+}
+
 /** Compare two conversion rates. Fixed-horizon reading only: no verdict before the planned end. */
-export function compareRates(p: { control: { visitors: number; conversions: number }; treatment: { visitors: number; conversions: number }; plannedEndReached?: boolean; alpha?: number }): RateComparison {
+export function compareRates(p: { control: { visitors: number; conversions: number }; treatment: { visitors: number; conversions: number }; plannedEndReached?: boolean; alpha?: number; practicalChange?: number }): RateComparison {
   const { control: c, treatment: t } = p;
   if (!(c.visitors > 0 && t.visitors > 0)) throw new RangeError("each arm needs visitors");
+  // Counts must be whole and nested: more conversions than visitors used to read as a certain difference (p = 0).
+  for (const a of [c, t]) if (!(Number.isInteger(a.visitors) && Number.isInteger(a.conversions) && a.conversions >= 0 && a.conversions <= a.visitors)) throw new RangeError("conversions must be whole numbers between 0 and visitors");
   const cr = c.conversions / c.visitors;
   const tr = t.conversions / t.visitors;
   const small = Math.min(c.conversions, t.conversions, c.visitors - c.conversions, t.visitors - t.conversions) < 10;
@@ -92,6 +120,11 @@ export function compareRates(p: { control: { visitors: number; conversions: numb
   const alpha = p.alpha ?? 0.05;
   const verdict: RateComparison["verdict"] = p.plannedEndReached === false ? "too_early" : pValue < alpha ? "difference_detected" : "no_reliable_difference";
   const pts = round((tr - cr) * 100, 2);
+  const [lo, hi] = differenceInterval(c.conversions, c.visitors, t.conversions, t.visitors);
+  const pc = p.practicalChange;
+  const practical: RateComparison["practical"] =
+    pc === undefined || !(pc > 0) ? undefined : lo >= pc ? "worth_acting" : hi <= -pc ? "harmful" : lo > -pc && hi < pc ? "flat" : (lo > 0 || hi < 0) ? "small_but_real" : "inconclusive";
+  const ptsOf = (x: number) => `${round(x * 100, 1)}`;
   return {
     controlRate: round(cr),
     treatmentRate: round(tr),
@@ -100,8 +133,12 @@ export function compareRates(p: { control: { visitors: number; conversions: numb
     pValue: round(pValue),
     method: small ? "fisher_exact" : "two_proportion_z",
     verdict,
+    differenceInterval: [round(lo), round(hi)],
+    ...(practical ? { practical } : {}),
     notes: [
-      `The change is ${pts} percentage points${cr > 0 ? ` (${Math.round(((tr - cr) / cr) * 100)}% relative)` : ""}; the relative number alone overstates small rates.`,
+      `The change is ${pts} percentage points${cr > 0 ? ` (${Math.round(((tr - cr) / cr) * 100)}% relative)` : ""}, likely between ${ptsOf(lo)} and ${ptsOf(hi)} points; the relative number alone overstates small rates.`,
+      ...(practical === "inconclusive" ? [`Too few to tell whether the change reaches the ${ptsOf(pc!)}-point bar worth acting on: not evidence of no effect.`] : []),
+      ...(practical === "flat" ? [`Any change is smaller than the ${ptsOf(pc!)}-point bar worth acting on.`] : []),
       ...(verdict === "too_early" ? ["The planned end isn't reached: reading the result now (peeking) makes the p-value meaningless."] : []),
       ...(verdict === "no_reliable_difference" ? ["Not a proven win or loss: the data can't tell the arms apart. That isn't proof they're the same."] : []),
       ...(verdict === "difference_detected" ? ["A detected difference still needs a valid split (check sample ratio), guardrails and whether it's worth the cost."] : []),
@@ -192,7 +229,7 @@ export function beforeAfter(p: { before: number; after: number; confounders?: st
 export const CalcInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("margin"), price: z.number(), costs: z.array(z.object({ name: z.string(), amount: z.number() })), costBoundary: z.string().optional(), targetMargin: z.number().optional() }),
   z.object({ kind: z.literal("price_floor"), unitCost: z.number(), targetMargin: z.number(), statedWillingnessToPay: z.number().optional() }),
-  z.object({ kind: z.literal("compare_rates"), control: z.object({ visitors: z.number(), conversions: z.number() }), treatment: z.object({ visitors: z.number(), conversions: z.number() }), plannedEndReached: z.boolean().optional() }),
+  z.object({ kind: z.literal("compare_rates"), control: z.object({ visitors: z.number(), conversions: z.number() }), treatment: z.object({ visitors: z.number(), conversions: z.number() }), plannedEndReached: z.boolean().optional(), practicalChange: z.number().optional() }),
   z.object({ kind: z.literal("sample_ratio"), planned: z.array(z.number()), observed: z.array(z.number()) }),
   z.object({ kind: z.literal("sample_size"), baseline: z.number(), minDetectable: z.number(), arms: z.number().optional(), weeklyEligible: z.number().optional() }),
   z.object({ kind: z.literal("before_after"), before: z.number(), after: z.number(), confounders: z.array(z.string()).optional() }),
@@ -218,6 +255,7 @@ export const CalcToolInput = z.object({
   control: Arm.optional().describe("compare_rates: control arm"),
   treatment: Arm.optional().describe("compare_rates: treatment arm"),
   plannedEndReached: z.boolean().optional().describe("compare_rates: has the planned test end been reached"),
+  practicalChange: z.number().optional().describe("compare_rates: smallest change worth acting on, as a share (0.01 = 1 point), set before the test"),
   planned: z.array(z.number()).optional().describe("sample_ratio: planned split, e.g. [50, 50]"),
   observed: z.array(z.number()).optional().describe("sample_ratio: units actually in each arm"),
   baseline: z.number().optional().describe("sample_size: current conversion rate as a share"),

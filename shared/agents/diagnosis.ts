@@ -4,8 +4,24 @@
  * is weakest; the model only explains it and names a competing explanation.
  * Run 4 showed a model-written decision made plans worse, so the choice is
  * made here, deterministically, and is "unknown" when the numbers aren't there.
+ *
+ * Decision books (2026-10-20):
+ * - Counts are read as Beta posteriors (Downey Ch 4; Kochenderfer §4.2): a
+ *   small sample below a reference isn't evidence it is below, so verdicts
+ *   need 90% posterior probability (references.ts DECISION_THRESHOLDS).
+ * - Diagnosis is a set of competing hypotheses with observations, support,
+ *   conflicts and the measurement that would tell them apart. The weakest
+ *   link is an observation, not a proven cause (Hernán & Robins Ch 1, 7):
+ *   the lowest rate isn't automatically the most valuable fix, so each
+ *   link's customers per +1 point is shown and the owner compares evidence,
+ *   cost and delay.
+ * - Inputs are checked before reading: counts must nest, the period must
+ *   cover the sales cycle, and the SaaS reference depends on the signup
+ *   model. Contradictions return a resolution task, not a confident plan.
  */
 import type { BindingConstraint } from "./decision";
+import { betaPosterior, probBelow, probLess, type BetaPosterior } from "../analysis/bayes";
+import { REFERENCES, DECISION_THRESHOLDS, conversionReference, type ReferenceRule, type SignupKind } from "./references";
 
 /** The owner's last-period funnel (all optional; counts over `periodDays`). */
 export interface OwnerFunnel {
@@ -23,6 +39,8 @@ export interface OwnerFunnel {
   activationKind?: "value" | "habit" | "setup" | "unknown";
   /** New paying customers (or completed paid jobs). */
   newCustomers?: number;
+  /** For SaaS: what a signup is (free plan, trial without card, trial with card). Picks the reference; unknown means none. */
+  signupKind?: SignupKind;
 }
 
 export interface DiagnosisContext {
@@ -33,6 +51,8 @@ export interface DiagnosisContext {
   newCustomersPerMonth?: number | null;
   /** Library business types (for which reference ranges apply). */
   types?: string[];
+  /** Typical days from lead to purchase; a shorter period can't show purchases yet. */
+  salesCycleDays?: number;
 }
 
 export interface StageReading {
@@ -43,6 +63,25 @@ export interface StageReading {
   /** Reference range and its grade, when one exists; null means no reliable benchmark. */
   reference: string | null;
   verdict: "weak" | "ok" | "unknown";
+  /** 90% credible range of the true rate (uniform prior), when counts were given. */
+  likely?: { low: number; high: number };
+  /** P(true rate < the reference's low end), when a reference applies. */
+  probBelowReference?: number;
+  /** The period is shorter than the sales cycle: purchases are still arriving. */
+  immature?: boolean;
+  referenceId?: string;
+}
+
+export interface Hypothesis {
+  constraint: BindingConstraint;
+  /** What the numbers show: an observation, not a cause. */
+  observation: string;
+  /** P(this link is the weaker of the competing measured links); null when not computable. */
+  probability: number | null;
+  support: string[];
+  against: string[];
+  /** The measurement that would tell this hypothesis apart from the others. */
+  discriminate: string;
 }
 
 export interface Diagnosis {
@@ -55,17 +94,26 @@ export interface Diagnosis {
   competing: string;
   /** What to measure next when the diagnosis is weak or unknown. */
   missing: string[];
+  /**
+   * supported: one link is the weaker with ≥80% probability (still an observation, not a cause);
+   * ambiguous: two links compete; insufficient_evidence: too few numbers;
+   * conflicting_inputs: the counts contradict each other (resolve first).
+   * Absent on diagnoses saved before 2026-10-20.
+   */
+  status?: "supported" | "ambiguous" | "insufficient_evidence" | "conflicting_inputs";
+  hypotheses?: Hypothesis[];
+  /** Contradictions in the owner's numbers, each a task to resolve before planning on them. */
+  conflicts?: string[];
+  /** New customers a month gained per +1 percentage point at each measured link, other rates held (illustrative arithmetic, not an attainable lift). */
+  leverage?: { stage: StageReading["stage"]; perPoint: number }[];
+  /** Rules used, with versions (references.ts). */
+  rules?: string[];
 }
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+const r2 = (x: number) => Math.round(x * 100) / 100;
 const SAAS = new Set(["b2b_saas", "b2c_saas", "ai_product", "developer_tools", "enterprise_software"]);
-
-/** Practitioner ranges from skills/growth-plays/reference/base-rates.md (grade C). Only these are used as references. */
-const REF = {
-  trialToPaid: { low: 0.15, high: 0.25, text: "15–25% trial (no card) → paid, practitioner range, grade C" },
-  freeToPaid: { low: 0.02, high: 0.05, text: "2–5% free user → paid, practitioner range, grade C" },
-  saasChurn: { low: 0.03, high: 0.07, text: "3–7% monthly churn for small-business SaaS, practitioner range, grade C" },
-};
+const T = DECISION_THRESHOLDS;
 
 const COMPETING: Record<BindingConstraint | "unknown", string> = {
   demand: "The few who arrive may be the wrong people (positioning or targeting), not too few people.",
@@ -73,79 +121,170 @@ const COMPETING: Record<BindingConstraint | "unknown", string> = {
   conversion: "Price or packaging may block the purchase rather than the product failing to show value.",
   offer: "Buyers may not understand the offer (communication) rather than not wanting it.",
   positioning: "The product may not deliver the promised value rather than being described poorly.",
-  retention: "Customers may leave for budget or seasonality reasons rather than weak recurring value.",
+  retention: "Customers may leave for budget or seasonality reasons rather than weak recurring value; some loss is normal at any size.",
   delivery: "Demand may exceed capacity only at peak times; scheduling or pricing could free room.",
   economics: "Costs may be misallocated rather than the model being unprofitable.",
   unknown: "Without the owner's funnel numbers any constraint is a guess.",
 };
 
-/** Read the funnel. Weakest measured link wins; capacity and retention override when they bind. */
+/** The measurement that separates a hypothesis from its rival. */
+const DISCRIMINATE: Partial<Record<BindingConstraint, string>> = {
+  activation: "Ask 5–10 recent signups who didn't reach first value what stopped them, and check where they came from: wrong-fit traffic points to targeting, right-fit people stalling points to onboarding.",
+  conversion: "Ask activated people who didn't buy why not, and record the reason (price, package, timing, trust) for each.",
+  demand: "Compare lead quality by source for a week: if the right people convert well, more of them helps; if not, fix targeting first.",
+  retention: "List the last 10–20 cancellations by reason and month (failed payment, early, near renewal).",
+  delivery: "Count turned-away or delayed jobs for two weeks.",
+};
+
+/** Read the funnel. Capacity and retention override; otherwise competing links are compared on posteriors. */
 export function diagnose(ctx: DiagnosisContext): Diagnosis {
   const f = ctx.funnel ?? {};
   const days = f.periodDays && f.periodDays > 0 ? f.periodDays : 30;
   const perMonth = (n: number) => (n * 30) / days;
   const readings: StageReading[] = [];
   const missing: string[] = [];
+  const conflicts: string[] = [];
+  const rules: string[] = [`${T.id}@${T.version}`];
   const saas = (ctx.types ?? []).some((t) => SAAS.has(t));
+  const immature = ctx.salesCycleDays !== undefined && ctx.salesCycleDays > days;
+
+  // 0. Do the counts nest? Contradictions are resolved before anything is read from them.
+  const gt = (a: number | undefined, b: number | undefined) => a !== undefined && b !== undefined && a > b;
+  if (gt(f.leads, f.visitors)) conflicts.push(`${f.leads} leads but only ${f.visitors} visitors: check what each counts (visitors may be one channel only).`);
+  if (gt(f.activated, f.leads)) conflicts.push(`${f.activated} reached first value but only ${f.leads} leads: one of the two counts is off.`);
+  if (gt(f.newCustomers, f.leads) && f.leads !== undefined) conflicts.push(`${f.newCustomers} new customers but only ${f.leads} leads: some buyers may skip the lead step, or a count is off.`);
+  if (gt(f.newCustomers, f.activated) && !gt(f.newCustomers, f.leads)) conflicts.push(`${f.newCustomers} paid but only ${f.activated} reached first value: either people pay before first value (then first value isn't on the path to paying) or a count is off.`);
+  for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isFinite(n) && n >= 0)) conflicts.push(`${k} must be a count of zero or more.`);
 
   // Capacity binds before anything else: more demand can't be served.
   const cap = ctx.newCustomersPerMonth;
-  if (cap && f.newCustomers !== undefined) {
+  if (cap && f.newCustomers !== undefined && f.newCustomers >= 0) {
     const use = perMonth(f.newCustomers) / cap;
     readings.push({ stage: "capacity", observed: `${Math.round(perMonth(f.newCustomers))} new customers a month against room for ${cap}`, rate: use, reference: null, verdict: use >= 0.8 ? "weak" : "ok" });
   }
   // Retention: only against a reference that exists (SaaS).
   if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null) {
-    readings.push({ stage: "retention", observed: `${pct(ctx.monthlyChurn)} of customers leave each month`, rate: ctx.monthlyChurn, reference: saas ? REF.saasChurn.text : null, verdict: saas ? (ctx.monthlyChurn > REF.saasChurn.high ? "weak" : "ok") : "unknown" });
+    const ref = REFERENCES.saasChurn;
+    if (saas) rules.push(`${ref.id}@${ref.version}`);
+    readings.push({ stage: "retention", observed: `${pct(ctx.monthlyChurn)} of customers leave each month`, rate: ctx.monthlyChurn, reference: saas ? ref.text : null, verdict: saas ? (ctx.monthlyChurn > (ref.high ?? ref.low) ? "weak" : "ok") : "unknown", ...(saas ? { referenceId: ref.id } : {}) });
   }
-  // Funnel links the owner measured.
-  const link = (stage: StageReading["stage"], num: number | undefined, den: number | undefined, label: string, ref?: { low: number; text: string }) => {
-    if (num === undefined || den === undefined || !(den > 0)) return null;
+
+  // Funnel links the owner measured, read as posteriors.
+  const posts: Partial<Record<StageReading["stage"], BetaPosterior>> = {};
+  const link = (stage: StageReading["stage"], num: number | undefined, den: number | undefined, label: string, ref?: ReferenceRule | null, isPurchase = false) => {
+    if (num === undefined || den === undefined || !(den > 0) || num < 0 || num > den) return null;
+    const post = betaPosterior(Math.round(num), Math.round(den));
+    posts[stage] = post;
     const rate = num / den;
-    const r: StageReading = { stage, observed: `${num} of ${den} ${label}`, rate, reference: ref?.text ?? null, verdict: ref ? (rate < ref.low ? "weak" : "ok") : "unknown" };
+    const pBelow = ref ? probBelow(post, ref.low) : undefined;
+    const late = isPurchase && immature;
+    const verdict: StageReading["verdict"] = !ref || late || pBelow === undefined ? "unknown" : pBelow >= T.weakAt ? "weak" : 1 - pBelow >= T.weakAt ? "ok" : "unknown";
+    if (ref) rules.push(`${ref.id}@${ref.version}`);
+    const r: StageReading = { stage, observed: `${num} of ${den} ${label}`, rate, reference: ref?.text ?? null, verdict, likely: { low: post.low, high: post.high }, ...(pBelow !== undefined ? { probBelowReference: r2(pBelow) } : {}), ...(late ? { immature: true } : {}), ...(ref ? { referenceId: ref.id } : {}) };
     readings.push(r);
     return r;
   };
   const lead = link("lead", f.leads, f.visitors, "visitors became leads or signups");
   const act = link("activation", f.activated, f.leads, "leads reached first value");
-  const buyFromActive = link("purchase", f.newCustomers, f.activated, "activated leads paid");
-  // Overall lead → paid has a reference for SaaS trials; it tells whether activation × purchase is weak at all.
-  const overall = f.newCustomers !== undefined && f.leads ? f.newCustomers / f.leads : null;
-  if (!buyFromActive && overall !== null) link("purchase", f.newCustomers, f.leads, "leads paid", saas ? REF.trialToPaid : undefined);
+  const buyFromActive = gt(f.newCustomers, f.activated) ? null : link("purchase", f.newCustomers, f.activated, "activated leads paid", undefined, true);
+  // Overall lead → paid has a reference for SaaS by signup model; it tells whether activation × purchase is weak at all.
+  const saasRef = saas ? conversionReference(f.signupKind) : null;
+  const overall = f.newCustomers !== undefined && f.leads && !gt(f.newCustomers, f.leads) ? f.newCustomers / f.leads : null;
+  const overallReading = !buyFromActive && overall !== null ? link("purchase", f.newCustomers, f.leads, "leads paid", saasRef, true) : null;
 
   if (f.visitors === undefined) missing.push("visitors in the period");
   if (f.leads === undefined) missing.push("signups or leads");
   if (f.activated === undefined) missing.push("how many reached first value");
   if (f.newCustomers === undefined) missing.push("new paying customers");
+  if (saas && !saasRef && overall !== null) missing.push("whether a signup is a free plan, a trial without a card, or a trial with a card (picks the reference)");
+  if (immature) missing.push(`a period of at least ${ctx.salesCycleDays} days (one sales cycle), so recent leads have had time to buy`);
 
   const capR = readings.find((r) => r.stage === "capacity");
   const retR = readings.find((r) => r.stage === "retention");
-  const measuredLinks = [lead, act, buyFromActive].filter(Boolean).length + (overall !== null && !buyFromActive ? 1 : 0);
+  const measuredLinks = [lead, act, buyFromActive].filter(Boolean).length + (overallReading ? 1 : 0);
   // A setup count isn't value received: it can't make the diagnosis "measured" on its own (BRP-07).
   const setupCount = f.activated !== undefined && (f.activationKind === "setup" || f.activationKind === "unknown");
   if (setupCount) missing.push("a first-value event (the count given is setup or unclear, not value received)");
-  const basis: Diagnosis["basis"] = measuredLinks >= 2 && !setupCount ? "measured" : measuredLinks >= 1 || capR || retR ? "partial" : "none";
-  const out = (constraint: Diagnosis["constraint"]): Diagnosis => ({ constraint, basis, readings, competing: COMPETING[constraint], missing });
+  const basis: Diagnosis["basis"] = measuredLinks >= 2 && !setupCount && !conflicts.length ? "measured" : measuredLinks >= 1 || capR || retR ? "partial" : "none";
 
-  if (capR?.verdict === "weak") return out("delivery");
-  if (retR?.verdict === "weak") return out("retention");
-  // Lead → paid is weak (or unreferenced): blame the weaker of activation and purchase-from-activated.
-  const weakOverall = saas && overall !== null ? overall < REF.trialToPaid.low : null;
-  if (act && buyFromActive && weakOverall !== false) return out(act.rate! <= buyFromActive.rate! ? "activation" : "conversion");
-  if (weakOverall === true) return out(act ? "activation" : "conversion");
+  // Customers a month per +1 point at each link (other rates held): shows the lowest rate isn't automatically the biggest lever.
+  const leverage: NonNullable<Diagnosis["leverage"]> = [];
+  const down = (stage: "lead" | "activation" | "purchase") => (stage === "lead" ? (act && buyFromActive ? act.rate! * buyFromActive.rate! : overall) : stage === "activation" ? (buyFromActive?.rate ?? null) : 1);
+  if (lead && f.visitors) {
+    const d = down("lead");
+    if (d !== null) leverage.push({ stage: "lead", perPoint: r2(perMonth(f.visitors) * 0.01 * d) });
+  }
+  if (act && f.leads && buyFromActive) leverage.push({ stage: "activation", perPoint: r2(perMonth(f.leads) * 0.01 * buyFromActive.rate!) });
+  if (buyFromActive && f.activated !== undefined) leverage.push({ stage: "purchase", perPoint: r2(perMonth(f.activated) * 0.01) });
+
+  const hyp = (constraint: BindingConstraint, observation: string, probability: number | null, support: string[], against: string[]): Hypothesis => ({ constraint, observation, probability, support, against, discriminate: DISCRIMINATE[constraint] ?? "Collect one more period of the same counts." });
+  const out = (constraint: Diagnosis["constraint"], status: NonNullable<Diagnosis["status"]>, hypotheses: Hypothesis[]): Diagnosis => ({
+    constraint,
+    basis,
+    readings,
+    competing: COMPETING[constraint],
+    missing,
+    status,
+    hypotheses,
+    ...(conflicts.length ? { conflicts } : {}),
+    ...(leverage.length ? { leverage } : {}),
+    rules: [...new Set(rules)],
+  });
+
+  if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, ["Capacity is at least 80% used."], [COMPETING.delivery])]);
+  if (conflicts.length) {
+    missing.unshift(...conflicts.map((c) => `Resolve: ${c}`));
+    return out("unknown", "conflicting_inputs", []);
+  }
+  if (retR?.verdict === "weak") return out("retention", "supported", [hyp("retention", retR.observed, null, [`Above the ${REFERENCES.saasChurn.text}.`], [COMPETING.retention])]);
+
+  // Is lead → paid weak at all? Only with a reference for this signup model, and only on posterior evidence.
+  const weakOverall = overallReading && saasRef ? (overallReading.verdict === "weak" ? true : overallReading.verdict === "ok" ? false : null) : null;
+  // Activation vs purchase-from-activated: which is weaker, with what probability?
+  if (act && buyFromActive && weakOverall !== false) {
+    const pAct = probLess(posts.activation!, posts.purchase!);
+    const a = hyp("activation", `${act.observed} (${pct(act.rate!)})`, r2(pAct), [`P(activation is the weaker link) = ${r2(pAct)}.`], [COMPETING.activation]);
+    const c = hyp("conversion", `${buyFromActive.observed} (${pct(buyFromActive.rate!)})`, r2(1 - pAct), [`P(purchase is the weaker link) = ${r2(1 - pAct)}.`], [COMPETING.conversion]);
+    if (buyFromActive.immature) {
+      missing.push("purchases from recent leads (the period is shorter than the sales cycle)");
+      return out("unknown", "insufficient_evidence", [a, c]);
+    }
+    if (pAct >= T.preferAt) return out("activation", "supported", [a, c]);
+    if (1 - pAct >= T.preferAt) return out("conversion", "supported", [c, a]);
+    missing.push("more leads through both steps: the two links can't be told apart yet");
+    return out("unknown", "ambiguous", pAct >= 0.5 ? [a, c] : [c, a]);
+  }
+  if (weakOverall === true) {
+    // The lead → paid rate is weak, but without a first-value count it can't say which link (Kochenderfer Ch 6: a missing count that could flip the choice must be measured first).
+    return out("unknown", "ambiguous", [
+      hyp("activation", `${f.newCustomers} of ${f.leads} leads paid; first-value count missing`, null, ["Lead → paid is below the reference."], ["Unmeasured: could equally be purchase."]),
+      hyp("conversion", `${f.newCustomers} of ${f.leads} leads paid; first-value count missing`, null, ["Lead → paid is below the reference."], ["Unmeasured: could equally be activation."]),
+    ]);
+  }
   // Downstream fine and few people arriving: demand.
-  if (f.visitors !== undefined && f.leads !== undefined && weakOverall === false && perMonth(f.visitors) < 1000) return out("demand");
-  return out("unknown");
+  if (f.visitors !== undefined && f.leads !== undefined && weakOverall === false && perMonth(f.visitors) < 1000)
+    return out("demand", "supported", [hyp("demand", `${Math.round(perMonth(f.visitors))} visitors a month; lead → paid is at or above the reference`, null, ["Downstream converts normally."], [COMPETING.demand])]);
+  return out("unknown", "insufficient_evidence", []);
 }
 
 /** The diagnosis as the plays and plan agents read it. */
 export function diagnosisBrief(d: Diagnosis): string {
-  if (d.constraint === "unknown")
-    return `DIAGNOSIS (computed from the owner's numbers): not enough numbers to name the binding constraint${d.missing.length ? ` (missing: ${d.missing.join(", ")})` : ""}. Include a first step that measures these, and keep plays cheap and reversible until they're known.`;
+  const reading = (r: StageReading) =>
+    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
+  const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
+  if (d.status === "conflicting_inputs")
+    return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");
+  if (d.constraint === "unknown") {
+    const hyps = d.hypotheses?.length ? [`Competing hypotheses (none established): ${d.hypotheses.map((h) => `${h.constraint}${h.probability !== null ? ` (P weaker ${h.probability})` : ""}`).join(" vs ")}. To tell them apart: ${d.hypotheses[0].discriminate}`] : [];
+    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint${d.missing.length ? ` (missing: ${d.missing.join(", ")})` : ""}.`, ...d.readings.map(reading), ...hyps, ...lever, "Include a first step that measures these, and keep plays cheap and reversible until they're known."].join("\n");
+  }
+  const alt = d.hypotheses?.slice(1).filter((h) => h.probability !== null);
   return [
-    `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the binding constraint is ${d.constraint}.`,
-    ...d.readings.map((r) => `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.verdict === "weak" ? " → weak" : ""}`),
-    `Competing explanation to check first: ${d.competing}`,
+    `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the numbers point to ${d.constraint} as the weakest link. This is an observation about where people drop, not a proven cause.`,
+    ...d.readings.map(reading),
+    ...(alt?.length ? [`Alternative still possible: ${alt.map((h) => `${h.constraint} (P weaker ${h.probability})`).join(", ")}.`] : []),
+    ...lever,
+    `Competing explanation to check first: ${d.competing}${d.hypotheses?.[0] ? ` How: ${d.hypotheses[0].discriminate}` : ""}`,
     `The bankable play must work on this constraint (or say in notDoing why not). Don't add demand above it.`,
   ].join("\n");
 }
@@ -167,9 +306,10 @@ export function playStage(text: string): BindingConstraint {
  * The plays must work on the computed constraint: when it's activation,
  * conversion, retention or delivery, at least one play (the bankable one
  * first) must target it rather than only adding people at the top.
+ * Only for a supported diagnosis: an ambiguous one mustn't force a single link.
  */
 export function lintDiagnosisFit(plays: { name?: string; kind?: string; oneLiner?: string; mechanic?: string; firstActionToday?: string; test?: string }[], d: Diagnosis | undefined) {
-  if (!d || d.basis === "none" || !["activation", "conversion", "retention", "delivery"].includes(d.constraint)) return [];
+  if (!d || d.basis === "none" || (d.status && d.status !== "supported") || !["activation", "conversion", "retention", "delivery"].includes(d.constraint)) return [];
   const hits = plays.some((p) => playStage(`${p.name ?? ""} ${p.oneLiner ?? ""} ${p.mechanic ?? ""} ${p.firstActionToday ?? ""} ${p.test ?? ""}`) === d.constraint);
   return hits ? [] : [{ severity: "error" as const, rule: "diagnosis_fit", message: `The owner's numbers show ${d.constraint} is the weak link, but no play works on it. Make the bankable play fix ${d.constraint} first; adding people at the top would feed the leak.`, path: "plays" }];
 }

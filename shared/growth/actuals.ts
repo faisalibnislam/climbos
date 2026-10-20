@@ -5,6 +5,16 @@
  * early noise doesn't swing the plan).
  */
 import type { PlayModel } from "../agents/economics";
+import { betaPosterior, poissonCdf, probBelow } from "../analysis/bayes";
+
+/*
+ * Decision books (2026-10-20):
+ * - Time zero (Hernán & Robins Ch 22): weeks before the play started aren't its results.
+ * - Missing weeks are unknown, not zero (Ch 8 selection; Ch 19 loss to follow-up): no "ahead" while the log has gaps.
+ * - Noise (Downey Ch 7, Kochenderfer §4.2): "behind" needs the count to be unlikely under the plan
+ *   (Poisson, P ≤ 5% at the expected count), not just below P10; 2 customers against 4 expected is normal noise.
+ */
+const WEEK = 7 * 86_400_000;
 
 export interface ResultEntry {
   /** Monday of the week the counts cover (ms). */
@@ -39,13 +49,21 @@ export interface PlayActuals {
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
+  /** Weeks from the first week to the latest logged one; more than `weeks` means some weeks weren't logged. */
+  weeksSinceStart: number;
+  /** Logged weeks before the play's start (ignored). */
+  ignoredBeforeStart: number;
 }
 
 /** How many observations the planned rate is worth. */
 export const PRIOR_WEIGHT = 20;
 
-export function playActuals(model: PlayModel, entries: ResultEntry[], forecast: { p10: number; p50: number; p90: number }, horizonWeeks = 13): PlayActuals {
-  const weeks = new Set(entries.map((e) => e.weekStart)).size;
+export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p10: number; p50: number; p90: number }, horizonWeeks = 13, opts: { startWeek?: number } = {}): PlayActuals {
+  const entries = opts.startWeek !== undefined ? all.filter((e) => e.weekStart >= opts.startWeek!) : all;
+  const starts = [...new Set(entries.map((e) => e.weekStart))].sort((a, b) => a - b);
+  const weeks = starts.length;
+  const first = opts.startWeek ?? starts[0];
+  const weeksSinceStart = weeks ? Math.round((starts[weeks - 1] - first) / WEEK) + 1 : 0;
   const reach = entries.reduce((s, e) => s + Math.max(0, e.reach), 0);
   const stepSums = model.steps.map((_, i) => entries.reduce((s, e) => s + Math.max(0, e.steps[i] ?? 0), 0));
   const steps: StepActual[] = model.steps.map((st, i) => {
@@ -57,8 +75,13 @@ export function playActuals(model: PlayModel, entries: ResultEntry[], forecast: 
   const customers = stepSums[stepSums.length - 1] ?? 0;
   const f = Math.min(1, weeks / Math.max(1, horizonWeeks));
   const expectedByNow = { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f };
-  // Judge on the leading step when customers are too few to say anything.
-  const status: PlayActuals["status"] = weeks < 2 ? "too_early" : customers > expectedByNow.p90 ? "ahead" : customers < expectedByNow.p10 && leadingBehind(steps) ? "behind" : "on_track";
+  // Behind only when the count is unlikely under the plan (not just below P10), and the leading step agrees.
+  const lam = expectedByNow.p50;
+  const surprisinglyLow = lam > 0 && poissonCdf(customers, lam) <= 0.05;
+  const surprisinglyHigh = lam > 0 ? 1 - poissonCdf(customers - 1, lam) <= 0.05 : customers > 0;
+  const gaps = weeksSinceStart > weeks;
+  const status: PlayActuals["status"] =
+    weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh && !gaps ? "ahead" : customers < expectedByNow.p10 && surprisinglyLow && leadingBehind(steps) ? "behind" : "on_track";
   return {
     weeks,
     reach,
@@ -69,14 +92,28 @@ export function playActuals(model: PlayModel, entries: ResultEntry[], forecast: 
     status,
     steps,
     reachVsPlan: weeks > 0 && model.weeklyReach > 0 ? reach / weeks / model.weeklyReach : null,
+    weeksSinceStart,
+    ignoredBeforeStart: all.length - entries.length,
   };
 }
 
-/** The first step with enough data is clearly below its planned low (or half the plan when no low was given). */
+/** A step is clearly short: well under plan (under half) AND at least 95% likely to be below plan on its counts. */
+export function stepClearlyShort(s: Pick<StepActual, "planned" | "successes" | "trials">): boolean {
+  if (!(s.trials > 0) || !(s.planned > 0)) return false;
+  return s.successes / s.trials < s.planned * 0.5 && probBelow(betaPosterior(s.successes, s.trials), s.planned) >= 0.95;
+}
+
+/** The counts can't yet rule out a big shortfall or confirm one (posterior too wide). */
+export function stepTooThin(s: Pick<StepActual, "planned" | "successes" | "trials">): boolean {
+  if (!(s.trials > 0)) return true;
+  return !stepClearlyShort(s) && probBelow(betaPosterior(s.successes, s.trials), s.planned * 0.5) >= 0.1;
+}
+
+/** The leading step agrees the play is behind: the first step that can be judged is clearly short (when none can, customers decide). */
 function leadingBehind(steps: StepActual[]): boolean {
-  const s = steps.find((x) => x.trials >= 30);
-  if (!s || s.observed === null) return true;
-  return s.observed < s.planned * 0.5;
+  const s = steps.find((x) => !stepTooThin(x));
+  if (!s) return true;
+  return stepClearlyShort(s);
 }
 
 /** One line per play for the next plan's brief: observed counts are first-party facts (grade A). */

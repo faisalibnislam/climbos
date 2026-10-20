@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics, portfolioP50, withForecasts, type Economics } from "./economics";
+import { lintEconomics, portfolioP50, selectPortfolio, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -105,8 +105,11 @@ export const PlaySchema = z.object({
     weeklyReachLow: z.number(),
     weeklyReachHigh: z.number(),
     reachSource: SourceTagSchema,
-    /** Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from. */
-    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string(), quote: z.string() })),
+    /**
+     * Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from.
+     * baselineRate = today's rate at a step the play changes (onboarding, checkout, follow-up), so only the extra customers count.
+     */
+    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string(), quote: z.string(), baselineRate: z.number().optional() })),
     monthlySpendUsd: z.number(),
     spendSource: SourceTagSchema,
     ownerHoursPerWeek: z.number(),
@@ -149,7 +152,7 @@ export const StrategyV2Schema = StrategySchema.extend({
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
-export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
+export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v3.1-trust-checks";
@@ -775,16 +778,22 @@ export function lintReferralDrivers(plays: LensPlay[]): LintIssue[] {
 }
 
 /** Spec §13: the portfolio must fit the owner's cash and time. */
-export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined): LintIssue[] {
+export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
   if (!c) return [];
   const issues: LintIssue[] = [];
   const m = (n: number) => formatMoney(n, c.currency);
+  // The fix is computed, not left to the model: the best set of these plays that fits all limits together (decision books, Kochenderfer App. E).
+  const fixHint = () => {
+    if (!economics) return "";
+    const pick = selectPortfolio({ economics, plays: plays as never }, { monthlyBudgetUsd: c.monthlyAdBudgetUsd, ownerHoursPerWeek: c.ownerHoursPerWeek, newCustomersPerMonth: c.newCustomersPerMonth, horizonDays: c.horizonDays });
+    return pick?.selected.length ? ` Best set that fits (computed): ${pick.selected.join(" + ")}; drop or shrink ${pick.left.map((l) => l.name).join(", ")}.` : "";
+  };
   const spend = plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
   const hours = plays.reduce((s, p) => s + Math.max(0, p.model?.ownerHoursPerWeek ?? 0), 0);
   if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001)
-    issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend ${m(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend ${m(spend)}/month; the budget is ${m(c.monthlyAdBudgetUsd)}. Cut or drop a play.`, path: "plays" });
+    issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend ${m(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend ${m(spend)}/month; the budget is ${m(c.monthlyAdBudgetUsd)}. Cut or drop a play.${fixHint()}`, path: "plays" });
   if (c.ownerHoursPerWeek !== undefined && hours > c.ownerHoursPerWeek + 0.01)
-    issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.`, path: "plays" });
+    issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.${fixHint()}`, path: "plays" });
   else if (c.ownerHoursPerWeek === undefined && hours > 10)
     issues.push({ severity: "warn", rule: "capacity", message: `The plays need ${Math.round(hours)} owner hours a week; most owners have under 10. Move work to ClimbOS where you can.`, path: "plays" });
   return issues;
@@ -852,6 +861,22 @@ const STOP_WORD = /\b(stop|pause|halt|switch off|turn off|roll back)\b/i;
 /** The owner's measured funnel rates, by the kind of metric a test targets (shared/agents/diagnosis.ts readings). */
 export type FunnelRates = { lead?: number; activation?: number; purchase?: number };
 
+/**
+ * The baseline in the population's own unit (decision books: Kohavi Ch 17, the denominator must be the unit
+ * counted): a purchase rate per lead can't size a test whose population is visitors. Visitors → paid is
+ * lead × (activation) × purchase; when a link isn't measured the per-lead rate is kept as an upper bound.
+ */
+function inPopulationUnits(base: { rate: number; kind: string } | null, population: string, rates: FunnelRates | undefined): { rate: number; kind: string } | null {
+  if (!base || !rates) return base;
+  const visitors = /\b(visit\w*|views?|sessions?|traffic|page ?views?)\b/i.test(population);
+  if (!visitors || base.kind === "lead") return base;
+  const chain = base.kind === "activation" ? [rates.lead, rates.activation] : [rates.lead, rates.activation ?? 1, rates.purchase];
+  // A link missing: the per-lead rate is an upper bound on the per-visitor rate, so it still proves a test can't finish (never that it can).
+  if (chain.some((r) => r === undefined)) return base;
+  const rate = chain.reduce<number>((acc, r) => acc * (r as number), 1);
+  return rate > 0 && rate < 1 ? { rate, kind: `visitor → ${base.kind}` } : null;
+}
+
 /** Which owner-measured rate a test's primary metric is about, if any. */
 function baselineFor(metric: string, rates: FunnelRates | undefined): { rate: number; kind: string } | null {
   if (!rates) return null;
@@ -887,7 +912,7 @@ export function lintExperimentFeasibility(out: { experiments?: { name: string; m
     const days = Math.max(1, e.durationDays);
     const available = cnt.per === "week" ? cnt.n * (days / 7) : cnt.n === 0 ? 0 : cnt.per === "month" ? cnt.n * (days / 30) : cnt.n;
     // Sized on the owner's measured rate for this kind of metric when known (a 50% relative swing); otherwise the generous default.
-    const base = baselineFor(e.primaryMetric ?? "", c?.funnelRates);
+    const base = inPopulationUnits(baselineFor(e.primaryMetric ?? "", c?.funnelRates), e.population, c?.funnelRates);
     const p0 = base ? base.rate : FEASIBILITY_BASELINE;
     const mde = base ? Math.min(base.rate * 0.5, 0.99 - base.rate) : FEASIBILITY_MDE;
     const need = sampleSize({ baseline: p0, minDetectable: mde }).total;
@@ -910,7 +935,7 @@ const GEO_TARGETED = /\b(radius|within \d|km|kilomet|miles?|mi\b|neighbou?rhoods
 export function lintDeliveryCapacity(customers: number, c: PlanConstraints | undefined, path = "plays"): LintIssue[] {
   const cap = c?.newCustomersPerMonth;
   if (cap === undefined || !(customers > 0)) return [];
-  const months = (c?.horizonDays ?? 90) / 30;
+  const months = (c?.horizonDays ?? 90) / (365.25 / 12);
   const limit = cap * months;
   return customers > limit * 1.001
     ? [{ severity: "error", rule: "capacity", message: `The plays forecast about ${Math.round(customers)} new customers in ${c?.horizonDays ?? 90} days; the business can take about ${Math.round(limit)} (${cap} a month). Fill the capacity you have (pricing, selectivity, a waitlist) or add capacity before adding demand.`, path }]
@@ -1167,7 +1192,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), evidenceOf(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), evidenceOf(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",

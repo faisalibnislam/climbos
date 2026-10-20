@@ -4,6 +4,7 @@ import { CHECK_STAMP, economicsSources, forecastBasis, type EconomicsSources, ty
 import { createRng } from "../forecasting/prng";
 import { goalGap, goalLines, type GoalGap, type GoalTarget } from "./goal";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
+import { playStage } from "./diagnosis";
 
 /**
  * Growth maths in code, not prose (spec §15–17): each play's inputs (reach,
@@ -20,6 +21,12 @@ export interface PlayStep {
   rate: number;
   low?: number;
   high?: number;
+  /**
+   * The rate at this step today, without the play (plays that change an existing step: onboarding,
+   * checkout, follow-up). When any step has one, only the extra customers count: reach × (Π rate − Π baseline).
+   * People who'd have converted anyway aren't the play's customers (decision books: Hernán & Robins Ch 1).
+   */
+  baselineRate?: number;
   /** Where the rate came from (newer plans); `check` is set by code, never by the writer. */
   source?: Provenance;
   ref?: string;
@@ -119,6 +126,16 @@ export interface PlayMaths {
   profitable: boolean | null;
   /** A rate or margin outside 0–1 (rejected, never reinterpreted as a percent). */
   invalidInputs: string[];
+  /** Counted only the extra customers over each step's baseline rate. */
+  incremental: boolean;
+  /**
+   * Does the verdict survive the low end of its own range? robust: pays back even at P10;
+   * fragile: pays back at the most-likely rates only; loses: doesn't at the most-likely rates;
+   * unknown: economics unknown (Kochenderfer Ch 14 robustness).
+   */
+  robustness: "robust" | "fragile" | "loses" | "unknown";
+  /** Customers needed in the horizon for cost per customer to equal value: the decision switch point. */
+  breakevenCustomers: number | null;
 }
 
 /** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
@@ -165,28 +182,47 @@ function quantile(sorted: number[], q: number): number {
 
 /** Customers over the horizon: P10/P50/P90 from triangular input ranges (seeded, reproducible). */
 export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { p10: number; p50: number; p90: number } {
+  const xs = simulateSamples(m, weeks, seed);
+  if (typeof xs === "number") return { p10: xs, p50: xs, p90: xs };
+  return { p10: quantile(xs, 0.1), p50: quantile(xs, 0.5), p90: quantile(xs, 0.9) };
+}
+
+/** The baseline customers a play's reach would bring without it (0 when no step gives a baseline). */
+function baselineCustomers(m: PlayModel, weeks: number): number {
+  if (!m.steps.some((s) => s.baselineRate !== undefined)) return 0;
+  const rates = m.steps.map((s) => rateOf(s.baselineRate ?? s.rate));
+  return rates.some(Number.isNaN) ? 0 : (funnelCustomers(Math.max(0, m.weeklyReach), rates) ?? 0) * weeks;
+}
+
+/** Seeded draws of a play's customers (sorted), or the point value when it has no ranges. Extra customers only when baselines are given. */
+export function simulateSamples(m: PlayModel, weeks: number, seed: string): number[] | number {
   const reach = Math.max(0, m.weeklyReach);
   // Invalid rates give no forecast (lint reports them); nothing is reinterpreted.
-  if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return { p10: 0, p50: 0, p90: 0 };
-  const point = (funnelCustomers(reach, m.steps.map((s) => s.rate)) ?? 0) * weeks;
+  if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return 0;
+  const base = baselineCustomers(m, weeks);
+  const point = Math.max(0, (funnelCustomers(reach, m.steps.map((s) => s.rate)) ?? 0) * weeks - base);
   const ranged = m.weeklyReachLow !== undefined || m.steps.some((s) => s.low !== undefined || s.high !== undefined);
-  if (!ranged) return { p10: point, p50: point, p90: point };
+  if (!ranged) return point;
   const rng = createRng(seedOf(seed));
   const rL = Math.max(0, Math.min(m.weeklyReachLow ?? reach, reach));
   const rH = Math.max(reach, m.weeklyReachHigh ?? reach);
   const out: number[] = [];
+  // Baseline people per reached person (Π baseline rates): scales with each draw's reach.
+  const basePer = reach > 0 ? base / (reach * weeks) : 0;
   for (let i = 0; i < RUNS; i++) {
-    let c = tri(rng.next(), rL, reach, rH) * weeks;
+    const people = tri(rng.next(), rL, reach, rH) * weeks;
+    let c = people;
     for (const s of m.steps) {
       const mode = s.rate;
       const low = Number.isNaN(rateOf(s.low)) ? mode : (s.low as number);
       const high = Number.isNaN(rateOf(s.high)) ? mode : (s.high as number);
       c *= tri(rng.next(), Math.min(low, mode), mode, Math.max(high, mode));
     }
-    out.push(c);
+    // Extra customers only: the same people would have converted at the baseline rates without the play.
+    out.push(Math.max(0, c - people * basePer));
   }
   out.sort((a, b) => a - b);
-  return { p10: quantile(out, 0.1), p50: quantile(out, 0.5), p90: quantile(out, 0.9) };
+  return out;
 }
 
 export function playMaths(p: PlayLike, e: Economics): PlayMaths {
@@ -196,7 +232,8 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const weeks = days / 7;
   const invalidInputs = [...p.model.steps.filter((s) => Number.isNaN(rateOf(s.rate))).map((s) => s.name), ...(Number.isNaN(rateOf(e.grossMargin)) ? ["margin"] : [])];
   const rates = p.model.steps.map((s) => rateOf(s.rate));
-  const customers = invalidInputs.some((n) => n !== "margin") ? 0 : (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks;
+  const incremental = p.model.steps.some((s) => s.baselineRate !== undefined);
+  const customers = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks - baselineCustomers(p.model, weeks));
   const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
@@ -209,19 +246,26 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const churn = churnOf(e);
   // Unknown churn stays unknown: no value, payback or verdict is invented from it.
   const valueUsd = contributionOver(cm, churn, PAYBACK_HORIZON_MONTHS);
+  const headline = { p10: Math.min(range.p10, customers), p50: customers, p90: Math.max(range.p90, customers) };
+  const profitable = cacUsd === null || valueUsd === null ? null : cacUsd <= valueUsd;
+  const atLow = valueUsd === null ? null : headline.p10 > 0 ? costUsd / headline.p10 <= valueUsd : costUsd === 0;
+  const robustness: PlayMaths["robustness"] = profitable === null ? "unknown" : !profitable ? "loses" : atLow ? "robust" : "fragile";
   return {
     name: p.name,
     kind: p.kind,
     customers,
     range,
-    headline: { p10: Math.min(range.p10, customers), p50: customers, p90: Math.max(range.p90, customers) },
+    headline,
     costUsd,
     cacUsd,
     valueUsd,
     paybackMonths: cacUsd === null ? null : paybackWithChurn(cacUsd, cm, churn),
     breakevenPerReachUsd: breakevenPerReach(valueUsd, rates),
-    profitable: cacUsd === null || valueUsd === null ? null : cacUsd <= valueUsd,
+    profitable,
     invalidInputs,
+    incremental,
+    robustness,
+    breakevenCustomers: valueUsd !== null && valueUsd > 0 ? costUsd / valueUsd : null,
   };
 }
 
@@ -260,6 +304,10 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
     if (p.model.steps.some((s) => !(s.rate > 0) || s.rate > 1)) issues.push({ severity: "error", rule: "economics", message: "Step rates are shares between 0 and 1 (e.g. 0.03 for 3%).", path: `${path}.model.steps` });
     if (p.model.steps.some((s) => s.low !== undefined && s.high !== undefined && !(s.low <= s.rate && s.rate <= s.high))) issues.push({ severity: "error", rule: "economics", message: "Each step needs low ≤ rate ≤ high.", path: `${path}.model.steps` });
     if (p.model.weeklyReachLow !== undefined && p.model.weeklyReachHigh !== undefined && !(p.model.weeklyReachLow <= p.model.weeklyReach && p.model.weeklyReach <= p.model.weeklyReachHigh)) issues.push({ severity: "error", rule: "economics", message: "Weekly reach needs low ≤ reach ≤ high.", path: `${path}.model` });
+    // A play that changes an existing step must say today's rate there, or it counts customers who'd have come anyway (decision books).
+    if (SAME_STEP.has(stageOfPlay(p)) && !p.model.steps.some((s) => s.baselineRate !== undefined))
+      issues.push({ severity: "warn", rule: "economics", message: `"${p.name}" changes an existing step but gives no baselineRate, so its forecast counts every customer through that step, including those who'd have come anyway. Give today's rate at the step it changes.`, path: `${path}.model.steps` });
+    if (p.model.steps.some((s) => s.baselineRate !== undefined && !(s.baselineRate >= 0 && s.baselineRate <= 1))) issues.push({ severity: "error", rule: "economics", message: "baselineRate is a share between 0 and 1.", path: `${path}.model.steps` });
     const m = playMaths(p, e);
     if (m.profitable === false && p.kind !== "moonshot")
       issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at ${usd(ownerHourOf(e))}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
@@ -267,12 +315,120 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
   return issues;
 }
 
-/** Portfolio customers (P50, after overlap): the number the plan's North Star must use. */
-/** The portfolio's new customers over one shared horizon (each play re-run at that horizon, so periods aren't mixed). */
+/** Stages where plays change the same existing step: their customers don't add (the same people move once). */
+const SAME_STEP = new Set(["activation", "conversion", "retention", "offer"]);
+const stageOfPlay = (p: PlayLike) => playStage(`${p.name} ${p.unit ?? ""} ${(p as { oneLiner?: string }).oneLiner ?? ""} ${(p as { mechanic?: string }).mechanic ?? ""}`);
+
+/**
+ * Combine per-play customers into a portfolio total: plays changing the same
+ * existing step count as the largest of them (their effects aren't additive
+ * without evidence; Hernán & Robins Ch 5 interaction, Kochenderfer Ch 27);
+ * then the largest group counts in full and the rest lose the stated overlap.
+ */
+export function combinePlays(values: number[], stages: string[]): number {
+  const groups = new Map<string, number>();
+  const free: number[] = [];
+  values.forEach((v, i) => {
+    if (SAME_STEP.has(stages[i])) groups.set(stages[i], Math.max(groups.get(stages[i]) ?? 0, v));
+    else free.push(v);
+  });
+  return portfolioCustomers([...free, ...groups.values()], PLAY_OVERLAP) ?? 0;
+}
+
+/**
+ * The portfolio's new customers over one shared horizon (each play re-run at that horizon, so periods aren't mixed).
+ * P50 combines the most-likely counts (the same basis as cost per customer). P10/P90 come from joint seeded draws,
+ * assuming plays vary independently, rather than adding every play's P10 (or P90) as if all fail (or win) together.
+ */
 export function portfolioRange(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): { p10: number; p50: number; p90: number } {
-  const ms = out.plays.filter((p) => p.model?.steps?.length).map((p) => playMaths(horizonDays ? { ...p, horizonDays } : p, out.economics).headline);
-  const sum = (k: "p10" | "p50" | "p90") => portfolioCustomers(ms.map((m) => m[k]), PLAY_OVERLAP) ?? 0;
-  return { p10: sum("p10"), p50: sum("p50"), p90: sum("p90") };
+  const ps = out.plays.filter((p) => p.model?.steps?.length).map((p) => (horizonDays ? { ...p, horizonDays } : p));
+  if (!ps.length) return { p10: 0, p50: 0, p90: 0 };
+  const stages = ps.map(stageOfPlay);
+  const heads = ps.map((p) => playMaths(p, out.economics).headline);
+  const p50 = combinePlays(heads.map((h) => h.p50), stages);
+  const draws = ps.map((p) => simulateSamples(p.model, (p.horizonDays > 0 ? p.horizonDays : 90) / 7, `${p.name}|${p.kind}`));
+  if (draws.every((d) => typeof d === "number")) return { p10: Math.min(p50, combinePlays(heads.map((h) => h.p10), stages)), p50, p90: Math.max(p50, combinePlays(heads.map((h) => h.p90), stages)) };
+  // Independent draws: shuffle each play's sorted samples with its own seed so draws pair at random.
+  const n = RUNS;
+  const cols = draws.map((d, j) => {
+    if (typeof d === "number") return new Array<number>(n).fill(d);
+    const rng = createRng(seedOf(`pair|${ps[j].name}|${j}`));
+    const a = d.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const k = Math.floor(rng.next() * (i + 1));
+      [a[i], a[k]] = [a[k], a[i]];
+    }
+    return a;
+  });
+  const totals = Array.from({ length: n }, (_, i) => combinePlays(cols.map((c) => c[i]), stages)).sort((a, b) => a - b);
+  return { p10: Math.min(p50, quantile(totals, 0.1)), p50, p90: Math.max(p50, quantile(totals, 0.9)) };
+}
+
+export interface PortfolioChoice {
+  /** Play names in the best feasible set. */
+  selected: string[];
+  customers: number;
+  spendUsdMonth: number;
+  ownerHoursWeek: number;
+  /** Contribution in the horizon minus cost (null when what a customer is worth is unknown; then customers decide). */
+  netUsd: number | null;
+  /** Every drafted play fits together. */
+  allFit: boolean;
+  /** Plays left out and why (over budget, over hours, over capacity, loses money). */
+  left: { name: string; why: string }[];
+  /** The best feasible alternative that differs from the selected set, for the owner-facing trade-off. */
+  runnerUp: { selected: string[]; customers: number; netUsd: number | null } | null;
+  basis: string;
+}
+
+/**
+ * The best feasible set of drafted plays under the owner's joint limits (Kochenderfer App. C/E:
+ * small sets are enumerated exactly; no solver needed up to 10 plays). Plays that lose money at
+ * their most-likely rates never enter, at any budget. A bigger budget only adds feasible sets,
+ * so a set that fit before still fits.
+ */
+export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }, limits: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number; horizonDays?: number }): PortfolioChoice | null {
+  const h = limits.horizonDays || 90;
+  const ps = out.plays.filter((p) => p.model?.steps?.length).slice(0, 10);
+  if (!ps.length) return null;
+  const ms = ps.map((p) => playMaths({ ...p, horizonDays: h }, out.economics));
+  const stages = ps.map(stageOfPlay);
+  const value = customerValue(out.economics);
+  const capLimit = limits.newCustomersPerMonth !== undefined ? limits.newCustomersPerMonth * (h / 30) : undefined;
+  const losers = new Set(ms.flatMap((m, i) => (m.profitable === false && ps[i].kind !== "moonshot" ? [i] : [])));
+  type Opt = { idx: number[]; customers: number; spend: number; hours: number; net: number | null; cost: number };
+  const opts: Opt[] = [];
+  for (let mask = 1; mask < 1 << ps.length; mask++) {
+    const idx = ps.map((_, i) => i).filter((i) => mask & (1 << i));
+    if (idx.some((i) => losers.has(i))) continue;
+    const spend = idx.reduce((s, i) => s + Math.max(0, ps[i].model.monthlySpendUsd), 0);
+    const hours = idx.reduce((s, i) => s + Math.max(0, ps[i].model.ownerHoursPerWeek), 0);
+    const customers = combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
+    const cost = idx.reduce((s, i) => s + ms[i].costUsd, 0);
+    if (limits.monthlyBudgetUsd !== undefined && spend > limits.monthlyBudgetUsd * 1.001) continue;
+    if (limits.ownerHoursPerWeek !== undefined && hours > limits.ownerHoursPerWeek + 0.01) continue;
+    if (capLimit !== undefined && customers > capLimit * 1.001) continue;
+    opts.push({ idx, customers, spend, hours, cost, net: value === null ? null : customers * value - cost });
+  }
+  const score = (o: Opt) => (o.net ?? o.customers);
+  opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
+  const best = opts[0];
+  const leftWhy = (i: number) => (losers.has(i) ? "loses money at its most-likely rates" : "doesn't fit with the others under the budget, hours or capacity");
+  const all = ps.map((_, i) => i);
+  if (!best) return { selected: [], customers: 0, spendUsdMonth: 0, ownerHoursWeek: 0, netUsd: null, allFit: false, left: all.map((i) => ({ name: ps[i].name, why: leftWhy(i) })), runnerUp: null, basis: "No play fits the limits on its own." };
+  const key = (o: Opt) => o.idx.join(",");
+  const runner = opts.find((o) => key(o) !== key(best)) ?? null;
+  return {
+    selected: best.idx.map((i) => ps[i].name),
+    customers: best.customers,
+    spendUsdMonth: best.spend,
+    ownerHoursWeek: best.hours,
+    netUsd: best.net,
+    allFit: best.idx.length === ps.length,
+    left: all.filter((i) => !best.idx.includes(i)).map((i) => ({ name: ps[i].name, why: leftWhy(i) })),
+    runnerUp: runner ? { selected: runner.idx.map((i) => ps[i].name), customers: runner.customers, netUsd: runner.net } : null,
+    basis: value === null ? "Ranked by customers (what a customer is worth is unknown)." : "Ranked by contribution in the horizon minus cost, at most-likely rates.",
+  };
 }
 
 /** Every customer count the calculations produce: portfolio and each play's P10/P50/P90, at the goal's horizon and each play's own. */
@@ -299,7 +455,7 @@ export function playsGoalGap(out: { economics: Economics; plays: PlayLike[] }, g
 }
 
 /** The numbers the plan must use, computed here so it can't contradict them. */
-export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, goal?: { statement?: string; target?: GoalTarget | null; horizonDays?: number } | null): string {
+export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, goal?: { statement?: string; target?: GoalTarget | null; horizonDays?: number } | null, limits?: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number }): string {
   const rows = out.plays.map((p) => ({ p, m: playMaths(p, out.economics) }));
   // The total uses the goal's horizon for every play, so it never mixes periods.
   const own = [...new Set(out.plays.map((p) => p.horizonDays).filter((d) => d > 0))];
@@ -316,12 +472,23 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}. ${basisNote(p, e)}`),
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}. ${basisNote(p, e)}`),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
-    `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}; assumes ${PLAY_OVERLAP * 100}% overlap between plays) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
+    `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
+    ...portfolioLine(out, { ...(limits ?? {}), horizonDays: h }, usd),
     `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,
     ...(goal ? goalLines(goal.statement, playsGoalGap(out, goal)) : []),
   ].join("\n");
+}
+
+const ROBUST_WORD: Record<PlayMaths["robustness"], string> = { robust: "pays back even at the low end", fragile: "pays back only at the most-likely rates", loses: "doesn't pay back at the most-likely rates", unknown: "payback unknown" };
+
+/** The feasible-set check as one locked line: what fits together, and the strongest alternative. */
+function portfolioLine(out: { economics: Economics; plays: PlayLike[] }, limits: Parameters<typeof selectPortfolio>[1], usd: (n: number | null) => string): string[] {
+  const c = selectPortfolio(out, limits);
+  if (!c || (c.allFit && !c.left.length)) return [];
+  const alt = c.runnerUp ? ` Strongest alternative: ${c.runnerUp.selected.join(" + ")} (≈${roundCount(c.runnerUp.customers)} customers${c.runnerUp.netUsd !== null ? `, net ${usd(c.runnerUp.netUsd)}` : ""}).` : "";
+  return [`- PORTFOLIO CHECK (computed): the best set that fits the limits is ${c.selected.join(" + ") || "none"} (≈${roundCount(c.customers)} customers, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). Left out: ${c.left.map((l) => `${l.name} (${l.why})`).join("; ")}.${alt} ${c.basis}`];
 }
 
 /** "revenue: research (formkit.app/pricing), margin: assumption, …" for the locked numbers. */
@@ -428,7 +595,7 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const capacity: OwnerQuestion[] =
     owner?.ownerHoursPerWeek === undefined && hours > 3 ? [{ key: "ownerHoursPerWeek", question: QUESTION.ownerHoursPerWeek.q, assumed: Math.round(hours * 10) / 10, unit: "hours_week", why: `The plays need about ${Math.round(hours)} hours a week from you.` }] : [];
   // Delivery: a service business can only take so many new clients; ask when the plays forecast any.
-  const months = (opts.horizonDays || 90) / 30;
+  const months = (opts.horizonDays || 90) / DAYS_PER_MONTH;
   const perMonth = portfolioP50(out, opts.horizonDays || 90) / months;
   const delivery: OwnerQuestion[] =
     opts.serviceBusiness && owner?.newCustomersPerMonth === undefined && perMonth >= 1 ? [{ key: "newCustomersPerMonth", question: QUESTION.newCustomersPerMonth.q, assumed: Math.round(perMonth), unit: "count_month", why: `The plays forecast about ${Math.round(perMonth)} new customers a month; more than you can serve wastes the work.` }] : [];

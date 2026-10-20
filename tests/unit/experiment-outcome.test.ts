@@ -9,7 +9,10 @@ describe("experiment inference label (Book 14 §14)", () => {
     expect(inferenceOf({ ...base, design: "before_after", exposed: 200, controlSize: 200 })).toBe("observed");
   });
   it("is incremental only for holdout or randomized with both groups present", () => {
-    expect(inferenceOf({ ...base, design: "holdout", exposed: 200, controlSize: 50 })).toBe("incremental");
+    expect(inferenceOf({ ...base, design: "holdout", exposed: 200, controlSize: 50, assignment: "random" })).toBe("incremental");
+    // Decision books: a holdout picked by a rule or by hand isn't exchangeable, so it isn't incremental (Hernán & Robins Ch 3).
+    expect(inferenceOf({ ...base, design: "holdout", exposed: 200, controlSize: 50, assignment: "rule" })).toBe("observed");
+    expect(inferenceOf({ ...base, design: "holdout", exposed: 200, controlSize: 50 })).toBe("observed");
     expect(inferenceOf({ ...base, design: "randomized", exposed: 100, controlSize: 100 })).toBe("incremental");
     expect(inferenceOf({ ...base, design: "holdout", exposed: 200 })).toBe("observed");
     expect(inferenceOf({ ...base, design: "randomized", exposed: 0, controlSize: 100 })).toBe("observed");
@@ -48,14 +51,17 @@ describe("outcome checks and wording", () => {
     const att = outcomeLine("Meta ads", { ...base, source: "platform_report", conversions: 30, inference: "attributed", redefined: false });
     expect(att).toContain("ATTRIBUTED");
     expect(att).not.toMatch(/incremental/i);
-    const inc = outcomeLine("Holdout email", { ...base, design: "holdout", exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, inference: "incremental", redefined: false });
+    const inc = outcomeLine("Holdout email", { ...base, design: "holdout", assignment: "random", exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, inference: "incremental", redefined: false });
     // 20/200 vs 5/100 isn't significant (Fisher p ≈ 0.18): no "incremental conversions" claim (blog research BRP-21).
     expect(inc).toContain("COMPARED (holdout)");
     expect(inc).toContain("No reliable difference");
     expect(inc).not.toMatch(/incremental conversions/);
-    const sig = outcomeLine("Holdout email", { ...base, design: "holdout", exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15, plannedSharePct: 50, inference: "incremental", redefined: false });
+    const sig = outcomeLine("Holdout email", { ...base, design: "holdout", assignment: "random", exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15, plannedSharePct: 50, inference: "incremental", redefined: false });
+    const byHand = outcomeLine("Holdout email", { ...base, design: "holdout", assignment: "owner_choice", exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15, inference: "observed", redefined: false });
+    expect(byHand).toContain("COMPARED, NOT RANDOMIZED (holdout chosen by hand)");
+    expect(byHand).not.toMatch(/incremental/i);
     expect(sig).toContain("INCREMENTAL (holdout)");
-    expect(sig).toMatch(/about 45 incremental conversions \(p < 0\.001\)/);
+    expect(sig).toMatch(/about 45 incremental conversions, likely \d+–\d+ \(p < 0\.001\)/);
     // A split far from its plan can't be read at all.
     const bad = outcomeLine("Holdout email", { ...base, design: "randomized", exposed: 300, conversions: 60, controlSize: 100, controlConversions: 5, plannedSharePct: 50, inference: "incremental", redefined: false });
     expect(bad).toContain("doesn't match the plan");

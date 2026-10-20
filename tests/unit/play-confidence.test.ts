@@ -23,6 +23,11 @@ describe("play confidence", () => {
     expect(c.fix).toBe("weak");
     expect(c.why.fix).toMatch(/assumptions/);
   });
+  it("an ambiguous diagnosis gives each competing link some problem evidence, not strong", () => {
+    const amb = diagnose({ funnel: { leads: 10, activated: 3, newCustomers: 1 }, types: ["b2b_saas"] });
+    expect(amb.status).toBe("ambiguous");
+    expect(playConfidence(play([assumption]) as never, econKnown, amb).problem).toBe("some");
+  });
   it("problem evidence is weak when the play works elsewhere, or there are no numbers", () => {
     expect(playConfidence(play([research], "Google Ads for more trials") as never, econKnown, activation).problem).toBe("weak");
     expect(playConfidence(play([research]) as never, econKnown, diagnose({})).problem).toBe("weak");
@@ -30,7 +35,10 @@ describe("play confidence", () => {
   it("fix and forecast firm up with sourced and owner rates", () => {
     expect(playConfidence(play([research, research]) as never, econKnown, activation).fix).toBe("some");
     const own = playConfidence(play([owner, owner]) as never, econKnown, activation);
-    expect(own.fix).toBe("strong");
+    // Decision books: owner rates show what happened, not that the play caused it; strong fix evidence needs a comparison.
+    expect(own.fix).toBe("some");
+    expect(own.why.fix).toMatch(/without a comparison group/);
     expect(["some", "strong"]).toContain(own.forecast);
+    expect(playConfidence(play([owner, owner]) as never, econKnown, activation, { comparativeEvidence: true }).fix).toBe("strong");
   });
 });

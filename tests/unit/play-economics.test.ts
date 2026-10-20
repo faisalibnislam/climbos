@@ -49,7 +49,7 @@ describe("growth maths in code", () => {
     expect(one).toContain("TOTAL: ≈9.8 new customers in 91 days");
     expect(one).toContain("North Star target = ≈10 new customers by day 91");
     const two = lockedNumbers({ economics: econ, plays: [play(), play({ kind: "creative" })] });
-    expect(two).toContain("TOTAL: ≈16 new customers"); // 2 × 9.75 × (1 − 0.2)
+    expect(two).toContain("TOTAL: ≈18 new customers"); // 9.75 + 9.75 × (1 − 0.2): the largest play counts in full
     expect(two).toContain("20% overlap");
   });
 });

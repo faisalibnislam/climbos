@@ -93,12 +93,21 @@ export function nextMrr(mrr: N, churn: N, newCustomers: N, price: N): number | n
   return v && share(v[1]) ? v[0] * (1 - v[1]) + v[2] * v[3] : null;
 }
 
-/** Portfolio customers with a stated overlap share between plays. */
+/**
+ * Portfolio customers with a stated overlap share: the largest play counts in
+ * full and each other play loses `overlap` of its customers to people the
+ * others also reach. Adding a play can never lower the total (the earlier
+ * formula discounted the first play too, so [12, 2] gave 11.2 < 12; decision
+ * books, Kochenderfer Ch 14 validation by enumeration).
+ */
 export function portfolioCustomers(perPlay: N[], overlap: N): number | null {
   const v = nums(overlap, ...perPlay);
   if (!v || !share(v[0])) return null;
-  const sum = v.slice(1).reduce((s, x) => s + Math.max(0, x), 0);
-  return perPlay.length > 1 ? sum * (1 - v[0]) : sum;
+  const xs = v.slice(1).map((x) => Math.max(0, x));
+  if (!xs.length) return 0;
+  const top = Math.max(...xs);
+  const rest = xs.reduce((s, x) => s + x, 0) - top;
+  return top + rest * (1 - v[0]);
 }
 
 /** Monthly churn implied by an average customer lifetime in months (1 / months). */

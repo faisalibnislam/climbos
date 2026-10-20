@@ -61,7 +61,7 @@ describe("horizon and locked numbers", () => {
 
   it("the portfolio total re-runs every play at the goal's horizon (no mixed periods)", () => {
     const r = portfolioRange({ economics: econ, plays }, 60);
-    expect(r.p50).toBeCloseTo(2 * 100 * 0.02 * (60 / 7) * 0.8, 6); // two equal plays, 20% overlap
+    expect(r.p50).toBeCloseTo(100 * 0.02 * (60 / 7) * (1 + 0.8), 6); // two equal plays: the largest in full, the other less 20% overlap
   });
 
   it("locked numbers keep the owner goal and use its horizon", () => {

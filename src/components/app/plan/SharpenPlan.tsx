@@ -106,7 +106,15 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
 }
 
 type ActivationKind = "value" | "habit" | "setup" | "unknown";
-type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number; activationKind?: ActivationKind };
+type SignupKind = "free_plan" | "trial_no_card" | "trial_card" | "unknown";
+type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number; activationKind?: ActivationKind; signupKind?: SignupKind };
+/** Software only: picks the conversion reference (free plans and trials convert very differently). */
+const SIGNUP_KINDS = [
+  { value: "free_plan", label: "Free plan" },
+  { value: "trial_no_card", label: "Trial, no card" },
+  { value: "trial_card", label: "Trial with card" },
+  { value: "unknown", label: "Not software / not sure" },
+];
 const ACTIVATION_KINDS = [
   { value: "value", label: "Got the result" },
   { value: "setup", label: "Finished setup" },
@@ -125,6 +133,7 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FUNNEL_FIELDS.map((f) => [f.key, funnel?.[f.key] !== undefined ? String(funnel[f.key]) : ""])));
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<ActivationKind>(funnel?.activationKind ?? "value");
+  const [signup, setSignup] = useState<SignupKind>(funnel?.signupKind ?? "unknown");
   const submit = async () => {
     const args: Record<string, number> = {};
     for (const f of FUNNEL_FIELDS) {
@@ -136,7 +145,7 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
     }
     setBusy(true);
     try {
-      await save({ slug, periodDays: 30, ...args, ...(args.activated !== undefined ? { activationKind: kind } : {}) });
+      await save({ slug, periodDays: 30, ...args, ...(args.activated !== undefined ? { activationKind: kind } : {}), ...(args.leads !== undefined ? { signupKind: signup } : {}) });
       toast({ tone: "success", title: "Numbers saved. Refresh the plan to use them." });
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
@@ -166,6 +175,12 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
           <div className="flex flex-col gap-1.5">
             <span className="text-xs text-ink-2">&quot;Got first value&quot; counts people who…</span>
             <ChoiceChips aria-label="What was counted as first value" options={ACTIVATION_KINDS} value={kind} onValueChange={(v) => setKind(v as ActivationKind)} disabled={!canEdit || busy} />
+          </div>
+        ) : null}
+        {vals.leads?.trim() ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-2">A signup is…</span>
+            <ChoiceChips aria-label="What a signup is" options={SIGNUP_KINDS} value={signup} onValueChange={(v) => setSignup(v as SignupKind)} disabled={!canEdit || busy} />
           </div>
         ) : null}
         {canEdit ? (

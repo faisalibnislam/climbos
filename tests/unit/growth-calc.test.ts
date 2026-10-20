@@ -55,6 +55,9 @@ describe("missing and invalid inputs", () => {
 
   it("portfolio overlap applies only with two or more plays", () => {
     expect(c.portfolioCustomers([10], 0.2)).toBe(10);
-    expect(c.portfolioCustomers([10, 10], 0.2)).toBe(16);
+    expect(c.portfolioCustomers([10, 10], 0.2)).toBe(18);
+    // Adding a play never lowers the total (decision books: the old formula gave 11.2 for [12, 2]).
+    expect(c.portfolioCustomers([12, 2], 0.2)).toBeCloseTo(13.6, 9);
+    expect(c.portfolioCustomers([12, 0], 0.2)).toBe(12);
   });
 });

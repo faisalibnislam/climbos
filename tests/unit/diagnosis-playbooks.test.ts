@@ -4,10 +4,10 @@ import { choosePlaybooks, eligibility, lintEligibility, lintEligibilityIds, play
 
 /** Cycle 2: diagnosis decided in code from the owner's numbers; playbooks gated by typed contracts. */
 describe("diagnosis", () => {
-  it("EV01: 100 trials → 12 first value → 3 paid is an activation problem", () => {
+  it("EV01: 100 trials → 12 first value → 3 paid points to activation as an observation, not a proven cause", () => {
     const d = diagnose({ funnel: { periodDays: 30, leads: 100, activated: 12, newCustomers: 3 }, types: ["b2b_saas"] });
-    expect(d).toMatchObject({ constraint: "activation", basis: "measured" });
-    expect(diagnosisBrief(d)).toMatch(/binding constraint is activation/);
+    expect(d).toMatchObject({ constraint: "activation", basis: "measured", status: "supported" });
+    expect(diagnosisBrief(d)).toMatch(/point to activation as the weakest link\. This is an observation/);
     expect(d.competing).toMatch(/wrong fit/);
   });
   it("capacity binds before anything else (EV09-like)", () => {
@@ -21,7 +21,11 @@ describe("diagnosis", () => {
     expect(diagnose({ funnel: { leads: 100, activated: 60, newCustomers: 3 }, types: ["b2b_saas"] }).constraint).toBe("conversion");
   });
   it("healthy conversion with few visitors is demand", () => {
-    expect(diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10 }, types: ["b2b_saas"] }).constraint).toBe("demand");
+    expect(diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"] }).constraint).toBe("demand");
+    // Without the signup model there is no reference, so "healthy" can't be judged (decision books: CG-02).
+    const unknownModel = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10 }, types: ["b2b_saas"] });
+    expect(unknownModel.constraint).toBe("unknown");
+    expect(unknownModel.missing.join(" ")).toMatch(/free plan, a trial without a card/);
   });
   it("no numbers → unknown, with what to measure (never a guess)", () => {
     const d = diagnose({});
@@ -48,11 +52,17 @@ describe("playbook contracts", () => {
   });
   it("gates by budget, price, traffic, audience, connection, type and place", () => {
     const search = PLAYBOOKS.find((p) => p.id === "PB-paid-search-test")!;
-    expect(eligibility(search, ctx({ budgetUsd: 60, priceUsdMonth: 50 })).eligible).toBe(false);
-    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 6 })).reasons.join(" ")).toMatch(/\$25/);
-    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 50 })).eligible).toBe(true);
+    // Decision books: a small budget is a preference, not a ban; no budget at all is hard; CPC unknown is "check first".
+    expect(eligibility(search, ctx({ budgetUsd: 0, priceUsdMonth: 50 })).eligible).toBe(false);
+    expect(eligibility(search, ctx({ budgetUsd: 60, priceUsdMonth: 50 }))).toMatchObject({ eligible: true, status: "needs_evidence", unknown: ["cost per click for your search terms"] });
+    expect(eligibility(search, ctx({ budgetUsd: 60, priceUsdMonth: 50, cpcUsd: 2 }))).toMatchObject({ eligible: true, status: "low_priority" });
+    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 6, cpcUsd: 2 })).soft.join(" ")).toMatch(/\$25/);
+    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 50, cpcUsd: 2 })).status).toBe("eligible");
     const split = PLAYBOOKS.find((p) => p.id === "PB-landing-split")!;
     expect(eligibility(split, ctx({ weeklyVisitors: 12 })).eligible).toBe(false);
+    // Readability is sized on the owner's own rate: 400 a week at a 20% lead rate fits in 6 weeks; at 2% it doesn't.
+    expect(eligibility(split, ctx({ weeklyVisitors: 400, leadRate: 0.2 })).eligible).toBe(true);
+    expect(eligibility(split, ctx({ weeklyVisitors: 400, leadRate: 0.02 })).reasons.join(" ")).toMatch(/2% lead rate needs about \d+ weeks/);
     expect(eligibility(split, ctx({})).unknown).toEqual(["weekly visitors"]);
     const email = PLAYBOOKS.find((p) => p.id === "PB-lifecycle-email")!;
     expect(eligibility(email, ctx({ emailAudience: 0 })).eligible).toBe(false);
@@ -69,7 +79,7 @@ describe("playbook contracts", () => {
     expect(brief).toMatch(/Lifecycle email to consented contacts: needs consented contacts.*Instead: First-value repair or Build a consented list/);
   });
   it("blocks plays built on an ineligible playbook, from the choice or from saved ids", () => {
-    const c = choosePlaybooks(ctx({ budgetUsd: 50, priceUsdMonth: 6 }));
+    const c = choosePlaybooks(ctx({ budgetUsd: 0, priceUsdMonth: 6 })); // no ad budget at all: paid search is blocked (hard)
     const plays = [{ name: "Google Ads sprint", oneLiner: "Run Google Ads on 'form builder'" }];
     expect(lintEligibility(plays, c)).toMatchObject([{ rule: "eligibility", path: "plays[0]" }]);
     expect(lintEligibilityIds(plays, c.ineligible.map(({ pb, reasons }) => ({ id: pb.id, reasons })))).toHaveLength(1);

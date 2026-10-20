@@ -4,7 +4,9 @@
  * code decides what the result can claim:
  * - "observed": counts with no comparison group (or before/after). Not proof of cause.
  * - "attributed": the platform's own report. Its attribution, not a comparison.
- * - "incremental": randomized or holdout design with both groups measured.
+ * - "incremental": randomized design, or a holdout chosen at random, with both groups measured.
+ *   A holdout picked by a rule or by the owner isn't exchangeable with the treated group
+ *   (Hernán & Robins Ch 2–3; Kohavi Ch 11), so it stays "observed" with its comparison shown.
  * - "not_run": the test wasn't carried out, so it says nothing about the channel.
  */
 import { compareRates, sampleRatio } from "../analysis/decisions";
@@ -12,6 +14,9 @@ import { compareRates, sampleRatio } from "../analysis/decisions";
 export const OUTCOME_SOURCES = ["owner_report", "integration", "platform_report"] as const;
 export const OUTCOME_DESIGNS = ["none", "before_after", "holdout", "randomized"] as const;
 export const OUTCOME_RESULTS = ["met", "missed", "unclear"] as const;
+/** How the comparison group was chosen: only random assignment supports a causal reading. */
+export const OUTCOME_ASSIGNMENTS = ["random", "rule", "owner_choice"] as const;
+export type OutcomeAssignment = (typeof OUTCOME_ASSIGNMENTS)[number];
 
 export type OutcomeSource = (typeof OUTCOME_SOURCES)[number];
 export type OutcomeDesign = (typeof OUTCOME_DESIGNS)[number];
@@ -25,8 +30,10 @@ export interface OutcomeInput {
   design: OutcomeDesign;
   /** Everyone who could have been in the test. */
   eligible?: number;
-  /** People who got the change. */
+  /** Everyone assigned to get the change, whether or not they used it (count by person, not visit). */
   exposed?: number;
+  /** Holdouts only: how the comparison group was chosen (missing on older records = unknown). */
+  assignment?: OutcomeAssignment;
   /** Conversions among the exposed (on the analysis metric). */
   conversions?: number;
   /** Comparison group size (holdout / control arm). */
@@ -48,10 +55,10 @@ export interface OutcomeInput {
 }
 
 /** What the result can claim, from the design and source alone (never from the model). */
-export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "design" | "exposed" | "controlSize">): Inference {
+export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "design" | "exposed" | "controlSize" | "assignment">): Inference {
   if (!o.executed) return "not_run";
   if (o.source === "platform_report") return "attributed";
-  const comparative = o.design === "randomized" || o.design === "holdout";
+  const comparative = o.design === "randomized" || (o.design === "holdout" && o.assignment === "random");
   if (comparative && (o.exposed ?? 0) > 0 && (o.controlSize ?? 0) > 0) return "incremental";
   return "observed";
 }
@@ -65,8 +72,8 @@ export type Reading =
   | { kind: "no_counts" }
   | { kind: "split_mismatch"; splitP: number }
   | { kind: "split_warning"; splitP: number; pValue: number }
-  | { kind: "no_difference"; pValue: number }
-  | { kind: "difference"; pValue: number; extra: number };
+  | { kind: "no_difference"; pValue: number; interval?: [number, number] }
+  | { kind: "difference"; pValue: number; extra: number; interval?: [number, number] };
 
 export function readingOf(o: Pick<OutcomeInput, "exposed" | "conversions" | "controlSize" | "controlConversions" | "plannedSharePct">): Reading {
   if (!o.exposed || !o.controlSize || o.conversions === undefined || o.controlConversions === undefined) return { kind: "no_counts" };
@@ -78,11 +85,12 @@ export function readingOf(o: Pick<OutcomeInput, "exposed" | "conversions" | "con
   }
   const r = compareRates({ control: { visitors: o.controlSize, conversions: o.controlConversions }, treatment: { visitors: o.exposed, conversions: o.conversions } });
   if (splitWarn !== null) return { kind: "split_warning", splitP: splitWarn, pValue: r.pValue };
-  if (r.verdict !== "difference_detected") return { kind: "no_difference", pValue: r.pValue };
-  return { kind: "difference", pValue: r.pValue, extra: lift(o)?.extra ?? 0 };
+  if (r.verdict !== "difference_detected") return { kind: "no_difference", pValue: r.pValue, interval: r.differenceInterval };
+  return { kind: "difference", pValue: r.pValue, extra: lift(o)?.extra ?? 0, interval: r.differenceInterval };
 }
 
 const fmtP = (p: number) => (p < 0.001 ? "p < 0.001" : `p = ${Math.round(p * 1000) / 1000}`);
+const ptsRange = ([lo, hi]: [number, number]) => `${Math.round(lo * 1000) / 10} to ${Math.round(hi * 1000) / 10} points`;
 
 /** One owner-facing phrase for a reading. */
 export function readingText(r: Reading): string {
@@ -94,9 +102,9 @@ export function readingText(r: Reading): string {
     case "split_warning":
       return `The split looks off (${fmtP(r.splitP)}): check it before calling a winner.`;
     case "no_difference":
-      return `No reliable difference (${fmtP(r.pValue)}): not proof it worked, or that it didn't.`;
+      return `No reliable difference (${fmtP(r.pValue)}${r.interval ? `; likely ${ptsRange(r.interval)}` : ""}): not proof it worked, or that it didn't.`;
     case "difference":
-      return `A difference the data can tell apart (${fmtP(r.pValue)}).`;
+      return `A difference the data can tell apart (${fmtP(r.pValue)}${r.interval ? `; likely ${ptsRange(r.interval)}` : ""}).`;
   }
 }
 
@@ -158,10 +166,16 @@ export function outcomeLine(name: string, o: OutcomeInput & { inference: Inferen
     const r = readingOf(o);
     const counts = l ? `${o.conversions}/${o.exposed} exposed (${pct(l.exposedRate)}) vs ${o.controlConversions}/${o.controlSize} in the comparison group (${pct(l.controlRate)})` : `comparison group of ${o.controlSize}`;
     // Only a valid split with a significant difference may speak of extra conversions.
-    const claim = r.kind === "difference" ? `about ${r.extra} incremental conversions (${fmtP(r.pValue)})` : readingText(r);
+    const range = r.kind === "difference" && r.interval && o.exposed ? `, likely ${Math.max(0, Math.round(r.interval[0] * o.exposed))}–${Math.round(r.interval[1] * o.exposed)}` : "";
+    const claim = r.kind === "difference" ? `about ${r.extra} incremental conversions${range} (${fmtP(r.pValue)})` : readingText(r);
     return `${head}. ${r.kind === "difference" ? "INCREMENTAL" : "COMPARED"} (${o.design}): ${counts}: ${claim}${redefined}`;
   }
   const counts = o.exposed !== undefined ? `${o.conversions ?? "?"} conversions from ${o.exposed} exposed${of}` : o.conversions !== undefined ? `${o.conversions} conversions` : "no counts";
   if (o.inference === "attributed") return `${head}. ATTRIBUTED by the platform: ${counts}. The platform's attribution, not a measured lift.${redefined}`;
+  if (o.design === "holdout" && o.controlSize) {
+    const l = lift(o);
+    const how = o.assignment === "rule" ? "chosen by a rule" : o.assignment === "owner_choice" ? "chosen by hand" : "chosen in an unrecorded way";
+    return `${head}. COMPARED, NOT RANDOMIZED (holdout ${how}): ${l ? `${pct(l.exposedRate)} vs ${pct(l.controlRate)}` : counts}. The groups may differ in other ways, so this isn't proof of cause.${redefined}`;
+  }
   return `${head}. OBSERVED: ${counts}; no comparison group, so not proof of cause.${redefined}`;
 }

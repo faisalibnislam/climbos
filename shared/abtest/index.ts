@@ -1,8 +1,13 @@
 /**
- * A/B decisions: a two-proportion z-test. A winner needs at least `minTrials`
- * per variant and 95% confidence; after `maxTrials` in total with no clear
- * winner the test ends and the current version (A) stays.
+ * A/B decisions, read once at a planned end (decision books, 2026-10-20:
+ * Kohavi et al. Ch 2 and 21; Kochenderfer et al. Ch 15 explore-then-commit).
+ * The engine used to test after every view, send, lead and reply and apply B
+ * at the first 95% reading; with identical variants that picks B in roughly
+ * 14–33% of tests. Now the test collects until `maxTrials` in total, checks
+ * the split (sample-ratio mismatch), then decides once with the same exact
+ * or z test the calculators use. Before the end there is no winner.
  */
+import { compareRates, sampleRatio } from "../analysis/decisions";
 
 export interface VariantStats {
   key: string;
@@ -15,16 +20,9 @@ export interface Decision {
   winner: string | null;
   /** Relative lift of B over A (e.g. 0.25 = +25%), null until both have data. */
   lift: number | null;
+  /** 100 × (1 − p) at the planned end; 0 before it (a mid-test number invites peeking). Not a probability that B is better. */
   confidence: number;
   note: string;
-}
-
-function normalCdf(z: number): number {
-  // Abramowitz–Stegun approximation.
-  const t = 1 / (1 + 0.2316419 * Math.abs(z));
-  const d = 0.3989423 * Math.exp((-z * z) / 2);
-  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  return z > 0 ? 1 - p : p;
 }
 
 export function decide(stats: VariantStats[], minTrials: number, maxTrials: number): Decision {
@@ -34,17 +32,17 @@ export function decide(stats: VariantStats[], minTrials: number, maxTrials: numb
   const pa = a.trials ? a.wins / a.trials : 0;
   const pb = b.trials ? b.wins / b.trials : 0;
   const lift = a.trials && b.trials && pa > 0 ? (pb - pa) / pa : null;
-  const pooled = a.trials + b.trials ? (a.wins + b.wins) / (a.trials + b.trials) : 0;
-  const se = Math.sqrt(pooled * (1 - pooled) * (1 / Math.max(1, a.trials) + 1 / Math.max(1, b.trials)));
-  const z = se > 0 ? (pb - pa) / se : 0;
-  const confidence = Math.round((1 - 2 * (1 - normalCdf(Math.abs(z)))) * 1000) / 10;
-  const enough = a.trials >= minTrials && b.trials >= minTrials;
-  if (enough && confidence >= 95) {
-    const winner = pb > pa ? "B" : "A";
-    return { done: true, winner, lift, confidence, note: `${winner === "B" ? "The new version" : "The original"} wins with ${confidence}% confidence.` };
-  }
-  if (a.trials + b.trials >= maxTrials) return { done: true, winner: "A", lift, confidence, note: "No clear difference, so we kept the original." };
-  return { done: false, winner: null, lift, confidence, note: enough ? `Leaning ${pb > pa ? "B" : "A"} (${confidence}% sure). Still collecting.` : `Collecting data (${Math.min(a.trials, b.trials)} of ${minTrials} per version).` };
+  const total = a.trials + b.trials;
+  if (total < maxTrials || a.trials < minTrials || b.trials < minTrials)
+    return { done: false, winner: null, lift, confidence: 0, note: `Collecting: ${total} of ${maxTrials}. The result is read once at the end; an early lead is usually noise.` };
+  // The split must match 50/50 before any result is read.
+  const srm = sampleRatio({ planned: [50, 50], observed: [a.trials, b.trials] });
+  if (srm.mismatch) return { done: true, winner: "A", lift, confidence: 0, note: "The two versions weren't shown equally often, so the result can't be trusted. Kept the original; check the page or sending before testing again." };
+  const r = compareRates({ control: { visitors: a.trials, conversions: Math.min(a.wins, a.trials) }, treatment: { visitors: b.trials, conversions: Math.min(b.wins, b.trials) } });
+  const confidence = Math.round((1 - r.pValue) * 1000) / 10;
+  if (r.verdict === "difference_detected" && pb > pa) return { done: true, winner: "B", lift, confidence, note: `The new version did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
+  if (r.verdict === "difference_detected") return { done: true, winner: "A", lift, confidence, note: `The original did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
+  return { done: true, winner: "A", lift, confidence, note: "No clear difference, so we kept the original." };
 }
 
 /** Stable A/B split for a recipient id. */

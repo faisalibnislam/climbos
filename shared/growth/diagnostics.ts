@@ -5,7 +5,7 @@
  * order and the first failing one decides the next step; more spend is only
  * suggested when reach is the sole shortfall and conversion holds.
  */
-import type { PlayActuals } from "./actuals";
+import { stepClearlyShort, stepTooThin, type PlayActuals } from "./actuals";
 
 export type ShortfallVerdict = "not_run" | "tracking" | "reach" | "conversion" | "reach_only" | "too_few" | "fine";
 
@@ -37,7 +37,9 @@ export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}
   checks.push({ check: "executed", status: "pass", detail: `${a.weeks} week${a.weeks === 1 ? "" : "s"} logged, ${a.reach} reached.` });
   // 2. Is it being measured? Reach with nothing at all recorded downstream for 2+ weeks.
   const recorded = a.steps.reduce((s, x) => s + x.successes, 0);
-  if (a.weeks >= 2 && recorded === 0 && a.reach >= 30) {
+  // Zero recorded is only suspicious when the plan expected at least 3 at the first step (P(0) ≤ 5%); at 30 reached and a 2% rate, zero is the likeliest result.
+  const expectedFirst = a.reach * (a.steps[0]?.planned ?? 0);
+  if (a.weeks >= 2 && recorded === 0 && a.reach >= 30 && expectedFirst >= 3) {
     checks.push({ check: "measured", status: "fail", detail: `${a.reach} reached but nothing recorded at "${a.steps[0]?.name ?? "the first step"}".` });
     return { verdict: "tracking", checks, next: "Check the tracking first: people were reached but no step recorded anything. A broken count looks like a failed play.", moreSpendJustified: false };
   }
@@ -46,9 +48,10 @@ export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}
   const reachShort = a.reachVsPlan !== null && a.reachVsPlan < 0.5;
   checks.push({ check: "reach", status: a.reachVsPlan === null ? "unknown" : reachShort ? "fail" : "pass", detail: a.reachVsPlan === null ? "No planned reach to compare." : `Reach is ${pct(a.reachVsPlan)} of the plan.` });
   // 4. Which step converts worse than planned (with enough people to tell)?
-  const weak = a.steps.find((s) => s.trials >= 30 && s.observed !== null && s.observed < s.planned * 0.5);
-  const thin = a.steps.every((s) => s.trials < 30);
-  const thinAny = a.steps.some((s) => s.trials < 30);
+  // A step fails only when its counts make a big shortfall at least 95% likely (decision books: 0 of 30 at a planned 2% is the most likely result, not a failure).
+  const weak = a.steps.find((s) => s.observed !== null && stepClearlyShort(s));
+  const thin = a.steps.every((s) => stepTooThin(s));
+  const thinAny = a.steps.some((s) => stepTooThin(s));
   checks.push({ check: "conversion", status: weak ? "fail" : thin ? "unknown" : "pass", detail: weak ? `"${weak.name}" converts ${pct(weak.observed!)} vs ${pct(weak.planned)} planned (${weak.successes}/${weak.trials}).` : thin ? "Too few people at each step to judge conversion." : "Steps convert at or near plan." });
   if (weak) return { verdict: "conversion", checks, next: `Fix "${weak.name}" before adding people: test one change at that step.${stop}`, moreSpendJustified: false };
   if (reachShort && !thin) return { verdict: "reach_only", checks, next: `Conversion holds; only reach is short. Fix the route to the page, or raise spend within the cap.${stop}`, moreSpendJustified: true };

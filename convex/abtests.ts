@@ -7,7 +7,8 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /** A/B tests on landing page headlines (leads per view) and outreach subjects (reply rate). */
 
-const RULES = { landing: { min: 100, max: 3000 }, email_subject: { min: 30, max: 600 } } as const;
+/** Planned end per test (total trials): the result is read once there (shared/abtest decide). Small sites can reach 1,000 views; it detects only big differences. */
+const RULES = { landing: { min: 100, max: 1000 }, email_subject: { min: 30, max: 600 } } as const;
 
 export async function runningTest(ctx: { db: MutationCtx["db"] }, targetId: string) {
   return ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", targetId).eq("status", "running")).first();

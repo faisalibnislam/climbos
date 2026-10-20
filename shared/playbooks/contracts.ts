@@ -8,8 +8,17 @@
  * BK06 volume needs, BK02 price fit, BK05 consent) and ClimbOS policy; they are
  * labelled heuristics, not laws. Eligibility is decided here, in code; the plays
  * agent only sees the result.
+ *
+ * Decision books (2026-10-20): every requirement has a class. A hard one
+ * (no consent, no connection, wrong business type, no cash, no owner time,
+ * a test that can't read at this traffic) blocks the playbook with the exact
+ * reason. A preference (typical budget, price fit, customer base, a leak
+ * further down) keeps it eligible at lower priority with its scope stated,
+ * so a small, deliberate test isn't banned by a generic threshold. Unknown
+ * inputs are listed as "check first", never treated as a pass or a fail.
  */
 import type { BindingConstraint } from "../agents/decision";
+import { sampleSize } from "../analysis/decisions";
 
 export interface PlaybookContext {
   /** Acquisition library types. */
@@ -29,10 +38,25 @@ export interface PlaybookContext {
   constraint: BindingConstraint | "unknown";
   geography?: string;
   ownerHoursPerWeek?: number;
+  /** Cost per click for the business's search terms, when the owner or research knows it. */
+  cpcUsd?: number;
+  /** The owner's measured visitor → lead rate (sizes split tests on the real baseline). */
+  leadRate?: number;
+  /** Diagnosis status: only a supported constraint lowers playbooks that would feed a leak. */
+  constraintStatus?: "supported" | "ambiguous" | "insufficient_evidence" | "conflicting_inputs";
 }
 
-type Requirement =
+/** hard: blocks the playbook; preference: keeps it eligible at lower priority, with the reason. */
+export type RequirementClass = "hard" | "preference";
+
+type Requirement = (
   | { kind: "budget_min"; usd: number; why: string }
+  /** Paid clicks must be affordable at all (no budget blocks); readability depends on cost per click, so unknown CPC is "check first". */
+  | { kind: "paid_test"; minClicks: number; why: string }
+  /** A split test must finish within `weeks` for a 50% relative swing on the owner's baseline (falls back to `weeklyFallback` visitors when the baseline is unknown). */
+  | { kind: "split_readable"; weeks: number; weeklyFallback: number; why: string }
+  /** Lower priority while a measured leak sits further down (referrals and paid scale feed it). */
+  | { kind: "no_leak"; constraints: BindingConstraint[]; why: string }
   | { kind: "traffic_min"; weekly: number; why: string }
   | { kind: "audience_min"; contacts: number; why: string }
   | { kind: "customers_min"; count: number; why: string }
@@ -41,7 +65,25 @@ type Requirement =
   | { kind: "types_none"; types: string[]; why: string }
   | { kind: "price_min"; usd: number; why: string }
   | { kind: "geography"; any: string[]; why: string }
-  | { kind: "hours_min"; hours: number; why: string };
+  | { kind: "hours_min"; hours: number; why: string }
+) & { class?: RequirementClass };
+
+/** Default class by kind: consent, connections, business type, place, owner time and readability are hard; money and base-size floors are preferences. */
+const DEFAULT_CLASS: Record<Requirement["kind"], RequirementClass> = {
+  budget_min: "preference",
+  paid_test: "hard",
+  split_readable: "hard",
+  no_leak: "preference",
+  traffic_min: "hard",
+  audience_min: "hard",
+  customers_min: "preference",
+  connection: "hard",
+  types_any: "hard",
+  types_none: "hard",
+  price_min: "preference",
+  geography: "hard",
+  hours_min: "hard",
+};
 
 export interface Playbook {
   id: string;
@@ -134,8 +176,9 @@ export const PLAYBOOKS: Playbook[] = [
     appliesWhen: "Buyers search for the service; conversion is tracked; the budget can buy a readable sample.",
     avoidWhen: "Low price per customer, no conversion tracking, or a leak further down the funnel.",
     requires: [
-      { kind: "budget_min", usd: 300, why: "below about $300 a month a search test can't read out" },
-      { kind: "price_min", usd: 25, why: "below $25 a month per customer paid clicks rarely pay back" },
+      { kind: "paid_test", minClicks: 100, why: "a search test needs enough clicks to read (about 100 a month is a small, learning-only test)" },
+      { kind: "price_min", usd: 25, why: "below $25 a month per customer paid clicks rarely pay back; check the break-even cost per click first" },
+      { kind: "no_leak", constraints: ["activation", "retention", "conversion"], why: "a measured leak further down: run only as a capped test that also reads lead quality, no expansion" },
     ],
     steps: ["Pick 1–2 high-intent themes", "Set a hard spend cap and a stop date", "Track paid conversions, not clicks", "Read once at the planned end"],
     outcome: "Cost per paying customer vs what one is worth",
@@ -172,7 +215,10 @@ export const PLAYBOOKS: Playbook[] = [
     worksOn: ["demand"],
     appliesWhen: "There are active, satisfied customers and a natural moment to share.",
     avoidWhen: "Few customers, or activation and retention are weak (referrals feed a leak).",
-    requires: [{ kind: "customers_min", count: 20, why: "referral participation is 3–15% of customers, so it needs a customer base" }],
+    requires: [
+      { kind: "customers_min", count: 20, why: "referral participation is 3–15% of customers, so a programme needs a base; with fewer, ask happy customers personally" },
+      { kind: "no_leak", constraints: ["activation", "retention"], why: "activation or retention is the measured weak link, so referrals would feed a leak" },
+    ],
     steps: ["Pick the moment right after first value or a good result", "Add the share link or invite there", "Count invites and referred signups"],
     outcome: "Referred new customers",
     guardrail: "No pressure tactics; rewards disclosed",
@@ -320,7 +366,7 @@ export const PLAYBOOKS: Playbook[] = [
     worksOn: ["positioning", "conversion"],
     appliesWhen: "The page gets enough visitors to read a difference in weeks.",
     avoidWhen: "Low traffic: use a before/after or interviews instead.",
-    requires: [{ kind: "traffic_min", weekly: 700, why: "about 100 visitors a day is the book's floor for a landing-page test" }],
+    requires: [{ kind: "split_readable", weeks: 6, weeklyFallback: 700, why: "a split test must finish in about 6 weeks for a big (50% relative) change" }],
     steps: ["One big change, not a tweak", "Fix the sample and end date in advance", "Check the split matches the plan", "Read once at the end"],
     outcome: "Signups or paid conversion",
     guardrail: "Refunds and support don't rise",
@@ -356,7 +402,10 @@ export const PLAYBOOKS: Playbook[] = [
     worksOn: ["demand", "positioning"],
     appliesWhen: "The owner can show the work and post steadily.",
     avoidWhen: "No time to post, or a leak further down the funnel.",
-    requires: [{ kind: "hours_min", hours: 2, why: "steady posting needs owner time even with drafts done" }],
+    requires: [
+      { kind: "hours_min", hours: 2, why: "steady posting needs owner time even with drafts done" },
+      { kind: "no_leak", constraints: ["activation", "retention", "conversion"], why: "a measured leak further down: attention added now would leak" },
+    ],
     steps: ["Pick one platform where buyers are", "Post 3 times a week from real work", "Track profile visits to signups"],
     outcome: "Signups or inquiries from social",
     guardrail: "No engagement bait; views aren't the goal",
@@ -371,55 +420,78 @@ export const PLAYBOOKS: Playbook[] = [
 
 const fmtUsd = (n: number) => `$${n}`;
 
-/** Whether a playbook fits this business now; unknown inputs are listed, not assumed. */
-export function eligibility(pb: Playbook, ctx: PlaybookContext): { eligible: boolean; reasons: string[]; unknown: string[] } {
+/** Whether a playbook fits this business now; unknown inputs are listed, not assumed. Hard failures block; preferences lower priority. */
+export function eligibility(pb: Playbook, ctx: PlaybookContext): { eligible: boolean; reasons: string[]; soft: string[]; unknown: string[]; status: "eligible" | "needs_evidence" | "low_priority" | "blocked" } {
   const reasons: string[] = [];
+  const soft: string[] = [];
   const unknown: string[] = [];
   for (const r of pb.requires) {
+    const fail = (msg: string) => ((r.class ?? DEFAULT_CLASS[r.kind]) === "hard" ? reasons : soft).push(msg);
     switch (r.kind) {
       case "budget_min":
-        if (ctx.budgetUsd < r.usd) reasons.push(`${r.why} (budget ${fmtUsd(ctx.budgetUsd)})`);
+        if (ctx.budgetUsd < r.usd) fail(`${r.why} (budget ${fmtUsd(ctx.budgetUsd)})`);
+        break;
+      case "paid_test":
+        if (!(ctx.budgetUsd > 0)) reasons.push("no ad budget: paid clicks cost money");
+        else if (ctx.cpcUsd === undefined || !(ctx.cpcUsd > 0)) unknown.push("cost per click for your search terms");
+        else if (ctx.budgetUsd / ctx.cpcUsd < r.minClicks) soft.push(`about ${Math.round(ctx.budgetUsd / ctx.cpcUsd)} clicks a month at ${fmtUsd(ctx.cpcUsd)} each: a learning test that reads only a big difference`);
+        break;
+      case "split_readable": {
+        if (ctx.weeklyVisitors === undefined) {
+          unknown.push("weekly visitors");
+          break;
+        }
+        const base = ctx.leadRate !== undefined && ctx.leadRate > 0 && ctx.leadRate < 0.67 ? ctx.leadRate : null;
+        const need = base ? sampleSize({ baseline: base, minDetectable: base * 0.5 }).total : r.weeklyFallback * r.weeks;
+        const weeks = ctx.weeklyVisitors > 0 ? need / ctx.weeklyVisitors : Infinity;
+        if (weeks > r.weeks) fail(`${r.why}: about ${Math.round(ctx.weeklyVisitors)} visitors a week ${base ? `at your ${Math.round(base * 1000) / 10}% lead rate needs about ${Number.isFinite(weeks) ? Math.ceil(weeks) : "∞"} weeks` : `is below the ${r.weeklyFallback}-a-week rule of thumb (your lead rate isn't known)`}`);
+        break;
+      }
+      case "no_leak":
+        if (ctx.constraintStatus === "supported" && r.constraints.includes(ctx.constraint as BindingConstraint)) soft.push(r.why);
         break;
       case "traffic_min":
         if (ctx.weeklyVisitors === undefined) unknown.push("weekly visitors");
-        else if (ctx.weeklyVisitors < r.weekly) reasons.push(`${r.why} (about ${Math.round(ctx.weeklyVisitors)} a week)`);
+        else if (ctx.weeklyVisitors < r.weekly) fail(`${r.why} (about ${Math.round(ctx.weeklyVisitors)} a week)`);
         break;
       case "audience_min":
         if (ctx.emailAudience === undefined) unknown.push("consented contacts");
-        else if (ctx.emailAudience < r.contacts) reasons.push(`${r.why} (${ctx.emailAudience} consented contacts)`);
+        else if (ctx.emailAudience < r.contacts) fail(`${r.why} (${ctx.emailAudience} consented contacts)`);
         break;
       case "customers_min":
         if (ctx.customers === undefined) unknown.push("current customers");
-        else if (ctx.customers < r.count) reasons.push(`${r.why} (${ctx.customers} customers)`);
+        else if (ctx.customers < r.count) fail(`${r.why} (${ctx.customers} customers)`);
         break;
       case "connection":
-        if (!r.any.some((p) => ctx.connected.includes(p))) reasons.push(r.why);
+        if (!r.any.some((p) => ctx.connected.includes(p))) fail(r.why);
         break;
       case "types_any":
-        if (!ctx.types.some((t) => r.types.includes(t))) reasons.push(r.why);
+        if (!ctx.types.some((t) => r.types.includes(t))) fail(r.why);
         break;
       case "types_none":
-        if (ctx.types.some((t) => r.types.includes(t))) reasons.push(r.why);
+        if (ctx.types.some((t) => r.types.includes(t))) fail(r.why);
         break;
       case "price_min":
         if (ctx.priceUsdMonth === undefined) unknown.push("price per customer");
-        else if (ctx.priceUsdMonth < r.usd) reasons.push(`${r.why} (about ${fmtUsd(Math.round(ctx.priceUsdMonth))} a month)`);
+        else if (ctx.priceUsdMonth < r.usd) fail(`${r.why} (about ${fmtUsd(Math.round(ctx.priceUsdMonth))} a month)`);
         break;
       case "geography":
         if (ctx.geography === undefined) unknown.push("where customers are");
-        else if (!r.any.includes(ctx.geography)) reasons.push(r.why);
+        else if (!r.any.includes(ctx.geography)) fail(r.why);
         break;
       case "hours_min":
         if (ctx.ownerHoursPerWeek === undefined) unknown.push("owner hours a week");
-        else if (ctx.ownerHoursPerWeek < r.hours) reasons.push(`${r.why} (${ctx.ownerHoursPerWeek} h a week)`);
+        else if (ctx.ownerHoursPerWeek < r.hours) fail(`${r.why} (${ctx.ownerHoursPerWeek} h a week)`);
         break;
     }
   }
-  return { eligible: reasons.length === 0, reasons, unknown };
+  const status = reasons.length ? "blocked" : soft.length ? "low_priority" : unknown.length ? "needs_evidence" : "eligible";
+  return { eligible: reasons.length === 0, reasons, soft, unknown, status };
 }
 
 export interface PlaybookChoice {
-  eligible: { pb: Playbook; unknown: string[] }[];
+  /** Not blocked: fits now, needs a check first, or fits at lower priority (with why). */
+  eligible: { pb: Playbook; unknown: string[]; soft?: string[]; status?: ReturnType<typeof eligibility>["status"] }[];
   ineligible: { pb: Playbook; reasons: string[] }[];
 }
 
@@ -427,8 +499,12 @@ export interface PlaybookChoice {
 export function choosePlaybooks(ctx: PlaybookContext): PlaybookChoice {
   const rows = PLAYBOOKS.map((pb) => ({ pb, e: eligibility(pb, ctx) }));
   const onConstraint = (pb: Playbook) => (ctx.constraint !== "unknown" && pb.worksOn.includes(ctx.constraint) ? 0 : 1);
+  const rank = { eligible: 0, needs_evidence: 1, low_priority: 2, blocked: 3 } as const;
   return {
-    eligible: rows.filter((r) => r.e.eligible).sort((a, b) => onConstraint(a.pb) - onConstraint(b.pb)).map((r) => ({ pb: r.pb, unknown: r.e.unknown })),
+    eligible: rows
+      .filter((r) => r.e.eligible)
+      .sort((a, b) => onConstraint(a.pb) - onConstraint(b.pb) || rank[a.e.status] - rank[b.e.status])
+      .map((r) => ({ pb: r.pb, unknown: r.e.unknown, soft: r.e.soft, status: r.e.status })),
     ineligible: rows.filter((r) => !r.e.eligible).map((r) => ({ pb: r.pb, reasons: r.e.reasons })),
   };
 }
@@ -438,7 +514,10 @@ export function playbookBrief(choice: PlaybookChoice): string {
   const name = (id: string) => PLAYBOOKS.find((p) => p.id === id)?.name ?? id;
   return [
     "PLAYBOOKS THAT FIT (code-checked; prefer the first ones, which work on the diagnosed constraint):",
-    ...choice.eligible.slice(0, 8).map(({ pb, unknown }) => `- ${pb.name}: ${pb.decision}. Steps: ${pb.steps.join("; ")}. Watch: ${pb.guardrail}. Stop: ${pb.stop}. Expand: ${pb.expand}.${unknown.length ? ` Check first: ${unknown.join(", ")}.` : ""}`),
+    ...choice.eligible.slice(0, 8).map(({ pb, unknown, soft }) => {
+      const leak = pb.requires.some((r) => r.kind === "no_leak") && soft?.some((x) => pb.requires.some((r) => r.kind === "no_leak" && r.why === x));
+      return `- ${pb.name}: ${pb.decision}. Steps: ${pb.steps.join("; ")}. Watch: ${pb.guardrail}. Stop: ${pb.stop}.${leak ? " Capped test only: no expansion this plan." : ` Expand: ${pb.expand}.`}${soft?.length ? ` Lower priority: ${soft.join("; ")}.` : ""}${unknown.length ? ` Check first: ${unknown.join(", ")}.` : ""}`;
+    }),
     ...(choice.ineligible.length ? ["NOT ELIGIBLE NOW (don't build plays on these):", ...choice.ineligible.map(({ pb, reasons }) => `- ${pb.name}: ${reasons.join("; ")}.${pb.alternatives.length ? ` Instead: ${pb.alternatives.map(name).join(" or ")}.` : ""}`)] : []),
   ].join("\n");
 }

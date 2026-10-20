@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, CircleDashed, ClipboardPen, Scale, type Lucid
 import { useState } from "react";
 import { Badge, Button, Checkbox, DatePicker, Field, Input, Segmented, Select, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
-import { inferenceOf, isRedefined, readingOf, readingText, type Inference, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
+import { inferenceOf, isRedefined, readingOf, readingText, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
 
 export type Analysis = OutcomeInput & { n: number; inference: Inference; redefined: boolean; reviewedAt: number };
 
@@ -37,6 +37,11 @@ const DESIGNS: { value: OutcomeDesign; label: string }[] = [
   { value: "randomized", label: "Random split" },
 ];
 
+const ASSIGNMENTS: { value: OutcomeAssignment; label: string }[] = [
+  { value: "random", label: "At random" },
+  { value: "rule", label: "By a rule (e.g. inactive customers)" },
+  { value: "owner_choice", label: "By hand" },
+];
 const DESIGN_OF_METHOD: Record<string, OutcomeDesign> = { holdout: "holdout", ab_split: "randomized", pre_post_observational: "before_after", export_instructions: "none" };
 
 type Exp = { id: Id<"experiments">; method: string; primaryMetric: string; stoppingRule: string; analyses: Analysis[] };
@@ -60,6 +65,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     controlSize: str(latest?.controlSize),
     controlConversions: str(latest?.controlConversions),
     plannedSharePct: str(latest?.plannedSharePct ?? (latest ? undefined : 50)),
+    assignment: (latest as { assignment?: OutcomeAssignment } | undefined)?.assignment ?? ("random" as OutcomeAssignment),
     windowStart: latest?.windowStart ?? "",
     windowEnd: latest?.windowEnd ?? "",
     result: latest?.result ?? ("unclear" as OutcomeResult),
@@ -78,6 +84,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     controlSize: comparative ? num(f.controlSize) : undefined,
     controlConversions: comparative ? num(f.controlConversions) : undefined,
     plannedSharePct: comparative ? num(f.plannedSharePct) : undefined,
+    ...(f.design === "holdout" ? { assignment: f.assignment } : {}),
   };
   const preview = inferenceOf({ ...f, ...counts });
   const redefines = Boolean(latest) && (f.metric.trim() !== latest!.metric || f.successRule.trim() !== latest!.successRule);
@@ -160,9 +167,14 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                   <Select options={DESIGNS} value={f.design} onValueChange={(v) => set("design", v as OutcomeDesign)} disabled={busy} />
                 </Field>
               </div>
+              {f.design === "holdout" ? (
+                <Field label="Comparison group chosen">
+                  <Select options={ASSIGNMENTS} value={f.assignment} onValueChange={(v) => set("assignment", v as OutcomeAssignment)} disabled={busy} />
+                </Field>
+              ) : null}
               <div className="grid grid-cols-3 gap-2">
                 <NumField label="Eligible" value={f.eligible} onChange={(v) => set("eligible", v)} disabled={busy} />
-                <NumField label="Exposed" value={f.exposed} onChange={(v) => set("exposed", v)} disabled={busy} />
+                <NumField label="Assigned to the change" value={f.exposed} onChange={(v) => set("exposed", v)} disabled={busy} />
                 <NumField label="Converted" value={f.conversions} onChange={(v) => set("conversions", v)} disabled={busy} />
                 {comparative ? (
                   <>

@@ -384,6 +384,8 @@ export default defineSchema({
         newCustomers: v.optional(v.number()),
         /** What was counted as activated: value received, a habit, setup only, or unclear. */
         activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))),
+        /** Software only: what a signup is; picks the conversion reference (shared/agents/references.ts). Absent means unknown. */
+        signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))),
         updatedAt: v.number(),
       }),
     ),
@@ -1279,6 +1281,8 @@ export default defineSchema({
         goalGap: v.optional(v.any()),
         /** The weakest link computed from the owner's numbers (shared/agents/diagnosis.ts); `diagnosis` is the plan's prose. */
         constraintDiagnosis: v.optional(v.any()),
+        /** Best feasible set of plays under the owner's joint limits, and the strongest alternative (economics.ts selectPortfolio). */
+        portfolio: v.optional(v.any()),
         /** Playbooks that fit and those that didn't, with reasons (shared/playbooks/contracts.ts). */
         playbooks: v.optional(v.any()),
         /** decision_contract plans: the structured decision the plays rest on (shared/agents/decision.ts, REQ-STRAT-01/02). */
@@ -1378,6 +1382,8 @@ export default defineSchema({
           controlConversions: v.optional(v.number()),
           /** Planned % in the changed version, so the split can be checked. */
           plannedSharePct: v.optional(v.number()),
+          /** Holdouts: how the comparison group was chosen (only random supports "incremental"). */
+          assignment: v.optional(v.union(v.literal("random"), v.literal("rule"), v.literal("owner_choice"))),
           windowStart: v.optional(v.string()),
           windowEnd: v.optional(v.string()),
           metric: v.string(),
