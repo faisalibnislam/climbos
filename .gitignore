@@ -48,3 +48,7 @@ test-results/
 
 # Benchmark caches
 bench/cache/
+
+# Reference books (copyrighted source EPUBs; read locally, never committed)
+docs/reference-books/*.epub
+docs/reference-books/*.pdf
