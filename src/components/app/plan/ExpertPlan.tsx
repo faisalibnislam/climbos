@@ -49,6 +49,7 @@ import { formatMoney } from "../../../../shared/economics/currency";
 import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
 import { churnOf, ownerHourOf, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
+import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
 import { FeedbackButton } from "./Feedback";
@@ -527,6 +528,9 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
   const m = playMaths({ ...play, model: play.model! }, economics);
   const cost = forecastBasis({ ...play, model: play.model! }, economics).cost;
   const pb = m.paybackMonths === null ? null : Math.max(0.1, Math.round(m.paybackMonths * 10) / 10);
+  // What decides it (Hubbard's threshold): the input closest to flipping the verdict, computed in code.
+  const top = switchPoints({ ...play, model: play.model! }, economics).find((s) => s.switchValue !== null);
+  const money = (n: number) => usd(n, economics.currency);
   return (
     <div className="flex flex-col gap-1.5">
       <StatBlocks
@@ -552,6 +556,12 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         <Badge tone={cost.kind === "assumption_scenario" ? "amber" : "neutral"}>{`Cost basis: ${COST_BASIS_LABEL[cost.kind]}`}</Badge>
         <span className="text-xs text-ink-3">At most-likely rates, not the simulated range</span>
       </div>
+      {top && top.switchValue !== null ? (
+        <p className="text-xs text-ink-2">
+          Pays back only if {top.label} is {top.direction === "ge" ? "at least" : "at most"} <span className="font-medium tabular-nums text-ink">{fmtSwitch(top, top.switchValue, money)}</span> (now {fmtSwitch(top, top.assumed, money)})
+          {m.lossChance !== null && m.costUsd > 0 ? ` · ${Math.round(m.lossChance * 100)}% chance it doesn't, if its ranges are right` : ""}.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { playMaths } from "../../shared/agents/economics";
 import { describe, expect, it } from "vitest";
 import { DECISION_CONTRACT, playsTask } from "../../shared/agents/planTasks";
 import { growthPlaysSpec, lintPlays, type PlayDraft } from "../../shared/agents/specs";
@@ -43,7 +44,13 @@ describe("decision contract flag", () => {
   it("on: still at most 4 plays, one moonshot, and 'bankable' must be predictable", () => {
     expect(portfolio(lintPlays(["Referral ask", "Partner webinar", "Directory listing", "Review request", "Local press"].map((n) => play({ name: n, mechanic: `${n} campaign` })), econ, { decisionContract: true })).length).toBe(1);
     expect(portfolio(lintPlays([play({ kind: "moonshot" }), play({ kind: "moonshot", name: "Billboard stunt", mechanic: "Guerrilla billboard near the stadium" })], econ, { decisionContract: true })).length).toBe(1);
-    expect(portfolio(lintPlays([play({ kind: "bankable" })], econ, { decisionContract: true }))[0]).toBeTruthy(); // predictability 3
+    // Decision books (Hubbard Ch 6/14): with economics known, computed robustness decides "bankable", not the model's score.
+    expect(portfolio(lintPlays([play({ kind: "bankable" })], econ, { decisionContract: true }))).toEqual([]); // robust despite predictability 3
+    const fragile = play({ kind: "bankable", model: { ...play().model!, ownerHoursPerWeek: 6 } });
+    expect(playMaths(fragile as never, econ as never).robustness).toBe("fragile");
+    expect(portfolio(lintPlays([fragile], econ, { decisionContract: true }))[0]).toBeTruthy();
+    // Without economics the score still gates.
+    expect(portfolio(lintPlays([play({ kind: "bankable" })], undefined, { decisionContract: true }))[0]).toBeTruthy(); // predictability 3
   });
 
   it("the spec and task follow the flag; the default task is unchanged", () => {

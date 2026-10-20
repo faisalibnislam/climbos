@@ -13,7 +13,7 @@ Books:
 - **D1–D4:** Algorithms for Decision Making (Kochenderfer, Wheeler, Wray, MIT Press 2022)
 - **C1–C3:** Causal Inference: What If (Hernán & Robins, online 2026-08-19)
 - **K1–K2:** Trustworthy Online Controlled Experiments (Kohavi, Tang, Xu, CUP 2020)
-- **Not supplied:** Hubbard, *How to Measure Anything* (see README).
+- **H1–H3:** Hubbard, *How to Measure Anything*, 3rd ed. (Wiley 2014): see the section at the end.
 
 Status counts: deferred 33, implemented 40, kept as human judgment 6, partly implemented 10, rejected 3.
 
@@ -123,3 +123,41 @@ Status counts: deferred 33, implemented 40, kept as human judgment 6, partly imp
 | DX2-2 | Ex 27.2 | Shared components correlate outcomes; independent draws understate spread | `portfolioRange` | deferred (limitation stated) |
 | DX2-3 | Ex 19.3 | Large counts can make trivial differences "certain"; require materiality | `diagnosis.ts` | **implemented** (10% gap) |
 | DX2-4 | Ex 15.3 | Stop a test when the outcome can no longer change | `shared/abtest` | deferred (low value) |
+
+## Hubbard, *How to Measure Anything*, 3rd edition (H1–H3)
+
+| Idea | Locator | Principle (paraphrase) | Status here |
+|---|---|---|---|
+| H1-I1 | Ch 5 intro | Ask for a 90% range, not a point | **partly implemented**: ranges for revenue, margin and churn ("3–6") |
+| H1-I2 | Ch 3 economic objections | Measure only what could change the decision; find the threshold | **implemented**: `voi.ts switchPoints` |
+| H1-I3 | Ch 5 further improvements | One-sided threshold questions | **partly implemented**: "Matters if it's below X" |
+| H1-I4 | Ch 5 overconfidence | Estimates aren't measurements | deferred (records vs estimate flag) |
+| H1-I5 | Ch 5 calibration exercise | Calibration is measurable against outcomes | **implemented**: `forecastCalibration`, results brief |
+| H1-I6 | Ch 4 definitions | Ranges must state their probability | deferred (triangular-bound reading documented) |
+| H1-I7 | Ch 5 anchoring | Don't show a number before asking | deferred (the placeholder still shows the assumed value) |
+| H1-I8 | Ch 4 intro | A measurement needs a stated decision and alternatives | deferred (experiment schema) |
+| H1-I9 | Ch 3 | Ordinal scores aren't measurements | **implemented**: bankable gated on computed robustness |
+| H1-I10 | Ch 3 rule of five | Tiny samples are informative under high uncertainty | already covered by `bayes.ts` |
+| H2-I1 | Ch 7 ranges | Threshold first, for every input | **implemented** |
+| H2-I2 | Ch 7 EOL/EVPI | Value of information = expected opportunity loss removed | **implemented** (sourced ranges only) |
+| H2-I3 | Ch 7 imperfect world | Measure iteratively, to the threshold | **partly implemented**: computed stop rule; EVSI deferred |
+| H2-I4 | Ch 6 Monte Carlo | Decide on expected loss, not the most-likely value | **implemented**: expected ranking plus "do nothing" |
+| H2-I5 | Ch 9 measure to threshold | Ask the question relative to the threshold | **partly implemented** |
+| H2-I6 | Ch 6/7 | Ranges must state coverage | deferred |
+| H2-I7 | Ch 9 proportions | Small-sample proportion intervals are Beta posteriors | already covered by `bayes.ts` |
+| H2-I8 | Ch 9 easiest statistic | Min and max of five as a range | deferred |
+| H2-I9 | Ch 6 how not to quantify risk | Use the computed chance of loss, not ordinal scores | **implemented**: `lossChance`, bankable gate |
+| H2-I10 | Ch 9 catch-recatch | Overlap of two samples estimates the unseen | deferred |
+| H2-I11 | Ch 8 decomposition | Decompose uncertain variables | kept as human judgment |
+| H2-I12 | Ch 8 measure just enough | Spend about 2–10% of EVPI | deferred |
+| H2-I13 | Ch 7 multiple variables | Information value depends on the portfolio decision | deferred |
+| H3-I1 | Ch 14 | Screen every uncertain variable | **implemented**: funnel rates and reach included |
+| H3-I2 | Ch 14 | Compare with doing nothing | **implemented**: `selectPortfolio` |
+| H3-I3 | Ch 12 placebo | Don't let a score stand in for a computed quantity | **implemented**: bankable gate |
+| H3-I4 | Ch 12 linear models | A weight's real effect depends on its spread | deferred (scoring weight test) |
+| H3-I5 | Ch 12 Lens model | Derive weights from judgments | kept as human judgment / deferred |
+| H3-I6 | Ch 12 consistency | Test judges' repeat consistency | deferred (needs a paid bench) |
+| H3-I7 | Ch 11 risk tolerance | Measure the investment boundary | **partly implemented**: loss chance shown; elicitation deferred |
+| H3-I8 | Ch 10 Bayesian inversion | Calibrated prior plus a small sample | deferred |
+| H3-I9 | Ch 10 | Judge probabilities by calibration | **implemented** (80% band) |
+| H3-I10 | Ch 10 heterogeneous benchmarking | Reference points from dissimilar cases | rejected (benchmarks stay thresholds) |

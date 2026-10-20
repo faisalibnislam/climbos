@@ -5,7 +5,7 @@
  * early noise doesn't swing the plan).
  */
 import type { PlayModel } from "../agents/economics";
-import { betaPosterior, poissonCdf, probBelow } from "../analysis/bayes";
+import { betaPosterior, binomialCdf, poissonCdf, probBelow } from "../analysis/bayes";
 
 /*
  * Decision books (2026-10-20):
@@ -116,6 +116,19 @@ function leading(steps: StepActual[]): "short" | "ok" | "thin" {
   const s = steps.find((x) => !stepTooThin(x));
   if (!s) return "thin";
   return stepClearlyShort(s) ? "short" : "ok";
+}
+
+/**
+ * Forecast calibration (Hubbard Ch 5; Kochenderfer Ch 14): of the plays that ran their full horizon with every
+ * week logged, how many landed inside their P10–P90 range? That band is an 80% range, so about 80% should.
+ * A low count means ranges were too narrow (overconfident); the next plan should say so. Predictions were saved
+ * with the plan before results, so this compares honestly.
+ */
+export function forecastCalibration(rows: { customers: number; p10: number; p90: number }[]): { matured: number; inside: number; expected: number; pTooFew: number; verdict: "too_few_plays" | "overconfident" | "consistent" } {
+  const n = rows.length;
+  const inside = rows.filter((r) => r.customers >= r.p10 && r.customers <= r.p90).length;
+  const pTooFew = n ? binomialCdf(inside, n, 0.8) : 1;
+  return { matured: n, inside, expected: Math.round(n * 0.8 * 10) / 10, pTooFew: Math.round(pTooFew * 1000) / 1000, verdict: n < 3 ? "too_few_plays" : pTooFew <= 0.05 ? "overconfident" : "consistent" };
 }
 
 /** One line per play for the next plan's brief: observed counts are first-party facts (grade A). */

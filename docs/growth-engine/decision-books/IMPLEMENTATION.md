@@ -58,6 +58,24 @@ Branch `decision-engine-books`, cut from `growth-engine-v2` at `1321d8e`. Editio
 | **Callers** | Play cards (`PlayResults.tsx` via `forStrategy`). The next plan's `resultsBrief`. The outcome form `ExperimentOutcome.tsx`: new "Comparison group chosen" select; "Exposed" is relabelled "Assigned to the change". Schema `experiments.analyses[].assignment` (optional). |
 | **Compatibility** | Stored analyses keep their saved inference. New holdout outcomes default to "At random" in the form, so the owner must change it if the group was hand-picked. |
 
+## 6. What would change the decision: value of information (Hubbard, 3rd edition)
+
+| | |
+|---|---|
+| **Before** | `decisionQuestions` swept revenue, margin, churn and owner hour across ranges the code made up (×0.5–×1.5, ×0.6–×1.25, ×0.5–×2). It counted flips without their stakes, ignored funnel rates, and showed no threshold. "Bankable" rested on the model's 1–5 predictability score. A set with negative expected contribution could still be selected. Ranges were never checked against outcomes. |
+| **Source** | Hubbard Ch 3 (measure what could change a decision), Ch 5 (calibrated ranges; calibration is measurable), Ch 6 (Monte Carlo risk; ordinal scores aren't measurements), Ch 7 (thresholds, expected opportunity loss, EVPI), Ch 9 (measure to the threshold), Ch 14 (AIE: screen every variable; include "do nothing"). |
+| **Algorithm** | New `shared/agents/voi.ts`. **`switchPoints(play, economics)`:** for reach, every step rate, revenue, margin, churn and owner-hour value, the break-even by bisection on the play's net contribution (point arithmetic, no simulation), with direction and margin from today's value. **EVPI** per input: expected loss of today's go/no-go call over a triangular range (401-point grid), computed only when the range carries an owner, research or benchmark source. **`stopRule(n, switch)`:** stop when successes ≤ k, the largest k with (k+1)/(n+2) below the switch rate; null when n is too small to show failure. **`playMaths`:** gains `lossChance` (share of seeded draws not paying back) and a `pointOnly` mode for searches. **`decidesLine`:** one locked line per play ("Decides it: pays back only if reply rate is at least 3.2%…; knowing it first is worth up to $X if its stated range is right; computed stop rule…"). **`decisionQuestions`:** keeps its flip screen but each question carries `switchValue` and direction, and the form says "Matters if it's below X". **Owner ranges:** typing "3–6" stores a range for revenue, margin or churn (`unitEconomics.ranges`; the midpoint is the value; a later single number replaces it), so EVPI uses the owner's own range. **Bankable** needs computed robustness (pays back at P10) when economics are known; the score gates only otherwise. **`selectPortfolio`:** returns "doing nothing new" when every set's expected contribution is below its cost. **`forecastCalibration`:** plays that ran their full horizon, fully logged, are checked against their P10–P90 (an 80% range) with an exact binomial tail; the next plan's brief says if past ranges were too narrow. |
+| **Callers** | Locked numbers (plays prompt and plan). Plan card `PlayEconomics` (ExpertPlan.tsx) shows the deciding input and the loss chance. `workspace.ts` passes `decisionQuestions` to "Sharpen this plan", which accepts ranges, through `setUnitEconomics` (validated: low < high, same bounds, value required). `resultsBrief` adds the calibration line. Plays lint gates bankable. |
+| **Assumptions** | Triangular reading of low/most-likely/high, the shape the forecasts already simulate; Hubbard reads them as 90% ranges with tails, which would raise EVPI. Calibration target 80%, because P10–P90 is an 80% band. Expected-value ranking is risk-neutral; the loss chance is shown beside it. |
+| **Cost** | About 7 inputs × (60 bisection + 401 grid) point evaluations per play; a 4-play locked-numbers call stays well under the 1.5 s test bound. |
+| **Compatibility** | New optional fields only (`unitEconomics.ranges`, `OwnerQuestion.switchValue` and `switchDirection`, `PlayMaths.lossChance`). Old plans recompute these at read time. |
+
+**Before → after (hypothetical):**
+- A knife-edge play (most-likely pays back; range skewed low) used to be selected. Now: "doing nothing new beats every set; run only capped tests that measure the deciding input first".
+- A bankable play that pays back only at its most-likely rates used to pass on a model score of 4. Now it gets a lint error asking to firm the deciding input or call it creative.
+- A churn question used to read "Decides whether a play pays back". Now it adds "A play pays back only if it's at most 51.2%", and the form says "Matters if it's above 51.2 %/month".
+- "10 of 10 matured plays" used to give no calibration. Now 5 of 10 inside gives "overconfident (P = 0.033): widen this plan's ranges".
+
 ## Follow-up from the ADM exercise sets
 
 Kochenderfer et al. Ex 4.1, 6.5–6.7, 14.5, 19.3, 20.2, 21.1 and 27.2.
@@ -91,7 +109,7 @@ Kochenderfer et al. Ex 4.1, 6.5–6.7, 14.5, 19.3, 20.2, 21.1 and 27.2.
 
 ## Verification performed
 
-- `vitest run`: 129 files, 974 tests passing. That includes `tests/unit/decision-books.test.ts` (28 acceptance, before/after and follow-up cases) and updated expectations in 9 existing test files, where a test encoded the corrected behaviour.
+- `vitest run`: 131 files, 986 tests passing. That includes `tests/unit/decision-books.test.ts` (28 acceptance, before/after and follow-up cases), `tests/unit/decision-voi.test.ts` (11 cases; EVPI checked against an independent 200,000-step integration; binomial tail 0.0328) and `tests/convex/owner-ranges.test.ts` and updated expectations in 9 existing test files, where a test encoded the corrected behaviour.
 - `tsc` (app and Convex): clean, apart from pre-existing generated `.next` types.
 - ESLint on the changed files: 0 errors (2 pre-existing warnings in `jobs.ts`).
 - The Beta and Poisson helpers were checked against closed forms (P = 0.5563, 0.5934, 0.2381).
@@ -116,7 +134,10 @@ Kochenderfer et al. Ex 4.1, 6.5–6.7, 14.5, 19.3, 20.2, 21.1 and 27.2.
 
 | Item | Reason |
 |---|---|
-| Value-of-information calculation | Hubbard's book isn't supplied yet; switch-point tools stand in. |
+| Records vs estimate flag on owner inputs (Hubbard Ch 5) | Needs a UI choice; ranges cover most of the need. |
+| Pilot value (EVSI) and spend at 2–10% of EVPI | Needs a sampling model per step; the stop rule covers the decision. |
+| Owner risk tolerance (investment boundary) | Needs elicitation UI; loss chance shown meanwhile. |
+| Weighted channel scores: show when weights alone decide the pick (Hubbard Ch 12) | Scoring test planned; weights stay owner judgement. |
 | Correlated draws for plays sharing a step | Needs plays to declare shared steps. |
 | Censoring of immature weeks in play results | Needs a per-play lag. |
 | Reported k-of-n plays | Needs a "no result" state per play. |

@@ -5,6 +5,7 @@ import { createRng } from "../forecasting/prng";
 import { goalGap, goalLines, type GoalGap, type GoalTarget } from "./goal";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 import { playStage } from "./diagnosis";
+import { decidesLine, switchPoints } from "./voi";
 
 /**
  * Growth maths in code, not prose (spec §15–17): each play's inputs (reach,
@@ -66,7 +67,12 @@ export interface Economics {
   ownerHourUsd?: number;
   /** Workspace currency (ISO code), set by code. Every "Usd" amount here is in this currency; absent means USD. */
   currency?: string;
+  /** Ranges the owner gave instead of one number (Hubbard Ch 5): value of information is computed over these only. */
+  ranges?: OwnerRanges;
 }
+
+/** Owner-stated low–high ranges (their 90% range, labelled judgement); the point value is the midpoint. */
+export type OwnerRanges = Partial<Record<"revenue" | "margin" | "churn", { low: number; high: number }>>;
 
 /** Numbers the owner confirmed (businesses.unitEconomics); they always beat the model's assumptions. */
 export interface OwnerEconomics {
@@ -80,6 +86,7 @@ export interface OwnerEconomics {
   newCustomersPerMonth?: number;
   /** When the owner last confirmed these numbers. */
   updatedAt?: number;
+  ranges?: OwnerRanges;
 }
 export interface PlayLike {
   name: string;
@@ -136,6 +143,8 @@ export interface PlayMaths {
   robustness: "robust" | "fragile" | "loses" | "unknown";
   /** Customers needed in the horizon for cost per customer to equal value: the decision switch point. */
   breakevenCustomers: number | null;
+  /** Share of the seeded draws where the play doesn't pay back (only when it has ranges and value is known); "if the ranges are right". */
+  lossChance: number | null;
 }
 
 /** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
@@ -194,6 +203,12 @@ function baselineCustomers(m: PlayModel, weeks: number): number {
   return rates.some(Number.isNaN) ? 0 : (funnelCustomers(Math.max(0, m.weeklyReach), rates) ?? 0) * weeks;
 }
 
+/** Most-likely customers only (no draws). */
+function customersPoint(m: PlayModel, weeks: number): number {
+  if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return 0;
+  return Math.max(0, (funnelCustomers(Math.max(0, m.weeklyReach), m.steps.map((s) => s.rate)) ?? 0) * weeks - baselineCustomers(m, weeks));
+}
+
 /** Seeded draws of a play's customers (sorted), or the point value when it has no ranges. Extra customers only when baselines are given. */
 export function simulateSamples(m: PlayModel, weeks: number, seed: string): number[] | number {
   const reach = Math.max(0, m.weeklyReach);
@@ -225,7 +240,8 @@ export function simulateSamples(m: PlayModel, weeks: number, seed: string): numb
   return out;
 }
 
-export function playMaths(p: PlayLike, e: Economics): PlayMaths {
+/** `pointOnly` skips the simulation (range = the point): for searches that only need the most-likely arithmetic (voi.ts). */
+export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean } = {}): PlayMaths {
   if (!p.model?.steps) p = { ...p, model: { weeklyReach: 0, steps: [], monthlySpendUsd: 0, ownerHoursPerWeek: 0 } };
   // The actual horizon: 3 days is 3/7 of a week of reach, not a full week (REQ-MATH-04).
   const days = p.horizonDays > 0 ? p.horizonDays : 90;
@@ -234,7 +250,8 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
   const rates = p.model.steps.map((s) => rateOf(s.rate));
   const incremental = p.model.steps.some((s) => s.baselineRate !== undefined);
   const customers = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks - baselineCustomers(p.model, weeks));
-  const range = simulateCustomers(p.model, weeks, `${p.name}|${p.kind}`);
+  const draws = opts.pointOnly ? customersPoint(p.model, weeks) : simulateSamples(p.model, weeks, `${p.name}|${p.kind}`);
+  const range = typeof draws === "number" ? { p10: draws, p50: draws, p90: draws } : { p10: quantile(draws, 0.1), p50: quantile(draws, 0.5), p90: quantile(draws, 0.9) };
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
   const hourUsd = ownerHourOf(e);
@@ -266,6 +283,7 @@ export function playMaths(p: PlayLike, e: Economics): PlayMaths {
     incremental,
     robustness,
     breakevenCustomers: valueUsd !== null && valueUsd > 0 ? costUsd / valueUsd : null,
+    lossChance: valueUsd === null || typeof draws === "number" ? null : Math.round((draws.filter((c) => c * valueUsd < costUsd).length / draws.length) * 1000) / 1000,
   };
 }
 
@@ -430,10 +448,23 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   }
   const score = (o: Opt) => (o.net ?? o.expectedCustomers);
   opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
-  const best = opts[0];
+  // Doing nothing new is always an option: a set whose expected contribution is below its cost loses to it (Hubbard Ch 14; Kochenderfer Ch 6).
+  const best = opts[0] && (opts[0].net === null || opts[0].net >= 0) ? opts[0] : undefined;
   const leftWhy = (i: number) => (losers.has(i) ? "loses money at its most-likely rates" : "doesn't fit with the others under the budget, hours or capacity");
   const all = ps.map((_, i) => i);
-  if (!best) return { selected: [], customers: 0, spendUsdMonth: 0, expectedCustomers: 0, ownerHoursWeek: 0, netUsd: null, allFit: false, left: all.map((i) => ({ name: ps[i].name, why: leftWhy(i) })), runnerUp: null, basis: "No play fits the limits on its own." };
+  if (!best)
+    return {
+      selected: [],
+      customers: 0,
+      spendUsdMonth: 0,
+      expectedCustomers: 0,
+      ownerHoursWeek: 0,
+      netUsd: null,
+      allFit: false,
+      left: all.map((i) => ({ name: ps[i].name, why: opts.length ? "every set's expected contribution is below its cost" : leftWhy(i) })),
+      runnerUp: opts[0] ? { selected: opts[0].idx.map((i) => ps[i].name), customers: opts[0].customers, netUsd: opts[0].net } : null,
+      basis: opts.length ? "Doing nothing new beats every set at expected values: run only capped tests that measure the deciding input first." : "No play fits the limits on its own.",
+    };
   const key = (o: Opt) => o.idx.join(",");
   // The strongest alternative must beat the choice on something (more customers, less cash or fewer hours); a set worse on every count isn't a trade-off (Kochenderfer Ex 14.5).
   const runner = opts.find((o) => key(o) !== key(best) && (o.expectedCustomers > best.expectedCustomers + 1e-9 || o.spend < best.spend - 1e-9 || o.hours < best.hours - 1e-9)) ?? null;
@@ -492,7 +523,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}. ${basisNote(p, e)}`),
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     ...portfolioLine(out, { ...(limits ?? {}), horizonDays: h }, usd),
@@ -554,6 +585,8 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
     out.sources!.ownerHour = ownerTag(owner);
     confirmed.push("owner hour");
   }
+  const rk = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" } as const;
+  for (const [k, r] of Object.entries(rk)) if (owner.ranges?.[r] && confirmed.includes(r) && typeof owner[k as keyof typeof rk] === "number") out.ranges = { ...(out.ranges ?? {}), [r]: owner.ranges[r] };
   if (confirmed.length) out.basis = `Owner confirmed ${confirmed.join(", ")}.${e.basis ? ` ${e.basis}` : ""}`.slice(0, 400);
   return out;
 }
@@ -565,8 +598,12 @@ export interface OwnerQuestion {
   /** The value the plan assumed, for the input's placeholder. */
   assumed: number;
   unit: "usd_month" | "share" | "share_month" | "usd_hour" | "hours_week" | "count_month";
-  /** Why it matters: which plays' verdicts flip across a plausible range. */
+  /** Why it matters: which plays' verdicts flip across a plausible range, with the value where they flip. */
   why: string;
+  /** The value where the most sensitive play flips (Hubbard's threshold): the owner only needs to know which side they're on. */
+  switchValue?: number;
+  /** ge: plays pay back only at or above the switch value; le: at or below. */
+  switchDirection?: "ge" | "le";
 }
 
 const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> = {
@@ -597,6 +634,12 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const churn = churnOf(e) ?? 0.05;
   if (assumed.has("churn")) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
   if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: ownerHourOf(e), low: thresholdIn(20, e.currency), high: thresholdIn(150, e.currency) });
+  // Switch values (Hubbard Ch 7): the value where each play flips; shown to the owner instead of a bare question.
+  const switchOf = (key: QuestionKey) => {
+    const k = key === "revenuePerCustomerMonthUsd" ? "revenue" : key === "grossMargin" ? "margin" : key === "monthlyChurn" ? "churn" : "ownerHour";
+    const sps = plays.map((p) => switchPoints(p, e).find((s) => s.key === k)).filter((s): s is NonNullable<typeof s> => Boolean(s && s.switchValue !== null));
+    return sps.sort((a, b) => (a.margin ?? Infinity) - (b.margin ?? Infinity))[0];
+  };
   const scored = candidates.map((c) => {
     let flips = 0;
     let paybackSwing = 0;
@@ -626,12 +669,17 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
     .filter((x) => x.flips > 0 || x.paybackSwing >= 0.5)
     .sort((a, b) => b.flips - a.flips || b.paybackSwing - a.paybackSwing)
     .slice(0, max)
-    .map(({ c, flips }) => ({
-      key: c.key,
-      question: QUESTION[c.key].q,
-      assumed: Math.round(c.value * 1000) / 1000,
-      unit: QUESTION[c.key].unit,
-      why: flips > 0 ? `Decides whether ${flips === 1 ? "a play pays back" : `${flips} plays pay back`}.` : "Changes how fast your main play pays back.",
-    })),
+    .map(({ c, flips }) => {
+      const sw = switchOf(c.key);
+      const at = sw?.switchValue != null ? ` A play pays back only if it's ${sw.direction === "ge" ? "at least" : "at most"} ${c.key === "grossMargin" || c.key === "monthlyChurn" ? `${Math.round(sw.switchValue * 1000) / 10}%` : formatMoney(sw.switchValue, e.currency)}.` : "";
+      return {
+        key: c.key,
+        question: QUESTION[c.key].q,
+        assumed: Math.round(c.value * 1000) / 1000,
+        unit: QUESTION[c.key].unit,
+        why: `${flips > 0 ? `Decides whether ${flips === 1 ? "a play pays back" : `${flips} plays pay back`}.` : "Changes how fast your main play pays back."}${at}`,
+        ...(sw?.switchValue != null ? { switchValue: Math.round(sw.switchValue * 10000) / 10000, switchDirection: sw.direction } : {}),
+      };
+    }),
   ].slice(0, max);
 }

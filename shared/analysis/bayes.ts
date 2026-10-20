@@ -143,6 +143,16 @@ export function poissonCdf(k: number, lambda: number): number {
   return Math.min(1, sum);
 }
 
+/** Binomial P(X ≤ k) for n trials at probability p (exact sum; n is small here). */
+export function binomialCdf(k: number, n: number, p: number): number {
+  if (!(p >= 0 && p <= 1) || !(n >= 0)) throw new RangeError("need 0 ≤ p ≤ 1 and n ≥ 0");
+  if (k < 0) return 0;
+  if (k >= n) return 1;
+  let sum = 0;
+  for (let i = 0; i <= Math.floor(k); i++) sum += Math.exp(logGamma(n + 1) - logGamma(i + 1) - logGamma(n - i + 1) + (i ? i * Math.log(p) : 0) + (n - i ? (n - i) * Math.log(1 - p) : 0));
+  return Math.min(1, sum);
+}
+
 /** Display: "4/30 (5–25%)". */
 export function rangeText(p: BetaPosterior): string {
   const pc = (v: number) => `${Math.round(v * 1000) / 10}%`;

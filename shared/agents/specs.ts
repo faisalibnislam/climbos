@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics, portfolioP50, selectPortfolio, withForecasts, type Economics } from "./economics";
+import { lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -206,14 +206,23 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
   const scored = plays.map((p) => ({ p, s: playScores(p) }));
   const bankable = scored.filter((x) => x.p.kind === "bankable");
+  // "Bankable" is decided by computed robustness when what a customer is worth is known (Hubbard Ch 6/14): it must pay back
+  // even at the low end of its own range. The model's 1–5 predictability score only decides when robustness can't be computed.
+  const robust = (p: PlayDraft) => (economics && (p as { model?: { steps?: unknown[] } }).model?.steps?.length ? playMaths(p as never, economics).robustness : "unknown");
+  scored.forEach((x, i) => {
+    if (x.p.kind !== "bankable") return;
+    const r = robust(x.p);
+    if (r === "fragile") err(`"${x.p.name}" is labelled bankable but pays back only at its most-likely rates, not at the low end of its range (computed). Firm up the deciding input or call it creative with a capped test.`, `plays[${i}]`);
+  });
+  const scoreGate = (x: { p: PlayDraft; s: ReturnType<typeof playScores> }) => robust(x.p) === "unknown" && x.s.predictability < 4;
   if (opts.decisionContract) {
     // Focus over shape: 1–4 plays of any kind; the goal gap (code) reports a shortfall instead of pushing volume.
     if (plays.length < 1 || plays.length > 4) err(`${plays.length} plays; give 1 to 4.`);
-    if (bankable.some((x) => x.s.predictability < 4)) err("A play labelled bankable needs predictability ≥ 4; otherwise call it creative.");
+    if (bankable.some(scoreGate)) err("A play labelled bankable needs predictability ≥ 4; otherwise call it creative.");
   } else {
     if (plays.length < 2 || plays.length > 4) err(`${plays.length} plays; the portfolio needs 2 to 4.`);
     if (bankable.length !== 1) err(`${bankable.length} bankable plays; exactly one is needed.`);
-    if (bankable[0] && bankable[0].s.predictability < 4) err("The bankable play needs predictability ≥ 4.");
+    if (bankable[0] && scoreGate(bankable[0])) err("The bankable play needs predictability ≥ 4.");
     if (!scored.some((x) => x.p.kind === "creative" && x.s.distinctiveness >= 4 && x.s.predictability >= 3)) err("At least one creative play needs distinctiveness ≥ 4 and predictability ≥ 3 (a proven mechanic on a non-obvious audience, asset or moment).");
   }
   if (plays.filter((p) => p.kind === "moonshot").length > 1) err("At most one moonshot.");

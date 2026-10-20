@@ -4,7 +4,7 @@ import { internalQuery, mutation, query, type QueryCtx } from "./_generated/serv
 import type { Doc, Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
-import { playActuals, resultsLine, type PlayActuals } from "../shared/growth/actuals";
+import { forecastCalibration, playActuals, resultsLine, type PlayActuals } from "../shared/growth/actuals";
 import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
 import type { PlayModel } from "../shared/agents/economics";
 
@@ -29,7 +29,7 @@ function playsOf(s: Doc<"strategies">): SavedPlay[] {
   return ((s.expert?.plays ?? []) as SavedPlay[]).filter((p) => p.model?.steps?.length);
 }
 
-async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; entries: Doc<"playResults">[] }[]> {
+async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; entries: Doc<"playResults">[]; forecast: { p10: number; p90: number }; horizonWeeks: number }[]> {
   const out = [];
   const all = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400);
   for (const p of playsOf(s)) {
@@ -38,7 +38,7 @@ async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: 
     if (!entries.length) continue;
     const weeks = (p.horizonDays || 90) / 7;
     // Time zero is the week the plan was made: earlier weeks aren't this play's results (Hernán & Robins Ch 22).
-    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks, { startWeek: weekOf(s._creationTime) }) });
+    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, forecast: { p10: p.p10 ?? 0, p90: p.p90 ?? 0 }, horizonWeeks: weeks, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks, { startWeek: weekOf(s._creationTime) }) });
   }
   return out;
 }
@@ -155,15 +155,21 @@ async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<
 export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(4);
   const lines: string[] = [];
+  const matured: { customers: number; p10: number; p90: number }[] = [];
   for (const s of plans)
-    for (const r of await actualsFor(ctx, s))
+    for (const r of await actualsFor(ctx, s)) {
+      // Calibration only on plays that ran their whole horizon with every week logged.
+      if (r.actuals.weeks >= Math.floor(r.horizonWeeks) && r.actuals.weeksSinceStart === r.actuals.weeks && r.forecast.p90 > 0) matured.push({ customers: r.actuals.customers, ...r.forecast });
       if (lines.length < 6) {
         lines.push(`- ${resultsLine(r.name, r.actuals)}`);
         // A play that's behind gets a diagnosis, not more budget (cycle 2).
         if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }))}`);
       }
+    }
+  const cal = forecastCalibration(matured);
   const { tested, notRun } = await outcomeLines(ctx, plans);
   const parts = [
+    cal.verdict !== "too_few_plays" ? `FORECAST CALIBRATION (computed; plays that ran their full horizon): ${cal.inside} of ${cal.matured} landed inside their P10–P90 range (an 80% range, so about ${cal.expected} expected).${cal.verdict === "overconfident" ? ` That few is unlikely by chance (P = ${cal.pTooFew}): past ranges were too narrow, so widen this plan's ranges and lean on measured rates.` : " Consistent with the stated ranges."}` : "",
     lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",
     tested.length ? `EXPERIMENT OUTCOMES (owner-reviewed; each label says what it can claim: OBSERVED and ATTRIBUTED are not proof of cause; only INCREMENTAL compared with a group that didn't get the change, so only those may be called incremental):\n${tested.join("\n")}` : "",
     notRun.length ? `TESTS NOT RUN (the plan wasn't carried out; draw no lesson about these channels):\n${notRun.join("\n")}` : "",

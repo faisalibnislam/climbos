@@ -18,6 +18,9 @@ const UNIT: Record<OwnerQuestion["unit"], { suffix: string; toInput: (v: number)
   count_month: { suffix: "/ month", toInput: (v) => String(Math.round(v)), fromInput: Number },
 };
 
+/** Inputs that accept a range ("3–6"). */
+const RANGE_KEY: Record<string, "revenue" | "margin" | "churn" | undefined> = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" };
+
 /** Short labels; the full question stays available to screen readers and in the tooltip. */
 const SHORT: Record<string, string> = {
   revenuePerCustomerMonthUsd: "Revenue per customer",
@@ -43,14 +46,26 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
   const filled = questions.filter((q) => vals[q.key]?.trim());
   const submit = async () => {
     const args: Record<string, number> = {};
+    const ranges: Record<string, { low: number; high: number }> = {};
     for (const q of filled) {
+      // "3–6" is a range (Hubbard: a range you're 90% sure of beats a guessed point); its midpoint is the value.
+      const m = vals[q.key].trim().match(/^([\d.,]+)\s*(?:-|–|to)\s*([\d.,]+)$/i);
+      const rk = RANGE_KEY[q.key];
+      if (m && rk) {
+        const lo = UNIT[q.unit].fromInput(m[1].replace(/,/g, ""));
+        const hi = UNIT[q.unit].fromInput(m[2].replace(/,/g, ""));
+        if (!(Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi > lo)) return toast({ tone: "danger", title: `Check the range: ${q.question}` });
+        ranges[rk] = { low: lo, high: hi };
+        args[q.key] = (lo + hi) / 2;
+        continue;
+      }
       const n = UNIT[q.unit].fromInput(vals[q.key]);
       if (!Number.isFinite(n) || n <= 0) return toast({ tone: "danger", title: `Check: ${q.question}` });
       args[q.key] = n;
     }
     setBusy(true);
     try {
-      await save({ slug, ...args });
+      await save({ slug, ...args, ...(Object.keys(ranges).length ? { ranges } : {}) });
       setVals({});
       toast({ tone: "success", title: "Numbers updated" });
     } catch (e) {
@@ -88,7 +103,10 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
                   <Input id={id} inputMode="decimal" disabled={!canEdit || busy} placeholder={unit.toInput(q.assumed)} value={vals[q.key] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [q.key]: e.target.value }))} className="pr-24" />
                   <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-3">{unit.suffix}</span>
                 </div>
-                <p className="text-xs text-ink-3">Assumed {unit.toInput(q.assumed)}</p>
+                <p className="text-xs text-ink-3">
+                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${unit.toInput(q.switchValue)} ${unit.suffix}` : `Assumed ${unit.toInput(q.assumed)}`}
+                  {RANGE_KEY[q.key] ? " · a range like 3–6 is fine" : ""}
+                </p>
               </div>
             );
           })}
