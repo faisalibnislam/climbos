@@ -1,0 +1,37 @@
+{
+  "playbook_id": "growth_outcome_review_v1",
+  "status": "proposed",
+  "module": "OutcomeReview",
+  "required_inputs": [
+    "experiment_contract_version",
+    "assignment_counts",
+    "metric_counts",
+    "data_freshness",
+    "actual_execution_log",
+    "guardrail_results",
+    "analysis_method_version"
+  ],
+  "checks_before_effect_claim": [
+    "population_matches_contract",
+    "allocation_integrity_checked",
+    "outcome_window_mature",
+    "missingness_reviewed",
+    "exclusions_symmetric",
+    "multiplicity_and_stopping_respected"
+  ],
+  "permitted_result_states": [
+    "invalid",
+    "inconclusive",
+    "unfavorable",
+    "favorable",
+    "awaiting_observation"
+  ],
+  "commercial_translation": {
+    "formula": "incremental_units_times_contribution_minus_changed_costs",
+    "future_volume_kind": "assumption",
+    "effect_kind": "estimated_from_experiment",
+    "predictive_interval_claim_allowed": false
+  },
+  "automatic_deployment": false,
+  "human_review_required": true
+}

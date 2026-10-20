@@ -1,0 +1,25 @@
+id: seo.opportunity_diagnosis.v1
+scope: tenant
+inputs:
+  required: [business_snapshot_id, goal, observation_window]
+  optional: [search_report_id, analytics_report_id, url_inventory_id]
+steps:
+  - id: verify_business
+    output: capability_claims
+    on_missing: request_owner_evidence
+  - id: inspect_access
+    checks: [http_status, robots_directives, canonical, rendered_content]
+    on_failed_inspection: record_unknown
+  - id: map_demand
+    output: customer_tasks
+    exclude: [unsupported_features, unavailable_locations]
+  - id: model_value
+    method: deterministic_scenarios
+    assumptions_required: true
+  - id: recommend
+    max_actions: 3
+    require: [mechanism, evidence_ids, effort, maintenance, measurement]
+authorization:
+  research: authorized_sources_only
+  publish: separate_approval
+outputs: [diagnosis, recommendations, unresolved_questions]

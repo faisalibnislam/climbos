@@ -1,0 +1,126 @@
+{
+  "reviewed_at": "2026-10-19",
+  "reviewer": "Independent cross-review by Books 03/05 author",
+  "scope": [
+    "books/06_seo_content_ai_search.md",
+    "books/07_app_store_optimization.md",
+    "books/12_analytics_forecasting_pricing.md"
+  ],
+  "overall_status": "pass_after_one_localized_precision_fix",
+  "blocking_findings": [],
+  "localized_fixes": [
+    {
+      "file": "books/07_app_store_optimization.md",
+      "section": "8. Design experiments before producing variants",
+      "issue": "Provider metric labels were compressed; exact labels improve faithful integration.",
+      "resolution": "Replaced phrase with full Unique user install clicks, Unique user open clicks, and Unique user pre-registration clicks labels.",
+      "source": "https://support.google.com/googleplay/android-developer/answer/12053285?hl=en",
+      "word_delta": 7
+    }
+  ],
+  "checks": [
+    {
+      "file": "books/06_seo_content_ai_search.md",
+      "machine_readable_blocks_parsed": 2,
+      "conclusion": "Substantive prose, worked examples, decision guidance, AI applications, source references, and proposed ClimbOS mapping present."
+    },
+    {
+      "file": "books/07_app_store_optimization.md",
+      "machine_readable_blocks_parsed": 2,
+      "conclusion": "Substantive prose, worked examples, decision guidance, AI applications, source references, and proposed ClimbOS mapping present."
+    },
+    {
+      "file": "books/12_analytics_forecasting_pricing.md",
+      "machine_readable_blocks_parsed": 2,
+      "conclusion": "Substantive prose, worked examples, decision guidance, AI applications, source references, and proposed ClimbOS mapping present."
+    }
+  ],
+  "formula_checks": [
+    {
+      "book": "06",
+      "check": "300 visits x 8% activation x 10% paid x $120 = $288",
+      "result": "pass"
+    },
+    {
+      "book": "06",
+      "check": "$400 creation + four $100 maintenance cycles = $800; ten x $120 less $800 = $400",
+      "result": "pass"
+    },
+    {
+      "book": "07",
+      "check": "1000 installs,400 activations,40 payers yield40%,10%,4%;30/1500=2%",
+      "result": "pass"
+    },
+    {
+      "book": "07",
+      "check": "($6-$2)x5%=$0.20 per suitable install;$300/$0.20=1500 incremental installs",
+      "result": "pass under explicitly simplified cost boundary"
+    },
+    {
+      "book": "12",
+      "check": "60/200=30%;24/60=40%;24/200=12%;50 activations x30%x50 contribution=750 vs600 baseline",
+      "result": "pass"
+    },
+    {
+      "book": "12",
+      "check": "Margin floor12.30/.67=18.3582089552;$25 gives$13.05 cost,$11.95 contribution,47.8% margin",
+      "result": "pass"
+    },
+    {
+      "book": "12",
+      "check": "300/40=7.5,so eight whole customers exceed cost;20hours/2hours=10 capacity",
+      "result": "pass"
+    }
+  ],
+  "primary_policy_spot_checks": [
+    {
+      "book": "06",
+      "source": "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
+      "status": "independently_opened",
+      "finding": "July10,2026 update;dedicated report,inclusion control,and no-special-llms.txt/chunking/schema advice confirmed."
+    },
+    {
+      "book": "06",
+      "source": "https://support.google.com/webmasters/answer/16984139",
+      "status": "independently_opened",
+      "finding": "August31,2026 worldwide rollout,impression-focused reporting,absence at insufficient impressions,and export zeros for unavailable values confirmed."
+    },
+    {
+      "book": "06",
+      "source": "https://support.google.com/webmasters/answer/16908024",
+      "status": "independently_opened",
+      "finding": "Search inclusion is distinct from model-training control;global rollout and property inheritance documented."
+    },
+    {
+      "book": "07",
+      "source": "https://support.google.com/googleplay/android-developer/answer/12053285?hl=en",
+      "status": "independently_opened",
+      "finding": "Up to two experimental variants,current unique-user click labels,and default-graphics/localized distinction confirmed."
+    },
+    {
+      "book": "07",
+      "source": "https://developer.apple.com/app-store/custom-product-pages/",
+      "status": "independently_opened",
+      "finding": "Custom pages can appear in search through selected keywords;book correctly avoids obsolete universal link-only claim."
+    },
+    {
+      "book": "07",
+      "source": "https://developer.apple.com/app-store/search/",
+      "status": "independently_opened",
+      "finding": "Natural-language search,metadata-generated tags,100-character keywords,and relevance/user behavior confirmed."
+    }
+  ],
+  "cross_book_consistency": [
+    "Observed,assumed,and calculated distinctions and hypothetical labels preserved.",
+    "No invented universal store fee or model token price;Book12 requires live provider price registry.",
+    "Contribution margin distinct from company net profit,cash,and retained value.",
+    "Discovery distinct from activation,retention,and profit;direct-download Mac routing correct.",
+    "Convex,Vercel,Resend,and OpenAI-first responsibilities are proposed rather than claimed deployed.",
+    "Data access and account connection do not authorize publishing,sending,pricing changes,or spend."
+  ],
+  "limitations": [
+    "Editorial/arithmetic review,not production integration testing.",
+    "Originating authors checked most references;independent review spot-checked changing search/store capabilities.",
+    "No private Search Console or developer console accessed."
+  ]
+}

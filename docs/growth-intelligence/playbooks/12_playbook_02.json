@@ -1,0 +1,26 @@
+{
+  "playbook_id": "pricing.contribution_floor.v1",
+  "currency": "USD",
+  "inputs": {
+    "other_included_variable_cost": 12,
+    "fixed_payment_fee": 0.3,
+    "proportional_payment_fee": 0.03,
+    "target_contribution_margin": 0.3
+  },
+  "formula": "(other_included_variable_cost + fixed_payment_fee) / (1 - target_contribution_margin - proportional_payment_fee)",
+  "expected_result_rounded": 18.36,
+  "rounding": "display_two_decimals_calculate_full_precision",
+  "assertions": [
+    "all_costs_nonnegative",
+    "denominator_positive",
+    "currency_consistent",
+    "cost_policy_version_present",
+    "actual_provider_prices_not_inferred_from_example"
+  ],
+  "prohibited_interpretations": [
+    "minimum_price_is_optimal_market_price",
+    "contribution_margin_is_company_net_profit",
+    "illustrative_fees_are_current_provider_prices"
+  ],
+  "execution_authority": "none"
+}

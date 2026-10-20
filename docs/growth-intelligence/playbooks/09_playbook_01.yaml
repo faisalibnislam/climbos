@@ -1,0 +1,41 @@
+playbook_id: evidence_backed_social_cycle_v1
+version: 1
+status: proposed
+objective: qualified_demand_and_customer_learning
+required_inputs:
+  - business_snapshot_id
+  - audience_hypothesis_id
+  - allowed_claims_snapshot_id
+  - destination_capability_snapshot_id
+stages:
+  - discover_customer_question
+  - write_single_takeaway_brief
+  - generate_draft
+  - validate_claims_and_rights
+  - render_platform_preview
+  - request_owner_review
+  - freeze_content_hash
+  - schedule_eligibility_recheck
+  - publish_with_reconciliation
+  - route_responses
+  - record_learning
+publication_gates:
+  valid_destination_capability: true
+  current_owner_authorization: true
+  approved_content_hash_matches: true
+  asset_processing_complete: true
+  budget_available: true
+failure_behavior:
+  missing_evidence: return_to_draft
+  capability_missing: offer_manual_export
+  ambiguous_external_outcome: reconcile_before_retry
+measurement:
+  primary: qualified_next_steps
+  diagnostics:
+    - relevant_engagement
+    - destination_sessions
+    - owner_edit_minutes
+  guardrails:
+    - factual_error_incidents
+    - moderation_load
+    - duplicate_publications

@@ -1,0 +1,20 @@
+id: aso.audit.v1
+required_inputs:
+  - business_snapshot_id
+  - app_snapshot_id
+  - distribution_channel
+steps:
+  - id: verify_capabilities
+    require_evidence_for: [features, compatibility, pricing, privacy_claims]
+  - id: discover_store_support
+    outputs: [metadata_fields, experiment_types, reporting_routes]
+    on_unknown: manual_verification_task
+  - id: diagnose_funnel
+    stages: [exposure, listing, installation, activation, retained_value, contribution]
+    missing_metrics: preserve_unknown
+  - id: propose_actions
+    max_actions: 3
+    require: [hypothesis, evidence_ids, cost, owner, observation_window]
+execution:
+  default: draft_only
+  publishing_requires: scoped_approval

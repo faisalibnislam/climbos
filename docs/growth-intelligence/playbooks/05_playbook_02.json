@@ -1,0 +1,41 @@
+{
+  "playbook_id": "channel_staged_investment_v1",
+  "status": "proposed",
+  "module": "ChannelRunPlanner",
+  "inputs": {
+    "selected_channel_candidate_id": "required",
+    "approved_test_budget": "required",
+    "asset_versions": "required",
+    "audience_definition": "required",
+    "primary_commercial_metric": "required",
+    "observation_window_days": "required",
+    "approval_record_id": "nullable"
+  },
+  "stages": [
+    "validate_prerequisites",
+    "reserve_budget_and_capacity",
+    "prepare_exact_reviewable_assets",
+    "verify_action_specific_approval",
+    "execute_with_idempotent_action_identity",
+    "reconcile_provider_outcome",
+    "wait_for_defined_outcome_maturation",
+    "review_economics_quality_and_learning"
+  ],
+  "stop_conditions": [
+    "authorization_revoked",
+    "budget_exceeded",
+    "destination_broken",
+    "material_guardrail_breach"
+  ],
+  "result_states": [
+    "not_executed",
+    "executing",
+    "awaiting_observation",
+    "inconclusive",
+    "redesign",
+    "continue_bounded",
+    "scale_subject_to_approval"
+  ],
+  "automatic_budget_increase": false,
+  "prospect_database_assumed": false
+}

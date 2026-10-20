@@ -1,0 +1,102 @@
+{
+  "research_cutoff": "2026-10-19",
+  "sources": [
+    {
+      "id": "G03-S1",
+      "title": "Diagnosing Sample Ratio Mismatch in A/B Testing",
+      "url": "https://www.microsoft.com/en-us/research/articles/diagnosing-sample-ratio-mismatch-in-a-b-testing/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2020-09-14",
+      "claim_scope": "Sample ratio mismatch as an experiment-quality warning requiring diagnosis before effect interpretation.",
+      "evidence_summary": "Microsoft's primary experimentation publication describes assignment, execution, logging, and analysis defects that can create mismatch and advocates checking mismatch before trusting effects.",
+      "books": ["03_growth_experimentation"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G03-S2",
+      "title": "R: Power Calculations for Two-Sample Test for Proportions",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/power.prop.test.html",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Two-sample proportion power calculation arguments and per-group definition of n.",
+      "evidence_summary": "R stats documentation defines p1, p2, significance, power, and n per group; used as a reference convention, not as evidence of observed business conversion rates.",
+      "books": ["03_growth_experimentation"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G03-S3",
+      "title": "About Conversion Lift",
+      "url": "https://support.google.com/google-ads/answer/12003020?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Google Conversion Lift controlled comparison and account availability limits.",
+      "evidence_summary": "Google states Conversion Lift is not available to every account and describes exposed and control comparisons plus incremental conversion metrics.",
+      "books": ["03_growth_experimentation"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G03-S4",
+      "title": "Evaluation best practices",
+      "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Task-specific datasets and evaluations for AI workflow quality.",
+      "evidence_summary": "Primary OpenAI evaluation guidance supports explicit evaluation instead of impression-only model assessment; no claim of measured ClimbOS model superiority is derived.",
+      "books": ["03_growth_experimentation"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G05-S1",
+      "title": "AI features and your website",
+      "url": "https://developers.google.com/search/docs/appearance/ai-features",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Google's primary documentation for website participation in its AI search features.",
+      "evidence_summary": "Used for the limited claim that AI-mediated search has website documentation and changing platform requirements. No guaranteed traffic or ranking tactic is claimed.",
+      "books": ["05_channel_strategy"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G05-S2",
+      "title": "Get started with attribution",
+      "url": "https://support.google.com/analytics/answer/10596866?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Attribution assigns touchpoint credit under a model and reporting scope.",
+      "evidence_summary": "Google Analytics describes attribution models and credit assignment. The book's commercial recommendation distinguishes that operational reporting from a causal incrementality claim.",
+      "books": ["05_channel_strategy"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G05-S3",
+      "title": "Increasing Access — LinkedIn Marketing",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access?view=li-lms-2026-07",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "LinkedIn API product access, tiers, and permissions require verification for the proposed action.",
+      "evidence_summary": "Primary versioned LinkedIn documentation describes product-specific access and permissions. No claim is made that ClimbOS currently has approved API access.",
+      "books": ["05_channel_strategy"],
+      "verification_status": "primary_page_opened_and_read"
+    },
+    {
+      "id": "G05-S4",
+      "title": "Idempotency Keys — Resend",
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Provider support for idempotency keys in sending requests.",
+      "evidence_summary": "Resend documents request deduplication via idempotency keys. Application workflow state, reconciliation, and permission requirements are original proposed architecture guidance.",
+      "books": ["05_channel_strategy"],
+      "verification_status": "primary_page_opened_and_read"
+    }
+  ],
+  "limitations": [
+    "Primary documentation was checked on October 19, 2026; future platform changes require revalidation.",
+    "Null publication dates indicate no verified publication date was recorded; retrieval date is not publication date.",
+    "No live advertising account, customer analytics, production repository, or provider permission was inspected.",
+    "All numerical business cases are hypothetical teaching scenarios and not Formkit or ClimbOS observations.",
+    "Formula examples use stated simplifying assumptions; unsupported designs require specialist review.",
+    "Architecture and playbook names are proposed logical mappings, not claims of implemented production capability.",
+    "Source material is narrowly summarized; the extensive applied frameworks and cases are original synthesis."
+  ]
+}

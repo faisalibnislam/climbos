@@ -1,0 +1,34 @@
+playbook_id: growth_experiment_design_v1
+status: proposed
+module: ExperimentPlanner
+inputs:
+  business_snapshot_id: required
+  primary_metric_definition_id: required
+  baseline_probability: nullable
+  target_probability: nullable
+  eligible_units_per_week: nullable
+  randomization_unit: required
+  observation_window_days: required
+  evidence_ids: required
+policy:
+  external_actions_allowed: false
+  no_prospect_database_assumed: true
+  alpha: 0.05
+  power: 0.80
+  allocation: [0.5, 0.5]
+  test_family: fixed_horizon_two_sided
+steps:
+  - validate_tenant_scope
+  - validate_metric_population_period_and_units
+  - check_independence_and_interference_assumptions
+  - calculate_sample_with_verified_proportion_method_if_applicable
+  - calculate_duration_including_outcome_maturation
+  - compare_duration_and_exposure_to_owner_limits
+  - choose_randomized_or_alternative_learning_design
+  - require_approval_for_exact_intervention_version
+outputs:
+  feasibility: [feasible, infeasible, unknown, specialist_review]
+  sample_per_arm: nullable
+  estimated_duration_days: nullable
+  limitations: required
+  alternative_learning_plan: nullable

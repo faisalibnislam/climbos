@@ -1,0 +1,41 @@
+playbook_id: lifecycle_first_value_v1
+version: 1
+status: proposed
+purpose: help_eligible_users_complete_first_value
+entity: account
+required_inputs:
+  - business_snapshot_id
+  - activation_definition_id
+  - consent_evidence_id
+  - destination_validation_id
+eligibility:
+  relationship: explicitly_opted_in
+  lifecycle_state: started
+  activation_event_observed: false
+  marketing_suppressed: false
+  unresolved_service_incident: false
+trigger:
+  event: onboarding_obstacle_observed
+  delay_policy: business_configured
+pre_send_checks:
+  - recompute_lifecycle_state
+  - verify_current_permission
+  - check_global_contact_pressure
+  - validate_content_approval_hash
+  - reserve_dispatch_budget
+exit_conditions:
+  - activation_completed
+  - consent_withdrawn
+  - account_closed
+  - human_support_takes_ownership
+measurement:
+  primary: incremental_qualified_activation
+  downstream: paid_conversion_with_defined_window
+  guardrails:
+    - complaint_rate
+    - unsubscribe_rate
+    - support_load
+execution:
+  provider: resend
+  owner_authorization_required: true
+  on_unknown_outcome: reconcile_before_retry
