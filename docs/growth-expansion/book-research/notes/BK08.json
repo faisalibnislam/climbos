@@ -1,0 +1,909 @@
+{
+ "reading_id": "BK08",
+ "book_title": "Forget the Funnel",
+ "frameworks": [
+  {
+   "id": "BK08-K1",
+   "name": "Best-fit customer research: who to learn from and by which method",
+   "decision": "Whom to recruit for research and whether to run interviews, a survey, or both",
+   "business_models": [
+    "saas",
+    "subscription services",
+    "agencies",
+    "ecommerce with repeat buyers",
+    "local services with repeat clients"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "List of paying customers with start date",
+    "A value-realized signal per customer (usage, renewals, repeat orders, owner judgement)",
+    "Consent basis to contact customers for research"
+   ],
+   "prerequisites": [
+    "At least some customers who have solved their problem with the product",
+    "A named decision the research must inform (Book 02 §1)"
+   ],
+   "branches": [
+    {
+     "if": "Decision is what to say, whom to target or which Job to serve (attract more of the best)",
+     "then": "Recruit best-fit customers per BK08-F6 (recent payers who reached value)."
+    },
+    {
+     "if": "Decision is why people fail to activate, stall or churn",
+     "then": "Recruit for contrast (Book 02 §5): stalled evaluators, churned and non-buyers, kept as separate pools; best-fit customers only as a comparison pool."
+    },
+    {
+     "if": "Best-fit pool is large (author heuristic: 500+)",
+     "then": "Start with a short open-ended survey; target 25-50 good answers; follow with interviews."
+    },
+    {
+     "if": "Best-fit pool is small, or time for only one method",
+     "then": "10-15 interviews (or PB-interviews saturation stop)."
+    },
+    {
+     "if": "No best-fit customers yet",
+     "then": "Go to BK08-K2 audience research; label results as hypotheses."
+    }
+   ],
+   "steps": [
+    "State the decision",
+    "Filter customers: felt the problem, pay without hesitation, ongoing need, value realized, started 3-6 months ago (up to 12)",
+    "Count the pool and choose method",
+    "Ask what happened in sequence (old way, trigger, search, choice, certainty moment, new capability)",
+    "Keep raw answers with respondent counts"
+   ],
+   "exceptions_failure_modes": [
+    "Only happy customers interviewed for a churn question (selection bias)",
+    "Long-tenured customers cannot recall the trigger",
+    "Survey sent under marketing-only consent",
+    "Owner 'is the customer' and skips research (BK08-F10)"
+   ],
+   "requirements": {
+    "cash": "None (optional incentives)",
+    "labor": "Owner 5-10 hours for 10-15 interviews; less for a survey",
+    "capability": "Contact list, survey form or calendar",
+    "measurement": "Respondent and invite counts; response rate"
+   },
+   "metrics": [
+    "Invited, responded, usable responses",
+    "Share of answers that describe events rather than opinions"
+   ],
+   "guardrails": [
+    "No synthetic respondents or invented quotes",
+    "Research invitations contain no promotion",
+    "Owner approves every send; sends only from owner's channels with a consent basis"
+   ],
+   "stop_review": [
+    "Survey under 10 usable answers after 14 days: switch to interviews (CH-C2)",
+    "Interviews stop adding new struggle themes: stop",
+    "Answers scattered across many Jobs after ~10: narrow the segment (PB-interviews revise)"
+   ],
+   "alternatives": [
+    "No list or consent: audience research (BK08-K2) or public review mining (voc-research)",
+    "Tiny pool (<10 best customers): 3-5 interviews plus competitor reviews, labelled thin"
+   ],
+   "author_refs": [
+    "BK08-F6",
+    "BK08-F7",
+    "BK08-F8",
+    "BK08-F10",
+    "BK08-F9"
+   ],
+   "interpretation": "INTERPRETATION: The book's selection rule optimises for 'more of the customers we want'. It is the right sample for positioning and acquisition messaging and the wrong sample for diagnosing a leak, which Book 02 and BK05 handle by recruiting for contrast.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: PB-interviews v2 chooses the recruitment pool from the decision: best-fit recent payers for targeting/messaging decisions; contrast pools (stalled, churned, non-buyers) for activation/conversion/retention diagnoses.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: the 500-customer survey threshold and 10-15% response rate are shown as author heuristics, never as expected yields; the plan uses the owner's own list size and states the assumed rate.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: participants should have started paying within about 12 months so they can recall the trigger; older customers go in a separate pool.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: no research send without a recorded consent basis and owner approval.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "shared/playbooks/contracts.ts PB-interviews; skills/voc-research/SKILL.md (new own-customer branch)",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "shared/playbooks/contracts.ts:76-92 PB-interviews",
+     "docs/growth-intelligence/books/02_research_positioning.md §5",
+     "docs/growth-expansion/guides/05_customer_discovery.md",
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C2"
+    ],
+    "note": "PB-interviews has no participant-selection rule and no survey branch; CH-C2 adds surveys but not best-fit selection. Candidate PB-interviews v2."
+   },
+   "disagreements": "Book 02 §5 says recruit for contrast, not applause; FTF says learn only from the best. What decides: the decision type. Messaging/targeting decisions favour best-fit; leak diagnosis needs contrast. BK05/guide 05 favour episode questions about any recent instance; FTF's script is a success-story reconstruction. Both agree on past events over opinions.",
+   "eval_case_ids": [
+    "EV-BK08-K1-1",
+    "EV-BK08-K1-2"
+   ]
+  },
+  {
+   "id": "BK08-K2",
+   "name": "Future-customer research: website visitor survey and audience research",
+   "decision": "What message to lead with and what blocks signup when own-customer evidence is thin or the target is new",
+   "business_models": [
+    "saas",
+    "apps",
+    "ecommerce",
+    "local services with a website",
+    "agencies"
+   ],
+   "lifecycle_stages": [
+    "pre-launch",
+    "early",
+    "pivot",
+    "new segment"
+   ],
+   "evidence_required": [
+    "Site traffic level (for website survey)",
+    "Public sources where the audience talks (for audience research)"
+   ],
+   "prerequisites": [
+    "Owner permission to add an on-site survey",
+    "Privacy notice covering collected answers"
+   ],
+   "branches": [
+    {
+     "if": "Site has steady traffic",
+     "then": "Run a short on-site survey: awareness stage (closed), current tool, dislikes, what matters most, what holds them back (open)."
+    },
+    {
+     "if": "Low or no traffic, or new market",
+     "then": "Audience research via voc-research (reviews, forums), target-market interviews, subscriber survey."
+    },
+    {
+     "if": "Best-fit customers exist too",
+     "then": "Use own-customer research (K1) first; visitor survey adds message order and blockers."
+    }
+   ],
+   "steps": [
+    "Write the decision and the five question slots in own words",
+    "Estimate days to reach the response target from the owner's traffic and an assumed response rate",
+    "Launch with owner approval; keep it running in background",
+    "Code answers: awareness mix, current alternative, dislikes, priority, blockers",
+    "Rank 'what matters most' themes to set homepage order; blockers go near the CTA (CH-C5)"
+   ],
+   "exceptions_failure_modes": [
+    "Treating respondents as ideal customers",
+    "Survey placed on the conversion step and hurting signups",
+    "Existing customers logging in counted as prospects"
+   ],
+   "requirements": {
+    "cash": "Survey tool may cost; ClimbOS should build its own snippet first (build-own rule)",
+    "labor": "Low after setup",
+    "capability": "Ability to add a script to the site",
+    "measurement": "Impressions, responses, signup rate before/after on comparable traffic"
+   },
+   "metrics": [
+    "Responses per week",
+    "Share of 'already a customer' answers (screen out)",
+    "Signup rate of surveyed vs not-surveyed sessions"
+   ],
+   "guardrails": [
+    "Answers labelled 'prospect, fit unknown' and never pooled with own-customer evidence",
+    "No personal data required to answer",
+    "Do not place on checkout or signup form"
+   ],
+   "stop_review": [
+    "Signup rate on survey pages drops vs prior period: move or remove survey",
+    "Projected time to target exceeds ~8 weeks: switch to audience research"
+   ],
+   "alternatives": [
+    "No traffic: voc-research public mining",
+    "No site edit access: ask 5 recent inquirers the same questions by reply"
+   ],
+   "author_refs": [
+    "BK08-F11",
+    "BK08-F12",
+    "BK08-F13"
+   ],
+   "interpretation": "INTERPRETATION: The visitor survey is a cheap, consent-light source of prospect language and blockers; ClimbOS currently has none. Its evidence is weaker than best-customer data and should carry a lower confidence label.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: voc-research gets a 'site visitor' pool with its own N, confidence ceiling Medium, never blended with own-customer or competitor pools.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: before recommending a visitor survey, compute days-to-target from owner traffic and an explicit assumed rate in code; if over 8 weeks, offer audience research instead.",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: installing a survey on the owner's site is an external action requiring owner approval.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "skills/voc-research/SKILL.md (new source branch); skills/landing-pages/SKILL.md (message order, blockers near CTA)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/voc-research/SKILL.md",
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C1, CH-C2, CH-C5",
+     "BRP-13"
+    ],
+    "note": "CH-C2 covers buyer surveys and a post-purchase poll; no repo file covers a pre-purchase on-site visitor survey (repo search found none)."
+   },
+   "disagreements": "Book 02 §4 warns a survey characterises its sampling frame only; FTF agrees in substance (results are hypotheses). Copyhackers ranks by theme frequency; FTF orders by 'what matters most'. Both decide order from counted answers, so no conflict.",
+   "eval_case_ids": [
+    "EV-BK08-K2-1",
+    "EV-BK08-K2-2"
+   ]
+  },
+  {
+   "id": "BK08-K3",
+   "name": "Job statements from coded research, then pick one Job",
+   "decision": "Which customer Job to build messaging, channels and onboarding around first",
+   "business_models": [
+    "saas",
+    "apps",
+    "agencies",
+    "services",
+    "ecommerce"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "plateau"
+   ],
+   "evidence_required": [
+    "Coded research answers (K1/K2) with respondent IDs",
+    "Per-Job signals for urgency, willingness to pay, support burden, retention, expansion, reachability"
+   ],
+   "prerequisites": [
+    "At least ~10 coded respondents, or labelled thin"
+   ],
+   "branches": [
+    {
+     "if": "One struggle theme dominates and scores well on the criteria",
+     "then": "Choose it; park others."
+    },
+    {
+     "if": "Most frequent Job scores worse on payment, retention or reachability than another",
+     "then": "Present both; criteria and owner strategy decide, frequency is one input."
+    },
+    {
+     "if": "Respondents mix segments with different buying processes",
+     "then": "Code segments separately before counting (guide 05)."
+    },
+    {
+     "if": "Fewer than 3 respondents share a struggle",
+     "then": "Signal only; do not write a Job statement on it."
+    }
+   ],
+   "steps": [
+    "Tag every answer with struggle, motivation and desired-outcome themes, one dimension at a time",
+    "Count struggle themes as n of N respondents",
+    "For each top struggle, filter to its respondents and count their motivations and outcomes",
+    "Write 2-3 'when / help me / so I can' statements in customer words",
+    "Score each Job on the selection criteria with evidence notes; unknowns stay unknown",
+    "Pick one; log the runner-up and why"
+   ],
+   "exceptions_failure_modes": [
+    "Trying to serve all Jobs at once (book's top mistake)",
+    "Counts read as market share",
+    "Job statements paraphrased into company jargon",
+    "Ignoring anxieties and habits that block switching"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "2-4 hours of coding for 15-50 answers (model-assisted, owner-checked)",
+    "capability": "Spreadsheet or ClimbOS coding view",
+    "measurement": "Counts per theme with denominators"
+   },
+   "metrics": [
+    "Respondents per theme",
+    "Conditional share of motivation within a struggle",
+    "After choosing: signup and first-value rates for the chosen Job's traffic"
+   ],
+   "guardrails": [
+    "Every theme count shows n of N and pool",
+    "Statement words traceable to quotes",
+    "Criteria scores cite evidence or say unknown"
+   ],
+   "stop_review": [
+    "Chosen Job's messaging shows no change in signup or first-value rate after the planned window: revisit choice or execution",
+    "New research shows the Job's trigger changed: redo"
+   ],
+   "alternatives": [
+    "No research: owner's notes from 5 best clients coded the same way, labelled owner-reported",
+    "Very small sample: keep Jobs as hypotheses and test messages per Job in ads or email"
+   ],
+   "author_refs": [
+    "BK08-F14",
+    "BK08-F15",
+    "BK08-F16",
+    "BK08-F17"
+   ],
+   "interpretation": "INTERPRETATION: FTF's struggle/motivation/outcome coding overlaps voc-research's push/pull/outcome tags, but adds two missing steps: the conditional cross-tab (motivations within a struggle) and an explicit one-Job choice. The choice criteria resemble Book 02 §8's importance profile and the channel-scoring factors.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: voc-research outputs 2-3 Job statements built from the conditional cross-tab, each with n of N, and a one-Job recommendation with the runner-up.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: theme percentages and conditional shares are computed in code from coded rows, never written by the model.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: a Job statement needs a struggle theme seen in at least 3 respondents from the same pool (matches voc-research 'finding' bar).",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: when the most frequent Job is not the best on payment, retention or reachability, show both and let the owner choose.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/voc-research/SKILL.md steps 5-9; skills/positioning/SKILL.md step 6 (best-fit customers)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/voc-research/SKILL.md:39-61",
+     "skills/positioning/SKILL.md:35",
+     "docs/growth-intelligence/books/02_research_positioning.md §7-8"
+    ],
+    "note": "No repo file contains job statements or a one-Job selection step (search for 'job statement' found none)."
+   },
+   "disagreements": "voc-research codes four forces including anxiety and habit; FTF's statement drops them. Keep four-force coding and add the statement; anxieties feed objections. Book 02 §7 warns counts do not estimate prevalence; FTF uses counts to rank. Both hold if counts rank within the sample and are not reported as market share.",
+   "eval_case_ids": [
+    "EV-BK08-K3-1",
+    "EV-BK08-K3-2"
+   ]
+  },
+  {
+   "id": "BK08-K4",
+   "name": "Customer-experience map: phases and milestones vs ClimbOS's funnel stages",
+   "decision": "Which stages to measure for this business and where the purchase sits in them",
+   "business_models": [
+    "saas",
+    "subscriptions",
+    "agencies on retainer",
+    "local services with repeat visits",
+    "ecommerce with repeat purchase"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Chosen Job (K3)",
+    "Research answers tagged thinking/doing/feeling",
+    "Which events the owner can observe"
+   ],
+   "prerequisites": [
+    "One Job chosen",
+    "Some way to observe at least one value event"
+   ],
+   "branches": [
+    {
+     "if": "Recurring or repeat revenue",
+     "then": "Map all three phases; Growth (continued value, value growth) is measured, not optional."
+    },
+    {
+     "if": "One-off purchase (emergency repair, single high-ticket job)",
+     "then": "A purchase funnel plus a review/referral step is adequate; Growth phase reduces to referral and rebooking."
+    },
+    {
+     "if": "Owner only has counts of visitors, leads and customers",
+     "then": "Diagnose with diagnosis.ts stages, define activation as value received, and make instrumenting one value milestone the first step."
+    },
+    {
+     "if": "Enterprise buyer",
+     "then": "Expect more Evaluation milestones (stakeholders, security, onboarding many users)."
+    }
+   ],
+   "steps": [
+    "Lay out Struggle, Evaluation, Growth",
+    "Place evidence under thinking, doing, feeling per phase",
+    "Split into milestones where feelings shift",
+    "Map each milestone to a diagnosis.ts stage (Problem→reach, Interest→lead, First Value→activation, Value Realization→activation(value)/purchase, Continued Value→retention, Value Growth→no stage today)",
+    "Note where payment happens for this business"
+   ],
+   "exceptions_failure_modes": [
+    "Generic awareness/consideration/purchase stages pasted in",
+    "Milestones invented without customer evidence",
+    "Map made for all Jobs at once"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "A half-day workshop equivalent; ClimbOS drafts from research",
+    "capability": "Research from K1/K2",
+    "measurement": "At least one value event per phase eventually"
+   },
+   "metrics": [
+    "Milestones with an observable KPI / total milestones"
+   ],
+   "guardrails": [
+    "Each milestone cites research rows",
+    "Stages with no data marked unmeasured, not guessed"
+   ],
+   "stop_review": [
+    "Research for the Job is older than ~12 months or the product changed: refresh"
+   ],
+   "alternatives": [
+    "No research: draft milestones from owner interview, labelled owner-reported",
+    "No event data: owner hand-marks a sample of recent customers per milestone"
+   ],
+   "author_refs": [
+    "BK08-F1",
+    "BK08-F18",
+    "BK08-F19",
+    "BK08-F20",
+    "BK08-F31"
+   ],
+   "interpretation": "INTERPRETATION: The book's 'forget the funnel' is a critique of generic stage names, purchase-as-endpoint and business-value metrics. It does not reject sequential stage-to-stage ratios: Ch8 picks the gap where many reach one milestone and few reach the next, which is funnel arithmetic on customer-value milestones. ClimbOS's diagnosis already moved toward this (activation as value received, diagnosis.ts:17-23) but has no expansion stage.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: for recurring-revenue types, the diagnosis reports a retention reading and, when supplied, an expansion reading (upgrades, added seats, referrals); missing Growth-phase numbers are listed in 'missing'.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: stage labels shown to the owner use the business's own milestone names where defined, while code keeps the fixed stage keys.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: one-off purchase businesses keep the purchase funnel; ClimbOS does not force a Growth-phase map on them.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (OwnerFunnel, StageReading); skills/retention-lifecycle/SKILL.md step 2; Book 08 §2",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:11-46",
+     "docs/growth-intelligence/books/08_email_lifecycle.md §2",
+     "skills/retention-lifecycle/SKILL.md:26-30",
+     "BRP-07"
+    ],
+    "note": "Book 08 §2 already defines lifecycle states around customer progress (prospect...expanding). FTF adds the evidence-based method (thinking/doing/feeling, feeling shifts) and a per-Job map."
+   },
+   "disagreements": "Tension with the title: ClimbOS diagnoses a funnel. What decides: (1) revenue model: recurring or repeat revenue needs Growth-phase stages; one-off sales can live with a purchase funnel; (2) data: ClimbOS can only diagnose what the owner can count, so a funnel of counts is the floor, defined by value events; (3) decision: choosing which stage to work on needs sequential ratios under either framing. Disagree with FTF that generic stages are useless: fixed stage keys let code compare and lint plays; customer-specific milestone names can sit on top.",
+   "eval_case_ids": [
+    "EV-BK08-K4-1",
+    "EV-BK08-K4-2"
+   ]
+  },
+  {
+   "id": "BK08-K5",
+   "name": "Customer-led KPI per milestone",
+   "decision": "Which metric represents each stage and which metrics team or plan targets use",
+   "business_models": [
+    "saas",
+    "apps",
+    "subscriptions",
+    "services with trackable delivery"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Customer statements of value mapped to features or service elements",
+    "Event or job data per customer",
+    "Later paid/retained outcome per customer for validation"
+   ],
+   "prerequisites": [
+    "Milestones (K4)",
+    "Event tracking or owner-markable records"
+   ],
+   "branches": [
+    {
+     "if": "Product runs in the background (automation, scheduled sends)",
+     "then": "Value KPI is the outcome event (sent, delivered, error-free), never logins."
+    },
+    {
+     "if": "Enough cohort volume to compare later payment",
+     "then": "Validate thresholds: users reaching the KPI must pay or retain clearly more than those who do not (BRP-07 step 5)."
+    },
+    {
+     "if": "Too few users to validate",
+     "then": "Keep threshold as a labelled hypothesis; owner marks 10-20 recent signups."
+    },
+    {
+     "if": "Top-of-journey metric",
+     "then": "Use new unique visitors, excluding logins and returning customers."
+    }
+   ],
+   "steps": [
+    "List what customers said was valuable per milestone",
+    "Map each to the feature or service element that delivers it",
+    "Write a trackable action (with threshold if data supports) per milestone",
+    "Continued Value = value KPI within a period matched to natural use frequency",
+    "Value Growth = continued value plus upgrade, review or referral",
+    "Validate against later outcomes; adjust",
+    "Dashboard and benchmark before choosing work"
+   ],
+   "exceptions_failure_modes": [
+    "DAU/MAU or logins as engagement",
+    "Shared metric across teams causing misattribution",
+    "Thresholds copied from the book's SparkToro example",
+    "Lagging metrics (MRR) used as stage targets"
+   ],
+   "requirements": {
+    "cash": "None to low",
+    "labor": "Setup of events or manual counts",
+    "capability": "Analytics or admin export",
+    "measurement": "Cohort by signup date"
+   },
+   "metrics": [
+    "Rate reaching each milestone KPI within window",
+    "Paid/retained rate conditional on reaching vs not"
+   ],
+   "guardrails": [
+    "Rates computed in code with denominators",
+    "No vanity events",
+    "Pair any milestone lift with downstream paid or retained outcome"
+   ],
+   "stop_review": [
+    "KPI reachers do not pay/retain better than non-reachers: move the definition",
+    "Nearly everyone reaches it: it is setup, move later"
+   ],
+   "alternatives": [
+    "No tracking: weekly owner count from admin view",
+    "Service business: milestone = job delivered, problem gone, rebooked"
+   ],
+   "author_refs": [
+    "BK08-F21",
+    "BK08-F22",
+    "BK08-F23",
+    "BK08-F24",
+    "BK08-F25"
+   ],
+   "interpretation": "INTERPRETATION: For activation this duplicates BRP-07 (Verna), which is stricter because it validates the definition against later payment. New from FTF: the full ladder (problem, interest, continued value per period, value growth), new-unique-visitor counting, and the metric-incentive warning.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: BRP-07 v2 extends the value-event definition to every milestone, including Continued Value (value KPI per natural period) and Value Growth (plus upgrade, review or referral).",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: a milestone threshold is 'validated' only when reachers' later paid or retained rate exceeds non-reachers' in the same cohort; otherwise label 'hypothesis'.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: the owner's 'visitors' input asks for new unique visitors and excludes logged-in customers.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: NPS/CSAT may be reported but never used as a milestone KPI or a diagnosis input.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "BRP-07 (docs/growth-expansion/blog-research/playbooks/BRP-07-activation-definition.json); shared/agents/diagnosis.ts OwnerFunnel; skills/retention-lifecycle/SKILL.md step 2",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "BRP-07",
+     "docs/growth-expansion/blog-research/guides/02_activation_retention_plg.md EV-C1",
+     "docs/growth-intelligence/books/08_email_lifecycle.md §2, §9"
+    ],
+    "note": "Activation part duplicates BRP-07; candidate BRP-07 v2 for the full ladder."
+   },
+   "disagreements": "FTF lists signups and NPS/CSAT as leading indicators while warning against transactional and opinion measures; ClimbOS should keep signups as a lead-stage count and keep NPS out of diagnosis. FTF sets thresholds by judgment; Verna (BRP-07) requires validation. What decides: cohort volume. With enough signups, validate; without, label hypothesis.",
+   "eval_case_ids": [
+    "EV-BK08-K5-1",
+    "EV-BK08-K5-2",
+    "EV-BK08-K5-3"
+   ]
+  },
+  {
+   "id": "BK08-K6",
+   "name": "Success-gap selection and bridging",
+   "decision": "Which stage-to-stage gap to fix first and which few projects to run on it",
+   "business_models": [
+    "saas",
+    "apps",
+    "subscriptions",
+    "services",
+    "ecommerce"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established",
+    "plateau"
+   ],
+   "evidence_required": [
+    "Counts reaching each milestone in a period",
+    "Value per new customer (owner-supplied)",
+    "Walk-through notes per milestone"
+   ],
+   "prerequisites": [
+    "Milestone KPIs (K5) or diagnosis.ts readings",
+    "One Job chosen"
+   ],
+   "branches": [
+    {
+     "if": "Many reach a milestone and few reach the next",
+     "then": "Candidate gap; size it by added customers per realistic lift times value."
+    },
+    {
+     "if": "Two gaps are close",
+     "then": "Prefer the one actionable in weeks with existing people and tools."
+    },
+    {
+     "if": "Walk-through finds a gap but counts do not show a drop",
+     "then": "Treat as a hypothesis or service-quality fix, not the binding constraint."
+    },
+    {
+     "if": "Diagnosis constraint is delivery (capacity)",
+     "then": "Do not add demand-side projects; capacity overrides (diagnosis.ts:130)."
+    }
+   ],
+   "steps": [
+    "Walk each milestone as the chosen-Job customer: their search places, ads, homepage, signup, first use, emails, renewal",
+    "List mismatches per milestone",
+    "Read stage counts and rates (code)",
+    "Size each candidate gap deterministically",
+    "Pick one; park others",
+    "Shortlist 2-4 projects deliverable in weeks",
+    "Measure with the milestone KPI and downstream paid/retained; schedule a recurring check"
+   ],
+   "exceptions_failure_modes": [
+    "Picking the most fun or trendy idea",
+    "Fixing several gaps at once and learning nothing",
+    "Treating a walk-through mismatch as the proven cause",
+    "Feeding traffic into a leaking activation stage"
+   ],
+   "requirements": {
+    "cash": "Usually none to low (copy, onboarding, emails)",
+    "labor": "Owner time for walk-through and fixes",
+    "capability": "Ability to edit site, onboarding or emails",
+    "measurement": "Whole-week cohorts before/after or a split when volume allows"
+   },
+   "metrics": [
+    "Milestone KPI rate for new cohorts",
+    "Downstream paid/retained",
+    "Support tickets and refunds (guardrail)"
+   ],
+   "guardrails": [
+    "Lift claims carry window, cohort and comparison",
+    "Book case uplifts never used as forecasts",
+    "Customer-facing sends follow consent rules (lifecycle email only to consented contacts; Resend never for cold)"
+   ],
+   "stop_review": [
+    "No change after planned weeks: gap cause was elsewhere",
+    "Milestone up, paid flat: look at offer or price (PB-activation-repair revise)"
+   ],
+   "alternatives": [
+    "No counts: owner hand-checks last 20 signups through each milestone",
+    "Low volume: before/after on whole weeks, labelled directional"
+   ],
+   "author_refs": [
+    "BK08-F26",
+    "BK08-F27",
+    "BK08-F28",
+    "BK08-F9"
+   ],
+   "interpretation": "INTERPRETATION: This is the same job diagnosis.ts does (weakest link) plus a customer walk-through to generate repair ideas. FTF weighs absolute revenue effect; diagnosis.ts compares activation and purchase rates directly (diagnosis.ts:134). Book 08 §3's expected-contribution formula is the deterministic version of FTF's 'outsized impact' test.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: when two measured gaps compete, code reports added customers and contribution for the same point lift at each stage (eligible x lift x downstream rate x value) next to the rate comparison.",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: plans include a 'walk the journey' first step that lists mismatches per milestone, labelled as hypotheses.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: book case uplifts (2x, +93%, +64%) appear only as labelled historical examples, never as expected results.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts diagnose(), lintDiagnosisFit; PB-activation-repair; skills/growth-strategy/SKILL.md; skills/retention-lifecycle/SKILL.md step 3",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:130-138",
+     "shared/playbooks/contracts.ts:94-110 PB-activation-repair",
+     "docs/growth-intelligence/books/08_email_lifecycle.md §3, §17",
+     "skills/retention-lifecycle/SKILL.md:30"
+    ],
+    "note": "Gap choice duplicates the existing weakest-link logic; new parts are the walk-through audit, the per-milestone project menu and volume-weighted sizing."
+   },
+   "disagreements": "FTF implies the walk-through reveals what to fix; Book 08 §17 warns counts describe but do not diagnose, and a cause needs verified evidence. Both hold: the walk-through generates hypotheses, counts locate the gap, a test confirms. diagnosis.ts uses lowest rate; FTF uses largest revenue effect. What decides: when volumes differ a lot between stages, sizing in absolute customers is more informative; keep the rate rule as the default and show sizing as explanation.",
+   "eval_case_ids": [
+    "EV-BK08-K6-1",
+    "EV-BK08-K6-2",
+    "EV-BK08-K6-3"
+   ]
+  },
+  {
+   "id": "BK08-K7",
+   "name": "Customer-led operating cadence (one Job, map-tagged plans, refresh triggers)",
+   "decision": "How plans stay tied to the chosen Job and when to redo research",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Chosen Job and milestones",
+    "Date of last research",
+    "Product or market changes since"
+   ],
+   "prerequisites": [
+    "K3-K5 done at least once"
+   ],
+   "branches": [
+    {
+     "if": "Solo owner",
+     "then": "ClimbOS acts as facilitator; owner is decision-maker and champion; skip team roles."
+    },
+    {
+     "if": "Team of 5+",
+     "then": "Name a champion and an accountable decision-maker; share the map."
+    },
+    {
+     "if": "Product, pricing, segment or market changed, or research older than ~12 months",
+     "then": "Refresh research for the Job."
+    },
+    {
+     "if": "First Job's gap bridged and stable",
+     "then": "Return to a tabled Job or a new segment."
+    }
+   ],
+   "steps": [
+    "Every play states the Job, milestone and KPI it moves",
+    "Review KPI dashboard on a fixed cadence",
+    "Log which gap is being worked and which are parked",
+    "Trigger research refresh on change events"
+   ],
+   "exceptions_failure_modes": [
+    "Map shelved after the workshop",
+    "Plays not tied to any milestone",
+    "Research never refreshed"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "Short recurring review",
+    "capability": "Plan records with milestone tags",
+    "measurement": "KPI per milestone over time"
+   },
+   "metrics": [
+    "Share of plays tagged to the chosen Job's milestone",
+    "Days since last research"
+   ],
+   "guardrails": [
+    "Tags are checked by code, not trusted from prose"
+   ],
+   "stop_review": [
+    "Over half the plays target other milestones than the chosen gap: re-focus or justify"
+   ],
+   "alternatives": [
+    "No dashboard: monthly manual counts per milestone"
+   ],
+   "author_refs": [
+    "BK08-F5",
+    "BK08-F29",
+    "BK08-F30",
+    "BK08-F2"
+   ],
+   "interpretation": "INTERPRETATION: ClimbOS already enforces a version of this (plays must work on the computed constraint, diagnosis.ts:171-175). FTF adds tagging by Job and refresh triggers. The team-role chapter mostly does not apply to solo owners.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: each play carries a milestone tag and the chosen Job id; lint flags plans where the bankable play is not on the chosen gap.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: research older than 12 months or predating a pricing/product change is shown as stale.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts lintDiagnosisFit; shared/agents/decision.ts; skills/growth-strategy/SKILL.md",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:171-175",
+     "shared/agents/decision.ts:12"
+    ],
+    "note": "Constraint-fit lint exists; Job tagging and research staleness do not."
+   },
+   "disagreements": "FTF's cross-functional team setup assumes 6-200 staff; ClimbOS's owners are often solo. What decides: team size.",
+   "eval_case_ids": [
+    "EV-BK08-K7-1",
+    "EV-BK08-K7-2"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/voc-research/SKILL.md",
+   "change": "Add an own-customer branch: select best-fit recent payers (or contrast pools when the decision is a leak), choose survey vs interviews from pool size with the rate stated as an assumption, and keep a separate 'site visitor' pool for an on-site survey. After four-force coding, add a step that cross-tabs motivations and outcomes within each top struggle, writes 2-3 'when / help me / so I can' statements with n of N, and recommends one Job with a runner-up scored on urgency, willingness to pay, support burden, retention, expansion and reachability.",
+   "why": "Skill covers public reviews only and stops at insights; no job statement or one-Job choice exists in the repo.",
+   "refs": [
+    "BK08-K1",
+    "BK08-K2",
+    "BK08-K3"
+   ]
+  },
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "In step 6 (best-fit customers), take the chosen Job's struggle as the trigger event and its desired outcome as the value theme; disqualify the other Jobs' buyers explicitly for now.",
+   "why": "Links Dunford's best-fit segment to FTF's one-Job focus without duplicating it.",
+   "refs": [
+    "BK08-K3"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "In step 2, define Continued Value as the value moment repeated within the natural use period and Value Growth as upgrade, added seats, review or referral; warn against login-based engagement for background products.",
+   "why": "Step 2 defines the value moment and repeat cycle but not the growth-phase milestones.",
+   "refs": [
+    "BK08-K4",
+    "BK08-K5"
+   ]
+  },
+  {
+   "skill": "skills/landing-pages/SKILL.md",
+   "change": "When the product has many features, lead with the one gateway outcome customers hired it for and move others to later onboarding messages; order sections by the visitor survey's 'what matters most' ranking when available.",
+   "why": "Autobooks and Alistair cases; complements CH-C1 theme-rank ordering.",
+   "refs": [
+    "BK08-K2",
+    "BK08-K3",
+    "BK08-F9"
+   ]
+  },
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "Add a journey walk-through step: as the chosen-Job customer, check each milestone (search places, ads, homepage, signup, first use, emails, renewal), list mismatches as hypotheses, then size the measured gaps in code and pick one.",
+   "why": "Generates repair ideas tied to the computed constraint.",
+   "refs": [
+    "BK08-K6"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/agents/diagnosis.ts:39",
+   "gap": "StageReading.stage has no expansion/value-growth stage and OwnerFunnel (11-26) has no expansion input, so recurring businesses get no reading for upgrades, added seats or referrals.",
+   "proposed_change": "Add optional `expanded` count to OwnerFunnel and an 'expansion' reading with verdict 'unknown' (no benchmark in base-rates.md); list it in `missing` for SaaS types. Do not add a constraint until there is a reference.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:160",
+   "gap": "playStage maps 'upgrade' to conversion, so an existing-customer upsell or annual-switch play can satisfy lintDiagnosisFit (171-175) when the constraint is first-purchase conversion.",
+   "proposed_change": "Distinguish trial/free-to-paid upgrade from existing-customer upgrade (tier, seats, annual) and map the latter to retention/expansion.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:13-14",
+   "gap": "`visitors` is 'people who saw the offer'; owners may enter total sessions including logged-in customers, inflating the reach denominator and the demand test at line 137 (perMonth(visitors) < 1000).",
+   "proposed_change": "Reword the input to 'new unique visitors (not logged-in customers)' and in the owner UI ask whether the figure includes logins.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:11-26",
+   "gap": "Funnel has no segment or Job dimension; mixed Jobs are aggregated, so one Job's leak can be masked by another's success.",
+   "proposed_change": "Optional segment label with per-segment counts; diagnose the chosen Job's segment when supplied (pairs with BRP-10 signup profiling).",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:134",
+   "gap": "Activation vs conversion is chosen by lower rate only; absolute effect (eligible volume x lift x downstream rate x value) is not shown.",
+   "proposed_change": "Add a deterministic sizing line to diagnosisBrief for the two candidate stages using a fixed point lift; keep the rate rule for the choice.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:76-92",
+   "gap": "PB-interviews has no participant-selection rule (best-fit recent payers vs contrast pools) and no survey branch for large customer pools.",
+   "proposed_change": "PB-interviews v2: recruitment pool chosen by decision type; survey branch when the owner's filtered pool is large; recency rule (started within ~12 months).",
+   "priority": "P2"
+  },
+  {
+   "where": "skills/voc-research/SKILL.md:10-21",
+   "gap": "Inputs and sources are public reviews and forums only; no own-customer survey or on-site visitor survey branch.",
+   "proposed_change": "See skill_proposals; add pools 'own-customer survey' and 'site visitor' with separate N and confidence ceilings.",
+   "priority": "P2"
+  }
+ ]
+}

@@ -1,0 +1,280 @@
+{
+ "id": "BKP-01",
+ "version": 1,
+ "slug": "advantage-ledger",
+ "title": "Name the advantage growth comes from, and test its barrier",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Which advantage a plan relies on (a named power, an execution edge, or unknown) and how much upfront spend that advantage can justify.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Plan asks for heavy upfront spend or long payback",
+  "Owner claims a moat or 'unique' position",
+  "Choosing between copying a rival and a different offer path"
+ ],
+ "exclusions": [
+  "Plans that are cheap, reversible tests (an advantage isn't needed to run them)"
+ ],
+ "required_inputs": [
+  "Named competitors the advantage must hold against",
+  "Evidence for the benefit (margin, price, cost) and the barrier"
+ ],
+ "evidence_requirements": [
+  "the claimed edge in the owner's words",
+  "customer evidence that it raises price, lowers cost or lowers investment (Benefit)",
+  "named competitors: direct, functional (substitutes, DIY) and likely entrants",
+  "why each competitor can't or won't copy it (Barrier)",
+  "retention, price premium or cost data if available",
+  "K1 result",
+  "BK01 growth source class (advantage share gain / market tide / substitution / bought / extension)",
+  "concentration of current customer sources",
+  "business type and geography",
+  "cost structure (fixed vs variable)",
+  "whether customers buy again or buy add-ons",
+  "any exclusive asset: lease, licence, supplier deal, data, patent",
+  "years operating in same niche",
+  "incumbents' business model: pricing unit, fees, contract terms, channel",
+  "how much incumbent revenue depends on the practice the new model removes",
+  "the new model's own margin at a realistic volume",
+  "which similar small rivals could copy the new model and what they would lose",
+  "the proposed offer vs competitors",
+  "whether the customer need is known",
+  "the margin impact of any price cut",
+  "cash available for the commitment"
+ ],
+ "missing_data_behavior": [
+  "No competitor named: advantage 'unknown'; plan stays cheap and reversible.",
+  "Benefit unproven: label 'execution advantage' at most; never tell the owner they have no viable strategy."
+ ],
+ "decision_branches": [
+  {
+   "if": "Benefit and barrier both evidenced against named rivals",
+   "then": "Record the power; longer payback may be justified, still within cash guardrails."
+  },
+  {
+   "if": "Benefit evidenced, barrier copyable by similar small rivals",
+   "then": "Execution advantage: grow it, but size spend to normal payback."
+  },
+  {
+   "if": "Neither evidenced",
+   "then": "Advantage unknown; the plan's first step gathers evidence; no moat language in copy."
+  }
+ ],
+ "implementation_steps": [
+  "Write the claimed edge",
+  "Name the Barrier first: scale cost of share gains, network, collateral damage, switching cost, brand history, fiat, process time",
+  "Check materiality (would it move price, cost or retention noticeably?)",
+  "Test against each competitor class",
+  "Record evidence source for each element",
+  "Label result: Power type / execution advantage / unknown",
+  "Fill advantage: type, Benefit, Barrier, competitor it holds against, evidence, stage",
+  "Classify growth source",
+  "Tag each play: uses advantage / builds Barrier / execution only",
+  "Rule out types that don't fit the stage and model",
+  "For each remaining type, state industry economics (is the effect strong in this niche?) and competitive position (are we ahead?) separately",
+  "Keep at most 3 candidates",
+  "List top incumbents' models",
+  "Find the revenue they would put at risk by copying",
+  "Compute the new model's standalone margin",
+  "Classify the path",
+  "Compute price-cut break-even volume in code if relevant",
+  "Size the commitment to path risk"
+ ],
+ "dependencies": [
+  "a defined offer and segment (one strategically separate business at a time)",
+  "diagnosis computed (shared/agents/diagnosis.ts)",
+  "K1 result",
+  "unit economics of the new model computed in code",
+  "unit economics in code"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "owner 30-60 minutes for competitor and evidence notes",
+  "capability": "basic competitor knowledge; voc-research or competitor-teardown output helps",
+  "measurement": "retention, price vs alternatives, or cost per job if any exist"
+ },
+ "metrics": [
+  "price vs named alternatives",
+  "retention or repeat rate",
+  "win/loss reasons",
+  "cost per unit vs rivals (if known)",
+  "share of plans with evidenced advantage field",
+  "share of plays tagged to build a Barrier",
+  "cost per job by area (route businesses)",
+  "add-on attach rate",
+  "share of new customers in target cluster",
+  "new-model contribution margin",
+  "customers won from named incumbent",
+  "incumbent price or policy changes",
+  "volume vs break-even volume",
+  "adoption of new offer"
+ ],
+ "guardrails": [
+  "No exit traps or price rises on locked-in unhappy customers (rejects the author's SAP example as policy).",
+  "Large-company case evidence is not a small-business rule.",
+  "No advantage claim without a named Barrier and non-inference evidence",
+  "An execution advantage is not a failure; say so plainly",
+  "No invented competitors or competitor facts",
+  "Short owner-facing text",
+  "Large-company cases are illustrations, not small-business rules",
+  "Industry economics and competitive position judged separately; both must be positive",
+  "Comparative claims must be true and sourced (claims ledger)",
+  "Below-cost pricing only as an owner-approved, capped experiment",
+  "Loss ceilings for learning bets",
+  "Owner approval for large commitments"
+ ],
+ "alternatives_when_constrained": [
+  "No competitor data: mark Barrier 'unknown', run competitor-teardown",
+  "No customer data: run PB-interviews before asserting Benefit",
+  "Flag off: keep current decision contract; advantage noted in limits",
+  "No cost data: skip scale analysis, mark unknown",
+  "No competitor data: map only own-side candidates and mark position unknown",
+  "No incumbent revenue data: mark collateral damage unknown and present the model as a differentiator",
+  "Owner can't afford launch pricing: launch at normal margin",
+  "No cash for commitments: concierge test (PB-concierge)"
+ ],
+ "stop_conditions": [
+  "Review when a competitor copies the edge, a new substitute appears, or retention/price evidence contradicts the claim",
+  "Re-evaluate when K1 inputs change",
+  "Re-run when the business changes model, geography or adds a recurring offer",
+  "Incumbent adopts the model in a segment: re-run K1 for that competitor",
+  "Standalone margin falls below owner floor",
+  "Volume below break-even by review date: stop the price cut"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Calling 'great service' or 'fast response' a moat",
+  "Treating a list of features as a Barrier",
+  "Generic 'our AI is our moat' text",
+  "Listing a Power with only inference evidence",
+  "Copying Netflix/Intel scale logic to a firm with no fixed-cost lead",
+  "Confusing awareness with Branding (big ad budgets are scale, not brand)",
+  "Assuming 'they can't copy' when the rival is a small shop that can change prices overnight",
+  "Ignoring that collateral damage shrinks as the challenger grows",
+  "Price war against a larger rival",
+  "Big upfront spend on an unproven capability bet"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: an advantage or moat claim in a plan must name its Barrier type, the competitor it holds against, and at least one non-inference evidence item; otherwise label it execution advantage or unknown",
+    "from": "BK07-K1"
+   },
+   {
+    "rule": "proposed: the decision contract gains an advantage field (type, barrier, competitor, evidence source, stage); type 'none_yet' is valid",
+    "from": "BK07-K6"
+   },
+   {
+    "rule": "proposed: lint warns when plan text claims a moat, network effect or lock-in that is not recorded in the advantage field with non-inference evidence",
+    "from": "BK07-K6"
+   },
+   {
+    "rule": "proposed: the plan considers at most 3 candidate Power types and states why the others are ruled out in one line each",
+    "from": "BK07-K2"
+   },
+   {
+    "rule": "proposed: a Cornered Resource claim must pass the five tests (idiosyncratic, non-arbitraged, transferable, ongoing, sufficient), recorded per test",
+    "from": "BK07-K2"
+   },
+   {
+    "rule": "proposed: label a model 'counter-position' only if both the standalone-margin test and the named-incumbent collateral-damage test pass; else 'differentiator'",
+    "from": "BK07-K4"
+   },
+   {
+    "rule": "proposed: every counter-position names the like-model rivals it does not protect against",
+    "from": "BK07-K4"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: never tell an owner the business has 'no viable strategy' because no Power was found; state that growth rests on copyable execution and size commitments accordingly",
+    "from": "BK07-K1"
+   },
+   {
+    "rule": "proposed: assess advantage per strategically separate offer (e.g. an agency's retainer vs its one-off audits) rather than for the whole firm",
+    "from": "BK07-K1"
+   },
+   {
+    "rule": "proposed: don't project a brand price premium within a 90-day plan; treat brand work as a conversion Benefit",
+    "from": "BK07-K2"
+   },
+   {
+    "rule": "proposed: capabilities-led bets start as capped tests with a stated learning goal",
+    "from": "BK07-K7"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: when advantage is none_yet or unknown, plays requiring payback beyond the plan's guardrail are blocked",
+    "from": "BK07-K6"
+   },
+   {
+    "rule": "proposed: a 'match competitor at lower price' play must show break-even volume and the expected rival response",
+    "from": "BK07-K7"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: comparative hooks about competitors' fees or terms must be verified current facts",
+    "from": "BK07-K4"
+   }
+  ]
+ },
+ "versions_existing": [
+  "docs/growth-intelligence/books/01_business_strategy_economics.md (section 9, candidate v2)",
+  "docs/growth-engine/book-review/BK01.md (rules 2 and 5)",
+  "shared/agents/decision.ts"
+ ],
+ "reconciliation_note": "Helmer's barrier-first test replaces the library's equal-weight durability check only when spend depends on durability (RECONCILIATION R01-R03).",
+ "member_frameworks": [
+  "BK07-K1",
+  "BK07-K6",
+  "BK07-K2",
+  "BK07-K4",
+  "BK07-K7"
+ ],
+ "source_references": [
+  "BK07-F1",
+  "BK07-F2",
+  "BK07-F3",
+  "BK07-F16",
+  "BK07-F24",
+  "BK07-F4",
+  "BK07-F22",
+  "BK07-F5",
+  "BK07-F7",
+  "BK07-F13",
+  "BK07-F14",
+  "BK07-F15",
+  "BK07-F9",
+  "BK07-F10",
+  "BK07-F20",
+  "BK07-F18",
+  "BK07-F19"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK07-K1-1",
+  "EV-BK07-K1-2",
+  "EV-BK07-K1-3",
+  "EV-BK07-K6-1",
+  "EV-BK07-K6-2",
+  "EV-BK07-K6-3",
+  "EV-BK07-K2-1",
+  "EV-BK07-K2-2",
+  "EV-BK07-K2-3",
+  "EV-BK07-K4-1",
+  "EV-BK07-K4-2",
+  "EV-BK07-K4-3",
+  "EV-BK07-K7-1",
+  "EV-BK07-K7-2"
+ ]
+}

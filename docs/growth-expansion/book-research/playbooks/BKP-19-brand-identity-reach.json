@@ -1,0 +1,253 @@
+{
+ "id": "BKP-19",
+ "version": 1,
+ "slug": "brand-identity-reach",
+ "title": "Consistent brand cues and reach-first media on small budgets",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to keep brand cues consistent and early in content and ads, and when to favour reach and continuity over narrow targeting.",
+ "business_types": [
+  "consumer",
+  "local services",
+  "ecommerce"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Recurring consumer or local business with ongoing content or ads"
+ ],
+ "exclusions": [
+  "Small niche B2B where reach has a low ceiling"
+ ],
+ "required_inputs": [
+  "Brand assets (name, colours, logo, characters)",
+  "Budget and schedule"
+ ],
+ "evidence_requirements": [
+  "Inventory of every asset in current collateral (site, socials, listings, van or shopfront, packaging, ads)",
+  "Optional: masked-asset survey of category buyers (asset shown without the name; 'which business or brand is this?' open answer)",
+  "Platform-reported unique reach and frequency for the service area",
+  "Monthly budget and authorised spend",
+  "Where the business can actually deliver or sell",
+  "Share of annual sales in peak season",
+  "purchase frequency (frequency dimension)",
+  "whether buyers search shortly before buying (recency category)",
+  "monthly budget",
+  "service area / distribution footprint",
+  "opening hours, ordering routes, delivery coverage"
+ ],
+ "missing_data_behavior": [
+  "No brand kit: skip asset checks; name the business early."
+ ],
+ "decision_branches": [
+  {
+   "if": "Budget allows continuous presence",
+   "then": "Steady weekly spend beats bursts."
+  },
+  {
+   "if": "Content varies",
+   "then": "Vary the angle, keep identity cues."
+  }
+ ],
+ "implementation_steps": [
+  "Lay out all collateral together and list what repeats and what clashes (table test)",
+  "Choose a varied palette, starting with one or two items usable on pack/storefront and at the start of videos",
+  "Pair each asset with the name prominently in every execution",
+  "Check legibility at thumbnail size for online listings and feeds",
+  "For variants or new services: parent assets first, then a variant twist",
+  "Optionally survey fame and uniqueness; compute in code; place on the grid",
+  "Define category buyers in the area and the period",
+  "Compute the response rate needed for the sales target at each reach level (in code)",
+  "Buy reach: broad targeting within the area, frequency watched, continuous presence",
+  "Classify category recency and frequency",
+  "Audit physical availability (hours, locations, apps, stockists, booking friction)",
+  "Pick demand-capture channel(s) per scoring"
+ ],
+ "dependencies": [
+  "A brand kit or the minimal provisional kit already defined by instagram-posts and social-visual-briefs",
+  "For metrics: category-buyer respondents, not just followers",
+  "Physical availability in the targeted area (K6)",
+  "Conversion path works (Book 10 gates)",
+  "Owner approval for any spend",
+  "eligible channels from scoring.ts"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Zero for the audit; survey cost unknown",
+  "labor": "1-2 hours for the table test",
+  "capability": "Design consistency across tools; brand kit in ClimbOS",
+  "measurement": "Masked-asset survey of category buyers (optional)"
+ },
+ "metrics": [
+  "Fame = respondents naming the brand for the asset / all respondents",
+  "Uniqueness = mentions of the brand for the asset / all brand mentions for the asset",
+  "Share of published pieces carrying the declared assets in the first frame or slide (ClimbOS proxy)",
+  "Unique reach in the service area",
+  "Average frequency",
+  "Cost per 1,000 people reached",
+  "Sales or inquiries per period versus baseline",
+  "monthly reach in area",
+  "weeks with any presence (continuity)",
+  "branded search volume",
+  "new buyers per month"
+ ],
+ "guardrails": [
+  "Fame x uniqueness audit needs a survey of category buyers; customer-only surveys are biased.",
+  "Required-response arithmetic is done in code.",
+  "Don't derive assets from the current positioning claim",
+  "Don't copy a competitor's assets (trademark and trade-dress risk)",
+  "Don't change logo, packaging or colours for 'freshness'",
+  "Distinctive, not odd",
+  "Don't plan for a minimum frequency of 3",
+  "Don't trade reach for 'engagement' formats without comparing the cost per category buyer reached",
+  "Spend only within approved caps; external actions need owner approval",
+  "Respect special ad category and geographic targeting rules",
+  "Even monthly spend preferred to bursts unless a seasonal peak is real",
+  "No paid reach without owner budget approval",
+  "Never treat impressions as people reached"
+ ],
+ "alternatives_when_constrained": [
+  "No survey budget: consistency audit plus an informal masked check with a few locals, labelled anecdotal",
+  "No budget: owned reach (storefront, van, packaging, Google Business Profile, partners' audiences, flyers)",
+  "No reach data: use the platform's reach estimate, labelled as an estimate",
+  "No ad budget: physical availability fixes, local listings, partner placements, consistent organic posting",
+  "No tracking: self-reported 'how did you hear' at checkout"
+ ],
+ "stop_conditions": [
+  "Re-test yearly or after a major campaign; if uniqueness falls because a competitor copies the asset, pair it more strongly with the name",
+  "Weekly: frequency versus reach. Quarterly: sales versus baseline. Stop a channel if its reach is mostly duplicated.",
+  "Reach channel: review at 3 months on new-buyer trend and branded search, not 8-week inquiries",
+  "Demand-capture channel: existing stop rules"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Forced rebrand (legal, merger)",
+  "Category-generic colours (e.g. blue in dental): execute them in a distinctive way, like the book's HSBC red border example",
+  "Platform minimum spends and learning phases that make very small budgets inefficient",
+  "Regulated categories with targeting limits (special ad categories)",
+  "Small budgets spread so thin that no one sees the ad more than once a quarter",
+  "Platform 'reach' that isn't attention (FAQ: social OTS vs actual brains)"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: Every set of posts or ads carries the same one or two declared brand assets in the first frame or slide, while angles and buying situations vary.",
+    "from": "BK11-K3"
+   },
+   {
+    "rule": "proposed: Prefer continuous lower-weight presence to a single burst unless sales are highly seasonal.",
+    "from": "BK11-K4"
+   },
+   {
+    "rule": "proposed rule: a physical-availability check (hours, ordering routes, stockists, booking friction) runs before any awareness spend for consumer businesses",
+    "from": "BK10-K5"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: Video ads and scripts make the business identifiable early, through the product or owner carrying a declared asset in frame 1 or the name on screen within the opening, and again later. A hook-first opening is fine if branding comes within it.",
+    "from": "BK11-K3"
+   },
+   {
+    "rule": "proposed: Don't recommend a logo, packaging or colour change without a recorded reason (legal, merger, asset fails a test) and a re-education plan.",
+    "from": "BK11-K3"
+   },
+   {
+    "rule": "proposed: Paid social drafts for consumer and local businesses default to broad targeting within the service area, not narrow interest or persona targeting, unless eligibility, capacity or a listable B2B target set requires narrowing.",
+    "from": "BK11-K4"
+   },
+   {
+    "rule": "proposed: A second platform needs a stated reason it reaches different people; two similar social platforms on a small budget are flagged.",
+    "from": "BK11-K4"
+   },
+   {
+    "rule": "proposed rule: use the frequency dimension in scoring: for recurring B2C, soften the intent penalty on broad-reach families (paid_social, video, local, traditional) by a bounded amount when the budget band supports them",
+    "from": "BK10-K5"
+   },
+   {
+    "rule": "proposed rule: paid reach plans spread spend evenly by month unless the owner names a seasonal peak",
+    "from": "BK10-K5"
+   },
+   {
+    "rule": "proposed rule: reach-channel stop rules use a 3-month window and new-buyer trend, not 8-week inquiries",
+    "from": "BK10-K5"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: Never imitate a competitor's distinctive assets.",
+    "from": "BK11-K3"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: Fame and uniqueness are computed in code with n shown.",
+    "from": "BK11-K3"
+   },
+   {
+    "rule": "proposed: When an owner proposes a low-reach tactic, show the required response rate (target / (category buyers x reach)) computed in code.",
+    "from": "BK11-K4"
+   },
+   {
+    "rule": "proposed: Ad geography must match where the business can deliver.",
+    "from": "BK11-K4"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed rule: whether reach channels beat demand capture for small recurring-B2C budgets is unknown; run a geo holdout when budget allows",
+    "from": "BK10-K5"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-social-content",
+  "skills/meta-ads/SKILL.md",
+  "docs/growth-intelligence/books/10_paid_media_cro.md"
+ ],
+ "reconciliation_note": "Revises the 'never open with the brand name' rule (RECONCILIATION R07).",
+ "member_frameworks": [
+  "BK11-K3",
+  "BK11-K4",
+  "BK10-K5"
+ ],
+ "source_references": [
+  "BK11-F23",
+  "BK11-F24",
+  "BK11-F25",
+  "BK11-F26",
+  "BK11-F39",
+  "BK11-F43",
+  "BK11-F27",
+  "BK11-F28",
+  "BK11-F29",
+  "BK11-F30",
+  "BK11-F31",
+  "BK11-F12",
+  "BK11-F14",
+  "BK10-F16",
+  "BK10-F24",
+  "BK10-F25",
+  "BK10-F26",
+  "BK10-F32",
+  "BK10-F33",
+  "BK10-F34",
+  "BK10-F35"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK11-K3-1",
+  "EV-BK11-K3-2",
+  "EV-BK11-K3-3",
+  "EV-BK11-K4-1",
+  "EV-BK11-K4-2",
+  "EV-BK11-K4-3",
+  "EV-BK11-K4-4",
+  "EV-BK10-K5-1",
+  "EV-BK10-K5-2",
+  "EV-BK10-K5-3",
+  "EV-BK10-K5-4"
+ ]
+}

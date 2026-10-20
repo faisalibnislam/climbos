@@ -1,0 +1,121 @@
+{
+ "id": "BKP-24",
+ "version": 1,
+ "slug": "guarantee-rollout",
+ "title": "Guarantee design with scenario modelling",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether to offer a guarantee for a diagnosed risk, and its break-even invocation rate.",
+ "business_types": [
+  "any selling to wary buyers"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Diagnosis shows risk is a main objection"
+ ],
+ "exclusions": [
+  "No diagnosed risk (risk reversal isn't a default)"
+ ],
+ "required_inputs": [
+  "Orders per period, contribution kept per order, loss per invoked guarantee"
+ ],
+ "evidence_requirements": [
+  "Diagnosed risk or skepticism (K1/K2)",
+  "Orders per period, price, contribution per kept order, loss per invoked guarantee incl. handling",
+  "Claim period and product evaluation time",
+  "Owner confirmation the product delivers the promise"
+ ],
+ "missing_data_behavior": [
+  "No loss estimate: grid of scenarios only, labelled."
+ ],
+ "decision_branches": [
+  {
+   "if": "Break-even invocation rate is comfortably above expected",
+   "then": "Pilot on new buyers, with statutory rights unchanged."
+  }
+ ],
+ "implementation_steps": [
+  "Draft: name it, positive wording, matched type, easy to invoke, prompt refund, placed where risk is felt",
+  "Scenario grid in code: uplift x invocation rate -> net profit change",
+  "Short test if risk tolerance allows",
+  "Wait out the claim period",
+  "Compute actual uplift and invocation cost",
+  "Keep, extend or drop; then consider a bolder version"
+ ],
+ "dependencies": [
+  "Owner approval; guarantee is a confirmed fact before it appears in copy (specs.ts lintOfferClaims)",
+  "Operational process for claims (returns, refunds)",
+  "Statutory rights checked (do not present legal rights as a special extra)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Refund reserve sized from the scenario grid",
+  "labor": "2-4 hours plus claim handling",
+  "capability": "Refund process",
+  "measurement": "Orders and claims tagged by cohort"
+ },
+ "metrics": [
+  "Conversion uplift (observed, labelled)",
+  "Invocation rate",
+  "Net profit change per period"
+ ],
+ "guardrails": [
+  "Scenario grid, not a forecast.",
+  "Statutory consumer rights are not a 'guarantee'.",
+  "No outcome guarantees the business cannot control",
+  "No 'strings' hidden in terms",
+  "Statutory rights not marketed as extras"
+ ],
+ "alternatives_when_constrained": [
+  "No order history: start with a narrow, low-cost satisfaction promise and a cap, labelled pilot",
+  "No test capacity: before/after over a full claim period, labelled observational"
+ ],
+ "stop_conditions": [
+  "Invocation above the break-even rate from the grid: stop or revise",
+  "Claims handling backlog: pause"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Long feedback loop: costs known only after the claim period",
+  "Long claim periods increase exposure without more conversions"
+ ],
+ "rule_classes": {
+  "economic_feasibility": [
+   {
+    "rule": "proposed: any guarantee recommendation includes a code-computed scenario grid and break-even invocation rate",
+    "from": "BK13-K6"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: guarantees appear in copy only after the owner confirms them (already enforced for plays in specs.ts:737-746)",
+    "from": "BK13-K6"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: do not present statutory rights (e.g. distance-selling withdrawal periods where they apply) as a special guarantee",
+    "from": "BK13-K6"
+   }
+  ]
+ },
+ "versions_existing": [
+  "docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json"
+ ],
+ "reconciliation_note": "Conditional risk reversal (RECONCILIATION R08).",
+ "member_frameworks": [
+  "BK13-K6"
+ ],
+ "source_references": [
+  "BK13-F9",
+  "BK13-F29"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK13-K6-1",
+  "EV-BK13-K6-2"
+ ]
+}

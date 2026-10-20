@@ -1,0 +1,287 @@
+{
+ "id": "BKP-06",
+ "version": 1,
+ "slug": "customer-value-stages",
+ "title": "Customer-value stages and the one gap to close",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to map the customer's journey into value stages, pick one customer-led measure per stage and choose the single gap worth closing, sized in customers.",
+ "business_types": [
+  "saas",
+  "membership",
+  "subscription_commerce",
+  "agency_retainer",
+  "repeat services"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Recurring or repeat revenue",
+  "Owner tracks only signups and sales"
+ ],
+ "exclusions": [
+  "One-off purchases where a purchase funnel plus reviews and referrals is enough"
+ ],
+ "required_inputs": [
+  "Counts per stage over the same period",
+  "Definition of first value (value received, not setup)"
+ ],
+ "evidence_requirements": [
+  "Chosen Job (K3)",
+  "Research answers tagged thinking/doing/feeling",
+  "Which events the owner can observe",
+  "Customer statements of value mapped to features or service elements",
+  "Event or job data per customer",
+  "Later paid/retained outcome per customer for validation",
+  "Counts reaching each milestone in a period",
+  "Value per new customer (owner-supplied)",
+  "Walk-through notes per milestone",
+  "Chosen Job and milestones",
+  "Date of last research",
+  "Product or market changes since",
+  "customer or unit growth over 12 months with the starting base",
+  "market flux signals: new regulation, new technology, new area, shortage, new category",
+  "whether buyers ask 'who can do this?' or compare prices",
+  "retention and repeat data"
+ ],
+ "missing_data_behavior": [
+  "Stage counts missing: name the measurement step; no gap ranking.",
+  "Thresholds set by judgement: label them; check against later payment when cohorts allow."
+ ],
+ "decision_branches": [
+  {
+   "if": "Two gaps have similar rates",
+   "then": "Size each by extra customers (eligible x lift x downstream rate), not rate alone."
+  },
+  {
+   "if": "Expansion is the gap",
+   "then": "Treat upgrades by existing customers as retention, not conversion."
+  },
+  {
+   "if": "Product or market changed",
+   "then": "Mark the research and stage map stale; refresh before planning."
+  }
+ ],
+ "implementation_steps": [
+  "Lay out Struggle, Evaluation, Growth",
+  "Place evidence under thinking, doing, feeling per phase",
+  "Split into milestones where feelings shift",
+  "Map each milestone to a diagnosis.ts stage (Problem→reach, Interest→lead, First Value→activation, Value Realization→activation(value)/purchase, Continued Value→retention, Value Growth→no stage today)",
+  "Note where payment happens for this business",
+  "List what customers said was valuable per milestone",
+  "Map each to the feature or service element that delivers it",
+  "Write a trackable action (with threshold if data supports) per milestone",
+  "Walk each milestone as the chosen-Job customer: their search places, ads, homepage, signup, first use, emails, renewal",
+  "List mismatches per milestone",
+  "Read stage counts and rates (code)",
+  "Every play states the Job, milestone and KPI it moves",
+  "Review KPI dashboard on a fixed cadence",
+  "Log which gap is being worked and which are parked",
+  "Compute 12-month unit growth in code and keep the base",
+  "Collect market flux signals separately from own growth",
+  "Pick the stage, or 'unknown'"
+ ],
+ "dependencies": [
+  "One Job chosen",
+  "Some way to observe at least one value event",
+  "Milestones (K4)",
+  "Event tracking or owner-markable records",
+  "Milestone KPIs (K5) or diagnosis.ts readings",
+  "K3-K5 done at least once",
+  "K1 and K2"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "A half-day workshop equivalent; ClimbOS drafts from research",
+  "capability": "Research from K1/K2",
+  "measurement": "At least one value event per phase eventually"
+ },
+ "metrics": [
+  "Milestones with an observable KPI / total milestones",
+  "Rate reaching each milestone KPI within window",
+  "Paid/retained rate conditional on reaching vs not",
+  "Milestone KPI rate for new cohorts",
+  "Downstream paid/retained",
+  "Support tickets and refunds (guardrail)",
+  "Share of plays tagged to the chosen Job's milestone",
+  "Days since last research",
+  "12-month unit growth and base",
+  "share of new customers on contracts or follow-on offers",
+  "retention of takeoff-period cohorts"
+ ],
+ "guardrails": [
+  "NPS and CSAT stay out of diagnosis (leading indicators at most).",
+  "Sizing lifts are illustrative, labelled assumptions.",
+  "Each milestone cites research rows",
+  "Stages with no data marked unmeasured, not guessed",
+  "Rates computed in code with denominators",
+  "No vanity events",
+  "Pair any milestone lift with downstream paid or retained outcome",
+  "Lift claims carry window, cohort and comparison",
+  "Book case uplifts never used as forecasts",
+  "Customer-facing sends follow consent rules (lifecycle email only to consented contacts; Resend never for cold)",
+  "Tags are checked by code, not trusted from prose",
+  "Stage is a labelled heuristic, never a computed certainty",
+  "Takeoff never overrides cash floor, capacity or payback guardrails"
+ ],
+ "alternatives_when_constrained": [
+  "No research: draft milestones from owner interview, labelled owner-reported",
+  "No event data: owner hand-marks a sample of recent customers per milestone",
+  "No tracking: weekly owner count from admin view",
+  "Service business: milestone = job delivered, problem gone, rebooked",
+  "No counts: owner hand-checks last 20 signups through each milestone",
+  "Low volume: before/after on whole weeks, labelled directional",
+  "No dashboard: monthly manual counts per milestone",
+  "No growth data: ask for customer counts 12 months ago and now",
+  "No market signals: default to stability rules for spending"
+ ],
+ "stop_conditions": [
+  "Research for the Job is older than ~12 months or the product changed: refresh",
+  "KPI reachers do not pay/retain better than non-reachers: move the definition",
+  "Nearly everyone reaches it: it is setup, move later",
+  "No change after planned weeks: gap cause was elsewhere",
+  "Milestone up, paid flat: look at offer or price (PB-activation-repair revise)",
+  "Over half the plays target other milestones than the chosen gap: re-focus or justify",
+  "Review each quarter or when growth slows sharply; a boom ending is the moment arbitrage arrives"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Generic awareness/consideration/purchase stages pasted in",
+  "Milestones invented without customer evidence",
+  "DAU/MAU or logins as engagement",
+  "Shared metric across teams causing misattribution",
+  "Picking the most fun or trendy idea",
+  "Fixing several gaps at once and learning nothing",
+  "Map shelved after the workshop",
+  "Plays not tied to any milestone",
+  "Reading 100% growth from a tiny base as market takeoff",
+  "Using the 30-40% cutoff as a law"
+ ],
+ "rule_classes": {
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: for recurring-revenue types, the diagnosis reports a retention reading and, when supplied, an expansion reading (upgrades, added seats, referrals); missing Growth-phase numbers are listed in 'missing'.",
+    "from": "BK08-K4"
+   },
+   {
+    "rule": "proposed: a milestone threshold is 'validated' only when reachers' later paid or retained rate exceeds non-reachers' in the same cohort; otherwise label 'hypothesis'.",
+    "from": "BK08-K5"
+   },
+   {
+    "rule": "proposed: the owner's 'visitors' input asks for new unique visitors and excludes logged-in customers.",
+    "from": "BK08-K5"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: stage labels shown to the owner use the business's own milestone names where defined, while code keeps the fixed stage keys.",
+    "from": "BK08-K4"
+   },
+   {
+    "rule": "proposed: BRP-07 v2 extends the value-event definition to every milestone, including Continued Value (value KPI per natural period) and Value Growth (plus upgrade, review or referral).",
+    "from": "BK08-K5"
+   },
+   {
+    "rule": "proposed: book case uplifts (2x, +93%, +64%) appear only as labelled historical examples, never as expected results.",
+    "from": "BK08-K6"
+   },
+   {
+    "rule": "proposed: each play carries a milestone tag and the chosen Job id; lint flags plans where the bankable play is not on the chosen gap.",
+    "from": "BK08-K7"
+   },
+   {
+    "rule": "proposed: in a takeoff branch, prefer plays that convert new customers onto recurring or embedded arrangements over one-off sales",
+    "from": "BK07-K3"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: one-off purchase businesses keep the purchase funnel; ClimbOS does not force a Growth-phase map on them.",
+    "from": "BK08-K4"
+   },
+   {
+    "rule": "proposed: NPS/CSAT may be reported but never used as a milestone KPI or a diagnosis input.",
+    "from": "BK08-K5"
+   },
+   {
+    "rule": "proposed: plans include a 'walk the journey' first step that lists mismatches per milestone, labelled as hypotheses.",
+    "from": "BK08-K6"
+   },
+   {
+    "rule": "proposed: research older than 12 months or predating a pricing/product change is shown as stale.",
+    "from": "BK08-K7"
+   },
+   {
+    "rule": "proposed: compute stage only when the 12-month starting base is at least a minimum count (owner-configurable; e.g. 30 customers); otherwise stage = unknown",
+    "from": "BK07-K3"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: when two measured gaps compete, code reports added customers and contribution for the same point lift at each stage (eligible x lift x downstream rate x value) next to the rate comparison.",
+    "from": "BK08-K6"
+   },
+   {
+    "rule": "proposed: when stage is stability or unknown, affordable CAC must not include unobserved lock-in lifetimes",
+    "from": "BK07-K3"
+   }
+  ]
+ },
+ "versions_existing": [
+  "docs/growth-expansion/blog-research/playbooks/BRP-07-activation-definition.json (candidate v2)",
+  "shared/agents/diagnosis.ts",
+  "shared/playbooks/contracts.ts PB-activation-repair"
+ ],
+ "reconciliation_note": "The book rejects a funnel that ends at purchase, not stage ratios; ClimbOS diagnosis keeps ratios on value stages (RECONCILIATION R09).",
+ "member_frameworks": [
+  "BK08-K4",
+  "BK08-K5",
+  "BK08-K6",
+  "BK08-K7",
+  "BK07-K3"
+ ],
+ "source_references": [
+  "BK08-F1",
+  "BK08-F18",
+  "BK08-F19",
+  "BK08-F20",
+  "BK08-F31",
+  "BK08-F21",
+  "BK08-F22",
+  "BK08-F23",
+  "BK08-F24",
+  "BK08-F25",
+  "BK08-F26",
+  "BK08-F27",
+  "BK08-F28",
+  "BK08-F9",
+  "BK08-F5",
+  "BK08-F29",
+  "BK08-F30",
+  "BK08-F2",
+  "BK07-F20",
+  "BK07-F21",
+  "BK07-F22",
+  "BK07-F12"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK08-K4-1",
+  "EV-BK08-K4-2",
+  "EV-BK08-K5-1",
+  "EV-BK08-K5-2",
+  "EV-BK08-K5-3",
+  "EV-BK08-K6-1",
+  "EV-BK08-K6-2",
+  "EV-BK08-K6-3",
+  "EV-BK08-K7-1",
+  "EV-BK08-K7-2",
+  "EV-BK07-K3-1",
+  "EV-BK07-K3-2",
+  "EV-BK07-K3-3"
+ ]
+}

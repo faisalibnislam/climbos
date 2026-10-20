@@ -1,0 +1,281 @@
+{
+ "id": "BKP-21",
+ "version": 1,
+ "slug": "retention-acquisition-balance",
+ "title": "Retention vs acquisition: ceiling, replacement and penetration",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How much effort goes to keeping customers vs winning new buyers, using the steady-state ceiling and replacement arithmetic.",
+ "business_types": [
+  "any repeat-purchase or recurring business"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Owner asks whether to focus on retention or acquisition",
+  "Growth goal relies on buying frequency alone"
+ ],
+ "exclusions": [
+  "Capacity full"
+ ],
+ "required_inputs": [
+  "Active customers",
+  "Monthly churn",
+  "New customers per month"
+ ],
+ "evidence_requirements": [
+  "monthly or annual churn/defection rate",
+  "new customers per month",
+  "current active customers",
+  "churn reasons split: controllable (value, onboarding, service) vs uncontrollable (moved, closed, no longer needs, budget)",
+  "category or size-matched churn norm if any",
+  "customers (or accounts) who bought in the last 12 months",
+  "purchases or visits per buyer in that period",
+  "rough count of category buyers in the reachable area (estimate allowed, labelled)",
+  "category purchase rate per buyer if known",
+  "customer-level purchases for at least 12 months (ideally 24)",
+  "revenue by customer decile",
+  "Unique buyers per quarter and new buyers per quarter (POS, Shopify, Stripe, bookings)",
+  "Purchases or orders per buyer per quarter",
+  "Buyer-level purchase counts for a frequency distribution",
+  "Capacity utilisation (bookable slots used) for service businesses",
+  "Size of the reachable market where it is listable (B2B niche)"
+ ],
+ "missing_data_behavior": [
+  "No active count: no ceiling; show the formula only.",
+  "Churn typed by the owner: show source and a wide range."
+ ],
+ "decision_branches": [
+  {
+   "if": "Churn high for the business's size and controllable",
+   "then": "Retention first."
+  },
+  {
+   "if": "Churn normal for size, growth goal needs more buyers",
+   "then": "Penetration first; keep acquisition at least at replacement."
+  },
+  {
+   "if": "Plan only raises frequency",
+   "then": "Double-jeopardy flag: growth usually comes mostly from more buyers."
+  }
+ ],
+ "implementation_steps": [
+  "Compute steady-state ceiling = new customers per month / monthly churn (code)",
+  "Compute replacement acquisition = churn x current base",
+  "Split churn reasons",
+  "Compare churn to a reference only where one exists (SaaS) and note size effect",
+  "Allocate: fix controllable churn first only when it is above the norm; never zero acquisition",
+  "Decompose sales = buyers x purchases per buyer (code, not prose)",
+  "State the target in both terms",
+  "Check frequency against category rate and against peers if known",
+  "Compute revenue share of top 20%, middle 30%, bottom 50% (code)",
+  "Compare two consecutive periods for the same customers before calling anyone 'VIP'",
+  "Size the light/non-buyer pool in reach",
+  "Pull quarterly unique buyers, new buyers and purchases",
+  "Decompose growth into change in buyers and change in purchases per buyer (in code)",
+  "Compute the purchase-frequency distribution and the top-20% share of purchases (Pareto share)"
+ ],
+ "dependencies": [
+  "a recurring or repeat relationship",
+  "consistent definition of an active customer",
+  "a repeat-purchase category with several substitutes",
+  "a defined period (annual by default)",
+  "repeat purchase",
+  "enough customers for deciles (rule of thumb: 100+)",
+  "Transactions linked to a customer ID for at least two quarters",
+  "Capacity is not the binding constraint (diagnosis.ts delivery check)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "owner tags churn reasons",
+  "capability": "billing or booking export",
+  "measurement": "monthly cohorts; reasons for exit"
+ },
+ "metrics": [
+  "monthly churn",
+  "steady-state ceiling",
+  "replacement acquisition",
+  "share of churn that is controllable",
+  "unique buyers per period (penetration proxy)",
+  "purchases per buyer",
+  "share of new vs returning buyers",
+  "Pareto share (top 20%)",
+  "next-period share of last period's top 20%",
+  "share of sales from last period's non-buyers",
+  "Unique buyers per quarter",
+  "New buyers per quarter",
+  "Pareto share (top 20% of buyers' share of purchases)",
+  "Top-20% stability across periods",
+  "Capacity utilisation"
+ ],
+ "guardrails": [
+  "Top 20% of buyers give about half of volume, not 80%; heavy buyers regress.",
+  "No 'retention is 5x cheaper' claims.",
+  "No '5x cheaper to retain' or '5% retention = 100% profit' claims (no empirical basis per ch3)",
+  "Retention plays must say what share of churn they can touch",
+  "Never present a frequency-only plan as the default for a repeat-purchase consumer business without the double-jeopardy note",
+  "Arithmetic in code",
+  "Don't build segments or lookalikes on a single period's heavy buyers without the moderation caveat",
+  "Never recommend 'firing' light customers",
+  "Don't present a loyalty program as the growth engine without a penetration mechanism",
+  "Label Ehrenberg-Bass patterns as consumer/repeat defaults, not laws for every business",
+  "Arithmetic done in code, never estimated in prose"
+ ],
+ "alternatives_when_constrained": [
+  "No churn reasons: run 5-10 exit interviews or a one-question cancel survey first",
+  "No churn rate: use repeat-rate proxy; mark retention 'unknown' (as diagnosis.ts:99 does for non-SaaS)",
+  "No buyer-level data: use transactions and a customer-count estimate, labelled; or run a 4-week receipt or booking-name tally",
+  "No category size: skip penetration %, keep buyer counts",
+  "No customer IDs: skip; use category-buyer reach logic",
+  "Under 100 customers: describe, don't decile",
+  "No customer IDs: use new versus returning customer counts from the last 90 days",
+  "No transaction data: add a measurement first step and keep plays cheap and reversible (diagnosis 'unknown' path)"
+ ],
+ "stop_conditions": [
+  "If a retention fix runs one renewal cycle and churn is unchanged, return effort to acquisition",
+  "Review after one full purchase cycle; if buyers grew but frequency did not, that is the expected pattern, not failure",
+  "If a heavy-buyer program shows member lift, check against the moderation baseline before expanding",
+  "Review quarterly. If two quarters show growth mainly from purchases per buyer while buyers are flat, and the business is niche- or capacity-limited, keep the loyalty-led plan and record it."
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "SaaS with high voluntary early churn: Sharp's low-defection examples do not apply",
+  "Very small bases: churn rates noisy month to month",
+  "Contracted B2B or SaaS where 'frequency' is seat or usage expansion",
+  "One-off purchases (frequency always ~1)",
+  "Short analysis windows exaggerate or understate concentration",
+  "One-off purchase categories",
+  "Capacity-limited services (one practitioner, fully booked)",
+  "Single-provider subscriptions (dentist, accountant) where repertoires are tiny"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed rule: diagnosis output adds a computed steady-state ceiling (newCustomersPerMonth / monthlyChurn) and replacement acquisition (monthlyChurn x active customers) whenever both inputs exist",
+    "from": "BK10-K2"
+   },
+   {
+    "rule": "proposed rule: COMPETING.retention also names 'defection outside the business's control (moved, closed, no longer needs) and normal size-related churn'",
+    "from": "BK10-K2"
+   },
+   {
+    "rule": "proposed rule: when retention binds, the plan still keeps acquisition at or above replacement level unless capacity binds",
+    "from": "BK10-K2"
+   },
+   {
+    "rule": "proposed rule: when a plan's goal implies purchases-per-buyer growth above 20% with flat buyers in a repeat-purchase B2C business, the plan must also show the penetration-led version and label the frequency version as against the norm",
+    "from": "BK10-K1"
+   },
+   {
+    "rule": "proposed rule: retention or VIP plays aimed at last period's heaviest buyers carry a note that next period they will buy less on average without any change (buyer moderation)",
+    "from": "BK10-K3"
+   },
+   {
+    "rule": "proposed: When top customers are identified from one period, state that about half may not be top customers next period, and don't size a VIP program from a single period.",
+    "from": "BK11-K1"
+   },
+   {
+    "rule": "proposed: When the diagnosis is retention for a consumer repeat business, add the competing explanation that higher defection is normal for a small brand and often circumstantial; require a churn-reason split before product changes.",
+    "from": "BK11-K1"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed rule: block copy or plans that cite 'retention is 5x cheaper' or 'a 5% retention gain doubles profit' as fact",
+    "from": "BK10-K2"
+   },
+   {
+    "rule": "proposed rule: for B2C repeat-purchase businesses, at least one acquisition play reaches light or non-buyers of the brand",
+    "from": "BK10-K3"
+   },
+   {
+    "rule": "proposed: For consumer repeat-purchase types that aren't capacity-bound, the bankable demand play must recruit new or light category buyers; a loyalty, VIP or referral play can't be labelled the growth engine unless a capacity or listable-niche condition is recorded.",
+    "from": "BK11-K1"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed rule: before labelling churn weak for a non-SaaS business, collect churn reasons",
+    "from": "BK10-K2"
+   },
+   {
+    "rule": "proposed rule: if buyer-level counts are missing, ask for them before setting a frequency target",
+    "from": "BK10-K1"
+   },
+   {
+    "rule": "proposed rule: any 'top customers' statistic must come from data with the period stated; never assume 80/20",
+    "from": "BK10-K3"
+   },
+   {
+    "rule": "proposed: Growth decomposition, Pareto share and heavy-buyer stability are computed by deterministic calculators from owner data.",
+    "from": "BK11-K1"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed rule: required purchases per buyer greater than the category purchase rate is infeasible and must be blocked by a deterministic check",
+    "from": "BK10-K1"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/agents/diagnosis.ts (retention branch, COMPETING.retention)",
+  "skills/retention-lifecycle/SKILL.md",
+  "docs/growth-expansion/blog-research/guides/02_activation_retention_plg.md"
+ ],
+ "reconciliation_note": "Context-dependent per owner decision (RECONCILIATION R04).",
+ "member_frameworks": [
+  "BK10-K2",
+  "BK10-K1",
+  "BK10-K3",
+  "BK11-K1"
+ ],
+ "source_references": [
+  "BK10-F8",
+  "BK10-F9",
+  "BK10-F10",
+  "BK10-F11",
+  "BK10-F12",
+  "BK10-F1",
+  "BK10-F2",
+  "BK10-F3",
+  "BK10-F4",
+  "BK10-F35",
+  "BK10-F7",
+  "BK10-F13",
+  "BK10-F14",
+  "BK10-F15",
+  "BK10-F16",
+  "BK10-F19",
+  "BK11-F1",
+  "BK11-F2",
+  "BK11-F3",
+  "BK11-F4",
+  "BK11-F5",
+  "BK11-F6",
+  "BK11-F7",
+  "BK11-F9",
+  "BK11-F10",
+  "BK11-F11",
+  "BK11-F13"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK10-K2-1",
+  "EV-BK10-K2-2",
+  "EV-BK10-K2-3",
+  "EV-BK10-K1-1",
+  "EV-BK10-K1-2",
+  "EV-BK10-K1-3",
+  "EV-BK10-K3-1",
+  "EV-BK10-K3-2",
+  "EV-BK10-K3-3",
+  "EV-BK11-K1-1",
+  "EV-BK11-K1-2",
+  "EV-BK11-K1-3",
+  "EV-BK11-K1-4"
+ ]
+}

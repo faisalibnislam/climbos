@@ -1,0 +1,41 @@
+--- a/skills/plays-local/SKILL.md
++++ b/skills/plays-local/SKILL.md
+@@ -16,8 +16,10 @@
+ 
+ ## How to use this catalog
+ 
+-- **Fix the leaky bucket first.** Plays 1–8 lift the conversion of everything else. Check them before suggesting acquisition plays 12+: a 3.9 rating, 40% missed calls and no rebooking waste money on mail, creators or sponsorships.
++- **Fix the leaky bucket first.** Plays 1–8 lift the conversion of everything else. Check them before suggesting acquisition plays 12+: a 3.9 rating, 40% missed calls and no rebooking waste money on mail, creators or sponsorships. Also check availability: listed where buyers search and book, right services, hours and area, easy to find [BK11-K6].
+ - **Suggest first, by vertical:** Home services 2, 1, 5, 8, 12, 15, 25, 18 · Food & beverage 1, 11, 13, 14, 24, 26, 29, 20 · Fitness 9, 3, 17, 16, 10, 1, 28 · Salons/spas 4, 1, 3, 10, 16, 33, 30 · Clinics 4, 3, 2, 1, 16, 17, 18 · Local retail 11, 20, 30, 37, 22, 1 · Professional services 2, 1, 15, 38, 28, 8 (Screened), 22.
++- **Route density** (home services): cluster acquisition by area (plays 12, 19, 21) and track cost per job and drive time by area; density is the scale economy a local firm can build [BK07-K2].
++- **Repeat verticals** (food, salons, fitness, retail): context: at least one acquisition play reaches light or non-buyers; loyalty, VIP and rebooking plays don't carry growth alone. Last period's heaviest buyers buy less next period on average, so never size a VIP club from one period or assume 80/20 [BK10-K3, BK11-K1]. Emergency trades: demand capture first; fully booked: capacity and price first [BK10-K8].
+ - **Best effort-to-upside creative plays** (a "find the right 50 targets and pitch them" step owners rarely do and AI can): 13, 14, 15, 23, 25, 26, 27, 31, 33.
+ - **Tracking needed for nearly every play:** unique codes per partner/route/creator, dedicated call-tracking numbers, QR-coded landing pages, a "how did you hear about us" field, and a cost-per-booked-job ledger across channels. Without them plays 12–40 can't be judged.
+ - **Scores:** predictability/leverage map the source's H/M/L to 4/3/2. Evidence strong = regulator, platform policy or peer-reviewed study; moderate = large vendor dataset with stated sample; weak = practitioner/vendor claims or anecdotes (source tag [WEAK EVIDENCE]).
+@@ -116,7 +118,7 @@
+ - **ClimbOS does:** offer page, nurture, follow-ups, funnel dashboard. Owner: consults.
+ 
+ ### 10. Double-sided referral program with tracking (`referral-program`) · evidence strong · predictability 3 · leverage 4
+-- **Fits:** all; best for high-ticket or high-trust services.
++- **Fits:** all; best for high-ticket or high-trust services. Bankable only with ~20+ customers; forecasts scale with the base and are partly non-incremental [BK11-K5].
+ - **Why:** referred customers arrive pre-trusted and churn less.
+ - **Do:** 1) two-sided credit (e.g., $50/$50) or charity donation; 2) personal code at the moment of delight; 3) specific ask ("who on your street has an older furnace?"); 4) thank within 24h, handwritten for big jobs; 5) monthly share, conversion, cost.
+ - **Expect:** referred customers' lifetime value 16–25% higher (bank study) [wharton.upenn.edu]. 2–8% of customers refer yearly [practitioner estimate]. HVAC rewards $50–$75 service, $100–$150 installs [christopholivierconsulting.com].
+@@ -131,7 +133,7 @@
+ - **Do:** 1) "buy 12, get 1" with 2–3 pre-applied stamps instead of a blank 10; 2) give a reason (welcome, birthday); 3) digital card captures consented contacts; 4) "you're 2 away" nudge; 5) compare vs old card for 90 days.
+ - **Expect:** car-wash field test: 34% completion with 2 free stamps on a 10-stamp card vs 19% on a blank 8-stamp card (~300 cards, replicated in labs) [knowledge.wharton.upenn.edu].
+ - **Cost / time:** $0–$50/mo; 1–2h; 2–6 wks.
+-- **Track:** completion rate; stamps at 30 days; visit frequency.
++- **Track:** completion rate; stamps at 30 days; total visits per customer vs prior period or a holdout. Completion isn't added sales and member vs non-member comparisons are biased; treat as predictability 3 for growth until a holdout reads out [BK10-K7].
+ - **Rules & risks:** SMS needs consent; clear expiry terms; no stamps for reviews.
+ - **ClimbOS does:** card design, nudges, cohort analysis. Owner: POS, staff habits.
+ 
+@@ -221,7 +223,7 @@
+ - **Do:** 1) 10DLC-verified platform; 2) keyword/form consent stating frequency and STOP; 3) concrete benefit; 4) 2–6 msgs/mo; 5) flows: birthday, 60-day win-back, slot opened; prune if opt-outs >~2%/send [practitioner estimate].
+ - **Expect:** "good" click rate 8.9–14.5% [klaviyo.com]; SMS CTR 12.39% vs 0.74% email [omnisend.com]; flows 7.6% of sends, 45.2% of revenue [clickminded.com]. Ecommerce-heavy data.
+ - **Cost / time:** $20–$150/mo; 1–2h/wk; 1–2 wks after 200+ subs.
+-- **Track:** opt-ins/wk; redemptions per send; opt-out rate.
++- **Track:** opt-ins/wk; redemptions per send; opt-out rate. Member revenue is partly selection: compare with a holdout or the same customers before joining [BK10-K7].
+ - **Rules & risks:** written consent, quiet hours, SHAFT limits; never import non-opted contacts.
+ - **ClimbOS does:** consent forms, drafts, state-rule enforcement, flows. Owner: offers.
+ 

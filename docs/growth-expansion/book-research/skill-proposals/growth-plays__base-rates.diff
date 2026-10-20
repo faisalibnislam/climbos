@@ -1,0 +1,37 @@
+--- a/skills/growth-plays/reference/base-rates.md
++++ b/skills/growth-plays/reference/base-rates.md
+@@ -60,15 +60,29 @@
+ 
+ ## Self-serve SaaS funnel (fallbacks; prefer the owner's numbers)
+ 
+-These are commonly reported practitioner ranges, grade C at best. Use them only when research finds nothing better, and say so.
++These are ClimbOS planning ranges, grade C at best; upper ends are weakly sourced. Use them only when research finds nothing better, and say so.
+ 
+ | Step | Typical range | Grade |
+ |---|---|---|
+-| Free plan user → paid | 2–5% [practitioner benchmark, e.g. Lean Analytics] | C |
+-| Free trial, no card → paid | 15–25% [practitioner benchmark, product-led growth literature] | C |
+-| Free trial, card required → paid | 40–60% of trials, but far fewer trial starts [same] | C |
++| Free plan user → paid | 2–5% [ClimbOS range; Lean Analytics (2013) says ~2%; Verna (2024, unsourced) 3–5%] | C |
++| Free trial, no card → paid | 15–25% [ClimbOS range; Lean Analytics (2013, Totango data) ~15%, 25% only when courting serious evaluators; Verna (2024, unsourced) 10–15%] | C |
++| Free trial, card required → paid | 40–50% of trials, but far fewer trial starts [Lean Analytics (2013, Totango data)] | C |
+ | Small-business SaaS monthly churn | 3–7% [practitioner benchmark] | C |
+ 
++## Dated book references (context only, never a threshold or verdict)
++
++| Reference | Figure | Grade · date · scope |
++|---|---|---|
++| Trial starts (Lean Analytics, Totango) | 0.5–2% of visitors with card vs 5–10% without; first-bill churn up to 40% vs 20% | C · c. 2012 · venture SaaS |
++| SaaS monthly churn (Lean Analytics) | Best 1.5–3%; under 5% before scaling | C · 2009–2012 · venture SaaS |
++| Ecommerce repurchase mode (Hillstrom, in Lean Analytics) | Annual repurchase <40% acquisition, 40–60% hybrid, >60% loyalty; loyalty programs rarely pay in acquisition mode | C · c. 2012 · one consultant, no sample |
++| Buyer concentration (How Brands Grow 1–2) | Top 20% of buyers ≈ 40–60% of annual volume, not 80%; about half of one period's heaviest aren't heavy the next | B · 2010–2016 · consumer repeat; not B2B account revenue |
++| Perceived differentiation (How Brands Grow) | ~10% of a brand's users call it different or unique | B · ≤2014 · consumer and bank surveys |
++| Temporary price cuts (How Brands Grow) | Elasticity usually −1 to −4, average about −2.5 | B · ≤2014 · consumer goods |
++| Founder-led B2B sales (Founding Sales, author view) | Win rate 10–30%; demo show-up ≥80%; cost of sales 20–30% of revenue closed | D · 2020 · US venture SaaS |
++
++Folk numbers never cited as fact: the 80/20 customer split, "retention is 5× cheaper".
++
+ ## No reliable benchmark exists for
+ 
+-Marketplace-listing share of signups, partnership acceptance, local event attendance, and Nextdoor or Facebook Group post conversion. Label these "assumption, grade D", use a wide range, and make the first test measure them.
++Marketplace-listing share of signups, partnership acceptance, local event attendance, Nextdoor or Facebook Group post conversion, and small-business sales win rates. Label these "assumption, grade D", use a wide range, and make the first test measure them.

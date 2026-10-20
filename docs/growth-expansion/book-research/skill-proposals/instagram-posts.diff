@@ -1,0 +1,37 @@
+--- a/skills/instagram-posts/SKILL.md
++++ b/skills/instagram-posts/SKILL.md
+@@ -57,7 +57,7 @@
+    - **Reel:** something that moves or changes (process footage, a reveal, the owner talking to camera, a quick demo). Behind-the-scenes and faces work.
+    - **Single image:** one striking real photo plus a story caption, or a news/offer post.
+ 
+-4. **Write the first frame or slide 1 first.** Payoff first: the finished product, the result, the number. Slide 1 headline in 10 words or fewer; Reel on-screen hook in 8 words or fewer. Never a logo card, title card or "Welcome back".
++4. **Write the first frame or slide 1 first.** Payoff first: the finished product, the result, the number. Slide 1 headline in 10 words or fewer; Reel on-screen hook in 8 words or fewer. Never a logo card, title card or "Welcome back". Slide 1 or frame 1 still carries the brand's recurring cue (colour band, the owner's face, the house template), and the name appears early in the post (on a slide, on screen or in caption line 1) [BK11-K3].
+ 
+ 5. **Build a carousel slide by slide:**
+    1. Slide 1: promise headline plus a strong real image. Must work as a feed post on its own.
+@@ -91,6 +91,7 @@
+ 
+ - Slide 1 or the first 2 seconds show the payoff and state a specific hook in 10 (slide) or 8 (Reel) words or fewer.
+ - You can name who this gets sent to, or why it gets saved.
++- Slide 1 or the first frame carries the declared brand cue, the same across posts.
+ - Each slide or beat carries one point and opens a loop the next one closes; no two slides say the same thing.
+ - At least one confirmed number, mechanism or permitted customer phrase carries the central claim.
+ - The caption's first ~125 characters stand alone and include the search phrase; the rest adds information the visual lacks.
+@@ -101,7 +102,7 @@
+ 
+ ## Never do
+ 
+-- Open with a logo, a title card, "Hey guys" or "Welcome back".
++- Open with a logo, a title card, "Hey guys" or "Welcome back". A recurring brand cue in the first frame is required; that isn't a logo card.
+ - Use more than 5 hashtags, generic tags, or a hashtag block in the first comment.
+ - Write emoji walls, "✨ New drop alert ✨" openers or hype adjectives.
+ - Ask for engagement bait ("Tag a friend who…", "Comment YES", "Like if…"). Asking people to send it to a specific kind of person who would genuinely benefit is fine; "comment a keyword to get the guide" is fine only if someone will actually send it.
+@@ -115,7 +116,7 @@
+ ## Checklist before answering
+ 
+ - [ ] One idea, under 12 words, tied to one positioning element; send or save reason named.
+-- [ ] Slide 1 headline 10 words or fewer (carousel) or on-screen hook 8 words or fewer in 0–2 s (Reel), payoff first.
++- [ ] Slide 1 headline 10 words or fewer (carousel) or on-screen hook 8 words or fewer in 0–2 s (Reel), payoff first; brand cue in frame 1 and the name in the post.
+ - [ ] Carousel: 20 slides or fewer (6–10 for teaching); one point per slide; summary slide and one CTA slide.
+ - [ ] Reel: beat table with timings, cover frame, shot list, sound note, burned-in captions; length fits the goal (up to 3 min; 15–60 s for reach).
+ - [ ] Caption under 2,200 characters; first ~125 characters stand alone and include the search phrase.

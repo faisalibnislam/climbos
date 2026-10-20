@@ -1,0 +1,74 @@
+--- a/skills/cold-outreach/SKILL.md
++++ b/skills/cold-outreach/SKILL.md
+@@ -5,7 +5,7 @@
+ 
+ ## Purpose
+ 
+-You write cold emails that a busy owner reads in ten seconds on a phone and thinks: "this person actually looked at my business, and the offer is relevant." Great cold email is short, plain, specific and honest. It opens with one observation the sender can prove with a stored public source, links it to a problem the prospect plausibly has now, offers one concrete outcome backed by real proof, and asks one easy question. Most replies come from the first email (58% in one large vendor dataset), so step 1 carries the weight; follow-ups each add something new and then stop politely. Every message must survive two readers: the prospect, who must never feel tricked, and the spam filter, which punishes links, images, tracking, sameness and volume. Nothing you write may state a fact about the prospect or the sender that is not in the confirmed facts or the prospect's stored sources.
++You write cold emails that a busy owner reads in ten seconds on a phone and thinks: "this person actually looked at my business, and the offer is relevant." Great cold email is short, plain, specific and honest. It opens with one observation the sender can prove with a stored public source, links it to a problem the prospect plausibly has now, offers one concrete outcome backed by real proof, and asks one easy question. Step 1 carries the weight (context: one undated vendor dataset put 58% of replies on step 1; an older vendor dataset cited in BK09a put step 2 highest; the owner's own per-step replies decide [BK09a-K5]); follow-ups each add something new and then stop politely. Every message must survive two readers: the prospect, who must never feel tricked, and the spam filter, which punishes links, images, tracking, sameness and volume. Nothing you write may state a fact about the prospect or the sender that is not in the confirmed facts or the prospect's stored sources.
+ 
+ ## Inputs you will get
+ 
+@@ -24,9 +24,9 @@
+ 
+ 1. **Pre-flight the prospect.** Confirm the country rule passes, the contact is not suppressed, and you know whether the address is a person or a role account. Role account: never greet by first name.
+ 
+-2. **Pick the one observation (research to relevance).** From the stored evidence, choose the single most specific fact that connects to a problem the sender solves. Prefer, in order: a dated trigger (new location, hiring, new service, review trend, site change), then a specific website or listing observation, then industry plus place. Test it: Can you point to the source URL? Would the owner nod and say "yes, that's us"? Is it about the business, not the person's private life? Is it neutral, not flattery? Use one observation only.
++2. **Pick the one observation (research to relevance).** From the stored evidence, choose the single most specific fact that connects to a problem the sender solves. Prefer, in order: a dated trigger (new location, hiring, new service, review trend, site change), then a specific website or listing observation, then industry plus place. Test it: Can you point to the source URL? Would the owner nod and say "yes, that's us"? Is it about the business, not the person's private life? Is it neutral, not flattery? Use one observation only. A market trend or "what changed in your industry" is not an observation: any rival could send it [BK14-K3].
+ 
+-3. **Build the bridge.** Write the logic in one line before drafting: observation → likely consequence for them → the outcome the sender delivers. Example: "Bookings are phone-only (source) → evening enquiries go to voicemail → the sender's online booking captures them." If the consequence is a guess, phrase it as a question or "often", never as a claim about their numbers.
++3. **Build the bridge.** Write the logic in one line before drafting: observation → likely consequence for them → the outcome the sender delivers. Example: "Bookings are phone-only (source) → evening enquiries go to voicemail → the sender's online booking captures them." If the consequence is a guess, phrase it as a question or "often", never as a claim about their numbers. context: their real alternative is usually doing nothing, so the consequence is the cost of today's workaround [BK14-K6]. Swap test: if a competitor could send the same bridge unchanged, rewrite it [BK14-K3].
+ 
+ 4. **Choose the offer and proof.** One outcome, stated concretely, with the strongest proof you are allowed: a verifiable number with its source, a named similar customer (only with permission in the facts), a mechanism, a guarantee. One proof point per email. If you only have a mechanism, explain how in one sentence.
+ 
+@@ -46,9 +46,12 @@
+    - Sign-off: the real sender's first name, then full name, role and company.
+    Plain text only. No links, no images, no attachments, no bold, no bullet lists, no tracking. 3-5 short paragraphs. Match the prospect's language and spelling (UK spelling for UK prospects). Write like a peer who runs a business, at plain reading level.
+ 
+-8. **Write the follow-ups.** Default 4 steps on business days 0, 3, 7 and 14; an optional step 5 at day 30 only when there is real new news. Follow-ups are 25-60 words, sit in the same thread (the "Re:" there is genuine because it replies to your own email), and each must make sense if it is the only one read.
++8. **Write the follow-ups.** Sequence length follows the PB-cold-outreach gate [BK09a-K5]:
++   - **First campaign (first ~100 contacts):** step 1 plus one follow-up on business day 5-7 (context) that brings a new angle (as step 2 below) and ends with the close-out line (as step 4 below). Then stop.
++   - **Longer sequence:** up to 4 steps on business days 0, 3, 7 and 14, only after the owner has reviewed per-step positive replies and complaints from the first ~100 contacts and approved it. Never more than 4 and no later "news" step: further contact needs permission [policy].
++   Follow-ups are 25-60 words, sit in the same thread (the "Re:" there is genuine because it replies to your own email), and each must make sense if it is the only one read. Give each follow-up a positioning value theme or proof point no earlier step used [BK09a-K5].
+    - **Step 2 (day 3):** a new angle or a different proof point. Never "bumping this" or "just following up".
+-   - **Step 3 (day 7):** a useful resource tied to their situation, offered without a link: "Want it?" One plain link to the sender's own domain is allowed from step 2 on, but only if it helps.
++   - **Step 3 (day 7):** a useful resource tied to their situation, offered without a link: "Want it?" One plain link to the sender's own domain is allowed from step 2 on, but only if it helps. context: a prospect-specific proof asset built from their public pages (three fixes for their booking page, a short recorded walk-through) is a strong resource; offer it without a link and send it only on a yes [BK09a-K5].
+    - **Step 4 (day 14), close-out:** brief, warm, no guilt and no false finality tricks. "I'll leave it here. If evening bookings become a headache, reply and I'll send the example."
+    The system stops the sequence on any reply, bounce or opt-out; never write a step that assumes they did not reply because they were busy.
+ 
+@@ -63,13 +66,14 @@
+ 
+ 11. **Vary structure.** When writing a template used across mailboxes, give 2-3 structural variants (different opening order, a different proof point, a different CTA wording), not just swapped merge fields. Identical bodies across a domain are a filtering signal.
+ 
+-12. **Plan small-volume tests honestly.** At 30 sends a day per mailbox and a 3-5% reply rate, 100 contacts yield about 3-5 replies, so most differences are noise.
++12. **Plan small-volume tests honestly.** context: at 30 sends a day per mailbox and an assumed 3-5% reply rate, 100 contacts yield about 3-5 replies, so most differences are noise. Response rates quoted in books or vendor reports are dated examples, never base rates [BK09a-K5].
+    - Test one big swing at a time: angle, offer or CTA rung. Never test word tweaks.
+    - Measure replies and positive replies. Never opens: they are unreliable and tracking is off.
+    - Pre-register in one line: hypothesis, metric, minimum contacts per variant, decision rule. Call results "directional".
+    - Weigh reply content (what objections recur) as evidence alongside the counts.
+ 
+-13. **Hand off replies.** Any reply stops the sequence. Opt-outs and hostile replies are suppressed immediately. Replies are drafted with the reply-handling skill and sent only after owner approval. A customer's first campaign also needs the owner to approve the template and 10 sample messages.
++13. **Hand off replies.** Any reply stops the sequence. Opt-outs and hostile replies are suppressed immediately. Replies are drafted with the reply-handling skill and sent only after owner approval. A customer's first campaign also needs the owner to approve the template and 10 sample messages. Calls are not a cold step; if the owner wants to phone prospects, flag "Check before calling" in the prospecting jurisdiction reference [BK09a-K4].
++   - **Warm intro variant:** draft a short note the owner's contact can forward. Name that contact only when the owner confirms they agreed or forwarded it; no tracking; at most one direct follow-up to the target, in the same thread [BK09a-K7].
+ 
+ 14. **Self-score** against the quality rubric below and revise until it passes.
+ 
+@@ -105,15 +109,16 @@
+ - AI tells: "I hope this email finds you well", "game-changer", "unlock", "leverage", heavy em-dash and rule-of-three cadence. See the spam and AI-tell reference.
+ - Follow-ups that only say "bumping this" or "circling back", or guilt-trip ("I guess you're not interested").
+ - Flattery ("Loved your recent post!"), personal-life references, or anything gathered from LinkedIn scraping.
++- **Sales-book tactics we don't use** [BK09a-K5]: open or click tracking, or emailing or calling because someone opened; "returning your call" or other invented history; fake voicemails; break-up emails written to guilt a reply; a meeting ask or booking link in every email; sends at 6am or 8pm in the recipient's time zone.
+ - Invented proof: numbers, customer names, reviews, awards or "studies show" not in the confirmed facts.
+ - A fabricated sender persona. The signature is a real person who works for or represents the business.
+ 
+ ## Checklist before answering
+ 
+ - [ ] The prospect passed jurisdiction and suppression checks, or you stopped and said why.
+-- [ ] Exactly one observation per prospect, traceable to a stored source URL, about the business, not flattery.
++- [ ] Exactly one observation per prospect, traceable to a stored source URL, about the business, not flattery or a market trend.
+ - [ ] Step 1 body is 50-90 words (125 maximum), plain text, with no links, images or attachments.
+-- [ ] Follow-ups are 25-60 words, each adds something new, and step 4 is a polite close-out.
++- [ ] Sequence length passes the gate: 2 emails for a first campaign, up to 4 only with owner approval after ~100 contacts. Follow-ups are 25-60 words, each adds a new theme or proof, and the last is a polite close-out.
+ - [ ] One interest-based CTA per email; no meeting demand or calendar link in cold steps.
+ - [ ] Subjects are 2-5 words, honest, with no "Re:"/"Fwd:" on the first touch, no emojis, caps or "$".
+ - [ ] Every variable has a stated source and a true, grammatical fallback; no merge field can leak.

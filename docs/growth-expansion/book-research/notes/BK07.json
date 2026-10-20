@@ -1,0 +1,896 @@
+{
+ "reading_id": "BK07",
+ "book_title": "7 Powers: The Foundations of Business Strategy",
+ "frameworks": [
+  {
+   "id": "BK07-K1",
+   "name": "Benefit/Barrier advantage test (barrier first, per competitor)",
+   "decision": "Does the business have a durable advantage that growth can come from, or is its edge copyable execution?",
+   "business_models": [
+    "b2b_saas",
+    "b2c_saas",
+    "local_services",
+    "agency",
+    "consulting",
+    "ecommerce",
+    "marketplace",
+    "mobile_app"
+   ],
+   "lifecycle_stages": [
+    "origination",
+    "takeoff",
+    "stability"
+   ],
+   "evidence_required": [
+    "the claimed edge in the owner's words",
+    "customer evidence that it raises price, lowers cost or lowers investment (Benefit)",
+    "named competitors: direct, functional (substitutes, DIY) and likely entrants",
+    "why each competitor can't or won't copy it (Barrier)",
+    "retention, price premium or cost data if available"
+   ],
+   "prerequisites": [
+    "a defined offer and segment (one strategically separate business at a time)"
+   ],
+   "branches": [
+    {
+     "if": "Benefit evidenced and a Barrier of a named type holds against every relevant competitor",
+     "then": "record the Power type; growth plan may lean on it (e.g. price, retention or acquisition spend sized to it)"
+    },
+    {
+     "if": "Benefit evidenced but no Barrier (rivals could copy within months)",
+     "then": "classify as execution advantage; keep it, but size investments to short payback and reversible commitments"
+    },
+    {
+     "if": "Barrier holds against incumbents but not against similar small rivals",
+     "then": "partial advantage; name the competitor it fails against and what would close the gap"
+    },
+    {
+     "if": "no Benefit evidence",
+     "then": "advantage unknown; research task (interviews, win/loss) before any claim"
+    }
+   ],
+   "steps": [
+    "Write the claimed edge",
+    "Name the Barrier first: scale cost of share gains, network, collateral damage, switching cost, brand history, fiat, process time",
+    "Check materiality (would it move price, cost or retention noticeably?)",
+    "Test against each competitor class",
+    "Record evidence source for each element",
+    "Label result: Power type / execution advantage / unknown"
+   ],
+   "exceptions_failure_modes": [
+    "Calling 'great service' or 'fast response' a moat",
+    "Treating a list of features as a Barrier",
+    "Judging only against the biggest incumbent and ignoring copycat small rivals",
+    "Applying 'no Power = no viable strategy' to an owner-run business that earns a fair living from execution"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner 30-60 minutes for competitor and evidence notes",
+    "capability": "basic competitor knowledge; voc-research or competitor-teardown output helps",
+    "measurement": "retention, price vs alternatives, or cost per job if any exist"
+   },
+   "metrics": [
+    "price vs named alternatives",
+    "retention or repeat rate",
+    "win/loss reasons",
+    "cost per unit vs rivals (if known)"
+   ],
+   "guardrails": [
+    "No advantage claim without a named Barrier and non-inference evidence",
+    "An execution advantage is not a failure; say so plainly"
+   ],
+   "stop_review": [
+    "Review when a competitor copies the edge, a new substitute appears, or retention/price evidence contradicts the claim"
+   ],
+   "alternatives": [
+    "No competitor data: mark Barrier 'unknown', run competitor-teardown",
+    "No customer data: run PB-interviews before asserting Benefit"
+   ],
+   "author_refs": [
+    "BK07-F1",
+    "BK07-F2",
+    "BK07-F3",
+    "BK07-F16",
+    "BK07-F24"
+   ],
+   "interpretation": "Interpretation: the Benefit/Barrier pair maps onto book 01 section 9's four tests (customer relevance + economic compatibility = Benefit; durability = Barrier) but adds a typed Barrier and a per-competitor check, which is what makes a durability claim testable. Most small businesses will land on 'execution advantage' and that is a valid plan basis.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: an advantage or moat claim in a plan must name its Barrier type, the competitor it holds against, and at least one non-inference evidence item; otherwise label it execution advantage or unknown",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: never tell an owner the business has 'no viable strategy' because no Power was found; state that growth rests on copyable execution and size commitments accordingly",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: assess advantage per strategically separate offer (e.g. an agency's retainer vs its one-off audits) rather than for the whole firm",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md (new step after diagnosis); shared/agents/decision.ts DecisionSchema (new advantage field); skills/competitor-teardown/SKILL.md",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/growth-intelligence/books/01_business_strategy_economics.md section 9 (lines 106-116)",
+     "docs/growth-engine/book-review/BK01.md rules 2 and 5 (lines 250, 253)"
+    ],
+    "note": "Candidate v2 of the book 01 advantage review: same four tests, plus typed Barrier and per-competitor relativity. Extends BK01's 'name the advantage growth comes from' with a test for whether the advantage is durable."
+   },
+   "disagreements": "Book 01 scores durability as one of four tests; Helmer says Benefits are common and the Barrier decides. Helmer also implies any business without Power lacks a strategy; book 01 and BK01 treat execution and focus as legitimate bases for small firms. Decide by goal: for owner-income plans, Power is a bonus; for plans that justify heavy upfront spend or long payback, a named Barrier should be required.",
+   "eval_case_ids": [
+    "EV-BK07-K1-1",
+    "EV-BK07-K1-2",
+    "EV-BK07-K1-3"
+   ]
+  },
+  {
+   "id": "BK07-K2",
+   "name": "Small-business Power availability map",
+   "decision": "Which of the seven Power types are worth considering for this business, and which to rule out fast",
+   "business_models": [
+    "local_services",
+    "b2b_saas",
+    "agency",
+    "ecommerce",
+    "marketplace",
+    "consulting"
+   ],
+   "lifecycle_stages": [
+    "origination",
+    "takeoff",
+    "stability"
+   ],
+   "evidence_required": [
+    "business type and geography",
+    "cost structure (fixed vs variable)",
+    "whether customers buy again or buy add-ons",
+    "any exclusive asset: lease, licence, supplier deal, data, patent",
+    "years operating in same niche"
+   ],
+   "prerequisites": [
+    "K1 result"
+   ],
+   "branches": [
+    {
+     "if": "route-based local service (lawn, pest, cleaning, pool)",
+     "then": "consider bounded Scale Economies via route density in chosen neighbourhoods; plan acquisition by area cluster"
+    },
+    {
+     "if": "recurring service, SaaS with stored data or workflows, agency or accountant relationship",
+     "then": "consider Switching Costs; build follow-on offers and genuine embedding (see K5)"
+    },
+    {
+     "if": "challenger whose incumbents profit from a practice customers dislike",
+     "then": "consider Counter-Positioning (see K4)"
+    },
+    {
+     "if": "an exclusive asset obtained on terms not priced at its value",
+     "then": "run the five Cornered Resource tests; founder skill usually fails 'sufficient' and 'non-arbitraged'"
+    },
+    {
+     "if": "marketplace or community",
+     "then": "Network Economies only if bounded network can tip locally and benefit is material; otherwise treat as a channel"
+    },
+    {
+     "if": "young business or B2B buyer focused on specs",
+     "then": "rule out Branding and Process Power as near-term Powers; reputation and process are Benefits"
+    }
+   ],
+   "steps": [
+    "Rule out types that don't fit the stage and model",
+    "For each remaining type, state industry economics (is the effect strong in this niche?) and competitive position (are we ahead?) separately",
+    "Keep at most 3 candidates",
+    "Attach a test or evidence task to each"
+   ],
+   "exceptions_failure_modes": [
+    "Copying Netflix/Intel scale logic to a firm with no fixed-cost lead",
+    "Confusing awareness with Branding (big ad budgets are scale, not brand)",
+    "Treating reviews as a Barrier (rivals can accumulate reviews too)",
+    "Calling a key person a Cornered Resource"
+   ],
+   "requirements": {
+    "cash": "none to assess",
+    "labor": "owner input on costs and assets",
+    "capability": "none",
+    "measurement": "cost per job or per account, repeat or add-on rate"
+   },
+   "metrics": [
+    "cost per job by area (route businesses)",
+    "add-on attach rate",
+    "share of new customers in target cluster"
+   ],
+   "guardrails": [
+    "Large-company cases are illustrations, not small-business rules",
+    "Industry economics and competitive position judged separately; both must be positive"
+   ],
+   "stop_review": [
+    "Re-run when the business changes model, geography or adds a recurring offer"
+   ],
+   "alternatives": [
+    "No cost data: skip scale analysis, mark unknown",
+    "No competitor data: map only own-side candidates and mark position unknown"
+   ],
+   "author_refs": [
+    "BK07-F5",
+    "BK07-F7",
+    "BK07-F13",
+    "BK07-F14",
+    "BK07-F15",
+    "BK07-F16",
+    "BK07-F24"
+   ],
+   "interpretation": "Interpretation (not Helmer's claims): realistic for small firms are bounded Scale Economies (route density, niche-leading fixed-cost tools), Switching Costs, Counter-Positioning against larger or legacy incumbents, and occasional Cornered Resources (exclusive lease, scarce licence, proprietary data). Mostly out of reach: Network Economies outside small bounded marketplaces, Branding in Helmer's strict sense (decades; B2B rarely), Process Power (rare even for giants).",
+   "proposed_rules": [
+    {
+     "rule": "proposed: the plan considers at most 3 candidate Power types and states why the others are ruled out in one line each",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: don't project a brand price premium within a 90-day plan; treat brand work as a conversion Benefit",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: a Cornered Resource claim must pass the five tests (idiosyncratic, non-arbitraged, transferable, ongoing, sufficient), recorded per test",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md; skills/plays-local/SKILL.md (route-density note); skills/positioning/SKILL.md (differentiator vs Power note)",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "docs/growth-intelligence/books/01_business_strategy_economics.md section 9"
+    ],
+    "note": "No existing library text maps Power types to small-business models."
+   },
+   "disagreements": "Helmer treats B2B Branding as weak; for small local trades, uncertainty-reduction reputation can earn a modest premium. Decide on the owner's own price-vs-competitor evidence, not the book.",
+   "eval_case_ids": [
+    "EV-BK07-K2-1",
+    "EV-BK07-K2-2",
+    "EV-BK07-K2-3"
+   ]
+  },
+  {
+   "id": "BK07-K3",
+   "name": "Power Progression stage check (what to build now)",
+   "decision": "Whether to prioritise acquisition, switching costs, business-model choices or protection right now, based on stage and market flux",
+   "business_models": [
+    "b2b_saas",
+    "b2c_saas",
+    "local_services",
+    "agency",
+    "ecommerce",
+    "marketplace"
+   ],
+   "lifecycle_stages": [
+    "origination",
+    "takeoff",
+    "stability"
+   ],
+   "evidence_required": [
+    "customer or unit growth over 12 months with the starting base",
+    "market flux signals: new regulation, new technology, new area, shortage, new category",
+    "whether buyers ask 'who can do this?' or compare prices",
+    "retention and repeat data"
+   ],
+   "prerequisites": [
+    "K1 and K2"
+   ],
+   "branches": [
+    {
+     "if": "origination (no compelling value yet, little or no traction)",
+     "then": "focus on the offer and business model: Counter-Positioning choice, securing any exclusive resource; acquisition only as learning tests"
+    },
+    {
+     "if": "takeoff signals: market in flux and buyers asking 'can I get it?'",
+     "then": "prioritise capturing installed base with genuine switching costs (contracts, embedded workflows, follow-on offers) and fast execution; acquisition spend still under owner's cash and payback guardrails"
+    },
+    {
+     "if": "stability: buyers compare deals, rivals know customer value",
+     "then": "don't buy share on lock-in assumptions; protect and deepen existing customers (follow-on offers, price review), improve process and reputation over years"
+    },
+    {
+     "if": "growth from a small base only (e.g. 10 to 20 customers) with no market flux signal",
+     "then": "stage unknown; treat as origination/stability for spending purposes"
+    }
+   ],
+   "steps": [
+    "Compute 12-month unit growth in code and keep the base",
+    "Collect market flux signals separately from own growth",
+    "Pick the stage, or 'unknown'",
+    "List the Power types whose window is open at that stage (max 3)",
+    "Set the quarter's emphasis: model / installed base / protection"
+   ],
+   "exceptions_failure_modes": [
+    "Reading 100% growth from a tiny base as market takeoff",
+    "Using the 30-40% cutoff as a law",
+    "Confusing the stage with product life-cycle stages",
+    "Taking strong margins in a boom as proof of Power"
+   ],
+   "requirements": {
+    "cash": "depends on branch; takeoff branch may justify front-loaded but capped spend",
+    "labor": "owner input on market signals",
+    "capability": "none",
+    "measurement": "unit growth with base, retention, attach rate"
+   },
+   "metrics": [
+    "12-month unit growth and base",
+    "share of new customers on contracts or follow-on offers",
+    "retention of takeoff-period cohorts"
+   ],
+   "guardrails": [
+    "Stage is a labelled heuristic, never a computed certainty",
+    "Takeoff never overrides cash floor, capacity or payback guardrails"
+   ],
+   "stop_review": [
+    "Review each quarter or when growth slows sharply; a boom ending is the moment arbitrage arrives"
+   ],
+   "alternatives": [
+    "No growth data: ask for customer counts 12 months ago and now",
+    "No market signals: default to stability rules for spending"
+   ],
+   "author_refs": [
+    "BK07-F20",
+    "BK07-F21",
+    "BK07-F22",
+    "BK07-F12"
+   ],
+   "interpretation": "Interpretation: for small firms the most usable part is the buyer-question proxy ('can I get it?' vs 'best deal?') and the barrier timing, not the 30-40% number, which was set for large markets. Small businesses rarely see true takeoff; local versions occur with new regulations, new housing areas or new platforms.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: compute stage only when the 12-month starting base is at least a minimum count (owner-configurable; e.g. 30 customers); otherwise stage = unknown",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: when stage is stability or unknown, affordable CAC must not include unobserved lock-in lifetimes",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: in a takeoff branch, prefer plays that convert new customers onto recurring or embedded arrangements over one-off sales",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (optional stage reading); skills/growth-strategy/SKILL.md; shared/agents/economics.ts (no change, guardrail reference)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-engine/book-review/BK01.md Ch 11 growth traps (lines 143-168)",
+     "skills/growth-strategy/SKILL.md step 4 (line 37-43)"
+    ],
+    "note": "Adds a timing view to BK01's 'riding market growth' trap and supports the skill's rule to extend value only with own repeat data."
+   },
+   "disagreements": "Helmer frames takeoff as a race where share must be won; growth-strategy SKILL and book 01 favour bounded, reversible tests. Decide by evidence of market flux and cash: without both, ClimbOS's guardrails win.",
+   "eval_case_ids": [
+    "EV-BK07-K3-1",
+    "EV-BK07-K3-2",
+    "EV-BK07-K3-3"
+   ]
+  },
+  {
+   "id": "BK07-K4",
+   "name": "Counter-Positioning test for small challengers",
+   "decision": "Whether a different business model will be left alone by incumbents, and against whom it protects",
+   "business_models": [
+    "local_services",
+    "agency",
+    "b2b_saas",
+    "ecommerce",
+    "consulting"
+   ],
+   "lifecycle_stages": [
+    "origination"
+   ],
+   "evidence_required": [
+    "incumbents' business model: pricing unit, fees, contract terms, channel",
+    "how much incumbent revenue depends on the practice the new model removes",
+    "the new model's own margin at a realistic volume",
+    "which similar small rivals could copy the new model and what they would lose"
+   ],
+   "prerequisites": [
+    "unit economics of the new model computed in code"
+   ],
+   "branches": [
+    {
+     "if": "new model is profitable on its own AND a named incumbent would lose material revenue by copying",
+     "then": "Counter-Positioning against that incumbent; plan expects a delayed response, not none"
+    },
+    {
+     "if": "new model unattractive on its own",
+     "then": "not Counter-Positioning; incumbent simply sees a bad business"
+    },
+    {
+     "if": "competitors have little revenue tied to the old practice",
+     "then": "not Counter-Positioning; it is a copyable differentiator"
+    },
+    {
+     "if": "Counter-Positioning holds vs incumbent but similar challengers can copy freely",
+     "then": "partial; plan needs another Benefit/Barrier vs like rivals (switching costs, density, reputation)"
+    }
+   ],
+   "steps": [
+    "List top incumbents' models",
+    "Find the revenue they would put at risk by copying",
+    "Compute the new model's standalone margin",
+    "Check like-model rivals separately",
+    "Write the hook only after the tests pass",
+    "Set a review trigger for incumbent response"
+   ],
+   "exceptions_failure_modes": [
+    "Assuming 'they can't copy' when the rival is a small shop that can change prices overnight",
+    "Ignoring that collateral damage shrinks as the challenger grows",
+    "Loud attacks on the incumbent that speed its response",
+    "Below-cost launch pricing without a loss ceiling"
+   ],
+   "requirements": {
+    "cash": "launch pricing losses, if any, capped and approved",
+    "labor": "competitor research 1-2 hours",
+    "capability": "competitor-teardown",
+    "measurement": "new model margin; share of new customers switching from the named incumbent"
+   },
+   "metrics": [
+    "new-model contribution margin",
+    "customers won from named incumbent",
+    "incumbent price or policy changes"
+   ],
+   "guardrails": [
+    "Comparative claims must be true and sourced (claims ledger)",
+    "Below-cost pricing only as an owner-approved, capped experiment"
+   ],
+   "stop_review": [
+    "Incumbent adopts the model in a segment: re-run K1 for that competitor",
+    "Standalone margin falls below owner floor"
+   ],
+   "alternatives": [
+    "No incumbent revenue data: mark collateral damage unknown and present the model as a differentiator",
+    "Owner can't afford launch pricing: launch at normal margin"
+   ],
+   "author_refs": [
+    "BK07-F9",
+    "BK07-F10",
+    "BK07-F20"
+   ],
+   "interpretation": "Interpretation: for small firms the incumbent is often a regional chain, franchise or legacy provider with fee income; small local peers rarely face collateral damage, so the same model gives no protection against them.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: label a model 'counter-position' only if both the standalone-margin test and the named-incumbent collateral-damage test pass; else 'differentiator'",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: every counter-position names the like-model rivals it does not protect against",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: comparative hooks about competitors' fees or terms must be verified current facts",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "docs/research/plays/frameworks-and-base-rates.md section 1.6; skills/growth-plays/SKILL.md line 23; skills/competitor-teardown/SKILL.md step 3",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/research/plays/frameworks-and-base-rates.md lines 141-152",
+     "skills/growth-plays/SKILL.md line 23"
+    ],
+    "note": "Existing procedure (built from a secondary summary) has the cannibalisation idea and a margin check, but lacks the standalone test, the like-rival limit and the shrinking-damage dynamic. Candidate v2."
+   },
+   "disagreements": "The existing library lists 'flat pricing vs hourly billers' and 'no-contract vs annual lock-in' as counter-positions; under Helmer's test these are only counter-positions where the competitor earns materially from the old practice. Decide per competitor with revenue-at-risk evidence.",
+   "eval_case_ids": [
+    "EV-BK07-K4-1",
+    "EV-BK07-K4-2",
+    "EV-BK07-K4-3"
+   ]
+  },
+  {
+   "id": "BK07-K5",
+   "name": "Switching costs through follow-on value (not traps)",
+   "decision": "Whether to invest in follow-on offers and genuine embedding with existing customers before (or instead of) more acquisition",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "local_services",
+    "b2c_saas"
+   ],
+   "lifecycle_stages": [
+    "takeoff",
+    "stability"
+   ],
+   "evidence_required": [
+    "existence of follow-on purchases (renewals, add-ons, repeat jobs)",
+    "current attach or repeat rate",
+    "what customers would lose by leaving (data, setup, training, relationships)",
+    "retention data"
+   ],
+   "prerequisites": [
+    "some paying customers; retention not broken"
+   ],
+   "branches": [
+    {
+     "if": "follow-on purchases exist and attach rate is low",
+     "then": "build one follow-on offer (maintenance plan, add-on service, annual plan) and measure attach"
+    },
+    {
+     "if": "no follow-on purchases are possible (one-off product)",
+     "then": "switching costs give no Benefit; focus elsewhere (referrals, conversion)"
+    },
+    {
+     "if": "proposal raises switching costs by making leaving harder rather than staying more valuable",
+     "then": "reject; propose genuine embedding instead"
+    },
+    {
+     "if": "retention is weak",
+     "then": "fix retention first (PB-lifecycle-email, PB-activation-repair) before adding offers"
+    }
+   ],
+   "steps": [
+    "List follow-on purchases",
+    "Classify current switching costs: financial, procedural, relational",
+    "Pick one value-adding follow-on offer",
+    "Measure attach rate and retention of attached customers",
+    "Review pricing for embedded customers with notice (PB-price-increase)"
+   ],
+   "exceptions_failure_modes": [
+    "Dark patterns: hidden cancellation, blocked data export, surprise auto-renewal",
+    "Assuming lock-in justifies higher acquisition spend in a mature market",
+    "Adding many add-ons that fragment delivery capacity"
+   ],
+   "requirements": {
+    "cash": "low",
+    "labor": "offer design and delivery hours",
+    "capability": "service or product able to deliver the follow-on",
+    "measurement": "attach rate, retention by attached vs not"
+   },
+   "metrics": [
+    "attach rate",
+    "retention of attached vs non-attached",
+    "revenue per customer"
+   ],
+   "guardrails": [
+    "Customers can always leave and take their data",
+    "Price changes to existing customers only with notice and owner approval",
+    "Renewal and cancellation terms clear and lawful where the business operates"
+   ],
+   "stop_review": [
+    "Attach rate flat after 8 weeks: revise offer",
+    "Complaints or refunds rise: stop"
+   ],
+   "alternatives": [
+    "No customers yet: not applicable; use origination plays",
+    "No delivery capacity: PB-capacity first"
+   ],
+   "author_refs": [
+    "BK07-F11",
+    "BK07-F12",
+    "BK07-F20"
+   ],
+   "interpretation": "Interpretation: this is the most broadly available Power for small firms, but Helmer's own point that the benefit is competed away at acquisition in mature markets means it supports retention and pricing of current customers more than acquisition. The ethics guardrail is ClimbOS policy, not Helmer.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: never recommend raising switching costs by restricting exit (blocked export, hidden cancellation)",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: when a business has follow-on purchases and attach rate under its own target, rank a follow-on offer play ahead of new acquisition plays of similar cost",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: switching-cost claims do not raise affordable CAC unless observed retention supports the longer lifetime",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "skills/retention-lifecycle/SKILL.md; candidate playbook PB-follow-on-offer in shared/playbooks/contracts.ts (check overlap with BRP-03 package architecture)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/playbooks/contracts.ts PB-lifecycle-email, PB-price-increase",
+     "docs/growth-engine/book-review/BK02.md line 82 (bundle ethics note)",
+     "docs/growth-intelligence/books/02_research_positioning.md line 89 (switching cost in alternatives matrix)"
+    ],
+    "note": "Existing library treats switching cost as a buyer objection to overcome; this adds the seller-side view, with BK02's anti-trapping ethics."
+   },
+   "disagreements": "Helmer describes SAP's ability to raise prices on locked-in, unhappy clients as a Benefit; ClimbOS should not recommend exploiting dissatisfied captive customers. Policy decides.",
+   "eval_case_ids": [
+    "EV-BK07-K5-1",
+    "EV-BK07-K5-2",
+    "EV-BK07-K5-3"
+   ]
+  },
+  {
+   "id": "BK07-K6",
+   "name": "Advantage ledger: name where growth comes from",
+   "decision": "What advantage the plan's growth rests on, and how that changes spend sizing",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "origination",
+    "takeoff",
+    "stability"
+   ],
+   "evidence_required": [
+    "K1 result",
+    "BK01 growth source class (advantage share gain / market tide / substitution / bought / extension)",
+    "concentration of current customer sources"
+   ],
+   "prerequisites": [
+    "diagnosis computed (shared/agents/diagnosis.ts)"
+   ],
+   "branches": [
+    {
+     "if": "a Power with evidence",
+     "then": "plan names it; at least one play deepens or protects the Barrier (e.g. follow-on offer, density cluster)"
+    },
+    {
+     "if": "execution advantage only",
+     "then": "plan says so; spend sized to short payback; one play aims to build a Barrier over time"
+    },
+    {
+     "if": "growth from market tide",
+     "then": "flag margin-after-slowdown risk (false-positive Power)"
+    },
+    {
+     "if": "unknown",
+     "then": "first-week task collects competitor and retention evidence"
+    }
+   ],
+   "steps": [
+    "Fill advantage: type, Benefit, Barrier, competitor it holds against, evidence, stage",
+    "Classify growth source",
+    "Tag each play: uses advantage / builds Barrier / execution only",
+    "Check spend sizing vs advantage type"
+   ],
+   "exceptions_failure_modes": [
+    "Generic 'our AI is our moat' text",
+    "Listing a Power with only inference evidence",
+    "Ignoring a dominant referral source that a partner could redirect"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "none beyond plan generation",
+    "capability": "deterministic lint",
+    "measurement": "fields present and evidence sources"
+   },
+   "metrics": [
+    "share of plans with evidenced advantage field",
+    "share of plays tagged to build a Barrier"
+   ],
+   "guardrails": [
+    "No invented competitors or competitor facts",
+    "Short owner-facing text"
+   ],
+   "stop_review": [
+    "Re-evaluate when K1 inputs change"
+   ],
+   "alternatives": [
+    "Flag off: keep current decision contract; advantage noted in limits"
+   ],
+   "author_refs": [
+    "BK07-F1",
+    "BK07-F2",
+    "BK07-F4",
+    "BK07-F22"
+   ],
+   "interpretation": "Interpretation: BK01 asks 'what advantage does growth come from?'; Helmer supplies the test for whether that advantage lasts. The Fundamental Equation is used only qualitatively: a play grows market reach (M) or protects share/margin (s, m), never as a computed valuation.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: the decision contract gains an advantage field (type, barrier, competitor, evidence source, stage); type 'none_yet' is valid",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: lint warns when plan text claims a moat, network effect or lock-in that is not recorded in the advantage field with non-inference evidence",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: when advantage is none_yet or unknown, plays requiring payback beyond the plan's guardrail are blocked",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "shared/agents/decision.ts DecisionSchema and lintDecision; shared/agents/lint.ts claims ledger; skills/growth-strategy/SKILL.md",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/growth-engine/book-review/BK01.md rules 2 and 5 (lines 250, 253)",
+     "docs/growth-expansion/guides/01_strategy.md (StrategyDecision record, line 51)"
+    ],
+    "note": "Candidate v2 of BK01's 'growth must name its advantage' rule, with a durability test. The 01_strategy guide's StrategyDecision has no advantage field (BK01 review G10 already flagged this)."
+   },
+   "disagreements": "None with BK01; tension with growth-strategy SKILL's ambition section (volume engines) only if advantage is none and spend is large. Guardrails decide.",
+   "eval_case_ids": [
+    "EV-BK07-K6-1",
+    "EV-BK07-K6-2",
+    "EV-BK07-K6-3"
+   ]
+  },
+  {
+   "id": "BK07-K7",
+   "name": "'Me too won't do': invention path and commitment sizing",
+   "decision": "Whether to copy a competitor's offer cheaper, or invent a different offer, and how big a commitment to make",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "origination",
+    "takeoff"
+   ],
+   "evidence_required": [
+    "the proposed offer vs competitors",
+    "whether the customer need is known",
+    "the margin impact of any price cut",
+    "cash available for the commitment"
+   ],
+   "prerequisites": [
+    "unit economics in code"
+   ],
+   "branches": [
+    {
+     "if": "plan is 'same offer, lower price' in a market where rivals can match",
+     "then": "show the volume needed to keep contribution; expect matching; prefer a differentiated offer test"
+    },
+    {
+     "if": "capabilities-led (we can build X, need unproven)",
+     "then": "small staged commitments; stay in the game; look for an early Barrier"
+    },
+    {
+     "if": "customer-led (need known, solution hard)",
+     "then": "the risk is delivery; test feasibility first"
+    },
+    {
+     "if": "competitor-led (beat an existing offer)",
+     "then": "needs a clearly better whole offer and complements lined up; larger commitment only with owner approval"
+    }
+   ],
+   "steps": [
+    "Classify the path",
+    "Compute price-cut break-even volume in code if relevant",
+    "Size the commitment to path risk",
+    "Set a review date"
+   ],
+   "exceptions_failure_modes": [
+    "Price war against a larger rival",
+    "Big upfront spend on an unproven capability bet",
+    "Treating the 10x rule as universal"
+   ],
+   "requirements": {
+    "cash": "sized to path",
+    "labor": "varies",
+    "capability": "varies",
+    "measurement": "volume vs break-even, early adoption"
+   },
+   "metrics": [
+    "volume vs break-even volume",
+    "adoption of new offer"
+   ],
+   "guardrails": [
+    "Loss ceilings for learning bets",
+    "Owner approval for large commitments"
+   ],
+   "stop_review": [
+    "Volume below break-even by review date: stop the price cut"
+   ],
+   "alternatives": [
+    "No cash for commitments: concierge test (PB-concierge)"
+   ],
+   "author_refs": [
+    "BK07-F18",
+    "BK07-F19",
+    "BK07-F5"
+   ],
+   "interpretation": "Interpretation: for small firms 'invention' usually means a new offer, package or business model, not technology. Helmer's call for crafting through experiments matches book 01 section 12 sequencing.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: a 'match competitor at lower price' play must show break-even volume and the expected rival response",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: capabilities-led bets start as capped tests with a stated learning goal",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md; shared/analysis/decisions.ts (price floor / margin calculators); PB-pricing-test, PB-concierge",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/01_business_strategy_economics.md section 12 (lines 142-152)",
+     "docs/growth-intelligence/books/01_business_strategy_economics.md section 9 (lines 112-114, low-price position)"
+    ],
+    "note": "Adds the price-war barrier logic and path-based commitment sizing."
+   },
+   "disagreements": "Helmer's competitor-led path calls for big-bang commitments; ClimbOS never assumes budget. Owner approval and cash guardrails decide.",
+   "eval_case_ids": [
+    "EV-BK07-K7-1",
+    "EV-BK07-K7-2"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "Add a step after diagnosis (step 3): 'Name the advantage growth comes from' with Benefit, Barrier type, the competitor it holds against, evidence and stage; 'execution advantage' and 'unknown' are valid. In phase 3 (line 58), classify the compounding asset by whether it builds a Barrier (e.g. follow-on offer base, route cluster) or is copyable (ad angle library). Add to Never do: claim a moat without a Barrier; tell an owner there is no viable strategy because no Power exists.",
+   "why": "BK01 rule asks for the advantage; nothing in the skill tests durability or ties spend to it.",
+   "refs": [
+    "BK07-K1",
+    "BK07-K6",
+    "BK07-K3"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/SKILL.md",
+   "change": "Line 23: counter-positioning candidates must pass standalone-margin and named-incumbent revenue-at-risk tests and name the like-model rivals they don't stop.",
+   "why": "Current wording ('what the incumbents can't copy') invites false claims against small peers.",
+   "refs": [
+    "BK07-K4"
+   ]
+  },
+  {
+   "skill": "skills/competitor-teardown/SKILL.md",
+   "change": "In the pricing and offer teardown (step 3), add 'what this competitor would lose by copying our model' (revenue tied to fees, contracts or channel) and competitor class (incumbent, like-model, functional substitute).",
+   "why": "Gives K1 and K4 the inputs they need.",
+   "refs": [
+    "BK07-K1",
+    "BK07-K4"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "Add seller-side switching costs: financial, procedural, relational; build them through follow-on value and embedding, never exit friction; measure attach rate.",
+   "why": "Most available Power for small firms; needs an ethics line.",
+   "refs": [
+    "BK07-K5"
+   ]
+  },
+  {
+   "skill": "skills/plays-local/SKILL.md",
+   "change": "Add route-density note for route-based services: cluster acquisition by area and track cost per job by area.",
+   "why": "The one Scale Economy source naturally available to local services.",
+   "refs": [
+    "BK07-K2"
+   ]
+  },
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "One line: a positioning differentiator is a Benefit; only call it durable when a Barrier is named (link to growth-strategy advantage step).",
+   "why": "Separates messaging claims from strategic durability.",
+   "refs": [
+    "BK07-K1"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/agents/decision.ts:28-42",
+   "gap": "DecisionSchema has no field for the advantage growth comes from (BK01 rule 2/5 and BK01 review G10 also unaddressed).",
+   "proposed_change": "Add optional advantage: {type: scale|network|counter_positioning|switching_costs|branding|cornered_resource|process|execution|none_yet|unknown, benefit, barrier, holdsAgainst, evidenceSource (owner|site|research|results|inference), stage: origination|takeoff|stability|unknown}, behind the decision_contract flag; extend DECISION_CAPS and DECISION_FIELDS (line 59-60).",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/decision.ts:66-94",
+   "gap": "lintDecision doesn't check advantage claims.",
+   "proposed_change": "Error when type is a Power but barrier or holdsAgainst is empty or evidenceSource is inference; warn when guidingPolicy or plays mention moat/network effect/lock-in/switching cost while type is none_yet/unknown/execution.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:28-36",
+   "gap": "DiagnosisContext has no growth history or market-flux input, so no stage reading is possible.",
+   "proposed_change": "Optional customersYearAgo/customersNow and marketFlux flag; add a 'stage' reading only when base >= configurable minimum; otherwise unknown. Never let stage alone change the binding constraint.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/lint.ts:41-53",
+   "gap": "Claims ledger covers buyer-facing capability claims but not internal strategic claims (moat, network effects, 'no one can copy').",
+   "proposed_change": "Add a strategic-claims pattern list applied to plan rationale fields, cross-checked against the advantage field.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:169-204",
+   "gap": "No playbook for building follow-on value with existing customers (switching costs); referrals and lifecycle email are nearest.",
+   "proposed_change": "Candidate PB-follow-on-offer: worksOn retention/economics; requires customers_min; steps per BK07-K5; guardrail no exit friction; alternatives PB-lifecycle-email, PB-price-increase. Check overlap with BRP-03 package architecture first.",
+   "priority": "P3"
+  },
+  {
+   "where": "docs/research/plays/frameworks-and-base-rates.md:141-152",
+   "gap": "Counter-positioning procedure lacks standalone test, like-rival limit, and incumbent-response dynamics; source is a secondary summary.",
+   "proposed_change": "Version to v2 per BK07-K4 citing BK07 locators; add fields standalone_margin, revenue_at_risk, unprotected_against to the output schema.",
+   "priority": "P2"
+  }
+ ]
+}

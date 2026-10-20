@@ -1,0 +1,171 @@
+{
+ "id": "BKP-10",
+ "version": 1,
+ "slug": "referral-calibration",
+ "title": "Referral and word-of-mouth with measured loop maths",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether a referral or word-of-mouth play is worth running and how to read its effect without overstating incrementality.",
+ "business_types": [
+  "any with satisfied customers"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Stickiness evidenced (BKP-07)",
+  "Customer base at or above the referral minimum"
+ ],
+ "exclusions": [
+  "Retention weak (referrals amplify a leak)",
+  "No consent to contact customers"
+ ],
+ "required_inputs": [
+  "Invites per customer and invite conversion (measured)",
+  "Customer count"
+ ],
+ "evidence_requirements": [
+  "Invites sent per user over a window",
+  "Invite click-through and signup rates",
+  "Time from signup to the invitee's signup",
+  "'How did you hear about us' counts",
+  "Referral counts and referred-customer outcomes",
+  "Customer base size",
+  "Recent product, service, price or staff changes",
+  "Review counts and ratings"
+ ],
+ "missing_data_behavior": [
+  "No measured invite rates: no viral claims; K never defaulted.",
+  "Small base: owner asks personally; no programme maths."
+ ],
+ "decision_branches": [
+  {
+   "if": "Measured K below 1",
+   "then": "Seeded total = seed / (1 - K); a multiplier on other channels, not growth on its own."
+  },
+  {
+   "if": "K at or above 1",
+   "then": "Treat as unproven; re-measure; never forecast unbounded growth."
+  },
+  {
+   "if": "Negative public reviews",
+   "then": "Keep review work (local reviews matter even though the book downplays negative word of mouth)."
+  }
+ ],
+ "implementation_steps": [
+  "Measure invites per user and conversion (split into click-through and signup)",
+  "Find the weakest factor",
+  "Shorten cycle time",
+  "Measure K by segment",
+  "Keep seeding",
+  "Count WOM and referral sources per 100 customers",
+  "Check whether the customer base is large enough",
+  "Design one share moment and a story worth retelling"
+ ],
+ "dependencies": [
+  "Activation works; referrals feed a leak otherwise (PB-referrals avoidWhen)",
+  "Enough experienced customers for WOM to exist (PB-referrals requires 20)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Reward cost if incentivised",
+  "labor": "Engineering for in-product loops (the book cites months of work)",
+  "capability": "Event tracking",
+  "measurement": "Invites, clicks, signups by cohort"
+ },
+ "metrics": [
+  "K = invites per user × invite conversion",
+  "Cycle time in days",
+  "Seeded multiplier 1/(1-K) for K<1 (interpretation)",
+  "Referral share of new customers",
+  "WOM mentions per 100 customers",
+  "Positive-to-negative ratio",
+  "Referred-customer retention"
+ ],
+ "guardrails": [
+  "Referred customers aren't all incremental; label the outcome.",
+  "No copied invite text or bought lists.",
+  "No 'exponential' or 'viral' claims unless measured K ≥ 1",
+  "Consent for any invite emails; no address-book spam",
+  "No fake or undisclosed incentivised reviews or endorsements",
+  "Don't treat NPS as WOM volume",
+  "Don't credit all referred customers as incremental"
+ ],
+ "alternatives_when_constrained": [
+  "No event tracking: referral codes per customer",
+  "Too few customers: borrow others' credibility (partners, creators) or build reach first"
+ ],
+ "stop_conditions": [
+  "PB-referrals stop rule (under 3% of customers share after 4 weeks)",
+  "Review negative-WOM handling only after a real change"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Small samples give unstable K",
+  "Incentivised referrals can attract low-quality users or breach platform rules",
+  "Public reviews differ from conversational WOM: they persist and are read by in-market searchers, so the book's 'negative WOM rarely matters' doesn't carry over to a low local rating",
+  "Disruptive new categories where people must see the product in use (the book notes WOM matters more there)"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: add viralCoefficient(invitesPerUser, inviteConversion) and seededTotal(seed, K) for K<1 to shared/growth/calc.ts; plays cite these numbers instead of writing them.",
+    "from": "BK15-K8"
+   },
+   {
+    "rule": "proposed: no viral-growth claim without measured K ≥ 1 over a stated window.",
+    "from": "BK15-K8"
+   },
+   {
+    "rule": "proposed: A plan for a business with under about 20 customers can't make referrals or WOM the bankable play (aligns with PB-referrals customers_min).",
+    "from": "BK11-K5"
+   },
+   {
+    "rule": "proposed: Referral and WOM forecasts scale with the customer base and are labelled partly non-incremental.",
+    "from": "BK11-K5"
+   },
+   {
+    "rule": "proposed: A single negative post or review triggers a fix-and-respond action, not a strategy change, unless it reflects a real product, service or staff change.",
+    "from": "BK11-K5"
+   },
+   {
+    "rule": "proposed: NPS is not used as a measure of WOM volume.",
+    "from": "BK11-K5"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: Review and referral incentives follow platform rules and consumer-protection disclosure law.",
+    "from": "BK11-K5"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-referrals (candidate v2)",
+  "skills/growth-plays/SKILL.md"
+ ],
+ "reconciliation_note": "Adds loop arithmetic and incrementality labels to PB-referrals (backlog CG-19, CG-39).",
+ "member_frameworks": [
+  "BK15-K8",
+  "BK11-K5"
+ ],
+ "source_references": [
+  "BK15-F19",
+  "BK15-F9",
+  "BK11-F8",
+  "BK11-F32",
+  "BK11-F33",
+  "BK11-F34",
+  "BK11-F42"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK15-K8-1",
+  "EV-BK15-K8-2",
+  "EV-BK15-K8-3",
+  "EV-BK11-K5-1",
+  "EV-BK11-K5-2",
+  "EV-BK11-K5-3"
+ ]
+}

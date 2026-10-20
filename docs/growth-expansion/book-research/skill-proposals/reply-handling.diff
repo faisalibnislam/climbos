@@ -1,0 +1,32 @@
+--- a/skills/reply-handling/SKILL.md
++++ b/skills/reply-handling/SKILL.md
+@@ -40,14 +40,17 @@
+    - **Other / unclear**: anything else; route to the owner with your best reading.
+ 
+ 5. **Decide the next step and draft accordingly.** Answer in the same thread, in the prospect's language and spelling, plain text, usually 25-100 words. Lead with what they asked for. One next step per reply. A link is now allowed (a booking link or the resource they asked for), but only one.
+-   - **Positive:** deliver what the CTA promised first (the two-line summary, the example), then propose the next step: two specific time options in their time zone, or the booking link, with what the call covers and how long it takes. Flag as urgent for the owner.
+-   - **Question:** answer directly in the first sentence, from the facts. Add one line of proof if it helps. End with a light next step ("Happy to show you on a 15-minute call if useful").
+-   - **Objection:** acknowledge it in their words, answer once with one proof item or a clarifying question, offer a smaller step. Never argue, never repeat the pitch. If they push back again, close graciously.
+-   - **Not now:** thank them, confirm the timing they gave, and ask permission to check back then ("Shall I drop you a line in January?"). If they already named a date ("try me in January"), that is permission for one check-in at that date. Without permission, no further contact.
++   - **Positive:** deliver what the CTA promised first (the two-line summary, the example), then propose the next step: two specific time options in their time zone, or the booking link, with what the call covers and how long it takes; context: slots within the next 7-10 days [BK09a-K6]. Flag as urgent for the owner.
++     - *Asks for a trial:* ask what proof would settle it, then offer only what the facts allow (a guided session, or a structured pilot with written success criteria the owner approves) [BK09b-K3].
++     - *Asks for a proposal:* confirm they want to buy and which options matter, then hand to the sales-follow-up skill [BK09b-K6].
++   - **Question:** answer directly in the first sentence, from the facts. Add one line of proof if it helps. End with a light next step ("Happy to show you on a 15-minute call if useful"). "How much?" gets the confirmed range; never hold the price back to win a meeting [BK09a-K6].
++   - **Objection:** a reply is written, so this is the one attempt [BK09b-K3]: acknowledge it in their words, answer once with one proof item or a clarifying question, offer a smaller step. Never argue, never repeat the pitch. If they push back again or repeat the no, close graciously; that no is final. Sales-book scripts we don't use [BK09a-K6]: "send me info" means ask which part and send that one thing; "not my decision" means ask once who owns it, never hint at going over their head; "call me later" is not now. Never press for the meeting after a no or assume a hidden objection.
++   - **Not now:** thank them, confirm the timing they gave, and ask permission to check back then ("Shall I drop you a line in January?"). If they already named a date ("try me in January"), that is permission for one check-in at that date. Without permission, no further contact, and never a default re-contact date (for example 60 days) [BK09b-K4; policy].
+    - **Not interested:** a one-line, gracious close is optional ("Understood, thanks for letting me know. I won't follow up."). Recommend no further outreach from this sender. If the wording leans towards "stop contacting me", label it unsubscribe instead.
+    - **Wrong person / referral:** thank them. If they named someone, ask nothing more of them. Log the named person as a new lead that must pass the prospecting compliance checks (jurisdiction, legal form, source) before any contact. A first email to the referred person may mention the referrer only if the referrer actually suggested the contact; it is a new first touch with a full footer.
+    - **Unsubscribe:** default to no reply. If the person asked for confirmation, draft one line: "Done, you won't hear from me again." No selling, no "sorry to see you go" pitch.
+    - **Angry / complaint:** default to a short, sincere reply the owner can choose to send: a brief apology, confirmation they are removed, and, if they asked, where their address came from. No justification, no debate, no legal argument. Flag to the owner; repeated complaints should trigger a campaign review.
++   - **Missed meeting** (an apology, or the owner reports a no-show; label Other): one miss gets one offer to rebook with a specific time. After two, draft one clarity email for the owner (still a priority, bad timing or not a fit?) and recommend closing as lost if it goes unanswered [BK09b-K4].
+ 
+ 6. **List the actions the system must take.** For every reply, state: sequence stopped (always for a human reply); suppression written (unsubscribe, complaint); reschedule date (out of office, agreed not-now check-in); address marked invalid (left the company); new referral lead to be checked; owner alert (positive, complaint, data request).
+ 
+@@ -75,6 +78,7 @@
+ - Never hide or invent the source of someone's data when they ask.
+ - Never send anything without owner approval.
+ - Never use pressure, false urgency or guilt in a reply.
++- Never use open or click data to time a reply or as a reason to chase [policy].
+ 
+ ## Checklist before answering
+ 

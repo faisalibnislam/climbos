@@ -1,0 +1,46 @@
+--- a/skills/growth-plays/SKILL.md
++++ b/skills/growth-plays/SKILL.md
+@@ -20,7 +20,7 @@
+    - **Switch triggers (jobs to be done):** moments customers start looking, such as moving, hiring, a new regulation, a season, a competitor's price rise or a bad review.
+    - **Borrowed audiences:** partners, creators, platforms and marketplaces that already have the audience.
+    - **Unfair assets:** founder story, data the business has, community, location, inventory, expertise, existing customers.
+-   - **Counter-positioning:** what the incumbents can't copy.
++   - **Counter-positioning:** a model profitable on its own that a named incumbent can't copy without losing material revenue. Name the like-model rivals it doesn't stop; otherwise call it a differentiator [BK07-K4]. A price-match play shows break-even volume and the likely rival response [BK07-K7].
+    - **Calendar:** seasonal and event windows in the next 90 days, with lead times.
+    - **Loops:** reviews, referrals, user-generated content, SEO pages that compound.
+    - **Engineering as marketing:** free tools, calculators, templates, data reports.
+@@ -64,6 +64,7 @@
+   - Scale when clearly above max(2 × r*, 0.8 × base rate) and at least one sale or booking is observed.
+ - **Rule of three:** zero successes in n tries means the true rate is below 3/n.
+ - **Time box:** leading signal by day 14–21, lagging check by day 30–45. At most three iterations, changing one variable at a time (audience → hook → offer → channel).
++- **Channel tests are discovery, not optimisation** [BK15-K2, BK15-K3]: few variants; name the assumption tested and the channel's volume ceiling vs the goal gap. A capped test near break-even is a learning cost, not a scaled-ROI forecast; it needs source tagging before launch. Never inflate rates to pass the economics check.
+ 
+ ## Scoring and gates
+ 
+@@ -118,16 +119,19 @@
+ - Pick the one number that matters for the business's stage and model: early self-serve products watch activation and trial → paid; growing ones watch net new paying customers and churn; local services watch booked jobs.
+ - Followers, impressions, views and visits are leading signals, never the North Star or a play's outcome unit **(checked)**.
+ - Use the funnel benchmarks in base rates as fallbacks only, labelled by grade; prefer the owner's numbers.
++- Never a cumulative count (total, to date, list size) as progress; use the per-period flow. Ad-funded media: inventory metrics count when paired with revenue per 1,000 (code) [BK12-K1].
++- Marketplaces: read liquidity (searches or requests that find a match) first; when low, seed supply before buyer demand [BK12-K4]. Stickiness unproven: paid stays a capped test; charging and first-purchase fixes are always fine [BK12-K3].
+ 
+ ### 5. Word of mouth
+ - People share what makes them look good, what they're reminded of often, what moves them, what others can see, what's useful to pass on, and stories that carry the product inside them.
+ - A referral or word-of-mouth play names its trigger (the moment a customer thinks of it, e.g. after sending a client their first invoice) and the share mechanism built into that moment (a link, invite or template in the product) **(checked)**. "Ask customers to share us" with no trigger or mechanism isn't a play.
++- Referral and WOM forecasts scale with the customer base and are partly non-incremental; under ~20 customers they aren't the bankable play [BK11-K5]. No "viral" claim without measured K ≥ 1 [BK15-K8].
+ 
+ ## Think like a CMO with 20 years' experience
+ 
+ Before writing any play, decide in this order:
+ 1. **The binding constraint.** What actually limits growth right now (demand, conversion, price/value, retention, reach)? Plays attack it.
+-2. **Where the money is.** Which segment has the best value × reachability? Prefer customers worth more (teams, agencies, annual plans) when cheap ones can't pay for acquisition.
++2. **Where the money is.** Which segment has the best value × reachability? Prefer customers worth more (teams, agencies, annual plans) when cheap ones can't pay for acquisition. Don't plan growth on heavy customers buying more: about half of one period's heaviest aren't heavy the next [BK11-K1]. context: in consumer repeat categories the volume engine recruits new and light category buyers [BK11-K1, BK10-K8].
+ 3. **The offer.** What would make that segment act now (trigger, risk reversal, a reason to switch)?
+ 4. **1–2 bets sized by economics.** Only plays whose numbers pay back. Every play fills its model (weekly reach with low/high, step rates as shares 0–1 with low/high, monthly spend, owner hours, and other monthly costs such as tools, freelancers or creative, 0 when none); ClimbOS computes customers (P10/P50/P90), cost per customer and payback with churn from it, and rejects plays that lose money.
+ 5. **What we won't do,** and why.
+@@ -196,4 +200,4 @@
+ - **Endorsements:** creators and affiliates must disclose (FTC).
+ - **Messaging:** SMS needs prior express written consent (TCPA). Email follows CAN-SPAM, plus GDPR where it applies.
+ - **Promotions:** sweepstakes follow state law. Health, money and earnings claims need substantiation.
+-- **Platforms:** follow platform rules, such as no vote-begging on Product Hunt and no disguised promotion on Reddit.
++- **Platforms:** follow platform rules, such as no vote-begging on Product Hunt and no disguised promotion on Reddit. Check tactics from older books against current policy before use [BK15-K7].

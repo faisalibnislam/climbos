@@ -1,0 +1,38 @@
+--- a/skills/lead-magnets/SKILL.md
++++ b/skills/lead-magnets/SKILL.md
+@@ -37,6 +37,8 @@
+ 
+    Long generic ebooks attract the wrong leads and underperform. Gated generic information has also lost value now that AI answers give it away.
+ 
++   For a considered B2B purchase (several people decide, real cost if wrong), a short **buyer's guide** fits: the 2-5 ways to solve the problem including doing nothing, their trade-offs, and a criteria checklist saying who needs what. It passes the uniqueness test only when built on the business's own view and evidence; its insight is the problem inside the problem, never a trend or "what changed" [BK14-K7, BK14-K3].
++
+ 3. **Run three tests before committing.**
+    - **Uniqueness**: could a chatbot produce this in 30 seconds? If yes, choose something else.
+    - **Bridge**: does using it naturally lead to the paid offer? Name the next step inside the asset (a pre-filled order, a "book the fix" link on the audit).
+@@ -53,7 +55,7 @@
+ 
+ 6. **Design the capture.** Hand the page to the landing-pages skill, specifying:
+    - The promise, a preview image or partial result, who it's for, time to use.
+-   - The form: email only, plus website for audits or one qualifying field if the owner truly needs it.
++   - The form: email only, plus website for audits or one qualifying field if the owner truly needs it and can't observe it from their domain or site [BK09a-K8].
+    - Show part of the result before the gate and send the full result by email. Don't gate a tool so hard that nobody starts it.
+    - Button text with the outcome ("Send my estimate", "Get my audit").
+ 
+@@ -70,7 +72,7 @@
+ 
+ 10. **Plan promotion.** Put the magnet where buyers already are: inline on the related service or product pages, the Google Business Profile, social posts, the email signature, partner sites, and a lead-ad or landing-page ad concept for the meta-ads or google-ads skills. No aggressive entry pop-ups.
+ 
+-11. **Define measurement.** Track visit → start (tools and quizzes) → complete → opt-in → customer, plus time to purchase and revenue per lead by magnet. Judge on the lead-to-customer rate, not downloads. Practitioner ranges suggest good small-business tool magnets convert 20–40% of visitors who start the tool, and gated PDFs much less; treat that as directional, never as a promise to the owner.
++11. **Define measurement.** Track visit → start (tools and quizzes) → complete → opt-in → customer, plus time to purchase and revenue per lead by magnet. Judge on the lead-to-customer rate, not downloads. context: undated practitioner ranges suggest good small-business tool magnets convert 20–40% of visitors who start the tool, and gated PDFs much less; treat that as directional, never as a promise to the owner. When the sale completes on a partner's site or through a sales team, the primary metric is the confirmed conversion there; clicks out are a proxy [BK13-K8]. context: a buyer's-guide download suggests active shopping; it may raise priority inside the consented nurture, never trigger a "saw you downloaded" message or a cold call [BK14-K7; policy].
+ 
+ ## Quality bar
+ 
+@@ -91,7 +93,7 @@
+ - Never pre-tick consent, bundle marketing consent into the download without disclosure, or use confirmshaming ("No thanks, I don't like saving money").
+ - Never ask for phone, company size, budget or more unless the owner needs it for the next step and accepts the lower opt-in rate.
+ - Never route magnet leads into cold outreach, or cold prospects into nurture without fresh consent.
+-- Never use fake scarcity on free items ("only 3 downloads left").
++- Never use fake scarcity on free items ("only 3 downloads left"). Any deadline or limit in magnet copy needs an owner-confirmed fact [BK13-K8].
+ - Never use hype naming: unlock, secrets, blueprint, revolutionary, game-changing.
+ 
+ ## Checklist before answering

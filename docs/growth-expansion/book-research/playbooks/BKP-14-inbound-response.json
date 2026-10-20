@@ -1,0 +1,120 @@
+{
+ "id": "BKP-14",
+ "version": 1,
+ "slug": "inbound-response",
+ "title": "Inbound capture and speed to lead",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How inbound forms and first replies should qualify and respond so good leads aren't lost and misfits are redirected politely.",
+ "business_types": [
+  "any with inbound enquiries"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Inbound enquiries arrive by form, email or phone"
+ ],
+ "exclusions": [
+  "No inbound enquiries yet (demand first)"
+ ],
+ "required_inputs": [
+  "Current form fields",
+  "Response time from enquiry to first reply"
+ ],
+ "evidence_requirements": [
+  "which qualifiers can be seen publicly",
+  "owner response capacity",
+  "the request details"
+ ],
+ "missing_data_behavior": [
+  "No response-time data: measure for two weeks first."
+ ],
+ "decision_branches": [
+  {
+   "if": "Form asks what could be looked up",
+   "then": "Remove those fields."
+  },
+  {
+   "if": "Likely misfit",
+   "then": "Hard-qualifier reply that states fit criteria and offers an alternative."
+  }
+ ],
+ "implementation_steps": [
+  "One clear demo or contact call to action",
+  "Short form: name, company, work email, phone, plus non-observable qualifiers",
+  "Show a phone number; send an honest automatic reply",
+  "Notify the owner instantly",
+  "Respond in minutes with an answer and one next step",
+  "Use the hard-qualifier template for likely misfits",
+  "Log attempts and outcomes"
+ ],
+ "dependencies": [
+  "a website with a request form or booking page"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None to small",
+  "labor": "Owner availability for quick replies",
+  "capability": "Form and notifications",
+  "measurement": "Time to first response, contact rate, meetings"
+ },
+ "metrics": [
+  "median time to first response",
+  "contact rate",
+  "qualified share",
+  "meetings from inbound"
+ ],
+ "guardrails": [
+  "Call and touch counts stay within the sales-follow-up caps.",
+  "Dated lead-response studies are context, not targets.",
+  "A request isn't marketing consent (sales-follow-up)",
+  "Sensible hours for the lead's time zone"
+ ],
+ "alternatives_when_constrained": [
+  "No site traffic: outbound or warm intros generate the first inbound"
+ ],
+ "stop_conditions": [
+  "Response time drifting past an hour in working hours: add an automatic reply or a missed-call text-back (plays-local)"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Long forms asking what the site already shows",
+  "Chat widgets with no one answering"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: lead forms ask only for qualifiers that can't be found from the company domain; each extra field needs a stated reason.",
+    "from": "BK09a-K8"
+   },
+   {
+    "rule": "proposed: likely-unqualified inbound gets a hard-qualifier email instead of a meeting offer.",
+    "from": "BK09a-K8"
+   },
+   {
+    "rule": "proposed: the MIT/InsideSales response-time figure is shown only as a dated, directional example.",
+    "from": "BK09a-K8"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/sales-follow-up/SKILL.md",
+  "skills/plays-local/SKILL.md (speed to lead)"
+ ],
+ "reconciliation_note": "Extends existing speed-to-lead guidance.",
+ "member_frameworks": [
+  "BK09a-K8"
+ ],
+ "source_references": [
+  "BK09a-F42"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09a-K8-1",
+  "EV-BK09a-K8-2",
+  "EV-BK09a-K8-3"
+ ]
+}

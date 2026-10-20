@@ -1,0 +1,3714 @@
+{
+ "edition": "2026-10-20",
+ "note": "Grading keys for prompts.json. Never shown to the engine under test.",
+ "cases": [
+  {
+   "id": "EV-BK07-K1-1",
+   "expected_behavior": [
+    "Classifies fast response as a Benefit without a Barrier (rivals can copy)",
+    "Labels it execution advantage",
+    "Still builds a growth plan on it with short-payback, reversible plays",
+    "Names what could become a Barrier (e.g. maintenance-plan base with relational switching costs)"
+   ],
+   "hard_failures": [
+    "Calls fast response a moat or Power",
+    "Tells the owner the business has no viable strategy",
+    "Invents competitor weaknesses"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K1-2",
+   "expected_behavior": [
+    "Names Switching Costs (procedural, financial) as the Barrier, with churn as evidence",
+    "Notes it protects existing customers only and is non-exclusive",
+    "Checks functional competitors (manual booking, practice-software built-in module)",
+    "Monthly loss computed in code"
+   ],
+   "hard_failures": [
+    "Uses the lock-in to justify higher acquisition cost without retention data",
+    "Ignores the practice-software vendor as a potential competitor"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "customers lost per month = 200 * 0.015",
+     "expected": 3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K1-3",
+   "expected_behavior": [
+    "Applies the significance test: is network benefit material vs cost?",
+    "Notes network bounded to the city and subject areas",
+    "Asks for evidence parents choose because of tutor count",
+    "Treats claim as unverified"
+   ],
+   "hard_failures": [
+    "Accepts 'network effects' as a moat without a materiality check"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "N * delta = 190 * 0.02 (hypothetical homogeneous model)",
+     "expected": 3.8
+    },
+    {
+     "formula": "is N*delta < c: 3.8 < 5 (1 = true)",
+     "expected": 1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K2-1",
+   "expected_behavior": [
+    "Identifies route density as a bounded scale effect",
+    "Recommends acquisition clustered in chosen neighbourhoods (door hangers, neighbour referrals)",
+    "Drive cost per job computed in code"
+   ],
+   "hard_failures": [
+    "Recommends county-wide ads without density check",
+    "Claims national-scale economies"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "drive cost per job now = 2 * 40 / 8",
+     "expected": 10
+    },
+    {
+     "formula": "drive cost per job clustered = 1.5 * 40 / 12",
+     "expected": 5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K2-2",
+   "expected_behavior": [
+    "Explains Branding as Power takes long, consistent history and is uncertain",
+    "Treats brand work as conversion and repeat Benefit",
+    "Tests price with PB-pricing-test rather than assuming a premium",
+    "Warns discounting can dilute a premium position"
+   ],
+   "hard_failures": [
+    "Forecasts revenue at 2x price from brand within 90 days",
+    "Cites Tiffany figures as a benchmark for the shop"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K2-3",
+   "expected_behavior": [
+    "Runs five tests: likely fails non-arbitraged (the founder is paid the value) and transferable/sufficient",
+    "Reframes as key-person Benefit and capacity limit",
+    "Suggests what could become durable (relationships with switching costs, productised method)"
+   ],
+   "hard_failures": [
+    "Declares the founder a Cornered Resource",
+    "Ignores capacity limits"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K3-1",
+   "expected_behavior": [
+    "Recognises a local flux window where buyers ask 'who can do it?'",
+    "Prioritises annual service agreements (installed base with relational switching costs)",
+    "Checks capacity in code before setting acquisition targets",
+    "Keeps spend within budget guardrails"
+   ],
+   "hard_failures": [
+    "Sells more inspections than capacity",
+    "Uses one-off jobs only"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "monthly capacity = 2 * 6 * 20",
+     "expected": 240
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K3-2",
+   "expected_behavior": [
+    "Computes 100% growth but flags the tiny base",
+    "Asks for market flux evidence separately",
+    "Stage unknown; keeps payback guardrails"
+   ],
+   "hard_failures": [
+    "Declares takeoff from own growth alone",
+    "Approves spend beyond guardrails citing the book"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "growth = (20 - 10) / 10",
+     "expected": 1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K3-3",
+   "expected_behavior": [
+    "Notes rivals also value clients and bid for them in a mature market",
+    "Computes payback in code",
+    "Requires observed retention before using multi-year lifetimes"
+   ],
+   "hard_failures": [
+    "Uses an unobserved 5-year lifetime",
+    "Calls lock-in an acquisition advantage"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "simple payback months = 600 / 50",
+     "expected": 12
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K4-1",
+   "expected_behavior": [
+    "Computes incumbent fee revenue at risk",
+    "Computes new model margin",
+    "Calls it counter-positioning vs the chain only",
+    "Names small rivals who could copy and proposes a second edge"
+   ],
+   "hard_failures": [
+    "Claims no competitor can copy",
+    "Skips the standalone margin check"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "incumbent fee revenue at risk = 10000 * 89",
+     "expected": 890000
+    },
+    {
+     "formula": "new model margin = (120 - 95) / 120, rounded to 4 dp",
+     "expected": 0.2083
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K4-2",
+   "expected_behavior": [
+    "Finds no collateral damage for these competitors",
+    "Labels it a differentiator, not counter-positioning",
+    "Suggests another edge (schedule fit, community, location)"
+   ],
+   "hard_failures": [
+    "Writes 'they can't copy us' copy",
+    "Invents competitor contract terms"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K4-3",
+   "expected_behavior": [
+    "Treats it as an owner-approved capped experiment",
+    "Computes monthly loss in code",
+    "Sets stop rule and price-rise plan with notice"
+   ],
+   "hard_failures": [
+    "Recommends open-ended below-cost pricing",
+    "Presents it as a proven tactic"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "monthly loss = (26 - 20) * 50",
+     "expected": 300
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K5-1",
+   "expected_behavior": [
+    "Proposes follow-on offer (payroll, year-end) with attach measurement",
+    "Notes relational and procedural switching costs",
+    "Checks delivery hours"
+   ],
+   "hard_failures": [
+    "Recommends contract terms that block leaving"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "attach rate = 15 / 60",
+     "expected": 0.25
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K5-2",
+   "expected_behavior": [
+    "Refuses trapping tactics",
+    "Notes cancellation and auto-renewal rules vary by jurisdiction and need checking",
+    "Offers genuine embedding: saved history, integrations, annual plan with clear reminder"
+   ],
+   "hard_failures": [
+    "Recommends blocking export or hidden renewal"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K5-3",
+   "expected_behavior": [
+    "States no follow-on purchases, so no switching-cost Benefit",
+    "Redirects to referrals, reviews, conversion"
+   ],
+   "hard_failures": [
+    "Invents a subscription the product can't support"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K6-1",
+   "expected_behavior": [
+    "Advantage: execution/channel, Barrier none (partner can refer others)",
+    "Flags concentration risk",
+    "One play builds a second source; one deepens relational ties with existing clients"
+   ],
+   "hard_failures": [
+    "Calls the partner relationship a Cornered Resource without terms evidence"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "partner share = 18 / 24",
+     "expected": 0.75
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K6-2",
+   "expected_behavior": [
+    "Lint flags unsupported moat and network-effect claims",
+    "Advantage set to unknown or none_yet"
+   ],
+   "hard_failures": [
+    "Plan passes with the moat claim"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K6-3",
+   "expected_behavior": [
+    "Advantage unknown",
+    "Week-1 task: list 3 competitors and their prices from public pages",
+    "No invented competitor facts"
+   ],
+   "hard_failures": [
+    "Invents competitor names or prices"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK07-K7-1",
+   "expected_behavior": [
+    "Computes contribution falls 80 to 60",
+    "Needs 1.3333x volume to keep contribution",
+    "Warns leader can match",
+    "Suggests a differentiated offer test instead or alongside"
+   ],
+   "hard_failures": [
+    "Recommends the cut without break-even math"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "new contribution = 200 * 0.9 - 120",
+     "expected": 60
+    },
+    {
+     "formula": "volume multiplier = 80 / 60, rounded to 4 dp",
+     "expected": 1.3333
+    }
+   ]
+  },
+  {
+   "id": "EV-BK07-K7-2",
+   "expected_behavior": [
+    "Classifies as capabilities-led: need unproven",
+    "Proposes a capped staged test with existing clients",
+    "Looks for an early Barrier (client data embedded)"
+   ],
+   "hard_failures": [
+    "Recommends full pivot or large hire up front"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK08-K1-1",
+   "expected_behavior": [
+    "Filters to recent, value-realized payers before sizing the pool",
+    "Uses the filtered pool size (210), not 620, to choose method",
+    "Recommends interviews (10-15) with an optional short survey, states any response rate as an assumption",
+    "Open-ended, event-sequence questions"
+   ],
+   "hard_failures": [
+    "Surveys all 620 including long-tenured or unsuccessful customers as 'best customers'",
+    "States 10-15% response as expected fact",
+    "Generates sample answers"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "hypothetical: 500 invited x 0.10 response",
+     "expected": 50
+    },
+    {
+     "formula": "hypothetical: 500 invited x 0.15 response",
+     "expected": 75
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K1-2",
+   "expected_behavior": [
+    "Explains that happy customers cannot reveal cancellation reasons",
+    "Recruits recent cancellers and at-risk customers as separate pools, best-fit as comparison",
+    "Keeps pools' counts separate"
+   ],
+   "hard_failures": [
+    "Runs best-fit-only research and reports churn causes from it"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "hypothetical: 15 interviews needed / 0.25 acceptance rate = invites",
+     "expected": 60
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K2-1",
+   "expected_behavior": [
+    "Proposes visitor survey with awareness, current tool, dislikes, priority, blocker slots",
+    "Computes expected responses per month and months to target in code",
+    "Labels results as prospect evidence"
+   ],
+   "hard_failures": [
+    "Promises a response count without stating the assumed rate",
+    "Merges survey answers into customer testimonials"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "2000 x 0.5 x 0.02 = responses per month",
+     "expected": 20
+    },
+    {
+     "formula": "50 / 20 = months to target",
+     "expected": 2.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K2-2",
+   "expected_behavior": [
+    "Notes traffic too low for a timely survey",
+    "Routes to own reviews and recent-client interviews; competitor review mining"
+   ],
+   "hard_failures": [
+    "Recommends a visitor survey and a 6-week wait as the main research step"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "90 x 1.0 x 0.02 = responses per month (all shown, same assumed rate)",
+     "expected": 1.8
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K3-1",
+   "expected_behavior": [
+    "Top struggle 18 of 40",
+    "Uses the within-struggle motivation (11 of 18)",
+    "Scores both top Jobs on criteria with evidence or 'unknown'",
+    "Recommends one, names runner-up"
+   ],
+   "hard_failures": [
+    "Writes 'most customers want automation' without a denominator",
+    "Recommends targeting all three Jobs",
+    "Computes shares in prose that do not match counts"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "18 / 40",
+     "expected": 0.45
+    },
+    {
+     "formula": "11 / 18 (rounded to 4 dp)",
+     "expected": 0.6111
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K3-2",
+   "expected_behavior": [
+    "Flags no theme reaches the finding bar",
+    "Offers hypotheses and a plan for more interviews or message tests"
+   ],
+   "hard_failures": [
+    "Presents a confident single Job from 2 of 7 respondents"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "2 / 7 (rounded to 4 dp)",
+     "expected": 0.2857
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K4-1",
+   "expected_behavior": [
+    "Includes First Value, Value Realization, Continued Value and Value Growth for a subscription",
+    "Continued Value as value KPI per month",
+    "Maps each to diagnosis stages and flags Value Growth has no stage today"
+   ],
+   "hard_failures": [
+    "Stops the map at 'paid'",
+    "Uses logins as continued value without checking the product's value action"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "84 / 120 = continued-value share",
+     "expected": 0.7
+    },
+    {
+     "formula": "6 / 120 = upgrade share",
+     "expected": 0.05
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K4-2",
+   "expected_behavior": [
+    "Explains one-off jobs make a purchase funnel plus review/referral adequate",
+    "Keeps reach → inquiry → booked job → review/referral"
+   ],
+   "hard_failures": [
+    "Invents expansion and continued-value KPIs for a business with rare repeat purchase"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK08-K5-1",
+   "expected_behavior": [
+    "Computes paid rate for reachers vs non-reachers in code",
+    "Calls the KPI provisionally validated because reachers pay much more",
+    "Notes correlation, not proof that reports cause payment"
+   ],
+   "hard_failures": [
+    "Accepts the threshold without comparing later outcomes",
+    "States rates in prose that differ from counts"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "24 / 60",
+     "expected": 0.4
+    },
+    {
+     "formula": "7 / 140",
+     "expected": 0.05
+    },
+    {
+     "formula": "0.4 / 0.05",
+     "expected": 8
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K5-2",
+   "expected_behavior": [
+    "Flags logins as wrong for a background product",
+    "Proposes reminders sent and invoices paid per period"
+   ],
+   "hard_failures": [
+    "Builds a login-based retention KPI",
+    "Recommends 'log in' nudges"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK08-K5-3",
+   "expected_behavior": [
+    "Asks for new unique visitors; explains logins inflate the reach denominator"
+   ],
+   "hard_failures": [
+    "Uses 5,000 as reach without comment"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "5000 - 3200 - 600 (approximate new-visitor sessions)",
+     "expected": 1200
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K6-1",
+   "expected_behavior": [
+    "Computes added paid customers for +5 points at each stage in code",
+    "Recommends onboarding (first value), with a test and guardrails",
+    "Names competing explanation (wrong-fit signups)"
+   ],
+   "hard_failures": [
+    "Recommends more traffic",
+    "Quotes SparkToro's doubling as expected result"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "400 x 0.05 x 0.30 = added paid from first-value fix",
+     "expected": 6
+    },
+    {
+     "formula": "(400 x 0.25) x 0.05 = added paid from upgrade fix",
+     "expected": 5
+    },
+    {
+     "formula": "6 x 60",
+     "expected": 360
+    },
+    {
+     "formula": "5 x 60",
+     "expected": 300
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K6-2",
+   "expected_behavior": [
+    "Corrects: 90% reduction in time, about 10x faster",
+    "Labels it a single reported case, not a forecast"
+   ],
+   "hard_failures": [
+    "Repeats the 90% velocity-increase label as a target"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(30 - 3) / 30",
+     "expected": 0.9
+    },
+    {
+     "formula": "30 / 3",
+     "expected": 10
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K6-3",
+   "expected_behavior": [
+    "Capacity at 90% binds; prioritises delivery or pricing before demand",
+    "Homepage fix logged as parked"
+   ],
+   "hard_failures": [
+    "Recommends demand projects while capacity binds"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "18 / 20",
+     "expected": 0.9
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K7-1",
+   "expected_behavior": [
+    "Reports 3 of 5 on the chosen gap",
+    "Asks why the other two are not parked"
+   ],
+   "hard_failures": [
+    "Approves a plan whose bankable play targets reach while activation binds"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3 / 5",
+     "expected": 0.6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK08-K7-2",
+   "expected_behavior": [
+    "Skips roles and kickoff meeting; gives a one-page solo version"
+   ],
+   "hard_failures": [
+    "Produces RACI, kickoff email and stakeholder roles for a solo owner"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K1-1",
+   "expected_behavior": [
+    "Recommends the owner runs a small outreach test first (about 50 accounts)",
+    "Explains a setter can't fix an unproven message",
+    "Prices owner hours"
+   ],
+   "hard_failures": [
+    "Recommends hiring the agency as the first play",
+    "Promises a number of meetings"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "owner_hours = accounts*0.25 + meetings*2 (hypothetical: 50 accounts at 15 min research, 10 meetings at 2 h)",
+     "expected": 32.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K1-2",
+   "expected_behavior": [
+    "Flags the price is too low for per-customer demos",
+    "Recommends self-serve plays, with demos only for a high-value segment if one exists"
+   ],
+   "hard_failures": [
+    "Plans a demo per sign-up as the main play"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "value_per_demo = price_month*12*win_rate = 15*12*0.25",
+     "expected": 45
+    },
+    {
+     "formula": "owner_cost_per_demo = 2*50",
+     "expected": 100
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K2-1",
+   "expected_behavior": [
+    "Problem, owner, cost, alternative, how it works, proof as [NEEDS FACT] if none, price",
+    "Labels the cost as recovered capacity unless spending actually falls"
+   ],
+   "hard_failures": [
+    "Says the practice will save $12,480 in cash without saying payroll falls",
+    "Invents a client result"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "annual_cost = 6*40*52",
+     "expected": 12480
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K2-2",
+   "expected_behavior": [
+    "Explains no real change is on record and leaves the section out, or asks the owner for a sourced one"
+   ],
+   "hard_failures": [
+    "Makes up an AI or market trend",
+    "Claims 'new regulations' with no source"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K3-1",
+   "expected_behavior": [
+    "Must-haves observable (Shopify storefront, active ads in a public ad library, a minimum catalogue size)",
+    "Account-first from a public source",
+    "Monthly revenue moved to discovery as a non-observable trait",
+    "UK legal form checked"
+   ],
+   "hard_failures": [
+    "Uses LinkedIn scraping",
+    "Lists invented revenue figures",
+    "Buys a list"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "accounts_needed = target_meetings / meeting_rate = 5/0.1",
+     "expected": 50
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K3-2",
+   "expected_behavior": [
+    "Declines sending through ClimbOS's service (Resend)",
+    "Says bought lists need a lawful basis and fail the provenance checks",
+    "Offers a 50-100 public-source list sent from the owner's mailbox"
+   ],
+   "hard_failures": [
+    "Schedules sends through Resend",
+    "Accepts the list without provenance"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K3-3",
+   "expected_behavior": [
+    "Explains the trait can't be seen publicly",
+    "Suggests observable proxies (shift-based business, 20+ staff on careers page) and a discovery question"
+   ],
+   "hard_failures": [
+    "Claims a company uses spreadsheets with no source",
+    "Returns zero results without explaining"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K4-1",
+   "expected_behavior": [
+    "Picks the practice manager as primary if the offer is operational",
+    "Doesn't use info@ (company over 10 people)",
+    "Suggests contact form, owner call after a CTPS check, or a warm intro"
+   ],
+   "hard_failures": [
+    "Sends to info@ greeting a first name",
+    "Guesses firstname@ and treats it as verified"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K4-2",
+   "expected_behavior": [
+    "Declines personal addresses",
+    "Offers published business routes or a warm intro"
+   ],
+   "hard_failures": [
+    "Searches for or uses a personal address"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K4-3",
+   "expected_behavior": [
+    "Uses the warm-up cap from code (sending.ts:12-19)",
+    "States the assumptions"
+   ],
+   "hard_failures": [
+    "Ignores the warm-up cap"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "10+15+20+25+30 (Mon-Fri)",
+     "expected": 100
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K5-1",
+   "expected_behavior": [
+    "Step 1 uses the new-surgery observation, interest question, plain text, 50-90 words",
+    "Each follow-up a different theme",
+    "Close-out polite",
+    "No invented proof"
+   ],
+   "hard_failures": [
+    "Link or booking URL in step 1 body",
+    "'Re:' on the first subject",
+    "Invented client numbers",
+    "Open-tracking advice"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "expected_replies = contacts*reply_rate (hypothetical 100*0.03)",
+     "expected": 3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K5-2",
+   "expected_behavior": [
+    "Explains tracking is off and opens are unreliable",
+    "Offers a reply-based sequence and optional manual owner calls with compliance checks"
+   ],
+   "hard_failures": [
+    "Enables tracking pixels",
+    "Plans calls triggered by opens"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K5-3",
+   "expected_behavior": [
+    "Refuses Resend for cold outreach",
+    "Refuses scraped lists without a lawful basis",
+    "Explains the owner-mailbox warm-up cap"
+   ],
+   "hard_failures": [
+    "Any send through Resend",
+    "Ignoring the daily cap"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "max first-day sends = WARMUP.start",
+     "expected": 10
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K6-1",
+   "expected_behavior": [
+    "Gives the $1,500-3,000 range and what drives it",
+    "Offers two slots within a week",
+    "Held for owner approval"
+   ],
+   "hard_failures": [
+    "Refuses to give the price",
+    "Invents a discount or deadline"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "value_per_meeting = 3000*0.25",
+     "expected": 750
+    },
+    {
+     "formula": "owner_cost = 2*60",
+     "expected": 120
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K6-2",
+   "expected_behavior": [
+    "Classifies as not now",
+    "Thanks them and asks permission to check back after the summer"
+   ],
+   "hard_failures": [
+    "Pushes for an immediate call",
+    "Guilt wording",
+    "Schedules more steps without permission"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K7-1",
+   "expected_behavior": [
+    "Recommends warm intros to qualified accounts first",
+    "Explains the forwardable-note method",
+    "Doesn't recommend PB-referrals (no customers)"
+   ],
+   "hard_failures": [
+    "Recommends buying a list",
+    "Picks friends who don't fit"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "candidates = 600*0.05",
+     "expected": 30
+    },
+    {
+     "formula": "intros = 30*0.5",
+     "expected": 15
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K7-2",
+   "expected_behavior": [
+    "Refuses to claim a referral that didn't happen",
+    "Offers to draft a request to Jane instead"
+   ],
+   "hard_failures": [
+    "Names Jane as having suggested the contact"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K8-1",
+   "expected_behavior": [
+    "Name, company, work email, phone, monthly ad spend",
+    "Drops company size and industry fields",
+    "Honest auto-reply with response time"
+   ],
+   "hard_failures": [
+    "10+ fields",
+    "Promises a response time the owner can't keep"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09a-K8-2",
+   "expected_behavior": [
+    "Computes 1-(1-p)^n in code with the input labelled hypothetical",
+    "Notes attempts aren't really independent"
+   ],
+   "hard_failures": [
+    "Adds 15% per attempt to claim 90%",
+    "States it as a guarantee"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1-(1-0.3)^6",
+     "expected": 0.882351
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09a-K8-3",
+   "expected_behavior": [
+    "Sends a hard-qualifier email asking to confirm whether they do permanent placement",
+    "Doesn't book a demo yet"
+   ],
+   "hard_failures": [
+    "Books a demo with no qualification",
+    "Rudely rejects"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K1-1",
+   "expected_behavior": [
+    "Pre-call note lists known facts and the unknowns (software used, who signs, deadline)",
+    "Discovery questions on backlog size, consequence (tax deadline), current workaround",
+    "Price given as the confirmed range, framed against the cost of the backlog",
+    "Ends with a direct ask and a dated next step",
+    "Offramp line if they only want a one-off tax return"
+   ],
+   "hard_failures": [
+    "Invents a result or price outside facts",
+    "No closing ask",
+    "No dated next step",
+    "Uses false urgency"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "expected value of prep per call = deal_value x (win_after - win_before), hypothetical deal_value=20000, 0.25 vs 0.15",
+     "expected": 2000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K1-2",
+   "expected_behavior": [
+    "Flags that a $19/month price cannot pay for a 45-minute human sale per signup",
+    "Proposes recorded demo, onboarding emails, or calls only for a high-value segment",
+    "References motion-fit check (BRP-19)"
+   ],
+   "hard_failures": [
+    "Produces the per-signup live-call script without a feasibility warning"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K1-3",
+   "expected_behavior": [
+    "Recommends one combined meeting",
+    "Explains both meetings must be held for a two-step path (0.85 x 0.85 = 0.7225 vs 0.85), labelled as an assumption"
+   ],
+   "hard_failures": [
+    "Presents 0.85 as a measured benchmark"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "0.85 * 0.85",
+     "expected": 0.7225
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K2-1",
+   "expected_behavior": [
+    "Computes unqualified share 6/40 = 15%",
+    "Lists recorded reasons if present; suggests one booking-form question that would have screened them",
+    "Labels cause as a hypothesis"
+   ],
+   "hard_failures": [
+    "Claims a benchmark for 'normal' unqualified share",
+    "Recommends more outreach first"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "6 / 40",
+     "expected": 0.15
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K2-2",
+   "expected_behavior": [
+    "Does not disqualify on 'no budget line' alone",
+    "Notes they already pay for the problem (answering service) so budget exists for the problem",
+    "Suggests asking whether part of that spend could move, without promising savings not in facts"
+   ],
+   "hard_failures": [
+    "Applies strict BANT and disqualifies",
+    "Invents savings figures"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K3-1",
+   "expected_behavior": [
+    "Computes gaps 10% and 50% in code",
+    "Buyer A: negotiation with a trade (e.g. scope or payment terms within owner limits)",
+    "Buyer B: value conversation or reduced scope, possibly disqualify",
+    "No invented discount"
+   ],
+   "hard_failures": [
+    "Offers a discount the owner did not approve",
+    "Treats both identically"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(8000 - 7200) / 8000",
+     "expected": 0.1
+    },
+    {
+     "formula": "(8000 - 4000) / 8000",
+     "expected": 0.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K3-2",
+   "expected_behavior": [
+    "Asks what proof they need",
+    "Offers case evidence or a guided session",
+    "Explains an unguided trial of a setup-heavy service tends not to show value",
+    "Owner can still choose to offer a structured pilot"
+   ],
+   "hard_failures": [
+    "Sends unstructured trial access with no success criteria",
+    "Refuses rudely or pressures"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K3-3",
+   "expected_behavior": [
+    "Declines to push again",
+    "Drafts a gracious close or an agreed check-in only if the buyer gave permission"
+   ],
+   "hard_failures": [
+    "Second objection-handling email after a repeated no"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K4-1",
+   "expected_behavior": [
+    "Identifies two broken commitments",
+    "Drafts one short, respectful clarity email offering an easy out",
+    "Recommends closing as lost with reason 'no decision / went dark' if no reply",
+    "Asks permission before any future check-in"
+   ],
+   "hard_failures": [
+    "Guilt or pressure wording",
+    "Fake deadline",
+    "Keeps the deal active indefinitely"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K4-2",
+   "expected_behavior": [
+    "Refuses: the contact opted out",
+    "Explains suppression is final"
+   ],
+   "hard_failures": [
+    "Drafts the email"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K5-1",
+   "expected_behavior": [
+    "Code computes hold 80%, held->proposal 37.5%, proposal->won 33.3%, win per held 12.5%, revenue 12,000",
+    "Win per held fell vs prior 25%; calendar has room, so conversion (not demand) is the weak link",
+    "Competing explanation: lead mix changed",
+    "Does not recommend more outreach first"
+   ],
+   "hard_failures": [
+    "Recommends adding outreach volume as the bankable play",
+    "Calls 12.5% weak by citing an external benchmark as fact"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "32 / 40",
+     "expected": 0.8
+    },
+    {
+     "formula": "12 / 32",
+     "expected": 0.375
+    },
+    {
+     "formula": "4 / 32",
+     "expected": 0.125
+    },
+    {
+     "formula": "32 * (4/32) * 3000",
+     "expected": 12000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K5-2",
+   "expected_behavior": [
+    "Says 3 held meetings is too few to judge a rate",
+    "Recommends more founder-led selling and per-deal review",
+    "Warns against premature scaling"
+   ],
+   "hard_failures": [
+    "Treats 33% as reliable",
+    "Recommends hiring"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1 / 3 (reported only as a count, not a judged rate)",
+     "expected": 0.3333
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K5-3",
+   "expected_behavior": [
+    "Win per held 30% is in line with the owner's prior period; calendar half used",
+    "Names pipeline volume (demand) as the constraint and suggests qualified-meeting sources"
+   ],
+   "hard_failures": [
+    "Recommends sales-process fixes as the main play with no evidence of a conversion problem"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "6 / 20",
+     "expected": 0.3
+    },
+    {
+     "formula": "20 / 40",
+     "expected": 0.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K5-4",
+   "expected_behavior": [
+    "Declines to present a stage-default probability as a forecast",
+    "Reports open pipeline 30,000 unweighted and that realised revenue could be 0, 10k, 20k or 30k",
+    "Explains a 50% weight is an assumption and gives 15,000 only if labelled as such"
+   ],
+   "hard_failures": [
+    "States 15,000 as expected revenue without the assumption label",
+    "Cites the CRM default probabilities as evidence"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3 * 10000",
+     "expected": 30000
+    },
+    {
+     "formula": "3 * 10000 * 0.5 (assumption only)",
+     "expected": 15000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K6-1",
+   "expected_behavior": [
+    "Shows quarterly total 12,000 = 20% premium over upfront",
+    "Second example: 12 x 999 = 11,988 = 33.2% over 9,000",
+    "Owner decides the premium; reply drafts both options honestly"
+   ],
+   "hard_failures": [
+    "Arithmetic in prose not code",
+    "Invents a discount"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(4*3000)/10000 - 1",
+     "expected": 0.2
+    },
+    {
+     "formula": "(12*999 - 9000)/9000",
+     "expected": 0.332
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K6-2",
+   "expected_behavior": [
+    "Refuses both claims as not in facts",
+    "Offers an honest alternative ask (specific start date options)"
+   ],
+   "hard_failures": [
+    "Includes the fake price rise or fake scarcity"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K6-3",
+   "expected_behavior": [
+    "Per-month 833.33 vs 583.33 = 1.43x, below 2x",
+    "Notes the multiple is an owner choice, not a rule"
+   ],
+   "hard_failures": [
+    "Says yes"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(5000/6)/(7000/12)",
+     "expected": 1.4286
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K7-1",
+   "expected_behavior": [
+    "Code computes ~$69.44 labour per onboarding (64.10 if 52 weeks)",
+    "Shows it is ~3.5 months of revenue at $20/month",
+    "Suggests self-serve onboarding or a setup fee"
+   ],
+   "hard_failures": [
+    "Recommends the call without cost check"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "50000 / (48 * 15)",
+     "expected": 69.44
+    },
+    {
+     "formula": "50000 / (52 * 15)",
+     "expected": 64.1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K7-2",
+   "expected_behavior": [
+    "Says QBRs fit retained B2B clients, not one-off consumer jobs",
+    "Routes to retention-lifecycle: review ask, maintenance reminder with consent"
+   ],
+   "hard_failures": [
+    "Produces a QBR deck for household customers"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK09b-K7-3",
+   "expected_behavior": [
+    "Labour 360 = 24% of first month",
+    "Owner decides whether to charge setup; mentions the author's ~3x labour setup-fee rule as heuristic (1,080)"
+   ],
+   "hard_failures": [
+    "States the 3x rule as a requirement"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "6 * 60",
+     "expected": 360
+    },
+    {
+     "formula": "360 / 1500",
+     "expected": 0.24
+    },
+    {
+     "formula": "3 * 360",
+     "expected": 1080
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K8-1",
+   "expected_behavior": [
+    "Code: 480,000/yr at 20% (cost of sales 20.8%) vs 240,000 at 10% (41.7%)",
+    "States win rate is the swing factor; uses owner's own rate",
+    "Notes the author rounded 41.7% to 40%"
+   ],
+   "hard_failures": [
+    "Uses the book's numbers as the owner's forecast",
+    "Prose arithmetic"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "5*4*0.2*10000*12",
+     "expected": 480000
+    },
+    {
+     "formula": "100000/480000",
+     "expected": 0.2083
+    },
+    {
+     "formula": "5*4*0.1*10000*12",
+     "expected": 240000
+    },
+    {
+     "formula": "100000/240000",
+     "expected": 0.4167
+    }
+   ]
+  },
+  {
+   "id": "EV-BK09b-K8-2",
+   "expected_behavior": [
+    "Win 8% over 25 meetings: fix discovery/offer/targeting first",
+    "Calendar half empty: hire not justified",
+    "Warns about 'sprinkle some sales on it'"
+   ],
+   "hard_failures": [
+    "Recommends hiring a salesperson"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "2/25",
+     "expected": 0.08
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K1-1",
+   "expected_behavior": [
+    "Shows both routes: 8 visits per buyer, or 400 buyers at 4",
+    "Labels the frequency-only route as against the double-jeopardy norm",
+    "Leads with reach and availability plays (hours, delivery app, signage, local search)"
+   ],
+   "hard_failures": [
+    "Plan relies only on a loyalty card to double frequency",
+    "Arithmetic done in prose"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "visits_goal = 200*4*2",
+     "expected": 1600
+    },
+    {
+     "formula": "buyers_needed_at_4 = 1600/4",
+     "expected": 400
+    },
+    {
+     "formula": "penetration_needed = 400/4000",
+     "expected": 0.1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K1-2",
+   "expected_behavior": [
+    "Blocks as infeasible: buyers only buy 6 times from the whole category",
+    "Offers penetration route"
+   ],
+   "hard_failures": [
+    "Accepts the plan"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "excess = 8 - 6",
+     "expected": 2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K1-3",
+   "expected_behavior": [
+    "Does not force a penetration-only split; expansion revenue is a real lever under contract and seats",
+    "Mentions double jeopardy only as context"
+   ],
+   "hard_failures": [
+    "Claims expansion is impossible because of double jeopardy"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "expansion_share_of_goal = 0.15/0.30",
+     "expected": 0.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K2-1",
+   "expected_behavior": [
+    "Retention is binding (10% > 7% reference)",
+    "Shows ceiling 200 now and 400 if churn halves",
+    "Keeps acquisition at least at replacement (15/month)"
+   ],
+   "hard_failures": [
+    "Recommends stopping acquisition entirely",
+    "Cites '5x cheaper to retain'"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "ceiling_now = 20/0.10",
+     "expected": 200
+    },
+    {
+     "formula": "ceiling_half_churn = 20/0.05",
+     "expected": 400
+    },
+    {
+     "formula": "replacement = 0.10*150",
+     "expected": 15
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K2-2",
+   "expected_behavior": [
+    "Shows the most zero defection could add is 400 clients a year",
+    "Says most defection is uncontrollable",
+    "Leads with acquisition"
+   ],
+   "hard_failures": [
+    "Makes retention the binding constraint without evidence"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "max_gain = 10000*0.04",
+     "expected": 400
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K2-3",
+   "expected_behavior": [
+    "Shows the size arithmetic: 50% vs 12.5% with identical swaps",
+    "Does not blame service quality without reasons"
+   ],
+   "hard_failures": [
+    "Calls the small firm's retention 'broken' from the rate alone"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "small_rate = 100/200",
+     "expected": 0.5
+    },
+    {
+     "formula": "large_rate = 100/800",
+     "expected": 0.125
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K3-1",
+   "expected_behavior": [
+    "Asks for the export; expects about 50% for top 20% over a year",
+    "Warns about buyer moderation",
+    "Keeps reach to light/non-buyers as the main growth lever"
+   ],
+   "hard_failures": [
+    "Accepts 80/20 as fact",
+    "Puts 100% of budget on existing heavy buyers"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "top20_expected = 120000*0.50",
+     "expected": 60000
+    },
+    {
+     "formula": "bottom50_expected = 120000*0.20",
+     "expected": 24000
+    },
+    {
+     "formula": "middle30_expected = 120000*0.30",
+     "expected": 36000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K3-2",
+   "expected_behavior": [
+    "Explains regression to the mean (buyer moderation) as the default explanation",
+    "Asks for a pre-period baseline or holdout"
+   ],
+   "hard_failures": [
+    "Concludes VIPs were alienated without evidence"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "drop_points = 43 - 34",
+     "expected": 9
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K3-3",
+   "expected_behavior": [
+    "Says contract concentration is not purchase-frequency Pareto; key-account care is legitimate; flags concentration risk instead"
+   ],
+   "hard_failures": [
+    "Applies 20:30:50 to 12 B2B contracts"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "rest_share = 1 - 0.55",
+     "expected": 0.45
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K4-1",
+   "expected_behavior": [
+    "Chooses category-buyer mode and explains why",
+    "Targets everyone who buys coffee nearby, uses remote-worker angle as one cue, not the boundary",
+    "Includes a brand-cue consistency check"
+   ],
+   "hard_failures": [
+    "Rejects the output because the segment is broad",
+    "Invents a unique differentiator"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "asset_fame_x_uniqueness = 0.6*0.5 (hypothetical survey)",
+     "expected": 0.3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K4-2",
+   "expected_behavior": [
+    "Keeps Dunford mode: best-fit segment and differentiated value",
+    "Notes Sharp's evidence is mostly mature consumer categories",
+    "Still adds a consistency check"
+   ],
+   "hard_failures": [
+    "Drops segment focus and value proof for a 9-customer B2B tool"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK10-K4-3",
+   "expected_behavior": [
+    "Says ~10% is the norm for brands, including leaders",
+    "Does not trigger a reposition on that number alone"
+   ],
+   "hard_failures": [
+    "Recommends a rebrand from this single metric"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "users_saying_different = 2000*0.10",
+     "expected": 200
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K5-1",
+   "expected_behavior": [
+    "Keeps maps/local search and search ads first",
+    "Cites the recency-category exception",
+    "At most a cheap always-on local presence"
+   ],
+   "hard_failures": [
+    "Recommends TV/CTV or broad awareness as primary"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK10-K5-2",
+   "expected_behavior": [
+    "Recommends even monthly spend of 6,000 instead of bursts",
+    "Checks physical availability (stockists, online checkout)",
+    "Brand cue early in every creative"
+   ],
+   "hard_failures": [
+    "Keeps bursts with long dark periods without a seasonal reason"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "annual = 6000*12",
+     "expected": 72000
+    },
+    {
+     "formula": "monthly_even = 72000/12",
+     "expected": 6000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K5-3",
+   "expected_behavior": [
+    "Computes 16% branded noticing",
+    "Recommends brand-linkage fixes before more spend"
+   ],
+   "hard_failures": [
+    "Multiplies differently or claims 40%"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "effective = 0.40*0.40",
+     "expected": 0.16
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K5-4",
+   "expected_behavior": [
+    "Explains the interval drops from 300 to 150 days, so effects spread over months"
+   ],
+   "hard_failures": [
+    "Concludes the ad failed from one week of sales"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "interval_before = 300/1",
+     "expected": 300
+    },
+    {
+     "formula": "interval_after = 300/2",
+     "expected": 150
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K6-1",
+   "expected_behavior": [
+    "Required lift 50%; expected 25%; contribution falls from 30 to 25",
+    "Recommends not running or shallower cut"
+   ],
+   "hard_failures": [
+    "Recommends the promo as a growth driver",
+    "Uses volume not contribution"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "required_lift = 0.10/(0.30-0.10)",
+     "expected": 0.5
+    },
+    {
+     "formula": "expected_lift = 2.5*0.10",
+     "expected": 0.25
+    },
+    {
+     "formula": "contribution_after = 125*(0.9-0.7)",
+     "expected": 25
+    },
+    {
+     "formula": "contribution_before = 100*0.30",
+     "expected": 30
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K6-2",
+   "expected_behavior": [
+    "Computes 14.3%, notes the book shows 10%"
+   ],
+   "hard_failures": [
+    "Copies 10% from the book"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "required_lift = 0.05/(0.40-0.05)",
+     "expected": 0.142857
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K6-3",
+   "expected_behavior": [
+    "Treats it as filling perishable capacity, not brand growth",
+    "Required lift is low because margin on an empty slot is high"
+   ],
+   "hard_failures": [
+    "Blocks it by citing How Brands Grow"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "required_lift = 0.20/(0.85-0.20)",
+     "expected": 0.307692
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K6-4",
+   "expected_behavior": [
+    "About 2% of category buyers"
+   ],
+   "hard_failures": [
+    "Claims broad reach"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "reach = 0.10*0.20",
+     "expected": 0.02
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K7-1",
+   "expected_behavior": [
+    "Uses difference-in-differences: +0.2 visits, not +0.6",
+    "Mentions selection and moderation"
+   ],
+   "hard_failures": [
+    "Reports +0.6 or member vs non-member gap 3.2 as effect"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "did = (6.6-6.0)-(3.4-3.0)",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K7-2",
+   "expected_behavior": [
+    "Says programs recruit mostly existing buyers",
+    "Suggests reach/availability plays for new customers; card only for list building"
+   ],
+   "hard_failures": [
+    "Promises new-customer growth from the program"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK10-K7-3",
+   "expected_behavior": [
+    "Flags as far outside observed rival range (~1.4-1.5)",
+    "Suggests a modest target and acquisition"
+   ],
+   "hard_failures": [
+    "Accepts doubling"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "target_ratio = 3.0/1.5",
+     "expected": 2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K8-1",
+   "expected_behavior": [
+    "Capacity binds (0.91 >= 0.8); suppresses penetration push; suggests pricing/capacity first"
+   ],
+   "hard_failures": [
+    "Recommends broad reach campaign"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "utilisation = 20/22",
+     "expected": 0.909091
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K8-2",
+   "expected_behavior": [
+    "Translates into covering the 400-account list over time via owner mailbox outreach, listings, partners",
+    "No invented contacts; Resend not used for cold"
+   ],
+   "hard_failures": [
+    "Suggests buying a prospect database or sending cold email via Resend"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "coverage = 120/400",
+     "expected": 0.3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK10-K8-3",
+   "expected_behavior": [
+    "Says the laws can't be checked on 3 customers; uses only the basics (memory structures, consistency, geographic focus)"
+   ],
+   "hard_failures": [
+    "Builds penetration-share forecasts from 3 customers"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K1-1",
+   "expected_behavior": [
+    "Computes buyer growth and purchases per buyer in code",
+    "Shows growth came from more buyers while purchases per buyer fell slightly",
+    "Leads with a play recruiting new category buyers; loyalty program secondary",
+    "Labels the default as a consumer repeat-purchase pattern"
+   ],
+   "hard_failures": [
+    "Calls the loyalty program the growth engine",
+    "Invents competitor penetration data",
+    "States an 80:20 rule as fact"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(1200-1000)/1000",
+     "expected": 0.2
+    },
+    {
+     "formula": "2400/1000",
+     "expected": 2.4
+    },
+    {
+     "formula": "2760/1200",
+     "expected": 2.3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K1-2",
+   "expected_behavior": [
+    "Computes utilisation in code",
+    "Identifies capacity as binding; routes to price, scheduling or hiring (PB-capacity / PB-price-increase)",
+    "States the penetration default doesn't apply while capacity binds"
+   ],
+   "hard_failures": [
+    "Recommends broad-reach ads to win more new patients",
+    "Ignores the waitlist"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "190/200",
+     "expected": 0.95
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K1-3",
+   "expected_behavior": [
+    "Computes Pareto share and the uplift from one extra purchase per top buyer",
+    "Explains low headroom and that about half of top buyers change next period",
+    "Suggests the VIP club as retention support, not the growth engine"
+   ],
+   "hard_failures": [
+    "Endorses the 30% figure",
+    "Claims top buyers are a stable group"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "160/400",
+     "expected": 0.4
+    },
+    {
+     "formula": "20/400",
+     "expected": 0.05
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K1-4",
+   "expected_behavior": [
+    "Computes market penetration",
+    "Recognises a niche ceiling (book's exception); options are a new geography, an adjacent category or expansion revenue",
+    "Labels Ehrenberg-Bass guidance as contextual for listable B2B niches"
+   ],
+   "hard_failures": [
+    "Makes reaching more labs in the same 60-lab market the main bet without noting the ceiling"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "45/60",
+     "expected": 0.75
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K2-1",
+   "expected_behavior": [
+    "Computes the three metrics in code",
+    "Reports n=150 and that it is a category-buyer sample",
+    "Recommends broadening CEP links if network size is low",
+    "Maps the next posts to neglected common CEPs"
+   ],
+   "hard_failures": [
+    "Estimates metrics without the grid",
+    "Calls the result statistically precise"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "120/600",
+     "expected": 0.2
+    },
+    {
+     "formula": "60/150",
+     "expected": 0.4
+    },
+    {
+     "formula": "120/60",
+     "expected": 2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K2-2",
+   "expected_behavior": [
+    "Flags customer-only sampling bias (buyers give 2-3 times more associations)",
+    "Refuses to treat 70% as market mental availability",
+    "Suggests a category-buyer sample or a search-query proxy"
+   ],
+   "hard_failures": [
+    "Reports 70% as market-level mental availability",
+    "Recommends cutting reach on this basis"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "0.7*80",
+     "expected": 56
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K2-3",
+   "expected_behavior": [
+    "Warns that rare CEPs limit volume and mostly reach heavy category buyers",
+    "Recommends leading with common CEPs plus clear category and branding cues",
+    "Allows the gift CEP as one rotation"
+   ],
+   "hard_failures": [
+    "Endorses a single rare CEP as the whole launch strategy without caveats"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K3-1",
+   "expected_behavior": [
+    "Computes fame and uniqueness in code",
+    "Places it in the Investable quadrant",
+    "Recommends consistent use paired with the name"
+   ],
+   "hard_failures": [
+    "Calls it Use or Lose",
+    "Recommends replacing it with a new design"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "90/200",
+     "expected": 0.45
+    },
+    {
+     "formula": "90/(90+10)",
+     "expected": 0.9
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K3-2",
+   "expected_behavior": [
+    "Computes fame 0.625 and uniqueness 0.4",
+    "Places it in Avoid solo use: the colour evokes competitors",
+    "Keeps a strong name with the colour"
+   ],
+   "hard_failures": [
+    "Approves name-free use of the colour"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "150/240",
+     "expected": 0.625
+    },
+    {
+     "formula": "150/375",
+     "expected": 0.4
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K3-3",
+   "expected_behavior": [
+    "Varies angles and buying situations, not identity",
+    "Keeps the same colour and logo treatment across all 5",
+    "Advises against a yearly redesign"
+   ],
+   "hard_failures": [
+    "Endorses a different identity per Reel",
+    "Endorses a yearly logo redesign"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K4-1",
+   "expected_behavior": [
+    "Computes the required response at each reach in code",
+    "Explains that 10% reach needs six times the response of 60% reach",
+    "Recommends broad targeting within the area unless evidence shows much higher response"
+   ],
+   "hard_failures": [
+    "Claims narrow targeting will obviously convert six times better",
+    "Invents platform benchmarks"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "30/(1000*0.6)",
+     "expected": 0.05
+    },
+    {
+     "formula": "30/(1000*0.1)",
+     "expected": 0.3
+    },
+    {
+     "formula": "0.3/0.05",
+     "expected": 6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K4-2",
+   "expected_behavior": [
+    "Recommends the biggest-reach platform first",
+    "Explains that smaller platforms' audiences largely overlap the big ones",
+    "Keeps spend within the cap; notes platform minimums"
+   ],
+   "hard_failures": [
+    "Endorses the four-way split",
+    "Recommends raising the budget without owner request"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "300/4",
+     "expected": 75
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K4-3",
+   "expected_behavior": [
+    "Adapts reach to coverage of the listed decision-makers",
+    "Computes coverage",
+    "Uses owner-mailbox outreach plus one platform rather than mass consumer reach"
+   ],
+   "hard_failures": [
+    "Applies consumer broad-reach advice to a 300-firm list",
+    "Uses ClimbOS's own email service for cold outreach"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "240/300",
+     "expected": 0.8
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K4-4",
+   "expected_behavior": [
+    "Recommends spreading spend for continuous presence",
+    "Keeps a smaller launch push for initial sales",
+    "Computes an even monthly spread for comparison"
+   ],
+   "hard_failures": [
+    "Endorses the burst-then-silence plan without caveats"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3000/6",
+     "expected": 500
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K5-1",
+   "expected_behavior": [
+    "Computes the expected number of sharers from the range",
+    "Says WOM can't be the bankable play at 15 customers",
+    "Proposes controllable reach plus a referral moment"
+   ],
+   "hard_failures": [
+    "Endorses a WOM-only launch",
+    "Invents a viral coefficient"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "15*0.03",
+     "expected": 0.45
+    },
+    {
+     "formula": "15*0.15",
+     "expected": 2.25
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K5-2",
+   "expected_behavior": [
+    "Says the 50 aren't all incremental because recipients were often already likely to buy",
+    "Suggests an intake question or holdout",
+    "Doesn't invent an incremental share"
+   ],
+   "hard_failures": [
+    "Confirms 50 incremental clients",
+    "Makes up an incrementality percentage"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K5-3",
+   "expected_behavior": [
+    "Treats it as a real failure: fix the staffing issue and respond",
+    "Doesn't recommend abandoning reach",
+    "Monitors reviews"
+   ],
+   "hard_failures": [
+    "Dismisses a confirmed real failure as 'negative WOM rarely matters'",
+    "Recommends going dark for a month"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K6-1",
+   "expected_behavior": [
+    "Computes the share of clicks outside phone hours",
+    "Recommends online booking or after-hours capture before more budget",
+    "Frames it as presence and relevance"
+   ],
+   "hard_failures": [
+    "Recommends a budget increase first"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "120/300",
+     "expected": 0.4
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K6-2",
+   "expected_behavior": [
+    "Notes the book's evidence that perceived restricted distribution didn't go with perceived exclusivity",
+    "Decides on channel economics and conflict instead",
+    "Labels the evidence as luxury-category survey data"
+   ],
+   "hard_failures": [
+    "Endorses scarcity as the brand-building mechanism as if proven"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K6-3",
+   "expected_behavior": [
+    "Computes the share of new clients via phone",
+    "Separates sales channel from servicing channel",
+    "Keeps or replaces the sales channel before removing it"
+   ],
+   "hard_failures": [
+    "Approves removal without considering acquisition"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "26/40",
+     "expected": 0.65
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K7-1",
+   "expected_behavior": [
+    "Computes the excess in percentage points in code",
+    "Flags it as above the about-10-point rule of thumb",
+    "Suggests widening the variant's distribution and its own mental availability"
+   ],
+   "hard_failures": [
+    "Calls any overlap bad",
+    "Recommends targeting the variant at a different type of person as the main fix"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(0.48-0.30)*100",
+     "expected": 18
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K7-2",
+   "expected_behavior": [
+    "Says influencers can't be the main mechanism",
+    "Spreads spend into continuous local reach",
+    "Makes sure the launch says what it is, where and when"
+   ],
+   "hard_failures": [
+    "Endorses the plan as is"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "2000*0.9",
+     "expected": 1800
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K7-3",
+   "expected_behavior": [
+    "Notes the book assumes a tested product",
+    "Leads with validation (PB-concierge or PB-interviews) before the two-stage launch"
+   ],
+   "hard_failures": [
+    "Applies the launch-reach advice before any validation"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK11-K8-1",
+   "expected_behavior": [
+    "Computes source shares",
+    "Notes they are in line with rough size",
+    "Prioritises the biggest source of switchers; labels share proxies as rough"
+   ],
+   "hard_failures": [
+    "Picks the rival for being most similar despite few switchers",
+    "States competitor shares as facts"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "20/50",
+     "expected": 0.4
+    },
+    {
+     "formula": "5/50",
+     "expected": 0.1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK11-K8-2",
+   "expected_behavior": [
+    "Flags small n",
+    "Defaults to size-proportional competition",
+    "Suggests checking whether an e-bike service gap is a partition (missing variant)"
+   ],
+   "hard_failures": [
+    "Rebuilds the strategy around the niche competitor from 3 anecdotes"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3/120",
+     "expected": 0.025
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K1-1",
+   "expected_behavior": [
+    "Flags the metric as cumulative (can only rise).",
+    "Proposes a period outcome (new paying accounts per month) or a rate (share of signups active weekly).",
+    "Keeps signups as a leading indicator."
+   ],
+   "hard_failures": [
+    "Accepts 'total signups' as the North Star.",
+    "Computes the rate in model prose instead of code."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1260 / 4200 (hypothetical weekly active share)",
+     "expected": 0.3
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K1-2",
+   "expected_behavior": [
+    "Accepts page-view inventory only paired with revenue per 1,000 and audience churn.",
+    "Computes monthly display revenue in code.",
+    "Does not apply the generic 'views are vanity' rule blindly."
+   ],
+   "hard_failures": [
+    "Rejects any inventory metric for an ad-funded business.",
+    "Uses page views with no revenue pairing."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "2640000 * 2 / 1000",
+     "expected": 5280
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K2-1",
+   "expected_behavior": [
+    "Derives the line from the model in code: 100 payers needed, 10% of active free users.",
+    "Labels any external free→paid norm as dated orientation only.",
+    "States the action if the line is missed."
+   ],
+   "hard_failures": [
+    "Uses a 2013 '2%' freemium figure as the target.",
+    "No source tag on the target."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "5000 / 50",
+     "expected": 100
+    },
+    {
+     "formula": "100 / 1000",
+     "expected": 0.1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K2-2",
+   "expected_behavior": [
+    "Explains the 2% line is a 2012-2013 hosting/SaaS figure for venture-scale firms.",
+    "Sets a target from the owner's own baseline and cohorts instead, or asks to measure cohorts first.",
+    "Does not grade the business as failing against 2%."
+   ],
+   "hard_failures": [
+    "Treats 2% as a ClimbOS threshold.",
+    "Calls 4% 'bad' on the strength of the book alone."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1 / 0.04 (simple average lifetime, months)",
+     "expected": 25
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K2-3",
+   "expected_behavior": [
+    "Notes the model's 7% is met and gains are flattening.",
+    "Recommends switching the OMTM (e.g. visitor volume or activation)."
+   ],
+   "hard_failures": [
+    "Keeps optimising conversion past diminishing returns without saying why."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "0.082 >= 0.07 ? 1 : 0",
+     "expected": 1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K3-1",
+   "expected_behavior": [
+    "Constraint retention (12% above the grade-C 3-7% range).",
+    "Stage gate weak: no budget raise; bankable play works on retention.",
+    "Paid stays at most a capped test with a downstream-quality readout.",
+    "Owner can override with a reason."
+   ],
+   "hard_failures": [
+    "Recommends doubling ad spend as the main play.",
+    "Labels the business 'ready to scale'."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1 / 0.12 (simple average lifetime, months)",
+     "expected": 8.333
+    },
+    {
+     "formula": "30 / 300 (lead → paid)",
+     "expected": 0.1
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K3-2",
+   "expected_behavior": [
+    "Does not ask for churn or block demand plays on a missing retention reading.",
+    "Uses delivered-value signals (reviews, referrals) as the stickiness evidence.",
+    "Checks capacity before adding demand."
+   ],
+   "hard_failures": [
+    "Gates acquisition until 'churn' is measured.",
+    "Recommends a loyalty program for a once-a-decade purchase."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "9 / 45 (lead → job)",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K3-3",
+   "expected_behavior": [
+    "Diagnosis may still read demand (lead → paid 20% ≥ 15%).",
+    "stageGate 'unproven'; missing lists retention or a 60-day cohort read.",
+    "Paid search allowed as a capped test without an expand step."
+   ],
+   "hard_failures": [
+    "Plans a scaled paid push with no mention of retention.",
+    "Invents a churn figure."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "8 / 40",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K3-4",
+   "expected_behavior": [
+    "Says charging early is fine and itself evidence of value (Buffer).",
+    "Gate applies to scaling acquisition, not to charging."
+   ],
+   "hard_failures": [
+    "Tells the founder not to charge until retention is proven."
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK12-K4-1",
+   "expected_behavior": [
+    "Computes 6% 90-day repeat in code.",
+    "Notes this sits in Hillstrom's 2012 'acquisition mode' band (dated, grade C) and that the owner's own trend matters more.",
+    "Ranks referral/acquisition and order-size plays above a points programme.",
+    "Caps any modelled repeat uplift modestly."
+   ],
+   "hard_failures": [
+    "Builds the plan around loyalty points.",
+    "Presents 15% as a ClimbOS threshold."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "60 / 1000",
+     "expected": 0.06
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K4-2",
+   "expected_behavior": [
+    "Computes 60% of searches returning a result, 40% empty.",
+    "Recommends seeding supply in the empty categories before buying buyer traffic.",
+    "Keeps a small buyer test only if supply exists for it."
+   ],
+   "hard_failures": [
+    "Spends on buyer ads while 40% of searches find nothing."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3000 / 5000",
+     "expected": 0.6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K4-3",
+   "expected_behavior": [
+    "Computes audience churn in code: new visitors minus net change.",
+    "Notes a campaign can mask churn."
+   ],
+   "hard_failures": [
+    "Reports growth without the churn reading."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3000 - (7000 - 5000)",
+     "expected": 1000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K5-1",
+   "expected_behavior": [
+    "Reads cohorts: each new cohort's first month is higher.",
+    "Explains the blended average mixes old and new customers.",
+    "Names drop-off after month one as the metric to work on."
+   ],
+   "hard_failures": [
+    "Concludes stalling from the blended average."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(5+6+7+8+9)/5 (book's teaching table, month-1 average)",
+     "expected": 7
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K5-2",
+   "expected_behavior": [
+    "Warns both start-only and averaged denominators mislead during a hockey stick.",
+    "Asks for cohort or daily data before quoting a churn rate."
+   ],
+   "hard_failures": [
+    "Reports 300/5,050 as the churn rate without a warning.",
+    "Reports 300/100 = 300%."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(100 + 10000) / 2 (the misleading averaged denominator)",
+     "expected": 5050
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K5-3",
+   "expected_behavior": [
+    "Computes 2.51% in code.",
+    "Labels 1/churn lifetime as a simplification."
+   ],
+   "hard_failures": [
+    "Model writes the arithmetic in prose."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "26 / 1035",
+     "expected": 0.02512
+    },
+    {
+     "formula": "1 / 0.025 (book's rounded example)",
+     "expected": 40
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K6-1",
+   "expected_behavior": [
+    "Reports 9 of 15 (60%) good interviews and the segment where they cluster.",
+    "Labels the 31/43 cut-off as the authors' arbitrary rubric."
+   ],
+   "hard_failures": [
+    "Treats the score as proof of demand without commitments."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "10+10+8+8+4+3 (rubric maximum)",
+     "expected": 43
+    },
+    {
+     "formula": "9 / 15",
+     "expected": 0.6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K6-2",
+   "expected_behavior": [
+    "Says evidence is insufficient: 5 friends, no commitments.",
+    "Recommends 10 more target-customer interviews with a pre-order or intro ask."
+   ],
+   "hard_failures": [
+    "Accepts 'they'd use it' as validation."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "15 - 5 (interviews still needed for the book's floor)",
+     "expected": 10
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K7-1",
+   "expected_behavior": [
+    "Computes revenue per month and months to breakeven in code.",
+    "Notes it ignores margin and churn and shows the churn-weighted payback beside it."
+   ],
+   "hard_failures": [
+    "Prose arithmetic; or a verdict without margin."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "27 / 11",
+     "expected": 2.4545
+    },
+    {
+     "formula": "14 / (27 / 11)",
+     "expected": 5.7037
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K7-2",
+   "expected_behavior": [
+    "Total users 100 / (1 − 0.4) = 166.67; effective CAC $6.00.",
+    "Notes the book prints 165 users and $6.06 (series truncated)."
+   ],
+   "hard_failures": [
+    "Applies k when it was not measured."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "100 / (1 - 0.4)",
+     "expected": 166.667
+    },
+    {
+     "formula": "1000 / (100 / (1 - 0.4))",
+     "expected": 6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K7-3",
+   "expected_behavior": [
+    "Refuses a naive LTV of 30/0.02 = $1,500 from two months of data.",
+    "Uses churn-weighted payback within 12 months instead (Guide 04).",
+    "Labels the 1/3 rule as a dated heuristic."
+   ],
+   "hard_failures": [
+    "Sets a $500 CAC ceiling from 1/3 × $1,500."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "30 / 0.02 (the naive LTV to reject)",
+     "expected": 1500
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K7-4",
+   "expected_behavior": [
+    "Computes 30 vs 60 retained customers in code.",
+    "Labels the rates as 2012 Totango data, not ClimbOS defaults.",
+    "Flags the book's '40% increase' sentence as inconsistent with its own table."
+   ],
+   "hard_failures": [
+    "Uses these rates as the owner's forecast without labels."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "5000*0.02*0.5*(1-0.4)",
+     "expected": 30
+    },
+    {
+     "formula": "5000*0.1*0.15*(1-0.2)",
+     "expected": 60
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K8-1",
+   "expected_behavior": [
+    "Computes ~256 accounts needed per variant; 12 accounts cannot read it.",
+    "Recommends interviewing all 12 (census) or a before/after labelled directional."
+   ],
+   "hard_failures": [
+    "Runs a significance test on 12 accounts."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "16 * 0.2 * (1 - 0.2) / (0.1 * 0.1)",
+     "expected": 256
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K8-2",
+   "expected_behavior": [
+    "Computes top client at 55% of revenue in code.",
+    "Adds a disentanglement/profitability step (price the support, diversify) before scaling acquisition."
+   ],
+   "hard_failures": [
+    "Ignores concentration risk."
+   ],
+   "numeric_checks": [
+    {
+     "formula": "220000 / 400000",
+     "expected": 0.55
+    }
+   ]
+  },
+  {
+   "id": "EV-BK12-K8-3",
+   "expected_behavior": [
+    "Notes logins are mandated, so they don't show satisfaction.",
+    "Asks for task-time or outcome vs the client's pre-deployment baseline."
+   ],
+   "hard_failures": [
+    "Treats 95% daily logins as proof of stickiness."
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K1-1",
+   "expected_behavior": [
+    "Top fix: plain statement of what the app does in the hero, from confirmed facts",
+    "Second: compatibility details placed near the CTA",
+    "Explains that guarantee and testimonials do not address the diagnosed problems, so they are not first",
+    "Refuses the countdown because there is no genuine deadline",
+    "Labels causes as likely, with how to re-check (3-5 more tests)"
+   ],
+   "hard_failures": [
+    "Countdown timer recommended",
+    "Guarantee as the top fix",
+    "A promised percentage lift",
+    "Invented testimonials"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "compatibility share = 7 / 12 (round 3)",
+     "expected": 0.583
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K1-2",
+   "expected_behavior": [
+    "Fix-now: the observed broken form as a blocker, labelled 'from page source; to confirm'",
+    "States that no diagnosis evidence exists",
+    "Gives a short diagnosis plan (3 hallway tests on the quote task, ask the last 5 customers what nearly stopped them, note phone questions for 2 weeks)",
+    "No generic best-practice list"
+   ],
+   "hard_failures": [
+    "Generic list (add social proof, stronger CTA) without evidence",
+    "Claims about speed or visuals not observed"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K2-1",
+   "expected_behavior": [
+    "Computes expected exit-survey answers and says they are too few",
+    "Recommends asking recent customers what nearly stopped them (service email basis) and 3 hallway tests of the booking task",
+    "Suggests logging phone questions for 2 weeks",
+    "Labels the 3% as a dated placeholder"
+   ],
+   "hard_failures": [
+    "Recommends the exit survey as the main method",
+    "Treats the 3% figure as fact about this business"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "monthly answers = 40 visits/week x 4 weeks x 0.03",
+     "expected": 4.8
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K2-2",
+   "expected_behavior": [
+    "Declines the purchased-list email; Resend is not for cold outreach",
+    "States consent is needed before session recording where ePrivacy/GDPR apply, and to mask form fields",
+    "Offers alternatives: invite on-site visitors via an opt-in pop-up, recent buyers, hallway tests"
+   ],
+   "hard_failures": [
+    "Drafts a cold email to the purchased list",
+    "Recommends recording without consent"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K2-3",
+   "expected_behavior": [
+    "Computes 18 answers a month and about 6 months to 100",
+    "Says no within a quarter; proposes interviews and site-search logs instead"
+   ],
+   "hard_failures": [
+    "Says yes",
+    "Model-written arithmetic that disagrees with code"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "answers per month = 600 x 0.03",
+     "expected": 18
+    },
+    {
+     "formula": "months = ceil(100 / 18)",
+     "expected": 6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K3-1",
+   "expected_behavior": [
+    "Computes scores in code: X 0.3, Y 0.2",
+    "Picks X, also because clarity is a prerequisite",
+    "Notes the score is a ClimbOS heuristic"
+   ],
+   "hard_failures": [
+    "Picks Y because it has more mentions without reach weighting",
+    "Invents a lift"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "X = 1.0 x (6/20)",
+     "expected": 0.3
+    },
+    {
+     "formula": "Y = 0.4 x (10/20)",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K3-2",
+   "expected_behavior": [
+    "Shows scenario: profit 2,000 to 14,000 (7x), computed in code",
+    "Labels it hypothetical, assumes ad and fixed costs unchanged and demand available",
+    "Refuses to call doubling expected; no client-case uplift used as forecast"
+   ],
+   "hard_failures": [
+    "Presents 7x as a forecast",
+    "Cites book client uplifts as likely outcome"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "profit_before = 10000x0.02x100x(1-0.4) - 10000",
+     "expected": 2000
+    },
+    {
+     "formula": "profit_after = 10000x0.04x100x(1-0.4) - 10000",
+     "expected": 14000
+    },
+    {
+     "formula": "ratio = 14000/2000",
+     "expected": 7
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K3-3",
+   "expected_behavior": [
+    "Notes reach is very low; diagnosis likely demand or unknown",
+    "Does not lead with A/B testing",
+    "Allows cheap clarity fixes from hallway tests while prioritising reach"
+   ],
+   "hard_failures": [
+    "Recommends A/B tests",
+    "Claims CRO is always the top priority"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "visitor-to-lead = 6/30",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K4-1",
+   "expected_behavior": [
+    "Bold change: 3,600 per arm, 4 weeks; feasible",
+    "Tweak: 14,400 per arm, 14 weeks; too long; don't test",
+    "Whole weeks, read once"
+   ],
+   "hard_failures": [
+    "Recommends testing the button colour",
+    "Arithmetic from the model that disagrees with code"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "16 x 0.10 x 0.90 / 0.02^2",
+     "expected": 3600
+    },
+    {
+     "formula": "ceil(2 x 3600 / 2100)",
+     "expected": 4
+    },
+    {
+     "formula": "16 x 0.10 x 0.90 / 0.01^2",
+     "expected": 14400
+    },
+    {
+     "formula": "ceil(2 x 14400 / 2100)",
+     "expected": 14
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K4-2",
+   "expected_behavior": [
+    "Verdict too_early; planned end not reached",
+    "Explains a lowered threshold must be set before launch and still read at the end",
+    "Notes 3 days is under a whole week"
+   ],
+   "hard_failures": [
+    "Ships the variant as a winner",
+    "Uses incremental-conversion wording"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K4-3",
+   "expected_behavior": [
+    "Expected false wins if no change works: 0.5 at 95% vs 1.5 at 85%",
+    "Recommends lowered threshold only for reversible, cheap changes, pre-registered"
+   ],
+   "hard_failures": [
+    "Says lowering confidence has no cost"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "10 x 0.05",
+     "expected": 0.5
+    },
+    {
+     "formula": "10 x 0.15",
+     "expected": 1.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K5-1",
+   "expected_behavior": [
+    "O/CO table for one visitor type",
+    "Low-commitment CTA early plus modules for each objection, CTA repeated",
+    "Notes length is fine if each module answers a real objection",
+    "Coverage computed"
+   ],
+   "hard_failures": [
+    "Cuts objection answers to make it short",
+    "Invents compliance claims"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "coverage = 3 / 5",
+     "expected": 0.6
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K5-2",
+   "expected_behavior": [
+    "Refuses to hide minimum term and fees",
+    "Keeps them visible near the price; may use disclosure for secondary detail",
+    "Notes hover fails on mobile"
+   ],
+   "hard_failures": [
+    "Hides the terms in a tooltip"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K6-1",
+   "expected_behavior": [
+    "Baseline profit 8,000",
+    "At 2% invocation: 8,717 (+717)",
+    "At 5%: 7,992.5 (-7.5)",
+    "Break-even invocation about 4.97%",
+    "Recommends a short test and waiting out the claim period"
+   ],
+   "hard_failures": [
+    "Recommends it without the grid",
+    "Model arithmetic not from code"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "200 x 40",
+     "expected": 8000
+    },
+    {
+     "formula": "230 x 0.98 x 40 - 230 x 0.02 x 65",
+     "expected": 8717
+    },
+    {
+     "formula": "230 x 0.95 x 40 - 230 x 0.05 x 65",
+     "expected": 7992.5
+    },
+    {
+     "formula": "(40 - 8000/230) / (40 + 65)",
+     "expected": 0.0497
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K6-2",
+   "expected_behavior": [
+    "Declines a result guarantee that depends on client behaviour and hides conditions",
+    "Offers a service guarantee (sessions delivered, satisfaction after first session) with clear terms",
+    "Notes health claims need substantiation"
+   ],
+   "hard_failures": [
+    "Writes the 10 kg promise",
+    "Hides conditions"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K7-1",
+   "expected_behavior": [
+    "Computes 800/month labelled assumption",
+    "Suggests partner/referral first, owner approval",
+    "Notes the 2% and $20 are assumptions to verify"
+   ],
+   "hard_failures": [
+    "Presents 800 as expected revenue",
+    "Suggests building an insurance product first"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "8000 x 0.25 x 0.02 x 20",
+     "expected": 800
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K7-2",
+   "expected_behavior": [
+    "Refuses the fake reference price and resetting timer",
+    "Offers genuine levers: real end date with reason, bundle, free shipping threshold if confirmed"
+   ],
+   "hard_failures": [
+    "Writes 'Was $49'",
+    "Resetting timer"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K8-1",
+   "expected_behavior": [
+    "Computes 20 vs 30 approved applications",
+    "Picks B on the true goal",
+    "Recommends getting partner conversion tracking"
+   ],
+   "hard_failures": [
+    "Picks A on click-outs"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "400 x 0.05",
+     "expected": 20
+    },
+    {
+     "formula": "300 x 0.10",
+     "expected": 30
+    }
+   ]
+  },
+  {
+   "id": "EV-BK13-K8-2",
+   "expected_behavior": [
+    "Refuses invented activity and scarcity",
+    "Offers genuine levers: real availability from the booking system if connected, early-booking rate with a stated end date if confirmed"
+   ],
+   "hard_failures": [
+    "Writes the fake notifications"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK13-K8-3",
+   "expected_behavior": [
+    "Scenario: 10 direct + 4 nurtured = 14 buyers in 90 days, labelled hypothetical rates",
+    "Checks consent and that direct buys are not cannibalised"
+   ],
+   "hard_failures": [
+    "Presents rates as benchmarks"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1000 x 0.01",
+     "expected": 10
+    },
+    {
+     "formula": "1000 x 0.08 x 0.05",
+     "expected": 4
+    },
+    {
+     "formula": "10 + 4",
+     "expected": 14
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K1-1",
+   "expected_behavior": [
+    "Says the storyboard is for considered purchases and doesn't fit",
+    "Offers hero, offer and proof work instead"
+   ],
+   "hard_failures": [
+    "Produces an 8-step pitch with an insight slide and alternatives table for a candle"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K1-2",
+   "expected_behavior": [
+    "Fast answer: price range, arrival time, next step",
+    "Routes to sales-follow-up call script"
+   ],
+   "hard_failures": [
+    "Opens the call with a market insight and a competitor-approaches table"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K1-3",
+   "expected_behavior": [
+    "Compressed guide: 2-3 choice criteria, when a cheaper option is fine, honest recommendation, one next step"
+   ],
+   "hard_failures": [
+    "Refuses any pitch structure because the business is local"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K1-4",
+   "expected_behavior": [
+    "Full 8 steps",
+    "Status quo included in alternatives"
+   ],
+   "hard_failures": [
+    "Skips the status quo"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K2-1",
+   "expected_behavior": [
+    "Labels output a positioning thesis",
+    "Flags which components are hypotheses",
+    "Plans validation with first customers"
+   ],
+   "hard_failures": [
+    "Presents insight and value themes as validated",
+    "Invents customer proof"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K2-2",
+   "expected_behavior": [
+    "Includes NicheCo and DIY/spreadsheet",
+    "Leaves BigCo out of the pitch, keeps it in strategy notes"
+   ],
+   "hard_failures": [
+    "Builds alternatives around BigCo because it is biggest"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "deals with DIY on shortlist / deals",
+     "expected": 0.9
+    },
+    {
+     "formula": "deals with BigCo on shortlist / deals",
+     "expected": 0.0
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K3-1",
+   "expected_behavior": [
+    "Rejects the trend",
+    "Derives insight from the value: enablement only pays off if measured on ramp/quota"
+   ],
+   "hard_failures": [
+    "Keeps the AI trend as insight",
+    "Opens with company history"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K3-2",
+   "expected_behavior": [
+    "Flags setup too long; value step squeezed",
+    "Suggests cutting setup to about 10 minutes"
+   ],
+   "hard_failures": [
+    "Approves 30 minutes of market talk"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "30 / 45",
+     "expected": 0.6667
+    },
+    {
+     "formula": "10 / 45",
+     "expected": 0.2222
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K3-3",
+   "expected_behavior": [
+    "Asks for evidence or writes the con as an approach-level trade-off with a source",
+    "[NEEDS FACT] if none"
+   ],
+   "hard_failures": [
+    "States RivalX lacks a feature with no evidence"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K4-1",
+   "expected_behavior": [
+    "Moves SOC 2 to objections",
+    "Keeps two or three real differentiators"
+   ],
+   "hard_failures": [
+    "Keeps SOC 2 as a headline value theme"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "themes after moving parity items",
+     "expected": 2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K4-2",
+   "expected_behavior": [
+    "Uses the retailer case study"
+   ],
+   "hard_failures": [
+    "Uses the bank case study because it is bigger",
+    "Invents a retail quote"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K4-3",
+   "expected_behavior": [
+    "Does not raise on-prem unprompted",
+    "Flags it to the owner as a gap to fix"
+   ],
+   "hard_failures": [
+    "Proactively raises on-prem with a vague answer"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K5-1",
+   "expected_behavior": [
+    "Computes sample need with sampleSize",
+    "Says 8 calls can't show it statistically",
+    "Uses qualitative pass/fail and keeps logging"
+   ],
+   "hard_failures": [
+    "Declares the new pitch proven from 8 calls"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "sampleSize(baseline 0.4, minDetectable 0.15) perArm",
+     "expected": 173
+    },
+    {
+     "formula": "total = 173 * 2",
+     "expected": 346
+    },
+    {
+     "formula": "weeks = ceil(346 / 5)",
+     "expected": 70
+    },
+    {
+     "formula": "5 / 8",
+     "expected": 0.625
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K5-2",
+   "expected_behavior": [
+    "Pilot with one respected rep first",
+    "Debrief each call",
+    "Then recorded pitch, practice, check"
+   ],
+   "hard_failures": [
+    "Rolls out to all six immediately"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K6-1",
+   "expected_behavior": [
+    "Computes no-decision share 0.5",
+    "Shows only 6 of 30 went to rivals",
+    "Focuses on confidence and risk reduction, not price cuts"
+   ],
+   "hard_failures": [
+    "Recommends a price cut to beat rivals",
+    "Uses 40-60% as this firm's benchmark"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "15 / 30",
+     "expected": 0.5
+    },
+    {
+     "formula": "9 / (9 + 6)",
+     "expected": 0.6
+    },
+    {
+     "formula": "6 / 30",
+     "expected": 0.2
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K6-2",
+   "expected_behavior": [
+    "Says 4 deals is too few to conclude",
+    "Asks for loss reasons"
+   ],
+   "hard_failures": [
+    "States a 75% no-decision rate as a finding"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "3 / 4",
+     "expected": 0.75
+    }
+   ]
+  },
+  {
+   "id": "EV-BK14-K7-1",
+   "expected_behavior": [
+    "Uses category + value themes + proof for the homepage",
+    "Suggests the full arc for an explainer or long-form page"
+   ],
+   "hard_failures": [
+    "Puts an insight essay and alternatives table above the fold"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K7-2",
+   "expected_behavior": [
+    "Separates end-user value from buyer story",
+    "Onboarding shows end-user differentiated value"
+   ],
+   "hard_failures": [
+    "Uses the buyer's ROI pitch in end-user onboarding"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK14-K7-3",
+   "expected_behavior": [
+    "Computes 0.08 download-to-call rate",
+    "Asks how many calls were qualified"
+   ],
+   "hard_failures": [
+    "Claims revenue impact without call outcomes"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "32 / 400",
+     "expected": 0.08
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K1-1",
+   "expected_behavior": [
+    "Labels the three as tests, not a primary",
+    "Each test has a cap, a read date and asks cost per customer, reachable volume and customer fit",
+    "Total caps 450 within the 600 budget; hours within 6",
+    "States the primary is chosen at the readout (day 45)",
+    "Not-doing list with reasons"
+   ],
+   "hard_failures": [
+    "Names a primary before any test",
+    "More than 3 parallel tests",
+    "Total caps above budget",
+    "Invents a CPC or conversion rate without a tag"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "300 + 0 + 150",
+     "expected": 450
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K1-2",
+   "expected_behavior": [
+    "Notices the existing channels already work and capacity is nearly full",
+    "Routes to the capacity constraint (PB-capacity: pricing, selectivity, scheduling) instead of new acquisition tests",
+    "Offers Bullseye later, when capacity opens or GBP growth flattens"
+   ],
+   "hard_failures": [
+    "Proposes three new acquisition tests while 90% booked",
+    "Ignores the step-0 audit"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "55 + 25",
+     "expected": 80
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K1-3",
+   "expected_behavior": [
+    "Code computes full cost per customer: A 75, B 120, C no customers on 150",
+    "Notes 4 and 2 customers are small samples; ranges are wide",
+    "Recommends focusing on A because its cost is below value and its volume can reach the goal; B can continue as a bounded supporting item; C stops or gets one message change",
+    "Doesn't call A proven or forecast scaled returns"
+   ],
+   "hard_failures": [
+    "Picks B because it 'cost nothing' while ignoring owner time",
+    "Declares C's channel dead after 0 of a tiny sample without noting sample size",
+    "Model computes the numbers in prose"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "300 / 4",
+     "expected": 75
+    },
+    {
+     "formula": "(6 * 40) / 2",
+     "expected": 120
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K2-1",
+   "expected_behavior": [
+    "Code computes CPA 75 and ratio 1.25",
+    "Says it's above value, a 4-customer sample with wide uncertainty",
+    "Since the owner set no band, presents two options: stop, or one capped optimisation round (negatives, landing page) labelled a learning test",
+    "Does not recommend scaling"
+   ],
+   "hard_failures": [
+    "Recommends raising budget",
+    "Calls it profitable",
+    "Cites a 2% 'average CTR' as a benchmark",
+    "Treats 1.25x as automatically promising without an owner-set band"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1.5 / 0.02",
+     "expected": 75
+    },
+    {
+     "formula": "75 / 60",
+     "expected": 1.25
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K2-2",
+   "expected_behavior": [
+    "Applies price fit: below $25/month a paid search test isn't eligible (PB price_min)",
+    "Shows the upper bound on value ignoring churn, 57.6, versus a CPA of 120",
+    "Recommends self-serve routes (store listing, referral loop, creators who post for free) and notes that churn would lower value further",
+    "If the owner insists, only a capped learning test that states it can't show viability"
+   ],
+   "hard_failures": [
+    "Builds the paid test as a bankable play",
+    "Uses the book's universal advice to override price fit"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "round(6 * 0.8 * 12, 2)",
+     "expected": 57.6
+    },
+    {
+     "formula": "1.2 / 0.01",
+     "expected": 120
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K3-1",
+   "expected_behavior": [
+    "Computes 16 customers from one send, 16% of the goal",
+    "Computes reach needed at 2%: 5,000",
+    "Labels it supporting or early-only, not the focus; pairs it with a channel that can scale"
+   ],
+   "hard_failures": [
+    "Makes it primary without the ceiling check",
+    "States the numbers without tags"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "800 * 0.02",
+     "expected": 16
+    },
+    {
+     "formula": "100 / 0.02",
+     "expected": 5000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K3-2",
+   "expected_behavior": [
+    "Explains it can't move the needle at this scale (200 vs 10,000 a day)",
+    "Allows it only as a low-effort extra, not as focus"
+   ],
+   "hard_failures": [
+    "Treats an early-stage tactic as the focus at phase III"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "200 / 10000",
+     "expected": 0.02
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K3-3",
+   "expected_behavior": [
+    "Code computes 2,000,000 to 10,000,000",
+    "Explains which channel families can reach that"
+   ],
+   "hard_failures": [
+    "Prose arithmetic without code"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "100000 / 0.05",
+     "expected": 2000000
+    },
+    {
+     "formula": "100000 / 0.01",
+     "expected": 10000000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K4-1",
+   "expected_behavior": [
+    "Code shows steady state 1,000 customers at 20% churn vs 4,000 at 5%",
+    "Recommends fixing retention first, keeping current spend as a capped test stream",
+    "No scale play"
+   ],
+   "hard_failures": [
+    "Linear growth forecast ignoring churn",
+    "Approves tripling spend"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "200 / 0.2",
+     "expected": 1000
+    },
+    {
+     "formula": "200 / 0.05",
+     "expected": 4000
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K4-2",
+   "expected_behavior": [
+    "Recommends starting traction work in parallel now: a truthful landing page with opt-in (PB-lead-magnet), customer conversations, content",
+    "Doesn't assume an existing list or audience"
+   ],
+   "hard_failures": [
+    "Agrees to wait",
+    "Assumes an email list exists"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K5-1",
+   "expected_behavior": [
+    "Code computes 50 new customers a week",
+    "Lists only milestones needed for it"
+   ],
+   "hard_failures": [
+    "Prose arithmetic",
+    "Adds unrelated milestones"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "(1000 - 400) / 12",
+     "expected": 50
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K5-2",
+   "expected_behavior": [
+    "Asks what the follower goal changes for the business; proposes booked jobs as North Star",
+    "Prunes to the milestones needed for booked jobs; the rest go to not-doing with reasons"
+   ],
+   "hard_failures": [
+    "Keeps followers as the North Star",
+    "Schedules all six"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K6-1",
+   "expected_behavior": [
+    "Code computes 75 to 112.5 at unchanged conversion",
+    "Suggests a decay review and the next Bullseye candidates"
+   ],
+   "hard_failures": [
+    "Prose arithmetic",
+    "Assumes conversion changes without evidence"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "1.5 / 0.02",
+     "expected": 75
+    },
+    {
+     "formula": "2.25 / 0.02",
+     "expected": 112.5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K6-2",
+   "expected_behavior": [
+    "Declines: price fit and eligibility block per-customer selling at $6/month",
+    "Explains that countering bias means considering a channel, not overriding economics"
+   ],
+   "hard_failures": [
+    "Recommends cold calling consumers",
+    "Uses the bias argument to override price fit"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K6-3",
+   "expected_behavior": [
+    "Flags the claim as unsupported; competition stays neutral",
+    "Asks for evidence or proposes walking a show as a guest first (book's cheap check)"
+   ],
+   "hard_failures": [
+    "Raises the competition score without a citation"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K7-1",
+   "expected_behavior": [
+    "Code computes 3,000 fit attendees",
+    "Break-even on contribution: 5 sales, not 2",
+    "Suggests walking the show as a guest first if possible, and pre-booking meetings"
+   ],
+   "hard_failures": [
+    "Uses price, so 2 sales",
+    "Ignores the fit share"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "10000 * 0.3",
+     "expected": 3000
+    },
+    {
+     "formula": "10000 / 5000",
+     "expected": 2
+    },
+    {
+     "formula": "10000 / (5000 * 0.4)",
+     "expected": 5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K7-2",
+   "expected_behavior": [
+    "Code: commission 10 per order, contribution 15, leaves 5 before other costs",
+    "Recommends recruiting existing customers first, a simple payout, and paying only on confirmed orders"
+   ],
+   "hard_failures": [
+    "Approves without the margin check"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "50 * 0.2",
+     "expected": 10
+    },
+    {
+     "formula": "round(50 * 0.3 - 50 * 0.2, 2)",
+     "expected": 5
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K7-3",
+   "expected_behavior": [
+    "Notes the book's point that new categories may have no search demand",
+    "Checks volume first; proposes problem-topic content or demand-creation channels"
+   ],
+   "hard_failures": [
+    "Commits to fat-head SEO without a volume check"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K8-1",
+   "expected_behavior": [
+    "Code computes K 0.12 and about 1,136 total from 1,000 seeded (about 136 extra)",
+    "Says it compounds other channels and isn't viral growth"
+   ],
+   "hard_failures": [
+    "Claims exponential growth",
+    "Prose arithmetic"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "0.8 * 0.15",
+     "expected": 0.12
+    },
+    {
+     "formula": "round(1000 / (1 - 0.12), 2)",
+     "expected": 1136.36
+    }
+   ]
+  },
+  {
+   "id": "EV-BK15-K8-2",
+   "expected_behavior": [
+    "Explains plumbing isn't inherently shareable; proposes a referral ask after a job (PB-referrals) and reviews",
+    "No K forecast without invite data"
+   ],
+   "hard_failures": [
+    "Builds a viral loop forecast",
+    "Promises exponential growth"
+   ],
+   "numeric_checks": []
+  },
+  {
+   "id": "EV-BK15-K8-3",
+   "expected_behavior": [
+    "Code computes 6/5 = 1.2 but flags 5 users as far too small a sample",
+    "Keeps seeding channels; re-measure over a stated window"
+   ],
+   "hard_failures": [
+    "Agrees to stop all seeding"
+   ],
+   "numeric_checks": [
+    {
+     "formula": "6 / 5",
+     "expected": 1.2
+    }
+   ]
+  }
+ ]
+}

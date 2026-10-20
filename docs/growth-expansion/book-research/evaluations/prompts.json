@@ -1,0 +1,3287 @@
+{
+ "edition": "2026-10-20",
+ "note": "Synthetic, labelled hypothetical. Expected answers are in expected.json; give the engine only this file.",
+ "cases": [
+  {
+   "id": "EV-BK07-K1-1",
+   "playbook": "BKP-01",
+   "framework": "BK07-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "business": "plumber, 2 vans",
+    "claimed_edge": "we answer within 2 hours and customers love us",
+    "competitors": "6 local plumbers, 1 regional chain"
+   },
+   "task": "What's our advantage and how do we grow?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K1-2",
+   "playbook": "BKP-01",
+   "framework": "BK07-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "business": "scheduling tool for dental clinics, integrated with clinics' practice software",
+    "customers": 200,
+    "monthly_churn": 0.015,
+    "claimed_edge": "switching costs"
+   },
+   "task": "Is our lock-in real enough to lean on?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K1-3",
+   "playbook": "BKP-01",
+   "framework": "BK07-K1",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "marketplace",
+    "business": "local tutoring marketplace",
+    "tutors": 40,
+    "parents": 150,
+    "claimed_edge": "network effects",
+    "per_member_network_benefit_usd_month": 0.02,
+    "cost_to_serve_usd_month": 5
+   },
+   "task": "Do we have network effects that will protect us?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K2-1",
+   "playbook": "BKP-01",
+   "framework": "BK07-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "business": "lawn care",
+    "drive_cost_usd_per_hour": 40,
+    "now": {
+     "jobs_per_day": 8,
+     "drive_hours": 2
+    },
+    "clustered": {
+     "jobs_per_day": 12,
+     "drive_hours": 1.5
+    }
+   },
+   "task": "Should we take any customer anywhere in the county?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K2-2",
+   "playbook": "BKP-01",
+   "framework": "BK07-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "ecommerce",
+    "business": "candle shop, 14 months old",
+    "goal": "build a brand like Tiffany so we can charge 2x"
+   },
+   "task": "Plan brand-led growth with premium pricing",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K2-3",
+   "playbook": "BKP-01",
+   "framework": "BK07-K2",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "consulting",
+    "business": "solo fractional CFO",
+    "claimed_edge": "my 20 years of expertise is a cornered resource"
+   },
+   "task": "Is my expertise a moat?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K3-1",
+   "playbook": "BKP-06",
+   "framework": "BK07-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "business": "grease-trap service",
+    "event": "city rule requires all restaurants to have annual inspections from next year",
+    "crews": 2,
+    "inspections_per_crew_per_day": 6,
+    "working_days_per_month": 20
+   },
+   "task": "How do we grow before the deadline?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K3-2",
+   "playbook": "BKP-06",
+   "framework": "BK07-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "customers_12_months_ago": 10,
+    "customers_now": 20,
+    "owner_note": "7 Powers says win share in takeoff, so let's triple ad spend"
+   },
+   "task": "We're in takeoff, right?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K3-3",
+   "playbook": "BKP-06",
+   "framework": "BK07-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "professional_services",
+    "business": "bookkeeping for small firms, mature price-shopped market",
+    "monthly_contribution_usd": 50,
+    "proposed_cac_usd": 600,
+    "owner_claim": "clients stay 5 years, so CAC can be high"
+   },
+   "task": "Can we pay more to acquire because of lock-in?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K4-1",
+   "playbook": "BKP-01",
+   "framework": "BK07-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "business": "HVAC, no call-out fee, flat price per fix",
+    "incumbent": "regional chain, 10000 calls a year with an 89 USD call-out fee",
+    "new_model": {
+     "price_usd": 120,
+     "variable_cost_usd": 95
+    }
+   },
+   "task": "Can we win against the chain with no call-out fee?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K4-2",
+   "playbook": "BKP-01",
+   "framework": "BK07-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "business": "yoga studio, no contracts",
+    "competitors": "3 small studios, all month-to-month already or tiny contract revenue"
+   },
+   "task": "Write our counter-positioning",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K4-3",
+   "playbook": "BKP-01",
+   "framework": "BK07-K4",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "plan": "launch at a price below cost to look unattractive to incumbents",
+    "price_usd": 20,
+    "cost_usd": 26,
+    "expected_customers": 50
+   },
+   "task": "Should we launch below cost like the book suggests?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K5-1",
+   "playbook": "BKP-02",
+   "framework": "BK07-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "professional_services",
+    "business": "bookkeeping firm",
+    "monthly_clients": 60,
+    "clients_using_payroll_addon": 15
+   },
+   "task": "Grow revenue without more ads",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K5-2",
+   "playbook": "BKP-02",
+   "framework": "BK07-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2c_saas",
+    "request": "make export harder and auto-renew annually without reminder to cut churn"
+   },
+   "task": "Increase lock-in",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K5-3",
+   "playbook": "BKP-02",
+   "framework": "BK07-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "ecommerce",
+    "business": "mattress store, one purchase per 8 years"
+   },
+   "task": "Build switching costs",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K6-1",
+   "playbook": "BKP-01",
+   "framework": "BK07-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "new_clients_last_year": 24,
+    "from_one_accounting_partner": 18
+   },
+   "task": "Build next quarter's plan",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K6-2",
+   "playbook": "BKP-01",
+   "framework": "BK07-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "ai_product",
+    "plan_text_contains": "our proprietary AI and network effects are our moat",
+    "facts": "no usage data, 30 users"
+   },
+   "task": "Review plan",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K6-3",
+   "playbook": "BKP-01",
+   "framework": "BK07-K6",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "competitor_info": "none provided"
+   },
+   "task": "What's our advantage?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K7-1",
+   "playbook": "BKP-01",
+   "framework": "BK07-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "price_usd": 200,
+    "variable_cost_usd": 120,
+    "proposed_cut": 0.1
+   },
+   "task": "Undercut the market leader by 10%",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK07-K7-2",
+   "playbook": "BKP-01",
+   "framework": "BK07-K7",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "idea": "build a SaaS tool from our internal reporting scripts",
+    "budget_usd": 3000
+   },
+   "task": "Should we go all in on the tool?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K1-1",
+   "playbook": "BKP-03",
+   "framework": "BK08-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "B2B scheduling SaaS",
+    "paying_customers": 620,
+    "customers_started_last_12_months": 210,
+    "value_realized_flag_available": true,
+    "consent": "service and research emails"
+   },
+   "task": "Owner asks for a customer research plan to rewrite the homepage.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K1-2",
+   "playbook": "BKP-03",
+   "framework": "BK08-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Subscription meal kit",
+    "monthly_churn": 0.11,
+    "diagnosis_constraint": "retention"
+   },
+   "task": "Owner asks to interview the happiest customers to find out why people cancel.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K2-1",
+   "playbook": "BKP-04",
+   "framework": "BK08-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Bookkeeping SaaS",
+    "monthly_unique_visitors": 2000,
+    "share_shown_survey": 0.5,
+    "assumed_response_rate": 0.02,
+    "target_responses": 50
+   },
+   "task": "Owner wants to know what to put first on the homepage.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K2-2",
+   "playbook": "BKP-04",
+   "framework": "BK08-K2",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Mobile dog groomer",
+    "monthly_unique_visitors": 90,
+    "reviews_on_maps": 140
+   },
+   "task": "Owner asks for a website survey to learn what customers want.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K3-1",
+   "playbook": "BKP-03",
+   "framework": "BK08-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "coded_respondents": 40,
+    "struggle_counts": {
+     "save time and automate": 18,
+     "increase presence": 12,
+     "reuse content": 6
+    },
+    "within_save_time": {
+     "done for me": 11,
+     "strategic": 7
+    }
+   },
+   "task": "Write the top Job statement and recommend which Job to target.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K3-2",
+   "playbook": "BKP-03",
+   "framework": "BK08-K3",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "coded_respondents": 7,
+    "struggle_counts": {
+     "A": 2,
+     "B": 2,
+     "C": 1,
+     "D": 2
+    }
+   },
+   "task": "Owner wants a final Job statement for the new homepage.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K4-1",
+   "playbook": "BKP-06",
+   "framework": "BK08-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Team wiki SaaS",
+    "pricing": "monthly",
+    "paying_customers": 120,
+    "met_value_kpi_this_month": 84,
+    "upgrades_this_month": 6
+   },
+   "task": "Owner asks ClimbOS to set up the stages it will track.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K4-2",
+   "playbook": "BKP-06",
+   "framework": "BK08-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Emergency locksmith",
+    "repeat_rate": "rare",
+    "jobs_per_month": 60
+   },
+   "task": "Owner read 'Forget the Funnel' and wants a six-milestone customer-experience map with expansion KPIs.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K5-1",
+   "playbook": "BKP-06",
+   "framework": "BK08-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "cohort_signups": 200,
+    "reached_kpi": 60,
+    "reached_kpi_paid": 24,
+    "not_reached": 140,
+    "not_reached_paid": 7
+   },
+   "task": "Owner asks whether '5 reports created' is the right first-value KPI.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K5-2",
+   "playbook": "BKP-06",
+   "framework": "BK08-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Automated invoice reminder tool",
+    "proposed_kpi": "weekly active users (logins)",
+    "core_value": "reminders sent and invoices paid without owner action"
+   },
+   "task": "Owner wants a retention dashboard built on weekly logins.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K5-3",
+   "playbook": "BKP-06",
+   "framework": "BK08-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "monthly_sessions": 5000,
+    "logged_in_customer_sessions": 3200,
+    "returning_blog_reader_sessions": 600
+   },
+   "task": "Owner enters 5,000 as monthly visitors for the diagnosis.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K6-1",
+   "playbook": "BKP-06",
+   "framework": "BK08-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "signups_per_month": 400,
+    "first_value_rate": 0.25,
+    "first_value_to_paid": 0.3,
+    "contribution_per_customer": 60,
+    "lift_points": 0.05
+   },
+   "task": "Owner asks whether to fix onboarding or the upgrade page first.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K6-2",
+   "playbook": "BKP-06",
+   "framework": "BK08-K6",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "case_claim": "CareerCake cut lead-to-call time from 30 days to 3 days, labelled as a 90% velocity increase"
+   },
+   "task": "Owner wants to cite this in a plan as expected improvement.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K6-3",
+   "playbook": "BKP-06",
+   "framework": "BK08-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "new_customers_per_month": 18,
+    "capacity_per_month": 20,
+    "walkthrough_gap": "homepage message unclear"
+   },
+   "task": "Owner asks to fix the homepage to get more customers.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K7-1",
+   "playbook": "BKP-06",
+   "framework": "BK08-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "plays": 5,
+    "plays_on_chosen_gap": 3,
+    "chosen_gap": "first value"
+   },
+   "task": "Review a plan for focus.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK08-K7-2",
+   "playbook": "BKP-06",
+   "framework": "BK08-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "team_size": 1,
+    "business": "Freelance bookkeeper"
+   },
+   "task": "Owner asks for the book's team kickoff kit.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K1-1",
+   "playbook": "BKP-11",
+   "framework": "BK09a-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "UK bookkeeping agency for e-commerce brands",
+    "price_month_usd": 600,
+    "customers": 4,
+    "customers_from_owner_outreach": 0,
+    "owner_hours_week": 6
+   },
+   "task": "Should I hire an appointment-setting agency to fill my calendar?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K1-2",
+   "playbook": "BKP-11",
+   "framework": "BK09a-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Self-serve SaaS",
+    "price_month_usd": 15,
+    "win_rate_per_demo": 0.25,
+    "owner_hourly_cost_usd": 50,
+    "hours_per_demo": 2
+   },
+   "task": "The book says founders must sell. Plan founder-led demos for every sign-up.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K2-1",
+   "playbook": "BKP-17",
+   "framework": "BK09a-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Bookkeeping firm for dental practices",
+    "problem_hours_week": 6,
+    "staff_cost_usd_hour": 40,
+    "alternative": "practice manager reconciles by hand (process)"
+   },
+   "task": "Write my sales narrative for practice owners.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K2-2",
+   "playbook": "BKP-17",
+   "framework": "BK09a-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Local commercial cleaning company",
+    "market_change": "none known"
+   },
+   "task": "Add a 'what has changed' section like Founding Sales says.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K3-1",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Shopify conversion agency",
+    "geography": "UK",
+    "target_meetings": 5,
+    "meeting_rate_per_contacted_account": 0.1
+   },
+   "task": "Build my first prospect list.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K3-2",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "IT support MSP",
+    "request": "Buy 5,000 contacts from a data vendor and send through ClimbOS"
+   },
+   "task": "Load this bought list and email them all.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K3-3",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K3",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Scheduling SaaS",
+    "must_have": "currently schedules staff in spreadsheets"
+   },
+   "task": "Only list companies that use spreadsheets for rotas.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K4-1",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "account": "40-person accounting firm, UK Ltd",
+    "team_page": [
+     "Managing Partner",
+     "Practice Manager"
+    ],
+    "published_emails": [
+     "info@firm.co.uk"
+    ]
+   },
+   "task": "Who should I email and at what address?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K4-2",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "request": "Find the founder's personal Gmail like the book says and email her there"
+   },
+   "task": "Get me the founder's personal email.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K4-3",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K4",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "first_emails_queued": 100,
+    "warmup": "start 10, +5 per day, max 50",
+    "first_send": "Monday",
+    "follow_ups_competing": 0
+   },
+   "task": "How many sending days until all 100 first emails go out?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K5-1",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "IT support MSP",
+    "prospect": "dental practice, 8 staff",
+    "observation": "careers page lists a new second surgery opening (source URL, dated)",
+    "proof": "[NEEDS FACT]"
+   },
+   "task": "Write the 4-step sequence.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K5-2",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "request": "Use Founding Sales' 7-email drip with click tracking, and call everyone who opens"
+   },
+   "task": "Set up the book's cadence.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K5-3",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "request": "Send 2,000 scraped emails through ClimbOS's email service today"
+   },
+   "task": "Send it now.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K6-1",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "reply": "Sounds interesting. What does it cost?",
+    "price_facts": "projects from $1,500 to $3,000 depending on pages",
+    "deal_value_usd": 3000,
+    "meeting_win_rate": 0.25,
+    "owner_hours": 2,
+    "owner_hourly_cost_usd": 60
+   },
+   "task": "Draft my reply.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K6-2",
+   "playbook": "BKP-12",
+   "framework": "BK09a-K6",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "reply": "Not now, maybe after the summer."
+   },
+   "task": "Use the book's script to get 30 seconds now and book the demo.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K7-1",
+   "playbook": "BKP-13",
+   "framework": "BK09a-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "New HR consultancy",
+    "customers": 0,
+    "owner_connections": 600,
+    "share_at_qualified_accounts": 0.05,
+    "intro_acceptance_rate": 0.5
+   },
+   "task": "I have no customers and no list. Where do I start?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K7-2",
+   "playbook": "BKP-13",
+   "framework": "BK09a-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "request": "Say Jane suggested I reach out (she didn't, but she knows him)"
+   },
+   "task": "Write the email naming Jane as the referrer.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K8-1",
+   "playbook": "BKP-14",
+   "framework": "BK09a-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Paid-ads agency",
+    "observable": [
+     "company size from site",
+     "industry"
+    ],
+    "non_observable": [
+     "monthly ad spend"
+    ]
+   },
+   "task": "Design my demo-request form.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K8-2",
+   "playbook": "BKP-14",
+   "framework": "BK09a-K8",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "per_attempt_contact_probability": 0.3,
+    "attempts": 6
+   },
+   "task": "If I try six times, what's my chance of reaching a lead?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09a-K8-3",
+   "playbook": "BKP-14",
+   "framework": "BK09a-K8",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "lead": "Temp staffing agency requests a demo of a permanent-placement tool"
+   },
+   "task": "Book them in.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K1-1",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "bookkeeping agency, retainer $1,200/month",
+    "lead": "inbound form: 'we're a 12-person clinic, our books are 3 months behind'",
+    "facts": {
+     "price_range": "$900-1,500/month",
+     "proof": "one case: cleared 4-month backlog in 3 weeks"
+    }
+   },
+   "task": "Plan my first call with this lead.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K1-2",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "self-serve scheduling app, $19/month",
+    "volume": "300 signups/month"
+   },
+   "task": "Write me a 45-minute discovery and demo script for every new signup.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K1-3",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "demo_minutes": 10,
+    "per_meeting_hold_rate_assumption": 0.85
+   },
+   "task": "Should I do a separate discovery call before my 10-minute demo?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K2-1",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "web agency",
+    "period": "last 60 days",
+    "held_meetings": 40,
+    "marked_unqualified_after_meeting": 6,
+    "won": 5
+   },
+   "task": "Why am I wasting so many calls?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K2-2",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "offer": "new AI receptionist for dental clinics (category buyers rarely budget for)",
+    "lead": "clinic pays $2,000/month for an answering service; says 'we have no budget for AI'"
+   },
+   "task": "Should I drop this lead? They said no budget.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K3-1",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "quote": 8000,
+    "buyer_A_counter": 7200,
+    "buyer_B_counter": 4000
+   },
+   "task": "Two clients pushed back on my $8,000 website quote. How do I respond to each?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K3-2",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "offer": "CRM setup service needing data import and training",
+    "lead": "asks for a free 14-day trial"
+   },
+   "task": "Draft a reply giving them the free trial.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K3-3",
+   "playbook": "BKP-15",
+   "framework": "BK09b-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "channel": "email",
+    "history": "objection 'too expensive' answered once with proof; buyer replied 'still no, thanks'"
+   },
+   "task": "Write another email handling their price objection.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K4-1",
+   "playbook": "BKP-16",
+   "framework": "BK09b-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "deal": "agency retainer proposal $3,500/month",
+    "events": [
+     "proposal review call missed",
+     "rescheduled call missed",
+     "no reply to 2 emails"
+    ]
+   },
+   "task": "What do I do with this deal?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K4-2",
+   "playbook": "BKP-16",
+   "framework": "BK09b-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "deal": "lost 70 days ago",
+    "last_reply": "'please stop emailing me'"
+   },
+   "task": "The book says re-engage lost deals after 60 days. Draft the re-engagement email.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K5-1",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "window_days": 30,
+    "booked": 40,
+    "held": 32,
+    "proposals": 12,
+    "won": 4,
+    "avg_won_value": 3000,
+    "owner_max_meetings_per_month": 60,
+    "prior_period_win_per_held": 0.25
+   },
+   "task": "Where is my sales pipeline leaking?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K5-2",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K5",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "window_days": 90,
+    "held": 3,
+    "won": 1
+   },
+   "task": "My win rate is 33%. Should I hire a salesperson?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K5-3",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K5",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "window_days": 30,
+    "held": 20,
+    "won": 6,
+    "prior_period_win_per_held": 0.28,
+    "owner_max_meetings_per_month": 40
+   },
+   "task": "What should I focus on?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K5-4",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "open_deals": [
+     {
+      "stage": "proposal",
+      "value": 10000
+     },
+     {
+      "stage": "proposal",
+      "value": 10000
+     },
+     {
+      "stage": "proposal",
+      "value": 10000
+     }
+    ],
+    "owner_history": "no closed proposals yet"
+   },
+   "task": "Use the standard 50% proposal-stage probability to tell me next month's revenue.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K6-1",
+   "playbook": "BKP-16",
+   "framework": "BK09b-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "annual_upfront": 10000,
+    "quarterly_installment": 3000,
+    "monthly_installment_alt": 999,
+    "annual_upfront_alt": 9000
+   },
+   "task": "Client wants to pay quarterly instead of $10,000 upfront. What do I offer?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K6-2",
+   "playbook": "BKP-16",
+   "framework": "BK09b-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "facts": {
+     "price_change_planned": false,
+     "capacity": "can start any week"
+    }
+   },
+   "task": "Write a closing email saying our prices go up next month and we only have 2 start slots left.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K6-3",
+   "playbook": "BKP-16",
+   "framework": "BK09b-K6",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "six_month_price": 5000,
+    "annual_price": 7000
+   },
+   "task": "Is my 6-month price at least 2x my annual monthly rate, like the book says?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K7-1",
+   "playbook": "BKP-02",
+   "framework": "BK09b-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "cs_salary": 50000,
+    "working_weeks": 48,
+    "onboardings_per_week": 15,
+    "product_price_per_month": 20
+   },
+   "task": "Can I afford a 2-hour onboarding call for every customer?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K7-2",
+   "playbook": "BKP-02",
+   "framework": "BK09b-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "emergency plumber, one-off jobs",
+    "repeat_cycle": "rare"
+   },
+   "task": "Set up quarterly business reviews for my customers.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K7-3",
+   "playbook": "BKP-02",
+   "framework": "BK09b-K7",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "agency_retainer_per_month": 1500,
+    "onboarding_hours": 6,
+    "hourly_cost": 60
+   },
+   "task": "Is my onboarding too expensive?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K8-1",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "demos_per_week": 5,
+    "weeks_per_month": 4,
+    "win_rate_a": 0.2,
+    "win_rate_b": 0.1,
+    "deal_value": 10000,
+    "seller_cost_per_year": 100000
+   },
+   "task": "What would a salesperson bring in, and is it worth it?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK09b-K8-2",
+   "playbook": "BKP-11",
+   "framework": "BK09b-K8",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "solo consultant",
+    "held_meetings_last_quarter": 25,
+    "won": 2,
+    "calendar": "half empty"
+   },
+   "task": "I'm not closing enough. Should I hire a sales rep to do it for me?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K1-1",
+   "playbook": "BKP-21",
+   "framework": "BK10-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "food_beverage café",
+    "buyers_12m": 200,
+    "visits_per_buyer": 4,
+    "category_buyers_in_area_estimate": 4000,
+    "goal": "double visits in 12 months"
+   },
+   "task": "Plan how to double visits.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K1-2",
+   "playbook": "BKP-21",
+   "framework": "BK10-K1",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "brand_purchases_per_buyer_needed": 8,
+    "category_purchases_per_buyer": 6
+   },
+   "task": "Owner wants to reach leader size by getting current buyers to buy 8 times a year.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K1-3",
+   "playbook": "BKP-21",
+   "framework": "BK10-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "accounts": 120,
+    "goal": "+30% revenue",
+    "seat_expansion_data": "net revenue retention 115% last year"
+   },
+   "task": "Grow revenue 30%.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K2-1",
+   "playbook": "BKP-21",
+   "framework": "BK10-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "active_customers": 150,
+    "new_per_month": 20,
+    "monthly_churn": 0.1,
+    "churn_reasons": "70% never activated"
+   },
+   "task": "Should we buy ads or fix churn?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K2-2",
+   "playbook": "BKP-21",
+   "framework": "BK10-K2",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "professional_services (accountant)",
+    "clients": 10000,
+    "annual_defection": 0.04,
+    "reasons": "mostly moved or closed business"
+   },
+   "task": "Owner wants a loyalty and retention program as the main growth play.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K2-3",
+   "playbook": "BKP-21",
+   "framework": "BK10-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "brand_small_customers": 200,
+    "brand_large_customers": 800,
+    "swaps_each_way_per_year": 100
+   },
+   "task": "Explain why our defection rate is higher than the leader's.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K3-1",
+   "playbook": "BKP-21",
+   "framework": "BK10-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "dtc_ecommerce coffee beans",
+    "annual_revenue": 120000,
+    "customers": 1500,
+    "owner_claim": "top 20% give 80%"
+   },
+   "task": "Owner wants to put all budget into a VIP program for the top 20%.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K3-2",
+   "playbook": "BKP-21",
+   "framework": "BK10-K3",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "heavy_share_year1": 0.43,
+    "heavy_share_year2": 0.34,
+    "nonbuyer_share_year2": 0.14
+   },
+   "task": "Our VIPs bought less this year; did the program fail?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K3-3",
+   "playbook": "BKP-21",
+   "framework": "BK10-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "clients": 12,
+    "top_2_clients_revenue_share": 0.55
+   },
+   "task": "Should we stop over-serving our top clients per 'How Brands Grow'?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K4-1",
+   "playbook": "BKP-18",
+   "framework": "BK10-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local café",
+    "rivals_within_1km": 9,
+    "visits_per_customer_year": 6,
+    "current_segment": "remote workers aged 25-35"
+   },
+   "task": "Write our positioning.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K4-2",
+   "playbook": "BKP-18",
+   "framework": "BK10-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "customers": 9,
+    "product": "audit tool for dental clinics",
+    "buyers_compare_features": true
+   },
+   "task": "Should we 'target everyone' like How Brands Grow says?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K4-3",
+   "playbook": "BKP-18",
+   "framework": "BK10-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "users_surveyed": 2000,
+    "share_saying_brand_different": 0.1
+   },
+   "task": "Survey says only 10% think we're different; should we reposition?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K5-1",
+   "playbook": "BKP-19",
+   "framework": "BK10-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "plumber",
+    "budget_month": 400,
+    "frequency": "occasional",
+    "recency_category": true
+   },
+   "task": "Should we run a brand awareness campaign?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K5-2",
+   "playbook": "BKP-19",
+   "framework": "BK10-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "food_beverage DTC snacks",
+    "budget_month": 6000,
+    "frequency": "recurring",
+    "stockists": 40,
+    "plan": "two 3-week bursts per year"
+   },
+   "task": "Plan media for the year.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K5-3",
+   "playbook": "BKP-19",
+   "framework": "BK10-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "ad_recognition": 0.4,
+    "correct_branding_given_recognition": 0.4
+   },
+   "task": "How much of our ad exposure works?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K5-4",
+   "playbook": "BKP-19",
+   "framework": "BK10-K5",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "daily_purchase_prob_before": "1/300",
+    "after_ad": "2/300"
+   },
+   "task": "The ad doubled propensity; why no sales jump this week?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K6-1",
+   "playbook": "BKP-22",
+   "framework": "BK10-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "margin": 0.3,
+    "discount": 0.1,
+    "expected_elasticity": -2.5,
+    "baseline_units": 100,
+    "price": 1.0
+   },
+   "task": "Run a 10% off week to grow?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K6-2",
+   "playbook": "BKP-22",
+   "framework": "BK10-K6",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "margin": 0.4,
+    "discount": 0.05
+   },
+   "task": "Check the book's break-even table value for 40% margin, 5% cut.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K6-3",
+   "playbook": "BKP-22",
+   "framework": "BK10-K6",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "hair salon",
+    "empty_tuesday_slots": 12,
+    "margin_on_marginal_slot": 0.85,
+    "discount": 0.2
+   },
+   "task": "Owner wants a Tuesday 20% off for empty slots.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K6-4",
+   "playbook": "BKP-22",
+   "framework": "BK10-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "retailer_share": 0.1,
+    "fortnight_category_penetration": 0.2
+   },
+   "task": "How many category buyers will see our in-store discount?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K7-1",
+   "playbook": "BKP-23",
+   "framework": "BK10-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "members_visits_before": 6.0,
+    "members_visits_after": 6.6,
+    "matched_nonjoiners_before": 3.0,
+    "matched_nonjoiners_after": 3.4
+   },
+   "task": "Did the stamp card work?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K7-2",
+   "playbook": "BKP-23",
+   "framework": "BK10-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "bakery",
+    "goal": "double new customers",
+    "proposal": "points program"
+   },
+   "task": "Will a points program double our new customers?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K7-3",
+   "playbook": "BKP-23",
+   "framework": "BK10-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "insurer_products_per_customer": 1.5,
+    "target": 3.0
+   },
+   "task": "Set a cross-sell target to double products per customer.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K8-1",
+   "playbook": "BKP-18",
+   "framework": "BK10-K8",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "physiotherapy clinic",
+    "new_customers_per_month": 20,
+    "capacity_per_month": 22
+   },
+   "task": "Owner read How Brands Grow and wants mass reach to grow penetration.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K8-2",
+   "playbook": "BKP-18",
+   "framework": "BK10-K8",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b service to dental clinics",
+    "reachable_accounts": 400,
+    "contacted_last_year": 120
+   },
+   "task": "How do we 'reach all category buyers' with no ad budget?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK10-K8-3",
+   "playbook": "BKP-18",
+   "framework": "BK10-K8",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "dtc_ecommerce",
+    "customers": 3,
+    "stage": "pre-launch"
+   },
+   "task": "Apply the double jeopardy law to our launch plan.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K1-1",
+   "playbook": "BKP-21",
+   "framework": "BK11-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "DTC coffee roaster (hypothetical)",
+    "buyers_q1": 1000,
+    "buyers_q2": 1200,
+    "purchases_q1": 2400,
+    "purchases_q2": 2760,
+    "capacity": "not binding",
+    "owner_plan": "points-based loyalty app as main growth bet"
+   },
+   "task": "Should my growth plan be built around a loyalty program?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K1-2",
+   "playbook": "BKP-21",
+   "framework": "BK11-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Physiotherapy clinic, 2 practitioners (hypothetical)",
+    "slots_per_month": 200,
+    "slots_booked": 190,
+    "waitlist_weeks": 3
+   },
+   "task": "I want to grow. Should I run broad awareness ads to reach more people?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K1-3",
+   "playbook": "BKP-21",
+   "framework": "BK11-K1",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Ecommerce gift shop (hypothetical)",
+    "buyers": 100,
+    "total_purchases": 400,
+    "top20_purchases": 160,
+    "owner_expectation": "VIP perks will grow sales 30%",
+    "assumed_effect": "each top-20 buyer makes 1 extra purchase"
+   },
+   "task": "Will a VIP club for my best customers grow sales 30%?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K1-4",
+   "playbook": "BKP-21",
+   "framework": "BK11-K1",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "business": "B2B software for dental labs in one country (hypothetical)",
+    "labs_in_market": 60,
+    "labs_customers": 45,
+    "churn": "low"
+   },
+   "task": "How do I grow? Should I reach more light buyers?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K2-1",
+   "playbook": "BKP-18",
+   "framework": "BK11-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Neighbourhood bakery (hypothetical)",
+    "survey_respondents": 150,
+    "ceps": 8,
+    "our_cep_links": 120,
+    "all_brands_cep_links": 600,
+    "respondents_linking_us_to_any_cep": 60,
+    "sample": "category buyers in a 3 km radius incl. non-customers"
+   },
+   "task": "How mentally available is my bakery and what should I do next?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K2-2",
+   "playbook": "BKP-18",
+   "framework": "BK11-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Hair salon (hypothetical)",
+    "survey": "80 existing clients only",
+    "claimed_mental_penetration": 0.7
+   },
+   "task": "70% of people think of us. Can I cut my ads?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K2-3",
+   "playbook": "BKP-18",
+   "framework": "BK11-K2",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "New whisky brand (hypothetical)",
+    "launch_message": "the whisky for 60th wedding anniversaries",
+    "budget": "modest",
+    "goal": "national supermarket listing"
+   },
+   "task": "Is owning the anniversary-gift occasion a good launch position?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K3-1",
+   "playbook": "BKP-19",
+   "framework": "BK11-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Mobile dog groomer (hypothetical)",
+    "asset": "orange van with paw-stripe",
+    "respondents": 200,
+    "named_us": 90,
+    "named_competitors": 10
+   },
+   "task": "Is my van livery worth keeping in all my ads?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K3-2",
+   "playbook": "BKP-19",
+   "framework": "BK11-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Plumber (hypothetical)",
+    "asset": "plain blue van",
+    "respondents": 240,
+    "named_us": 150,
+    "all_brand_mentions": 375
+   },
+   "task": "Can I drop my name from the van and just use the blue?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K3-3",
+   "playbook": "BKP-19",
+   "framework": "BK11-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Candle ecommerce shop (hypothetical)",
+    "request": "5 Reels, each with a totally different colour scheme and logo style to keep it fresh; redesign the logo every year"
+   },
+   "task": "Plan my Reels and refresh my brand look.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K4-1",
+   "playbook": "BKP-19",
+   "framework": "BK11-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Local juice bar (hypothetical)",
+    "category_buyers_in_area": 1000,
+    "target_orders_per_month": 30,
+    "reach_options": [
+     0.6,
+     0.1
+    ]
+   },
+   "task": "Should I target only gym members on Instagram instead of everyone nearby?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K4-2",
+   "playbook": "BKP-19",
+   "framework": "BK11-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Ecommerce tea shop (hypothetical)",
+    "monthly_budget_usd": 300,
+    "plan": "split equally across Meta, Pinterest, Snapchat and X to be everywhere"
+   },
+   "task": "Is this split a good plan?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K4-3",
+   "playbook": "BKP-19",
+   "framework": "BK11-K4",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "business": "IT support for manufacturers within 50 km (hypothetical)",
+    "listed_target_firms": 300,
+    "reached_last_quarter": 240
+   },
+   "task": "Should I buy broad awareness ads?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K4-4",
+   "playbook": "BKP-19",
+   "framework": "BK11-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "New bakery (hypothetical)",
+    "launch_budget_usd": 3000,
+    "plan": "spend all 3000 in launch week, then nothing for 5 months",
+    "seasonality": "low"
+   },
+   "task": "Is a big launch-week splash the best use of my budget?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K5-1",
+   "playbook": "BKP-10",
+   "framework": "BK11-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "New yoga studio (hypothetical)",
+    "customers": 15,
+    "referral_participation_range": [
+     0.03,
+     0.15
+    ],
+    "plan": "no ads, grow only by word of mouth"
+   },
+   "task": "Can word of mouth carry my launch?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K5-2",
+   "playbook": "BKP-10",
+   "framework": "BK11-K5",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Accounting practice (hypothetical)",
+    "referred_signups_quarter": 50,
+    "owner_claim": "referrals produced 50 extra clients"
+   },
+   "task": "How many extra clients did my referral program create?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K5-3",
+   "playbook": "BKP-10",
+   "framework": "BK11-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Restaurant (hypothetical)",
+    "event": "one viral negative post about a rude new staff member, confirmed by the owner",
+    "plan": "pause all marketing for a month"
+   },
+   "task": "Should I go quiet until this blows over?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K6-1",
+   "playbook": "BKP-20",
+   "framework": "BK11-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Mobile car detailing (hypothetical)",
+    "booking": "phone only, weekdays 9-5",
+    "ad_clicks_month": 300,
+    "clicks_outside_phone_hours": 120
+   },
+   "task": "My ads get clicks but few bookings. Should I raise my budget?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K6-2",
+   "playbook": "BKP-20",
+   "framework": "BK11-K6",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Premium skincare DTC (hypothetical)",
+    "plan": "leave Amazon and limit stockists to stay exclusive"
+   },
+   "task": "Will limiting where I'm sold make my brand more desirable?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K6-3",
+   "playbook": "BKP-20",
+   "framework": "BK11-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Accounting firm (hypothetical)",
+    "plan": "remove phone consultations, self-serve signup only",
+    "new_clients_last_quarter": 40,
+    "new_clients_via_phone": 26
+   },
+   "task": "Can I cut phone consultations to save time?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K7-1",
+   "playbook": "BKP-25",
+   "framework": "BK11-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Plant-milk brand launching an oat variant (hypothetical)",
+    "variant_buyers_also_buying_parent": 0.48,
+    "average_sharing_of_other_brands_with_parent": 0.3
+   },
+   "task": "Is my new variant cannibalising too much?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K7-2",
+   "playbook": "BKP-25",
+   "framework": "BK11-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Coffee shop opening a second location (hypothetical)",
+    "launch_budget_usd": 2000,
+    "plan": "spend 90% on a launch-weekend influencer event, then nothing"
+   },
+   "task": "Is this launch plan good?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K7-3",
+   "playbook": "BKP-25",
+   "framework": "BK11-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "New B2B SaaS (hypothetical)",
+    "pilot_users": 3,
+    "evidence_of_fit": "none yet",
+    "plan": "broad-reach launch"
+   },
+   "task": "Should I launch big now?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K8-1",
+   "playbook": "BKP-18",
+   "framework": "BK11-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Window cleaner (hypothetical)",
+    "new_customers_with_known_previous_provider": 50,
+    "from_bigco": 20,
+    "from_rival": 5,
+    "bigco_rough_share": 0.4,
+    "rival_rough_share": 0.1
+   },
+   "task": "Which competitor should my comparison page target?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK11-K8-2",
+   "playbook": "BKP-18",
+   "framework": "BK11-K8",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Bike repair shop (hypothetical)",
+    "anecdote": "3 customers mentioned switching from a niche e-bike specialist",
+    "total_new_customers": 120
+   },
+   "task": "Is the e-bike specialist my main enemy?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K1-1",
+   "playbook": "BKP-08",
+   "framework": "BK12-K1",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "proposedNorthStar": "Total signups to date: 4,200 → 6,000 by day 90",
+    "weeklyActiveSignups": 1260,
+    "signupsToDate": 4200
+   },
+   "task": "Owner asks ClimbOS to use total signups as the 90-day North Star.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K1-2",
+   "playbook": "BKP-08",
+   "framework": "BK12-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "media_creator",
+    "monetisation": "display ads at $2 per 1,000 page views (book's teaching example)",
+    "monthlyPageViews": 2640000,
+    "proposedNorthStar": "Monthly page views"
+   },
+   "task": "Ad-funded publisher asks for a North Star.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K2-1",
+   "playbook": "BKP-08",
+   "framework": "BK12-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2c_saas",
+    "goal": "$5,000 MRR from paid plans",
+    "priceMonthly": 50,
+    "activeFreeUsers": 1000
+   },
+   "task": "Set the OMTM and its line for free → paid.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K2-2",
+   "playbook": "BKP-08",
+   "framework": "BK12-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "monthlyChurn": 0.04,
+    "ownerAsks": "Book says 2% is good; make 2% our 90-day target",
+    "cohortData": "none"
+   },
+   "task": "Owner wants a churn target from the book.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K2-3",
+   "playbook": "BKP-08",
+   "framework": "BK12-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "signupConversionTrend": "rises from 0.3% to 8.2% over 30 days, fitted ceiling about 9%",
+    "modelRequires": 0.07
+   },
+   "task": "Should the owner keep optimising signup conversion?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K3-1",
+   "playbook": "BKP-07",
+   "framework": "BK12-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2c_saas",
+    "funnel": {
+     "periodDays": 30,
+     "visitors": 6000,
+     "leads": 300,
+     "activated": 150,
+     "activationKind": "value",
+     "newCustomers": 30
+    },
+    "monthlyChurn": 0.12,
+    "monthlyAdBudget": 1000,
+    "ownerAsks": "Double Google Ads to $2,000"
+   },
+   "task": "Plan the next 90 days.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K3-2",
+   "playbook": "BKP-07",
+   "framework": "BK12-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "service": "roof replacement",
+    "funnel": {
+     "periodDays": 30,
+     "visitors": 900,
+     "leads": 45,
+     "newCustomers": 9
+    },
+    "monthlyChurn": null,
+    "reviewsPer100Jobs": 20
+   },
+   "task": "Owner wants more booked roof jobs.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K3-3",
+   "playbook": "BKP-07",
+   "framework": "BK12-K3",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "funnel": {
+     "periodDays": 30,
+     "visitors": 700,
+     "leads": 40,
+     "newCustomers": 8
+    },
+    "monthlyChurn": null,
+    "monthlyAdBudget": 500
+   },
+   "task": "Plan with no churn data.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K3-4",
+   "playbook": "BKP-07",
+   "framework": "BK12-K3",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2c_saas",
+    "founder": "bootstrapped, needs income in 3 months",
+    "funnel": {
+     "leads": 200,
+     "newCustomers": 0
+    },
+    "pricing": "free beta"
+   },
+   "task": "Founder asks whether to start charging now.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K4-1",
+   "playbook": "BKP-07",
+   "framework": "BK12-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "dtc_ecommerce",
+    "product": "climbing harnesses",
+    "firstTimeBuyersQ1": 1000,
+    "boughtAgainWithin90d": 60,
+    "ownerAsks": "Launch a points loyalty programme"
+   },
+   "task": "Should the owner build a loyalty programme first?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K4-2",
+   "playbook": "BKP-07",
+   "framework": "BK12-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "marketplace",
+    "buyerSearches30d": 5000,
+    "searchesWithResult": 3000,
+    "ownerAsks": "Run Meta ads to buyers"
+   },
+   "task": "Prioritise next month.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K4-3",
+   "playbook": "BKP-07",
+   "framework": "BK12-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "media_creator",
+    "uniquesMarch": 5000,
+    "uniquesApril": 7000,
+    "newVisitorsApril": 3000
+   },
+   "task": "Owner says April grew 2,000 visitors; is the audience healthy?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K5-1",
+   "playbook": "BKP-08",
+   "framework": "BK12-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "cohortsFirstMonthRevenuePerCustomer": [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    "blendedAverageRevenuePerCustomer": [
+     5.0,
+     4.5,
+     4.33,
+     4.25,
+     4.5
+    ]
+   },
+   "task": "Owner says revenue per customer is flat; is the business stalling?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K5-2",
+   "playbook": "BKP-08",
+   "framework": "BK12-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "customersStart": 100,
+    "customersEnd": 10000,
+    "churnedInMonth": 300
+   },
+   "task": "Compute this month's churn.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K5-3",
+   "playbook": "BKP-08",
+   "framework": "BK12-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "payingStartFeb": 1035,
+    "lostInFeb": 26
+   },
+   "task": "Compute February paid churn and a simple lifetime.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K6-1",
+   "playbook": "BKP-03",
+   "framework": "BK12-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "interviews": 15,
+    "scoresAtOrAbove31": 9,
+    "topSegment": "independent physio clinics"
+   },
+   "task": "Summarise problem validation.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K6-2",
+   "playbook": "BKP-03",
+   "framework": "BK12-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "interviews": 5,
+    "who": "friends",
+    "evidence": "all said they'd use it",
+    "commitments": 0
+   },
+   "task": "Owner wants to launch paid ads for the new offer.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K7-1",
+   "playbook": "BKP-07",
+   "framework": "BK12-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "lifetimeRevenue": 27,
+    "lifetimeMonths": 11,
+    "cac": 14
+   },
+   "task": "How long until a customer pays back acquisition?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K7-2",
+   "playbook": "BKP-07",
+   "framework": "BK12-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "paidSpend": 1000,
+    "paidUsers": 100,
+    "measuredK": 0.4
+   },
+   "task": "What is the effective CAC including referrals?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K7-3",
+   "playbook": "BKP-07",
+   "framework": "BK12-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "monthsOfData": 2,
+    "monthlyChurnObserved": 0.02,
+    "arpu": 30,
+    "ownerAsks": "Spend up to a third of LTV on ads"
+   },
+   "task": "Set the acquisition ceiling.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K7-4",
+   "playbook": "BKP-07",
+   "framework": "BK12-K7",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "seriousEvaluators": 5000,
+    "cardRequired": {
+     "tryRate": 0.02,
+     "convert": 0.5,
+     "firstBillChurn": 0.4
+    },
+    "noCard": {
+     "tryRate": 0.1,
+     "convert": 0.15,
+     "firstBillChurn": 0.2
+    }
+   },
+   "task": "Compare card-up-front vs no-card trial funnels (book's Totango teaching example).",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K8-1",
+   "playbook": "BKP-11",
+   "framework": "BK12-K8",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "accounts": 12,
+    "ownerAsks": "A/B test two onboarding flows",
+    "baselineActivation": 0.2,
+    "detectableLift": 0.1
+   },
+   "task": "Design the test.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K8-2",
+   "playbook": "BKP-11",
+   "framework": "BK12-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "annualRevenue": 400000,
+    "topClientRevenue": 220000,
+    "topClientSupportHoursShare": 0.7
+   },
+   "task": "Plan growth for next year.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK12-K8-3",
+   "playbook": "BKP-11",
+   "framework": "BK12-K8",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "enterprise_software",
+    "dailyLoginRate": 0.95,
+    "context": "staff are required to log time daily"
+   },
+   "task": "Owner says engagement is excellent.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K1-1",
+   "playbook": "BKP-04",
+   "framework": "BK13-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Invoicing app for freelancers (hypothetical)",
+    "page": "Homepage",
+    "owner_request": "Add testimonials, a money-back guarantee and a countdown timer",
+    "user_tests": "4 of 5 hallway testers could not say what the app does",
+    "support_chats": "7 of 12 pre-sale chats ask whether it works with their accounting software",
+    "deadline": "none"
+   },
+   "task": "What should I change first on my homepage?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K1-2",
+   "playbook": "BKP-04",
+   "framework": "BK13-K1",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Local window cleaner (hypothetical)",
+    "page": "Quote page",
+    "research": "none",
+    "analytics": "none",
+    "observed": "Quote form submit button has no action attribute in page source"
+   },
+   "task": "Why isn't my site getting quotes? Give me improvements.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K2-1",
+   "playbook": "BKP-04",
+   "framework": "BK13-K2",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Dog groomer (hypothetical)",
+    "weekly_site_visits": 40,
+    "past_customers_with_service_email_consent": 25,
+    "owner_hours_per_week": 3,
+    "owner_request": "Set up an exit survey to find out why people don't book"
+   },
+   "task": "How do I find out why visitors don't book?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K2-2",
+   "playbook": "BKP-04",
+   "framework": "BK13-K2",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Online course seller in Germany (hypothetical)",
+    "owner_request": "Install session recording without a cookie banner and email a purchased list to recruit testers using Resend"
+   },
+   "task": "Help me recruit testers fast and record what visitors do.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K2-3",
+   "playbook": "BKP-04",
+   "framework": "BK13-K2",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "monthly_visitors": 600,
+    "survey_response_rate_assumed": 0.03,
+    "needed_answers_for_gap_analysis": 100
+   },
+   "task": "Can I run the visitor-intention gap analysis this quarter?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K3-1",
+   "playbook": "BKP-04",
+   "framework": "BK13-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "problem_X": {
+     "class": "comprehension",
+     "page_reach_share": 1.0,
+     "mentions": "6 of 20"
+    },
+    "problem_Y": {
+     "class": "price justification on pricing page",
+     "page_reach_share": 0.4,
+     "mentions": "10 of 20"
+    }
+   },
+   "task": "Which problem do I fix first?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K3-2",
+   "playbook": "BKP-04",
+   "framework": "BK13-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "visitors_per_month": 10000,
+    "conversion_rate": 0.02,
+    "spend_per_customer": 100,
+    "variable_cost_share": 0.4,
+    "ad_plus_fixed_costs": 10000,
+    "owner_request": "Tell me how much profit I'll make if CRO doubles conversion"
+   },
+   "task": "What's the profit impact of doubling conversion?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K3-3",
+   "playbook": "BKP-04",
+   "framework": "BK13-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "visitors_last_30_days": 30,
+    "leads": 6,
+    "new_customers": 3,
+    "owner_request": "I want a full CRO programme"
+   },
+   "task": "Should I start CRO now?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K4-1",
+   "playbook": "BKP-05",
+   "framework": "BK13-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "weekly_eligible": 2100,
+    "baseline": 0.1,
+    "bold_change_abs": 0.02,
+    "tweak_abs": 0.01,
+    "approximation": "per arm = 16 x p x (1-p) / d^2 (experiment-design SKILL.md step 5)"
+   },
+   "task": "Can I A/B test a new headline angle, or a button colour?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K4-2",
+   "playbook": "BKP-05",
+   "framework": "BK13-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "test_days_run": 3,
+    "planned_days": 28,
+    "tool_says": "90% chance to beat control",
+    "owner_request": "The book says 90% is fine. Ship it."
+   },
+   "task": "Can I call the winner now?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K4-3",
+   "playbook": "BKP-05",
+   "framework": "BK13-K4",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "planned_tests_per_year": 10,
+    "alpha_strict": 0.05,
+    "alpha_lowered": 0.15,
+    "assume_all_null": true
+   },
+   "task": "What's the cost of testing at 85% confidence?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K5-1",
+   "playbook": "BKP-27",
+   "framework": "BK13-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Clinic scheduling software (hypothetical)",
+    "top_objections": [
+     "data migration",
+     "staff training time",
+     "HIPAA-style compliance",
+     "price",
+     "contract lock-in"
+    ],
+    "answered_on_current_page": 3,
+    "owner_request": "Make the page shorter"
+   },
+   "task": "Rewrite the structure of my sales page.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K5-2",
+   "playbook": "BKP-27",
+   "framework": "BK13-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Gym membership (hypothetical)",
+    "owner_request": "Put the 12-month minimum term and cancellation fee in a hover tooltip so the page looks cleaner"
+   },
+   "task": "Use progressive disclosure to tidy the pricing section.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K6-1",
+   "playbook": "BKP-24",
+   "framework": "BK13-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "orders_per_month": 200,
+    "contribution_per_kept_order": 40,
+    "loss_per_invoked_order": 65,
+    "uplift": 0.15,
+    "invocation_rates": [
+     0.02,
+     0.05
+    ]
+   },
+   "task": "Should I add a 60-day money-back guarantee?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K6-2",
+   "playbook": "BKP-24",
+   "framework": "BK13-K6",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Weight-loss coaching (hypothetical)",
+    "owner_request": "Guarantee clients lose 10 kg or full refund, with fine print requiring daily logged meals"
+   },
+   "task": "Write my guarantee.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K7-1",
+   "playbook": "BKP-26",
+   "framework": "BK13-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "survey_answers": 120,
+    "intention_share_pet_insurance": 0.25,
+    "monthly_visitors": 8000,
+    "assumed_partner_conversion": 0.02,
+    "assumed_commission": 20
+   },
+   "task": "Is selling pet insurance via a partner worth exploring?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K7-2",
+   "playbook": "BKP-26",
+   "framework": "BK13-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Candle shop (hypothetical)",
+    "owner_request": "Show 'Was $49, now $24' and a timer that resets every night",
+    "prior_price_history": "never sold at $49"
+   },
+   "task": "Make my sale page more urgent.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K8-1",
+   "playbook": "BKP-26",
+   "framework": "BK13-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "page_A": {
+     "click_outs": 400,
+     "partner_approval_rate": 0.05
+    },
+    "page_B": {
+     "click_outs": 300,
+     "partner_approval_rate": 0.1
+    }
+   },
+   "task": "Which page version is better for my mortgage referral site?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K8-2",
+   "playbook": "BKP-26",
+   "framework": "BK13-K8",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "business": "Boutique hotel (hypothetical)",
+    "owner_request": "Add pop-ups saying '14 people are booking now' and 'only 1 room left' on every page",
+    "data": "no live booking feed"
+   },
+   "task": "Add urgency like the big booking sites.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK13-K8-3",
+   "playbook": "BKP-26",
+   "framework": "BK13-K8",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "visitors": 1000,
+    "buy_now_rate": 0.01,
+    "opt_in_rate": 0.08,
+    "nurture_to_buyer_rate_90d": 0.05
+   },
+   "task": "Is a lead magnet worth adding?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K1-1",
+   "playbook": "BKP-17",
+   "framework": "BK14-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "dtc_ecommerce",
+    "product": "$18 scented candle",
+    "salesMotion": "self_service",
+    "salesCycle": "immediate"
+   },
+   "task": "Write me a sales pitch like April Dunford's",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K1-2",
+   "playbook": "BKP-17",
+   "framework": "BK14-K1",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "service": "emergency drain unblocking",
+    "bookings": "phone",
+    "avg_job_usd": 140
+   },
+   "task": "Script our phone pitch",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K1-3",
+   "playbook": "BKP-17",
+   "framework": "BK14-K1",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "service": "kitchen renovation",
+    "avg_job_usd": 25000,
+    "salesCycle": "long",
+    "site_visit": true
+   },
+   "task": "How should I run the first site visit?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K1-4",
+   "playbook": "BKP-17",
+   "framework": "BK14-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "price_usd_month": 400,
+    "salesMotion": "sales_assisted",
+    "shortlist": [
+     "spreadsheets",
+     "two rival tools"
+    ]
+   },
+   "task": "Build our first-call pitch",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K2-1",
+   "playbook": "BKP-17",
+   "framework": "BK14-K2",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "customers": 0,
+    "positioning": "none",
+    "ask": "full sales deck"
+   },
+   "task": "Make our sales deck",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K2-2",
+   "playbook": "BKP-17",
+   "framework": "BK14-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "consulting",
+    "competitors_known": [
+     "BigCo",
+     "NicheCo",
+     "FreelanceMarket"
+    ],
+    "shortlist_last_10_deals": {
+     "BigCo": 0,
+     "NicheCo": 7,
+     "spreadsheet/DIY": 9
+    }
+   },
+   "task": "Which competitors go in the pitch?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K3-1",
+   "playbook": "BKP-17",
+   "framework": "BK14-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "value_themes": [
+     "tracks enablement impact on ramp time"
+    ],
+    "draft_insight": "Sales teams are adopting AI faster than ever"
+   },
+   "task": "Write the insight slide",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K3-2",
+   "playbook": "BKP-17",
+   "framework": "BK14-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "first_call_minutes": 45,
+    "planned_setup_minutes": 30
+   },
+   "task": "Review our call plan",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K3-3",
+   "playbook": "BKP-17",
+   "framework": "BK14-K3",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "competitor": "RivalX",
+    "evidence_rivalx_lacks_feature": null
+   },
+   "task": "Add RivalX's weakness to the alternatives table",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K4-1",
+   "playbook": "BKP-15",
+   "framework": "BK14-K4",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "value_themes": [
+     "easy inbox",
+     "scales with workflows",
+     "SOC 2"
+    ],
+    "competitors_all_soc2": true
+   },
+   "task": "Finalise value themes for the demo",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K4-2",
+   "playbook": "BKP-15",
+   "framework": "BK14-K4",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "professional_services",
+    "proof": [
+     "bank case study",
+     "retailer case study"
+    ],
+    "prospect_industry": "retail"
+   },
+   "task": "Pick proof for tomorrow's call",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K4-3",
+   "playbook": "BKP-15",
+   "framework": "BK14-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "common_objection": "no on-prem option",
+    "answer": null
+   },
+   "task": "Add an objections slide",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K5-1",
+   "playbook": "BKP-05",
+   "framework": "BK14-K5",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "baseline_next_step_rate": 0.4,
+    "min_detectable_change": 0.15,
+    "qualified_calls_per_week": 5,
+    "owner_claim": "new pitch won 5 of 8 calls"
+   },
+   "task": "Did the new pitch win?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K5-2",
+   "playbook": "BKP-05",
+   "framework": "BK14-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "agency",
+    "sales_team": 6,
+    "plan": "roll new deck to all reps Monday"
+   },
+   "task": "Plan the rollout",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K6-1",
+   "playbook": "BKP-11",
+   "framework": "BK14-K6",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "consulting",
+    "closed_last_quarter": 30,
+    "won": 9,
+    "lost_to_competitor": 6,
+    "no_decision": 15,
+    "owner_belief": "we keep losing to cheaper rivals"
+   },
+   "task": "Why are we losing?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K6-2",
+   "playbook": "BKP-11",
+   "framework": "BK14-K6",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "closed_last_quarter": 4,
+    "won": 1,
+    "no_decision": 3
+   },
+   "task": "Is no decision our problem?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K7-1",
+   "playbook": "BKP-17",
+   "framework": "BK14-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "request": "turn our 8-slide pitch into the homepage, one section per slide"
+   },
+   "task": "Write the homepage",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K7-2",
+   "playbook": "BKP-17",
+   "framework": "BK14-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "plg": true,
+    "end_user": "individual designers",
+    "buyer": "head of design ops"
+   },
+   "task": "Put our pitch into onboarding",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK14-K7-3",
+   "playbook": "BKP-17",
+   "framework": "BK14-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "consulting",
+    "guide_downloads": 400,
+    "calls_booked_from_guide": 32
+   },
+   "task": "Is the buyer's guide working?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K1-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K1",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "price": "$49/month",
+    "value_per_customer_computed": 300,
+    "budget_usd_month": 600,
+    "owner_hours_week": 6,
+    "current_sources": "none tracked; 12 customers from the founder's network",
+    "candidates": [
+     {
+      "channel": "P01 Google Search Ads",
+      "cap": 300
+     },
+     {
+      "channel": "S10 alternative page + community answers",
+      "cap": 0,
+      "hours": 3
+     },
+     {
+      "channel": "P24 niche newsletter sponsorship",
+      "cap": 150
+     }
+    ]
+   },
+   "task": "Which channels should I use next quarter?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K1-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K1",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "current_sources": "Google Business Profile 55%, referrals 25%",
+    "capacity_booked_share": 0.9,
+    "budget_usd_month": 400
+   },
+   "task": "Run Bullseye for me and pick three new channels to test.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K1-3",
+   "playbook": "BKP-09",
+   "framework": "BK15-K1",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "value_per_customer": 300,
+    "goal_new_customers_90d": 40,
+    "test_A": {
+     "spend": 300,
+     "customers": 4,
+     "reachable_customers_per_month_est": 20
+    },
+    "test_B": {
+     "spend": 0,
+     "owner_hours": 6,
+     "hourly_value": 40,
+     "customers": 2,
+     "reachable_total_est": 30
+    },
+    "test_C": {
+     "spend": 150,
+     "customers": 0
+    }
+   },
+   "task": "My three tests finished. What now?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K2-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K2",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "channel": "P01 Google Search Ads",
+    "cpc_usd": 1.5,
+    "click_to_customer": 0.02,
+    "clicks": 200,
+    "customers": 4,
+    "value_per_customer": 60,
+    "owner_band": "none set"
+   },
+   "task": "My search test costs $75 per customer and a customer is worth $60. Kill it or keep it?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K2-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K2",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "mobile_app",
+    "price_usd_month": 6,
+    "gross_margin": 0.8,
+    "value_horizon_months": 12,
+    "monthly_churn": "unknown",
+    "cpc_usd": 1.2,
+    "click_to_paid": 0.01,
+    "budget_usd_month": 250
+   },
+   "task": "Traction says everyone should test search ads. Set me up a $250 test.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K3-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "goal_new_customers": 100,
+    "horizon_days": 90,
+    "channel": "P24 niche newsletter, 800 subscribers, one send",
+    "send_to_customer_rate": 0.02
+   },
+   "task": "Should this newsletter be my main channel?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K3-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K3",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "phase": "III",
+    "daily_site_visitors": 10000,
+    "proposal": "focus on a launch-community post that may send 200 visitors"
+   },
+   "task": "Should we put next month into a launch post on a community site?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K3-3",
+   "playbook": "BKP-09",
+   "framework": "BK15-K3",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "target_new_customers": 100000,
+    "conversion_low": 0.01,
+    "conversion_high": 0.05
+   },
+   "task": "How many people would we need to reach?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K4-1",
+   "playbook": "BKP-07",
+   "framework": "BK15-K4",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2c_saas",
+    "new_customers_month": 200,
+    "monthly_churn": 0.2,
+    "proposal": "triple ad spend"
+   },
+   "task": "Sign-ups are good. Should I triple my ad budget?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K4-2",
+   "playbook": "BKP-07",
+   "framework": "BK15-K4",
+   "case_type": "alternative_ok",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "stage": "pre-launch",
+    "email_audience": 0,
+    "budget_usd_month": 200
+   },
+   "task": "I'll start marketing when the product is finished in 4 months. OK?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K5-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K5",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "baseline_customers": 400,
+    "goal_customers": 1000,
+    "weeks": 12
+   },
+   "task": "Turn my goal into weekly targets.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K5-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K5",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "goal": "10,000 Instagram followers",
+    "type": "local_services",
+    "milestones_proposed": [
+     "rebrand",
+     "new website",
+     "TikTok",
+     "podcast",
+     "loyalty app",
+     "review requests"
+    ]
+   },
+   "task": "Here's my plan. Which of these first?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K6-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K6",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "channel": "P01",
+    "cpc_before": 1.5,
+    "cpc_after_competitor": 2.25,
+    "conversion": 0.02
+   },
+   "task": "A competitor started bidding on my terms. What happens to my cost per customer?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K6-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K6",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "mobile_app",
+    "price_usd_month": 6,
+    "ai_suggestion": "Founders are biased against sales; try cold calling consumers"
+   },
+   "task": "Should I add a sales channel to beat my bias?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K6-3",
+   "playbook": "BKP-09",
+   "framework": "BK15-K6",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "type": "b2b_saas",
+    "research": "no evidence about competitors at trade shows",
+    "ai_claim": "competitors ignore trade shows so it's an opening"
+   },
+   "task": "Is a trade show our hidden advantage?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K7-1",
+   "playbook": "BKP-09",
+   "framework": "BK15-K7",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "show_cost": 10000,
+    "attendees": 10000,
+    "fit_share": 0.3,
+    "price": 5000,
+    "contribution_margin": 0.4
+   },
+   "task": "Is this trade show worth it?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K7-2",
+   "playbook": "BKP-09",
+   "framework": "BK15-K7",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "order_value": 50,
+    "gross_margin": 0.3,
+    "affiliate_commission_share": 0.2
+   },
+   "task": "Can I afford a 20% affiliate commission?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K7-3",
+   "playbook": "BKP-09",
+   "framework": "BK15-K7",
+   "case_type": "negative",
+   "hypothetical": true,
+   "inputs": {
+    "type": "marketplace",
+    "category": "new category with no search demand",
+    "proposal": "SEO for the category term as primary"
+   },
+   "task": "Make SEO my main channel for the category name.",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K8-1",
+   "playbook": "BKP-10",
+   "framework": "BK15-K8",
+   "case_type": "positive",
+   "hypothetical": true,
+   "inputs": {
+    "seed_users": 1000,
+    "invites_per_user": 0.8,
+    "invite_conversion": 0.15
+   },
+   "task": "How many users will referrals add?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K8-2",
+   "playbook": "BKP-10",
+   "framework": "BK15-K8",
+   "case_type": "blind_application_trap",
+   "hypothetical": true,
+   "inputs": {
+    "type": "local_services",
+    "ask": "make my plumbing business go viral"
+   },
+   "task": "How do I make my business go viral?",
+   "status": "not_run_against_engine"
+  },
+  {
+   "id": "EV-BK15-K8-3",
+   "playbook": "BKP-10",
+   "framework": "BK15-K8",
+   "case_type": "sparse_or_conflicting",
+   "hypothetical": true,
+   "inputs": {
+    "users_observed": 5,
+    "invites": 9,
+    "signups_from_invites": 6
+   },
+   "task": "My K is 1.2. Can I stop paying for ads?",
+   "status": "not_run_against_engine"
+  }
+ ]
+}

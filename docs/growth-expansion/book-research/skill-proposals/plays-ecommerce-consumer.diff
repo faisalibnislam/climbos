@@ -1,0 +1,22 @@
+--- a/skills/plays-ecommerce-consumer/SKILL.md
++++ b/skills/plays-ecommerce-consumer/SKILL.md
+@@ -13,6 +13,10 @@
+ - **Apps:** page tests and review-prompt timing lift every install source; recap cards and referral add inflow; nominate for featuring every release.
+ - **Creators, courses, coaching:** paid newsletter recommendations and JV partners fill a challenge or webinar; BookBub feeds the same funnel for authors.
+ - **Evidence.** Most benchmarks come from vendors selling the channel (ReferralCandy, Octane AI, AmpliSell, Firework, Shopify): treat as ceilings, plan on the low half, never guarantee. "[practitioner estimate]" is the researcher's synthesis.
++- **Buyers** [BK11-K1, BK10-K3]: context: at least one acquisition play reaches new or light category buyers; don't plan growth on heavy buyers buying more (about half aren't heavy the next period).
++- **Repeat mode** [BK12-K4]: compute the repeat rate from the owner's data (code) before loyalty or frequency plays. context: Hillstrom (c. 2012, grade C) found loyalty pushes rarely pay below ~40% annual repurchase; there, referral and acquisition come first.
++- **Availability** [BK11-K6]: be present where buyers already shop; add a channel by the occasions it covers and its economics. Don't drop a channel new customers buy through without source data.
++- **Loops** [BK15-K8]: K = invites per user × invite conversion (code). K < 1, the usual case, multiplies seeded users by about 1/(1−K) and needs constant seeding; shorten cycle time, find high-K segments. Never call a loop viral without measured K ≥ 1 over a stated window.
+ - **Legal review before shipping as templates (marked LEGAL REVIEW):** giveaway rules, auto-renew subscription flows, sustainability claims, health claims in any creator or host brief, course earnings claims.
+ - **All creator, affiliate, review plays:** FTC Endorsement Guides: free product must be disclosed; brands liable for endorsers' claims. FTC 2024 fake-review rule: no sentiment-conditioned incentives, suppression, undisclosed insider reviews or bought followers. Re-check at runtime: ChatGPT checkout, Vine, Faire, TikTok Shop fees; click-to-cancel status.
+ - **Not covered (gaps):** paid sampling networks, subscription boxes, Amazon Creator Connections, journalist-request platforms (Qwoted, Featured), Etsy Ads fees.
+@@ -315,7 +319,7 @@
+ - **Do:** 1) 1 free month each when the friend finishes onboarding; 2) deferred deep links; 3) prompt at success moments and settings; 4) pre-written iMessage and WhatsApp text; 5) monthly K-factor.
+ - **Expect:** participation 5–15% [shno.co, secondary]; K 0.05–0.2, cutting blended CAC 5–20%, not viral [practitioner estimate].
+ - **Cost / time:** 3–6 dev days + deep-link tool; 2–4 wks.
+-- **Track:** invites per WAU; invite→install; K-factor.
++- **Track:** invites per WAU; invite→install; K-factor (see Loops).
+ - **Rules & risks:** Apple 3.2.2 limits incentives, tie to friend activation; fake accounts.
+ - **ClimbOS does:** reward design, copy, funnel tracking, experiments. Developer: implement.
+ 

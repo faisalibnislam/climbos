@@ -1,0 +1,25 @@
+--- a/skills/prospecting/reference/jurisdiction-rules.md
++++ b/skills/prospecting/reference/jurisdiction-rules.md
+@@ -18,7 +18,8 @@
+ | Address type | Rule |
+ |---|---|
+ | Personal work address published on the company site | Preferred. Record URL and date. |
+-| Pattern-inferred work address | At most 3 candidates per person, verified before use; blocked for Canada and Australia; record "inferred". |
++| Pattern-inferred (guessed) address | Never. Only addresses the business publishes, or operator imports with provenance [policy; BK09a-K4]. |
++| Personal (non-business) address, even if published on a profile | Never [BK09a-K4]. |
+ | Role address (info, hello, contact, sales, support, admin, office, team, enquiries, inquiries, billing, accounts, hr, jobs, careers, press, marketing) | Only for companies with 1–10 employees and only when no personal work address is published. 10% of the list or less. Flag "no first name". |
+ | noreply, postmaster, abuse, webmaster | Never. |
+ | Disposable domain | Never. |
+@@ -27,4 +28,11 @@
+ ### Data you may and may not hold
+ 
+ - **May:** company name, domain, address, industry, size band, legal form, public services and prices, dated public triggers, a named person's name, work title and work email from a public business source.
+-- **May not:** data scraped from LinkedIn, restricted-visibility profiles, personal phone numbers, home addresses, personal social accounts, or anything about health, family, religion, politics or private life.
++- **May not:** bought, rented or scraped contact lists without a recorded lawful basis [BK09a-K3], data scraped from LinkedIn, restricted-visibility profiles, personal phone numbers, home addresses, personal social accounts, or anything about health, family, religion, politics or private life.
++
++### Check before calling
++
++Status: unknown_to_investigate [BK09a-K4]. This reference does not cover phone or SMS rules, and none here are verified.
++- Do not suggest calling or texting a prospect who has not asked to be contacted that way until the owner has checked the rules for that country and number type. Mark the plan `[CHECK: call rules for {country}]`.
++- Questions for the owner or counsel, not rules: do-not-call registers, calls or texts to mobile numbers, automated dialling, call recording consent, keeping a do-not-call log.
++- Inbound leads who gave a number for calls follow the sales-follow-up consent rules.

@@ -1,0 +1,137 @@
+{
+ "id": "BKP-20",
+ "version": 1,
+ "slug": "physical-availability",
+ "title": "Physical availability audit: presence, relevance, prominence",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Where buyers can't find, reach or buy from the business (hours, booking, payment, listings), and which gap to fix first.",
+ "business_types": [
+  "local services",
+  "retail",
+  "ecommerce"
+ ],
+ "lifecycle_stages": [
+  "any"
+ ],
+ "applies_when": [
+  "Demand diagnosis with low reach",
+  "Local or retail business"
+ ],
+ "exclusions": [
+  "Instant digital purchase where the site is the only point of sale (use BKP-04)"
+ ],
+ "required_inputs": [
+  "Opening hours, booking and payment options, listings"
+ ],
+ "evidence_requirements": [
+  "When and where category buyers buy (hours, channels, marketplaces, delivery apps)",
+  "Current channels, hours, booking and payment methods, service area",
+  "Entry price and size options",
+  "Findability for key situation searches and on marketplace or listing pages",
+  "Where recent new customers bought (channel)"
+ ],
+ "missing_data_behavior": [
+  "No data: owner checklist first."
+ ],
+ "decision_branches": [
+  {
+   "if": "Buyers want to book outside hours",
+   "then": "Online booking before more ads."
+  },
+  {
+   "if": "Sales and servicing share one channel",
+   "then": "Separate them when capacity allows."
+  }
+ ],
+ "implementation_steps": [
+  "Presence: list buying occasions and check coverage (hours, channels, area, marketplaces)",
+  "Relevance: check entry formats, price points and payment options",
+  "Prominence: check findability in search, maps, marketplaces and listings, including thumbnail legibility",
+  "Rank gaps by occasions lost and cost to fix",
+  "Fix blocking gaps before a demand play"
+ ],
+ "dependencies": [
+  "A list of buying occasions (can come from the CEP map, K2)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Varies; many fixes are free (hours, booking link, listing)",
+  "labor": "2-3 hours for the audit",
+  "capability": "Booking, payment and listing tools",
+  "measurement": "New-customer source channel; abandoned enquiries outside hours"
+ },
+ "metrics": [
+  "Share of inquiries arriving outside staffed hours",
+  "Share of buying occasions covered",
+  "Listing or search presence for key situation queries",
+  "Cart or booking abandonment"
+ ],
+ "guardrails": [
+  "No fake listings or reviews.",
+  "Each added channel weighed against its cost and margin",
+  "Don't remove a sales channel without source data",
+  "Don't recommend scarcity tactics without evidence"
+ ],
+ "alternatives_when_constrained": [
+  "No source data: add a 'how did you book' field first"
+ ],
+ "stop_conditions": [
+  "Review after adding a channel: did it add new buyers or just move existing ones?"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Capacity limits make more presence pointless",
+  "Channel fees can erase margin (run the margin calculator)"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: Before a demand play, run a three-part availability check (presence, relevance, prominence) and fix blocking gaps first.",
+    "from": "BK11-K6"
+   },
+   {
+    "rule": "proposed: Don't recommend removing a channel new customers buy through without measuring where new customers came from.",
+    "from": "BK11-K6"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: Don't recommend restricting distribution to create exclusivity; source exclusivity from price, quality and craft.",
+    "from": "BK11-K6"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: Add an online channel by the share of occasions it covers and its economics, starting with products bought comfortably online.",
+    "from": "BK11-K6"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-local-listing",
+  "skills/conversion-audit/SKILL.md"
+ ],
+ "reconciliation_note": "Extends PB-local-listing.",
+ "member_frameworks": [
+  "BK11-K6"
+ ],
+ "source_references": [
+  "BK11-F35",
+  "BK11-F36",
+  "BK11-F37",
+  "BK11-F38",
+  "BK11-F39",
+  "BK11-F40",
+  "BK11-F41",
+  "BK11-F45",
+  "BK11-F46",
+  "BK11-F29"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK11-K6-1",
+  "EV-BK11-K6-2",
+  "EV-BK11-K6-3"
+ ]
+}

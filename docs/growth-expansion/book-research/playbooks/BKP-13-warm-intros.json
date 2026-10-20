@@ -1,0 +1,129 @@
+{
+ "id": "BKP-13",
+ "version": 1,
+ "slug": "warm-intros",
+ "title": "Warm introductions through the owner's network",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether and how to ask people the owner knows for introductions to target accounts before cold outreach.",
+ "business_types": [
+  "b2b",
+  "agency",
+  "professional_services",
+  "high-value local services"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early"
+ ],
+ "applies_when": [
+  "No prospect database and no customers yet",
+  "Owner has a professional network"
+ ],
+ "exclusions": [
+  "Owner unwilling to ask contacts personally"
+ ],
+ "required_inputs": [
+  "Owner's list of contacts (owner-held; not imported without consent)",
+  "Target account list"
+ ],
+ "evidence_requirements": [
+  "qualified account list (K3)",
+  "a real relationship between the intermediary and the target, confirmed by the intermediary",
+  "the owner's own connections data (owner-provided)"
+ ],
+ "missing_data_behavior": [
+  "No network overlap: go to BKP-12."
+ ],
+ "decision_branches": [
+  {
+   "if": "Contact knows a target buyer",
+   "then": "Owner sends a short forwardable note; one ask per contact."
+  },
+  {
+   "if": "Friends or past colleagues show interest",
+   "then": "Treat as unqualified until they pass the ICP."
+  }
+ ],
+ "implementation_steps": [
+  "Owner exports or lists their own connections (no scraping of others' networks)",
+  "Optionally sit with an adviser who browses their own network",
+  "Match to qualified accounts",
+  "Ask intermediaries in one batched message",
+  "Send ready-to-forward notes (why them, why it helps the target, one ask)",
+  "Follow up once directly if forwarded",
+  "Thank intermediaries"
+ ],
+ "dependencies": [
+  "owner willing to ask contacts",
+  "account qualified before looking for a connection"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None (optional small thank-you)",
+  "labor": "1-2 hours per network review session",
+  "capability": "Owner network",
+  "measurement": "Intro requests, forwards, meetings"
+ },
+ "metrics": [
+  "intros requested",
+  "intros made",
+  "meetings from intros",
+  "wins from intros"
+ ],
+ "guardrails": [
+  "Use of exported connection data needs a lawful basis (unknown to investigate).",
+  "Mention the referrer only if they actually forwarded or agreed (skills/reply-handling/SKILL.md:48; skills/cold-outreach/reference/spam-and-ai-tells.md:16)",
+  "No scraping of LinkedIn networks; owner-provided data only",
+  "Disclose any paid referral arrangement"
+ ],
+ "alternatives_when_constrained": [
+  "No network: PB-partners or cold outreach",
+  "Customers exist: PB-referrals"
+ ],
+ "stop_conditions": [
+  "Network exhausted (book: this runs out); move to cold or partners"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Selling to friends who don't fit",
+  "Claiming a referral that didn't happen"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: add playbook PB-warm-intros (requires: B2B types, owner_hours_min 2; no customer minimum), steps: qualify accounts, match connections, request a forwardable intro, one direct follow-up.",
+    "from": "BK09a-K7"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: an intro email may name the intermediary only when the owner confirms the intermediary agreed or forwarded.",
+    "from": "BK09a-K7"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: whether a user's own exported connection data can be processed for outreach under each platform's terms and GDPR needs legal review before it is automated.",
+    "from": "BK09a-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "docs/growth-engine/book-review/BK05.md (warm intros)",
+  "shared/playbooks/contracts.ts PB-referrals"
+ ],
+ "reconciliation_note": "New candidate PB-warm-intros.",
+ "member_frameworks": [
+  "BK09a-K7"
+ ],
+ "source_references": [
+  "BK09a-F22",
+  "BK09a-F31"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09a-K7-1",
+  "EV-BK09a-K7-2"
+ ]
+}

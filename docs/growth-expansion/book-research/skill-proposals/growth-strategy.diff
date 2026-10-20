@@ -1,0 +1,110 @@
+--- a/skills/growth-strategy/SKILL.md
++++ b/skills/growth-strategy/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: growth-strategy
+-description: A focused 90-day growth strategy for a small business with a small budget (B2B SaaS, B2C app, local service, ecommerce/DTC, agency/consultant, creator/coach). Use when the owner asks how to get more customers, which channels to use, what to do next quarter, or when a plan needs to be rebuilt. Diagnoses the single biggest constraint, builds a constraints table, computes affordable CAC, runs Bullseye plus modified ICE scoring, commits to 1 primary and 1 secondary channel with a not-doing list, lays out three 30-day phases with budget and hours that add up, sets a North Star with leading indicators, a pre-registered test backlog and a week-1 checklist, and adjusts for the 2025–2026 landscape (AI search, Meta Andromeda, Google automation, founder-led LinkedIn, measurement loss).
++description: A focused 90-day growth strategy for a small business with a small budget (B2B SaaS, B2C app, local service, ecommerce/DTC, agency/consultant, creator/coach). Use when the owner asks how to get more customers, which channels to use, what to do next quarter, or when a plan needs to be rebuilt. Diagnoses the single biggest constraint, builds a constraints table, computes affordable CAC, runs Bullseye plus modified ICE scoring, focuses on a proven channel or tests up to 3 before committing to 1 primary and 1 secondary with a not-doing list, lays out three 30-day phases with budget and hours that add up, sets a North Star with leading indicators, a pre-registered test backlog and a week-1 checklist, and adjusts for the 2025–2026 landscape (AI search, Meta Andromeda, Google automation, founder-led LinkedIn, measurement loss).
+ ---
+ 
+ ## Purpose
+@@ -27,13 +27,15 @@
+ 
+ 3. **Diagnose the single biggest constraint**, with evidence. Common diagnoses:
+    - **Message unclear:** the money page fails the 10-second test (what, for whom, why better). Fix positioning and the page first.
+-   - **No demand capture:** buyers search but the business isn't there (no Google Business Profile, no high-intent pages, not in AI answers).
++   - **No demand capture:** buyers search but the business isn't there (no Google Business Profile, no high-intent pages, not in AI answers). Check presence, relevance and prominence first [BK11-K6].
+    - **Conversion leak:** traffic arrives but doesn't book or buy (hidden price, weak proof, friction).
+    - **CAC above margin:** the current channel costs more per customer than a customer is worth.
+-   - **Retention leak:** customers don't come back, apps churn in week 1. Fix before paying to acquire more.
++   - **Retention leak:** customers don't come back, apps churn in week 1. Fix controllable churn before scaling acquisition; capped tests and replacement-level acquisition continue [BK15-K4, BK10-K2]. context: churn that is normal for the size and mostly uncontrollable (moved, closed) doesn't bind; get churn reasons first [BK10-K2].
+    - **Capacity:** demand exceeds what they can deliver. The plan is pricing and selectivity, not acquisition.
+-   Name one. Say what evidence would prove you wrong.
++   Name one. Say what evidence would prove you wrong. Walk the journey as the best-fit customer; mismatches are hypotheses, counts locate the gap, a test confirms [BK08-K6].
+ 
++   **Name the advantage** [BK07-K1]: benefit, the barrier that stops copying, the competitor it holds against, evidence. "Execution advantage" and "unknown" are valid. No barrier: keep commitments short-payback and reversible.
++
+ 4. **Compute affordable CAC** and show the maths:
+    - Subscription: monthly gross profit per customer × target payback months (default: under 3 months for SMB-priced SaaS).
+    - Ecommerce/DTC: first-order contribution margin (AOV × gross margin, minus shipping and fees); extend to 90-day repeat only if the business's own repeat data supports it.
+@@ -44,20 +46,24 @@
+ 
+ 5. **Brainstorm across the Traction channels:** one concrete idea per channel for *this* business (not generic), plus 2026 channels: AI answer visibility, Reddit and community participation, creator partnerships, marketplace listings. Use the channel-options table in the reference for the business type.
+ 
+-6. **Filter by hard constraints.** Remove anything the budget, hours, skills or affordable CAC cannot support. Example floor: LinkedIn ads below roughly $1.5–3k/month rarely gather enough data (practitioner guidance; treat as a soft floor).
++6. **Filter by hard constraints.** Remove anything the budget, hours, skills or affordable CAC cannot support. Example floor: LinkedIn ads below roughly $1.5–3k/month rarely gather enough data (practitioner guidance; treat as a soft floor). context: no sales hire or outsourced SDR before the owner wins deals personally at a stable rate [BK09a-K1, BK09b-K8].
+ 
+ 7. **Score the survivors with modified ICE:** Impact (1–5: would it move the 90-day goal?), Confidence (1–5: evidence buyers are there and competitors win there), Ease (1–5: given these hours and skills). Multiply for a score out of 125. Apply two gates: **CAC fit** (yes/no) and **time-to-signal** (weeks to a leading indicator; break ties toward faster signal). Inside a chosen channel, rank experiments with RICE when reach can be estimated.
+ 
+-8. **Run Bullseye.** Outer ring: all ideas. Middle ring: top 3–5 by score. Inner ring: **1 primary + 1 secondary channel**, plus at most 1 always-on hygiene item (Google Business Profile for local, review collection, basic email capture). Write the **not-doing list**: every rejected channel with a one-line reason. A business under ~$50k/month revenue never runs more than 3 active acquisition channels.
++8. **Run Bullseye** [BK15-K1]. Outer ring: all ideas. Middle ring: top 3–5 by score. Inner ring depends on step 0:
++   - **A channel already works** (most customers, cost below value, not flattening): it is the primary; test others only when it flattens.
++   - **Nothing proven:** up to 3 channels tested in parallel, each with a cap, a read date and three questions (cost vs affordable CAC, volume vs goal, right customers). No primary before the readout; if only one test is affordable, test in sequence.
++   - **After the readout: 1 primary + 1 secondary.** context: the secondary is often conversion or trust work, not a second acquisition channel.
++   Plus at most 1 always-on hygiene item (Google Business Profile for local, review collection, basic email capture). Write the **not-doing list**: every rejected channel with a one-line reason. A business under ~$50k/month revenue never runs more than 3 active acquisition channels; parallel tests and hygiene count toward the 3.
+ 
+ 9. **Apply the 2025–2026 landscape adjustments** (reference: landscape table). At minimum: don't make informational blog SEO a primary engine without strong justification; add AI answer visibility checks; for Meta, plan broad audiences and 3–5 genuinely different creative concepts from the VoC bank; for Google, plan negative keywords, search-term review and offline conversion import; for B2B, centre LinkedIn on the founder's profile, not the company page; specify measurement that doesn't rely on platform attribution alone.
+ 
+ 10. **Lay out the 90 days in three phases:**
+-    - **Days 0–14, Foundation:** fix positioning and the money page message, install measurement (UTMs on every link, conversion events, server-side conversions where the stack allows, a "how did you hear about us?" question, a weekly scorecard), fix conversion leaks, set up review collection, launch 2–3 cheap tests on the middle ring.
+-    - **Days 15–45, Test:** run the tests with pre-set budgets and kill/scale rules (use experiment-design). Weekly review. By day 45, confirm or swap the primary.
+-    - **Days 46–90, Commit and compound:** 70–80% of effort on the primary, 20–30% on the secondary. Build one compounding asset: a referral loop, a library of winning ad angles, a comparison-page cluster, a partner list.
++    - **Days 0–14, Foundation:** fix positioning and the money page message, install measurement (UTMs on every link, conversion events, server-side conversions where the stack allows, a "how did you hear about us?" question, a weekly scorecard), fix conversion leaks, set up review collection, launch the inner-ring tests (step 8).
++    - **Days 15–45, Test:** run the tests with pre-set budgets and kill/scale rules (use experiment-design). Weekly review. By day 45, read each test on cost, volume and fit; pick or confirm the primary. All fail: change the message or offer before adding channels [BK15-K1].
++    - **Days 46–90, Commit and compound:** 70–80% of effort on the primary, 20–30% on the secondary. Build one compounding asset: a referral loop, a library of winning ad angles, a comparison-page cluster, a partner list. Say if it builds a barrier (route density, switching costs) or is copyable [BK07-K1].
+ 
+-11. **Set the scoreboard.** One **North Star** for 90 days in the owner's terms ("40 booked jobs a month, from 22"). 3–5 **leading indicators** with weekly targets (reference: indicators by business type). Targets come from the business's baseline plus a stated assumption, never from an invented benchmark.
++11. **Set the scoreboard.** One **North Star** for 90 days in the owner's terms ("40 booked jobs a month, from 22"). 3–5 **leading indicators** with weekly targets (reference: indicators by business type). Targets come from the business's baseline plus a stated assumption, never from an invented benchmark; tag each as model (code), owner baseline, or external with year (orientation only, never pass/fail). Pre-write hit/miss actions, pair one guardrail (refunds, churn, margin), switch metric when hit or flat for 3 weeks [BK12-K2]. Repeat-purchase B2C: split the goal into buyers × purchases per buyer (code); if it needs frequency growth with flat buyers, show the penetration-led version too [BK10-K1]. context: heuristic outside consumer repeat categories [BK10-K8].
+ 
+ 12. **Add up the resources.** A table of every recurring action: owner, cadence, hours per week, spend per month. Totals must be at or below the stated budget and hours. If the goal needs more than they have, say so and offer the smaller goal the resources support.
+ 
+@@ -69,7 +75,7 @@
+ 
+ - **One named constraint** with evidence, not a SWOT.
+ - **Unit economics first:** affordable CAC computed from price and margin, every channel checked against it.
+-- **Focus:** 1 primary + 1 secondary, scored, plus a not-doing list with reasons.
++- **Focus:** a proven primary, or ≤3 capped tests ending in 1 primary + 1 secondary; a not-doing list with reasons.
+ - **Fits the business type,** price point, buying behaviour and geography.
+ - **Executable:** every action names the asset, channel, audience, cadence, owner and metric.
+ - **Adds up:** budget and hours totals match what the owner has.
+@@ -80,8 +86,14 @@
+ 
+ ## North Star by stage
+ 
+-Pick the one number the business is paid for at its stage: activated accounts and trial → paid for an early self-serve product, net new paying customers (on any paid plan) and churn once it grows, booked jobs for a local service. Visits, followers and impressions are leading indicators only.
++Read the stage from evidence [BK12-K3]. context: a focus order, not a strict sequence; the owner may override with a reason.
++- **Need unproven** (no funnel numbers): interviews and a baseline; no scale plays.
++- **Stickiness unproven:** paid acquisition only as capped tests; no budget raises. Charging and first-purchase fixes are never gated.
++- **Sticky:** referrals before paid scale; then pricing; then raise caps in steps.
++- One-off purchases: sticky = delivered value (jobs, reviews, referrals), not churn. Capacity binds: delivery first.
+ 
++Pick the one number the business is paid for at its stage: activated accounts and trial → paid for an early self-serve product, net new paying customers (on any paid plan) and churn once it grows, booked jobs for a local service. Visits, followers and impressions are leading indicators only (except ad-funded media, paired with revenue per 1,000). Never a cumulative count; use the per-period flow [BK12-K1].
++
+ ## Never do
+ 
+ - Recommend a channel buffet ("omnichannel presence" across 6+ channels).
+@@ -92,6 +104,8 @@
+ - Propose A/B tests the traffic cannot support.
+ - Recommend fake reviews, review gating, incentivised reviews, buying followers, scraping in breach of terms, misleading claims, or ignoring regulated-industry rules.
+ - Recommend scaling paid acquisition while contribution margin is negative or retention is broken.
++- Claim a moat without a named barrier and evidence [BK07-K1].
++- Cite "retention is 5× cheaper" or "5% more retention doubles profit" as fact [BK10-K2].
+ - Load week 1 with 30 tasks.
+ - Default to a pre-2024 playbook: blog-first SEO, interest targeting, company-page LinkedIn posting.
+ 
+@@ -99,12 +113,12 @@
+ 
+ - [ ] Current customer sources audited; what works is protected.
+ - [ ] Constraints table with a source per row.
+-- [ ] One diagnosis with evidence and a falsifier.
++- [ ] One diagnosis with evidence and a falsifier; advantage named (barrier, execution or unknown).
+ - [ ] Affordable CAC computed with maths shown; each channel checked.
+-- [ ] 1 primary + 1 secondary (+ max 1 hygiene); scored; not-doing list with reasons.
++- [ ] Proven primary, or ≤3 capped tests with read dates; ≤3 active incl. hygiene; scored; not-doing list.
+ - [ ] Landscape adjustments applied (AI search, Meta, Google, LinkedIn, measurement).
+ - [ ] Three phases with dates; day-45 decision point.
+-- [ ] North Star + 3–5 leading indicators with weekly targets from a stated baseline.
++- [ ] Stage read from evidence; North Star + 3–5 leading indicators with weekly targets, each with a source tag.
+ - [ ] Budget and hours totals at or below what was stated.
+ - [ ] Each test has volume, run time and a decision rule.
+ - [ ] Risks with mitigations and validation dates.

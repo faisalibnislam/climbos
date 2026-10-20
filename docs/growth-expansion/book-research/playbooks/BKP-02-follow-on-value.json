@@ -1,0 +1,190 @@
+{
+ "id": "BKP-02",
+ "version": 1,
+ "slug": "follow-on-value",
+ "title": "Follow-on value and high-touch renewal (switching costs without traps)",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether to add follow-on offers, onboarding and success reviews that raise the value of staying, and whether the price can carry that labour.",
+ "business_types": [
+  "b2b_saas",
+  "agency",
+  "professional_services",
+  "membership"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Customers stay but buy one thing",
+  "High-touch accounts churn after onboarding",
+  "Agency or B2B retainers with renewal dates"
+ ],
+ "exclusions": [
+  "Activation or first-value problem unsolved (fix that first)",
+  "Lock-in that works by making leaving hard rather than staying valuable"
+ ],
+ "required_inputs": [
+  "Price per account and onboarding hours",
+  "Renewal dates or contract terms",
+  "Customer list with consent for account contact"
+ ],
+ "evidence_requirements": [
+  "existence of follow-on purchases (renewals, add-ons, repeat jobs)",
+  "current attach or repeat rate",
+  "what customers would lose by leaving (data, setup, training, relationships)",
+  "retention data",
+  "what was promised in the sale (goals, KPIs)",
+  "onboarding steps and owner/staff hours per client",
+  "usage or delivery signals per client",
+  "contract term and renewal date"
+ ],
+ "missing_data_behavior": [
+  "No hours data: show the service-cost share as a question, not a number.",
+  "No renewal data: start with a manual review list."
+ ],
+ "decision_branches": [
+  {
+   "if": "Onboarding hours x rate is a large share of first-period price",
+   "then": "Automated or group onboarding for low-price accounts; reserve live reviews for high-value ones."
+  },
+  {
+   "if": "Customers get repeat value and ask for adjacent work",
+   "then": "Test one follow-on offer with existing customers (owner-approved message)."
+  },
+  {
+   "if": "Leaving is hard but customers are unhappy",
+   "then": "Not eligible: remove friction, fix value."
+  }
+ ],
+ "implementation_steps": [
+  "List follow-on purchases",
+  "Classify current switching costs: financial, procedural, relational",
+  "Pick one value-adding follow-on offer",
+  "Measure attach rate and retention of attached customers",
+  "Review pricing for embedded customers with notice (PB-price-increase)",
+  "Kickoff: restate goals ('rediscovery') and confirm in writing.",
+  "Setup items first.",
+  "Client does real work in the session."
+ ],
+ "dependencies": [
+  "some paying customers; retention not broken",
+  "Sale notes captured at close: decision-maker, users, goals",
+  "Price per client known"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "low",
+  "labor": "offer design and delivery hours",
+  "capability": "service or product able to deliver the follow-on",
+  "measurement": "attach rate, retention by attached vs not"
+ },
+ "metrics": [
+  "attach rate",
+  "retention of attached vs non-attached",
+  "revenue per customer",
+  "share of new clients onboarded within N days",
+  "days to first promised result",
+  "share with a success review in the last quarter",
+  "renewal rate",
+  "net revenue retention (owner data)"
+ ],
+ "guardrails": [
+  "Cancelling stays as easy as buying.",
+  "Auto-renewal terms are an owner and legal decision, not a default.",
+  "Customers can always leave and take their data",
+  "Price changes to existing customers only with notice and owner approval",
+  "Renewal and cancellation terms clear and lawful where the business operates",
+  "Auto-renewal terms and notices follow local consumer/contract law (external)",
+  "Success reports show measured outcomes only, no invented results",
+  "Customer stories/testimonials only with client permission"
+ ],
+ "alternatives_when_constrained": [
+  "No customers yet: not applicable; use origination plays",
+  "No delivery capacity: PB-capacity first",
+  "One-off local consumer jobs: use retention-lifecycle rebooking/review flows instead of QBRs",
+  "No usage data: monthly 2-question check-in email"
+ ],
+ "stop_conditions": [
+  "Attach rate flat after 8 weeks: revise offer",
+  "Complaints or refunds rise: stop",
+  "If renewal rate falls, review onboarding completion and first-result timing first"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Dark patterns: hidden cancellation, blocked data export, surprise auto-renewal",
+  "Assuming lock-in justifies higher acquisition spend in a mature market",
+  "Group onboarding that leaves half-trained users",
+  "Upselling while delivery is failing"
+ ],
+ "rule_classes": {
+  "external_requirement": [
+   {
+    "rule": "proposed: never recommend raising switching costs by restricting exit (blocked export, hidden cancellation)",
+    "from": "BK07-K5"
+   },
+   {
+    "rule": "proposed: Auto-renewal clauses and reminder timing are flagged for the owner to check against local law; ClimbOS does not draft them as compliant.",
+    "from": "BK09b-K7"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: when a business has follow-on purchases and attach rate under its own target, rank a follow-on offer play ahead of new acquisition plays of similar cost",
+    "from": "BK07-K5"
+   },
+   {
+    "rule": "proposed: Expansion or upsell suggestions are suppressed for clients with open delivery issues.",
+    "from": "BK09b-K7"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: switching-cost claims do not raise affordable CAC unless observed retention supports the longer lifetime",
+    "from": "BK07-K5"
+   },
+   {
+    "rule": "proposed: Before recommending a high-touch onboarding, code computes onboarding labour cost per client and its share of first-period revenue; flag when it exceeds the owner's margin room.",
+    "from": "BK09b-K7"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: Every onboarding plan ends with a booked back-check and a measurable first task.",
+    "from": "BK09b-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-lifecycle-email",
+  "docs/growth-expansion/blog-research/playbooks/BRP-03-package-architecture.json",
+  "skills/retention-lifecycle/SKILL.md"
+ ],
+ "reconciliation_note": "Overlaps BRP-03 on add-ons; this playbook covers retention labour and renewal, BRP-03 covers package design.",
+ "member_frameworks": [
+  "BK07-K5",
+  "BK09b-K7"
+ ],
+ "source_references": [
+  "BK07-F11",
+  "BK07-F12",
+  "BK07-F20",
+  "BK09b-F28",
+  "BK09b-F29",
+  "BK09b-F30",
+  "BK09b-F31",
+  "BK09b-F33",
+  "BK09b-F34",
+  "BK09b-F35"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK07-K5-1",
+  "EV-BK07-K5-2",
+  "EV-BK07-K5-3",
+  "EV-BK09b-K7-1",
+  "EV-BK09b-K7-2",
+  "EV-BK09b-K7-3"
+ ]
+}

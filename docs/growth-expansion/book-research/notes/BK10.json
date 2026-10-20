@@ -1,0 +1,1121 @@
+{
+ "reading_id": "BK10",
+ "book_title": "How Brands Grow",
+ "frameworks": [
+  {
+   "id": "BK10-K1",
+   "name": "Double-jeopardy sanity check on growth targets (penetration vs loyalty)",
+   "decision": "Whether a growth target should come mainly from more buyers or from more purchases per buyer, and whether a frequency-led target is realistic.",
+   "business_models": [
+    "dtc_ecommerce",
+    "food_beverage",
+    "subscription_commerce",
+    "physical_retail",
+    "local_services (repeat)",
+    "hospitality",
+    "b2c_saas (as context only)",
+    "wholesale/manufacturing (repeat B2B supply)"
+   ],
+   "lifecycle_stages": [
+    "established",
+    "growing"
+   ],
+   "evidence_required": [
+    "customers (or accounts) who bought in the last 12 months",
+    "purchases or visits per buyer in that period",
+    "rough count of category buyers in the reachable area (estimate allowed, labelled)",
+    "category purchase rate per buyer if known"
+   ],
+   "prerequisites": [
+    "a repeat-purchase category with several substitutes",
+    "a defined period (annual by default)"
+   ],
+   "branches": [
+    {
+     "if": "plan needs purchases per buyer to rise more than ~10-20% with flat buyer count",
+     "then": "flag as against double jeopardy; re-split the target toward penetration and show both versions"
+    },
+    {
+     "if": "required purchases per buyer exceed what buyers buy from the whole category",
+     "then": "mark infeasible (hard arithmetic, not a heuristic)"
+    },
+    {
+     "if": "category has few substitutes, high switching costs or a contract (SaaS seats, retainers)",
+     "then": "treat double jeopardy as context only; expansion revenue can be a real lever"
+    },
+    {
+     "if": "the business is capacity-limited",
+     "then": "do not set a penetration target above capacity; hand off to PB-capacity"
+    }
+   ],
+   "steps": [
+    "Decompose sales = buyers x purchases per buyer (code, not prose)",
+    "State the target in both terms",
+    "Check frequency against category rate and against peers if known",
+    "Prefer penetration levers (reach, availability, removing reasons not to buy) unless a branch above applies"
+   ],
+   "exceptions_failure_modes": [
+    "Contracted B2B or SaaS where 'frequency' is seat or usage expansion",
+    "One-off purchases (frequency always ~1)",
+    "Genuine niche with switching costs (Apple-type operating-system lock-in raised repeat only slightly)",
+    "Owner counts transactions not buyers"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner exports buyer and order counts",
+    "capability": "POS, shop or CRM export",
+    "measurement": "12-month unique buyers and orders"
+   },
+   "metrics": [
+    "unique buyers per period (penetration proxy)",
+    "purchases per buyer",
+    "share of new vs returning buyers"
+   ],
+   "guardrails": [
+    "Never present a frequency-only plan as the default for a repeat-purchase consumer business without the double-jeopardy note",
+    "Arithmetic in code"
+   ],
+   "stop_review": [
+    "Review after one full purchase cycle; if buyers grew but frequency did not, that is the expected pattern, not failure"
+   ],
+   "alternatives": [
+    "No buyer-level data: use transactions and a customer-count estimate, labelled; or run a 4-week receipt or booking-name tally",
+    "No category size: skip penetration %, keep buyer counts"
+   ],
+   "author_refs": [
+    "BK10-F1",
+    "BK10-F2",
+    "BK10-F3",
+    "BK10-F4",
+    "BK10-F35"
+   ],
+   "interpretation": "INTERPRETATION: double jeopardy is a strong default for consumer repeat-purchase businesses (cafés, salons, DTC consumables). For niche B2B, contracts and early-stage products it is a heuristic: the evidence base there is one concrete-supplier table and assertions in the FAQ.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: when a plan's goal implies purchases-per-buyer growth above 20% with flat buyers in a repeat-purchase B2C business, the plan must also show the penetration-led version and label the frequency version as against the norm",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: required purchases per buyer greater than the category purchase rate is infeasible and must be blocked by a deterministic check",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed rule: if buyer-level counts are missing, ask for them before setting a frequency target",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md (goal decomposition); shared/growth/calc.ts (decomposition helper); skills/retention-lifecycle/SKILL.md (frequency plays framed honestly)",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "skills/growth-strategy/SKILL.md",
+     "shared/growth/calc.ts"
+    ],
+    "note": "No existing guidance decomposes a sales goal into buyers x frequency or checks it against double jeopardy (grep found no mention in skills, playbooks or library books)."
+   },
+   "disagreements": "Retention-lifecycle and rebooking plays implicitly assume frequency is an easy lever. Sharp says it barely moves without penetration. Decided by the owner's own buyer x frequency history, and by the category (contracted B2B and SaaS expansion are outside his evidence).",
+   "eval_case_ids": [
+    "EV-BK10-K1-1",
+    "EV-BK10-K1-2",
+    "EV-BK10-K1-3"
+   ]
+  },
+  {
+   "id": "BK10-K2",
+   "name": "Retention vs acquisition allocation with a steady-state ceiling",
+   "decision": "How much effort goes to reducing churn/defection versus acquiring new customers, given the business's churn level, its size and whether churn is controllable.",
+   "business_models": [
+    "b2b_saas",
+    "b2c_saas",
+    "subscription_commerce",
+    "local_services",
+    "professional_services",
+    "agency",
+    "financial_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "monthly or annual churn/defection rate",
+    "new customers per month",
+    "current active customers",
+    "churn reasons split: controllable (value, onboarding, service) vs uncontrollable (moved, closed, no longer needs, budget)",
+    "category or size-matched churn norm if any"
+   ],
+   "prerequisites": [
+    "a recurring or repeat relationship",
+    "consistent definition of an active customer"
+   ],
+   "branches": [
+    {
+     "if": "churn is far above the reference range for the model and most of it is controllable (value, onboarding, failed payments)",
+     "then": "retention is the binding constraint (agrees with diagnosis.ts:131 and Verna EV-C2); acquisition continues at least at replacement level"
+    },
+    {
+     "if": "churn is within the normal range for a business of this size and most exits are uncontrollable",
+     "then": "treat acquisition as the growth lever; retention work is maintenance (Sharp ch3)"
+    },
+    {
+     "if": "business is small and its churn is higher than market leaders'",
+     "then": "expect some of the gap from size alone (retention double jeopardy); don't label it a product failure without churn reasons"
+    },
+    {
+     "if": "capacity is the limit",
+     "then": "neither; delivery constraint first (PB-capacity)"
+    }
+   ],
+   "steps": [
+    "Compute steady-state ceiling = new customers per month / monthly churn (code)",
+    "Compute replacement acquisition = churn x current base",
+    "Split churn reasons",
+    "Compare churn to a reference only where one exists (SaaS) and note size effect",
+    "Allocate: fix controllable churn first only when it is above the norm; never zero acquisition"
+   ],
+   "exceptions_failure_modes": [
+    "SaaS with high voluntary early churn: Sharp's low-defection examples do not apply",
+    "Very small bases: churn rates noisy month to month",
+    "Counting paused or seasonal customers as churned"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner tags churn reasons",
+    "capability": "billing or booking export",
+    "measurement": "monthly cohorts; reasons for exit"
+   },
+   "metrics": [
+    "monthly churn",
+    "steady-state ceiling",
+    "replacement acquisition",
+    "share of churn that is controllable"
+   ],
+   "guardrails": [
+    "No '5x cheaper to retain' or '5% retention = 100% profit' claims (no empirical basis per ch3)",
+    "Retention plays must say what share of churn they can touch"
+   ],
+   "stop_review": [
+    "If a retention fix runs one renewal cycle and churn is unchanged, return effort to acquisition"
+   ],
+   "alternatives": [
+    "No churn reasons: run 5-10 exit interviews or a one-question cancel survey first",
+    "No churn rate: use repeat-rate proxy; mark retention 'unknown' (as diagnosis.ts:99 does for non-SaaS)"
+   ],
+   "author_refs": [
+    "BK10-F8",
+    "BK10-F9",
+    "BK10-F10",
+    "BK10-F11",
+    "BK10-F12"
+   ],
+   "interpretation": "INTERPRETATION: Sharp's conclusion (acquisition dwarfs retention) depends on category-normal, low and largely uncontrollable defection. Small SaaS with 8-15% monthly churn sits outside that evidence; there, the steady-state ceiling makes retention decisive. Both views agree acquisition is never optional.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: diagnosis output adds a computed steady-state ceiling (newCustomersPerMonth / monthlyChurn) and replacement acquisition (monthlyChurn x active customers) whenever both inputs exist",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: COMPETING.retention also names 'defection outside the business's control (moved, closed, no longer needs) and normal size-related churn'",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: block copy or plans that cite 'retention is 5x cheaper' or 'a 5% retention gain doubles profit' as fact",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed rule: when retention binds, the plan still keeps acquisition at or above replacement level unless capacity binds",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: before labelling churn weak for a non-SaaS business, collect churn reasons",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (retention branch, COMPETING.retention, diagnosisBrief); skills/retention-lifecycle/SKILL.md; skills/growth-strategy/SKILL.md step 3",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "shared/agents/diagnosis.ts:76",
+     "shared/agents/diagnosis.ts:131",
+     "shared/agents/diagnosis.ts:149",
+     "docs/growth-expansion/blog-research/guides/02_activation_retention_plg.md (EV-C2, EV-C7)",
+     "skills/growth-strategy/SKILL.md:33"
+    ],
+    "note": "Candidate v2 of the retention branch: keeps the SaaS churn override but adds the ceiling, replacement-acquisition arithmetic and an uncontrollable-churn competing explanation."
+   },
+   "disagreements": "Verna (02_activation_retention_plg.md) and growth-strategy SKILL.md:33 say fix retention before acquiring; diagnosisBrief (diagnosis.ts:149) says 'Don't add demand above it'. Sharp says acquisition drives growth and defection is mostly size and circumstance. What decides: churn level vs a size-matched norm, and the controllable share of churn reasons. High controllable churn: Verna wins. Normal churn: Sharp wins.",
+   "eval_case_ids": [
+    "EV-BK10-K2-1",
+    "EV-BK10-K2-2",
+    "EV-BK10-K2-3"
+   ]
+  },
+  {
+   "id": "BK10-K3",
+   "name": "Light buyers, real Pareto and buyer moderation (who to target)",
+   "decision": "Whether to concentrate marketing on current heavy/best customers or to reach light and non-buyers, and how to read 'top customers' analyses.",
+   "business_models": [
+    "dtc_ecommerce",
+    "food_beverage",
+    "physical_retail",
+    "local_services (repeat)",
+    "hospitality",
+    "marketplace_seller"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "customer-level purchases for at least 12 months (ideally 24)",
+    "revenue by customer decile"
+   ],
+   "prerequisites": [
+    "repeat purchase",
+    "enough customers for deciles (rule of thumb: 100+)"
+   ],
+   "branches": [
+    {
+     "if": "owner claims top 20% = 80% of sales without data",
+     "then": "ask for the export; default expectation for consumer repeat categories is about 50% (20:30:50), more extreme only over long periods"
+    },
+    {
+     "if": "plan targets only last year's heaviest buyers",
+     "then": "warn about buyer moderation and the heavy-buyer fallacy; add reach to light/non-buyers"
+    },
+    {
+     "if": "B2B with a few large contracts (revenue concentration by contract size, not purchase frequency)",
+     "then": "account concentration is a different quantity; key-account care is legitimate; don't apply 20:30:50"
+    },
+    {
+     "if": "capacity-limited service",
+     "then": "selecting higher-value clients is a capacity decision (PB-capacity), not a Pareto growth play"
+    }
+   ],
+   "steps": [
+    "Compute revenue share of top 20%, middle 30%, bottom 50% (code)",
+    "Compare two consecutive periods for the same customers before calling anyone 'VIP'",
+    "Size the light/non-buyer pool in reach",
+    "Allocate most acquisition effort to broad reach; keep heavy-buyer care cheap (service, not discounts)"
+   ],
+   "exceptions_failure_modes": [
+    "Short analysis windows exaggerate or understate concentration",
+    "One-off purchase categories",
+    "Account-based B2B"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "export",
+    "capability": "customer IDs on orders",
+    "measurement": "two-period comparison"
+   },
+   "metrics": [
+    "Pareto share (top 20%)",
+    "next-period share of last period's top 20%",
+    "share of sales from last period's non-buyers"
+   ],
+   "guardrails": [
+    "Don't build segments or lookalikes on a single period's heavy buyers without the moderation caveat"
+   ],
+   "stop_review": [
+    "If a heavy-buyer program shows member lift, check against the moderation baseline before expanding"
+   ],
+   "alternatives": [
+    "No customer IDs: skip; use category-buyer reach logic",
+    "Under 100 customers: describe, don't decile"
+   ],
+   "author_refs": [
+    "BK10-F7",
+    "BK10-F13",
+    "BK10-F14",
+    "BK10-F15",
+    "BK10-F16",
+    "BK10-F19"
+   ],
+   "interpretation": "INTERPRETATION: strong default for consumer repeat-purchase; for B2B prospecting from 'best customers' (skills/prospecting) the ICP is about fit, not purchase weight, so Sharp's fallacy applies only partly.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: any 'top customers' statistic must come from data with the period stated; never assume 80/20",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed rule: retention or VIP plays aimed at last period's heaviest buyers carry a note that next period they will buy less on average without any change (buyer moderation)",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: for B2C repeat-purchase businesses, at least one acquisition play reaches light or non-buyers of the brand",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/retention-lifecycle/SKILL.md; skills/plays-local/SKILL.md (#20 sms-vip-club); skills/prospecting/SKILL.md:13 (B2B: fit-based, keep)",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "skills/retention-lifecycle/SKILL.md",
+     "skills/plays-local/SKILL.md"
+    ],
+    "note": "No existing Pareto or buyer-moderation guidance; nothing in the repo asserts 80/20, so no contradiction to fix."
+   },
+   "disagreements": "Prospecting and creator-scouting derive ICPs from 'best customers'. For B2B fit this is fine (Dunford). For consumer repeat-purchase, Sharp says the heaviest are already buying all they will. Decided by business type: fit-based B2B vs frequency-based B2C.",
+   "eval_case_ids": [
+    "EV-BK10-K3-1",
+    "EV-BK10-K3-2",
+    "EV-BK10-K3-3"
+   ]
+  },
+  {
+   "id": "BK10-K4",
+   "name": "Positioning mode: niche differentiation (Dunford) vs category-buyer distinctiveness (Sharp)",
+   "decision": "Whether positioning work should centre on a narrow best-fit segment and differentiated value, or on reaching all category buyers in reach with a distinctive, consistent brand identity.",
+   "business_models": [
+    "all; mode chosen by conditions"
+   ],
+   "lifecycle_stages": [
+    "pre-launch",
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "purchase frequency in the category",
+    "number of viable substitutes buyers see as interchangeable",
+    "how buyers choose (evaluation vs habit/salience)",
+    "best-fit customer evidence (Dunford)",
+    "existing brand cues the business already uses consistently"
+   ],
+   "prerequisites": [
+    "category frame decided (Dunford step 8)"
+   ],
+   "branches": [
+    {
+     "if": "new or complex B2B/SaaS product, buyers compare features, few customers, early stage",
+     "then": "Dunford mode: best-fit segment, differentiated value, Big Fish default (BK03); add a light distinctiveness check"
+    },
+    {
+     "if": "consumer repeat-purchase or local everyday service with many interchangeable rivals (café, salon, bakery, DTC consumables)",
+     "then": "category-buyer mode: target all category buyers within physical reach; one or two relevant category cues; distinctive assets used consistently; differentiation claims optional"
+    },
+    {
+     "if": "a functional difference is real and large (allergy-free, premium tier, specialist)",
+     "then": "say it, but expect a partition, not a separate market; still reach the wider category"
+    },
+    {
+     "if": "segment narrowing is driven by geography or capacity",
+     "then": "compatible with Sharp: grow area by area with matched media (FAQ)"
+    }
+   ],
+   "steps": [
+    "Classify the category on the conditions above",
+    "Pick a mode and say why",
+    "In both modes run a brand-cue audit: which cues (name, colour, logo, character, tagline, style) the business uses and whether they are consistent across site, pack, posts and ads",
+    "If budget allows, test fame and uniqueness of 1-2 assets with category buyers",
+    "In category-buyer mode, the swap test is advisory, not a gate"
+   ],
+   "exceptions_failure_modes": [
+    "Using 'everyone' as an excuse to skip customer research",
+    "Sharp's evidence on low perceived differentiation is from mature consumer categories and retail banks; may not hold for new B2B tools",
+    "Rebrands on a whim destroy distinctive assets"
+   ],
+   "requirements": {
+    "cash": "none; asset survey optional",
+    "labor": "1-2 hours audit",
+    "capability": "access to site and social",
+    "measurement": "fame = share linking asset to brand; uniqueness = share of those linking it only to this brand"
+   },
+   "metrics": [
+    "asset fame",
+    "asset uniqueness",
+    "consistency of cues across touchpoints"
+   ],
+   "guardrails": [
+    "Never fabricate competitor gaps to create differentiation (existing BK03 rule)",
+    "Don't recommend a rebrand or new visual identity without evidence the current assets lack fame"
+   ],
+   "stop_review": [
+    "Revisit mode when evidence of a best-fit pattern appears, or when the business moves from niche to mass category"
+   ],
+   "alternatives": [
+    "No survey budget: audit consistency only and ask 5-10 customers what they recall",
+    "No brand cues yet: pick simple ones and keep them (social-visual-briefs provisional kit)"
+   ],
+   "author_refs": [
+    "BK10-F5",
+    "BK10-F17",
+    "BK10-F18",
+    "BK10-F21",
+    "BK10-F22",
+    "BK10-F23",
+    "BK10-F35"
+   ],
+   "interpretation": "INTERPRETATION: Dunford answers 'what context makes our value obvious to buyers who evaluate'; Sharp answers 'how do near-substitutes win habitual choices'. Most ClimbOS SaaS and B2B owners fit Dunford; many local and DTC owners fit Sharp. Distinctiveness complements both.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: positioning skill selects a mode (niche-differentiation or category-buyer) from category conditions and records why",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: in category-buyer mode, 'all category buyers in the service area' is an acceptable segment and the swap test is advisory",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: every positioning output includes a brand-cue consistency check across site, posts and ads",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed rule: asset fame/uniqueness claims require survey data; otherwise label as unmeasured",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed rule: which mode wins for early-stage local consumer brands is unknown; track outcomes by mode in bench",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "skills/positioning/SKILL.md (steps 6-7, swap test line 57, segment rule line 70); skills/social-visual-briefs/SKILL.md; skills/meta-ads/SKILL.md",
+   "relation_to_existing": {
+    "type": "contradicts",
+    "targets": [
+     "skills/positioning/SKILL.md:38",
+     "skills/positioning/SKILL.md:57",
+     "skills/positioning/SKILL.md:70",
+     "docs/growth-expansion/guides/03_positioning.md",
+     "docs/growth-engine/book-review/BK03.md (Engine decision rules 2 and 5)"
+    ],
+    "note": "Contradicts the universal 'Big Fish default' and 'never everyone' for consumer repeat-purchase categories; extends with distinctive assets, which no current skill covers beyond a visual brand kit."
+   },
+   "disagreements": "Dunford/BK03 make Big Fish, Small Pond the default and the positioning skill forbids 'everyone'. Sharp says competing brands sell to the same people, niches are mostly availability deficits, and perceived differentiation is low even for winners. What decides: purchase frequency, substitutability, whether buyers evaluate or choose by salience, and stage. Owner decision: Sharp is the default only for consumer repeat-purchase; heuristic elsewhere.",
+   "eval_case_ids": [
+    "EV-BK10-K4-1",
+    "EV-BK10-K4-2",
+    "EV-BK10-K4-3"
+   ]
+  },
+  {
+   "id": "BK10-K5",
+   "name": "Mental and physical availability: reach, continuity and branding in channel choice",
+   "decision": "How to weigh broad reach, continuous presence and ease of buying against high-intent demand capture when choosing and scheduling channels.",
+   "business_models": [
+    "dtc_ecommerce",
+    "food_beverage",
+    "physical_retail",
+    "local_services",
+    "hospitality",
+    "b2c_saas",
+    "mobile_app"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "purchase frequency (frequency dimension)",
+    "whether buyers search shortly before buying (recency category)",
+    "monthly budget",
+    "service area / distribution footprint",
+    "opening hours, ordering routes, delivery coverage"
+   ],
+   "prerequisites": [
+    "eligible channels from scoring.ts",
+    "owner approval for any spend"
+   ],
+   "branches": [
+    {
+     "if": "recency category (emergency trades, legal, insurance, furniture, B2B with a trigger event)",
+     "then": "demand capture first (search, maps, directories), matches Sharp fn 69 and the current scoring intent weight"
+    },
+    {
+     "if": "recurring consumer category and budget can buy steady reach in the area",
+     "then": "add an always-on reach channel at even monthly spend; judge it over months, not weeks"
+    },
+    {
+     "if": "budget under ~$100-500/month",
+     "then": "reach media can't be bought at meaningful scale; use free reach (local listings, signage, partner newsletters, posts) and physical availability fixes"
+    },
+    {
+     "if": "physical availability is thin (hours, locations, delivery apps, checkout steps)",
+     "then": "fix availability before buying awareness; advertising falls flat if the brand is hard to buy"
+    },
+    {
+     "if": "new brand",
+     "then": "plant basics: what it is, what it looks like, where to buy; grow one area at a time with matched media"
+    }
+   ],
+   "steps": [
+    "Classify category recency and frequency",
+    "Audit physical availability (hours, locations, apps, stockists, booking friction)",
+    "Pick demand-capture channel(s) per scoring",
+    "If recurring B2C and budget allows, add one reach channel scheduled evenly",
+    "Brand-link every creative: brand cue in the first seconds or first frame and at the end",
+    "Judge reach channels on reach, branded recall proxies and slow sales trend"
+   ],
+   "exceptions_failure_modes": [
+    "Small budgets spread so thin that no one sees the ad more than once a quarter",
+    "Platform 'reach' that isn't attention (FAQ: social OTS vs actual brains)",
+    "Measuring brand reach by last-click ROAS and killing it in week 4"
+   ],
+   "requirements": {
+    "cash": "varies; zero for availability fixes",
+    "labor": "owner time for listings and creative",
+    "capability": "ad accounts only if paid",
+    "measurement": "reach and frequency from platforms; branded search; new-customer counts"
+   },
+   "metrics": [
+    "monthly reach in area",
+    "weeks with any presence (continuity)",
+    "branded search volume",
+    "new buyers per month"
+   ],
+   "guardrails": [
+    "Even monthly spend preferred to bursts unless a seasonal peak is real",
+    "No paid reach without owner budget approval",
+    "Never treat impressions as people reached"
+   ],
+   "stop_review": [
+    "Reach channel: review at 3 months on new-buyer trend and branded search, not 8-week inquiries",
+    "Demand-capture channel: existing stop rules"
+   ],
+   "alternatives": [
+    "No ad budget: physical availability fixes, local listings, partner placements, consistent organic posting",
+    "No tracking: self-reported 'how did you hear' at checkout"
+   ],
+   "author_refs": [
+    "BK10-F16",
+    "BK10-F24",
+    "BK10-F25",
+    "BK10-F26",
+    "BK10-F32",
+    "BK10-F33",
+    "BK10-F34",
+    "BK10-F35"
+   ],
+   "interpretation": "INTERPRETATION: ClimbOS scoring already favours demand capture, which matches Sharp's own exception for recency categories and suits tiny budgets. The gap is recurring consumer businesses with real budgets, where the engine has no notion of reach, continuity or physical availability.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: use the frequency dimension in scoring: for recurring B2C, soften the intent penalty on broad-reach families (paid_social, video, local, traditional) by a bounded amount when the budget band supports them",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: a physical-availability check (hours, ordering routes, stockists, booking friction) runs before any awareness spend for consumer businesses",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed rule: paid reach plans spread spend evenly by month unless the owner names a seasonal peak",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: reach-channel stop rules use a 3-month window and new-buyer trend, not 8-week inquiries",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: whether reach channels beat demand capture for small recurring-B2C budgets is unknown; run a geo holdout when budget allows",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "shared/acquisition/scoring.ts (priors, FACTORS, STAGE_INTENT); shared/acquisition/library.ts (Channel attributes); shared/playbooks/contracts.ts PB-social-content; skills/meta-ads/SKILL.md; skills/social-visual-briefs/SKILL.md",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/acquisition/scoring.ts:23",
+     "shared/acquisition/scoring.ts:212",
+     "shared/acquisition/scoring.ts:224",
+     "shared/acquisition/library.ts:63",
+     "docs/growth-intelligence/books/05_channel_strategy.md §1 (demand creation vs capture)",
+     "docs/growth-intelligence/books/09_social_community.md §3"
+    ],
+    "note": "Book 05 separates demand creation and capture but gives no reach/continuity rule; Book 09 §3 says repetition builds memory but focuses on points of view, not brand cues. Reach and penetration do not enter channel scoring."
+   },
+   "disagreements": "Sharp: reach light and non-buyers continuously; mass media is efficient. ClimbOS: intent-weighted scoring with tiny budgets and per-channel learning windows. Decided by recency vs habitual category, budget band, and frequency. meta-ads SKILL.md:114 ('never open with the brand name') vs Sharp's branding hurdle: reconcile by requiring a brand cue early (product in use, distinctive colour or name in frame) without a throat-clearing intro.",
+   "eval_case_ids": [
+    "EV-BK10-K5-1",
+    "EV-BK10-K5-2",
+    "EV-BK10-K5-3",
+    "EV-BK10-K5-4"
+   ]
+  },
+  {
+   "id": "BK10-K6",
+   "name": "Price promotion break-even and reach check",
+   "decision": "Whether to run a temporary discount, how deep, and what it can and cannot achieve.",
+   "business_models": [
+    "dtc_ecommerce",
+    "food_beverage",
+    "physical_retail",
+    "local_services",
+    "hospitality",
+    "subscription_commerce",
+    "b2c_saas"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "contribution margin at normal price",
+    "discount depth",
+    "expected volume lift (own history or a range)",
+    "share of promo buyers who bought before",
+    "whether rivals usually match"
+   ],
+   "prerequisites": [
+    "owner confirms margin; ClimbOS never invents an offer"
+   ],
+   "branches": [
+    {
+     "if": "expected lift < required lift = d/(m - d)",
+     "then": "the promotion loses contribution; recommend not running it or a shallower cut"
+    },
+    {
+     "if": "goal is new customers for an established brand",
+     "then": "say promo buyers are mostly existing buyers; prefer reach and availability"
+    },
+    {
+     "if": "new product trial or perishable capacity (empty slots, end of day)",
+     "then": "outside Sharp's evidence; a targeted, short offer can be rational (yield management)"
+    },
+    {
+     "if": "promotions are frequent (>1 in 4 weeks)",
+     "then": "warn about lowered reference price and promotion addiction; plan to wind down"
+    },
+    {
+     "if": "retailer requires promotions to keep listing",
+     "then": "evaluate against the listing objective, run the minimum needed"
+    }
+   ],
+   "steps": [
+    "Compute required lift (code)",
+    "Compare with expected lift; if unknown use elasticity -2.5 as a labelled central guess",
+    "Subtract a post-promo dip if stockpiling is possible",
+    "Prefer shallow cuts and feature/visibility support over depth",
+    "Report incremental contribution, not volume"
+   ],
+   "exceptions_failure_modes": [
+    "Ignoring baseline sales sold at a discount",
+    "Counting promo volume as new customers",
+    "Deep cuts eroding the reference price"
+   ],
+   "requirements": {
+    "cash": "forgone margin",
+    "labor": "low",
+    "capability": "sales by day and by customer",
+    "measurement": "baseline vs promo period; share of promo buyers who are new"
+   },
+   "metrics": [
+    "incremental contribution",
+    "share of promo buyers new to the brand",
+    "post-promo dip",
+    "promo frequency"
+   ],
+   "guardrails": [
+    "No discount in a first lifecycle touch (agrees with skills/retention-lifecycle)",
+    "No fake urgency",
+    "Owner confirms every offer"
+   ],
+   "stop_review": [
+    "Stop repeating a promo whose incremental contribution was negative",
+    "Review promo frequency quarterly"
+   ],
+   "alternatives": [
+    "No margin data: block the promotion recommendation until the owner gives it",
+    "No history: run one shallow, short test with a clear baseline window"
+   ],
+   "author_refs": [
+    "BK10-F27",
+    "BK10-F28",
+    "BK10-F29",
+    "BK10-F30",
+    "BK10-F34"
+   ],
+   "interpretation": "INTERPRETATION: the break-even formula is exact; the elasticity values are dated FMCG averages and only a fallback. Perishable-capacity offers (salons, restaurants) are a different economic problem Sharp doesn't address.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: add promoBreakEven(margin, discount) to shared/analysis/decisions.ts returning required lift = d/(m-d) and blocking promos where d >= m",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed rule: a promotion play may not claim new-customer acquisition for an established brand without new-buyer data",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: no promotion recommendation without owner-confirmed margin",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed rule: elasticity -2.5 is only a labelled fallback, never a forecast",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/analysis/decisions.ts (new calculator); skills/retention-lifecycle/SKILL.md (offer discipline); shared/playbooks/contracts.ts PB-pricing-test",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/analysis/decisions.ts:33",
+     "skills/retention-lifecycle/SKILL.md:43",
+     "shared/playbooks/contracts.ts:263"
+    ],
+    "note": "Agrees with retention-lifecycle's discount discipline; adds the missing deterministic break-even and the reach/new-customer caveat."
+   },
+   "disagreements": "Some local plays use offers to fill perishable capacity; that is consistent with Sharp only as capacity management, not brand growth. Decided by whether the unsold unit perishes.",
+   "eval_case_ids": [
+    "EV-BK10-K6-1",
+    "EV-BK10-K6-2",
+    "EV-BK10-K6-3",
+    "EV-BK10-K6-4"
+   ]
+  },
+  {
+   "id": "BK10-K7",
+   "name": "Loyalty programs, cross-sell and VIP clubs: what they can do and how to measure them",
+   "decision": "Whether to start a loyalty/points/VIP program or cross-sell push, what outcome to promise, and how to evaluate it without selection bias.",
+   "business_models": [
+    "physical_retail",
+    "food_beverage",
+    "local_services",
+    "hospitality",
+    "dtc_ecommerce",
+    "financial_services"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "pre-period purchase history for members and non-members",
+    "who joins (existing heavy, existing light, new)",
+    "program cost incl. rewards given to people who would buy anyway"
+   ],
+   "prerequisites": [
+    "consented contacts for any messaging (existing rule)"
+   ],
+   "branches": [
+    {
+     "if": "goal is growth (new buyers)",
+     "then": "a loyalty program is a weak lever: it recruits existing buyers; pair with reach"
+    },
+    {
+     "if": "goal is a consented contact list, data or a reason to message",
+     "then": "a low-cost card/club is reasonable; evaluate on list size and cost"
+    },
+    {
+     "if": "evaluation compares members vs non-members",
+     "then": "reject as biased; use pre/post with the same people, a holdout or the double-jeopardy benchmark"
+    },
+    {
+     "if": "cross-sell target of a big jump in products per customer",
+     "then": "flag as unlikely; differences between rivals are small"
+    }
+   ],
+   "steps": [
+    "State the program's real job",
+    "Cost rewards paid to buyers who would have bought anyway",
+    "Set an evaluation design before launch (holdout or pre/post on same customers)",
+    "Expect small effects"
+   ],
+   "exceptions_failure_modes": [
+    "Endowed-progress cards raise completion rates; completion isn't incremental sales",
+    "Coalition programs with competitor-store recruitment are rare"
+   ],
+   "requirements": {
+    "cash": "rewards + tool",
+    "labor": "staff habits",
+    "capability": "POS with customer IDs",
+    "measurement": "holdout or pre/post"
+   },
+   "metrics": [
+    "incremental visits vs holdout",
+    "share of members who were new",
+    "reward cost per incremental visit"
+   ],
+   "guardrails": [
+    "Never report member-vs-non-member gaps as program effect",
+    "Consent rules unchanged"
+   ],
+   "stop_review": [
+    "If incremental visits vs holdout are ~0 after 90 days, keep only if the list/data job justifies the cost"
+   ],
+   "alternatives": [
+    "No POS IDs: measure total visits vs prior-year same weeks, labelled weak",
+    "Small shop: a simple stamp card with no big promise"
+   ],
+   "author_refs": [
+    "BK10-F6",
+    "BK10-F15",
+    "BK10-F31"
+   ],
+   "interpretation": "INTERPRETATION: the plays-local endowed-progress card is well supported for card completion but its 'visit frequency' tracking will overstate effects through selection and buyer moderation.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: loyalty-program plays state their job (list, data, frequency nudge) and cannot be the only retention or growth play",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed rule: evaluation of loyalty/VIP plays requires a holdout or same-customer pre/post; member vs non-member comparisons are rejected",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed rule: diagnosis playStage treats 'loyalty program' as retention only when paired with a churn-reason fix",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/plays-local/SKILL.md #11 and #20; skills/retention-lifecycle/SKILL.md; shared/agents/diagnosis.ts:157 (playStage loyalty → retention)",
+   "relation_to_existing": {
+    "type": "contradicts",
+    "targets": [
+     "skills/plays-local/SKILL.md:128-137",
+     "skills/plays-local/SKILL.md:218-227",
+     "shared/agents/diagnosis.ts:157"
+    ],
+    "note": "plays-local rates the loyalty card 'evidence strong, predictability 4' on completion-rate evidence and tracks visit frequency of members; Sharp's evidence says the sales effect is small and the measurement biased."
+   },
+   "disagreements": "plays-local (Nunes & Drèze field test) vs Sharp ch11. Both can be right: the card raises completion, which may barely change total visits. Decided by a holdout on total visits per customer.",
+   "eval_case_ids": [
+    "EV-BK10-K7-1",
+    "EV-BK10-K7-2",
+    "EV-BK10-K7-3"
+   ]
+  },
+  {
+   "id": "BK10-K8",
+   "name": "Applicability gate: when Ehrenberg-Bass laws are defaults vs heuristics for a small business",
+   "decision": "Which BK10 rules the engine applies as defaults, which as contextual heuristics, and which it sets aside, given category, purchase frequency, market size, capacity and stage.",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "all"
+   ],
+   "evidence_required": [
+    "customerType",
+    "frequency",
+    "number of interchangeable rivals",
+    "reachable category buyers or accounts",
+    "capacity (newCustomersPerMonth)",
+    "stage / customer count",
+    "salesMotion",
+    "contract vs transactional"
+   ],
+   "prerequisites": [
+    "acquisition profile dimensions (scoring.ts DIMENSIONS)"
+   ],
+   "branches": [
+    {
+     "if": "B2C, recurring/occasional, many substitutes, capacity not binding",
+     "then": "DEFAULT: K1, K3, K5 (reach/continuity), K6, K7 apply; positioning in category-buyer mode (K4)"
+    },
+    {
+     "if": "local service with emergency/recency buying (plumber, locksmith, lawyer)",
+     "then": "HEURISTIC: demand capture first; K5 reach only as cheap always-on; K2 acquisition emphasis holds"
+    },
+    {
+     "if": "niche B2B, few hundred reachable accounts, sales-led",
+     "then": "HEURISTIC: 'reach all category buyers' becomes 'cover the full reachable account list over time' rather than mass media; Dunford positioning default; K3 Pareto not applicable to contracts"
+    },
+    {
+     "if": "capacity-limited service (fully booked)",
+     "then": "SET ASIDE growth-by-penetration until capacity grows; PB-capacity and pricing first (diagnosis.ts:91-96,130)"
+    },
+    {
+     "if": "pre-launch or < ~20 customers",
+     "then": "HEURISTIC: no laws can be checked on own data; use only: plant basic memories, consistent cues, grow area by area; Dunford exploration mode"
+    },
+    {
+     "if": "subscription SaaS with churn above reference",
+     "then": "K2 retention branch overrides Sharp's acquisition emphasis"
+    }
+   ],
+   "steps": [
+    "Read profile dimensions",
+    "Assign each BK10 framework a status: default / heuristic / set aside",
+    "Pass statuses into the plan brief so agents cite them with the right strength"
+   ],
+   "exceptions_failure_modes": [
+    "Dimensions inferred with low confidence",
+    "Hybrid businesses (B2B2C, marketplaces) need per-side treatment"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "none",
+    "capability": "profile",
+    "measurement": "none"
+   },
+   "metrics": [
+    "share of plans where status was set",
+    "bench cases passing"
+   ],
+   "guardrails": [
+    "Never cite a BK10 law as certain for niche B2B, capacity-limited or pre-launch businesses (owner decision 2026-10-20)"
+   ],
+   "stop_review": [
+    "Re-gate when dimensions change"
+   ],
+   "alternatives": [
+    "Unknown dimensions: ask the 1-3 dimension questions (scoring.ts dimensionsToConfirm) before applying any default"
+   ],
+   "author_refs": [
+    "BK10-F4",
+    "BK10-F26",
+    "BK10-F35",
+    "BK10-F1",
+    "BK10-F10"
+   ],
+   "interpretation": "INTERPRETATION: Sharp claims universality (Preface 'Examples in this book'; FAQ 'What about small brands?'), but the evidence is overwhelmingly mature, repeat-purchase consumer categories with unconstrained supply. The gate turns the owner's decision into code-level statuses.",
+   "proposed_rules": [
+    {
+     "rule": "proposed rule: compute a BK10 applicability status per plan from customerType, frequency, salesMotion, capacity and customer count; agents must phrase BK10 claims at that strength",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed rule: when capacity utilisation >= 0.8 (diagnosis.ts), penetration-growth advice is suppressed",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed rule: in sales-led niche B2B, translate 'reach all buyers' into list coverage of the reachable account universe using only owner-sourced or public data (no assumed prospect database)",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed rule: whether double jeopardy holds for small SaaS categories is unknown; collect owner data in bench before using it as a default",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (new applicability reading) or a small helper beside shared/acquisition/scoring.ts; skills/growth-strategy/SKILL.md",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "shared/acquisition/scoring.ts:13-30",
+     "shared/agents/diagnosis.ts:91-96",
+     "shared/acquisition/library.ts:388"
+    ],
+    "note": "Uses existing dimensions and SERVICE_TYPES; nothing in the library gates brand-science claims by condition today."
+   },
+   "disagreements": "Sharp's FAQ asserts the laws apply to small and B2B brands; the owner's decision and the evidence base say heuristic there. The concrete-supplier table (F4) is the only B2B data shown. Decided by bench evidence on owner data over time.",
+   "eval_case_ids": [
+    "EV-BK10-K8-1",
+    "EV-BK10-K8-2",
+    "EV-BK10-K8-3"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "Add a mode choice before step 6: niche-differentiation (current default for B2B, SaaS, complex or early products) vs category-buyer mode (consumer repeat-purchase or everyday local services with many substitutes). In category-buyer mode allow 'all category buyers in the service area' as the segment, make the swap test advisory, and add a brand-cue consistency check. Add a fame/uniqueness note for distinctive assets with 'unmeasured' labels when no survey exists.",
+   "why": "Current rules (line 38 Big Fish default, line 57 swap test, line 70 'never everyone') contradict Sharp for categories his evidence covers; owner decided Sharp is the default there.",
+   "refs": [
+    "BK10-K4",
+    "BK10-F17",
+    "BK10-F22",
+    "BK10-F23"
+   ]
+  },
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "In goal sizing, decompose sales into buyers x purchases per buyer and show the penetration-led split for repeat-purchase B2C; in the retention-leak diagnosis (line 33) add 'unless churn is normal for the business's size and mostly uncontrollable; acquisition continues at least at replacement level'. Add the BK10 applicability gate statuses.",
+   "why": "No goal decomposition today; retention-first wording is unconditional.",
+   "refs": [
+    "BK10-K1",
+    "BK10-K2",
+    "BK10-K8"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "Add: VIP/heavy-buyer plays carry the buyer-moderation caveat; loyalty programs state their job; evaluation via holdout or same-customer pre/post; ban '5x cheaper to retain' claims. Keep existing discount discipline (agrees with Ch 10).",
+   "why": "Sharp ch 3, 4, 11.",
+   "refs": [
+    "BK10-K3",
+    "BK10-K7",
+    "BK10-K2"
+   ]
+  },
+  {
+   "skill": "skills/plays-local/SKILL.md",
+   "change": "Play #11 endowed-progress card: change Track from member 'visit frequency' to total visits per customer vs prior period or holdout; note completion rate is not incremental sales; lower predictability until a holdout reads out. Play #20 SMS VIP club: add the selection/moderation caveat for revenue attribution.",
+   "why": "Member-vs-non-member and member trend comparisons are biased (ch 11, ch 4).",
+   "refs": [
+    "BK10-K7",
+    "BK10-F31",
+    "BK10-F15"
+   ]
+  },
+  {
+   "skill": "skills/meta-ads/SKILL.md",
+   "change": "Keep 'never open with a throat-clearing brand intro' but add a brand-linkage check: a brand cue (product in use with visible branding, distinctive colour or name) appears in the first seconds/frame and at the end, consistent with the brand kit across ads.",
+   "why": "Only ~16% of exposures were noticed and correctly branded in Sharp's cited study; branding is a hurdle, not a decoration.",
+   "refs": [
+    "BK10-K5",
+    "BK10-F25",
+    "BK10-F23"
+   ]
+  },
+  {
+   "skill": "skills/social-visual-briefs/SKILL.md",
+   "change": "Alongside 'logo small, never the focal point' (line 54), require a consistent distinctive cue (colour, character, layout) across every post in a series so content is attributable to the brand.",
+   "why": "Distinctiveness and consistency build mental availability (ch 8, ch 12).",
+   "refs": [
+    "BK10-K4",
+    "BK10-F23"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/reference/base-rates.md",
+   "change": "Add a short 'brand science reference' section, graded and labelled dated: Pareto top-20% ~50% annual (FMCG), promo elasticity -2.3 to -2.6 average (FMCG), perceived differentiation ~10% of users (consumer categories). Each with 'not for B2B contracts or SaaS' scope notes.",
+   "why": "Gives agents correct defaults instead of folk numbers (80/20, 5x).",
+   "refs": [
+    "BK10-F14",
+    "BK10-F28",
+    "BK10-F22"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/acquisition/scoring.ts:23",
+   "gap": "The 'frequency' dimension (one_time/occasional/recurring) is declared but never read by priors() (scoring.ts:228-275), so purchase frequency cannot change channel ranking.",
+   "proposed_change": "Use frequency with customerType: for recurring B2C, apply a bounded audience/intent adjustment to broad-reach families (paid_social, video_audio, local, traditional) when the budget band allows; leave one_time/recency categories unchanged.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/acquisition/scoring.ts:210-212,224",
+   "gap": "No reach or penetration factor: the 8 factors and STAGE_INTENT (unaware=30 vs high_intent=95, weight 0.2) structurally down-rank channels that build mental availability among light/non-buyers. Correct for tiny budgets and recency categories, but there is no condition where reach counts.",
+   "proposed_change": "Candidate v2: optional 'reach' factor (share of category buyers in area reachable per month) with weight 0 by default and >0 only for recurring B2C at budget band >= $1,000-5,000; validate on bench before enabling.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/acquisition/library.ts:63-64",
+   "gap": "Channel has 'scale' (organic scalability) but no attribute for reach breadth or for always-on vs burst scheduling, so continuity advice can't be generated deterministically.",
+   "proposed_change": "Add optional channel attributes reachBreadth (0-2) and schedule ('always_on'|'burst_ok'); scorecardText notes even monthly spend for reach channels.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:76",
+   "gap": "COMPETING.retention names only budget or seasonality; misses uncontrollable defection (moved, closed, no longer needs) and size-related churn (retention double jeopardy).",
+   "proposed_change": "Extend the competing explanation text; when the owner gives churn reasons, show the controllable share.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:131,149",
+   "gap": "When retention binds, the brief says 'Don't add demand above it' with no arithmetic on the acquisition needed just to hold the base; Sharp (ch 3) shows acquisition is required even to maintain size.",
+   "proposed_change": "Add deterministic readings: steadyStateCeiling = newCustomersPerMonth/monthlyChurn and replacementAcquisition = monthlyChurn x activeCustomers (needs an activeCustomers input); brief says keep acquisition at least at replacement.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:157",
+   "gap": "playStage maps any 'loyalty' wording to retention, so a points or stamp-card play satisfies lintDiagnosisFit for a retention constraint even though loyalty programs show small effects (ch 11).",
+   "proposed_change": "Require a churn-reason fix (activation, payment recovery, service) alongside a loyalty play for the retention fit check, or warn when a loyalty program is the only retention play.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:33-234",
+   "gap": "No promotion break-even calculator; promo maths would be done in model prose.",
+   "proposed_change": "Add promoBreakEven({margin, discount, expectedLift?}) returning requiredLift = d/(m-d), incremental contribution if expectedLift given, and error when d >= m; expose via calculate().",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:353-369",
+   "gap": "PB-social-content stop rule 'No inquiries after 8 weeks' judges only demand capture; no consistency guardrail on brand cues.",
+   "proposed_change": "Add guardrail 'same distinctive cues across posts' and note the stop rule measures inquiries only; brand-reach effects need a longer window.",
+   "priority": "P3"
+  }
+ ]
+}

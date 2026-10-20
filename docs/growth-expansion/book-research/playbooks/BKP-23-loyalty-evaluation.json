@@ -1,0 +1,121 @@
+{
+ "id": "BKP-23",
+ "version": 1,
+ "slug": "loyalty-evaluation",
+ "title": "Loyalty programmes judged with a holdout",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether a loyalty card, VIP club or cross-sell programme adds sales, judged against a holdout rather than members vs non-members.",
+ "business_types": [
+  "local services",
+  "retail",
+  "consumer"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Owner runs or plans a loyalty programme"
+ ],
+ "exclusions": [
+  "No loyalty programme planned or running"
+ ],
+ "required_inputs": [
+  "Member and non-member counts and visits",
+  "Ability to hold out a group"
+ ],
+ "evidence_requirements": [
+  "pre-period purchase history for members and non-members",
+  "who joins (existing heavy, existing light, new)",
+  "program cost incl. rewards given to people who would buy anyway"
+ ],
+ "missing_data_behavior": [
+  "No holdout possible: label results 'members already buy more'; no uplift claim."
+ ],
+ "decision_branches": [
+  {
+   "if": "Holdout possible",
+   "then": "Compare members vs holdout on visits per customer."
+  },
+  {
+   "if": "Loyalty is the only retention play",
+   "then": "Warn; add a retention play that works on value."
+  }
+ ],
+ "implementation_steps": [
+  "State the program's real job",
+  "Cost rewards paid to buyers who would have bought anyway",
+  "Set an evaluation design before launch (holdout or pre/post on same customers)",
+  "Expect small effects"
+ ],
+ "dependencies": [
+  "consented contacts for any messaging (existing rule)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "rewards + tool",
+  "labor": "staff habits",
+  "capability": "POS with customer IDs",
+  "measurement": "holdout or pre/post"
+ },
+ "metrics": [
+  "incremental visits vs holdout",
+  "share of members who were new",
+  "reward cost per incremental visit"
+ ],
+ "guardrails": [
+  "Card completion is not extra sales.",
+  "Never report member-vs-non-member gaps as program effect",
+  "Consent rules unchanged"
+ ],
+ "alternatives_when_constrained": [
+  "No POS IDs: measure total visits vs prior-year same weeks, labelled weak",
+  "Small shop: a simple stamp card with no big promise"
+ ],
+ "stop_conditions": [
+  "If incremental visits vs holdout are ~0 after 90 days, keep only if the list/data job justifies the cost"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Endowed-progress cards raise completion rates; completion isn't incremental sales",
+  "Coalition programs with competitor-store recruitment are rare"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed rule: loyalty-program plays state their job (list, data, frequency nudge) and cannot be the only retention or growth play",
+    "from": "BK10-K7"
+   },
+   {
+    "rule": "proposed rule: diagnosis playStage treats 'loyalty program' as retention only when paired with a churn-reason fix",
+    "from": "BK10-K7"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed rule: evaluation of loyalty/VIP plays requires a holdout or same-customer pre/post; member vs non-member comparisons are rejected",
+    "from": "BK10-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/plays-local/SKILL.md (#11, #20)",
+  "skills/retention-lifecycle/SKILL.md"
+ ],
+ "reconciliation_note": "Contradicts the 'evidence strong' rating in plays-local (RECONCILIATION R06).",
+ "member_frameworks": [
+  "BK10-K7"
+ ],
+ "source_references": [
+  "BK10-F6",
+  "BK10-F15",
+  "BK10-F31"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK10-K7-1",
+  "EV-BK10-K7-2",
+  "EV-BK10-K7-3"
+ ]
+}

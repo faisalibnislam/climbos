@@ -77,3 +77,27 @@ The package was authored as knowledge for ClimbOS. It is not evidence that a dep
 - A validation report: [blog-research/VALIDATION.md](blog-research/VALIDATION.md).
 
 Paywalled, blocked and unread items are listed in its README.
+
+## Book research: nine owner-supplied books (2026-10-20)
+
+[book-research/](book-research/README.md) adds source-grounded knowledge from nine owner-supplied books:
+- *7 Powers*
+- *Forget the Funnel*
+- *Founding Sales*
+- *How Brands Grow* Parts 1 and 2
+- *Lean Analytics*
+- *Making Websites Win*
+- *Sales Pitch*
+- *Traction*
+
+What it contains:
+- Book inventory, editions, hashes, watermarks and coverage: [book-research/README.md](book-research/README.md).
+- Nine guides, one per book: [book-research/guides/](book-research/guides/).
+- 27 proposed playbooks (BKP-01..27). Each versions the PB-* or BRP-* guidance it builds on: [book-research/playbooks/catalog.json](book-research/playbooks/catalog.json).
+- 25 proposed skill revisions as diffs, not applied: [book-research/skill-proposals/](book-research/skill-proposals/README.md).
+- Reconciliation and the rule-class policy: [book-research/RECONCILIATION.md](book-research/RECONCILIATION.md).
+- 213 synthetic cases, with prompts and grading keys kept separate: [book-research/evaluations/prompts.json](book-research/evaluations/prompts.json) and [book-research/evaluations/expected.json](book-research/evaluations/expected.json).
+- A verified runtime-code backlog of 46 items: [book-research/BACKLOG.md](book-research/BACKLOG.md).
+- A validation report: [book-research/VALIDATION.md](book-research/VALIDATION.md).
+
+Unreadable figures and other unprocessed material are listed in each guide's last section.

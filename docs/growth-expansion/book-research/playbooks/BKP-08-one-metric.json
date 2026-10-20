@@ -1,0 +1,193 @@
+{
+ "id": "BKP-08",
+ "version": 1,
+ "slug": "one-metric",
+ "title": "One actionable metric per stage, with a sourced line in the sand",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Which single metric the plan should move now, how its target is sourced, and how to read it by cohort rather than in aggregate.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Plan names a North Star or target",
+  "Owner reports cumulative or vanity numbers"
+ ],
+ "exclusions": [
+  "No numbers at all yet (set a baseline period first)"
+ ],
+ "required_inputs": [
+  "The metric's numerator, denominator and period",
+  "Target source: business-model maths, owner baseline, or dated outside figure"
+ ],
+ "evidence_requirements": [
+  "the metric's definition (numerator, denominator, window)",
+  "the decision it would change",
+  "whether it is cumulative or per period",
+  "the riskiest assumption now",
+  "business-model maths that implies a required value, if available",
+  "the owner's own trend for the metric",
+  "customer start dates and activity or payments by month",
+  "at least 3 cohorts with 3+ complete months for a survival read"
+ ],
+ "missing_data_behavior": [
+  "No baseline: first period sets it; no target.",
+  "Cohorts below the minimum: aggregate read labelled weak."
+ ],
+ "decision_branches": [
+  {
+   "if": "Metric is cumulative (total to date, list size)",
+   "then": "Replace with a rate or per-period count."
+  },
+  {
+   "if": "Ad-funded media business",
+   "then": "Inventory metrics allowed when paired with revenue per 1,000."
+  },
+  {
+   "if": "Target taken from a book benchmark",
+   "then": "Label it dated outside context; prefer the owner's own baseline."
+  }
+ ],
+ "implementation_steps": [
+  "List the 3-5 metrics the owner watches.",
+  "For each, write the action it would trigger if it rose or fell.",
+  "Convert cumulative counts to period flows or rates.",
+  "Pair each outcome with the paired metric that can move against it (conversion with order value; signups with activation).",
+  "Name the riskiest question.",
+  "Pick the metric that answers it.",
+  "Write the line and its source (model maths, own baseline, or dated external norm).",
+  "Group customers by start month.",
+  "Compare at equal ages.",
+  "Compute churn by cohort in code."
+ ],
+ "dependencies": [
+  "a stated business model (what the business is paid for)",
+  "a diagnosed constraint or stage (BK12-K3)",
+  "payments or usage data connected (convex computeCohorts) or an owner export"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "minutes",
+  "capability": "none",
+  "measurement": "a definition per metric"
+ },
+ "metrics": [
+  "share of signups active in the period",
+  "new paying customers per period",
+  "revenue per visitor",
+  "revenue per customer",
+  "the chosen OMTM",
+  "one guardrail",
+  "cohort retention by month of age",
+  "paid churn",
+  "first-month revenue per cohort",
+  "candidate leading indicator rate"
+ ],
+ "guardrails": [
+  "Each target carries its source tag.",
+  "Averages across cohorts of very different size are not used.",
+  "never accept an all-time count as progress",
+  "show count and denominator with any rate",
+  "record every line change with a reason and date",
+  "immature cells labelled",
+  "counts shown beside percentages"
+ ],
+ "alternatives_when_constrained": [
+  "no analytics connected: use the owner's own period counts (bookings this month) as the outcome, labelled self-reported",
+  "no tracking: owner tallies the metric by hand weekly; or ClimbOS measures a baseline week first",
+  "no billing connection: owner's reported monthly churn, labelled self-reported; or a manual list of customers by start month"
+ ],
+ "stop_conditions": [
+  "review when the business model or stage changes",
+  "hit: switch",
+  "flat for 3+ readings below the line: change strategy or metric",
+  "line changed twice without new evidence: stop and review",
+  "re-read monthly as cohorts mature"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Media and UGC businesses where attention is the inventory (BK12-F23).",
+  "Rates on tiny denominators look precise but are fragile (Book 12 §4: show counts beside percentages).",
+  "Single-metric focus can hide harm (refunds, churn); pair it with guardrails (Book 12 §1; BK06 OEC).",
+  "Lines borrowed from 2013 aggregates mislead small businesses.",
+  "Tiny cohorts: show counts ('3 of 10').",
+  "Correlation mistaken for a lever."
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: warn when a North Star or play outcome is a cumulative or all-time count ('total', 'cumulative', 'all-time', 'to date', 'list size'); suggest the per-period flow or rate.",
+    "from": "BK12-K1"
+   },
+   {
+    "rule": "proposed: for media_creator businesses monetised by impressions or sponsorships, allow inventory metrics as the North Star only when the plan pairs them with revenue per 1,000 (computed in code) and an audience-churn reading.",
+    "from": "BK12-K1"
+   },
+   {
+    "rule": "proposed: when three consecutive weekly readings show diminishing gains below the line, the plan suggests switching metric or strategy rather than more of the same.",
+    "from": "BK12-K2"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: every North Star target carries a source tag: 'model' (computed from goal and price in code), 'owner baseline', or 'external, dated' (with year); external dated targets are shown as orientation and never drive a pass/fail verdict.",
+    "from": "BK12-K2"
+   },
+   {
+    "rule": "proposed: churn shown to owners states its type (paid vs free; customer vs revenue) and denominator method.",
+    "from": "BK12-K5"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: when computeCohorts has 3+ cohorts with 3+ complete months, diagnose() uses observed cohort retention for the retention reading and labels the source; owner-typed churn is the fallback.",
+    "from": "BK12-K5"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/agents/specs.ts lintStageMetric",
+  "skills/growth-strategy/SKILL.md (North Star by stage)",
+  "docs/growth-expansion/blog-research/playbooks/BRP-18-cohort-retention.json"
+ ],
+ "reconciliation_note": "Duplicates BRP-18 on cohorts; adds the vanity filter and target sourcing.",
+ "member_frameworks": [
+  "BK12-K1",
+  "BK12-K2",
+  "BK12-K5"
+ ],
+ "source_references": [
+  "BK12-F1",
+  "BK12-F2",
+  "BK12-F3",
+  "BK12-F4",
+  "BK12-F23",
+  "BK12-F11",
+  "BK12-F12",
+  "BK12-F13",
+  "BK12-F5",
+  "BK12-F51",
+  "BK12-F14",
+  "BK12-F6",
+  "BK12-F8",
+  "BK12-F20",
+  "BK12-F33"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK12-K1-1",
+  "EV-BK12-K1-2",
+  "EV-BK12-K2-1",
+  "EV-BK12-K2-2",
+  "EV-BK12-K2-3",
+  "EV-BK12-K5-1",
+  "EV-BK12-K5-2",
+  "EV-BK12-K5-3"
+ ]
+}

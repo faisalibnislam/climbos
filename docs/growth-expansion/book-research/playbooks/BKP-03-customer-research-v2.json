@@ -1,0 +1,211 @@
+{
+ "id": "BKP-03",
+ "version": 1,
+ "slug": "customer-research-v2",
+ "title": "Customer research: who to learn from, and interviews vs survey",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Which customers to learn from for a given decision, which method fits the pool size, and how to turn coded answers into one chosen Job.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Messaging, targeting or positioning decisions",
+  "Finding why people stall or leave",
+  "Few customers and no usable analytics"
+ ],
+ "exclusions": [
+  "No consented way to contact customers (use public sources instead)"
+ ],
+ "required_inputs": [
+  "Customer list with consent to contact",
+  "The decision the research must inform"
+ ],
+ "evidence_requirements": [
+  "List of paying customers with start date",
+  "A value-realized signal per customer (usage, renewals, repeat orders, owner judgement)",
+  "Consent basis to contact customers for research",
+  "Coded research answers (K1/K2) with respondent IDs",
+  "Per-Job signals for urgency, willingness to pay, support burden, retention, expansion, reachability",
+  "15+ interviews per stage with target customers (not friends)",
+  "how they solve it today",
+  "commitments: follow-up, referrals, pre-payment"
+ ],
+ "missing_data_behavior": [
+  "Small pool: census of recent best-fit payers; no percentages.",
+  "No customers yet: problem interviews with prospects (PB-interviews, Mom Test rules)."
+ ],
+ "decision_branches": [
+  {
+   "if": "Decision is messaging or targeting",
+   "then": "Recent best-fit payers (about the last 12 months)."
+  },
+  {
+   "if": "Decision is why people drop off",
+   "then": "Contrast groups: stalled, churned, didn't buy."
+  },
+  {
+   "if": "Pool large enough for a survey (authors' rule of thumb about 500)",
+   "then": "Short survey plus a few interviews; counts rank themes within the sample only."
+  }
+ ],
+ "implementation_steps": [
+  "State the decision",
+  "Filter customers: felt the problem, pay without hesitation, ongoing need, value realized, started 3-6 months ago (up to 12)",
+  "Count the pool and choose method",
+  "Ask what happened in sequence (old way, trigger, search, choice, certainty moment, new capability)",
+  "Keep raw answers with respondent counts",
+  "Tag every answer with struggle, motivation and desired-outcome themes, one dimension at a time",
+  "Count struggle themes as n of N respondents",
+  "For each top struggle, filter to its respondents and count their motivations and outcomes",
+  "Recruit target people (not friends).",
+  "Run a script: context, ranking, how they solve it now.",
+  "Ask for a commitment (follow-up, intro, pre-order)."
+ ],
+ "dependencies": [
+  "At least some customers who have solved their problem with the product",
+  "A named decision the research must inform (Book 02 §1)",
+  "At least ~10 coded respondents, or labelled thin",
+  "a named target segment",
+  "a script that separates problem from solution"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None (optional incentives)",
+  "labor": "Owner 5-10 hours for 10-15 interviews; less for a survey",
+  "capability": "Contact list, survey form or calendar",
+  "measurement": "Respondent and invite counts; response rate"
+ },
+ "metrics": [
+  "Invited, responded, usable responses",
+  "Share of answers that describe events rather than opinions",
+  "Respondents per theme",
+  "Conditional share of motivation within a struggle",
+  "After choosing: signup and first-value rates for the chosen Job's traffic",
+  "share of interviews with an existing workaround",
+  "share offering a commitment",
+  "problem rank counts by segment"
+ ],
+ "guardrails": [
+  "Commitments outweigh enthusiasm (Mom Test over interview-scoring rubrics).",
+  "Theme counts are not prevalence estimates.",
+  "No synthetic respondents or invented quotes",
+  "Research invitations contain no promotion",
+  "Owner approves every send; sends only from owner's channels with a consent basis",
+  "Every theme count shows n of N and pool",
+  "Statement words traceable to quotes",
+  "Criteria scores cite evidence or say unknown",
+  "never quote an interviewee publicly without consent",
+  "no cold outreach via ClimbOS's own email service for recruitment"
+ ],
+ "alternatives_when_constrained": [
+  "No list or consent: audience research (BK08-K2) or public review mining (voc-research)",
+  "Tiny pool (<10 best customers): 3-5 interviews plus competitor reviews, labelled thin",
+  "No research: owner's notes from 5 best clients coded the same way, labelled owner-reported",
+  "Very small sample: keep Jobs as hypotheses and test messages per Job in ads or email",
+  "can't find 15 people: treat that as a reachability warning; use paid research panels or existing customers"
+ ],
+ "stop_conditions": [
+  "Survey under 10 usable answers after 14 days: switch to interviews (CH-C2)",
+  "Interviews stop adding new struggle themes: stop",
+  "Answers scattered across many Jobs after ~10: narrow the segment (PB-interviews revise)",
+  "Chosen Job's messaging shows no change in signup or first-value rate after the planned window: revisit choice or execution",
+  "New research shows the Job's trigger changed: redo",
+  "after 15 interviews per segment, decide: proceed, narrow segment, or drop"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Only happy customers interviewed for a churn question (selection bias)",
+  "Long-tenured customers cannot recall the trigger",
+  "Trying to serve all Jobs at once (book's top mistake)",
+  "Counts read as market share",
+  "Leading questions and compliments (also BK05).",
+  "Scoring body language is subjective; weight commitments more."
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: PB-interviews v2 chooses the recruitment pool from the decision: best-fit recent payers for targeting/messaging decisions; contrast pools (stalled, churned, non-buyers) for activation/conversion/retention diagnoses.",
+    "from": "BK08-K1"
+   },
+   {
+    "rule": "proposed: voc-research outputs 2-3 Job statements built from the conditional cross-tab, each with n of N, and a one-Job recommendation with the runner-up.",
+    "from": "BK08-K3"
+   },
+   {
+    "rule": "proposed: when the most frequent Job is not the best on payment, retention or reachability, show both and let the owner choose.",
+    "from": "BK08-K3"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: the 500-customer survey threshold and 10-15% response rate are shown as author heuristics, never as expected yields; the plan uses the owner's own list size and states the assumed rate.",
+    "from": "BK08-K1"
+   },
+   {
+    "rule": "proposed: participants should have started paying within about 12 months so they can recall the trigger; older customers go in a separate pool.",
+    "from": "BK08-K1"
+   },
+   {
+    "rule": "proposed: a Job statement needs a struggle theme seen in at least 3 respondents from the same pool (matches voc-research 'finding' bar).",
+    "from": "BK08-K3"
+   },
+   {
+    "rule": "proposed: PB-interviews readouts tally three things per interview, existing workaround, commitment offered, unprompted mention, and report counts by segment; any numeric score is labelled subjective.",
+    "from": "BK12-K6"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: no research send without a recorded consent basis and owner approval.",
+    "from": "BK08-K1"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: theme percentages and conditional shares are computed in code from coded rows, never written by the model.",
+    "from": "BK08-K3"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-interviews (candidate v2)",
+  "skills/voc-research/SKILL.md",
+  "docs/growth-intelligence/books/02_research_positioning.md"
+ ],
+ "reconciliation_note": "Book 02 recruits contrast groups; Forget the Funnel recruits best-fit customers. The decision decides (RECONCILIATION R10).",
+ "member_frameworks": [
+  "BK08-K1",
+  "BK08-K3",
+  "BK12-K6"
+ ],
+ "source_references": [
+  "BK08-F6",
+  "BK08-F7",
+  "BK08-F8",
+  "BK08-F10",
+  "BK08-F9",
+  "BK08-F14",
+  "BK08-F15",
+  "BK08-F16",
+  "BK08-F17",
+  "BK12-F26",
+  "BK12-F27",
+  "BK12-F28",
+  "BK12-F29"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK08-K1-1",
+  "EV-BK08-K1-2",
+  "EV-BK08-K3-1",
+  "EV-BK08-K3-2",
+  "EV-BK12-K6-1",
+  "EV-BK12-K6-2"
+ ]
+}

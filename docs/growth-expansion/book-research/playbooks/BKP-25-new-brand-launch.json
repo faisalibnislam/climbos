@@ -1,0 +1,132 @@
+{
+ "id": "BKP-25",
+ "version": 1,
+ "slug": "new-brand-launch",
+ "title": "Two-stage launch for a new brand, location or product line",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to launch so buyers first learn what category it is, then build memory and availability over time.",
+ "business_types": [
+  "any launching something new"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early"
+ ],
+ "applies_when": [
+  "New brand, location, product line or variant"
+ ],
+ "exclusions": [
+  "Established brand in a well-understood category (positioning work instead)"
+ ],
+ "required_inputs": [
+  "Category clarity",
+  "Launch budget and duration"
+ ],
+ "evidence_requirements": [
+  "Launch budget by month",
+  "Distribution or stock commitments",
+  "Evidence the offer works for buyers (tests, pilots)",
+  "Overlap between the new offer's buyers and the parent's buyers, and other comparable offers' overlap with the parent (for cannibalisation)",
+  "Reasons for non-repeat, gathered with neutral wording"
+ ],
+ "missing_data_behavior": [
+  "No budget: owner's own channels only."
+ ],
+ "decision_branches": [
+  {
+   "if": "Category unclear to buyers",
+   "then": "Category-first message before distinctiveness."
+  }
+ ],
+ "implementation_steps": [
+  "Priority memories: say what it is (category cue), how it looks and where to buy",
+  "Lead with common CEPs",
+  "Make the name clear and early in every execution; start building assets",
+  "Borrow existing cultural or category cues",
+  "Spread spend across months; avoid burst-then-silence",
+  "Monitor rejection with neutral questions, including 'couldn't find it' or 'didn't see it'"
+ ],
+ "dependencies": [
+  "The product has been tested with buyers. The book assumes pre-testing; if that's missing, validation comes first (PB-concierge, PB-interviews)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Enough to sustain presence beyond launch week",
+  "labor": "Launch plus ongoing content",
+  "capability": "Clear branding; distribution or listing",
+  "measurement": "First-time buyers per month; repeat by quarter; rejection reasons; overlap with parent"
+ },
+ "metrics": [
+  "First-time buyers per month",
+  "Repeat rate by quarter",
+  "Overlap with the parent versus the benchmark",
+  "Rejection reasons"
+ ],
+ "guardrails": [
+  "Launch-presence duration is a policy decision for the owner, not a book rule.",
+  "Don't rely on influencers or 'opinion leaders' as the main mechanism",
+  "Don't lead with differentiation before the category is clear",
+  "Don't treat low early repeat as rejection without evidence"
+ ],
+ "alternatives_when_constrained": [
+  "No overlap data: skip the cannibalisation benchmark and track total sales across parent and variant"
+ ],
+ "stop_conditions": [
+  "Review after 1 and 2 quarters: penetration trend, repeat and rejection reasons"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Highly seasonal launches",
+  "Products needing demonstration (disruptive innovation), where WOM and in-person demos matter more"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: Launch plans keep a presence for at least the first three months after launch week; the three-month span is ClimbOS policy, not from the book.",
+    "from": "BK11-K7"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: Launch messaging states the category, name, look and where to buy before any differentiation claim.",
+    "from": "BK11-K7"
+   },
+   {
+    "rule": "proposed: Flag cannibalisation only when overlap with the parent exceeds the average sharing of comparable offers by about 10 points (the authors' rule of thumb).",
+    "from": "BK11-K7"
+   },
+   {
+    "rule": "proposed: Low early repeat is labelled 'expected for a new brand' and investigated with neutral rejection questions before product changes.",
+    "from": "BK11-K7"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: If product-market fit isn't evidenced, the plan leads with validation; the book assumes a tested product.",
+    "from": "BK11-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-concierge",
+  "skills/positioning/SKILL.md"
+ ],
+ "reconciliation_note": "Extends PB-concierge.",
+ "member_frameworks": [
+  "BK11-K7"
+ ],
+ "source_references": [
+  "BK11-F42",
+  "BK11-F43",
+  "BK11-F44",
+  "BK11-F16",
+  "BK11-F34"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK11-K7-1",
+  "EV-BK11-K7-2",
+  "EV-BK11-K7-3"
+ ]
+}

@@ -1,0 +1,29 @@
+--- a/skills/social-calendar/SKILL.md
++++ b/skills/social-calendar/SKILL.md
+@@ -20,8 +20,9 @@
+ ## How to plan the week
+ 
+ 1. **Pick 3–4 pillars from the positioning, not from a theme list.** Each pillar is a reason the best-fit customer should care: a value pillar with proof, an objection to dissolve, an alternative to contrast with, or the trigger moment. Name each pillar in plain words and say why it serves this week's goal.
++   - One pillar may be a rotating **buying situation** (category entry point: when, where, with whom, why), one per post. Track which situations ran in the last 4–8 weeks and rotate to uncovered common ones [BK11-K2]. Default for consumer and repeat-purchase; context: niche B2B uses trigger moments instead.
+ 2. **Weight the mix toward the goal.** As a default: about 40% teach (solve a real problem the reader has, using the business's know-how), 30% prove (a confirmed result, process or behind-the-scenes detail), 20% connect (the people, values or community, only with facts), 10% ask (a direct, low-friction offer or next step). Shift it when the plan says so; a launch week leans toward prove and ask; an awareness-phase week leans toward teach.
+-3. **One idea per slot, never the same idea twice in a week.** The same pillar may appear on two channels only as two different angles native to each. Never paste one post across channels.
++3. **One idea per slot, never the same idea twice in a week.** The same pillar may appear on two channels only as two different angles native to each. Never paste one post across channels. Vary the idea, keep the identity: the same declared brand cues (colour, face, template) in every slot [BK11-K3].
+ 4. **Make the format fit the platform and the idea.**
+    - Instagram: carousels for teach and prove (saves and shares), Reels for process and personality, single images for announcements.
+    - LinkedIn: founder-voice text or document posts with an operational lesson; Page posts as proof assets.
+@@ -34,13 +35,13 @@
+    - Repeat the angle or format of the post that earned the most saves, shares, comments or clicks. Change the specific idea.
+    - Drop or rework whatever the owner rejected, using their note.
+    - When the owner edited a draft, copy their changes into the plan. Shorter, more specific, fewer emoji and a different call to action are signals about voice.
+-   - Say in `learningsApplied` what you changed and why. When there is no history yet, say so and plan the week as a test: two contrasting formats on the primary channel.
++   - Say in `learningsApplied` what you changed and why, including which buying situations you rotated in. When there is no history yet, say so and plan the week as a test: two contrasting formats on the primary channel.
+ 7. **Mark slots that need the owner.** Flag a slot `needsOwner` when it touches an always-ask topic, a price, discount or offer, a claim about health, money, safety or legal matters, a named customer or partner, or a fact we do not have. Explain why in `ownerNote`. Do not avoid these ideas just because they need a look; good offers matter. Flag them honestly.
+ 
+ ## Writing each slot
+ 
+ - `idea`: one sentence a writer could draft from, naming the specific point. Weak: "Share a customer tip". Strong: "Why the furnace filter you bought at the hardware store is the reason your first-floor rooms stay cold, and the 2-minute check."
+-- `angle`: the reader, the tension and the payoff in one line.
++- `angle`: the reader, their buying situation, the tension and the payoff in one line.
+ - `hookDraft`: a first line that would stop the best-fit reader on that platform.
+ - `proof`: which confirmed fact or research note carries the post, or "none needed" for pure teaching. Never invent proof.
+ - `callToAction`: the one next step, matched to the pillar (save, reply, visit, book, buy).

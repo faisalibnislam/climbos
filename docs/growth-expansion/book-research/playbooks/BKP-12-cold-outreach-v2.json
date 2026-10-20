@@ -1,0 +1,282 @@
+{
+ "id": "BKP-12",
+ "version": 1,
+ "slug": "cold-outreach-v2",
+ "title": "Cold outreach without a prospect database",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How the owner builds a lawful account list by hand, finds the right contact, structures messages and books first meetings.",
+ "business_types": [
+  "b2b_saas",
+  "agency",
+  "professional_services",
+  "b2b services"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "B2B offer with identifiable buyers",
+  "Owner has hours to research and send from their own mailbox"
+ ],
+ "exclusions": [
+  "No lawful basis for contact in the jurisdiction",
+  "Owner hours below the playbook minimum"
+ ],
+ "required_inputs": [
+  "ICP traits tagged observable or not",
+  "Owner's own mailbox connection",
+  "Owner hours a week"
+ ],
+ "evidence_requirements": [
+  "best-customer traits",
+  "2-4 must-have traits marked observable or not observable",
+  "magnitude signals (how much pain or spend)",
+  "one primary public source that reliably shows the gating trait",
+  "company size band",
+  "team or about page naming roles",
+  "how the email was obtained (published verbatim, role address, owner import)",
+  "country and legal form",
+  "one sourced observation per prospect",
+  "value themes from the narrative (K2)",
+  "proof per theme or [NEEDS FACT]",
+  "owner mailbox connected",
+  "the reply text",
+  "owner availability or booking link",
+  "average deal value and meeting-to-win rate (owner estimate)",
+  "price facts or range"
+ ],
+ "missing_data_behavior": [
+  "Traits not observable: become discovery questions, not list filters.",
+  "No reply data: first campaign is step 1 plus one follow-up."
+ ],
+ "decision_branches": [
+  {
+   "if": "First campaign",
+   "then": "Step 1 plus one follow-up; up to 4 steps only after the owner reviews about 100 contacts."
+  },
+  {
+   "if": "Owner has warm connections at target accounts",
+   "then": "Use BKP-13 first."
+  },
+  {
+   "if": "Prospect replies with interest",
+   "then": "Book with a lead time of about a week; invite and reminder hygiene."
+  }
+ ],
+ "implementation_steps": [
+  "Write the minimum viable criteria (2-4) and why each predicts fit",
+  "List magnitude signals and a simple labelled attractiveness order",
+  "Pick account-first or contact-first by the cheapest gating trait",
+  "Pick one primary public source; use others only to enrich",
+  "Start in the owner's area when in-person meetings help",
+  "Collect 50-100 accounts by hand with source URLs and dates",
+  "Record exclusions with reasons",
+  "Find titles on the company's own pages",
+  "Choose primary and one fallback contact",
+  "Get the route: published business email (verbatim), role address under the rules, form or phone",
+  "Map narrative themes to steps (1: core outcome, 2: new angle, 3: resource, 4: close-out)",
+  "Write step 1 with the observation",
+  "Write follow-ups that each add something new",
+  "Send the calendar invite with location in both fields, a short agenda and a clear title",
+  "Invite everyone the contact names",
+  "Block 15-30 minutes before and after"
+ ],
+ "dependencies": [
+  "positioning best-fit segment",
+  "service area",
+  "account qualified (K3)",
+  "jurisdiction rules (skills/prospecting/reference/jurisdiction-rules.md)",
+  "prospect passed K3/K4 and jurisdiction checks",
+  "owner approval of template and sample messages",
+  "reply classified (skills/reply-handling)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None to small (registry or directory access)",
+  "labor": "About 10-20 minutes per account by hand (our estimate, not the book's)",
+  "capability": "Reading websites and directories",
+  "measurement": "Share of listed accounts that turn out qualified in conversations"
+ },
+ "metrics": [
+  "accounts listed",
+  "exclusions by reason",
+  "qualified-on-contact rate",
+  "wrong-person replies",
+  "contacts per account",
+  "share with published route",
+  "reply rate",
+  "positive reply rate",
+  "meetings booked",
+  "bounce and complaint rate",
+  "booked-to-held rate",
+  "no-show rate",
+  "value per meeting"
+ ],
+ "guardrails": [
+  "Owner's mailbox only, never Resend; no bought or scraped lists without lawful basis; no pattern-guessed addresses.",
+  "No 'Re:' on first subjects, no links in step 1, no fake voicemails, no open-tracking triggers.",
+  "Public business sources only; no bought or scraped lists without a lawful basis",
+  "No LinkedIn scraping (skills/prospecting step 6)",
+  "Jurisdiction filters before outreach",
+  "No personal addresses, LinkedIn scraping or email-finder tools that scrape profiles",
+  "Published-only sending in code (shared/outbound/index.ts:188-209; convex/outboundSending.ts:94)",
+  "No lying to gatekeepers",
+  "Owner's own mailbox only, never Resend",
+  "Opt-out honoured immediately",
+  "Footer with identity and address",
+  "No tracking pixels",
+  "Owner approves every reply",
+  "No false urgency or invented slots",
+  "Price only from confirmed facts"
+ ],
+ "alternatives_when_constrained": [
+  "Market too thin publicly: inbound capture (K8) or partners (PB-partners)",
+  "Gating trait not observable at all: lead magnet or content that makes buyers raise their hands (PB-lead-magnet)",
+  "No usable route: warm intro (K7), partner (PB-partners), or inbound (K8)",
+  "No mailbox: warm intros (K7) or partners",
+  "Low price: self-serve plays",
+  "No owner availability: recorded demo plus reply-to-ask",
+  "Low deal value: self-serve"
+ ],
+ "stop_conditions": [
+  "If fewer than half of contacted accounts confirm the pain, tighten must-haves",
+  "Wrong-person replies above about 1 in 5: revisit the role choice (our heuristic)",
+  "PB-cold-outreach stop rule (under 1% reply after 100 contacts)",
+  "Negative-reply circuit breaker",
+  "No-show rate high: check lead time and reminders"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Jumping between sources",
+  "Padding with friends",
+  "Several simultaneous cold emails into one account",
+  "CEO-first to large companies (assistant filters)",
+  "Long template-style emails with exclamation marks",
+  "Links or tracking in step 1",
+  "Scheduling by email ping-pong",
+  "Booking more than a week out (book: attendance falls; unquantified)"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: each must-have is tagged observable or not observable; non-observable traits can't be list filters and become discovery or form questions.",
+    "from": "BK09a-K3"
+   },
+   {
+    "rule": "proposed: visible paid tiers (paid directory listing, active ads in a public ad library, a paid booking tool) count as a willingness-to-pay nice-to-have, with source URL.",
+    "from": "BK09a-K3"
+   },
+   {
+    "rule": "proposed: follow-up steps are assigned one narrative value theme or proof each, chosen from the positioning hierarchy, so no two steps repeat a theme.",
+    "from": "BK09a-K5"
+   },
+   {
+    "rule": "proposed: step 2 or 3 may offer a prospect-specific proof asset made from public evidence, offered without a link.",
+    "from": "BK09a-K5"
+   },
+   {
+    "rule": "proposed: book response-rate figures (12% vs 5%, 18% at step 2) are stored as dated vendor examples, never as base rates.",
+    "from": "BK09a-K5"
+   },
+   {
+    "rule": "proposed: booking pages offer slots within the next 7-10 days by default.",
+    "from": "BK09a-K6"
+   },
+   {
+    "rule": "proposed: confirmed meetings get a calendar invite with agenda and a same-morning reminder email from the owner's mailbox.",
+    "from": "BK09a-K6"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: a list uses one primary sourcing source per campaign; extra sources only enrich already-found accounts.",
+    "from": "BK09a-K3"
+   },
+   {
+    "rule": "proposed: contact one primary role per account; add one complementary role only after the primary sequence ends without reply.",
+    "from": "BK09a-K4"
+   },
+   {
+    "rule": "proposed: the first email carries no booking link; a booking link appears only after the prospect replies with interest.",
+    "from": "BK09a-K5"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: never source from bought or scraped contact lists without a recorded lawful basis; prospects come only from public business sources or owner-provided lists with provenance.",
+    "from": "BK09a-K3"
+   },
+   {
+    "rule": "proposed: personal (non-business) email addresses are never a cold-email route, even when published on a profile.",
+    "from": "BK09a-K4"
+   },
+   {
+    "rule": "proposed: subject lines starting with 'Re:' or 'Fwd:' on step 1, and any 'returning your call' wording, are lint errors.",
+    "from": "BK09a-K5"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: owner phone outreach to businesses needs a call-compliance check (UK TPS/CTPS screening, US mobile and autodialer rules) before ClimbOS suggests it.",
+    "from": "BK09a-K4"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: compute value per meeting = average deal value x meeting-to-win rate in code, and compare with owner hours x hourly cost before recommending meetings.",
+    "from": "BK09a-K6"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-cold-outreach (candidate v2)",
+  "skills/prospecting/SKILL.md",
+  "skills/cold-outreach/SKILL.md"
+ ],
+ "reconciliation_note": "Many book tactics conflict with ClimbOS policy and are excluded (see guides/BK09_founding_sales.md).",
+ "member_frameworks": [
+  "BK09a-K3",
+  "BK09a-K4",
+  "BK09a-K5",
+  "BK09a-K6"
+ ],
+ "source_references": [
+  "BK09a-F26",
+  "BK09a-F27",
+  "BK09a-F28",
+  "BK09a-F29",
+  "BK09a-F30",
+  "BK09a-F4",
+  "BK09a-F11",
+  "BK09a-F31",
+  "BK09a-F32",
+  "BK09a-F37",
+  "BK09a-F21",
+  "BK09a-F33",
+  "BK09a-F34",
+  "BK09a-F35",
+  "BK09a-F36",
+  "BK09a-F41",
+  "BK09a-F19",
+  "BK09a-F38",
+  "BK09a-F39",
+  "BK09a-F40",
+  "BK09a-F24"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09a-K3-1",
+  "EV-BK09a-K3-2",
+  "EV-BK09a-K3-3",
+  "EV-BK09a-K4-1",
+  "EV-BK09a-K4-2",
+  "EV-BK09a-K4-3",
+  "EV-BK09a-K5-1",
+  "EV-BK09a-K5-2",
+  "EV-BK09a-K5-3",
+  "EV-BK09a-K6-1",
+  "EV-BK09a-K6-2"
+ ]
+}

@@ -1,0 +1,1199 @@
+{
+ "reading_id": "BK13",
+ "book_title": "Making Websites Win: Apply the Customer-Centric Methodology That Has Doubled the Sales of Many Leading Websites",
+ "frameworks": [
+  {
+   "id": "BK13-K1",
+   "name": "Diagnosis-first remedy selection (DiPS, lock and key)",
+   "decision": "Which change to make on a page or funnel step, and whether a proposed best-practice remedy (testimonials, guarantee, urgency, new headline) is warranted at all.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "pre-launch with prototype",
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "At least one diagnosis source naming why people stall (user-test notes, buyer 'nearly stopped' answers, exit survey, sales/support/chat objections, recordings) with counts n of N",
+    "The page or step and its single goal",
+    "Traffic source and awareness stage (from conversion-audit step 1)"
+   ],
+   "prerequisites": [
+    "Goal defined (book: optimise for the content's reason to exist)",
+    "Owner-confirmed facts for any counter-objection copy"
+   ],
+   "branches": [
+    {
+     "if": "Visitors cannot say what the product does",
+     "then": "Plain description of what it does, early; do not add guarantee, discount or testimonials first"
+    },
+    {
+     "if": "They understand it but not why they need it",
+     "then": "Benefits tied to features they care about"
+    },
+    {
+     "if": "They doubt it works",
+     "then": "Proof: features, data, demonstrations, named reviews"
+    },
+    {
+     "if": "Compatibility or fit questions dominate",
+     "then": "Specific compatibility details where the question arises"
+    },
+    {
+     "if": "Price feels too high among qualified buyers",
+     "then": "Justify price (value comparison, what is included) or change the offer (BK13-K7)"
+    },
+    {
+     "if": "They distrust the company",
+     "then": "Credibility proof (size, reviews, press, associations) (BK13-K3 trust branch)"
+    },
+    {
+     "if": "They will think about it",
+     "then": "Genuine reasons to act now, or an intermediate step for the not-ready (BK13-K8)"
+    },
+    {
+     "if": "No diagnosis evidence exists",
+     "then": "Run the cheapest feasible diagnosis (BK13-K2) before recommending remedies; only observable blockers (broken form, missing price for price-shoppers) go to fix-now"
+    },
+    {
+     "if": "A requested remedy's function does not match any diagnosed problem",
+     "then": "Advise against it as clutter; put it under 'Later' or drop it"
+    }
+   ],
+   "steps": [
+    "State the page goal and audience",
+    "Collect diagnosis evidence (BK13-K2)",
+    "Code each reason into a problem class with counts",
+    "Pick the most frequent or most blocking class",
+    "Choose a remedy whose function matches it",
+    "Place the counter where and when the objection arises",
+    "Measure with the feasible method (BK13-K4); re-diagnose if the signal does not move"
+   ],
+   "exceptions_failure_modes": [
+    "Few respondents make the top class unstable",
+    "Several problems co-exist; fixing one can surface the next",
+    "Buyers' answers miss barriers that stopped everyone else",
+    "A diagnosis is a hypothesis, not a proven cause",
+    "Remedies add length and can bury the key message"
+   ],
+   "requirements": {
+    "cash": "$0-100 (incentives)",
+    "labor": "About 3-8 owner hours for 3-5 user tests or buyer calls plus coding",
+    "capability": "Can run a silent task-based test and code objections; ClimbOS drafts scripts and codes notes",
+    "measurement": "Goal event on the page; otherwise label results unmeasured"
+   },
+   "metrics": [
+    "Share of research mentions per problem class (n of N)",
+    "Goal conversion or earlier step rate",
+    "Repeat-test signal: does the confusion or objection still appear?"
+   ],
+   "guardrails": [
+    "No invented proof, guarantees or urgency",
+    "No dark patterns",
+    "Diagnoses labelled 'likely reason', never as proven cause"
+   ],
+   "stop_review": [
+    "Remedy shipped and the same objection still appears in the next 3-5 tests: revisit the diagnosis",
+    "Two remedies in a row fail to move the step: check whether the binding constraint is elsewhere (shared/agents/diagnosis.ts)"
+   ],
+   "alternatives": [
+    "No traffic: method marketing, selling face to face or by phone, VOC aggregators",
+    "No customers: competitor and adjacent reviews (voc-research)",
+    "No analytics: owner tally of enquiries and the questions asked"
+   ],
+   "author_refs": [
+    "BK13-F8",
+    "BK13-F9",
+    "BK13-F22",
+    "BK13-F15"
+   ],
+   "interpretation": "Interpretation: DiPS is the book's central idea and the strongest transferable rule. The existing conversion-audit skill is checklist-led (offer, proof, CTA, friction...), which is useful as a page scan but can slide into the 'marketing pharmacy' the authors criticise when no buyer evidence exists. Diagnosis remains inference; it ranks hypotheses rather than proving causes.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: every 'fix now' or 'test' item in a conversion audit names the diagnosed problem class and its evidence source with a count; items without one go to 'Later' unless they are observable blockers",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: recommend a guarantee or other risk reducer only when risk or credibility is among the top diagnosed problems (or the owner asks), matching its type to the concern",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: when no diagnosis evidence exists, output a diagnosis plan before any persuasion remedies",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/conversion-audit/SKILL.md (candidate v2: add a diagnose step before steps 4-12); shared/agents/diagnosis.ts (within-stage reason classes)",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/conversion-audit/SKILL.md",
+     "skills/landing-pages/SKILL.md",
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C5",
+     "docs/growth-intelligence/books/10_paid_media_cro.md section 6"
+    ],
+    "note": "Versions conversion-audit (diagnosis gate and remedy-function check). Duplicates CH-C5's 'match the reducer to the dominant risk' for guarantees. Consistent with Book 10 section 6 'separate persuasion problems from usability failures'."
+   },
+   "disagreements": "landing-pages SKILL.md:56 includes a risk-reversal section by default and line 22 suggests a guarantee when none exists; the book (and CH-C5) make guarantees conditional on diagnosed risk. Decider: diagnosed hesitation evidence; with none, the section stays optional and is labelled a suggestion.",
+   "eval_case_ids": [
+    "EV-BK13-K1-1",
+    "EV-BK13-K1-2"
+   ]
+  },
+  {
+   "id": "BK13-K2",
+   "name": "Diagnosis method selection by traffic and customer base (low-traffic toolkit)",
+   "decision": "Which research methods to use to learn why visitors do not convert, given traffic, number of reachable customers, owner time and consent basis.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "pre-launch",
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Weekly visitors to the page (or unknown)",
+    "Number of recent buyers reachable and the consent basis",
+    "Who talks to buyers (owner, staff, resellers, support)",
+    "Owner hours available"
+   ],
+   "prerequisites": [
+    "Owner approval for any tool install, survey, recording or customer contact",
+    "Consent banner and PII masking before session recording where required",
+    "Permission before recording calls (book notes this)"
+   ],
+   "branches": [
+    {
+     "if": "Pre-launch or a handful of visitors a day",
+     "then": "Hallway user tests (3-5), method marketing (buy and use own and competitor products, including offline analogues), sell face to face or by phone, interview VOC aggregators (sales, support, resellers), read reviews and plain-language descriptions"
+    },
+    {
+     "if": "Has about 10+ reachable recent buyers with a contact basis",
+     "then": "Ask 'what nearly stopped you' on the thank-you page or by email; run 2-3 retrospective walkthroughs with recent buyers"
+    },
+    {
+     "if": "Moderate traffic and owner approves tools",
+     "then": "Session recordings of strugglers, form-field drop-off, click/scroll maps for anomalies, site-search log review"
+    },
+    {
+     "if": "Expected survey answers reach the needed count inside the owner's horizon (computed)",
+     "then": "Exit survey (purpose / achieved? / what stopped you) or on-page survey; visitor-intention gap analysis only once about 100 answers are feasible"
+    },
+    {
+     "if": "Finance or health audience",
+     "then": "Expect low participation; plan compliance review in small chunks (micro-approvals)"
+    },
+    {
+     "if": "Too few answers expected",
+     "then": "Do not run the survey; switch to interviews, tests or aggregators"
+    }
+   ],
+   "steps": [
+    "Write the question the research must answer",
+    "Compute expected responses = eligible visitors x response rate (owner rate if known; the book's ~3% only as a dated placeholder)",
+    "Pick 2-3 methods from the branch, cheapest first",
+    "Draft scripts (tasks for tests; 3-question exit survey; buyer question)",
+    "Get owner approval for contact, tools and consent",
+    "Code findings into problem classes with counts",
+    "Hand the top class to BK13-K1"
+   ],
+   "exceptions_failure_modes": [
+    "Self-selected testers are more time-rich and cash-poor than buyers",
+    "The researcher's own method-marketing experience is one customer",
+    "Research framed as 'market research' yields polite answers",
+    "Buyer surveys miss barriers that stopped everyone",
+    "Heatmaps mostly show the obvious; only anomalies matter"
+   ],
+   "requirements": {
+    "cash": "$0 to low (gift-card incentives, optional remote test service fees)",
+    "labor": "2-10 owner hours per round",
+    "capability": "Moderate; ClimbOS drafts tasks, questions, codes notes",
+    "measurement": "Response counts and coded themes; no conversion claim"
+   },
+   "metrics": [
+    "Responses or sessions observed (n)",
+    "Themes with n of N",
+    "New themes per extra session (stop when none)"
+   ],
+   "guardrails": [
+    "Consent for recordings and calls",
+    "Contact customers only on a lawful basis; never cold-email purchased lists",
+    "Check terms before analysing customer-to-friend messages (the book flags this)",
+    "Do not deceive testers about what is being sold"
+   ],
+   "stop_review": [
+    "Stop collecting when two consecutive sessions add no new theme",
+    "If expected responses for a survey fall below the needed count within the horizon, switch method"
+   ],
+   "alternatives": [
+    "No traffic and no customers: VOC aggregators plus competitor and adjacent reviews (voc-research)",
+    "No owner time: remote unmoderated tests (paid) if budget is approved",
+    "No tool access: owner notes of every phone or email question for 2 weeks"
+   ],
+   "author_refs": [
+    "BK13-F10",
+    "BK13-F11",
+    "BK13-F13",
+    "BK13-F14",
+    "BK13-F15",
+    "BK13-F16",
+    "BK13-F17",
+    "BK13-F18",
+    "BK13-F20"
+   ],
+   "interpretation": "Interpretation: the book's most useful contribution for small businesses is its low-traffic list and the observational methods ClimbOS skills barely mention. Searching skills/*/SKILL.md found no step that runs user tests or watches recordings; voc-research is text-mining-led. The response-rate figures are dated agency numbers.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: before recommending a survey, compute expected responses in code from the owner's traffic and a stated response rate, and switch method if the needed count is out of reach within the horizon",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: session recording and heatmap suggestions carry a consent and masking prerequisite where privacy law applies",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: weight barrier evidence from recent buyers above non-buyer price complaints when choosing the first fix, while keeping non-buyer purpose data for fit questions",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/voc-research/SKILL.md; skills/conversion-audit/SKILL.md (new diagnose step); docs/growth-expansion/blog-research/playbooks/BRP-13-voc-mining-and-survey.json",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/voc-research/SKILL.md",
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C2",
+     "docs/growth-expansion/guides/06_experimentation.md 'Low-volume businesses need other learning paths'",
+     "BRP-13"
+    ],
+    "note": "Duplicates the 'what almost/nearly stopped them' question (voc-research SKILL.md:30, CH-C2 step 1). Extends with observational methods (user tests, retrospective walkthroughs, recordings, form analytics, VOC aggregators, method marketing, selling to learn) and a response-count feasibility check."
+   },
+   "disagreements": "Book: ask buyers, not non-buyers. voc-research leans on competitor and public reviews (mostly non-buyers of this business). Decider: purpose. For barriers among qualified prospects, weight buyers; for positioning and alternatives, public reviews are fine. CH-C2 'fewer than ~10 respondents: 3-5 interviews' agrees with the book.",
+   "eval_case_ids": [
+    "EV-BK13-K2-1",
+    "EV-BK13-K2-2",
+    "EV-BK13-K2-3"
+   ]
+  },
+  {
+   "id": "BK13-K3",
+   "name": "Problem taxonomy and prioritisation (where to work first)",
+   "decision": "Which diagnosed problem, on which page or step, to work on first; and whether conversion work should precede buying more traffic.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Page or step reach (share of eventual buyers or visitors who see it)",
+    "Coded problem classes with counts",
+    "Owner funnel numbers for the binding-constraint check"
+   ],
+   "prerequisites": [
+    "BK13-K1/K2 evidence",
+    "Diagnosis from shared/agents/diagnosis.ts showing conversion or activation is the weak link (or unknown)"
+   ],
+   "branches": [
+    {
+     "if": "Broken flows or errors observed",
+     "then": "Fix immediately; no test needed (Book 10 section 6 agrees)"
+    },
+    {
+     "if": "Comprehension problems (unclear writing or product description)",
+     "then": "Fix before persuasion work; clarity is the prerequisite"
+    },
+    {
+     "if": "Usability struggle",
+     "then": "Wireframe, test on 1-2 people, iterate"
+    },
+    {
+     "if": "Visitors want things you do not offer",
+     "then": "Offer/range gap analysis (BK13-K7)"
+    },
+    {
+     "if": "Benefits unclear or value unmentioned",
+     "then": "List all value delivered; apply so-what / yeah-right rule"
+    },
+    {
+     "if": "Trust in company vs trust in product",
+     "then": "Treat separately; surface existing proof on high-traffic pages first"
+    },
+    {
+     "if": "Risk or skepticism",
+     "then": "Guarantee per BK13-K6"
+    },
+    {
+     "if": "Many product-specific objections",
+     "then": "Complex-sale structure BK13-K5"
+    },
+    {
+     "if": "Not ready, distracted, delaying, or handover",
+     "then": "BK13-K8"
+    },
+    {
+     "if": "Choosing competitors",
+     "then": "Niche or differentiate (positioning skill)"
+    },
+    {
+     "if": "Diagnosis says demand (reach) is binding",
+     "then": "Do not lead with CRO; follow the computed constraint"
+    }
+   ],
+   "steps": [
+    "List problems with class, evidence count and the page/step where each bites",
+    "Compute priority = reach share x mention share (proposed, code); blockers override",
+    "Prefer pages most buyers see (book: arteries; zero-traffic pages yield nothing)",
+    "Pick the top 1-3; size bold changes, not tweaks",
+    "Record each as a hypothesis with metric"
+   ],
+   "exceptions_failure_modes": [
+    "Mention counts reflect who you asked",
+    "Reach unknown without analytics (use owner estimates labelled)",
+    "Categories overlap (trust vs risk)",
+    "Power-law arithmetic assumes ad costs stay flat and more traffic is buyable"
+   ],
+   "requirements": {
+    "cash": "$0",
+    "labor": "1-2 hours of owner review",
+    "capability": "ClimbOS computes scores deterministically",
+    "measurement": "Analytics page reach or owner estimate"
+   },
+   "metrics": [
+    "Priority score per problem",
+    "Step conversion before/after (labelled)",
+    "Contribution per visitor (economics.ts)"
+   ],
+   "guardrails": [
+    "Arithmetic in code",
+    "No profit forecast from hypothetical conversion doubling",
+    "Book benchmarks not used as targets"
+   ],
+   "stop_review": [
+    "Top problem fixed and the step still underperforms: re-run diagnosis",
+    "Constraint shifts to another stage: move work there"
+   ],
+   "alternatives": [
+    "No analytics: rank by mention share only and label it",
+    "No research: K2 first"
+   ],
+   "author_refs": [
+    "BK13-F4",
+    "BK13-F5",
+    "BK13-F12",
+    "BK13-F22",
+    "BK13-F23",
+    "BK13-F24",
+    "BK13-F28"
+   ],
+   "interpretation": "Interpretation: the book gives a taxonomy and broad priorities (high-traffic pages, frequency-ranked objections, clarity and usability first, bold changes) but no scoring rule. The reach x frequency score is a ClimbOS design, not the authors'. Book 10 section 6's understand / believe / want / complete sequence is a coarser version of the same taxonomy; the 14 classes map into it.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: order conversion fixes by blockers first, then comprehension and usability, then persuasion classes, within each by reach x mention share computed in code",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: show the profit leverage of a conversion change only as an owner-input scenario in economics code, labelled hypothetical, never as an expected result",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: do not prioritise CRO over reach when the computed binding constraint is demand",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/conversion-audit/SKILL.md step 14 (candidate v2); shared/agents/diagnosis.ts; shared/agents/economics.ts / shared/growth/calc.ts",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/conversion-audit/SKILL.md step 14",
+     "shared/agents/diagnosis.ts",
+     "docs/growth-intelligence/books/10_paid_media_cro.md section 6"
+    ],
+    "note": "conversion-audit prioritises by blocker/major/minor and fix/test/later; this adds reach x frequency and a clarity-first order. diagnosis.ts picks the weak stage but has no within-stage reason input."
+   },
+   "disagreements": "Book: CRO is the most important activity for any business (part0015 [75]). ClimbOS diagnosis.ts decides the binding constraint from the owner's numbers and may pick demand. Decider: the owner's funnel numbers, not the book's claim.",
+   "eval_case_ids": [
+    "EV-BK13-K3-1",
+    "EV-BK13-K3-2",
+    "EV-BK13-K3-3"
+   ]
+  },
+  {
+   "id": "BK13-K4",
+   "name": "Bold changes and low-traffic measurement",
+   "decision": "Whether and how to measure a page change when traffic is small: A/B, earlier metric, pooled pages, bought traffic, user tests or labelled before/after.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Weekly eligible visitors",
+    "Baseline rate of the candidate metric(s)",
+    "Minimum worthwhile effect",
+    "Owner horizon",
+    "Reversibility and cost of the change"
+   ],
+   "prerequisites": [
+    "Change grounded in diagnosis (BK13-K1)",
+    "Conversion tracking working",
+    "Owner approval for any spend to buy traffic"
+   ],
+   "branches": [
+    {
+     "if": "sampleSize weeks <= horizon for a bold change",
+     "then": "Fixed-horizon A/B in whole weeks, read once at the end, SRM check, guardrails"
+    },
+    {
+     "if": "Outcome metric too rare",
+     "then": "Use an earlier step (e.g. clicked Book) as primary, keep the outcome as guardrail (EXP-C5)"
+    },
+    {
+     "if": "Several similar pages each get little traffic",
+     "then": "Apply the same change to all and analyse pooled, with a per-page check for opposite effects"
+    },
+    {
+     "if": "Owner has an approved budget",
+     "then": "Temporarily buy traffic to the page; count it as a cost"
+    },
+    {
+     "if": "Still infeasible",
+     "then": "User tests as the measure of comprehension/usability; ship reversible fixes; before/after labelled observational"
+    },
+    {
+     "if": "Change is a tweak (colour, small wording)",
+     "then": "Do not test; ship if harmless or drop"
+    },
+    {
+     "if": "Owner wants a lower confidence threshold",
+     "then": "Allowed only if pre-registered, for reversible low-cost changes, read once at the planned end, and labelled directional; never 'incremental' wording"
+    }
+   ],
+   "steps": [
+    "Write the decision and minimum worthwhile effect",
+    "Run sampleSize for the outcome and for earlier steps",
+    "Choose the branch",
+    "Pre-register metric, guardrails, end date and decision rule",
+    "Run whole weeks; no peeking",
+    "Read with compareRates and sampleRatio; label strong vs directional"
+   ],
+   "exceptions_failure_modes": [
+    "2-day tests (book's meek-tweaking example) miss weekday cycles",
+    "Pooled pages hide opposite effects",
+    "Bought traffic differs from organic visitors",
+    "Lower thresholds multiply false wins across many tests",
+    "Promoting a research-backed challenger without a significant read is a judgement call, not evidence"
+   ],
+   "requirements": {
+    "cash": "$0 unless buying traffic",
+    "labor": "1-2 hours setup; ClimbOS computes",
+    "capability": "Split tool or ad-platform experiment",
+    "measurement": "Event on primary metric and guardrails"
+   },
+   "metrics": [
+    "Required weeks",
+    "Primary and guardrail rates per arm",
+    "Expected false wins = tests x alpha"
+   ],
+   "guardrails": [
+    "Whole weeks, at least 7 days",
+    "No early stop on a win; harm stops allowed",
+    "SRM gate",
+    "No causal wording without a valid significant read"
+   ],
+   "stop_review": [
+    "Planned end reached: decide once",
+    "Guardrail breach: stop",
+    "Weeks exceed horizon: change design"
+   ],
+   "alternatives": [
+    "No randomisation: before/after labelled observational",
+    "No tracking: user tests and owner tallies",
+    "No traffic: message lab in ads (experiment-design) only if budget is approved"
+   ],
+   "author_refs": [
+    "BK13-F2",
+    "BK13-F7",
+    "BK13-F21",
+    "BK13-F5"
+   ],
+   "interpretation": "Interpretation: the book's 'bold not meek' rule and its low-traffic menu match ClimbOS's experiment-design skill. Two points conflict with the Microsoft ExP guide and BK06: ending at 85-90% confidence and promoting a 'research-driven' challenger at a fixed end regardless of significance. They can coexist if they are framed as pre-registered business decision rules with a directional label, which is what experiment-design SKILL.md step 8 already does.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: compute run time with sampleSize before recommending any page test; tweaks are never tested at small-business volume",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: a lowered decision threshold must be set before launch, applies only to reversible low-cost changes, and the readout stays 'directional'",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: pooled multi-page tests report a per-page direction check before claiming a pooled effect",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: one horizon rule across skill and code (owner horizon, default 6 weeks) instead of 6 weeks in the skill and 12 in decisions.ts",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "PB-landing-split (shared/playbooks/contracts.ts:316-333); skills/experiment-design/SKILL.md; shared/analysis/decisions.ts sampleSize/compareRates; shared/agents/specs.ts lintExperimentFeasibility",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "PB-landing-split",
+     "skills/experiment-design/SKILL.md",
+     "docs/growth-expansion/blog-research/guides/05_trustworthy_experimentation.md EXP-C2/EXP-C5",
+     "docs/growth-engine/book-review/BK06.md",
+     "docs/growth-expansion/guides/06_experimentation.md"
+    ],
+    "note": "Candidate v2 of PB-landing-split: computed feasibility instead of a fixed 700/week floor; adds pooled pages, bought traffic and user tests as alternatives."
+   },
+   "disagreements": "Book part0050 [68] says ending at 90% or 85% confidence is usually worth it; 05_trustworthy_experimentation EXP-C2 and BK06 require a valid, significant read for causal wording, and compareRates defaults alpha 0.05. Book part0050 [71] would promote a research-driven challenger at a fixed end even if not winning significantly. Decider: reversibility and cost of a wrong ship. Reversible, cheap changes may use a pre-registered business threshold labelled directional; irreversible or costly ones (pricing, guarantees) keep the stricter read. The book's 2-day example duration conflicts with the whole-week rule (lint at specs.ts:878); the whole-week rule wins. Book's six-month fallback is far looser than experiment-design's ~6 weeks; ClimbOS's tighter horizon wins for small owners.",
+   "eval_case_ids": [
+    "EV-BK13-K4-1",
+    "EV-BK13-K4-2",
+    "EV-BK13-K4-3"
+   ]
+  },
+  {
+   "id": "BK13-K5",
+   "name": "Complex-sale page structure (O/CO table, commitment, modules, progressive disclosure)",
+   "decision": "How long a page should be, what the next step should ask, and how to organise many objections so visitors find answers without getting lost.",
+   "business_models": [
+    "saas",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "local_services (higher-ticket)",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Objection list with counts (K2)",
+    "Counter-objections from sales, support, chat canned replies or the owner",
+    "The next step options the business can offer (trial, consult, lead magnet, purchase)"
+   ],
+   "prerequisites": [
+    "Confirmed facts for every counter",
+    "Mobile rendering checked (hover does not exist on touch)"
+   ],
+   "branches": [
+    {
+     "if": "Many product-specific objections",
+     "then": "Build an O/CO table for one visitor type and intention, ranked by frequency"
+    },
+    {
+     "if": "The ask is large (contract, high price)",
+     "then": "Explore a lower-commitment next step (free trial, consult, lead magnet), then check persuasion is not just deferred to a later step"
+    },
+    {
+     "if": "Visitors differ in readiness",
+     "then": "Dual path: a direct low-commitment CTA plus detailed modules; CTAs repeated after objection blocks"
+    },
+    {
+     "if": "Visitors get lost in detail",
+     "then": "Modularise; headings within about three levels; spoiler headings that state the point; teaser headings only where a click is wanted"
+    },
+    {
+     "if": "Detail would distract from the funnel",
+     "then": "On-page disclosure (accordion, overlay, tooltip) instead of a new page; tap triggers on mobile"
+    },
+    {
+     "if": "Product has many variants",
+     "then": "Guide by the questions a good salesperson asks, not product codes"
+    },
+    {
+     "if": "Readers say 'so what?'",
+     "then": "Add the benefit"
+    },
+    {
+     "if": "Readers say 'yeah, right'",
+     "then": "Add the feature or other proof"
+    },
+    {
+     "if": "Service with an unclear after-purchase process",
+     "then": "Show what happens after yes, step by step"
+    }
+   ],
+   "steps": [
+    "Fill the O/CO table",
+    "Decide the next-step commitment",
+    "Order modules by objection frequency and where each arises",
+    "Write spoiler headings and plain copy (readability test with a real reader)",
+    "Add disclosure and fallbacks (search, FAQ, chat, phone) per economics",
+    "Test with 3-5 users on mobile"
+   ],
+   "exceptions_failure_modes": [
+    "Long pages fail when boring, not when long",
+    "Hidden information can conceal legally required terms",
+    "Too many equal CTAs split attention",
+    "Disclosure widgets inaccessible to keyboard or screen readers",
+    "Live chat and phone cost money and do not scale"
+   ],
+   "requirements": {
+    "cash": "$0",
+    "labor": "4-10 hours to draft and test",
+    "capability": "Page editor; ClimbOS drafts table and copy",
+    "measurement": "Scroll/clicks on disclosures if tracked; step conversion"
+   },
+   "metrics": [
+    "Objection coverage (answered / top objections)",
+    "Clicks on primary CTA from each module",
+    "Downstream step rate (to catch deferred persuasion)"
+   ],
+   "guardrails": [
+    "Price, fees, cancellation and legal terms stay visible",
+    "No invented counters",
+    "Accessible disclosure controls"
+   ],
+   "stop_review": [
+    "User tests still show the top objection unanswered: move its counter higher",
+    "Downstream drop after lowering commitment: revisit the step"
+   ],
+   "alternatives": [
+    "No objection data: owner's sales call notes or a recorded 7-minute pitch, transcribed",
+    "No designer: plain sections with alternating backgrounds"
+   ],
+   "author_refs": [
+    "BK13-F19",
+    "BK13-F23",
+    "BK13-F26",
+    "BK13-F31"
+   ],
+   "interpretation": "Interpretation: this chapter extends landing-pages with tools it lacks (O/CO table, commitment lever, progressive disclosure, heading types, future pacing, speak-first drafting). landing-pages' 'subheads that state the point' is the book's spoiler heading.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: a page brief for any offer with 5+ coded objections includes an O/CO table and names where each counter sits",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: progressive disclosure never hides price, mandatory fees, cancellation or other legally required terms",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: when a lower-commitment step is proposed, name the downstream metric that checks persuasion was not merely deferred",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/landing-pages/SKILL.md (page brief, steps 4-6); skills/copy-fundamentals/SKILL.md",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/landing-pages/SKILL.md",
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C3",
+     "BRP-14"
+    ],
+    "note": "CH-C3 already says answer the prospect's questions in order; landing-pages already ties length to awareness and price. New: O/CO table, commitment lever with downstream check, disclosure patterns, heading types, future pacing."
+   },
+   "disagreements": "landing-pages SKILL.md:116 forbids several equal-weight CTAs and prefers no navigation on paid pages; the book sometimes recommends three paths (buy, schedule trial, read more) and adding a nav tab (PhotoShelter 'Examples'). Decider: page job and traffic. Paid single-intent pages keep one primary CTA with a subordinate info path; homepages and mixed-readiness traffic can carry multiple paths.",
+   "eval_case_ids": [
+    "EV-BK13-K5-1",
+    "EV-BK13-K5-2"
+   ]
+  },
+  {
+   "id": "BK13-K6",
+   "name": "Guarantee design and safe rollout with scenario modelling",
+   "decision": "Whether to add, change or extend a guarantee, which type, and how to roll it out without unbounded refund risk.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Diagnosed risk or skepticism (K1/K2)",
+    "Orders per period, price, contribution per kept order, loss per invoked guarantee incl. handling",
+    "Claim period and product evaluation time",
+    "Owner confirmation the product delivers the promise"
+   ],
+   "prerequisites": [
+    "Owner approval; guarantee is a confirmed fact before it appears in copy (specs.ts lintOfferClaims)",
+    "Operational process for claims (returns, refunds)",
+    "Statutory rights checked (do not present legal rights as a special extra)"
+   ],
+   "branches": [
+    {
+     "if": "Buyers fear the product won't achieve a result",
+     "then": "Performance guarantee"
+    },
+    {
+     "if": "Buyers fear they won't be happy",
+     "then": "Satisfaction guarantee"
+    },
+    {
+     "if": "Buyers fear overpaying",
+     "then": "Price-match guarantee"
+    },
+    {
+     "if": "Low price and no bold claim (the book's hot-dog example)",
+     "then": "No guarantee needed"
+    },
+    {
+     "if": "Outcome depends mainly on the customer's own effort",
+     "then": "Guarantee the service delivered, not the result"
+    },
+    {
+     "if": "Scenario grid shows loss at plausible invocation rates",
+     "then": "Do not launch, or narrow terms honestly"
+    }
+   ],
+   "steps": [
+    "Draft: name it, positive wording, matched type, easy to invoke, prompt refund, placed where risk is felt",
+    "Scenario grid in code: uplift x invocation rate -> net profit change",
+    "Short test if risk tolerance allows",
+    "Wait out the claim period",
+    "Compute actual uplift and invocation cost",
+    "Keep, extend or drop; then consider a bolder version"
+   ],
+   "exceptions_failure_modes": [
+    "Long feedback loop: costs known only after the claim period",
+    "Long claim periods increase exposure without more conversions",
+    "Short periods add pressure that works against the buyer",
+    "Hidden conditions destroy trust and may breach consumer law"
+   ],
+   "requirements": {
+    "cash": "Refund reserve sized from the scenario grid",
+    "labor": "2-4 hours plus claim handling",
+    "capability": "Refund process",
+    "measurement": "Orders and claims tagged by cohort"
+   },
+   "metrics": [
+    "Conversion uplift (observed, labelled)",
+    "Invocation rate",
+    "Net profit change per period"
+   ],
+   "guardrails": [
+    "No outcome guarantees the business cannot control",
+    "No 'strings' hidden in terms",
+    "Statutory rights not marketed as extras"
+   ],
+   "stop_review": [
+    "Invocation above the break-even rate from the grid: stop or revise",
+    "Claims handling backlog: pause"
+   ],
+   "alternatives": [
+    "No order history: start with a narrow, low-cost satisfaction promise and a cap, labelled pilot",
+    "No test capacity: before/after over a full claim period, labelled observational"
+   ],
+   "author_refs": [
+    "BK13-F9",
+    "BK13-F29"
+   ],
+   "interpretation": "Interpretation: the nine-step rollout is a sound economic gate and maps directly to a deterministic calculator ClimbOS does not yet have (decisions.ts CalcInput lists margin, price_floor, compare_rates, sample_ratio, sample_size, before_after only). The Mobal 60-day guarantee is a reported case.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: any guarantee recommendation includes a code-computed scenario grid and break-even invocation rate",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: guarantees appear in copy only after the owner confirms them (already enforced for plays in specs.ts:737-746)",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: do not present statutory rights (e.g. distance-selling withdrawal periods where they apply) as a special guarantee",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "New calculator kind in shared/analysis/decisions.ts; BRP-14 risk branch; skills/conversion-audit and landing-pages risk-reversal steps",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md CH-C5",
+     "BRP-14",
+     "shared/agents/specs.ts lintOfferClaims"
+    ],
+    "note": "CH-C5 picks the reducer; this adds the economics and rollout gate."
+   },
+   "disagreements": "None material. The book's enthusiasm for 'bold' guarantees is bounded here by the scenario grid and consumer law.",
+   "eval_case_ids": [
+    "EV-BK13-K6-1",
+    "EV-BK13-K6-2"
+   ]
+  },
+  {
+   "id": "BK13-K7",
+   "name": "Offer, range and pricing levers with a compliance filter",
+   "decision": "Which offer change to make when diagnosis points to the deal (price, packaging, range) rather than clarity or trust.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Diagnosed offer problem with counts",
+    "Most-liked products (survey), not just best sellers",
+    "Margins (decisions.ts margin)",
+    "Visitor intentions if available (K2)",
+    "Prior selling prices with dates if any reference price is shown"
+   ],
+   "prerequisites": [
+    "Owner approval of any price change",
+    "Jurisdiction rules for reference prices, urgency and price testing"
+   ],
+   "branches": [
+    {
+     "if": "Qualified buyers cite upfront cost and research shows cash constraint",
+     "then": "Installments or monthly billing"
+    },
+    {
+     "if": "Tests or research show visitors are not price-sensitive",
+     "then": "Add premium tiers and upsells rather than cutting price"
+    },
+    {
+     "if": "First purchase is not a most-liked product",
+     "then": "Lead with the most-liked product as the entry offer"
+    },
+    {
+     "if": "Many visitors want things you do not offer (gap analysis)",
+     "then": "Refer or partner first, build later"
+    },
+    {
+     "if": "Buyers anchor on price comparisons",
+     "then": "Compete on comparable items; earn margin on less comparable extras"
+    },
+    {
+     "if": "A discount is offered",
+     "then": "Give the genuine reason and proof"
+    },
+    {
+     "if": "Strike-through 'was' price requested",
+     "then": "Only with a genuine prior selling price meeting local rules"
+    },
+    {
+     "if": "Price A/B test proposed",
+     "then": "Check legality and fairness; book suggests charging all buyers the lower price; prefer time-based tests for legal safety"
+    }
+   ],
+   "steps": [
+    "Confirm the offer problem from diagnosis",
+    "Pick one lever per branch",
+    "Compute margin and break-even in code",
+    "Run through the compliance filter",
+    "Test or pilot (PB-pricing-test / PB-price-increase)",
+    "Record outcome"
+   ],
+   "exceptions_failure_modes": [
+    "Free can backfire as 'too good to be true'",
+    "Cheapest position is open to one competitor only",
+    "Multibuy and premiums raise refunds or support",
+    "Ad-network probes (AdSense) damage UX and brand"
+   ],
+   "requirements": {
+    "cash": "Varies",
+    "labor": "2-6 hours",
+    "capability": "Billing changes",
+    "measurement": "Revenue per visitor, margin, refunds"
+   },
+   "metrics": [
+    "Revenue and contribution per visitor",
+    "Take rate per tier",
+    "Refund rate"
+   ],
+   "guardrails": [
+    "No fake reference prices",
+    "No rolling fake deadlines",
+    "Price changes owner-approved"
+   ],
+   "stop_review": [
+    "Contribution per visitor falls: revert",
+    "Refunds rise above guardrail: stop"
+   ],
+   "alternatives": [
+    "No traffic for price tests: interviews with willingness-to-pay questions labelled stated, or a pilot with new customers only",
+    "No intention data: site-search logs and competitor offering scan"
+   ],
+   "author_refs": [
+    "BK13-F3",
+    "BK13-F25",
+    "BK13-F27"
+   ],
+   "interpretation": "Interpretation: the chapter is a long idea list; its durable core is 'match the lever to the diagnosed reason' and 'the most-liked product, not the best seller, should be the entry offer'. Display tricks (decimals, odd prices) have weak evidence here and are low priority.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: a reference ('was') price requires an owner-confirmed prior selling price and period; otherwise block it",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: offer changes are proposed only when diagnosis names an offer problem; otherwise route to clarity, trust or readiness",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: gap-analysis revenue estimates are labelled assumptions and computed in code",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "PB-pricing-test, PB-price-increase, BRP-01..06; skills/positioning; shared/analysis/decisions.ts margin/priceFloor",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "PB-pricing-test",
+     "PB-price-increase",
+     "docs/growth-expansion/blog-research/playbooks/BRP-01..06"
+    ],
+    "note": "Adds the most-liked entry product, intention gap analysis and a compliance filter; pricing playbooks already exist."
+   },
+   "disagreements": "Book endorses rolling time-limited offers (Bose) and strike-through prices; ClimbOS runtime.ts:72 bans fake urgency and specs/lint require confirmed facts. Decider: whether the deadline or prior price is genuine and confirmed.",
+   "eval_case_ids": [
+    "EV-BK13-K7-1",
+    "EV-BK13-K7-2"
+   ]
+  },
+  {
+   "id": "BK13-K8",
+   "name": "Readiness funnel, attention capture, genuine urgency and handover tracking",
+   "decision": "Whether to ask for the sale now or offer intermediate steps; how to keep not-ready visitors; how to measure when the final conversion happens elsewhere.",
+   "business_models": [
+    "saas",
+    "local_services",
+    "agencies",
+    "ecommerce",
+    "apps",
+    "marketplaces",
+    "lead-gen brokers"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Share of visitors not ready (exit survey 'just looking' / 'need to think', or sales notes)",
+    "Buying triggers",
+    "Consented channels available",
+    "Whether the final conversion page is under the business's control"
+   ],
+   "prerequisites": [
+    "Consent for any contact capture and follow-up; Resend only for consented lifecycle mail",
+    "Ad budget and consent before retargeting",
+    "Tracking access on the final conversion page or a partner report"
+   ],
+   "branches": [
+    {
+     "if": "Most visitors are browsing, early-stage",
+     "then": "Offer a useful intermediate step (guide, tool, email course) with consented capture (PB-lead-magnet)"
+    },
+    {
+     "if": "Buying is trigger-driven",
+     "then": "Stay remembered (follow-up, memorable name) or appear in partners' funnels at the trigger"
+    },
+    {
+     "if": "Visitors delay with no reason to act",
+     "then": "Find genuine deadlines or scarcity with a stated reason; never manufactured"
+    },
+    {
+     "if": "Final conversion happens on a partner page or sales team",
+     "then": "Persuade and qualify before handover; get conversion tracking on the true goal; optimise for completed conversions, not click-outs"
+    },
+    {
+     "if": "No consented audience and no budget",
+     "then": "Owner-led follow-up only with people who opted in; no retargeting"
+    }
+   ],
+   "steps": [
+    "Measure readiness mix",
+    "Design each step with a clear reward",
+    "Set consent and follow-up flow",
+    "Define the true goal metric across the handover",
+    "Review conversion per step"
+   ],
+   "exceptions_failure_modes": [
+    "Lead capture inflates leads but not sales",
+    "Pressure notifications erode trust and may breach consumer rules",
+    "Click-out metrics reward sending unqualified visitors"
+   ],
+   "requirements": {
+    "cash": "$0 for owned steps; ad spend only if approved",
+    "labor": "4-12 hours to build an intermediate step",
+    "capability": "Email tool for consented lists",
+    "measurement": "Step conversions and partner-reported final conversions"
+   },
+   "metrics": [
+    "Opt-in rate",
+    "Nurtured-to-buyer rate within a window",
+    "Final conversions per visitor (not click-outs)"
+   ],
+   "guardrails": [
+    "Consent records",
+    "Genuine urgency only",
+    "No cold email via Resend"
+   ],
+   "stop_review": [
+    "Opt-ins rise but buyers do not within the window: revisit the step",
+    "Partner conversion data unavailable after negotiation: label click-outs as proxy"
+   ],
+   "alternatives": [
+    "No email consent: content the visitor can return to; owner social follow",
+    "No partner tracking: periodic partner reports, labelled"
+   ],
+   "author_refs": [
+    "BK13-F30",
+    "BK13-F33",
+    "BK13-F34",
+    "BK13-F35",
+    "BK13-F36"
+   ],
+   "interpretation": "Interpretation: the Hazelnut Trail and readiness chapter supports lead magnets and lifecycle email already in ClimbOS; the handover chapter adds a measurement rule useful for brokers and agencies. The urgency chapter's travel-site tactics are dated and partly non-compliant today.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: when the final conversion is off-site, the plan's primary metric is the partner-confirmed conversion; click-outs are labelled proxy",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: urgency and scarcity claims need an owner-confirmed deadline or stock fact before they appear in copy",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: contact capture and retargeting require consent and, for retargeting, an approved ad budget",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "PB-lead-magnet; skills/lead-magnets, skills/lifecycle-email; docs/growth-intelligence/books/10_paid_media_cro.md section 3; shared/agents/lint.ts / specs.ts claim checks",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "PB-lead-magnet",
+     "skills/lead-magnets/SKILL.md",
+     "skills/lifecycle-email/SKILL.md",
+     "docs/growth-intelligence/books/10_paid_media_cro.md section 3"
+    ],
+    "note": "Book 10 already says measure customer value, not cheap interactions; the handover rule extends it to brokers."
+   },
+   "disagreements": "Book presents manufactured scarcity and rolling offers neutrally; ClimbOS forbids fake urgency (runtime.ts:72, conversion-audit Never-do). ClimbOS wins.",
+   "eval_case_ids": [
+    "EV-BK13-K8-1",
+    "EV-BK13-K8-2",
+    "EV-BK13-K8-3"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/conversion-audit/SKILL.md",
+   "change": "Add a 'Diagnose first' step before the checklist: name the evidence source (user tests, buyer 'nearly stopped' answers, exit survey, chat/support objections) and code reasons into problem classes with counts. Each fix-now/test item cites its class and count; remedies whose function matches no diagnosed problem go to Later. When no evidence exists, output a diagnosis plan (3-5 hallway tests, buyer question, phone-question log). Add reach x mention-share ordering inside step 14.",
+   "why": "DiPS: remedies chosen without diagnosis add clutter; the skill currently has no observational method.",
+   "refs": [
+    "BK13-K1",
+    "BK13-K2",
+    "BK13-K3"
+   ]
+  },
+  {
+   "skill": "skills/landing-pages/SKILL.md",
+   "change": "Make the risk-reversal section (step 4 item 7) conditional on diagnosed risk or skepticism; add an O/CO table to the page brief for offers with 5+ objections; add the commitment lever with a downstream check; add progressive-disclosure patterns that never hide required terms and use tap triggers on mobile; add a 'what happens after you say yes' block for services; allow speak-first drafting from a recorded pitch.",
+   "why": "Book chapters on risk, complexity and benefits; aligns with CH-C5.",
+   "refs": [
+    "BK13-K5",
+    "BK13-K6"
+   ]
+  },
+  {
+   "skill": "skills/voc-research/SKILL.md",
+   "change": "Add non-text sources: VOC aggregators (sales, support, resellers; canned replies as tested counters), method marketing (buy, unbox, use; visit an offline analogue), selling-to-learn notes, site-search logs. Explain weighting of buyer barrier answers vs non-buyer price complaints.",
+   "why": "Book's ultra-qualitative methods are absent from the skill.",
+   "refs": [
+    "BK13-K2"
+   ]
+  },
+  {
+   "skill": "skills/experiment-design/SKILL.md",
+   "change": "Add pooled multi-page tests with a per-page direction check; temporary bought traffic only with an approved budget; user tests as the measure of comprehension when A/B is infeasible; state that any lowered threshold is fixed before launch and stays 'directional'. Reconcile its ~6-week horizon with decisions.ts (12 weeks).",
+   "why": "Book low-traffic menu; consistency with code.",
+   "refs": [
+    "BK13-K4"
+   ]
+  },
+  {
+   "skill": "skills/copy-fundamentals/SKILL.md",
+   "change": "Add the 'so what? -> benefit / yeah, right? -> feature or proof' rule, readability testing with a real reader, verb-early sentences and removing nominalisations.",
+   "why": "Durable clarity guidance from the writing chapter.",
+   "refs": [
+    "BK13-F23",
+    "BK13-F26"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/analysis/decisions.ts:171 vs skills/experiment-design/SKILL.md:32,42",
+   "gap": "sampleSize flags a test as too long only above 12 weeks, while the experiment-design skill says about 6 weeks; the book's own fallback is 6 months. Three horizons for one decision.",
+   "proposed_change": "Accept an owner horizon (default 6 weeks) in sampleSize and use the same value in the skill and lintExperimentFeasibility.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:323",
+   "gap": "PB-landing-split uses a fixed 700 visitors/week floor regardless of baseline and effect size; lintExperimentFeasibility (shared/agents/specs.ts:871-896) already sizes from the owner's baseline.",
+   "proposed_change": "Version PB-landing-split to compute eligibility via sampleSize with the owner's baseline and a bold effect; add alternatives: earlier metric, pooled pages, user tests.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:193-198 (CalcInput)",
+   "gap": "No guarantee scenario calculator; the book's rollout gate needs uplift x invocation arithmetic, which must be code, not prose.",
+   "proposed_change": "Add kind 'guarantee_scenario' {ordersPerPeriod, contributionKept, lossPerInvoked, uplifts[], invocationRates[]} returning the net-profit grid and break-even invocation rate.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/specs.ts:737-746 and shared/agents/runtime.ts:72",
+   "gap": "Deterministic lint covers guarantee claims only; fake urgency, scarcity and reference ('was') prices are banned only in the prompt.",
+   "proposed_change": "Add regex checks for countdown/deadline, 'only N left', 'N people viewing/booking', 'was $X' that require an owner-confirmed fact, as lintOfferClaims does for guarantees.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:10-27 (OwnerFunnel) and :73",
+   "gap": "Diagnosis picks the weak stage but takes no within-stage reason evidence; the conversion competing explanation is fixed text.",
+   "proposed_change": "Optional reasonCounts (problem class -> n of N, source) so the diagnosis names the likely reason and its competing reason, and conversion-audit can apply DiPS.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:85-93 and :195",
+   "gap": "compareRates accepts alpha but the tool schema does not expose it (good). If directional business thresholds are adopted, there is no field to record that they were set before launch.",
+   "proposed_change": "Add a pre-registered decisionRule {threshold, setAt} that labels the readout 'directional' and rejects thresholds set after data arrive.",
+   "priority": "P3"
+  }
+ ]
+}

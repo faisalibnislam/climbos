@@ -1,0 +1,277 @@
+{
+ "id": "BKP-18",
+ "version": 1,
+ "slug": "positioning-mode",
+ "title": "Positioning mode: niche differentiation or category-buyer distinctiveness",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether to position for a niche segment (Dunford) or for all category buyers with distinctive assets and buying-situation links (Sharp, Romaniuk).",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Choosing who to target and how to describe the business"
+ ],
+ "exclusions": [
+  "Owner has already chosen a target segment for a stated reason (record it; mode is advisory)"
+ ],
+ "required_inputs": [
+  "Category and purchase frequency",
+  "Market size and capacity",
+  "Stage",
+  "How buyers choose (memory in the moment vs comparison)"
+ ],
+ "evidence_requirements": [
+  "purchase frequency in the category",
+  "number of viable substitutes buyers see as interchangeable",
+  "how buyers choose (evaluation vs habit/salience)",
+  "best-fit customer evidence (Dunford)",
+  "existing brand cues the business already uses consistently",
+  "customerType",
+  "frequency",
+  "number of interchangeable rivals",
+  "reachable category buyers or accounts",
+  "capacity (newCustomersPerMonth)",
+  "stage / customer count",
+  "salesMotion",
+  "contract vs transactional",
+  "Candidate CEPs from VoC snippets, reviews and sales notes that mention the moment of need",
+  "Search queries that express situations (Search Console, Google Business Profile queries, keyword research)",
+  "Optional: pick-any survey of category buyers in the service area (customers and non-customers) with CEPs as rows and brands as columns, plus 'none'",
+  "Source-of-business at intake ('what did you use or buy before', 'who else did you call')",
+  "Lost-deal destinations",
+  "Rough size proxies for competitors (locations, review counts; low confidence)",
+  "Customer profile (area, age band or firm size) versus the category's"
+ ],
+ "missing_data_behavior": [
+  "Unknown buying mode: default by business type and label it."
+ ],
+ "decision_branches": [
+  {
+   "if": "Consumer repeat-purchase or everyday local service",
+   "then": "Category-buyer mode by default: reach all buyers, link to many buying situations, swap test advisory."
+  },
+  {
+   "if": "Niche B2B, capacity-limited service or early-stage product",
+   "then": "Niche mode by default; Sharp's laws are contextual heuristics."
+  },
+  {
+   "if": "New customers come mostly from the biggest rivals",
+   "then": "Normal (duplication of purchase); don't over-target one rival."
+  }
+ ],
+ "implementation_steps": [
+  "Classify the category on the conditions above",
+  "Pick a mode and say why",
+  "In both modes run a brand-cue audit: which cues (name, colour, logo, character, tagline, style) the business uses and whether they are consistent across site, pack, posts and ads",
+  "If budget allows, test fame and uniqueness of 1-2 assets with category buyers",
+  "In category-buyer mode, the swap test is advisory, not a gate",
+  "Read profile dimensions",
+  "Assign each BK10 framework a status: default / heuristic / set aside",
+  "Pass statuses into the plan brief so agents cite them with the right strength",
+  "Generate CEPs with why, when, where, with whom and with what, in buyer words and before any brand",
+  "Rank by commonness (how often linked to any brand, VoC counts, search volume)",
+  "Map existing posts, pages and ads to CEPs; find neglected common CEPs",
+  "Add a source-of-business field at intake",
+  "Tally sources against rough competitor size",
+  "Flag partitions only with evidence"
+ ],
+ "dependencies": [
+  "category frame decided (Dunford step 8)",
+  "acquisition profile dimensions (scoring.ts DIMENSIONS)",
+  "A defined category and the brands buyers would actually know, including the biggest",
+  "For measurement: a sample of category buyers, not only customers",
+  "Enough intake answers to read a pattern (the book gives no threshold; label small n)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none; asset survey optional",
+  "labor": "1-2 hours audit",
+  "capability": "access to site and social",
+  "measurement": "fame = share linking asset to brand; uniqueness = share of those linking it only to this brand"
+ },
+ "metrics": [
+  "asset fame",
+  "asset uniqueness",
+  "consistency of cues across touchpoints",
+  "share of plans where status was set",
+  "bench cases passing",
+  "Mental market share = brand's CEP links / all brands' CEP links",
+  "Mental penetration = category buyers linking the brand to at least one CEP / all category buyers surveyed",
+  "Network size = brand's CEP links / buyers linking the brand to at least one CEP",
+  "Share of content by CEP over the last 4-8 weeks (ClimbOS proxy)",
+  "Share of new customers by previous provider",
+  "Share of lost deals by destination",
+  "Deviation from size-proportional expectation (percentage points)"
+ ],
+ "guardrails": [
+  "Neither author's preference is a hard restriction.",
+  "Brand-science benchmarks are dated consumer-panel data.",
+  "Never fabricate competitor gaps to create differentiation (existing BK03 rule)",
+  "Don't recommend a rebrand or new visual identity without evidence the current assets lack fame",
+  "Never cite a BK10 law as certain for niche B2B, capacity-limited or pre-launch businesses (owner decision 2026-10-20)",
+  "Never survey only customers and call it market mental availability",
+  "Always include a 'none' option",
+  "No invented CEP statistics; label n",
+  "Don't drop a CEP just because it is 'parity' in consumer repeat categories",
+  "Don't build strategy around one competitor from a handful of anecdotes",
+  "Don't claim competitor shares without a source"
+ ],
+ "alternatives_when_constrained": [
+  "No survey budget: audit consistency only and ask 5-10 customers what they recall",
+  "No brand cues yet: pick simple ones and keep them (social-visual-briefs provisional kit)",
+  "Unknown dimensions: ask the 1-3 dimension questions (scoring.ts dimensionsToConfirm) before applying any default",
+  "No survey: use the share of situation queries where the business appears (Search Console impressions) as a low-confidence proxy",
+  "No VoC: start from search queries and reviews of category leaders",
+  "No intake data: use reviews and sales notes mentioning previous providers, labelled anecdotal"
+ ],
+ "stop_conditions": [
+  "Revisit mode when evidence of a best-fit pattern appears, or when the business moves from niche to mass category",
+  "Re-gate when dimensions change",
+  "If network size doesn't rise after two campaign waves on a new CEP, check branding (could viewers tell whose ad it was?) and reach before changing the message",
+  "Re-tally quarterly"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Using 'everyone' as an excuse to skip customer research",
+  "Sharp's evidence on low perceived differentiation is from mature consumer categories and retail banks; may not hold for new B2B tools",
+  "Dimensions inferred with low confidence",
+  "Hybrid businesses (B2B2C, marketplaces) need per-side treatment",
+  "Single-occasion categories (emergency locksmith) where breadth matters little",
+  "Tiny service areas where survey samples are too small",
+  "Very small n",
+  "Size proxies like review counts are weak"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed rule: positioning skill selects a mode (niche-differentiation or category-buyer) from category conditions and records why",
+    "from": "BK10-K4"
+   },
+   {
+    "rule": "proposed rule: in category-buyer mode, 'all category buyers in the service area' is an acceptable segment and the swap test is advisory",
+    "from": "BK10-K4"
+   },
+   {
+    "rule": "proposed: A mental availability reading from customers only is labelled biased and not reported as market mental availability.",
+    "from": "BK11-K2"
+   },
+   {
+    "rule": "proposed: For a new brand, a rare or unique CEP is not the main launch message unless the business is deliberately niche or capacity-limited.",
+    "from": "BK11-K2"
+   },
+   {
+    "rule": "proposed: Competitor teardowns rank competitors by size or penetration proxies as the default main source of customers, and flag a 'closest rival' only with switching evidence.",
+    "from": "BK11-K8"
+   },
+   {
+    "rule": "proposed: A skewed customer profile is first checked for distribution, price or variant restrictions before being explained as positioning.",
+    "from": "BK11-K8"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed rule: every positioning output includes a brand-cue consistency check across site, posts and ads",
+    "from": "BK10-K4"
+   },
+   {
+    "rule": "proposed rule: compute a BK10 applicability status per plan from customerType, frequency, salesMotion, capacity and customer count; agents must phrase BK10 claims at that strength",
+    "from": "BK10-K8"
+   },
+   {
+    "rule": "proposed: Content, ad and page plans tag each piece with one buying situation (CEP), and a 4-8 week calendar covers several common CEPs rather than one claim repeated.",
+    "from": "BK11-K2"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed rule: asset fame/uniqueness claims require survey data; otherwise label as unmeasured",
+    "from": "BK10-K4"
+   },
+   {
+    "rule": "proposed: Mental market share, mental penetration and network size are computed in code from a pick-any grid with n shown; the model never estimates them.",
+    "from": "BK11-K2"
+   },
+   {
+    "rule": "proposed: Source-of-business (previous provider) is captured at intake as a standard field.",
+    "from": "BK11-K8"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed rule: which mode wins for early-stage local consumer brands is unknown; track outcomes by mode in bench",
+    "from": "BK10-K4"
+   },
+   {
+    "rule": "proposed rule: whether double jeopardy holds for small SaaS categories is unknown; collect owner data in bench before using it as a default",
+    "from": "BK10-K8"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed rule: when capacity utilisation >= 0.8 (diagnosis.ts), penetration-growth advice is suppressed",
+    "from": "BK10-K8"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed rule: in sales-led niche B2B, translate 'reach all buyers' into list coverage of the reachable account universe using only owner-sourced or public data (no assumed prospect database)",
+    "from": "BK10-K8"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/positioning/SKILL.md (mode choice)",
+  "docs/growth-expansion/guides/03_positioning.md",
+  "docs/growth-engine/book-review/BK03.md"
+ ],
+ "reconciliation_note": "Owner decision: context-dependent (RECONCILIATION R05).",
+ "member_frameworks": [
+  "BK10-K4",
+  "BK10-K8",
+  "BK11-K2",
+  "BK11-K8"
+ ],
+ "source_references": [
+  "BK10-F5",
+  "BK10-F17",
+  "BK10-F18",
+  "BK10-F21",
+  "BK10-F22",
+  "BK10-F23",
+  "BK10-F35",
+  "BK10-F4",
+  "BK10-F26",
+  "BK10-F1",
+  "BK10-F10",
+  "BK11-F18",
+  "BK11-F19",
+  "BK11-F20",
+  "BK11-F21",
+  "BK11-F22",
+  "BK11-F43",
+  "BK11-F15",
+  "BK11-F16",
+  "BK11-F17",
+  "BK11-F12"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK10-K4-1",
+  "EV-BK10-K4-2",
+  "EV-BK10-K4-3",
+  "EV-BK10-K8-1",
+  "EV-BK10-K8-2",
+  "EV-BK10-K8-3",
+  "EV-BK11-K2-1",
+  "EV-BK11-K2-2",
+  "EV-BK11-K2-3",
+  "EV-BK11-K8-1",
+  "EV-BK11-K8-2"
+ ]
+}

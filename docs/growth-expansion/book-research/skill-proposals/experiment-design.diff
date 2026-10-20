@@ -1,0 +1,46 @@
+--- a/skills/experiment-design/SKILL.md
++++ b/skills/experiment-design/SKILL.md
+@@ -29,7 +29,10 @@
+    - **Sequential before/after:** change one big thing, compare equal-length windows with the same weekday mix, nothing else changed. Always "directional".
+    - **Holdout (retention and email):** randomly hold back part of a segment from a flow, only when the segment is large enough for the volume maths.
+    - **Customer conversations:** 5–10 calls with a fixed question script. At small scale this often beats statistics.
+-   - **Classic A/B on a page:** only if the volume maths below says it can finish within about 6 weeks.
++   - **Classic A/B on a page:** only if the volume maths below says it can finish within about 6 weeks (planning default; the calculator hard-flags over 12).
++   - **Pooled multi-page test** [BK13-K4]: the same change on several similar low-traffic pages, analysed together, with a per-page direction check before claiming a pooled effect.
++   - **User tests** [BK13-K4]: when A/B is infeasible, 3–5 tests measure comprehension and usability; ship reversible fixes; before/after stays observational. Bought traffic only from an approved budget, counted as cost.
++   - **Channel discovery test** [BK15-K2]: not a split. Tracking first; the smallest exposure that can show the event; too little exposure = inconclusive, not failed; one bounded optimisation round only inside an owner-set cost band.
+ 
+ 3. **Test big swings.** Only test changes that could plausibly move the metric 30% or more: a new offer, new positioning, new channel, new price, a guarantee. Button colours and word tweaks are undetectable at this scale.
+ 
+@@ -39,13 +42,14 @@
+    - Landing-page purchase rate 3%, detect a 30% relative lift (d = 0.009): about 5,750 visitors per variant. Usually impossible for a small site; move up the funnel.
+    - Landing-page click-through 20%, detect 30% relative (d = 0.06): about 710 visitors per variant. Often feasible.
+    - Cold-email reply rate 4%, detect a doubling to 8% (d = 0.04): about 385 contacts per variant.
+-   Divide by weekly volume to get the run time. If it exceeds about 6 weeks, change the metric, the test type or the size of the swing.
++   Divide by weekly volume to get the run time, in whole weeks (at least one) so every weekday counts equally [BK06]. If it exceeds about 6 weeks, change the metric, the test type or the size of the swing.
+ 
+ 6. **Set guardrail metrics** that stop a "winning" variant that does damage: refund or cancellation rate, unsubscribes, spam complaints (stay under 0.3% and ideally under 0.1% for bulk email, per Gmail sender rules), bounce rate on outreach (pause above 2%), lead quality (booked-call rate, not just form fills), margin per order when testing discounts.
+ 
+ 7. **Pre-register on a card** (template in the reference): name, hypothesis with its evidence, primary metric, guardrails, baseline and its source, the swing you expect, volume needed with the maths, minimum and maximum run time, decision rule, cost and hours, owner, dates, confounds to watch.
+ 
+ 8. **Write the decision rule as thresholds, not p-values.** Three outcomes, set before launch: **scale** ("≥25% relative lift in ad CTR after ≥4,300 impressions per variant, with cost per booked call no worse → roll the message out to the site and Google Business Profile"), **kill** ("<10% → drop"), **iterate once** (anything between: one revision, then decide). Say plainly that these are business thresholds, not significance tests.
++   **Confidence** [BK06, EXP-C2, BK13-K4]: causal or "incremental" wording needs a randomised, pre-registered test read once at the planned end, a passing split check and the standard 5% two-sided level. context: BK13 suggests stopping at 85–90% confidence; ClimbOS allows a lower threshold only when it is fixed before launch, the change is cheap and reversible, and the readout stays "directional".
+ 
+ 9. **Control what you can.** One change per test. Same audience, budget, schedule and weekday mix across variants. Note seasonality, holidays, press, price changes and tracking changes. Don't run two tests on the same audience at once.
+ 
+@@ -78,6 +82,7 @@
+ - Recommend A/B tests the traffic cannot finish, or testing micro-copy tweaks at small volume.
+ - Report p-values or "statistically significant" from tests that were peeked at, under-powered or not pre-registered.
+ - Change the metric, threshold or run time after seeing the data, or report the best of many metrics.
++- Call a lowered-threshold read "strong" or causal.
+ - Invent baselines, benchmarks or expected lifts. Unknown baselines are measured or labelled.
+ - Present before/after comparisons as causal proof.
+ - Run deceptive smoke tests: never take payment for something that may not exist without a clear refund promise, never show fake scarcity or fake countdowns, and always say what an email address will be used for.
+@@ -91,6 +96,7 @@
+ - [ ] Swing is big enough to detect; metric sits at the right funnel level.
+ - [ ] Guardrail metrics named with limits.
+ - [ ] Pre-registration card complete, with scale / kill / iterate thresholds.
++- [ ] Any lowered threshold set before launch, for a cheap reversible change, labelled directional; run time in whole weeks.
+ - [ ] Baselines sourced from the business's data or labelled; no invented benchmarks.
+ - [ ] Confounds and controls listed; one change per test.
+ - [ ] Smoke tests are honest and refundable; email tests respect consent.

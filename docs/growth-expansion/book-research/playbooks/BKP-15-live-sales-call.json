@@ -1,0 +1,278 @@
+{
+ "id": "BKP-15",
+ "version": 1,
+ "slug": "live-sales-call",
+ "title": "Live sales call: discover, qualify, demonstrate, handle objections",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to run a sales call so it ends with qualification and a dated next step, and how to handle price gaps, trial requests and objections.",
+ "business_types": [
+  "b2b",
+  "agency",
+  "professional_services",
+  "considered consumer purchases"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Considered purchase with a call or meeting step"
+ ],
+ "exclusions": [
+  "Impulse or self-serve purchases"
+ ],
+ "required_inputs": [
+  "Pitch story (BKP-17)",
+  "Qualification criteria",
+  "Price and proof assets"
+ ],
+ "evidence_requirements": [
+  "what the lead asked for and how they arrived",
+  "public facts about the account (site, listings, job posts)",
+  "offer facts: price ranges, proof items, case results",
+  "stated problem in the buyer's words",
+  "evidence the problem is material (volume, cost, deadline)",
+  "whether the buyer pays for any solution to this or similar problems",
+  "who decides and how purchases happen",
+  "timing or trigger",
+  "the objection in the buyer's words",
+  "discovery facts",
+  "proof items and pricing rules in confirmed facts",
+  "value themes with the features behind each",
+  "proof inventory tagged by industry, role, starting status quo",
+  "common unspoken objections from lost/stalled deals",
+  "the sales process steps"
+ ],
+ "missing_data_behavior": [
+  "No proof assets: say so; no invented logos or results."
+ ],
+ "decision_branches": [
+  {
+   "if": "Small price gap",
+   "then": "Negotiate with trades (BKP-16)."
+  },
+  {
+   "if": "Large price gap",
+   "then": "Value conversation, or disqualify politely."
+  },
+  {
+   "if": "'No budget'",
+   "then": "Disqualify only if they never pay for solutions."
+  },
+  {
+   "if": "Trial request",
+   "then": "Guided session, not open access."
+  }
+ ],
+ "implementation_steps": [
+  "Pre-call note (10-15 min): pain signals, size of the job, current solution, who decides, known unknowns, call goal.",
+  "Open: agree the agenda and that the call may end early if it is not a fit (micro-contract).",
+  "Discovery: problem, size, current workaround and its cost, consequence of doing nothing, who uses it, who decides, how they buy, timing.",
+  "Qualify or offramp.",
+  "Show only what maps to their stated problem, using their data or realistic sample data.",
+  "Proof: one or two results from confirmed facts.",
+  "Price framed against their current cost or alternative; then stop talking.",
+  "Direct ask, or a trial close if signals are unclear.",
+  "Agree and calendar the next step; same-day summary email.",
+  "Record each qualification field as unknown / reported / verified / contradicted (Book 11 §4 states).",
+  "Ask the cheapest missing question next.",
+  "Disqualify early and politely.",
+  "Catch the objection and restate it.",
+  "Find the question under the question.",
+  "Answer with one concrete proof or the buyer's own numbers.",
+  "One-line category introduction",
+  "Up to three value themes, each: claim, features that deliver it, demo or slide",
+  "Proof per theme matched to the prospect"
+ ],
+ "dependencies": [
+  "A deal size that pays for a live conversation (BRP-19 motion fit)",
+  "Confirmed facts for price and proof; otherwise [NEEDS FACT]",
+  "A written ideal-customer description with disqualifiers (Book 11 §2)",
+  "A living objection list with approved answers and proof (owner-maintained)",
+  "K3 setup",
+  "confirmed facts for timelines, certifications, integrations"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "owner time: ~15 min prep + call + ~15 min follow-up per meeting",
+  "capability": "a short pitch narrative and 1-2 proof items",
+  "measurement": "meetings held, qualified share, next-step agreed share, proposals requested"
+ },
+ "metrics": [
+  "held meetings",
+  "share ending with a calendared next step",
+  "share disqualified in discovery",
+  "proposal-request rate per held meeting",
+  "share of held meetings later marked unqualified",
+  "lost-reason distribution",
+  "win rate among qualified decisions",
+  "objection types per lost deal",
+  "pilot-to-paid rate (owner data)",
+  "share of trial requests resolved by proof without a pilot",
+  "share of first calls with an agreed next step",
+  "share of bad-fit prospects exiting at call one rather than later"
+ ],
+ "guardrails": [
+  "Written follow-ups get one objection attempt; live calls may take distinct objections in turn; a repeated no is final.",
+  "Parity requirements (e.g. SOC 2) go under objections, not value; never raise an objection you can't answer.",
+  "No invented prices, results or customers",
+  "No pressure or false urgency",
+  "Recording or transcription only with consent where law requires",
+  "Use only business-relevant public facts in research (no personal social-media profiling)",
+  "Job title does not prove authority; stage label does not prove probability (Book 11 prohibited inferences)",
+  "Never mark a field verified from a similar customer",
+  "One attempt per objection in written follow-ups",
+  "No invented discounts, deadlines or results",
+  "Pilot success criteria agreed in writing before start",
+  "Deployment times, certifications and customer names only from confirmed facts",
+  "Your own claim is not proof"
+ ],
+ "alternatives_when_constrained": [
+  "Low price or no time for calls: recorded demo video, published FAQ/objections page, self-serve trial (BRP-19)",
+  "No proof yet: offer a small paid first project instead of claiming results",
+  "Too few deals to compute shares: review each lost/unqualified deal by hand",
+  "No proof items yet: offer a small paid first step or money-back terms if the owner approves",
+  "Self-serve product: a time-boxed trial with onboarding emails instead of a guided session",
+  "No proof yet: demo the mechanism, offer a pilot as the ask, mark proof as [NEEDS FACT]"
+ ],
+ "stop_conditions": [
+  "Review the script after every ~10 held meetings: which questions predicted wins, which slides confused",
+  "If unqualified-after-meeting share is high for two review periods, fix targeting or booking questions before adding more outreach",
+  "Any objection heard 2+ times: add an approved answer and proof item to the living list",
+  "Very frequent objection: address it up front in the pitch or landing page",
+  "If next-step agreement stays low after the test period, check the ask's complexity before the story"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Feature tour without discovery ('show up and throw up')",
+  "Skipping the price and the ask out of fear of rejection",
+  "Strict BANT applied to a category buyers did not know existed",
+  "Treating a friendly contact as the decision-maker",
+  "Arguing or repeating the pitch",
+  "Unstructured free trials for products that need setup (low use, blamed on product)",
+  "Feature walkthrough",
+  "Same case study for every prospect"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: A sales-call plan must end with one agreed, dated next step or an explicit disqualification; 'I'll send info, let me know' is not a next step.",
+    "from": "BK09b-K1"
+   },
+   {
+    "rule": "proposed: Recommend a separate discovery call only when the demo needs more than ~15 minutes; otherwise one meeting (each extra meeting adds no-show risk).",
+    "from": "BK09b-K1"
+   },
+   {
+    "rule": "proposed: 'No budget line' alone never disqualifies; 'never pays for solutions to problems like this' does, unless the owner overrides.",
+    "from": "BK09b-K2"
+   },
+   {
+    "rule": "proposed: For price objections, ask the size of the gap before answering; route small gaps to negotiation levers and large gaps to value math or scope change.",
+    "from": "BK09b-K3"
+   },
+   {
+    "rule": "proposed: Never recommend an unstructured free trial for an offer that needs setup or training; recommend a guided session or a structured pilot with written success criteria.",
+    "from": "BK09b-K3"
+   },
+   {
+    "rule": "proposed: every pitch output ends with exactly one primary next step",
+    "from": "BK14-K4"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: Call plans never include recording or transcription unless the owner confirms consent handling for the jurisdiction.",
+    "from": "BK09b-K1"
+   },
+   {
+    "rule": "proposed: certifications and deployment-time statements in pitches pass the existing claim lint",
+    "from": "BK14-K4"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: Do not draft live-call scripts when the price per customer cannot pay for a human sale; route to BRP-19 alternatives.",
+    "from": "BK09b-K1"
+   },
+   {
+    "rule": "proposed: Do not recommend discounting to win a buyer whose expected value from the offer is low; recommend disqualifying.",
+    "from": "BK09b-K2"
+   },
+   {
+    "rule": "proposed: Structured pilots only when expected deal value covers the owner hours of the pilot (computed by code from owner inputs).",
+    "from": "BK09b-K3"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: Track 'unqualified after a meeting' separately from 'lost'; a rising share points to targeting or booking questions (diagnostic hypothesis, not proven cause).",
+    "from": "BK09b-K2"
+   },
+   {
+    "rule": "proposed: In written follow-ups, one evidenced answer per objection; a repeated no ends the sequence.",
+    "from": "BK09b-K3"
+   },
+   {
+    "rule": "proposed: a value theme that every shortlisted alternative also delivers is moved to objections or parity notes",
+    "from": "BK14-K4"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/sales-follow-up/SKILL.md (new live-call section)",
+  "docs/growth-intelligence/books/11_sales_partnerships.md sections 3-5",
+  "skills/reply-handling/SKILL.md"
+ ],
+ "reconciliation_note": "No skill covered the live call before.",
+ "member_frameworks": [
+  "BK09b-K1",
+  "BK09b-K2",
+  "BK09b-K3",
+  "BK14-K4"
+ ],
+ "source_references": [
+  "BK09b-F2",
+  "BK09b-F4",
+  "BK09b-F6",
+  "BK09b-F7",
+  "BK09b-F8",
+  "BK09b-F9",
+  "BK09b-F10",
+  "BK09b-F11",
+  "BK09b-F13",
+  "BK09b-F14",
+  "BK09b-F15",
+  "BK09b-F21",
+  "BK09b-F17",
+  "BK09b-F18",
+  "BK09b-F25",
+  "BK09b-F16",
+  "BK09b-F19",
+  "BK09b-F20",
+  "BK14-F8",
+  "BK14-F9",
+  "BK14-F21",
+  "BK14-F22",
+  "BK14-F23",
+  "BK14-F24",
+  "BK14-F25"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09b-K1-1",
+  "EV-BK09b-K1-2",
+  "EV-BK09b-K1-3",
+  "EV-BK09b-K2-1",
+  "EV-BK09b-K2-2",
+  "EV-BK09b-K3-1",
+  "EV-BK09b-K3-2",
+  "EV-BK09b-K3-3",
+  "EV-BK14-K4-1",
+  "EV-BK14-K4-2",
+  "EV-BK14-K4-3"
+ ]
+}

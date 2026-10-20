@@ -1,0 +1,1258 @@
+{
+ "reading_id": "BK11",
+ "book_title": "How Brands Grow Part 2: Including emerging markets, services and durables, new brands and luxury brands",
+ "frameworks": [
+  {
+   "id": "BK11-K1",
+   "name": "Penetration-first growth check (double jeopardy, heavy-buyer and Pareto reality check on the owner's own data)",
+   "decision": "Whether the main growth bet should recruit more (new and light) buyers or lean on loyalty, VIP, cross-sell or heavy-buyer programs, and how to read the business's own loyalty numbers.",
+   "business_models": [
+    "ecommerce_consumer (repeat)",
+    "local_services (repeat, not capacity-bound)",
+    "b2c_subscription_and_apps",
+    "b2b_saas (contextual)",
+    "agencies_and_consultants (contextual)"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established",
+    "early (contextual)"
+   ],
+   "evidence_required": [
+    "Unique buyers per quarter and new buyers per quarter (POS, Shopify, Stripe, bookings)",
+    "Purchases or orders per buyer per quarter",
+    "Buyer-level purchase counts for a frequency distribution",
+    "Capacity utilisation (bookable slots used) for service businesses",
+    "Size of the reachable market where it is listable (B2B niche)"
+   ],
+   "prerequisites": [
+    "Transactions linked to a customer ID for at least two quarters",
+    "Capacity is not the binding constraint (diagnosis.ts delivery check)"
+   ],
+   "branches": [
+    {
+     "if": "Consumer or repeat-purchase business, capacity not binding",
+     "then": "Default: the bankable growth play recruits new or light category buyers; loyalty/VIP/cross-sell plays are supporting, not the engine."
+    },
+    {
+     "if": "Capacity binds (utilisation at or above the diagnosis threshold)",
+     "then": "Don't push penetration; route to PB-capacity or PB-price-increase. The penetration default doesn't apply."
+    },
+    {
+     "if": "B2B niche where most of a small, listable market already buys (high penetration of a limited market)",
+     "then": "Treat it as the book's niche exception. Growth comes from a new geography or adjacent category, or from expansion revenue. Label it contextual."
+    },
+    {
+     "if": "Retention reading is weak",
+     "then": "Keep the diagnosis-fit rule (fix genuine leaks), but add the competing explanation that smaller brands normally lose more buyers and that much defection is circumstantial. Split churn by reason (BRP-08) before blaming the product."
+    },
+    {
+     "if": "Loyalty looks unusually high for the business's size",
+     "then": "Look for restricted reach or distribution (a niche ceiling) before celebrating super-loyalty."
+    },
+    {
+     "if": "Owner proposes a VIP or heavy-customer program as the growth engine",
+     "then": "Show the headroom arithmetic (top buyers' share and the effect of one extra purchase each) and the about-half instability of heavy-buyer membership."
+    }
+   ],
+   "steps": [
+    "Pull quarterly unique buyers, new buyers and purchases",
+    "Decompose growth into change in buyers and change in purchases per buyer (in code)",
+    "Compute the purchase-frequency distribution and the top-20% share of purchases (Pareto share)",
+    "Compute top-20% stability between two consecutive periods",
+    "List penetration barriers: entry price or size, hours, service area, missing variants, channels",
+    "Choose the bankable play by branch; record why the default was or wasn't used"
+   ],
+   "exceptions_failure_modes": [
+    "Capacity-limited services (one practitioner, fully booked)",
+    "Single-provider subscriptions (dentist, accountant) where repertoires are tiny",
+    "B2B with a few large accounts where revenue concentration is far above 50:20",
+    "Brand-new products with no repeat history",
+    "Durables bought once every several years"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "1-2 owner hours to export data, or zero if connected",
+    "capability": "Customer-level export from POS, e-commerce or billing",
+    "measurement": "Customer ID on each transaction; quarterly windows"
+   },
+   "metrics": [
+    "Unique buyers per quarter",
+    "New buyers per quarter",
+    "Purchases per buyer",
+    "Pareto share (top 20% of buyers' share of purchases)",
+    "Top-20% stability across periods",
+    "Capacity utilisation"
+   ],
+   "guardrails": [
+    "Never recommend 'firing' light customers",
+    "Don't present a loyalty program as the growth engine without a penetration mechanism",
+    "Label Ehrenberg-Bass patterns as consumer/repeat defaults, not laws for every business",
+    "Arithmetic done in code, never estimated in prose"
+   ],
+   "stop_review": [
+    "Review quarterly. If two quarters show growth mainly from purchases per buyer while buyers are flat, and the business is niche- or capacity-limited, keep the loyalty-led plan and record it."
+   ],
+   "alternatives": [
+    "No customer IDs: use new versus returning customer counts from the last 90 days",
+    "No transaction data: add a measurement first step and keep plays cheap and reversible (diagnosis 'unknown' path)"
+   ],
+   "author_refs": [
+    "BK11-F1",
+    "BK11-F2",
+    "BK11-F3",
+    "BK11-F4",
+    "BK11-F5",
+    "BK11-F6",
+    "BK11-F7",
+    "BK11-F9",
+    "BK11-F10",
+    "BK11-F11",
+    "BK11-F13"
+   ],
+   "interpretation": "Interpretation (reviewer): A small business can rarely compare itself with rivals on double jeopardy because it has no competitor data. It can check the within-brand patterns on its own records (reverse-J, about 50:20 Pareto, heavy-buyer churn), and these are enough to stop loyalty-first plans built on 80:20 myths. The default is strongest for consumer repeat categories and weakest for capacity-limited services and listable B2B niches, as the owner decided.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: For consumer repeat-purchase types that aren't capacity-bound, the bankable demand play must recruit new or light category buyers; a loyalty, VIP or referral play can't be labelled the growth engine unless a capacity or listable-niche condition is recorded.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: When top customers are identified from one period, state that about half may not be top customers next period, and don't size a VIP program from a single period.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: When the diagnosis is retention for a consumer repeat business, add the competing explanation that higher defection is normal for a small brand and often circumstantial; require a churn-reason split before product changes.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Growth decomposition, Pareto share and heavy-buyer stability are computed by deterministic calculators from owner data.",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/growth-plays (Think like a CMO step 2), skills/retention-lifecycle, skills/growth-strategy; shared/agents/diagnosis.ts (competing explanations); shared/analysis/decisions.ts (new calculators)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/growth-plays/SKILL.md:130",
+     "shared/agents/diagnosis.ts:76",
+     "docs/growth-expansion/blog-research/playbooks/BRP-08-churn-split.json",
+     "PB-capacity"
+    ],
+    "note": "The library has no penetration/loyalty law, no Pareto benchmark and no heavy-buyer instability check (repo search for 'penetration', 'Pareto', 'double jeopardy' and 'light buyer' found no brand-science use). It extends the diagnosis and growth-plays reasoning rather than replacing it."
+   },
+   "disagreements": "growth-plays (line 130) tells the planner to prefer customers worth more when cheap ones can't pay back. The book argues heavy buyers have little headroom and that growth comes from light and non-buyers. What decides: acquisition economics. If low-value customers can't cover acquisition cost (shared/growth/calc.ts payback), value-targeting wins as economic_feasibility; otherwise penetration is the default. diagnosis.ts treats weak SaaS churn as the binding constraint (line 131). The book implies part of a small brand's churn is size-normal. What decides: the churn-reason split and business type. A leaky subscription product still needs a retention fix first, and the book doesn't contradict fixing real leaks.",
+   "eval_case_ids": [
+    "EV-BK11-K1-1",
+    "EV-BK11-K1-2",
+    "EV-BK11-K1-3",
+    "EV-BK11-K1-4"
+   ]
+  },
+  {
+   "id": "BK11-K2",
+   "name": "Category entry point (CEP) map and mental availability measurement",
+   "decision": "Which buying situations the business should be linked to, which one each piece of content or ad should carry next, and whether marketing is building mental availability.",
+   "business_models": [
+    "local_services",
+    "ecommerce_consumer",
+    "b2c_apps",
+    "hospitality_food",
+    "b2b_saas (contextual: CEPs become trigger events)",
+    "agencies (contextual)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Candidate CEPs from VoC snippets, reviews and sales notes that mention the moment of need",
+    "Search queries that express situations (Search Console, Google Business Profile queries, keyword research)",
+    "Optional: pick-any survey of category buyers in the service area (customers and non-customers) with CEPs as rows and brands as columns, plus 'none'"
+   ],
+   "prerequisites": [
+    "A defined category and the brands buyers would actually know, including the biggest",
+    "For measurement: a sample of category buyers, not only customers"
+   ],
+   "branches": [
+    {
+     "if": "No survey budget",
+     "then": "Build a qualitative CEP list ranked by VoC frequency and search demand; use it as a message-rotation plan; make no mental-market-share claims."
+    },
+    {
+     "if": "A category-buyer survey is possible",
+     "then": "Compute mental market share, mental penetration and network size in code; show n; re-measure after each campaign wave among non-customers."
+    },
+    {
+     "if": "Mental penetration is high but network size is low",
+     "then": "Broaden the CEPs used in content and ads (the book's handset example)."
+    },
+    {
+     "if": "Mental market share is above sales share",
+     "then": "Look for price or physical availability barriers before adding awareness."
+    },
+    {
+     "if": "Mental market share is below sales share",
+     "then": "Messaging is too narrow or reach is low; add common CEPs and reach."
+    },
+    {
+     "if": "New brand",
+     "then": "Lead with the most common CEPs, not a rare 'ownable' one."
+    },
+    {
+     "if": "B2B with few buyers or committee purchases",
+     "then": "Treat CEPs as trigger events; measure by asking prospects which vendors came to mind when the trigger happened; label small n."
+    }
+   ],
+   "steps": [
+    "Generate CEPs with why, when, where, with whom and with what, in buyer words and before any brand",
+    "Rank by commonness (how often linked to any brand, VoC counts, search volume)",
+    "Map existing posts, pages and ads to CEPs; find neglected common CEPs",
+    "Give each execution one CEP; rotate CEPs across a calendar; record when each was last used",
+    "Optionally run the pick-any survey and compute the three metrics in code",
+    "Re-measure after campaigns among light and non-buyers"
+   ],
+   "exceptions_failure_modes": [
+    "Single-occasion categories (emergency locksmith) where breadth matters little",
+    "Tiny service areas where survey samples are too small",
+    "Customer-only samples, which inflate every metric because buyers give 2-3 times more associations",
+    "Leading 'would you consider' questions"
+   ],
+   "requirements": {
+    "cash": "Zero for the qualitative map; a paid category-buyer panel for measurement (cost unknown, varies by market)",
+    "labor": "2-4 hours to build the map; survey setup if used",
+    "capability": "VoC coding with a situation field; survey with pick-any grid",
+    "measurement": "CEP-by-brand pick-any responses from category buyers"
+   },
+   "metrics": [
+    "Mental market share = brand's CEP links / all brands' CEP links",
+    "Mental penetration = category buyers linking the brand to at least one CEP / all category buyers surveyed",
+    "Network size = brand's CEP links / buyers linking the brand to at least one CEP",
+    "Share of content by CEP over the last 4-8 weeks (ClimbOS proxy)"
+   ],
+   "guardrails": [
+    "Never survey only customers and call it market mental availability",
+    "Always include a 'none' option",
+    "No invented CEP statistics; label n",
+    "Don't drop a CEP just because it is 'parity' in consumer repeat categories"
+   ],
+   "stop_review": [
+    "If network size doesn't rise after two campaign waves on a new CEP, check branding (could viewers tell whose ad it was?) and reach before changing the message"
+   ],
+   "alternatives": [
+    "No survey: use the share of situation queries where the business appears (Search Console impressions) as a low-confidence proxy",
+    "No VoC: start from search queries and reviews of category leaders"
+   ],
+   "author_refs": [
+    "BK11-F18",
+    "BK11-F19",
+    "BK11-F20",
+    "BK11-F21",
+    "BK11-F22",
+    "BK11-F43"
+   ],
+   "interpretation": "Interpretation (reviewer): CEPs are the most actionable new idea in Part 2 for small businesses. Building the map costs nothing and turns straight into content and ad briefs. The measurement metrics need a category-buyer survey that most small owners won't run, so ClimbOS should treat measurement as optional and never fake it. Copy-fundamentals' 'one reader in a specific moment' is already a CEP in all but name.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Content, ad and page plans tag each piece with one buying situation (CEP), and a 4-8 week calendar covers several common CEPs rather than one claim repeated.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Mental market share, mental penetration and network size are computed in code from a pick-any grid with n shown; the model never estimates them.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: A mental availability reading from customers only is labelled biased and not reported as market mental availability.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: For a new brand, a rare or unique CEP is not the main launch message unless the business is deliberately niche or capacity-limited.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/positioning (new CEP map section), skills/social-calendar (pillars), skills/voc-research (situation field), skills/copy-fundamentals (one reader = one CEP); shared/analysis/decisions.ts (mentalAvailability calculator)",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "skills/positioning/SKILL.md:29",
+     "skills/positioning/SKILL.md:79",
+     "skills/social-calendar/SKILL.md:22",
+     "skills/copy-fundamentals/SKILL.md:30",
+     "docs/growth-intelligence/books/09_social_community.md:37"
+    ],
+    "note": "No CEP or mental-availability concept exists in the repo. It partly contradicts the positioning skill's 'delete parity attributes' rule for consumer repeat categories."
+   },
+   "disagreements": "positioning/SKILL.md line 29 deletes parity attributes and line 79 bans parity claims. Book 09 (line 37) recommends a small set of problem territories. The book says big brands win through links to many common CEPs, which are often category-generic. What decides is how the buyer chooses. If they choose from memory in the moment (repeat consumer goods, local services found by category search), CEP breadth matters and parity situations are legitimate message content. If they compare a few alternatives deliberately (considered B2B), Dunford-style differentiation leads. The swap test still applies to branding: copy should be recognisably this business even when the situation is generic.",
+   "eval_case_ids": [
+    "EV-BK11-K2-1",
+    "EV-BK11-K2-2",
+    "EV-BK11-K2-3"
+   ]
+  },
+  {
+   "id": "BK11-K3",
+   "name": "Distinctive asset audit (fame x uniqueness) and consistent brand identity",
+   "decision": "Which identity elements (colour, logo treatment, owner's face or character, van or shopfront, sound, short phrase) to build, use, protect or drop, and how to execute them across ads, posts, listings, packaging and pages.",
+   "business_models": [
+    "local_services",
+    "ecommerce_consumer",
+    "hospitality_food",
+    "b2c_apps",
+    "b2b_saas (contextual: ads, listings, decks)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Inventory of every asset in current collateral (site, socials, listings, van or shopfront, packaging, ads)",
+    "Optional: masked-asset survey of category buyers (asset shown without the name; 'which business or brand is this?' open answer)"
+   ],
+   "prerequisites": [
+    "A brand kit or the minimal provisional kit already defined by instagram-posts and social-visual-briefs",
+    "For metrics: category-buyer respondents, not just followers"
+   ],
+   "branches": [
+    {
+     "if": "Fame at least 50% and uniqueness at least 50%",
+     "then": "Use or Lose: use prominently, can stand in for the name, keep using it."
+    },
+    {
+     "if": "Uniqueness at least 50%, fame below 50%",
+     "then": "Investable: use consistently paired with the name; monitor competitors copying it."
+    },
+    {
+     "if": "Fame at least 50%, uniqueness below 50%",
+     "then": "Avoid solo use: only with a strong, direct brand name."
+    },
+    {
+     "if": "Both below 50%",
+     "then": "Ignore or test: no head start; check whether it is new, unseen or owned by a competitor."
+    },
+    {
+     "if": "No survey possible",
+     "then": "Run the collateral table test and pick one or two assets to build consistently; make no fame or uniqueness claims."
+    },
+    {
+     "if": "New business",
+     "then": "No assets yet: make the name crystal clear; choose assets independent of the current message."
+    }
+   ],
+   "steps": [
+    "Lay out all collateral together and list what repeats and what clashes (table test)",
+    "Choose a varied palette, starting with one or two items usable on pack/storefront and at the start of videos",
+    "Pair each asset with the name prominently in every execution",
+    "Check legibility at thumbnail size for online listings and feeds",
+    "For variants or new services: parent assets first, then a variant twist",
+    "Optionally survey fame and uniqueness; compute in code; place on the grid"
+   ],
+   "exceptions_failure_modes": [
+    "Forced rebrand (legal, merger)",
+    "Category-generic colours (e.g. blue in dental): execute them in a distinctive way, like the book's HSBC red border example",
+    "Assets chosen to express the current message, which have to be dropped when the message changes"
+   ],
+   "requirements": {
+    "cash": "Zero for the audit; survey cost unknown",
+    "labor": "1-2 hours for the table test",
+    "capability": "Design consistency across tools; brand kit in ClimbOS",
+    "measurement": "Masked-asset survey of category buyers (optional)"
+   },
+   "metrics": [
+    "Fame = respondents naming the brand for the asset / all respondents",
+    "Uniqueness = mentions of the brand for the asset / all brand mentions for the asset",
+    "Share of published pieces carrying the declared assets in the first frame or slide (ClimbOS proxy)"
+   ],
+   "guardrails": [
+    "Don't derive assets from the current positioning claim",
+    "Don't copy a competitor's assets (trademark and trade-dress risk)",
+    "Don't change logo, packaging or colours for 'freshness'",
+    "Distinctive, not odd"
+   ],
+   "stop_review": [
+    "Re-test yearly or after a major campaign; if uniqueness falls because a competitor copies the asset, pair it more strongly with the name"
+   ],
+   "alternatives": [
+    "No survey budget: consistency audit plus an informal masked check with a few locals, labelled anecdotal"
+   ],
+   "author_refs": [
+    "BK11-F23",
+    "BK11-F24",
+    "BK11-F25",
+    "BK11-F26",
+    "BK11-F39",
+    "BK11-F43"
+   ],
+   "interpretation": "Interpretation (reviewer): For an owner-led small business, the most available assets are the owner's face, a consistent colour treatment, the van or storefront, and a recurring visual format. The book's 'something with a face' palette item fits the owner-led social content ClimbOS already produces. The audit is cheap; the fame/uniqueness survey is optional.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Every set of posts or ads carries the same one or two declared brand assets in the first frame or slide, while angles and buying situations vary.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Video ads and scripts make the business identifiable early, through the product or owner carrying a declared asset in frame 1 or the name on screen within the opening, and again later. A hook-first opening is fine if branding comes within it.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Don't recommend a logo, packaging or colour change without a recorded reason (legal, merger, asset fails a test) and a re-education plan.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Never imitate a competitor's distinctive assets.",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: Fame and uniqueness are computed in code with n shown.",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/meta-ads, skills/instagram-posts, skills/social-visual-briefs, skills/short-video-scripts, skills/copy-fundamentals; shared/agents/lint.ts (brand-identifiable warning); shared/analysis/decisions.ts (asset grid calculator)",
+   "relation_to_existing": {
+    "type": "contradicts",
+    "targets": [
+     "skills/meta-ads/SKILL.md:42",
+     "skills/meta-ads/SKILL.md:55",
+     "skills/meta-ads/SKILL.md:93",
+     "skills/meta-ads/SKILL.md:114",
+     "skills/instagram-posts/SKILL.md:104",
+     "skills/social-visual-briefs/SKILL.md:52"
+    ],
+    "note": "The skills require a visually different first frame per concept, no logo in frame 1, never opening with the brand name, and the brand mark third in the hierarchy. The book wants early, frequent branding and identical identity across executions. Proposed resolution: version the skills (v2) rather than add a new skill."
+   },
+   "disagreements": "meta-ads (lines 42, 55, 93, 114) and instagram-posts (line 104) optimise for the hook and avoid title-card branding. That is good for attention, and the book agrees title-card branding at the end is weak. Where they conflict is that the book wants the brand recognisable early through distinctive assets and the identity identical across executions, while meta-ads asks each concept for a visually distinct first frame. Synthesis (proposed): the first frame differs in content (product, result, face) but carries the same identity cues (colour band, owner's face, recurring format), and the name appears early without 'Introducing...'. What would decide it is correct-branding recall (asking viewers whose ad it was), which small advertisers rarely can measure; platform brand-lift studies need budgets most ClimbOS users lack. So this stays a labelled heuristic.",
+   "eval_case_ids": [
+    "EV-BK11-K3-1",
+    "EV-BK11-K3-2",
+    "EV-BK11-K3-3"
+   ]
+  },
+  {
+   "id": "BK11-K4",
+   "name": "Reach-first media planning for a small budget",
+   "decision": "How to spend a limited media effort (paid or owned) on reach versus frequency, burst versus continuity, which platform to add, and where geographically.",
+   "business_models": [
+    "local_services",
+    "ecommerce_consumer",
+    "hospitality_food",
+    "b2c_apps",
+    "b2b (contextual: reach means coverage of a listed decision-maker set)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Platform-reported unique reach and frequency for the service area",
+    "Monthly budget and authorised spend",
+    "Where the business can actually deliver or sell",
+    "Share of annual sales in peak season"
+   ],
+   "prerequisites": [
+    "Physical availability in the targeted area (K6)",
+    "Conversion path works (Book 10 gates)",
+    "Owner approval for any spend"
+   ],
+   "branches": [
+    {
+     "if": "The business sells or delivers only in a region",
+     "then": "Advertise only where it sells; use regional targeting."
+    },
+    {
+     "if": "Platform frequency rises while unique reach plateaus",
+     "then": "Stop buying repeat exposure: widen the audience within the area, add a different media family, or hold budget for the next period."
+    },
+    {
+     "if": "Sales are highly seasonal",
+     "then": "A seasonal burst is acceptable; otherwise use continuous lower-weight presence."
+    },
+    {
+     "if": "Considering a second platform",
+     "then": "Add it only if it likely reaches different people; prefer a different media family (e.g. Meta plus local print, radio, in-store or a partner newsletter) over a second similar social site."
+    },
+    {
+     "if": "B2B with a listable target set",
+     "then": "Define reach as the share of listed decision-makers reached per period; outreach plus one platform can achieve it."
+    },
+    {
+     "if": "Tiny budget and strong existing search demand",
+     "then": "Demand capture (search, Google Business Profile) can come first (Book 10); label reach-building as the next step."
+    }
+   ],
+   "steps": [
+    "Define category buyers in the area and the period",
+    "Compute the response rate needed for the sales target at each reach level (in code)",
+    "Buy reach: broad targeting within the area, frequency watched, continuous presence",
+    "Before adding a platform, state why it adds unduplicated reach",
+    "Make sure each execution is clearly branded (K3) and carries one CEP (K2)"
+   ],
+   "exceptions_failure_modes": [
+    "Platform minimum spends and learning phases that make very small budgets inefficient",
+    "Regulated categories with targeting limits (special ad categories)",
+    "Capacity-bound services where more reach can't be served"
+   ],
+   "requirements": {
+    "cash": "Any budget; the book argues reach still matters at small budgets",
+    "labor": "Setup plus a weekly check",
+    "capability": "Ad account access with reach/frequency reporting",
+    "measurement": "Unique reach, frequency, cost per 1,000 reached, sales or inquiries over continuous periods"
+   },
+   "metrics": [
+    "Unique reach in the service area",
+    "Average frequency",
+    "Cost per 1,000 people reached",
+    "Sales or inquiries per period versus baseline"
+   ],
+   "guardrails": [
+    "Don't plan for a minimum frequency of 3",
+    "Don't trade reach for 'engagement' formats without comparing the cost per category buyer reached",
+    "Spend only within approved caps; external actions need owner approval",
+    "Respect special ad category and geographic targeting rules"
+   ],
+   "stop_review": [
+    "Weekly: frequency versus reach. Quarterly: sales versus baseline. Stop a channel if its reach is mostly duplicated."
+   ],
+   "alternatives": [
+    "No budget: owned reach (storefront, van, packaging, Google Business Profile, partners' audiences, flyers)",
+    "No reach data: use the platform's reach estimate, labelled as an estimate"
+   ],
+   "author_refs": [
+    "BK11-F27",
+    "BK11-F28",
+    "BK11-F29",
+    "BK11-F30",
+    "BK11-F31",
+    "BK11-F12",
+    "BK11-F14"
+   ],
+   "interpretation": "Interpretation (reviewer): The reach maths is simple and deterministic, and small businesses can act on it through Meta's reach and frequency reports. The book's evidence is mostly TV and panel-based, and it doesn't address search demand capture, which for a local service with a tiny budget may beat reach-building in the short run. Hence the owner's 'context-dependent' framing.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Paid social drafts for consumer and local businesses default to broad targeting within the service area, not narrow interest or persona targeting, unless eligibility, capacity or a listable B2B target set requires narrowing.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: When an owner proposes a low-reach tactic, show the required response rate (target / (category buyers x reach)) computed in code.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: Prefer continuous lower-weight presence to a single burst unless sales are highly seasonal.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: A second platform needs a stated reason it reaches different people; two similar social platforms on a small budget are flagged.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Ad geography must match where the business can deliver.",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/meta-ads, skills/google-ads, skills/growth-plays, skills/social-calendar; shared/acquisition/scoring.ts; BRP-12; docs/growth-intelligence/books/10_paid_media_cro.md",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/10_paid_media_cro.md:24",
+     "docs/growth-intelligence/books/10_paid_media_cro.md:66",
+     "docs/growth-intelligence/books/09_social_community.md:33",
+     "skills/growth-plays/SKILL.md:119",
+     "shared/acquisition/scoring.ts:224"
+    ],
+    "note": "Book 10 covers contribution, measurement and test design but not reach versus frequency. Book 09's 'one primary platform' agrees with the book's 'biggest reach medium first'."
+   },
+   "disagreements": "Book 10 (line 24) advises concentrating a small budget on one tightly defined hypothesis, and says audience breadth is a testable choice (line 66). The book argues against targeting narrower than category buyers, and says ROI-focused, short-window evaluation can keep a brand small. What decides: business type and horizon. For demand capture with long sales cycles or a tight cash constraint, Book 10's economics-first test applies. For repeat consumer brand-building, reach-first applies. Holdout or geo tests (Book 10 section 8) could settle it at scale, but small businesses rarely can run them, so ClimbOS should present both views with labels. scoring.ts gives unaware-stage channels an intent prior of 30 (line 224) at 20% weight, which structurally favours capture over reach. Flagged for investigation, not change.",
+   "eval_case_ids": [
+    "EV-BK11-K4-1",
+    "EV-BK11-K4-2",
+    "EV-BK11-K4-3",
+    "EV-BK11-K4-4"
+   ]
+  },
+  {
+   "id": "BK11-K5",
+   "name": "Word of mouth and referral calibration",
+   "decision": "How much growth to expect from word of mouth and referrals, how to read WOM, referral, review and NPS numbers, and how to respond to negative word of mouth.",
+   "business_models": [
+    "local_services",
+    "agencies_and_consultants",
+    "ecommerce_consumer",
+    "b2b_saas",
+    "b2c_apps"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "'How did you hear about us' counts",
+    "Referral counts and referred-customer outcomes",
+    "Customer base size",
+    "Recent product, service, price or staff changes",
+    "Review counts and ratings"
+   ],
+   "prerequisites": [
+    "Enough experienced customers for WOM to exist (PB-referrals requires 20)"
+   ],
+   "branches": [
+    {
+     "if": "New business with few customers",
+     "then": "WOM and referrals can't be the bankable play; plan controllable reach and keep a referral moment as support."
+    },
+    {
+     "if": "Small business with little WOM",
+     "then": "Normalise WOM per customer; low raw WOM is expected for a small customer base."
+    },
+    {
+     "if": "Negative WOM after a real failure or change (staff, reformulation, price)",
+     "then": "Fix the cause and respond; don't abandon reach."
+    },
+    {
+     "if": "Negative WOM without a real change",
+     "then": "Respond and log it; no strategy change."
+    },
+    {
+     "if": "Measuring referral impact",
+     "then": "Label referred customers as partly non-incremental because recipients were often already likely buyers; use a 'would you have bought anyway' question or a holdout where volume allows."
+    },
+    {
+     "if": "Planning a WOM play",
+     "then": "Create fresh, conversation-worthy stories and a named share moment; don't rely on 'tell your friends'."
+    }
+   ],
+   "steps": [
+    "Count WOM and referral sources per 100 customers",
+    "Check whether the customer base is large enough",
+    "Design one share moment and a story worth retelling",
+    "Measure referred customers with incrementality labelled",
+    "Use NPS only as satisfaction, not as a WOM volume measure; add lapsed-customer feedback"
+   ],
+   "exceptions_failure_modes": [
+    "Public reviews differ from conversational WOM: they persist and are read by in-market searchers, so the book's 'negative WOM rarely matters' doesn't carry over to a low local rating",
+    "Disruptive new categories where people must see the product in use (the book notes WOM matters more there)"
+   ],
+   "requirements": {
+    "cash": "Low (referral reward, if any)",
+    "labor": "Low",
+    "capability": "Source capture at intake; referral links",
+    "measurement": "Source field, referral attribution, reviews"
+   },
+   "metrics": [
+    "Referral share of new customers",
+    "WOM mentions per 100 customers",
+    "Positive-to-negative ratio",
+    "Referred-customer retention"
+   ],
+   "guardrails": [
+    "No fake or undisclosed incentivised reviews or endorsements",
+    "Don't treat NPS as WOM volume",
+    "Don't credit all referred customers as incremental"
+   ],
+   "stop_review": [
+    "PB-referrals stop rule (under 3% of customers share after 4 weeks)",
+    "Review negative-WOM handling only after a real change"
+   ],
+   "alternatives": [
+    "Too few customers: borrow others' credibility (partners, creators) or build reach first"
+   ],
+   "author_refs": [
+    "BK11-F8",
+    "BK11-F32",
+    "BK11-F33",
+    "BK11-F34",
+    "BK11-F42"
+   ],
+   "interpretation": "Interpretation (reviewer): The book's numbers mostly calibrate expectations: WOM grows with the customer base, is mostly positive, and is over-credited because recipients are already likely buyers. Public reviews on local listings behave differently from conversation, and ClimbOS's local playbooks shouldn't downgrade review work because of this chapter.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: A plan for a business with under about 20 customers can't make referrals or WOM the bankable play (aligns with PB-referrals customers_min).",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Referral and WOM forecasts scale with the customer base and are labelled partly non-incremental.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: A single negative post or review triggers a fix-and-respond action, not a strategy change, unless it reflects a real product, service or staff change.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: NPS is not used as a measure of WOM volume.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Review and referral incentives follow platform rules and consumer-protection disclosure law.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "shared/playbooks/contracts.ts PB-referrals; skills/growth-plays section 5; skills/retention-lifecycle; skills/plays-local",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/playbooks/contracts.ts:169",
+     "skills/growth-plays/SKILL.md:122",
+     "docs/growth-intelligence/books/09_social_community.md:127"
+    ],
+    "note": "growth-plays section 5 covers why people share; the book adds size-normalised expectations, recipient-skew and incrementality caveats. Book 09's attribution caution agrees."
+   },
+   "disagreements": "The book says negative WOM is rarely worth attention. For local services, public negative reviews persist on listings read by in-market searchers. The book's recipient-skew finding suggests these reach exactly the high-propensity people negative WOM affects most. So ClimbOS should keep review-response and review-request work (PB-local-listing). What decides: whether the WOM is private conversation or a public, persistent review.",
+   "eval_case_ids": [
+    "EV-BK11-K5-1",
+    "EV-BK11-K5-2",
+    "EV-BK11-K5-3"
+   ]
+  },
+  {
+   "id": "BK11-K6",
+   "name": "Physical availability audit: presence, relevance, prominence (with services and online)",
+   "decision": "Where the business must be present to be bought, which entry formats, price points and payment options remove barriers, and how easy it is to find, before buying more demand.",
+   "business_models": [
+    "local_services",
+    "ecommerce_consumer",
+    "hospitality_food",
+    "b2b_services (sell versus service channels)",
+    "b2c_apps (app stores, web)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "When and where category buyers buy (hours, channels, marketplaces, delivery apps)",
+    "Current channels, hours, booking and payment methods, service area",
+    "Entry price and size options",
+    "Findability for key situation searches and on marketplace or listing pages",
+    "Where recent new customers bought (channel)"
+   ],
+   "prerequisites": [
+    "A list of buying occasions (can come from the CEP map, K2)"
+   ],
+   "branches": [
+    {
+     "if": "Mental availability work is planned where the business can't sell",
+     "then": "Fix the overlap first: advertise where you sell, or expand where you advertise."
+    },
+    {
+     "if": "A service plans to cut a channel (phone, branch, demo call) to save cost",
+     "then": "First check how many new customers bought through it; keep sales channels separate from servicing channels."
+    },
+    {
+     "if": "A material share of category occasions happen online and the category is comfortable online",
+     "then": "Add online, starting with the part of the range that suits delivery."
+    },
+    {
+     "if": "Category is rarely bought online",
+     "then": "Prioritise physical presence; treat online as secondary."
+    },
+    {
+     "if": "Choosing marketplaces, retailers or directories",
+     "then": "Prefer the largest first, since small outlets' shoppers also use big ones. Add a small outlet only for cheap prominence."
+    },
+    {
+     "if": "Entry barrier (price, size, commitment)",
+     "then": "Add an entry format: trial size, intro session, monthly payment."
+    },
+    {
+     "if": "Premium brand wants restricted availability to look exclusive",
+     "then": "Book evidence doesn't support it; decide on channel economics instead."
+    }
+   ],
+   "steps": [
+    "Presence: list buying occasions and check coverage (hours, channels, area, marketplaces)",
+    "Relevance: check entry formats, price points and payment options",
+    "Prominence: check findability in search, maps, marketplaces and listings, including thumbnail legibility",
+    "Rank gaps by occasions lost and cost to fix",
+    "Fix blocking gaps before a demand play"
+   ],
+   "exceptions_failure_modes": [
+    "Capacity limits make more presence pointless",
+    "Channel fees can erase margin (run the margin calculator)",
+    "Channel conflict with existing stockists"
+   ],
+   "requirements": {
+    "cash": "Varies; many fixes are free (hours, booking link, listing)",
+    "labor": "2-3 hours for the audit",
+    "capability": "Booking, payment and listing tools",
+    "measurement": "New-customer source channel; abandoned enquiries outside hours"
+   },
+   "metrics": [
+    "Share of inquiries arriving outside staffed hours",
+    "Share of buying occasions covered",
+    "Listing or search presence for key situation queries",
+    "Cart or booking abandonment"
+   ],
+   "guardrails": [
+    "Each added channel weighed against its cost and margin",
+    "Don't remove a sales channel without source data",
+    "Don't recommend scarcity tactics without evidence"
+   ],
+   "stop_review": [
+    "Review after adding a channel: did it add new buyers or just move existing ones?"
+   ],
+   "alternatives": [
+    "No source data: add a 'how did you book' field first"
+   ],
+   "author_refs": [
+    "BK11-F35",
+    "BK11-F36",
+    "BK11-F37",
+    "BK11-F38",
+    "BK11-F39",
+    "BK11-F40",
+    "BK11-F41",
+    "BK11-F45",
+    "BK11-F46",
+    "BK11-F29"
+   ],
+   "interpretation": "Interpretation (reviewer): This is the most directly actionable framework for small businesses. Most fixes are operational (hours, booking, payment, listings), cheap to check and visible in the owner's own data. It also gives ClimbOS a principled reason to fix availability before adding demand, which matches the existing 'don't feed a leak' diagnosis logic.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Before a demand play, run a three-part availability check (presence, relevance, prominence) and fix blocking gaps first.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Don't recommend removing a channel new customers buy through without measuring where new customers came from.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Don't recommend restricting distribution to create exclusivity; source exclusivity from price, quality and craft.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Add an online channel by the share of occasions it covers and its economics, starting with products bought comfortably online.",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "skills/conversion-audit, skills/plays-local, skills/plays-ecommerce-consumer, skills/growth-strategy; PB-local-listing; shared/agents/diagnosis.ts (demand split); shared/agents/lint.ts (service area)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "PB-local-listing",
+     "skills/conversion-audit/SKILL.md",
+     "docs/growth-intelligence/books/10_paid_media_cro.md:22",
+     "shared/agents/diagnosis.ts:137"
+    ],
+    "note": "Book 10's 'operational readiness' gate covers part of this. Presence, relevance and prominence as a framework is new to the library."
+   },
+   "disagreements": "The library's channel scoring treats channels as acquisition sources, not as places where buying happens. The book says a single-channel sales strategy rarely covers enough occasions. Small owners face capacity and fee limits, so channel cost against occasions added (economics) decides. The luxury evidence contradicts common 'scarcity builds desire' advice; ClimbOS has no such rule today (repo search found none), so nothing needs reversing.",
+   "eval_case_ids": [
+    "EV-BK11-K6-1",
+    "EV-BK11-K6-2",
+    "EV-BK11-K6-3"
+   ]
+  },
+  {
+   "id": "BK11-K7",
+   "name": "Two-stage launch for a new brand, location, product line or variant",
+   "decision": "How to launch so the new offer gains first sales and distribution, then keeps recruiting medium and light buyers, and how much cannibalisation of an existing offer is normal.",
+   "business_models": [
+    "ecommerce_consumer",
+    "hospitality_food (new location)",
+    "local_services (new service line)",
+    "b2c_apps",
+    "b2b_saas (contextual: new tier or product)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "Launch budget by month",
+    "Distribution or stock commitments",
+    "Evidence the offer works for buyers (tests, pilots)",
+    "Overlap between the new offer's buyers and the parent's buyers, and other comparable offers' overlap with the parent (for cannibalisation)",
+    "Reasons for non-repeat, gathered with neutral wording"
+   ],
+   "prerequisites": [
+    "The product has been tested with buyers. The book assumes pre-testing; if that's missing, validation comes first (PB-concierge, PB-interviews)"
+   ],
+   "branches": [
+    {
+     "if": "Stage 1 (launch)",
+     "then": "Wide reach to win first sales and secure distribution; heavy category buyers will respond first without being targeted; keep frequency low."
+    },
+    {
+     "if": "Stage 2 (after launch)",
+     "then": "Stay present to reach medium and light buyers; adjust messages for them."
+    },
+    {
+     "if": "Early repeat or loyalty is lower than for established peers",
+     "then": "Expected for a new brand; don't cut support; check whether lost repeat follows withdrawn promotion or availability."
+    },
+    {
+     "if": "New variant overlaps the parent more than the benchmark (about 10 points above the average sharing)",
+     "then": "Flag excess cannibalisation; fix by widening the variant's distribution and building its own mental availability, unless blocking a competitor is the deliberate goal."
+    },
+    {
+     "if": "Product-market fit not evidenced",
+     "then": "Validation first; the two-stage plan follows."
+    }
+   ],
+   "steps": [
+    "Priority memories: say what it is (category cue), how it looks and where to buy",
+    "Lead with common CEPs",
+    "Make the name clear and early in every execution; start building assets",
+    "Borrow existing cultural or category cues",
+    "Spread spend across months; avoid burst-then-silence",
+    "Monitor rejection with neutral questions, including 'couldn't find it' or 'didn't see it'"
+   ],
+   "exceptions_failure_modes": [
+    "Highly seasonal launches",
+    "Products needing demonstration (disruptive innovation), where WOM and in-person demos matter more",
+    "Influencer-only launches that reach a small, already-interested audience"
+   ],
+   "requirements": {
+    "cash": "Enough to sustain presence beyond launch week",
+    "labor": "Launch plus ongoing content",
+    "capability": "Clear branding; distribution or listing",
+    "measurement": "First-time buyers per month; repeat by quarter; rejection reasons; overlap with parent"
+   },
+   "metrics": [
+    "First-time buyers per month",
+    "Repeat rate by quarter",
+    "Overlap with the parent versus the benchmark",
+    "Rejection reasons"
+   ],
+   "guardrails": [
+    "Don't rely on influencers or 'opinion leaders' as the main mechanism",
+    "Don't lead with differentiation before the category is clear",
+    "Don't treat low early repeat as rejection without evidence"
+   ],
+   "stop_review": [
+    "Review after 1 and 2 quarters: penetration trend, repeat and rejection reasons"
+   ],
+   "alternatives": [
+    "No overlap data: skip the cannibalisation benchmark and track total sales across parent and variant"
+   ],
+   "author_refs": [
+    "BK11-F42",
+    "BK11-F43",
+    "BK11-F44",
+    "BK11-F16",
+    "BK11-F34"
+   ],
+   "interpretation": "Interpretation (reviewer): The launch advice fits ClimbOS users opening a new location, line or product. The cannibalisation benchmark needs overlap data that only ecommerce and multi-location businesses usually have. The 'priority memories' rule agrees with Dunford's 'make the category instantly clear' (BK03).",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Launch plans keep a presence for at least the first three months after launch week; the three-month span is ClimbOS policy, not from the book.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Launch messaging states the category, name, look and where to buy before any differentiation claim.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Flag cannibalisation only when overlap with the parent exceeds the average sharing of comparable offers by about 10 points (the authors' rule of thumb).",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Low early repeat is labelled 'expected for a new brand' and investigated with neutral rejection questions before product changes.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: If product-market fit isn't evidenced, the plan leads with validation; the book assumes a tested product.",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy, skills/positioning (category clarity), docs/growth-intelligence/books/04_gtm_launches.md (not re-read in this pass), PB-concierge, PB-interviews",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/positioning/SKILL.md:38",
+     "docs/growth-engine/book-review/BK03.md",
+     "PB-concierge"
+    ],
+    "note": "BK03's homepage hierarchy (category first) agrees with the book's priority memories. Book 04 wasn't re-read here, so its overlap isn't verified."
+   },
+   "disagreements": "positioning/SKILL.md (line 38) makes Big Fish, Small Pond the default for almost every small business, and BK03 endorses that default. The book warns that a unique or uncommon CEP and niche targeting cap volume, and that niche brands have limited potential. What decides: capacity and the scale goal. A capacity-limited service (one practitioner, an agency with 10 client slots) can be filled by a niche and benefits from Dunford's sharp frame. A scalable repeat consumer product needs breadth. Category clarity at launch suits both.",
+   "eval_case_ids": [
+    "EV-BK11-K7-1",
+    "EV-BK11-K7-2",
+    "EV-BK11-K7-3"
+   ]
+  },
+  {
+   "id": "BK11-K8",
+   "name": "Where new customers come from: competitor set, customer-profile check and partitions",
+   "decision": "Which competitors the business mostly wins from and loses to, whether a sub-market locks it out, and whether its customer profile shows a restriction to fix.",
+   "business_models": [
+    "local_services",
+    "ecommerce_consumer",
+    "b2b_saas",
+    "agencies_and_consultants",
+    "hospitality_food"
+   ],
+   "lifecycle_stages": [
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "Source-of-business at intake ('what did you use or buy before', 'who else did you call')",
+    "Lost-deal destinations",
+    "Rough size proxies for competitors (locations, review counts; low confidence)",
+    "Customer profile (area, age band or firm size) versus the category's"
+   ],
+   "prerequisites": [
+    "Enough intake answers to read a pattern (the book gives no threshold; label small n)"
+   ],
+   "branches": [
+    {
+     "if": "Switching is roughly in line with competitor size",
+     "then": "Normal: expect most new customers from the biggest competitors; don't fixate on the most similarly positioned rival."
+    },
+    {
+     "if": "Two-sided excess sharing with one competitor (about 10 points or more)",
+     "then": "Possible partition (functional sub-market or same owner); check if a missing variant or format locks you out."
+    },
+    {
+     "if": "One-sided excess",
+     "then": "Check distribution or availability gaps first."
+    },
+    {
+     "if": "Customer profile differs from the category profile",
+     "then": "Look for restrictions (location, price, variant, channel) before explaining it as positioning."
+    }
+   ],
+   "steps": [
+    "Add a source-of-business field at intake",
+    "Tally sources against rough competitor size",
+    "Flag partitions only with evidence",
+    "Feed comparison-page and competitor-teardown priorities from the tally"
+   ],
+   "exceptions_failure_modes": [
+    "Very small n",
+    "Size proxies like review counts are weak",
+    "Categories where the main alternative is DIY or doing nothing (Dunford's alternatives), which the duplication law doesn't cover"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "Low once the intake field exists",
+    "capability": "Intake form or CRM field",
+    "measurement": "Source-of-business answers"
+   },
+   "metrics": [
+    "Share of new customers by previous provider",
+    "Share of lost deals by destination",
+    "Deviation from size-proportional expectation (percentage points)"
+   ],
+   "guardrails": [
+    "Don't build strategy around one competitor from a handful of anecdotes",
+    "Don't claim competitor shares without a source"
+   ],
+   "stop_review": [
+    "Re-tally quarterly"
+   ],
+   "alternatives": [
+    "No intake data: use reviews and sales notes mentioning previous providers, labelled anecdotal"
+   ],
+   "author_refs": [
+    "BK11-F15",
+    "BK11-F16",
+    "BK11-F17",
+    "BK11-F12"
+   ],
+   "interpretation": "Interpretation (reviewer): Small businesses can't build duplication tables, but they can capture source-of-business at intake, which approximates the same question. The useful default is that you compete with everyone roughly in proportion to their size.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Competitor teardowns rank competitors by size or penetration proxies as the default main source of customers, and flag a 'closest rival' only with switching evidence.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Source-of-business (previous provider) is captured at intake as a standard field.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: A skewed customer profile is first checked for distribution, price or variant restrictions before being explained as positioning.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/competitor-teardown, skills/positioning (alternatives), PB-comparison-page, skills/voc-research",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/competitor-teardown/SKILL.md:31",
+     "skills/positioning/SKILL.md:27",
+     "PB-comparison-page"
+    ],
+    "note": "Dunford's alternatives cover what best-fit customers would do instead, including non-product options. The duplication law covers where branded volume comes from. They answer different questions and can coexist."
+   },
+   "disagreements": "Positioning treats the closest alternatives of best-fit customers as the competitive frame. The book says brands compete with everyone in proportion to size. What decides: purpose. Use Dunford for messaging contrast, and the duplication law for forecasting where volume comes from and which comparison pages matter most.",
+   "eval_case_ids": [
+    "EV-BK11-K8-1",
+    "EV-BK11-K8-2"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "Add a buying-mode check before step 3. If buyers choose from memory in the moment (repeat consumer goods, local services found by category search), build a CEP map of common buying situations alongside the Dunford canvas, and allow common, even parity, situations as campaign message content. Keep the parity ban for differentiation claims. Also separate who the messaging speaks to from who media reaches: the best-fit segment shapes copy and offers but doesn't restrict media targeting in consumer or local repeat categories unless capacity, eligibility or a listable B2B niche requires it. Version as v2.",
+   "why": "Positioning currently deletes parity attributes (line 29) and demands a sharp segment (line 70), which conflicts with the book's evidence that big brands link to many common CEPs and that targeting narrower than category buyers limits growth. The owner rule makes this context-dependent.",
+   "refs": [
+    "BK11-K2",
+    "BK11-K4",
+    "BK11-F14",
+    "BK11-F19",
+    "BK11-F21"
+   ]
+  },
+  {
+   "skill": "skills/copy-fundamentals/SKILL.md",
+   "change": "Name 'one reader in a specific moment' as a buying situation (CEP) and require a set to rotate several common situations. Add a branding rule: on owned channels the business is identifiable early and more than once (name or a declared asset), and identity cues stay constant across a set while angles vary.",
+   "why": "The book shows that ads and posts only build memory if viewers can tell whose they are, and that one message per execution with rotation across executions builds breadth.",
+   "refs": [
+    "BK11-K2",
+    "BK11-K3",
+    "BK11-F21",
+    "BK11-F24",
+    "BK11-F43"
+   ]
+  },
+  {
+   "skill": "skills/meta-ads/SKILL.md",
+   "change": "Version lines 42, 55, 93 and 114. Concepts vary buyer, angle and buying situation, but all carry the same identity cues. Frame 1 shows the product, result or owner carrying a declared asset (colour, face, recurring format). The name appears early (on-screen text or voice) without 'Introducing...'. Default targeting is broad within the service area unless eligibility or capacity requires narrowing. Report unique reach and frequency alongside cost per result.",
+   "why": "Current rules optimise the hook but push branding late or small and make identity vary between concepts, against the book's early, consistent branding and reach-first guidance.",
+   "refs": [
+    "BK11-K3",
+    "BK11-K4",
+    "BK11-F24",
+    "BK11-F27",
+    "BK11-F28"
+   ]
+  },
+  {
+   "skill": "skills/instagram-posts/SKILL.md",
+   "change": "Keep 'no logo title card', but require slide 1 or frame 1 to carry the brand's recurring visual cue (colour band, owner's face, consistent template), and the name to appear in the post.",
+   "why": "Avoiding title cards is compatible with early distinctive-asset branding; the current wording (line 104) can be read as 'no brand cue up front'.",
+   "refs": [
+    "BK11-K3"
+   ]
+  },
+  {
+   "skill": "skills/social-visual-briefs/SKILL.md",
+   "change": "In the hierarchy step, make the brand cue part of the first or second read through a distinctive asset rather than a small logo third. Add a thumbnail-legibility check for feeds and listings.",
+   "why": "The book recommends legible, visually rich assets online and consistent identity.",
+   "refs": [
+    "BK11-K3",
+    "BK11-F25"
+   ]
+  },
+  {
+   "skill": "skills/short-video-scripts/SKILL.md",
+   "change": "Add branding beats: brand cue in the opening seconds and again before the end; owner or recurring character as an asset; no end-only branding.",
+   "why": "Early, frequent, spaced branding with visual and audio components (launch chapter guidance).",
+   "refs": [
+    "BK11-K3",
+    "BK11-F43"
+   ]
+  },
+  {
+   "skill": "skills/social-calendar/SKILL.md",
+   "change": "In step 1, let one of the 3-4 pillars be a rotating common buying situation (CEP) and track which CEPs were covered in the last 4-8 weeks.",
+   "why": "Breadth and freshness across CEPs, with one CEP per piece.",
+   "refs": [
+    "BK11-K2",
+    "BK11-F21"
+   ]
+  },
+  {
+   "skill": "skills/voc-research/SKILL.md",
+   "change": "Add a 'situation' code (when, where, with whom, why) to snippets so a CEP map can be built from VoC.",
+   "why": "CEPs come from buyers' situations; VoC already captures the raw text.",
+   "refs": [
+    "BK11-K2",
+    "BK11-F19"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/SKILL.md",
+   "change": "In 'Where the money is' (line 130), add the heavy-buyer caveat: prefer higher-value customers when economics require it, but don't plan growth on existing heavy customers buying more. Add a reach note for consumer repeat types: the volume engine should recruit new and light category buyers.",
+   "why": "The heavy-buyer fallacy and the Pareto 50:20 evidence.",
+   "refs": [
+    "BK11-K1",
+    "BK11-F7",
+    "BK11-F10",
+    "BK11-F11"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "For VIP or loyalty flows, state that about half of one period's top customers aren't top next period, that much defection is circumstantial, and that loyalty flows support rather than drive growth for consumer repeat types.",
+   "why": "Regression to the mean in heavy buyers; defection reasons.",
+   "refs": [
+    "BK11-K1",
+    "BK11-F7",
+    "BK11-F11"
+   ]
+  },
+  {
+   "skill": "skills/competitor-teardown/SKILL.md",
+   "change": "Add a size-proportional default: expect most switchers from the largest competitors, and flag a special rival only with switching evidence.",
+   "why": "Duplication of purchase law.",
+   "refs": [
+    "BK11-K8",
+    "BK11-F16"
+   ]
+  },
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "Add a pre-demand availability check (presence, relevance, prominence) and the two-stage launch shape for new offers.",
+   "why": "Physical availability before more demand; launch continuity.",
+   "refs": [
+    "BK11-K6",
+    "BK11-K7"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/agents/diagnosis.ts:76",
+   "gap": "The retention competing explanation mentions only budget and seasonality. It doesn't mention that small brands normally lose a higher share of customers, or that much defection is circumstantial.",
+   "proposed_change": "For consumer and repeat types, add: 'Some loss is normal for a business this size and often circumstantial (moves, life changes); split churn by reason (BRP-08) before blaming the product.' Keep the verdict logic unchanged.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:137",
+   "gap": "Demand is diagnosed only when visitors are under 1,000 a month and downstream is fine. There is no split between too little reach, too little mental availability and poor physical availability (hours, channels, findability).",
+   "proposed_change": "Add demand sub-reasons with required inputs (reach in area, branded versus unbranded search, availability gaps from a K6 audit) and list missing ones in 'missing'.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:234",
+   "gap": "No deterministic calculators for brand-science quantities, so the model would do this arithmetic in prose.",
+   "proposed_change": "Add mentalAvailability (MMS, mental penetration, network size from a grid), assetGrid (fame, uniqueness, quadrant), requiredResponseAtReach, paretoShare, heavyBuyerStability, growthDecomposition (buyers versus purchases per buyer) and duplicationDeviation, and route them through calculate().",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/acquisition/scoring.ts:224",
+   "gap": "The STAGE_INTENT prior gives unaware-stage channels 30 against 95 for high-intent, at 20% weight (line 212). Broad-reach channels that recruit light and non-buyers are structurally penalised for every business type.",
+   "proposed_change": "Investigate in bench before changing: for consumer repeat types with existing demand capture, test a type-dependent intent weight or a separate reach factor. Don't change defaults without eval evidence.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/lint.ts:140",
+   "gap": "lintCopy checks phrases, claims and emoji but nothing about whether a video script or ad identifies the business.",
+   "proposed_change": "Add a warn-level 'brand_identifiable' lint for video scripts and ad creative: the business name or a declared brand-kit asset appears in the opening and at least once more.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:353",
+   "gap": "PB-social-content measures only signups or inquiries and has no step on consistent identity or rotating buying situations.",
+   "proposed_change": "Add the steps 'same identity cues every post' and 'rotate common buying situations'. Revise rule: 'Views without inquiries: check that posts are identifiable as yours and that you're findable, then fix the CTA.'",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:176",
+   "gap": "PB-referrals counts referred signups as the outcome with no incrementality label; recipients skew to people already likely to buy.",
+   "proposed_change": "Label the outcome 'referred customers (not all incremental)' and add an optional 'would you have bought anyway' intake question to the steps.",
+   "priority": "P3"
+  },
+  {
+   "where": "bench/expansion/cases.ts:79",
+   "gap": "The business_fit criterion mentions capacity, but no case tests penetration-versus-capacity or reach-versus-niche branching from brand science.",
+   "proposed_change": "Add the K1, K4 and K6 eval cases (capacity-bound clinic, listable B2B niche, phone-only detailer) to the 32-case harness.",
+   "priority": "P3"
+  }
+ ]
+}

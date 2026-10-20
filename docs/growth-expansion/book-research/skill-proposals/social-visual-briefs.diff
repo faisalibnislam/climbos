@@ -1,0 +1,34 @@
+--- a/skills/social-visual-briefs/SKILL.md
++++ b/skills/social-visual-briefs/SKILL.md
+@@ -49,10 +49,10 @@
+ 1. **State the one message** the visual carries, in under 10 words. If the copy has one idea, the visual shows it or proves it; it doesn't introduce a second one.
+ 2. **Decide the job of the visual:** stop the scroll, prove a claim, show the product or process, or make a summary people screenshot. Pick one.
+ 3. **Choose the image type** from the list above, starting from the assets the business has or can shoot.
+-4. **Set the hierarchy:** what the eye sees first (one focal point: a face, a hand doing something, the product, the number), second (the headline), third (support line or brand mark). Specify sizes in relative terms (headline dominant, support about half its size, logo smallest).
++4. **Set the hierarchy:** what the eye sees first (one focal point: a face, a hand doing something, the product, the number), second (the headline), third (support line or logo). The brand cue sits in the first or second read through a distinctive asset (brand colour field, the owner's face, the recurring template), not only as a small logo third [BK11-K3, BK11-F25]. Specify sizes in relative terms (headline dominant, support about half its size, logo smallest).
+ 5. **Write the exact on-image text.** Few words, large type: a headline of about 8–10 words or fewer, an optional one-sentence support line, nothing else. Everything important on the image also appears in the caption or alt text, because screen readers and search don't read pixels.
+-6. **Apply the brand kit:** background and text colours by hex, headline and body fonts, logo placement (small, a corner or the last slide, never the focal point), photo treatment (no heavy filters that change product colour). For a series or carousel, define one template and keep it: same margins, type sizes and colour roles on every slide.
+-7. **Check legibility:** text on plain areas or a solid panel, never over busy detail; strong contrast between text and background (aim for WCAG AA, 4.5:1 for normal-size text); no thin or script fonts for key words; readable on a phone at arm's length.
++6. **Apply the brand kit:** background and text colours by hex, headline and body fonts, logo placement (small, a corner or the last slide, never the focal point), photo treatment (no heavy filters that change product colour). For a series or carousel, define one template and keep it: same margins, type sizes and colour roles on every slide. Declare one or two distinctive cues (colour, character, layout) and use them on every post in a series so it's attributable to the business [BK10-K4, BK11-K3]. Default for consumer and repeat-purchase; context: niche B2B and early-stage: a clear name matters more than asset-building.
++7. **Check legibility:** text on plain areas or a solid panel, never over busy detail; strong contrast between text and background (aim for WCAG AA, 4.5:1 for normal-size text); no thin or script fonts for key words; readable on a phone at arm's length. Thumbnail test: brand cue and headline still readable at feed and listing thumbnail size [BK11-F25].
+ 8. **Place everything inside the safe zone** for each placement in the table, and note the crop for each version you need.
+ 9. **Write the production brief:** for a photo, the shot (subject, action, framing, angle, location, light, props, what must be visible, what must not); for a design, the layout (grid, positions, sizes); for a chart, the exact data and labels from confirmed facts.
+ 10. **Write alt text:** what is shown, the action, the setting, and the full words of any on-image text, in one or two plain sentences. For charts, state the finding and the numbers.
+@@ -80,7 +80,7 @@
+ - Use stock or AI-generated people presented as the business's customers, staff or owner.
+ - Put an unconfirmed number, price, award or "best" claim on an image.
+ - Show real people, children, homes, number plates or customer data without consent; show competitor logos or trademarks.
+-- Lead with the logo, or make the logo the focal point.
++- Lead with the logo, or make the logo the focal point. (A distinctive brand cue in the first read is required; that isn't a logo lead.)
+ - Fill an image with paragraphs, several messages or tiny text.
+ - Place text in the bottom ~20% or right edge of vertical video, or outside the 3:4 grid crop on Instagram.
+ - Use images, fonts or music the business has no right to use, or content carrying another platform's watermark.
+@@ -93,7 +93,7 @@
+ - [ ] Image type chosen honestly (photo, typographic card, chart, illustration, real screenshot) with the reason.
+ - [ ] Focal point and three-level hierarchy specified.
+ - [ ] Exact on-image text, short and legible; everything important also in caption or alt text.
+-- [ ] Brand kit tokens applied (hex, fonts, logo rule); one template for a series.
++- [ ] Brand kit tokens applied (hex, fonts, logo rule); one template and the same declared cues for a series; cue in the first or second read; thumbnail test passed.
+ - [ ] Aspect ratio and safe zone stated for each placement; crops checked.
+ - [ ] Production brief specific enough to shoot or design without questions.
+ - [ ] Contrast checked; no key text over busy backgrounds.

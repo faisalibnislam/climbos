@@ -1,0 +1,269 @@
+{
+ "id": "BKP-04",
+ "version": 1,
+ "slug": "conversion-diagnosis",
+ "title": "Diagnose conversion problems before prescribing fixes",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Which page or flow problem to fix first, found by diagnosis methods that fit the traffic level, with each remedy matched to a diagnosed problem.",
+ "business_types": [
+  "any with a website or booking flow"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Conversion or purchase is the weak link",
+  "Owner wants a page redesign or A/B test",
+  "Low traffic rules out testing"
+ ],
+ "exclusions": [
+  "Demand or capacity is the binding constraint (fix that first)"
+ ],
+ "required_inputs": [
+  "Funnel numbers for the page or flow",
+  "Access to recent buyers, staff or support logs for diagnosis"
+ ],
+ "evidence_requirements": [
+  "At least one diagnosis source naming why people stall (user-test notes, buyer 'nearly stopped' answers, exit survey, sales/support/chat objections, recordings) with counts n of N",
+  "The page or step and its single goal",
+  "Traffic source and awareness stage (from conversion-audit step 1)",
+  "Weekly visitors to the page (or unknown)",
+  "Number of recent buyers reachable and the consent basis",
+  "Who talks to buyers (owner, staff, resellers, support)",
+  "Owner hours available",
+  "Page or step reach (share of eventual buyers or visitors who see it)",
+  "Coded problem classes with counts",
+  "Owner funnel numbers for the binding-constraint check",
+  "Site traffic level (for website survey)",
+  "Public sources where the audience talks (for audience research)"
+ ],
+ "missing_data_behavior": [
+  "No visitor counts: qualitative diagnosis only; no uplift estimate.",
+  "Expected survey answers below a usable count (computed): use buyer walkthroughs and hallway tests instead."
+ ],
+ "decision_branches": [
+  {
+   "if": "Traffic too low for a survey or test",
+   "then": "Walkthroughs with recent buyers, ask what nearly stopped them, become a customer yourself."
+  },
+  {
+   "if": "Several problems found",
+   "then": "Rank by page reach x share of mentions, blockers first (ClimbOS scoring, not the authors')."
+  },
+  {
+   "if": "A remedy matches no diagnosed problem",
+   "then": "Drop it (it adds clutter)."
+  }
+ ],
+ "implementation_steps": [
+  "State the page goal and audience",
+  "Collect diagnosis evidence (BK13-K2)",
+  "Code each reason into a problem class with counts",
+  "Pick the most frequent or most blocking class",
+  "Choose a remedy whose function matches it",
+  "Place the counter where and when the objection arises",
+  "Measure with the feasible method (BK13-K4); re-diagnose if the signal does not move",
+  "Write the question the research must answer",
+  "Compute expected responses = eligible visitors x response rate (owner rate if known; the book's ~3% only as a dated placeholder)",
+  "Pick 2-3 methods from the branch, cheapest first",
+  "List problems with class, evidence count and the page/step where each bites",
+  "Compute priority = reach share x mention share (proposed, code); blockers override",
+  "Prefer pages most buyers see (book: arteries; zero-traffic pages yield nothing)",
+  "Write the decision and the five question slots in own words",
+  "Estimate days to reach the response target from the owner's traffic and an assumed response rate",
+  "Launch with owner approval; keep it running in background"
+ ],
+ "dependencies": [
+  "Goal defined (book: optimise for the content's reason to exist)",
+  "Owner-confirmed facts for any counter-objection copy",
+  "Owner approval for any tool install, survey, recording or customer contact",
+  "Consent banner and PII masking before session recording where required",
+  "Permission before recording calls (book notes this)",
+  "BK13-K1/K2 evidence",
+  "Diagnosis from shared/agents/diagnosis.ts showing conversion or activation is the weak link (or unknown)",
+  "Owner permission to add an on-site survey",
+  "Privacy notice covering collected answers"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "$0-100 (incentives)",
+  "labor": "About 3-8 owner hours for 3-5 user tests or buyer calls plus coding",
+  "capability": "Can run a silent task-based test and code objections; ClimbOS drafts scripts and codes notes",
+  "measurement": "Goal event on the page; otherwise label results unmeasured"
+ },
+ "metrics": [
+  "Share of research mentions per problem class (n of N)",
+  "Goal conversion or earlier step rate",
+  "Repeat-test signal: does the confusion or objection still appear?",
+  "Responses or sessions observed (n)",
+  "Themes with n of N",
+  "New themes per extra session (stop when none)",
+  "Priority score per problem",
+  "Step conversion before/after (labelled)",
+  "Contribution per visitor (economics.ts)",
+  "Responses per week",
+  "Share of 'already a customer' answers (screen out)",
+  "Signup rate of surveyed vs not-surveyed sessions"
+ ],
+ "guardrails": [
+  "Reported client uplifts are examples, never forecasts.",
+  "Session recording needs consent where the law requires it.",
+  "No invented proof, guarantees or urgency",
+  "No dark patterns",
+  "Diagnoses labelled 'likely reason', never as proven cause",
+  "Consent for recordings and calls",
+  "Contact customers only on a lawful basis; never cold-email purchased lists",
+  "Check terms before analysing customer-to-friend messages (the book flags this)",
+  "Do not deceive testers about what is being sold",
+  "Arithmetic in code",
+  "No profit forecast from hypothetical conversion doubling",
+  "Book benchmarks not used as targets",
+  "Answers labelled 'prospect, fit unknown' and never pooled with own-customer evidence",
+  "No personal data required to answer",
+  "Do not place on checkout or signup form"
+ ],
+ "alternatives_when_constrained": [
+  "No traffic: method marketing, selling face to face or by phone, VOC aggregators",
+  "No customers: competitor and adjacent reviews (voc-research)",
+  "No analytics: owner tally of enquiries and the questions asked",
+  "No traffic and no customers: VOC aggregators plus competitor and adjacent reviews (voc-research)",
+  "No owner time: remote unmoderated tests (paid) if budget is approved",
+  "No tool access: owner notes of every phone or email question for 2 weeks",
+  "No analytics: rank by mention share only and label it",
+  "No research: K2 first",
+  "No traffic: voc-research public mining",
+  "No site edit access: ask 5 recent inquirers the same questions by reply"
+ ],
+ "stop_conditions": [
+  "Remedy shipped and the same objection still appears in the next 3-5 tests: revisit the diagnosis",
+  "Two remedies in a row fail to move the step: check whether the binding constraint is elsewhere (shared/agents/diagnosis.ts)",
+  "Stop collecting when two consecutive sessions add no new theme",
+  "If expected responses for a survey fall below the needed count within the horizon, switch method",
+  "Top problem fixed and the step still underperforms: re-run diagnosis",
+  "Constraint shifts to another stage: move work there",
+  "Signup rate on survey pages drops vs prior period: move or remove survey",
+  "Projected time to target exceeds ~8 weeks: switch to audience research"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Few respondents make the top class unstable",
+  "Several problems co-exist; fixing one can surface the next",
+  "Self-selected testers are more time-rich and cash-poor than buyers",
+  "The researcher's own method-marketing experience is one customer",
+  "Mention counts reflect who you asked",
+  "Reach unknown without analytics (use owner estimates labelled)",
+  "Treating respondents as ideal customers",
+  "Survey placed on the conversion step and hurting signups"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: every 'fix now' or 'test' item in a conversion audit names the diagnosed problem class and its evidence source with a count; items without one go to 'Later' unless they are observable blockers",
+    "from": "BK13-K1"
+   },
+   {
+    "rule": "proposed: order conversion fixes by blockers first, then comprehension and usability, then persuasion classes, within each by reach x mention share computed in code",
+    "from": "BK13-K3"
+   },
+   {
+    "rule": "proposed: show the profit leverage of a conversion change only as an owner-input scenario in economics code, labelled hypothetical, never as an expected result",
+    "from": "BK13-K3"
+   },
+   {
+    "rule": "proposed: voc-research gets a 'site visitor' pool with its own N, confidence ceiling Medium, never blended with own-customer or competitor pools.",
+    "from": "BK08-K2"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: recommend a guarantee or other risk reducer only when risk or credibility is among the top diagnosed problems (or the owner asks), matching its type to the concern",
+    "from": "BK13-K1"
+   },
+   {
+    "rule": "proposed: weight barrier evidence from recent buyers above non-buyer price complaints when choosing the first fix, while keeping non-buyer purpose data for fit questions",
+    "from": "BK13-K2"
+   },
+   {
+    "rule": "proposed: do not prioritise CRO over reach when the computed binding constraint is demand",
+    "from": "BK13-K3"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: when no diagnosis evidence exists, output a diagnosis plan before any persuasion remedies",
+    "from": "BK13-K1"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: before recommending a survey, compute expected responses in code from the owner's traffic and a stated response rate, and switch method if the needed count is out of reach within the horizon",
+    "from": "BK13-K2"
+   },
+   {
+    "rule": "proposed: before recommending a visitor survey, compute days-to-target from owner traffic and an explicit assumed rate in code; if over 8 weeks, offer audience research instead.",
+    "from": "BK08-K2"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: session recording and heatmap suggestions carry a consent and masking prerequisite where privacy law applies",
+    "from": "BK13-K2"
+   },
+   {
+    "rule": "proposed: installing a survey on the owner's site is an external action requiring owner approval.",
+    "from": "BK08-K2"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/conversion-audit/SKILL.md (candidate v2)",
+  "skills/landing-pages/SKILL.md",
+  "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md"
+ ],
+ "reconciliation_note": "Feeds BKP-05 (what to test) and BRP-14 (question order and risk).",
+ "member_frameworks": [
+  "BK13-K1",
+  "BK13-K2",
+  "BK13-K3",
+  "BK08-K2"
+ ],
+ "source_references": [
+  "BK13-F8",
+  "BK13-F9",
+  "BK13-F22",
+  "BK13-F15",
+  "BK13-F10",
+  "BK13-F11",
+  "BK13-F13",
+  "BK13-F14",
+  "BK13-F16",
+  "BK13-F17",
+  "BK13-F18",
+  "BK13-F20",
+  "BK13-F4",
+  "BK13-F5",
+  "BK13-F12",
+  "BK13-F23",
+  "BK13-F24",
+  "BK13-F28",
+  "BK08-F11",
+  "BK08-F12",
+  "BK08-F13"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK13-K1-1",
+  "EV-BK13-K1-2",
+  "EV-BK13-K2-1",
+  "EV-BK13-K2-2",
+  "EV-BK13-K2-3",
+  "EV-BK13-K3-1",
+  "EV-BK13-K3-2",
+  "EV-BK13-K3-3",
+  "EV-BK08-K2-1",
+  "EV-BK08-K2-2"
+ ]
+}

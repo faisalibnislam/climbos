@@ -1,0 +1,1027 @@
+{
+ "reading_id": "BK12",
+ "book_title": "Lean Analytics: Use Data to Build a Better Startup Faster",
+ "frameworks": [
+  {
+   "id": "BK12-K1",
+   "name": "Actionable-metric test and vanity filter",
+   "decision": "Which number goes on the scoreboard (North Star, play outcome, leading indicators) and which stays a diagnostic.",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "all"
+   ],
+   "evidence_required": [
+    "the metric's definition (numerator, denominator, window)",
+    "the decision it would change",
+    "whether it is cumulative or per period"
+   ],
+   "prerequisites": [
+    "a stated business model (what the business is paid for)"
+   ],
+   "branches": [
+    {
+     "if": "metric is a cumulative count (total signups, all-time customers, list size)",
+     "then": "replace with a per-period flow or a rate (new paying customers this month; share of signups active weekly)"
+    },
+    {
+     "if": "metric is attention (visits, followers, impressions, downloads) and the business is not ad-funded",
+     "then": "keep it as a leading indicator only, paired with the outcome it should predict"
+    },
+    {
+     "if": "business is ad-funded media (media_creator monetised by impressions or sponsorship per 1,000)",
+     "then": "inventory metrics are acceptable outcome inputs when paired with revenue per 1,000 and audience churn"
+    },
+    {
+     "if": "nobody can say what they'd do differently if the metric moved",
+     "then": "drop it from the scoreboard"
+    }
+   ],
+   "steps": [
+    "List the 3-5 metrics the owner watches.",
+    "For each, write the action it would trigger if it rose or fell.",
+    "Convert cumulative counts to period flows or rates.",
+    "Pair each outcome with the paired metric that can move against it (conversion with order value; signups with activation)."
+   ],
+   "exceptions_failure_modes": [
+    "Media and UGC businesses where attention is the inventory (BK12-F23).",
+    "Rates on tiny denominators look precise but are fragile (Book 12 §4: show counts beside percentages).",
+    "Lexical checks catch words, not meaning: 'leads' can still be a vanity count."
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "minutes",
+    "capability": "none",
+    "measurement": "a definition per metric"
+   },
+   "metrics": [
+    "share of signups active in the period",
+    "new paying customers per period",
+    "revenue per visitor",
+    "revenue per customer"
+   ],
+   "guardrails": [
+    "never accept an all-time count as progress",
+    "show count and denominator with any rate"
+   ],
+   "stop_review": [
+    "review when the business model or stage changes"
+   ],
+   "alternatives": [
+    "no analytics connected: use the owner's own period counts (bookings this month) as the outcome, labelled self-reported"
+   ],
+   "author_refs": [
+    "BK12-F1",
+    "BK12-F2",
+    "BK12-F3",
+    "BK12-F4",
+    "BK12-F23"
+   ],
+   "interpretation": "Interpretation (ours): ClimbOS's lintStageMetric (shared/agents/specs.ts:749-757) implements the attention half of the book's vanity list but lets cumulative signups, trials and leads through (they are in OUTCOME) and is blind to business model, so it would wrongly reject an ad-funded media North Star. The book's sharper test is 'cumulative vs rate' and 'does it change a decision'.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: warn when a North Star or play outcome is a cumulative or all-time count ('total', 'cumulative', 'all-time', 'to date', 'list size'); suggest the per-period flow or rate.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: for media_creator businesses monetised by impressions or sponsorships, allow inventory metrics as the North Star only when the plan pairs them with revenue per 1,000 (computed in code) and an audience-churn reading.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/agents/specs.ts lintStageMetric; skills/growth-plays/SKILL.md §4; skills/growth-strategy/SKILL.md 'North Star by stage'",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/specs.ts:749-757",
+     "skills/growth-plays/SKILL.md:117-120",
+     "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md §1-2"
+    ],
+    "note": "Book 12 already treats metrics as contracts and pairs outcomes with guardrails; this adds the cumulative-count rule and the media exception."
+   },
+   "disagreements": "ClimbOS treats visits/views as never-outcomes; the book says they are outcomes for ad-funded media. Decided by business model: who pays for what.",
+   "eval_case_ids": [
+    "EV-BK12-K1-1",
+    "EV-BK12-K1-2"
+   ]
+  },
+  {
+   "id": "BK12-K2",
+   "name": "One Metric That Matters with a line in the sand",
+   "decision": "Which single number the next 2-12 weeks optimise, what value counts as success, and when to switch to the next number.",
+   "business_models": [
+    "all"
+   ],
+   "lifecycle_stages": [
+    "all; changes by stage"
+   ],
+   "evidence_required": [
+    "the riskiest assumption now",
+    "business-model maths that implies a required value, if available",
+    "the owner's own trend for the metric"
+   ],
+   "prerequisites": [
+    "a diagnosed constraint or stage (BK12-K3)"
+   ],
+   "branches": [
+    {
+     "if": "the business model implies a required value (e.g. revenue target ÷ price ÷ active users)",
+     "then": "use that as the line, computed in code"
+    },
+    {
+     "if": "no model value and only an external norm exists",
+     "then": "use the norm as a labelled, dated reference for orientation only, never a pass/fail gate"
+    },
+    {
+     "if": "neither exists",
+     "then": "measure a baseline period first; or plot the owner's improvement curve and treat the flattening point as the practical ceiling"
+    },
+    {
+     "if": "the line is hit, or gains flatten below it",
+     "then": "switch the OMTM to the next constraint the squeeze toy exposed"
+    },
+    {
+     "if": "the line is missed and qualitative evidence shows a valuable segment uses it differently",
+     "then": "redefine for that segment, recording why (HighScore House); never lower it just to pass"
+    }
+   ],
+   "steps": [
+    "Name the riskiest question.",
+    "Pick the metric that answers it.",
+    "Write the line and its source (model maths, own baseline, or dated external norm).",
+    "Write the action for hit, miss and in-between before data arrive.",
+    "Pair it with one guardrail.",
+    "Re-pick when hit or flat."
+   ],
+   "exceptions_failure_modes": [
+    "Single-metric focus can hide harm (refunds, churn); pair it with guardrails (Book 12 §1; BK06 OEC).",
+    "Lines borrowed from 2013 aggregates mislead small businesses.",
+    "Line moved to fit results."
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "1 hour to set",
+    "capability": "basic tracking",
+    "measurement": "one metric, its definition and weekly readings"
+   },
+   "metrics": [
+    "the chosen OMTM",
+    "one guardrail"
+   ],
+   "guardrails": [
+    "record every line change with a reason and date"
+   ],
+   "stop_review": [
+    "hit: switch",
+    "flat for 3+ readings below the line: change strategy or metric",
+    "line changed twice without new evidence: stop and review"
+   ],
+   "alternatives": [
+    "no tracking: owner tallies the metric by hand weekly; or ClimbOS measures a baseline week first"
+   ],
+   "author_refs": [
+    "BK12-F11",
+    "BK12-F12",
+    "BK12-F13",
+    "BK12-F5",
+    "BK12-F51",
+    "BK12-F14"
+   ],
+   "interpretation": "Interpretation (ours): ClimbOS's 'North Star + 3-5 leading indicators' already matches OMTM in shape. What it lacks is the line's provenance (model maths vs external norm), the pre-agreed action per outcome at plan level, and an explicit 'switch when hit or flat' rule.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: every North Star target carries a source tag: 'model' (computed from goal and price in code), 'owner baseline', or 'external, dated' (with year); external dated targets are shown as orientation and never drive a pass/fail verdict.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: when three consecutive weekly readings show diminishing gains below the line, the plan suggests switching metric or strategy rather than more of the same.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md 'North Star by stage'; StrategyV2Schema.northStar (shared/agents/specs.ts:146-147); shared/agents/goal.ts",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/growth-strategy/SKILL.md:81-83",
+     "skills/growth-plays/SKILL.md:117-120",
+     "skills/experiment-design/SKILL.md:46-48"
+    ],
+    "note": "experiment-design already pre-registers scale/kill/iterate thresholds for tests (duplicate of the book's 'decide before data'); candidate v2 of 'North Star by stage' adds line provenance and the switch rule."
+   },
+   "disagreements": "Book 12 §1 warns against one metric carrying every obligation; BK06 prefers a composite OEC with guardrails. The book's own 'metrics come in pairs' and squeeze toy reconcile this: one focus metric plus guardrails. Decided by keeping both.",
+   "eval_case_ids": [
+    "EV-BK12-K2-1",
+    "EV-BK12-K2-2",
+    "EV-BK12-K2-3"
+   ]
+  },
+  {
+   "id": "BK12-K3",
+   "name": "Stage gates (Empathy → Stickiness → Virality → Revenue → Scale) mapped onto ClimbOS's constraint order",
+   "decision": "Whether a business has earned the right to scale acquisition or optimise revenue, and what it must prove first.",
+   "business_models": [
+    "all; gate evidence differs by model"
+   ],
+   "lifecycle_stages": [
+    "empathy",
+    "stickiness",
+    "virality",
+    "revenue",
+    "scale"
+   ],
+   "evidence_required": [
+    "activation measured as value received (not setup)",
+    "recurring models: churn or cohort retention",
+    "one-off purchase models: repeat, referral, review or satisfaction signal",
+    "capacity headroom"
+   ],
+   "prerequisites": [
+    "the owner's funnel numbers (diagnosis basis 'measured' or 'partial')"
+   ],
+   "branches": [
+    {
+     "if": "capacity is near full (delivery binds)",
+     "then": "delivery first, as today; stage gating does not apply until capacity frees up (ClimbOS rule, not from the book)"
+    },
+    {
+     "if": "no funnel numbers (basis none) or constraint unknown",
+     "then": "Empathy: interviews and a baseline measurement (PB-interviews); no scale plays"
+    },
+    {
+     "if": "activation weak, or retention weak or unmeasured on a recurring model",
+     "then": "Stickiness: bankable play fixes activation/retention; paid acquisition only as a capped test whose readout includes downstream quality; no budget raises, no upsell/price optimisation on the existing base"
+    },
+    {
+     "if": "stickiness evidenced and customers ≥ referral minimum",
+     "then": "Virality: referral/word-of-mouth plays rank before paid scale; effective CAC uses a measured referral rate only"
+    },
+    {
+     "if": "stickiness evidenced and unit economics known",
+     "then": "Revenue: pricing, packaging, upsell, margin work"
+    },
+    {
+     "if": "churn-weighted payback within horizon and margin at target",
+     "then": "Scale: raise paid caps in steps, add channels, compare payback by channel"
+    },
+    {
+     "if": "one-off purchase business (acquisition-mode e-commerce, roofing, weddings)",
+     "then": "stickiness means delivered value (completed jobs, satisfaction, reviews, referrals), not churn; do not block demand plays on a churn reading"
+    }
+   ],
+   "steps": [
+    "Run diagnose() as today.",
+    "Compute a separate stage gate in code from the same inputs: stickiness 'evidenced', 'weak' or 'unproven'.",
+    "Attach gate effects to playbook eligibility (expand steps, budget raises, price/upsell on existing base).",
+    "Add the missing stickiness measurement to diagnosis.missing.",
+    "Show the owner one line: 'Scaling paid waits until X is measured' with the number to collect."
+   ],
+   "exceptions_failure_modes": [
+    "Owner-funded businesses need cash now: charging and conversion fixes are never gated (Buffer, BK12-F40; book says charging early is fine, BK12-F34).",
+    "Network-effect products must seed critical mass before stickiness can be read (BK12-F30).",
+    "Treating the five stages as a strict sequence: the authors say all three engines get built; the order is about focus.",
+    "Gating on churn for businesses with no recurring relationship."
+   ],
+   "requirements": {
+    "cash": "none to compute",
+    "labor": "owner supplies churn or repeat data",
+    "capability": "deterministic code in diagnosis.ts and contracts.ts",
+    "measurement": "activation definition, churn/cohort retention or repeat rate"
+   },
+   "metrics": [
+    "activation rate (value event)",
+    "monthly churn or cohort retention (recurring)",
+    "90-day repeat or review/referral rate (one-off)",
+    "churn-weighted payback"
+   ],
+   "guardrails": [
+    "gate never blocks charging, first-purchase conversion work or a capped, reversible test",
+    "gate reasons shown to owner; owner can override with a stated reason (approval stays with owner)"
+   ],
+   "stop_review": [
+    "re-evaluate the gate when new churn/cohort data or 30 more days of funnel data arrive"
+   ],
+   "alternatives": [
+    "no churn data: run a 30-day cohort read or owner-reported retention, labelled self-reported",
+    "no activation event: interviews to define first value (PB-interviews)"
+   ],
+   "author_refs": [
+    "BK12-F9",
+    "BK12-F10",
+    "BK12-F18",
+    "BK12-F30",
+    "BK12-F31",
+    "BK12-F34",
+    "BK12-F37",
+    "BK12-F40",
+    "BK12-F42"
+   ],
+   "interpretation": "Interpretation (ours), answering the brief: yes, ClimbOS's diagnosis should add a stage-gate notion, but as a separate deterministic field that gates scale and revenue-optimisation actions, not as a ninth constraint and not as a reordering. Current order in diagnose() (shared/agents/diagnosis.ts:130-138): delivery (capacity ≥80%) → retention (only when churn is supplied AND the type is SaaS; >7% = weak) → weaker of activation vs purchase-from-activated → SaaS weak overall → demand (SaaS, downstream fine, under 1,000 visitors a month) → unknown. Mapping: Empathy ≈ basis none/unknown; Stickiness ≈ activation + retention; Virality ≈ referral demand; Revenue ≈ conversion/offer/economics optimisation; Scale ≈ paid demand expansion. The orders agree (retention and activation already outrank demand, and lintDiagnosisFit forces a play on the weak link). The gaps: (1) when churn is missing, or the type isn't SaaS, retention is silent, so a recurring business can be diagnosed 'demand' and pointed at acquisition with stickiness never checked; (2) lintDiagnosisFit needs only one play on the constraint, so paid demand plays can ride alongside a leak; (3) PB-paid-search-test's 'avoid when there is a leak further down' is prose (contracts.ts:135) that eligibility() never checks (contracts.ts:378-417). 'Don't optimise revenue before stickiness' should apply to recurring models: no upsell or price optimisation on the existing base, and no paid scale-up, while retention is weak or unmeasured. It must not stop a business charging or fixing first-purchase conversion. Delivery stays first: it's ClimbOS's own rule (BK01) and compatible with the book.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: diagnose() returns stageGate {stickiness: 'evidenced'|'weak'|'unproven', reason, measureNext}; 'unproven' when a recurring-model business (SaaS, subscription_commerce, mobile_app, gaming, membership) has no churn or cohort retention, or activation is setup-only.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: while stickiness is weak or unproven, paid-acquisition playbooks are eligible only as capped tests (no 'expand' step, no budget raise), and upsell/price optimisation aimed at existing customers is deferred unless the reason is capacity (PB-price-increase under delivery).",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: for one-off purchase types, the stickiness gate reads delivered-value signals (completion, reviews, referrals, repeat within the natural cycle) and never a churn rate.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: when activation and purchase-from-activated are both below the owner's own line (or both unreferenced and similar), prefer activation as the constraint (stickiness before revenue) instead of picking the lower raw rate across different denominators.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: the owner can override any gate with a written reason; the override is logged.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (diagnose, diagnosisBrief, lintDiagnosisFit); shared/playbooks/contracts.ts (eligibility, Requirement kinds); convex/jobs.ts:971",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:83-139",
+     "shared/agents/diagnosis.ts:171-175",
+     "shared/playbooks/contracts.ts:130-148",
+     "shared/playbooks/contracts.ts:169-176",
+     "docs/growth-intelligence/books/03_growth_experimentation.md §2",
+     "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md:101"
+    ],
+    "note": "Book 12 already says buying traffic may be premature when retention dominates value uncertainty, and Book 03 says rank constraints by system effect. Neither is enforced in code; the gate makes it deterministic."
+   },
+   "disagreements": "Book 03 §2 ranks constraints by system effect, which can favour fixing a high-volume conversion leak before retention; Lean Analytics' order says stickiness first. Decided by economics in code: if churn-weighted value per customer is unknown, the conversion fix is allowed (charging is never gated) but scale is not. Paul Graham's growth-first advice in Ch 21 conflicts with the gate; the authors themselves side with the gate for most businesses and call growth-first B2C-biased.",
+   "eval_case_ids": [
+    "EV-BK12-K3-1",
+    "EV-BK12-K3-2",
+    "EV-BK12-K3-3",
+    "EV-BK12-K3-4"
+   ]
+  },
+  {
+   "id": "BK12-K4",
+   "name": "Business model drives the metric (six models, including e-commerce modes and marketplace liquidity)",
+   "decision": "Which funnel and which stickiness signal apply, given how the business makes money.",
+   "business_models": [
+    "e-commerce",
+    "SaaS",
+    "free mobile app/game",
+    "media",
+    "UGC/community",
+    "two-sided marketplace"
+   ],
+   "lifecycle_stages": [
+    "stickiness",
+    "revenue"
+   ],
+   "evidence_required": [
+    "revenue source",
+    "purchase frequency",
+    "for e-commerce: share of past buyers who bought again in 90 days or 12 months",
+    "for marketplaces: share of buyer searches with at least one result, active listings, buyer:seller activity"
+   ],
+   "prerequisites": [
+    "business type classified"
+   ],
+   "branches": [
+    {
+     "if": "e-commerce with a low repeat rate (Hillstrom 'acquisition mode', dated)",
+     "then": "rank acquisition and referral above loyalty programmes; optimise revenue per visitor and order size"
+    },
+    {
+     "if": "e-commerce with a high repeat rate",
+     "then": "loyalty and purchase frequency plays are reasonable"
+    },
+    {
+     "if": "marketplace with many empty searches or few active listings",
+     "then": "seed supply (by hand) before buying buyer traffic; measure satisfied transactions"
+    },
+    {
+     "if": "free app/game",
+     "then": "read churn at day 1, week 1, month 1; separate payers (ARPPU) from all users (ARPU)"
+    },
+    {
+     "if": "media/UGC",
+     "then": "audience churn and engaged time, engagement-funnel tier conversion by cohort"
+    },
+    {
+     "if": "SaaS",
+     "then": "activation, paid churn separate from free churn, upsell path"
+    }
+   ],
+   "steps": [
+    "Classify the revenue source and repeat cycle.",
+    "Pick the model's stickiness signal.",
+    "Compute the model's key ratio in code (repeat rate, empty-search share, ARPPU).",
+    "Use it to rank playbooks, not to grade the business against 2013 norms."
+   ],
+   "exceptions_failure_modes": [
+    "Hybrid models (a SaaS with a marketplace, e-commerce with reviews) need both readings.",
+    "Hillstrom's cut-offs are one consultant's 2012 experience; use the owner's rate and trend."
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner export of orders or searches",
+    "capability": "code calculators",
+    "measurement": "orders with customer IDs; search logs for marketplaces"
+   },
+   "metrics": [
+    "90-day repeat purchase rate",
+    "revenue per visitor",
+    "share of searches with ≥1 result",
+    "satisfied transactions share",
+    "day-1/7/30 retention",
+    "ARPPU"
+   ],
+   "guardrails": [
+    "loyalty forecasts cap repeat-rate uplift modestly unless the owner has evidence (Hillstrom: annual rate rarely moves >10% relative; dated, grade C)"
+   ],
+   "stop_review": [
+    "re-classify when repeat rate trend changes for two quarters"
+   ],
+   "alternatives": [
+    "no order export: owner estimate of repeat buyers, labelled self-reported; marketplace with no search logs: manual weekly tally of unanswered requests"
+   ],
+   "author_refs": [
+    "BK12-F16",
+    "BK12-F17",
+    "BK12-F22",
+    "BK12-F23",
+    "BK12-F24",
+    "BK12-F25",
+    "BK12-F36"
+   ],
+   "interpretation": "Interpretation (ours): diagnosis.ts only has SaaS references (line 61-68) and no model-specific readings. The marketplace and e-commerce-mode readings would change which playbooks rank first (PB-lifecycle-email vs PB-referrals vs demand) without adding any external threshold.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: optional inputs repeatBuyers90d/firstTimeBuyers for commerce types; code computes the repeat rate and the brief tells the plays agent whether loyalty plays have room; Hillstrom's bands are shown only as a dated, grade-C reference.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: for marketplace types, when the owner reports a high share of empty searches or unanswered requests, demand plays aimed at buyers are ranked after supply seeding.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: candidate base-rates rows (dated, grade C): Hillstrom repurchase bands; app day-1 drop; to live under a '2013 practitioner (Lean Analytics)' heading, never in REF.",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (new optional inputs); skills/retention-lifecycle/SKILL.md; skills/plays-ecommerce-consumer/SKILL.md; skills/growth-plays/reference/base-rates.md",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:61-68",
+     "skills/retention-lifecycle/SKILL.md:26-30",
+     "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md §4 (separate marketplace funnels)"
+    ],
+    "note": "Book 12 notes marketplaces need separate supply and demand funnels; retention-lifecycle finds the biggest leak but has no 'acquisition mode' caution."
+   },
+   "disagreements": "retention-lifecycle assumes repeat purchase is always worth pursuing; Hillstrom (via the book) says loyalty pushes fail in acquisition mode. Decided by the owner's measured repeat rate and the cost of the loyalty play vs a referral or acquisition play, compared in code.",
+   "eval_case_ids": [
+    "EV-BK12-K4-1",
+    "EV-BK12-K4-2",
+    "EV-BK12-K4-3"
+   ]
+  },
+  {
+   "id": "BK12-K5",
+   "name": "Cohort and segment reading (churn maths, leading indicators)",
+   "decision": "Whether recent changes made things better, and which early behaviour predicts staying or paying.",
+   "business_models": [
+    "SaaS",
+    "subscription commerce",
+    "apps",
+    "UGC",
+    "any repeat business"
+   ],
+   "lifecycle_stages": [
+    "stickiness",
+    "virality",
+    "revenue"
+   ],
+   "evidence_required": [
+    "customer start dates and activity or payments by month",
+    "at least 3 cohorts with 3+ complete months for a survival read"
+   ],
+   "prerequisites": [
+    "payments or usage data connected (convex computeCohorts) or an owner export"
+   ],
+   "branches": [
+    {
+     "if": "growth is fast or uneven",
+     "then": "do not use start-of-period or averaged denominators; use cohorts or short periods"
+    },
+    {
+     "if": "freemium or trial",
+     "then": "track free-user and paid-customer churn separately"
+    },
+    {
+     "if": "cohort cell is immature",
+     "then": "label it, never zero"
+    },
+    {
+     "if": "a behaviour separates retained from lost users",
+     "then": "treat it as a candidate leading indicator; test causation before using it as a lever"
+    }
+   ],
+   "steps": [
+    "Group customers by start month.",
+    "Compare at equal ages.",
+    "Compute churn by cohort in code.",
+    "Segment retained vs lost by early behaviour.",
+    "Propose one leading indicator and the test that would show causation."
+   ],
+   "exceptions_failure_modes": [
+    "Tiny cohorts: show counts ('3 of 10').",
+    "Correlation mistaken for a lever.",
+    "Blended averages hiding improving (or worsening) cohorts."
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "low once connected",
+    "capability": "shared/attribution/cohorts.ts",
+    "measurement": "payment or activity events with customer IDs"
+   },
+   "metrics": [
+    "cohort retention by month of age",
+    "paid churn",
+    "first-month revenue per cohort",
+    "candidate leading indicator rate"
+   ],
+   "guardrails": [
+    "immature cells labelled",
+    "counts shown beside percentages"
+   ],
+   "stop_review": [
+    "re-read monthly as cohorts mature"
+   ],
+   "alternatives": [
+    "no billing connection: owner's reported monthly churn, labelled self-reported; or a manual list of customers by start month"
+   ],
+   "author_refs": [
+    "BK12-F3",
+    "BK12-F6",
+    "BK12-F8",
+    "BK12-F20",
+    "BK12-F33"
+   ],
+   "interpretation": "Interpretation (ours): ClimbOS computes cohorts from billing (shared/attribution/cohorts.ts:39) but diagnose() reads only the owner-typed churn (convex/jobs.ts:971). The book and Guide 04 DS-C4 both prefer the cohort read.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: when computeCohorts has 3+ cohorts with 3+ complete months, diagnose() uses observed cohort retention for the retention reading and labels the source; owner-typed churn is the fallback.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: churn shown to owners states its type (paid vs free; customer vs revenue) and denominator method.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "convex/jobs.ts:971; shared/attribution/cohorts.ts; shared/agents/diagnosis.ts",
+   "relation_to_existing": {
+    "type": "duplicates",
+    "targets": [
+     "docs/growth-expansion/blog-research/guides/04_subscription_economics.md DS-C4 (line 202)",
+     "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md §4 (line 43-53)"
+    ],
+    "note": "The cohort and churn guidance duplicates Guide 04 and Book 12; this book adds the separate free vs paid churn and the fast-growth denominator warning. No new framework needed; the code gap (diagnosis not reading cohorts) is the useful part."
+   },
+   "disagreements": "None material; the book's simple 1/churn lifetime is weaker than Book 12's cohort contribution method, which should win.",
+   "eval_case_ids": [
+    "EV-BK12-K5-1",
+    "EV-BK12-K5-2",
+    "EV-BK12-K5-3"
+   ]
+  },
+  {
+   "id": "BK12-K6",
+   "name": "Empathy-stage evidence: scored problem interviews and answers at scale",
+   "decision": "Whether a problem is painful enough for enough reachable people to build or sell a solution, and which segment feels it most.",
+   "business_models": [
+    "all; new offers and pivots"
+   ],
+   "lifecycle_stages": [
+    "empathy"
+   ],
+   "evidence_required": [
+    "15+ interviews per stage with target customers (not friends)",
+    "how they solve it today",
+    "commitments: follow-up, referrals, pre-payment"
+   ],
+   "prerequisites": [
+    "a named target segment",
+    "a script that separates problem from solution"
+   ],
+   "branches": [
+    {
+     "if": "exploring a broad space",
+     "then": "divergent interviews; count unprompted mentions of the problem"
+    },
+    {
+     "if": "comparing known problems",
+     "then": "convergent interviews; ask for a ranking; optional scoring"
+    },
+    {
+     "if": "people aren't trying to solve it today",
+     "then": "budget for creating awareness, or drop it"
+    },
+    {
+     "if": "high scores cluster in one segment",
+     "then": "that segment is the beachhead"
+    }
+   ],
+   "steps": [
+    "Recruit target people (not friends).",
+    "Run a script: context, ranking, how they solve it now.",
+    "Ask for a commitment (follow-up, intro, pre-order).",
+    "Score or tally consistently; compare segments.",
+    "Then test at scale with a survey whose 'good' threshold is written in advance."
+   ],
+   "exceptions_failure_modes": [
+    "Leading questions and compliments (also BK05).",
+    "Scoring body language is subjective; weight commitments more.",
+    "Surveys before you know what to ask."
+   ],
+   "requirements": {
+    "cash": "low (incentives)",
+    "labor": "15-30 hours",
+    "capability": "interview script",
+    "measurement": "tally sheet"
+   },
+   "metrics": [
+    "share of interviews with an existing workaround",
+    "share offering a commitment",
+    "problem rank counts by segment"
+   ],
+   "guardrails": [
+    "never quote an interviewee publicly without consent",
+    "no cold outreach via ClimbOS's own email service for recruitment"
+   ],
+   "stop_review": [
+    "after 15 interviews per segment, decide: proceed, narrow segment, or drop"
+   ],
+   "alternatives": [
+    "can't find 15 people: treat that as a reachability warning; use paid research panels or existing customers"
+   ],
+   "author_refs": [
+    "BK12-F26",
+    "BK12-F27",
+    "BK12-F28",
+    "BK12-F29"
+   ],
+   "interpretation": "Interpretation (ours): this largely duplicates BK05 (The Mom Test) and PB-interviews. The book's scoring rubric is a useful triage device but should be framed as subjective and secondary to commitments.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: PB-interviews readouts tally three things per interview, existing workaround, commitment offered, unprompted mention, and report counts by segment; any numeric score is labelled subjective.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "PB-interviews (shared/playbooks/contracts.ts:76-92); skills/voc-research/SKILL.md",
+   "relation_to_existing": {
+    "type": "duplicates",
+    "targets": [
+     "PB-interviews",
+     "docs/growth-engine/book-review/BK05.md",
+     "docs/growth-engine/book-review/BK04.md"
+    ],
+    "note": "Adds the convergent/divergent distinction and the 15-per-stage floor; otherwise covered."
+   },
+   "disagreements": "The Mom Test (BK05) distrusts enthusiasm and body language; this book scores them (8 points for engagement). Decided by weighting commitments over demeanour.",
+   "eval_case_ids": [
+    "EV-BK12-K6-1",
+    "EV-BK12-K6-2"
+   ]
+  },
+  {
+   "id": "BK12-K7",
+   "name": "Revenue-stage economics: payback, breakeven gates, virality as a CAC multiplier",
+   "decision": "Whether to pour revenue back into acquisition, and how fast.",
+   "business_models": [
+    "all paying models"
+   ],
+   "lifecycle_stages": [
+    "revenue",
+    "scale"
+   ],
+   "evidence_required": [
+    "revenue per customer per month",
+    "gross margin",
+    "CAC with owner time",
+    "churn or cohort survival",
+    "measured referral rate if counting virality"
+   ],
+   "prerequisites": [
+    "stickiness evidenced (BK12-K3)"
+   ],
+   "branches": [
+    {
+     "if": "churn-weighted payback within the horizon",
+     "then": "raise caps in steps; compare payback by channel"
+    },
+    {
+     "if": "payback beyond horizon",
+     "then": "fix value per customer or CAC first"
+    },
+    {
+     "if": "measured referral rate k < 1",
+     "then": "effective CAC = paid CAC × (1 − k), computed in code"
+    },
+    {
+     "if": "no measured k",
+     "then": "no virality discount on CAC"
+    }
+   ],
+   "steps": [
+    "Compute time to customer breakeven in code.",
+    "Compute churn-weighted payback (existing economics.ts).",
+    "If k is measured, compute effective CAC.",
+    "Check breakeven gates: variable costs, hibernation."
+   ],
+   "exceptions_failure_modes": [
+    "Using LTV:CAC ≥ 3 or 'CAC ≤ 1/3 CLV' as pass/fail (Guide 04 DS-C5 forbids).",
+    "Naive LTV from a few months of churn.",
+    "Magic-number thresholds whose definition varies."
+   ],
+   "requirements": {
+    "cash": "acquisition budget",
+    "labor": "low",
+    "capability": "shared/agents/economics.ts, shared/growth/calc.ts",
+    "measurement": "cost and revenue by channel"
+   },
+   "metrics": [
+    "months to customer breakeven",
+    "churn-weighted payback",
+    "effective CAC with measured referrals",
+    "magic number (labelled variant)"
+   ],
+   "guardrails": [
+    "spend never above the owner's cap",
+    "benchmarks carry era and basis"
+   ],
+   "stop_review": [
+    "payback lengthens two periods in a row: pause the raise"
+   ],
+   "alternatives": [
+    "no churn: no-churn payback labelled as an upper bound on speed, no verdict (as Guide 04 DS-C1)"
+   ],
+   "author_refs": [
+    "BK12-F19",
+    "BK12-F32",
+    "BK12-F35",
+    "BK12-F37",
+    "BK12-F39",
+    "BK12-F44",
+    "BK12-F46"
+   ],
+   "interpretation": "Interpretation (ours): ClimbOS already computes churn-weighted payback; the book adds two calculators worth having: time to customer breakeven (its simple form) and effective CAC when referrals are measured. Its 'a third of CLV' line contradicts Guide 04 DS-C5 and should stay a labelled heuristic.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: add effectiveCac(paidCac, k) = paidCac × (1 − k) for 0 ≤ k < 1, used only when k is measured from the owner's referral data; label it.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: do not adopt 'CAC ≤ 1/3 CLV' as a gate; show it only as a dated rule of thumb beside the churn-weighted payback.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "shared/agents/economics.ts; shared/growth/calc.ts; shared/analysis/decisions.ts",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/growth-expansion/blog-research/guides/04_subscription_economics.md DS-C1, DS-C5",
+     "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md §9"
+    ],
+    "note": "Candidate v2 adds the referral-adjusted CAC calculator; contradicts nothing in code."
+   },
+   "disagreements": "Book: CAC ≤ 1/3 CLV 'unless you have a good reason'. Guide 04 DS-C5: no LTV:CAC 3× gate. Decided for ClimbOS by DS-C5 (churn-weighted payback within a 12-month horizon suits owner-funded businesses). The book's Backupify 12-month payback target agrees with the ClimbOS horizon.",
+   "eval_case_ids": [
+    "EV-BK12-K7-1",
+    "EV-BK12-K7-2",
+    "EV-BK12-K7-3",
+    "EV-BK12-K7-4"
+   ]
+  },
+  {
+   "id": "BK12-K8",
+   "name": "B2B and enterprise adjustments",
+   "decision": "How to read evidence and pick metrics when there are few, large customers.",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "agency",
+    "consulting",
+    "developer_tools"
+   ],
+   "lifecycle_stages": [
+    "all"
+   ],
+   "evidence_required": [
+    "named customers and their revenue share",
+    "support and integration hours per customer",
+    "sales-stage conversion",
+    "buyer vs user contacts"
+   ],
+   "prerequisites": [
+    "a customer list"
+   ],
+   "branches": [
+    {
+     "if": "fewer than about 30 customers or prospects",
+     "then": "census, not sampling: talk to every one; no significance tests"
+    },
+    {
+     "if": "one or two customers dominate revenue or support",
+     "then": "disentangle: segment them, price support, avoid building only for them"
+    },
+    {
+     "if": "usage is mandated by the employer",
+     "then": "login frequency is not satisfaction; measure task outcomes against a pre-deployment baseline"
+    },
+    {
+     "if": "consulting revenue funds a product",
+     "then": "track integration/custom work per customer to see if it's becoming a product"
+    },
+    {
+     "if": "B2B virality",
+     "then": "references, case studies and named-customer proof, not invite loops"
+    }
+   ],
+   "steps": [
+    "List customers with revenue and support hours.",
+    "Compute revenue and support share per customer.",
+    "Document sales stages and conversion after the first few deals.",
+    "Capture client baselines before deployment for ROI case studies."
+   ],
+   "exceptions_failure_modes": [
+    "Self-serve SMB SaaS behaves more like consumer funnels.",
+    "Enterprise case-study requests can breach confidentiality; owner approval needed."
+   ],
+   "requirements": {
+    "cash": "low",
+    "labor": "moderate (calls)",
+    "capability": "CRM or spreadsheet",
+    "measurement": "per-customer revenue, hours, tickets"
+   },
+   "metrics": [
+    "revenue share of top customer",
+    "support hours per customer",
+    "stage-to-stage sales conversion",
+    "time to first value against client baseline"
+   ],
+   "guardrails": [
+    "no customer named publicly without permission"
+   ],
+   "stop_review": [
+    "quarterly customer profitability review"
+   ],
+   "alternatives": [
+    "no CRM: owner's spreadsheet of deals and hours"
+   ],
+   "author_refs": [
+    "BK12-F42",
+    "BK12-F52",
+    "BK12-F53",
+    "BK12-F32"
+   ],
+   "interpretation": "Interpretation (ours): ClimbOS's B2B plays catalogue channels well but nothing checks concentration, integration cost or mandated-usage pitfalls. The diagnosis treats a 10-customer B2B firm like a funnel with rates.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: for B2B types with fewer than about 30 customers, diagnosis readings report counts, not rates, and experiment lints block significance-style tests (route to interviews or before/after).",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: when one customer exceeds a large share of revenue (owner-defined), the plan includes a disentanglement step before scale.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/plays-saas-b2b/SKILL.md; shared/agents/diagnosis.ts; shared/agents/lint.ts (experiment feasibility)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/plays-saas-b2b/SKILL.md",
+     "skills/experiment-design/SKILL.md:38",
+     "docs/growth-expansion/blog-research/guides/04_subscription_economics.md DS-C6"
+    ],
+    "note": "experiment-design's volume maths already makes small-sample tests infeasible; this adds the B2B census framing, integration-cost and concentration metrics."
+   },
+   "disagreements": "None with the library; Guide 04 DS-C6 (sales touch fits customer value) agrees.",
+   "eval_case_ids": [
+    "EV-BK12-K8-1",
+    "EV-BK12-K8-2",
+    "EV-BK12-K8-3"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "Version 'North Star by stage': define the stage from evidence (the gate statements: need found; adopted and paid for; keeps users; growth fuelled; margins sustainable), require each target's source (model maths, owner baseline, or external dated reference with year), the action if hit or missed, one paired guardrail, and a rule to switch the metric when it's hit or flat.",
+   "why": "Today the skill says 'pick the number for the stage' without defining stage or line provenance; this is the book's core contribution.",
+   "refs": [
+    "BK12-K2",
+    "BK12-K3",
+    "BK12-F9",
+    "BK12-F12"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/SKILL.md",
+   "change": "In §4 add: cumulative counts are never progress (use per-period flows or rates); for ad-funded media, inventory metrics are valid when paired with revenue per 1,000; marketplaces read liquidity (searches with a result) before buyer acquisition; don't plan scale-up of paid while stickiness is unproven, but charging and first-purchase fixes are always fine.",
+   "why": "Closes the gaps between the skill's vanity rule and the book's model-specific exceptions.",
+   "refs": [
+    "BK12-K1",
+    "BK12-K3",
+    "BK12-K4"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "Add an 'acquisition mode' caution for commerce: when few past buyers buy again in the natural cycle, loyalty programmes are a poor first bet and repeat-rate uplift should be modelled modestly; read app churn at day 1, week 1 and month 1 separately; track paid churn separately from free-user churn.",
+   "why": "The skill assumes repeat purchase is always the lever; the book's e-commerce modes and churn windows refine it.",
+   "refs": [
+    "BK12-F16",
+    "BK12-F20",
+    "BK12-F22"
+   ]
+  },
+  {
+   "skill": "skills/plays-saas-b2b/SKILL.md",
+   "change": "Add a short B2B evidence section: treat customer research as a census when accounts are few; track integration and custom-work hours per customer; watch revenue and support concentration; mandated logins aren't satisfaction; capture client baselines before deployment for ROI case studies; references and case studies are B2B word of mouth.",
+   "why": "The catalogue covers channels but not how B2B evidence and stickiness differ.",
+   "refs": [
+    "BK12-K8",
+    "BK12-F52",
+    "BK12-F53"
+   ]
+  },
+  {
+   "skill": "skills/voc-research/SKILL.md",
+   "change": "Add the divergent (open problem space, count unprompted mentions) vs convergent (rank known problems) interview modes, a floor of about 15 target interviews per stage, and a tally of workaround / commitment / unprompted mention per interview; any numeric score labelled subjective.",
+   "why": "Adds structure that BK05 lacks without contradicting it.",
+   "refs": [
+    "BK12-K6",
+    "BK12-F26"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/reference/base-rates.md",
+   "change": "Correct the 'e.g. Lean Analytics' attribution on the self-serve rows: the book's freemium rule of thumb is about 2% (not 2-5%), card-required trial conversion 40-50% (Totango, c. 2012), no-card about 15% (25% only when sales effort targets serious evaluators), best SaaS churn 1.5-3% with 5% as a pre-scale line. Add era and basis to each row; keep ClimbOS's chosen ranges if other sources support them, but stop citing this book for the upper ends.",
+   "why": "Provenance accuracy; the brief forbids turning dated book benchmarks into ClimbOS thresholds.",
+   "refs": [
+    "BK12-F46",
+    "BK12-F47",
+    "BK12-F48"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/playbooks/contracts.ts:130-148 and :378-417",
+   "gap": "PB-paid-search-test says 'avoid when there is a leak further down the funnel' (line 135) and its expand step raises spend (line 145), but eligibility() never reads ctx.constraint or any retention evidence, so paid can scale while activation or retention is the weak link. Same prose-only pattern in PB-referrals (line 174) and PB-social-content (line 358).",
+   "proposed_change": "Add a Requirement kind (e.g. 'stage_gate' or 'constraint_not': ['activation','retention']) checked in eligibility(); when it fails, keep the playbook eligible as a capped test but drop its expand step from playbookBrief.",
+   "priority": "P1"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:97-100, 130-138",
+   "gap": "Retention gets a verdict only when churn is supplied and the type is SaaS; when churn is missing nothing records that stickiness is unproven, so a recurring business can be diagnosed 'demand' (line 137) and steered to acquisition. No stage-gate output exists.",
+   "proposed_change": "Return stageGate {stickiness: evidenced|weak|unproven, reason, measureNext}; push 'retention (churn or a cohort read)' to missing for recurring types (SaaS, subscription_commerce, mobile_app, gaming, nonprofit memberships) when absent; use delivered-value signals for one-off types. Surface in diagnosisBrief (line 142-151).",
+   "priority": "P1"
+  },
+  {
+   "where": "convex/jobs.ts:971",
+   "gap": "diagnose() receives only the owner-typed unitEconomics.monthlyChurn; cohort retention from connected billing (shared/attribution/cohorts.ts:39 computeCohorts) is never used, though both this book and Guide 04 DS-C4 prefer cohorts.",
+   "proposed_change": "When 3+ cohorts with 3+ complete months exist, pass observed retention (with source label) and prefer it over the typed value.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/specs.ts:749-757",
+   "gap": "lintStageMetric is lexical: OUTCOME (line 750) includes sign-ups, trials and leads, so 'Total signups to date' passes although it is the book's canonical vanity metric; and it is type-blind, so an ad-funded media_creator North Star built on monetised impressions is rejected unless 'revenue' appears.",
+   "proposed_change": "Add a warn for cumulative phrasing (total|cumulative|all-time|to date|list size); allow inventory metrics for media_creator when paired with a revenue-per-1,000 figure.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:134",
+   "gap": "The activation vs conversion choice compares raw rates with different denominators (activated/leads vs paid/activated) and picks the lower; the book's order would favour fixing stickiness (activation) when both are weak.",
+   "proposed_change": "When both links are below the owner's line or both unreferenced and within a small margin, choose activation and name conversion as the competing explanation.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:61-68",
+   "gap": "Reference ranges and readings exist only for SaaS; no model-specific readings for commerce repeat rate or marketplace liquidity (empty searches), which the book shows change the first move.",
+   "proposed_change": "Optional inputs repeatBuyers90d/firstTimeBuyers and searchesWithResult/searches; computed in code; used to rank playbooks, with any external bands shown as dated, grade-C references only.",
+   "priority": "P3"
+  },
+  {
+   "where": "skills/growth-plays/reference/base-rates.md:67-70",
+   "gap": "Rows cite 'e.g. Lean Analytics' for 2-5% free→paid, 15-25% no-card trial and 40-60% card trial; the book gives about 2%, about 15% (25% only with targeted selling) and 40-50%, all c. 2012. The upper ends are not from this book.",
+   "proposed_change": "Fix attribution and add era; source the upper ends elsewhere or narrow them. diagnosis.ts:65-67 REF texts mirror these rows and should change with them.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/economics.ts / shared/growth/calc.ts (no referral term found; grep 'viral' hits only shared/acquisition/library.ts:295,304 and scoring.ts:121)",
+   "gap": "No calculator for referral-adjusted CAC, so a measured word-of-mouth rate can't lower effective CAC in the economics.",
+   "proposed_change": "Add effectiveCac(paidCac, k) for measured 0 ≤ k < 1 in shared/analysis/decisions.ts with tests; never default k.",
+   "priority": "P3"
+  }
+ ]
+}

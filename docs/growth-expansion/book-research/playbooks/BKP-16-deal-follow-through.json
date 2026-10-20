@@ -1,0 +1,171 @@
+{
+ "id": "BKP-16",
+ "version": 1,
+ "slug": "deal-follow-through",
+ "title": "Next steps, stalled deals and negotiation trades",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "When to close a stalled deal as lost, and how to negotiate by trading rather than giving discounts.",
+ "business_types": [
+  "b2b",
+  "agency",
+  "professional_services"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Open deals with missed commitments",
+  "Buyer asks for a discount or better terms"
+ ],
+ "exclusions": [
+  "Deals with no agreed next step yet (run BKP-15 first)"
+ ],
+ "required_inputs": [
+  "Deal history with dated next steps",
+  "Owner's acceptable terms"
+ ],
+ "evidence_requirements": [
+  "agreed next steps and dates",
+  "kept vs broken commitments (missed meetings, unanswered agreed deliverables)",
+  "explicit buyer statements about timing or permission to re-contact",
+  "owner's list price, floor price and margin (shared/analysis/decisions.ts margin/priceFloor)",
+  "which terms the owner is willing to vary",
+  "competitor quote if claimed (seen, not assumed)"
+ ],
+ "missing_data_behavior": [
+  "No CRM: owner lists open deals and last contact."
+ ],
+ "decision_branches": [
+  {
+   "if": "Two broken commitments",
+   "then": "One clarity email, then close lost with a reason."
+  },
+  {
+   "if": "Discount requested",
+   "then": "Trade for upfront cash, term or scope; payment-term premium computed in code."
+  }
+ ],
+ "implementation_steps": [
+  "State the next step, owner and date at the end of every interaction and confirm it in writing.",
+  "Deliver your part fast.",
+  "Detect broken commitments from the calendar and CRM.",
+  "Clarity email draft for owner approval.",
+  "Close lost with reason(s) (multi-select, unknown allowed) and notes.",
+  "Schedule permitted re-engagement as a new opportunity.",
+  "List levers and owner priorities (cash up front, then term, then price).",
+  "Concede one step at a time; always trade.",
+  "Compute effective price and premium in code."
+ ],
+ "dependencies": [
+  "Deals carry next step + date (convex/crm.ts nextStep/nextStepAt exist)",
+  "Owner-approved price rules; the AI never invents a discount"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "minutes per deal",
+  "capability": "CRM with next step/date and lost reason",
+  "measurement": "deals without next step; broken-commitment count"
+ },
+ "metrics": [
+  "share of open deals with a dated next step",
+  "deals closed lost per month by reason",
+  "deferred deals revived and won",
+  "average realised price vs list",
+  "share paid upfront",
+  "concessions per deal"
+ ],
+ "guardrails": [
+  "No decoy proposal options; no inflated starting prices; no false urgency.",
+  "Re-contact after loss only with the buyer's permission.",
+  "Re-contact only with permission or a lawful basis (consent rules vary by country)",
+  "Breakup email: no guilt, no false deadline (sales-follow-up Never do)",
+  "Owner approves every send",
+  "No false urgency: 'price goes up' or 'limited start slots' only if true and in facts",
+  "Discounts only from owner rules",
+  "Never below price floor",
+  "Consumer contracts: check local cancellation and payment-term law"
+ ],
+ "alternatives_when_constrained": [
+  "No CRM use: a weekly 10-minute list review of open quotes with next-step dates",
+  "No price rules from owner: present list price and ask the owner before any concession"
+ ],
+ "stop_conditions": [
+  "Monthly: read lost reasons; recurring reason becomes a positioning, offer or targeting question",
+  "If average realised discount keeps rising, review list price and proof rather than conceding more"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Leaving dead deals open (inflates pipeline, wastes owner time)",
+  "Guilt-tripping breakup emails",
+  "Negotiating against yourself before the buyer asks",
+  "Reverse auction with a competitor"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: An open deal with no future dated next step is flagged 'uncovered' in the pipeline view and daily brief.",
+    "from": "BK09b-K4"
+   },
+   {
+    "rule": "proposed: Two broken commitments trigger a suggested clarity email, owner-approved, then close-lost with reason if unanswered.",
+    "from": "BK09b-K4"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: Re-engagement of a lost or deferred deal requires buyer permission or a lawful basis recorded on the deal; no default 60-day re-contact.",
+    "from": "BK09b-K4"
+   },
+   {
+    "rule": "proposed: Urgency statements (price rise, limited slots, offer end date) require a matching fact; otherwise the lint blocks them.",
+    "from": "BK09b-K6"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: Every concession in a drafted negotiation reply is paired with something the client gives (volume, term, upfront payment, reduced scope).",
+    "from": "BK09b-K6"
+   },
+   {
+    "rule": "proposed: Proposal options must each be a deliverable offer; no decoy options.",
+    "from": "BK09b-K6"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: Effective price, payment-term premium and margin after concession are computed in code and checked against the owner's price floor.",
+    "from": "BK09b-K6"
+   }
+  ]
+ },
+ "versions_existing": [
+  "docs/growth-intelligence/books/11_sales_partnerships.md sections 6, 7, 13",
+  "skills/sales-follow-up/SKILL.md step 8"
+ ],
+ "reconciliation_note": "Rejects the book's steering options and inflated anchors (RECONCILIATION R16).",
+ "member_frameworks": [
+  "BK09b-K4",
+  "BK09b-K6"
+ ],
+ "source_references": [
+  "BK09b-F12",
+  "BK09b-F21",
+  "BK09b-F24",
+  "BK09b-F26",
+  "BK09b-F15",
+  "BK09b-F17",
+  "BK09b-F22"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09b-K4-1",
+  "EV-BK09b-K4-2",
+  "EV-BK09b-K6-1",
+  "EV-BK09b-K6-2",
+  "EV-BK09b-K6-3"
+ ]
+}

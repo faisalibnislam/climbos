@@ -1,0 +1,76 @@
+--- a/skills/landing-pages/SKILL.md
++++ b/skills/landing-pages/SKILL.md
+@@ -19,7 +19,7 @@
+ - No traffic source → write the page for the most likely source, state that assumption at the top, and list the words the ad must use.
+ - No testimonials → use the next proof type down the hierarchy (numbers, mechanism, guarantee, credentials). No placeholders, and never write a sample quote.
+ - No price → don't invent one; use a clear next step ("see plans", "get a quote") and tell the owner in your notes why showing a starting price would convert better.
+-- No guarantee → don't invent one; suggest one for the owner to consider, clearly labelled as a suggestion.
++- No guarantee → don't invent one. Suggest one only when VOC or an audit shows risk or credibility among the top hesitations, matched to that risk and labelled a suggestion [BK13-K1, CH-C5].
+ 
+ ## Procedure
+ 
+@@ -28,7 +28,7 @@
+    | Awareness | Typical source | Open with | Length |
+    |---|---|---|---|
+    | Most aware | Brand search, retargeting, customer email | The offer and price | Short: hero, offer, key FAQs, CTA |
+-   | Product-aware | Comparison searches, competitor terms | The difference from the alternative | Medium: comparison, proof, risk reversal |
++   | Product-aware | Comparison searches, competitor terms | The difference from the alternative | Medium: comparison, proof, risk reducer if diagnosed |
+    | Solution-aware | "service + city", category searches | The outcome plus specifics | Medium: how it works, proof, offer, FAQ |
+    | Problem-aware | Cold social, problem content | The situation in VOC words | Long: problem, mechanism, proof, offer |
+    | Unaware | Rarely a landing page job | — | Use content or ads first |
+@@ -52,15 +52,24 @@
+    4. Proof block: named testimonials with specifics, numbers, logos with permission.
+    5. Offer detail: what's included, price, minimums, delivery or start date.
+    6. Objection FAQ.
+-   7. Risk reversal: guarantee, trial or cancellation terms.
++   7. Risk reversal, only for a diagnosed risk: the matched reducer near the CTA [BK13-K1, CH-C5]. Otherwise state trial and cancellation terms plainly in the offer detail.
+    8. Repeat CTA, plus contact details. A phone number builds trust for local businesses.
+ 
+-   For B2B or higher-ticket offers, use the sales-narrative order: insight (what changed), the alternatives and their trade-offs, what a good solution needs, how this delivers it, proof, objections, ask.
++   For long-form B2B or high-ticket considered offers, explainers and buyer's guides, use the sales-narrative order: insight, the alternatives grouped as approaches with trade-offs, what a good solution needs (each criterion maps to a value theme), how this delivers it, proof, objections, one ask [BK14-K3, BK14-K7].
++   - **Insight** = what the best-fit buyer misunderstands about the problem or the solution, derived backwards from the differentiated value. Not a trend or "what changed"; reject one that reads the same for the top competitor [BK14-F18, BK14-F29].
++   - Homepages lead with category + up to 3 value themes + proof; they need not follow the story [BK14-F30].
+ 
++   Any page:
++   - Many features: lead with the one gateway outcome customers hired it for; save the rest for onboarding. Order sections by a visitor survey's "what matters most" ranking when one exists [BK08-K2, BK08-K3].
++   - Services: add a "what happens after you say yes" block (steps, timing, who) [BK13-F26].
++   - Large asks: consider a lower-commitment next step (consult, trial) and name the downstream metric that shows persuasion wasn't just deferred [BK13-K5].
++
+ 5. **Place proof next to claims.** Use the hierarchy: verifiable number with source, named quote, demonstration or mechanism, guarantee, credentials. Superlatives are not proof. Every claim gets evidence within two sentences. A testimonial needs a name, a role or context, and a specific result or detail; "Great service!" is filler.
+ 
+ 6. **Map objections.** List the top 3–5 objections from the VOC bank (price, time, trust, switching effort, fit). For each, write the answer and choose where it sits: near the CTA if it blocks the click, in the FAQ otherwise. Habit and anxiety objections need concrete reducers: trial, import help, cancellation terms, a named person.
+ 
++   **Diagnose → problem → solution** [BK13-K1]: pick each remedy from the diagnosed problem, not a best-practice list. Unclear what it is → plain description early. Unclear why they need it → benefits. Doubt it works → proof. Fit questions → compatibility details where they arise. Price among qualified buyers → value justification. Distrust of the company → credibility proof. No evidence → write from VOC and flag remedies as hypotheses for conversion-audit's diagnosis plan. With 5+ coded objections, build an O/CO table (objection → counter-objection) for one visitor type, ranked by frequency [BK13-K5].
++
+ 7. **Design the form.**
+    - Ask only what is needed for the next step. Each extra field must justify itself in one line, or go.
+    - Visible labels, not placeholder-only text. This helps people, screen readers and AI browsing agents.
+@@ -73,6 +82,7 @@
+    - Paragraphs of 3 lines or fewer on mobile. Subheads that state the point, so a skimmer who reads only headings still gets the argument.
+    - "You" outnumbers "we".
+    - Cut every sentence that would survive a swap with a competitor's name.
++   - Long detail: accordions or overlays (tap to open on mobile); never hide price, mandatory fees, cancellation or other required terms [BK13-K5].
+ 
+ 9. **Specify mobile and speed.** CTA visible above the fold on a phone; tap targets at least 44 px; a sticky CTA on long pages; compressed images; no autoplay video with sound. Navigation removed or minimised on paid pages. Flag LCP and INP to be measured.
+ 
+@@ -84,10 +94,10 @@
+ - Page goal, conversion event and thank-you step.
+ - Traffic source and the exact promise to match.
+ - Reader, situation and awareness level.
+-- Offer: what, price, terms, risk reversal.
++- Offer: what, price, terms, risk reversal (only if a risk is diagnosed).
+ - Core message in one sentence.
+ - Proof inventory, with a source for each item.
+-- Objections → answers → section.
++- Objections → answers → section; an O/CO table when there are 5+.
+ - Section order, with the job of each section and a word budget.
+ - 3 H1 options, the pick and why.
+ - Form fields, each justified, plus consent wording.
+@@ -125,6 +135,7 @@
+ - [ ] Section order matches the awareness table; length fits price and commitment.
+ - [ ] Every claim and number traces to confirmed facts; the page is complete as written.
+ - [ ] Top objections answered, each in a named section.
++- [ ] Remedies trace to a diagnosed problem; risk reversal only for a diagnosed risk; any B2B insight is a buyer misunderstanding, not a trend.
+ - [ ] Form: minimum fields, visible labels, unticked separate marketing consent if used, privacy link, thank-you page written.
+ - [ ] Grade 5–8 reading level, paragraphs of 3 lines or fewer, "you" outnumbers "we".
+ - [ ] One primary CTA; mobile, tap-target and speed notes included.

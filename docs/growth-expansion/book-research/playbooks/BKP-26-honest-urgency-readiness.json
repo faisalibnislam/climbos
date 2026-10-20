@@ -1,0 +1,171 @@
+{
+ "id": "BKP-26",
+ "version": 1,
+ "slug": "honest-urgency-readiness",
+ "title": "Readiness funnels and genuine urgency only",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to move not-yet-ready buyers toward purchase, and which offer, range or urgency levers are allowed.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Buyers need time or education before buying"
+ ],
+ "exclusions": [
+  "Impulse purchases where buyers are ready at once"
+ ],
+ "required_inputs": [
+  "Owner-confirmed facts for any deadline, capacity or price claim"
+ ],
+ "evidence_requirements": [
+  "Share of visitors not ready (exit survey 'just looking' / 'need to think', or sales notes)",
+  "Buying triggers",
+  "Consented channels available",
+  "Whether the final conversion page is under the business's control",
+  "Diagnosed offer problem with counts",
+  "Most-liked products (survey), not just best sellers",
+  "Margins (decisions.ts margin)",
+  "Visitor intentions if available (K2)",
+  "Prior selling prices with dates if any reference price is shown"
+ ],
+ "missing_data_behavior": [
+  "No confirmed fact: no urgency or scarcity claim."
+ ],
+ "decision_branches": [
+  {
+   "if": "Real limit exists (capacity, sale end)",
+   "then": "State it with the confirmed fact."
+  },
+  {
+   "if": "Sale completes on a partner site",
+   "then": "Track partner-confirmed conversions."
+  }
+ ],
+ "implementation_steps": [
+  "Measure readiness mix",
+  "Design each step with a clear reward",
+  "Set consent and follow-up flow",
+  "Define the true goal metric across the handover",
+  "Review conversion per step",
+  "Confirm the offer problem from diagnosis",
+  "Pick one lever per branch",
+  "Compute margin and break-even in code"
+ ],
+ "dependencies": [
+  "Consent for any contact capture and follow-up; Resend only for consented lifecycle mail",
+  "Ad budget and consent before retargeting",
+  "Tracking access on the final conversion page or a partner report",
+  "Owner approval of any price change",
+  "Jurisdiction rules for reference prices, urgency and price testing"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "$0 for owned steps; ad spend only if approved",
+  "labor": "4-12 hours to build an intermediate step",
+  "capability": "Email tool for consented lists",
+  "measurement": "Step conversions and partner-reported final conversions"
+ },
+ "metrics": [
+  "Opt-in rate",
+  "Nurtured-to-buyer rate within a window",
+  "Final conversions per visitor (not click-outs)",
+  "Revenue and contribution per visitor",
+  "Take rate per tier",
+  "Refund rate"
+ ],
+ "guardrails": [
+  "No rolling deadlines, fake countdowns or 'was' prices (book endorses them; ClimbOS policy wins).",
+  "Consent records",
+  "Genuine urgency only",
+  "No cold email via Resend",
+  "No fake reference prices",
+  "No rolling fake deadlines",
+  "Price changes owner-approved"
+ ],
+ "alternatives_when_constrained": [
+  "No email consent: content the visitor can return to; owner social follow",
+  "No partner tracking: periodic partner reports, labelled",
+  "No traffic for price tests: interviews with willingness-to-pay questions labelled stated, or a pilot with new customers only",
+  "No intention data: site-search logs and competitor offering scan"
+ ],
+ "stop_conditions": [
+  "Opt-ins rise but buyers do not within the window: revisit the step",
+  "Partner conversion data unavailable after negotiation: label click-outs as proxy",
+  "Contribution per visitor falls: revert",
+  "Refunds rise above guardrail: stop"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Lead capture inflates leads but not sales",
+  "Pressure notifications erode trust and may breach consumer rules",
+  "Free can backfire as 'too good to be true'",
+  "Cheapest position is open to one competitor only"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: when the final conversion is off-site, the plan's primary metric is the partner-confirmed conversion; click-outs are labelled proxy",
+    "from": "BK13-K8"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: urgency and scarcity claims need an owner-confirmed deadline or stock fact before they appear in copy",
+    "from": "BK13-K8"
+   },
+   {
+    "rule": "proposed: a reference ('was') price requires an owner-confirmed prior selling price and period; otherwise block it",
+    "from": "BK13-K7"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: contact capture and retargeting require consent and, for retargeting, an approved ad budget",
+    "from": "BK13-K8"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: offer changes are proposed only when diagnosis names an offer problem; otherwise route to clarity, trust or readiness",
+    "from": "BK13-K7"
+   },
+   {
+    "rule": "proposed: gap-analysis revenue estimates are labelled assumptions and computed in code",
+    "from": "BK13-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-lead-magnet, PB-pricing-test",
+  "skills/lead-magnets/SKILL.md"
+ ],
+ "reconciliation_note": "Backlog CG-07 makes this a deterministic lint.",
+ "member_frameworks": [
+  "BK13-K8",
+  "BK13-K7"
+ ],
+ "source_references": [
+  "BK13-F30",
+  "BK13-F33",
+  "BK13-F34",
+  "BK13-F35",
+  "BK13-F36",
+  "BK13-F3",
+  "BK13-F25",
+  "BK13-F27"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK13-K8-1",
+  "EV-BK13-K8-2",
+  "EV-BK13-K8-3",
+  "EV-BK13-K7-1",
+  "EV-BK13-K7-2"
+ ]
+}

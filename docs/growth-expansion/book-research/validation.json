@@ -1,0 +1,1862 @@
+{
+ "ok": true,
+ "checks": 371,
+ "failed": [],
+ "results": [
+  {
+   "check": "json:evaluations/expected.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:evaluations/prompts.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK07.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK08.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK09a.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK09b.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK10.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK11.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK12.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK13.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK14.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/BK15.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-01-advantage-ledger.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-02-follow-on-value.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-03-customer-research-v2.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-04-conversion-diagnosis.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-05-landing-split-v2.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-06-customer-value-stages.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-07-stickiness-gate.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-08-one-metric.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-09-bullseye-channel-tests.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-10-referral-calibration.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-11-sales-pipeline-diagnosis.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-12-cold-outreach-v2.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-13-warm-intros.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-14-inbound-response.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-15-live-sales-call.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-16-deal-follow-through.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-17-pitch-storyboard.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-18-positioning-mode.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-19-brand-identity-reach.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-20-physical-availability.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-21-retention-acquisition-balance.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-22-promotion-break-even.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-23-loyalty-evaluation.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-24-guarantee-rollout.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-25-new-brand-launch.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-26-honest-urgency-readiness.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BKP-27-complex-sale-page.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/catalog.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:tools/numcheck_manual.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "unique:findings",
+   "ok": true,
+   "detail": "392 ids"
+  },
+  {
+   "check": "unique:frameworks",
+   "ok": true,
+   "detail": "77 ids"
+  },
+  {
+   "check": "unique:playbooks",
+   "ok": true,
+   "detail": "27 ids"
+  },
+  {
+   "check": "unique:cases",
+   "ok": true,
+   "detail": "213 ids"
+  },
+  {
+   "check": "catalog:matches_files",
+   "ok": true,
+   "detail": "27 playbooks"
+  },
+  {
+   "check": "catalog:file:BKP-01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-24",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-25",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-26",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BKP-27",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-01",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-01",
+   "ok": true,
+   "detail": "17 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-01",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-01",
+   "ok": true,
+   "detail": "14 cases"
+  },
+  {
+   "check": "playbook:path:BKP-01:docs/growth-intelligence/books/01_business_strategy_economics.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-01:docs/growth-engine/book-review/BK01.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-01:shared/agents/decision.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-02",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-02",
+   "ok": true,
+   "detail": "10 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-02",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-02",
+   "ok": true,
+   "detail": "6 cases"
+  },
+  {
+   "check": "playbook:path:BKP-02:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-02:PB-lifecycle-email",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-02:docs/growth-expansion/blog-research/playbooks/BRP-03-package-architecture.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-02:BRP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-02:skills/retention-lifecycle/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-03",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-03",
+   "ok": true,
+   "detail": "13 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-03",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-03",
+   "ok": true,
+   "detail": "6 cases"
+  },
+  {
+   "check": "playbook:path:BKP-03:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-03:PB-interviews",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-03:skills/voc-research/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-03:docs/growth-intelligence/books/02_research_positioning.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-04",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-04",
+   "ok": true,
+   "detail": "21 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-04",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-04",
+   "ok": true,
+   "detail": "10 cases"
+  },
+  {
+   "check": "playbook:path:BKP-04:skills/conversion-audit/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-04:skills/landing-pages/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-04:docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-05",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-05",
+   "ok": true,
+   "detail": "8 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-05",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-05",
+   "ok": true,
+   "detail": "5 cases"
+  },
+  {
+   "check": "playbook:path:BKP-05:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-05:PB-landing-split",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-05:skills/experiment-design/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-05:docs/growth-expansion/blog-research/playbooks/BRP-21-experiment-trust-gates.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-05:BRP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-06",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-06",
+   "ok": true,
+   "detail": "22 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-06",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-06",
+   "ok": true,
+   "detail": "13 cases"
+  },
+  {
+   "check": "playbook:path:BKP-06:docs/growth-expansion/blog-research/playbooks/BRP-07-activation-definition.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-06:BRP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-06:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-06:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-06:PB-activation-repair",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:fields:BKP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-07",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-07",
+   "ok": true,
+   "detail": "25 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-07",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-07",
+   "ok": true,
+   "detail": "13 cases"
+  },
+  {
+   "check": "playbook:path:BKP-07:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-07:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-07:PB-paid-search-test",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:pb_id:BKP-07:PB-referrals",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-07:docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-07:BRP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-08",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-08",
+   "ok": true,
+   "detail": "15 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-08",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-08",
+   "ok": true,
+   "detail": "8 cases"
+  },
+  {
+   "check": "playbook:path:BKP-08:shared/agents/specs.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-08:skills/growth-strategy/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-08:docs/growth-expansion/blog-research/playbooks/BRP-18-cohort-retention.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-08:BRP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-09",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-09",
+   "ok": true,
+   "detail": "32 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-09",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-09",
+   "ok": true,
+   "detail": "16 cases"
+  },
+  {
+   "check": "playbook:path:BKP-09:skills/growth-strategy/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-09:shared/acquisition/scoring.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-09:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-09:PB-paid-search-test",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-09:docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-09:BRP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-10",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-10",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-10",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-10",
+   "ok": true,
+   "detail": "6 cases"
+  },
+  {
+   "check": "playbook:path:BKP-10:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-10:PB-referrals",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-10:skills/growth-plays/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-11",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-11",
+   "ok": true,
+   "detail": "28 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-11",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-11",
+   "ok": true,
+   "detail": "13 cases"
+  },
+  {
+   "check": "playbook:path:BKP-11:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-11:docs/growth-intelligence/books/11_sales_partnerships.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-11:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-11:PB-capacity",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:fields:BKP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-12",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-12",
+   "ok": true,
+   "detail": "21 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-12",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-12",
+   "ok": true,
+   "detail": "11 cases"
+  },
+  {
+   "check": "playbook:path:BKP-12:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-12:PB-cold-outreach",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-12:skills/prospecting/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-12:skills/cold-outreach/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-13",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-13",
+   "ok": true,
+   "detail": "2 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-13",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-13",
+   "ok": true,
+   "detail": "2 cases"
+  },
+  {
+   "check": "playbook:path:BKP-13:docs/growth-engine/book-review/BK05.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-13:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-13:PB-referrals",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:fields:BKP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-14",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-14",
+   "ok": true,
+   "detail": "1 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-14",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-14",
+   "ok": true,
+   "detail": "3 cases"
+  },
+  {
+   "check": "playbook:path:BKP-14:skills/sales-follow-up/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-14:skills/plays-local/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-15",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-15",
+   "ok": true,
+   "detail": "25 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-15",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-15",
+   "ok": true,
+   "detail": "11 cases"
+  },
+  {
+   "check": "playbook:path:BKP-15:skills/sales-follow-up/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-15:docs/growth-intelligence/books/11_sales_partnerships.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-15:skills/reply-handling/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-16",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-16",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-16",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-16",
+   "ok": true,
+   "detail": "5 cases"
+  },
+  {
+   "check": "playbook:path:BKP-16:docs/growth-intelligence/books/11_sales_partnerships.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-16:skills/sales-follow-up/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-17",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-17",
+   "ok": true,
+   "detail": "22 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-17",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-17",
+   "ok": true,
+   "detail": "14 cases"
+  },
+  {
+   "check": "playbook:path:BKP-17:skills/positioning/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-17:docs/growth-expansion/guides/03_positioning.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-17:docs/research/strategy-positioning.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-18",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-18",
+   "ok": true,
+   "detail": "21 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-18",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-18",
+   "ok": true,
+   "detail": "11 cases"
+  },
+  {
+   "check": "playbook:path:BKP-18:skills/positioning/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-18:docs/growth-expansion/guides/03_positioning.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-18:docs/growth-engine/book-review/BK03.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-19",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-19",
+   "ok": true,
+   "detail": "21 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-19",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-19",
+   "ok": true,
+   "detail": "11 cases"
+  },
+  {
+   "check": "playbook:path:BKP-19:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-19:PB-social-content",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-19:skills/meta-ads/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-19:docs/growth-intelligence/books/10_paid_media_cro.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-20",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-20",
+   "ok": true,
+   "detail": "10 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-20",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-20",
+   "ok": true,
+   "detail": "3 cases"
+  },
+  {
+   "check": "playbook:path:BKP-20:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-20:PB-local-listing",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-20:skills/conversion-audit/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-21",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-21",
+   "ok": true,
+   "detail": "27 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-21",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-21",
+   "ok": true,
+   "detail": "13 cases"
+  },
+  {
+   "check": "playbook:path:BKP-21:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-21:skills/retention-lifecycle/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-21:docs/growth-expansion/blog-research/guides/02_activation_retention_plg.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-22",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-22",
+   "ok": true,
+   "detail": "5 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-22",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-22",
+   "ok": true,
+   "detail": "4 cases"
+  },
+  {
+   "check": "playbook:path:BKP-22:skills/retention-lifecycle/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-22:shared/analysis/decisions.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-23",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-23",
+   "ok": true,
+   "detail": "3 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-23",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-23",
+   "ok": true,
+   "detail": "3 cases"
+  },
+  {
+   "check": "playbook:path:BKP-23:skills/plays-local/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-23:skills/retention-lifecycle/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-24",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-24",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-24",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-24",
+   "ok": true,
+   "detail": "2 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-24",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-24",
+   "ok": true,
+   "detail": "2 cases"
+  },
+  {
+   "check": "playbook:path:BKP-24:docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-24:BRP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-25",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-25",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-25",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-25",
+   "ok": true,
+   "detail": "5 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-25",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-25",
+   "ok": true,
+   "detail": "3 cases"
+  },
+  {
+   "check": "playbook:path:BKP-25:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-25:PB-concierge",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-25:skills/positioning/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-26",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-26",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-26",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-26",
+   "ok": true,
+   "detail": "8 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-26",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-26",
+   "ok": true,
+   "detail": "5 cases"
+  },
+  {
+   "check": "playbook:path:BKP-26:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:pb_id:BKP-26:PB-lead-magnet",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:pb_id:BKP-26:PB-pricing-test",
+   "ok": true,
+   "detail": "exists in shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:path:BKP-26:skills/lead-magnets/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BKP-27",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:status:BKP-27",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:rule_classes:BKP-27",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:sources:BKP-27",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:frameworks:BKP-27",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "playbook:cases:BKP-27",
+   "ok": true,
+   "detail": "2 cases"
+  },
+  {
+   "check": "playbook:path:BKP-27:skills/landing-pages/SKILL.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:path:BKP-27:docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:brp_id:BKP-27:BRP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "frameworks:all_in_a_playbook",
+   "ok": true,
+   "detail": "unassigned: []"
+  },
+  {
+   "check": "notes:rule_classes_valid",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "notes:author_refs_resolve",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "evals:ids_match",
+   "ok": true,
+   "detail": "213 prompts, 213 keys"
+  },
+  {
+   "check": "evals:no_answers_in_prompts",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "evals:no_answers_in_notes",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "evals:hypothetical_and_not_run",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "evals:playbook_resolves",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "evals:case_type_mix",
+   "ok": true,
+   "detail": "{\"blind_application_trap\": 57, \"positive\": 71, \"sparse_or_conflicting\": 22, \"negative\": 50, \"alternative_ok\": 13}"
+  },
+  {
+   "check": "numeric:all_checks_recompute",
+   "ok": true,
+   "detail": "{\"auto\": 225, \"manual\": 11, \"engine\": 2, \"fail\": 0}"
+  },
+  {
+   "check": "links:internal_resolve",
+   "ok": true,
+   "detail": "457 links"
+  },
+  {
+   "check": "master_index:section_present",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:cold-outreach.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:competitor-teardown.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:conversion-audit.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:copy-fundamentals.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:experiment-design.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:growth-plays.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:growth-plays__base-rates.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:growth-strategy.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:instagram-posts.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:landing-pages.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:lead-magnets.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:meta-ads.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:plays-ecommerce-consumer.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:plays-local.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:plays-saas-b2b.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:positioning.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:prospecting-jurisdiction-rules.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:prospecting.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:reply-handling.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:retention-lifecycle.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:sales-follow-up.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:short-video-scripts.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:social-calendar.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:social-visual-briefs.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "skill_diff:applies:voc-research.diff",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "locators:pdf_pages_in_range:BK11",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "locators:pdf_pages_in_range:BK12",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "locators:every_finding_has_one",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "overlap:no_copied_prose",
+   "ok": true,
+   "detail": "{\"files\": 79, \"runs\": 32, \"non_title_runs\": 0}"
+  }
+ ]
+}

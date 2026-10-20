@@ -1,0 +1,1146 @@
+{
+ "reading_id": "BK09b",
+ "book_title": "Founding Sales (Chapters 7-13 and Conclusion; Part B of a two-agent split)",
+ "frameworks": [
+  {
+   "name": "Sales call structure: plan, discover, qualify, demonstrate, prove, price, ask",
+   "decision": "How to run a first sales conversation (call or meeting) so it either advances with an agreed next step or ends early and politely.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting",
+    "high-ticket local services (quotes/site visits)"
+   ],
+   "lifecycle_stages": [
+    "pre-product-market-fit",
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "what the lead asked for and how they arrived",
+    "public facts about the account (site, listings, job posts)",
+    "offer facts: price ranges, proof items, case results"
+   ],
+   "prerequisites": [
+    "A deal size that pays for a live conversation (BRP-19 motion fit)",
+    "Confirmed facts for price and proof; otherwise [NEEDS FACT]"
+   ],
+   "branches": [
+    {
+     "if": "Demo or walkthrough under ~15 minutes, or qualification is visible from public facts",
+     "then": "One combined meeting: discovery, short demo, proof, price, ask."
+    },
+    {
+     "if": "Demo is long (30-60 min) and qualification needs questions",
+     "then": "Separate short discovery call; book the demo only if qualified."
+    },
+    {
+     "if": "Discovery shows no pain or no ability to pay",
+     "then": "End politely, give time back, offer one useful resource; log as unqualified with reason."
+    },
+    {
+     "if": "Contact likes it but cannot decide",
+     "then": "Agree on a joint follow-up that includes the decision-maker; send a forwardable summary."
+    },
+    {
+     "if": "Buyer asks price early in an enquiry",
+     "then": "Give the confirmed range plainly (small-business norm), then frame it against their stated problem."
+    }
+   ],
+   "steps": [
+    "Pre-call note (10-15 min): pain signals, size of the job, current solution, who decides, known unknowns, call goal.",
+    "Open: agree the agenda and that the call may end early if it is not a fit (micro-contract).",
+    "Discovery: problem, size, current workaround and its cost, consequence of doing nothing, who uses it, who decides, how they buy, timing.",
+    "Qualify or offramp.",
+    "Show only what maps to their stated problem, using their data or realistic sample data.",
+    "Proof: one or two results from confirmed facts.",
+    "Price framed against their current cost or alternative; then stop talking.",
+    "Direct ask, or a trial close if signals are unclear.",
+    "Agree and calendar the next step; same-day summary email."
+   ],
+   "exceptions_failure_modes": [
+    "Feature tour without discovery ('show up and throw up')",
+    "Skipping the price and the ask out of fear of rejection",
+    "Re-asking questions already answered in research",
+    "Persona mismatch (pitching ROI to a user, features to an executive)",
+    "Over-preparing for low-value calls where a self-serve path fits better"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner time: ~15 min prep + call + ~15 min follow-up per meeting",
+    "capability": "a short pitch narrative and 1-2 proof items",
+    "measurement": "meetings held, qualified share, next-step agreed share, proposals requested"
+   },
+   "metrics": [
+    "held meetings",
+    "share ending with a calendared next step",
+    "share disqualified in discovery",
+    "proposal-request rate per held meeting"
+   ],
+   "guardrails": [
+    "No invented prices, results or customers",
+    "No pressure or false urgency",
+    "Recording or transcription only with consent where law requires",
+    "Use only business-relevant public facts in research (no personal social-media profiling)"
+   ],
+   "stop_review": [
+    "Review the script after every ~10 held meetings: which questions predicted wins, which slides confused"
+   ],
+   "alternatives": [
+    "Low price or no time for calls: recorded demo video, published FAQ/objections page, self-serve trial (BRP-19)",
+    "No proof yet: offer a small paid first project instead of claiming results"
+   ],
+   "author_refs": [
+    "BK09b-F2",
+    "BK09b-F4",
+    "BK09b-F6",
+    "BK09b-F7",
+    "BK09b-F8",
+    "BK09b-F9",
+    "BK09b-F10",
+    "BK09b-F11",
+    "BK09b-F13",
+    "BK09b-F14",
+    "BK09b-F15",
+    "BK09b-F21"
+   ],
+   "interpretation": "Interpretation: Kazanjy's sequence is a practical script skeleton that ClimbOS currently lacks; sales-follow-up covers enquiry replies and quote follow-up, and Book 11 covers discovery and demo principles but not the order of a live call or the split rule.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: A sales-call plan must end with one agreed, dated next step or an explicit disqualification; 'I'll send info, let me know' is not a next step.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Recommend a separate discovery call only when the demo needs more than ~15 minutes; otherwise one meeting (each extra meeting adds no-show risk).",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Call plans never include recording or transcription unless the owner confirms consent handling for the jurisdiction.",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: Do not draft live-call scripts when the price per customer cannot pay for a human sale; route to BRP-19 alternatives.",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "skills/sales-follow-up/SKILL.md (candidate v2: new 'Live sales call' section); Book 11 §3, §5",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/sales-follow-up/SKILL.md",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §3, §5",
+     "docs/growth-expansion/blog-research/playbooks/BRP-19-sales-touch-fit.json"
+    ],
+    "note": "Book 11 states discovery/demo principles (SPIN, demo vs pilot); sales-follow-up step 4 has a 2-minute phone script only. This adds the full call order, the split rule and the offramp."
+   },
+   "disagreements": "Kazanjy advises holding price until value is framed; sales-follow-up step 3 answers price directly in first replies. Decide by context: an inbound small-business enquiry asking price gets the confirmed range; a complex B2B evaluation may frame price after discovery but never dodges a direct question. Kazanjy's 'credible threat' of going over the contact's head and personal-interest icebreakers are not adopted.",
+   "id": "BK09b-K1",
+   "eval_case_ids": [
+    "EV-BK09b-K1-1",
+    "EV-BK09b-K1-2",
+    "EV-BK09b-K1-3"
+   ]
+  },
+  {
+   "name": "Qualification for small-business and new-category deals",
+   "decision": "Whether to keep investing time in an opportunity, and which missing fact to get next.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting",
+    "b2b local services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "stated problem in the buyer's words",
+    "evidence the problem is material (volume, cost, deadline)",
+    "whether the buyer pays for any solution to this or similar problems",
+    "who decides and how purchases happen",
+    "timing or trigger"
+   ],
+   "prerequisites": [
+    "A written ideal-customer description with disqualifiers (Book 11 §2)"
+   ],
+   "branches": [
+    {
+     "if": "No real problem, or problem is trivial for them",
+     "then": "Disqualify with reason; log as unqualified (feedback to targeting)."
+    },
+    {
+     "if": "Problem real, but the organisation never pays for tools/services to fix problems",
+     "then": "Disqualify or park; this is not a 'budget objection'."
+    },
+    {
+     "if": "Problem real and they pay for alternatives, but no budget line for this offer",
+     "then": "Keep: new-category offers rarely have a budget line; look for existing spend on the problem."
+    },
+    {
+     "if": "Problem real, contact lacks authority",
+     "then": "Keep; agree a joint meeting with the decision-maker."
+    },
+    {
+     "if": "Problem real, no urgency or trigger",
+     "then": "Agreed deferral with a date the buyer chooses, not active pipeline."
+    }
+   ],
+   "steps": [
+    "Record each qualification field as unknown / reported / verified / contradicted (Book 11 §4 states).",
+    "Ask the cheapest missing question next.",
+    "Disqualify early and politely.",
+    "Review 'unqualified after meeting' cases monthly to fix targeting or booking questions."
+   ],
+   "exceptions_failure_modes": [
+    "Strict BANT applied to a category buyers did not know existed",
+    "Treating a friendly contact as the decision-maker",
+    "Selling to buyers who will get little value because they agreed to a low price (churn later)"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "minutes per deal",
+    "capability": "a disqualifier list",
+    "measurement": "unqualified-after-meeting share; reasons"
+   },
+   "metrics": [
+    "share of held meetings later marked unqualified",
+    "lost-reason distribution",
+    "win rate among qualified decisions"
+   ],
+   "guardrails": [
+    "Job title does not prove authority; stage label does not prove probability (Book 11 prohibited inferences)",
+    "Never mark a field verified from a similar customer"
+   ],
+   "stop_review": [
+    "If unqualified-after-meeting share is high for two review periods, fix targeting or booking questions before adding more outreach"
+   ],
+   "alternatives": [
+    "Too few deals to compute shares: review each lost/unqualified deal by hand"
+   ],
+   "author_refs": [
+    "BK09b-F9",
+    "BK09b-F10",
+    "BK09b-F13",
+    "BK09b-F17",
+    "BK09b-F18",
+    "BK09b-F25"
+   ],
+   "interpretation": "Interpretation: Kazanjy's relaxation of BANT for new categories, plus the 'do they buy any tools at all' test and the Closed-Unqualified stage, are the useful additions. Book 11's evidence-state model is better for recording; Kazanjy supplies the small-deal branching.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: 'No budget line' alone never disqualifies; 'never pays for solutions to problems like this' does, unless the owner overrides.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Track 'unqualified after a meeting' separately from 'lost'; a rising share points to targeting or booking questions (diagnostic hypothesis, not proven cause).",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Do not recommend discounting to win a buyer whose expected value from the offer is low; recommend disqualifying.",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "Book 11 §4 (candidate v2 small-deal branch); skills/sales-follow-up/SKILL.md; convex/crm.ts stages",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/growth-intelligence/books/11_sales_partnerships.md §2, §4, §11 opportunity tree",
+     "convex/crm.ts:14"
+    ],
+    "note": "Book 11 uses MEDDPICC for complex deals and says simple deals need a lighter path but does not define it; this supplies that lighter path."
+   },
+   "disagreements": "None material with Book 11; Kazanjy is less cautious about inferring 'they're hiding the real objection'. Book 11 §6 warns not to assume concealment; ClimbOS keeps Book 11's stance and asks once.",
+   "id": "BK09b-K2",
+   "eval_case_ids": [
+    "EV-BK09b-K2-1",
+    "EV-BK09b-K2-2"
+   ]
+  },
+  {
+   "name": "Objection and trial-request handling (live loop vs written follow-up)",
+   "decision": "How to respond to a specific hesitation, and when to stop.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting",
+    "local services with quotes"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "the objection in the buyer's words",
+    "discovery facts",
+    "proof items and pricing rules in confirmed facts"
+   ],
+   "prerequisites": [
+    "A living objection list with approved answers and proof (owner-maintained)"
+   ],
+   "branches": [
+    {
+     "if": "Vague no ('not a fit')",
+     "then": "Ask once what specifically blocks progress."
+    },
+    {
+     "if": "Price: gap small (around 10% in the author's example)",
+     "then": "Treat as negotiation; use K6 levers within owner-approved limits."
+    },
+    {
+     "if": "Price: gap large (around 50%)",
+     "then": "Walk the value math with the buyer's own numbers; if their numbers show low value, offer a smaller scope or disqualify."
+    },
+    {
+     "if": "'No need' despite earlier evidence of need",
+     "then": "Restate the evidence they gave and ask which part is wrong; accept a specific contradiction."
+    },
+    {
+     "if": "Status quo / fear of change",
+     "then": "Show the cost of no change using the buyer's own numbers; describe how onboarding will be handled."
+    },
+    {
+     "if": "Timing / other priorities",
+     "then": "Reduce perceived effort; offer a later start date if real; or agree a deferral date."
+    },
+    {
+     "if": "'Need a trial'",
+     "then": "Ask what proof would settle it; offer case evidence, a guided hands-on session, or (large deals only) a structured pilot with success criteria and owner time limits."
+    },
+    {
+     "if": "Written (async) channel and the buyer repeats the no",
+     "then": "Stop; gracious close (sales-follow-up and reply-handling rule)."
+    }
+   ],
+   "steps": [
+    "Catch the objection and restate it.",
+    "Find the question under the question.",
+    "Answer with one concrete proof or the buyer's own numbers.",
+    "Check the answer landed.",
+    "Return to the next step; in a live conversation, check for other blockers."
+   ],
+   "exceptions_failure_modes": [
+    "Arguing or repeating the pitch",
+    "Unstructured free trials for products that need setup (low use, blamed on product)",
+    "Unrequested discounts",
+    "Treating every objection as a hidden different objection"
+   ],
+   "requirements": {
+    "cash": "none; structured pilot costs owner time",
+    "labor": "pilot: training, check-ins",
+    "capability": "proof library, ROI inputs from buyer",
+    "measurement": "objection frequency by type; pilot conversion"
+   },
+   "metrics": [
+    "objection types per lost deal",
+    "pilot-to-paid rate (owner data)",
+    "share of trial requests resolved by proof without a pilot"
+   ],
+   "guardrails": [
+    "One attempt per objection in written follow-ups",
+    "No invented discounts, deadlines or results",
+    "Pilot success criteria agreed in writing before start"
+   ],
+   "stop_review": [
+    "Any objection heard 2+ times: add an approved answer and proof item to the living list",
+    "Very frequent objection: address it up front in the pitch or landing page"
+   ],
+   "alternatives": [
+    "No proof items yet: offer a small paid first step or money-back terms if the owner approves",
+    "Self-serve product: a time-boxed trial with onboarding emails instead of a guided session"
+   ],
+   "author_refs": [
+    "BK09b-F16",
+    "BK09b-F17",
+    "BK09b-F18",
+    "BK09b-F19",
+    "BK09b-F20"
+   ],
+   "interpretation": "Interpretation: Kazanjy's loop assumes a live, engaged buyer. ClimbOS's 'one attempt' rule governs asynchronous drafts. Both hold if scoped by channel.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: For price objections, ask the size of the gap before answering; route small gaps to negotiation levers and large gaps to value math or scope change.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Never recommend an unstructured free trial for an offer that needs setup or training; recommend a guided session or a structured pilot with written success criteria.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Structured pilots only when expected deal value covers the owner hours of the pilot (computed by code from owner inputs).",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: In written follow-ups, one evidenced answer per objection; a repeated no ends the sequence.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/sales-follow-up/SKILL.md step 6 (candidate v2); skills/reply-handling/SKILL.md step 5",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/sales-follow-up/SKILL.md step 6",
+     "skills/reply-handling/SKILL.md step 5 (Objection)",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §5, §6"
+    ],
+    "note": "Adds the price-gap diagnostic, the 'no budget' disqualifier test, trial-request handling and the live loop; keeps the one-attempt rule for async."
+   },
+   "disagreements": "Kazanjy: loop until no objections remain, and treat vague 'no need' as cover for a hidden objection. sales-follow-up/reply-handling: one attempt, never argue. Book 11 §6: don't assume concealment. Resolution: channel decides (live vs written) and the buyer's explicit repeat no is final in both. Kazanjy's 'fear of missing out / competitors already use it' framing is allowed only with true, sourced facts.",
+   "id": "BK09b-K3",
+   "eval_case_ids": [
+    "EV-BK09b-K3-1",
+    "EV-BK09b-K3-2",
+    "EV-BK09b-K3-3"
+   ]
+  },
+  {
+   "name": "Next-step contracts, stalled deals and close-lost discipline",
+   "decision": "When a deal is still alive, when to close it as lost, and whether and when to re-engage.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting",
+    "high-ticket local services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "agreed next steps and dates",
+    "kept vs broken commitments (missed meetings, unanswered agreed deliverables)",
+    "explicit buyer statements about timing or permission to re-contact"
+   ],
+   "prerequisites": [
+    "Deals carry next step + date (convex/crm.ts nextStep/nextStepAt exist)"
+   ],
+   "branches": [
+    {
+     "if": "Next step agreed and dated",
+     "then": "Keep active; deliver your part within a day."
+    },
+    {
+     "if": "One missed meeting",
+     "then": "Reschedule once with a specific time."
+    },
+    {
+     "if": "Two or more broken commitments or no reply after an agreed step",
+     "then": "Send one respectful clarity email (still a priority? bad time? not a fit?), then close as lost with reason if no answer."
+    },
+    {
+     "if": "Buyer says 'not now' with a date",
+     "then": "Close as deferred; one check-in on that date (permission given)."
+    },
+    {
+     "if": "Buyer says 'not now' without a date",
+     "then": "Ask permission for a later check-in; no re-contact without it."
+    },
+    {
+     "if": "Buyer opts out or says stop",
+     "then": "Suppress; no re-engagement ever from automation."
+    }
+   ],
+   "steps": [
+    "State the next step, owner and date at the end of every interaction and confirm it in writing.",
+    "Deliver your part fast.",
+    "Detect broken commitments from the calendar and CRM.",
+    "Clarity email draft for owner approval.",
+    "Close lost with reason(s) (multi-select, unknown allowed) and notes.",
+    "Schedule permitted re-engagement as a new opportunity."
+   ],
+   "exceptions_failure_modes": [
+    "Leaving dead deals open (inflates pipeline, wastes owner time)",
+    "Guilt-tripping breakup emails",
+    "Re-contacting without permission",
+    "Single forced loss reason"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "minutes per deal",
+    "capability": "CRM with next step/date and lost reason",
+    "measurement": "deals without next step; broken-commitment count"
+   },
+   "metrics": [
+    "share of open deals with a dated next step",
+    "deals closed lost per month by reason",
+    "deferred deals revived and won"
+   ],
+   "guardrails": [
+    "Re-contact only with permission or a lawful basis (consent rules vary by country)",
+    "Breakup email: no guilt, no false deadline (sales-follow-up Never do)",
+    "Owner approves every send"
+   ],
+   "stop_review": [
+    "Monthly: read lost reasons; recurring reason becomes a positioning, offer or targeting question"
+   ],
+   "alternatives": [
+    "No CRM use: a weekly 10-minute list review of open quotes with next-step dates"
+   ],
+   "author_refs": [
+    "BK09b-F12",
+    "BK09b-F21",
+    "BK09b-F24",
+    "BK09b-F26"
+   ],
+   "interpretation": "Interpretation: 'broken micro-contracts' is a cheap, observable leading signal of a dying deal that ClimbOS can compute (missed booking, past-due nextStepAt).",
+   "proposed_rules": [
+    {
+     "rule": "proposed: An open deal with no future dated next step is flagged 'uncovered' in the pipeline view and daily brief.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Two broken commitments trigger a suggested clarity email, owner-approved, then close-lost with reason if unanswered.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Re-engagement of a lost or deferred deal requires buyer permission or a lawful basis recorded on the deal; no default 60-day re-contact.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "convex/crm.ts (deal flags); skills/sales-follow-up/SKILL.md step 8; skills/reply-handling/SKILL.md 'Not now'",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/11_sales_partnerships.md §7, §13",
+     "skills/sales-follow-up/SKILL.md step 8",
+     "skills/reply-handling/SKILL.md step 5",
+     "convex/crm.ts:14-17"
+    ],
+    "note": "Book 11 already requires next action/owner/date and separates deferred from lost. Adds the broken-commitment trigger and the clarity-email step."
+   },
+   "disagreements": "Kazanjy: if no date was given, re-engage after ~60 days regardless. ClimbOS reply-handling ('without permission, no further contact') and Book 11 §13 ('avoid indefinite automated reminders') win; for cold contacts this is also a legal matter (e.g. UK/EU direct-marketing rules).",
+   "id": "BK09b-K4",
+   "eval_case_ids": [
+    "EV-BK09b-K4-1",
+    "EV-BK09b-K4-2"
+   ]
+  },
+  {
+   "name": "Pipeline stages, hygiene and conversion metrics; is the pipeline the binding constraint?",
+   "decision": "For a business that sells through calls, quotes or proposals: which pipeline step limits revenue, and therefore whether to add more meetings (demand) or fix conversion, offer, targeting or selling capacity.",
+   "business_models": [
+    "agency",
+    "professional_services",
+    "consulting",
+    "b2b_saas (sales-led)",
+    "high-ticket local services (quote-based)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "per period: meetings booked, meetings held, proposals/quotes sent, won, lost, unqualified, average won value",
+    "owner selling hours per week and maximum meetings the owner can hold",
+    "deal dates (created, stage changes, won/lost)"
+   ],
+   "prerequisites": [
+    "Stage definitions with entry criteria the owner agrees to",
+    "At least a few closed decisions; otherwise use per-deal review, not rates"
+   ],
+   "branches": [
+    {
+     "if": "Held/booked is low (owner's own history or target)",
+     "then": "Meeting quality or reminders problem: confirmations, reminders, booking-page qualification (constraint: conversion of booked meetings)."
+    },
+    {
+     "if": "Unqualified-after-meeting share is high",
+     "then": "Targeting/positioning: tighten who gets a meeting before adding volume (competing explanation: booking form too loose)."
+    },
+    {
+     "if": "Held -> proposal low, qualified",
+     "then": "Discovery/pitch problem or offer unclear (conversion/offer)."
+    },
+    {
+     "if": "Proposal -> won low",
+     "then": "Price, packaging, proof or follow-up gap (conversion/offer); check lost reasons."
+    },
+    {
+     "if": "Win rate per held meeting is at or above the owner's own target and the owner's calendar has room",
+     "then": "Pipeline volume (demand) is the binding constraint: add qualified meetings."
+    },
+    {
+     "if": "Owner's calendar is full and win rate is falling",
+     "then": "Selling capacity binds (delivery): cap new meetings, delegate appointment setting or raise price; do not add demand."
+    },
+    {
+     "if": "Fewer than ~5 closed decisions in the window",
+     "then": "Rates are unknown; review deals individually and keep collecting."
+    }
+   ],
+   "steps": [
+    "Count stages over a fixed window (code).",
+    "Compute hold rate, held->proposal, proposal->won, win per held meeting, unqualified share, median days to close (code).",
+    "Compare to the owner's own prior period or stated target; external benchmarks only as grade-D context, never as a verdict.",
+    "Name the weakest link and its competing explanation.",
+    "Daily hygiene: uncovered deals, late-stage deals untouched 7+ days, deals stuck past the owner's typical stage time, past-due next steps.",
+    "Prioritise follow-up from closest-to-money down, by value."
+   ],
+   "exceptions_failure_modes": [
+    "Stage labels that describe seller activity instead of buyer progress",
+    "Using CRM default stage probabilities as forecasts",
+    "Small samples read as rates",
+    "Comparing immature and mature cohorts (recent deals have not had time to close)",
+    "Adding outreach when conversion or capacity is the limit"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "minutes per week to keep stages true",
+    "capability": "CRM stages with dates; deterministic aggregation",
+    "measurement": "stage counts and timestamps"
+   },
+   "metrics": [
+    "meetings booked",
+    "hold rate",
+    "held->proposal",
+    "proposal->won",
+    "win rate per held first meeting",
+    "unqualified share",
+    "median days to close",
+    "open deals without next step",
+    "pipeline value (open, unweighted) and won value"
+   ],
+   "guardrails": [
+    "All arithmetic in code",
+    "No stage-default probabilities (Book 11 prohibited inference)",
+    "Benchmarks from this book are grade D and dated",
+    "Diagnosis hypothesis, not proven cause"
+   ],
+   "stop_review": [
+    "Re-diagnose each month or after 10 new closed decisions",
+    "If the named constraint does not move after one cycle of fixes, test the competing explanation"
+   ],
+   "alternatives": [
+    "No CRM data: ask the owner for the six counts for the last 60-90 days",
+    "Very low volume: qualitative review of the last 5 won and 5 lost deals"
+   ],
+   "author_refs": [
+    "BK09b-F3",
+    "BK09b-F5",
+    "BK09b-F23",
+    "BK09b-F25",
+    "BK09b-F26",
+    "BK09b-F36",
+    "BK09b-F37",
+    "BK09b-F40"
+   ],
+   "interpretation": "Interpretation: Kazanjy's revenue identity (opportunities x win rate x deal size), his carrying-load signal (falling close rate when overloaded) and his readiness rule (fix win rate before adding volume) combine into a sales-pipeline branch of ClimbOS's diagnosis, which today only reads visitors -> leads -> activated -> customers.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: For sales-led businesses, diagnosis reads a sales block (booked, held, proposals, won, lost, unqualified, value, owner meeting capacity) and names the weakest link in code.",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: Do not recommend more top-of-funnel outreach when win rate per held meeting is below the owner's own target or prior period, unless the owner's calendar is empty and sample size is adequate.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: When the owner's meeting capacity is >=80% used and win rate is falling, name selling capacity (delivery) as the constraint.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Kazanjy's 15-30% win-rate band may be shown only as 'author view, 2020, venture SaaS, grade D'; it never sets a weak/ok verdict.",
+     "class": "unknown_to_investigate"
+    },
+    {
+     "rule": "proposed: Fewer than 5 closed decisions in the window => rates reported as counts with 'too few to judge'.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts (new sales stage); convex/crm.ts (hygiene flags); convex/jobs.ts:971 (feed CRM data); Book 11 §7",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/agents/diagnosis.ts:11-25, :39, :83-139",
+     "convex/crm.ts:14, :55-65",
+     "convex/schema.ts:1128-1147",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §7",
+     "skills/growth-plays/reference/base-rates.md"
+    ],
+    "note": "Book 11 §7 already lists the metrics and warns about weighted pipeline; nothing in code computes them or feeds diagnosis."
+   },
+   "disagreements": "Kazanjy treats 15-30% as a good win rate and uses it to decide readiness to scale; ClimbOS base-rates.md has no sales-led benchmark and diagnosis.ts only uses base-rates references. Owner's own history decides; the book band is context only. Book 11 favours buyer-progress stage names; Kazanjy's TalentBin stages mix seller activity ('Demo Scheduled') and buyer progress. Use Book 11's naming with Kazanjy's 'unqualified' and 'contract sent' states.",
+   "id": "BK09b-K5",
+   "eval_case_ids": [
+    "EV-BK09b-K5-1",
+    "EV-BK09b-K5-2",
+    "EV-BK09b-K5-3",
+    "EV-BK09b-K5-4"
+   ]
+  },
+  {
+   "name": "Negotiation levers, payment terms and proposal options",
+   "decision": "What to trade when a ready-to-buy client wants a better deal, and how to structure options and payment terms.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "owner's list price, floor price and margin (shared/analysis/decisions.ts margin/priceFloor)",
+    "which terms the owner is willing to vary",
+    "competitor quote if claimed (seen, not assumed)"
+   ],
+   "prerequisites": [
+    "Owner-approved price rules; the AI never invents a discount"
+   ],
+   "branches": [
+    {
+     "if": "Buyer wants a lower unit price",
+     "then": "Offer it only in exchange for more units, longer term or upfront payment, within owner limits."
+    },
+    {
+     "if": "Buyer wants a lower total",
+     "then": "Reduce scope or term rather than discounting the same scope."
+    },
+    {
+     "if": "Buyer wants monthly or split payments",
+     "then": "Price split payments above upfront (owner sets the premium)."
+    },
+    {
+     "if": "Buyer cites a cheaper competitor",
+     "then": "Compare like for like; adjust only if the quote is shown and the owner approves; tie any match to signing now."
+    },
+    {
+     "if": "Buyer just wants to feel they won",
+     "then": "A small, owner-pre-approved concession with no change to cash terms can close it."
+    }
+   ],
+   "steps": [
+    "List levers and owner priorities (cash up front, then term, then price).",
+    "Concede one step at a time; always trade.",
+    "Compute effective price and premium in code.",
+    "Document any non-standard concession and its reason in the agreement.",
+    "Proposal options: only offers the owner would deliver; each option viable."
+   ],
+   "exceptions_failure_modes": [
+    "Negotiating against yourself before the buyer asks",
+    "Reverse auction with a competitor",
+    "Concessions that break delivery capacity or margin floor",
+    "Decoy options that are deliberately unusable"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner",
+    "capability": "margin and price-floor calc",
+    "measurement": "average discount, payment-term mix, days to cash"
+   },
+   "metrics": [
+    "average realised price vs list",
+    "share paid upfront",
+    "concessions per deal"
+   ],
+   "guardrails": [
+    "No false urgency: 'price goes up' or 'limited start slots' only if true and in facts",
+    "Discounts only from owner rules",
+    "Never below price floor",
+    "Consumer contracts: check local cancellation and payment-term law"
+   ],
+   "stop_review": [
+    "If average realised discount keeps rising, review list price and proof rather than conceding more"
+   ],
+   "alternatives": [
+    "No price rules from owner: present list price and ask the owner before any concession"
+   ],
+   "author_refs": [
+    "BK09b-F15",
+    "BK09b-F17",
+    "BK09b-F22"
+   ],
+   "interpretation": "Interpretation: the trade-don't-give principle and the cash-first lever order are sound for cash-constrained small businesses; the anchoring and urgency tactics need ClimbOS's honesty filters.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Every concession in a drafted negotiation reply is paired with something the client gives (volume, term, upfront payment, reduced scope).",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Effective price, payment-term premium and margin after concession are computed in code and checked against the owner's price floor.",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: Urgency statements (price rise, limited slots, offer end date) require a matching fact; otherwise the lint blocks them.",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: Proposal options must each be a deliverable offer; no decoy options.",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "shared/analysis/decisions.ts (add paymentTermPremium / effectivePrice); skills/sales-follow-up/SKILL.md; Book 11 §6",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/11_sales_partnerships.md §6",
+     "skills/sales-follow-up/SKILL.md Never do",
+     "shared/analysis/decisions.ts:33, :54"
+    ],
+    "note": "Book 11 says trade value and obligations explicitly; this adds lever priority and payment-term math."
+   },
+   "disagreements": "Kazanjy: start with inflated pricing to leave room, and design three options so the middle is the target and the top looks like a deal. Book 11 §6: no intentionally unusable option to steer. Kazanjy also suggests 'pricing may go up' and 'CS slots are limited' as urgency; sales-follow-up forbids these without a fact. ClimbOS keeps its rules: anchoring is a strategic preference the owner may choose with real prices; fabricated urgency is never drafted. Author's own short-term pricing example (1.43x per month) does not meet his stated 2-3x rule; treat the multiple as owner choice.",
+   "id": "BK09b-K6",
+   "eval_case_ids": [
+    "EV-BK09b-K6-1",
+    "EV-BK09b-K6-2",
+    "EV-BK09b-K6-3"
+   ]
+  },
+  {
+   "name": "High-touch onboarding, success reviews and renewals (B2B and agencies)",
+   "decision": "How a small B2B business or agency gets new clients to the promised result and protects renewal, and whether its price can carry that work.",
+   "business_models": [
+    "agency",
+    "professional_services",
+    "consulting",
+    "b2b_saas (assisted onboarding)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "what was promised in the sale (goals, KPIs)",
+    "onboarding steps and owner/staff hours per client",
+    "usage or delivery signals per client",
+    "contract term and renewal date"
+   ],
+   "prerequisites": [
+    "Sale notes captured at close: decision-maker, users, goals",
+    "Price per client known"
+   ],
+   "branches": [
+    {
+     "if": "Onboarding labour cost per client is a large share of first-period revenue",
+     "then": "Charge a setup fee, simplify onboarding, or move to self-serve materials (code computes the share)."
+    },
+    {
+     "if": "Setup blockers exist (access, integrations, data)",
+     "then": "Separate setup call first, then the working session."
+    },
+    {
+     "if": "Client misses onboarding sessions",
+     "then": "Reschedule immediately; track who has not onboarded."
+    },
+    {
+     "if": "Value signals low for a client",
+     "then": "Helpful check-in; most effort on middling clients; involve the sponsor if one user blocks."
+    },
+    {
+     "if": "Price per client is low",
+     "then": "Automated success summary (e.g. a client report link) instead of a meeting."
+    },
+    {
+     "if": "Renewal near and issues open",
+     "then": "Renewal conversation ~6 weeks before term end; fix plan or short extension (owner choice)."
+    }
+   ],
+   "steps": [
+    "Kickoff: restate goals ('rediscovery') and confirm in writing.",
+    "Setup items first.",
+    "Client does real work in the session.",
+    "Measurable homework; back-check booked ~2 weeks out before ending.",
+    "Monitor value signals; record outcomes with dates.",
+    "Quarterly (or automated) success review: goals, before/after KPIs, issues, next steps.",
+    "Renewal conversation and ask; expansion only if delivering."
+   ],
+   "exceptions_failure_modes": [
+    "Group onboarding that leaves half-trained users",
+    "Upselling while delivery is failing",
+    "Losing the sponsor contact; not noticing a champion left",
+    "Auto-renew without notice where law requires it"
+   ],
+   "requirements": {
+    "cash": "none to start",
+    "labor": "owner/staff hours per client; must be priced in",
+    "capability": "client report or summary; calendar",
+    "measurement": "onboarded on time, first-result date, review held, renewal outcome"
+   },
+   "metrics": [
+    "share of new clients onboarded within N days",
+    "days to first promised result",
+    "share with a success review in the last quarter",
+    "renewal rate",
+    "net revenue retention (owner data)"
+   ],
+   "guardrails": [
+    "Auto-renewal terms and notices follow local consumer/contract law (external)",
+    "Success reports show measured outcomes only, no invented results",
+    "Customer stories/testimonials only with client permission"
+   ],
+   "stop_review": [
+    "If renewal rate falls, review onboarding completion and first-result timing first"
+   ],
+   "alternatives": [
+    "One-off local consumer jobs: use retention-lifecycle rebooking/review flows instead of QBRs",
+    "No usage data: monthly 2-question check-in email"
+   ],
+   "author_refs": [
+    "BK09b-F28",
+    "BK09b-F29",
+    "BK09b-F30",
+    "BK09b-F31",
+    "BK09b-F33",
+    "BK09b-F34",
+    "BK09b-F35"
+   ],
+   "interpretation": "Interpretation: retention-lifecycle covers automated flows by business type but not the high-touch B2B onboarding and review cadence an agency or consultancy runs; convex/clientReports.ts already provides the 'automated success review' artifact Kazanjy recommends for lower-priced accounts.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Before recommending a high-touch onboarding, code computes onboarding labour cost per client and its share of first-period revenue; flag when it exceeds the owner's margin room.",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: Every onboarding plan ends with a booked back-check and a measurable first task.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Expansion or upsell suggestions are suppressed for clients with open delivery issues.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: Auto-renewal clauses and reminder timing are flagged for the owner to check against local law; ClimbOS does not draft them as compliant.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "skills/retention-lifecycle/SKILL.md (candidate v2: 'High-touch B2B/agency onboarding and renewals'); convex/clientReports.ts",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/retention-lifecycle/SKILL.md",
+     "convex/clientReports.ts",
+     "docs/growth-expansion/blog-research/playbooks/BRP-07-activation-definition.json",
+     "PB-activation-repair"
+    ],
+    "note": "Activation as value received (BRP-07) matches Kazanjy's 'success = delivering the promise'; adds sessions, homework, reviews and renewal timing."
+   },
+   "disagreements": "Kazanjy recommends auto-renew clauses by default; ClimbOS treats them as owner/legal decisions. His churn chart is hypothetical and not reproducible; do not cite its figures as evidence.",
+   "id": "BK09b-K7",
+   "eval_case_ids": [
+    "EV-BK09b-K7-1",
+    "EV-BK09b-K7-2",
+    "EV-BK09b-K7-3"
+   ]
+  },
+  {
+   "name": "When to add sellers: founder-led proof, specialisation order and the metric tree",
+   "decision": "Whether a small B2B business or agency should hire sales help now, which role first, and how to diagnose a selling shortfall.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "founder win rate per held meeting over enough decisions",
+    "average deal value and cycle length",
+    "owner time split (prospecting vs selling vs delivery)",
+    "cost of the hire"
+   ],
+   "prerequisites": [
+    "K5 metrics available",
+    "Retention evidence that won clients get value (K7)"
+   ],
+   "branches": [
+    {
+     "if": "Too few closed decisions or win rate unstable",
+     "then": "Keep founder-led selling; do not hire."
+    },
+    {
+     "if": "Win rate stable and owner calendar under-filled because prospecting eats time",
+     "then": "Appointment setting help first (internal or assistant)."
+    },
+    {
+     "if": "Owner calendar full of selling meetings",
+     "then": "Second closer, or raise price."
+    },
+    {
+     "if": "Onboarding/delivery eats selling time",
+     "then": "Customer success or delivery help first."
+    },
+    {
+     "if": "Revenue shortfall",
+     "then": "Trace the metric tree: deals x value; deals = opportunities x win rate; opportunities = activity x conversion."
+    }
+   ],
+   "steps": [
+    "Compute expected bookings per seller = meetings per month x win rate x deal value (code).",
+    "Compute cost of sales = seller cost / bookings (code).",
+    "Compare against owner's margin room, not a generic band.",
+    "Hire one role, document the motion, review ramp metrics."
+   ],
+   "exceptions_failure_modes": [
+    "Premature scaling: hiring sales to 'figure it out'",
+    "Lagged scaling: founder keeps closing when the motion is proven",
+    "Hiring for a different sales-cycle tempo"
+   ],
+   "requirements": {
+    "cash": "salary runway for ramp",
+    "labor": "founder coaching time",
+    "capability": "documented pitch, objection list, qualification rules",
+    "measurement": "per-seller hold rate, win rate, deal size, activity"
+   },
+   "metrics": [
+    "bookings per seller per month",
+    "cost of sales",
+    "ramp time to founder-level win rate"
+   ],
+   "guardrails": [
+    "Arithmetic in code",
+    "Book salary and cost-of-sales bands are dated US venture-SaaS context, grade D",
+    "Employment law and contractor rules vary (external)"
+   ],
+   "stop_review": [
+    "If a new seller's win rate stays well below founder level after a set ramp, review onboarding before hiring more"
+   ],
+   "alternatives": [
+    "Can't afford a hire: freelance appointment setter on a trial, partners/referrals, or raise price to free founder time (PB-capacity, PB-price-increase)"
+   ],
+   "author_refs": [
+    "BK09b-F27",
+    "BK09b-F36",
+    "BK09b-F37",
+    "BK09b-F38",
+    "BK09b-F39",
+    "BK09b-F40",
+    "BK09b-F42",
+    "BK09b-F44",
+    "BK09b-F45"
+   ],
+   "interpretation": "Interpretation: most ClimbOS owners are solo; the useful part is the decision not to hire before the motion is proven, the role-order logic, and the metric tree for diagnosis. Management cadence and comp detail are out of scope.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: Do not recommend hiring a salesperson until the owner has a stable win rate over enough closed decisions and evidence won clients succeed.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: The first sales hire targets the step that limits the owner's selling time (prospecting, selling or delivery), computed from the owner's time split.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: Hiring recommendations show expected bookings and cost of sales computed from the owner's own rates, with ramp time stated as an assumption.",
+     "class": "economic_feasibility"
+    }
+   ],
+   "climbos_location": "skills/growth-strategy/SKILL.md; skills/plays-saas-b2b/SKILL.md; PB-capacity; shared/agents/economics.ts",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "shared/playbooks/contracts.ts PB-capacity",
+     "docs/growth-expansion/blog-research/playbooks/BRP-19-sales-touch-fit.json",
+     "shared/agents/economics.ts"
+    ],
+    "note": "PB-capacity addresses delivery capacity; nothing addresses selling capacity or sales hiring readiness."
+   },
+   "disagreements": "Kazanjy's 20-30% cost-of-sales target is venture-SaaS; an agency's gross margin and a consultancy's utilisation differ, so ClimbOS uses the owner's margin, not the band.",
+   "id": "BK09b-K8",
+   "eval_case_ids": [
+    "EV-BK09b-K8-1",
+    "EV-BK09b-K8-2"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/sales-follow-up/SKILL.md",
+   "change": "Candidate v2: add a 'Live sales call' section (pre-call note, agenda micro-contract, discovery list, offramp, tailored demo, one proof item, price framed against their cost, direct ask, dated next step, same-day summary). Scope step 6: one attempt per objection applies to written follow-ups; a live engaged conversation may address distinct objections in turn. Add price-gap question, 'no budget' disqualifier test and trial-request handling. Add 'send a proposal only when the buyer says they want to buy' and 'every option must be deliverable'.",
+   "why": "No skill covers the live call; Kazanjy supplies the order and the split rule.",
+   "refs": [
+    "BK09b-K1",
+    "BK09b-K2",
+    "BK09b-K3",
+    "BK09b-K6"
+   ]
+  },
+  {
+   "skill": "skills/reply-handling/SKILL.md",
+   "change": "Add reply types 'asks for a trial' (ask what proof they need; guided session or structured pilot) and 'asks for a proposal' (confirm intent and options). Add a clarity-email draft when two agreed meetings were missed.",
+   "why": "Common positive-but-risky replies are not classified today.",
+   "refs": [
+    "BK09b-K3",
+    "BK09b-K4"
+   ]
+  },
+  {
+   "skill": "skills/retention-lifecycle/SKILL.md",
+   "change": "Add a 'High-touch B2B and agency clients' branch: kickoff rediscovery, setup-first, measurable first task, booked back-check, monitored value signals, quarterly or automated success review (link to client reports), renewal conversation ~6 weeks before term end, onboarding cost check.",
+   "why": "Current skill is automated-flow centred; agencies and consultancies retain clients through sessions and reviews.",
+   "refs": [
+    "BK09b-K7"
+   ]
+  },
+  {
+   "skill": "skills/growth-plays/reference/base-rates.md",
+   "change": "Optional: add a 'Sales-led (author views, grade D)' block: demo hold expectation >=80%, per-meeting miss 10-20%, win 10-30% for new B2B solutions, cost of sales 20-30% (Kazanjy 2020, venture SaaS). Mark 'context only; never a verdict'.",
+   "why": "Diagnosis needs to state that no reliable sales-led benchmark exists; listing the dated author view with its grade prevents silent reuse.",
+   "refs": [
+    "BK09b-F5",
+    "BK09b-F23",
+    "BK09b-F37"
+   ]
+  },
+  {
+   "skill": "skills/growth-strategy/SKILL.md",
+   "change": "Add a sales-hiring readiness check: no sales hire before a stable founder win rate and evidence won clients succeed; first hire targets the step limiting the owner's selling time.",
+   "why": "Prevents premature-scaling advice for solo owners.",
+   "refs": [
+    "BK09b-K8"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/agents/diagnosis.ts:11-25",
+   "gap": "OwnerFunnel only has visitors, leads, activated, newCustomers; sales-led businesses (agencies, consultancies, quote-based services) have no fields for meetings booked/held, proposals, lost, unqualified, deal value or owner meeting capacity.",
+   "proposed_change": "Add an optional `sales` block {meetingsBooked, meetingsHeld, proposals, won, lost, unqualified, avgWonValue, ownerMaxMeetings, prior?: {...}}.",
+   "priority": "P1"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:39 and :83-139",
+   "gap": "StageReading.stage has no sales stage and diagnose() cannot name a sales-pipeline constraint; with only leads and newCustomers for a non-SaaS business the verdict is 'unknown' or falls through to demand.",
+   "proposed_change": "Add readings for hold rate, held->proposal, proposal->won, unqualified share and selling capacity; map to existing constraints (conversion, positioning, delivery, demand) per K5 branches; verdict 'unknown' unless compared to the owner's prior period or target; 'too few' below 5 closed decisions.",
+   "priority": "P1"
+  },
+  {
+   "where": "convex/jobs.ts:971",
+   "gap": "diagnose() receives only owner-typed job.business.funnel; CRM deal data in convex/crm.ts is never aggregated into the diagnosis.",
+   "proposed_change": "Deterministic aggregation of deals by stage and dates over the period into the sales block, owner-confirmable before use.",
+   "priority": "P2"
+  },
+  {
+   "where": "convex/schema.ts:1128-1147 (deals)",
+   "gap": "No lost reason, no stage history or stage-entered timestamps, no 'unqualified' outcome, no proposal/quote stage, no re-contact permission field.",
+   "proposed_change": "Add lostReasons (multi, incl. unknown), stageHistory [{stage, at}], outcome 'unqualified', optional 'proposal' stage, recontactPermission {allowed, at, untilDate}.",
+   "priority": "P2"
+  },
+  {
+   "where": "convex/crm.ts:14-17 and :55-65",
+   "gap": "Stages lead/talking/booked/won/lost: 'booked' does not distinguish booked from held; list totals give open count and unweighted value only; no hygiene flags (uncovered, untouched N days, stuck in stage, past-due next step).",
+   "proposed_change": "Compute flags in the list query from nextStepAt, updatedAt and stage timestamps; surface in pipeline view and get_pipeline tool (convex/lib/climbTools.ts:233-243).",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:33-60",
+   "gap": "No calculator for payment-term premium/effective price after concessions, or onboarding labour cost per client vs price.",
+   "proposed_change": "Add `paymentTerms` (upfront vs instalments premium) and `serviceCostShare` (hours x rate / price per period) kinds to CalcInput.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:160",
+   "gap": "playStage maps 'sales call|proposal|close rate' to conversion but not 'discovery call', 'demo', 'follow-up', 'objection', 'pipeline', so such plays default to demand and can fail the diagnosis-fit lint wrongly.",
+   "proposed_change": "Extend the conversion regex with discovery call, demo, objection, follow-up cadence, pipeline review.",
+   "priority": "P3"
+  }
+ ]
+}

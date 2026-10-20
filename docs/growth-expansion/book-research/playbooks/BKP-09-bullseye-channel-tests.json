@@ -1,0 +1,324 @@
+{
+ "id": "BKP-09",
+ "version": 1,
+ "slug": "bullseye-channel-tests",
+ "title": "Test up to three channels in parallel, then focus on results",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Which channels to test now, how cheaply, and when one has earned focus, instead of committing to a primary channel before any result.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "No channel has a first-party readout yet",
+  "A working channel's cost is rising (saturation)"
+ ],
+ "exclusions": [
+  "A channel already works within payback (focus on it; test only as a hedge)"
+ ],
+ "required_inputs": [
+  "Eligible channels from scoring",
+  "Owner hours and cash cap for tests",
+  "Gap to the traction goal"
+ ],
+ "evidence_requirements": [
+  "Current customer sources with rough shares (step 0 audit)",
+  "Value per customer computed by code (allowableCac / contribution)",
+  "Monthly budget and owner hours",
+  "Per candidate: guessed cost per customer, reachable customers before saturation, time to a readable signal, each tagged as a guess",
+  "The assumption the test checks (cost, volume, conversion or time)",
+  "Value per customer from code",
+  "Tracking in place",
+  "Customers needed: goal minus baseline",
+  "Reachable audience for the channel, with source",
+  "Conversion rates with source tags",
+  "The full eligible channel list",
+  "Cost and response trend of the focused channel over successive reads",
+  "Evidence of what competitors use (research notes)",
+  "Business type, price and margin, buying motion, geography",
+  "Where customers already gather (research)",
+  "The goal and why it matters (break-even, capacity, a funding or hiring trigger)",
+  "The candidate milestones"
+ ],
+ "missing_data_behavior": [
+  "No goal gap: tests still run; skip the needle check.",
+  "No readout: no channel is 'primary'."
+ ],
+ "decision_branches": [
+  {
+   "if": "Nothing proven",
+   "then": "Up to 3 capped tests in parallel (fewer with under about 5 owner hours a week); choose focus at the readout."
+  },
+  {
+   "if": "Test is near break-even",
+   "then": "Learning result: one optimisation round with a named lever, owner-set band."
+  },
+  {
+   "if": "Channel's reachable volume can't cover the goal gap",
+   "then": "Keep it supporting, not primary."
+  }
+ ],
+ "implementation_steps": [
+  "Audit current sources",
+  "Brainstorm one specific idea per channel family (see K6)",
+  "Attach guessed cost, volume and time-to-test to each idea",
+  "Rank into promising, possible and long-shot",
+  "Pick up to 3 for the inner circle",
+  "Design a cheap test per channel (K2)",
+  "Read all tests at their read dates; compare full cost per customer, volume ceiling (K3) and customer fit",
+  "Focus on the winner; re-run when it saturates",
+  "Write the channel's assumptions in a model sheet",
+  "Choose the smallest exposure that can test one assumption",
+  "Keep variants few (a handful of ads or pages): testing, not optimisation",
+  "Compute the gap in code",
+  "For each candidate: reachable audience × rates = customers (funnelCustomers) at P10, P50 and P90",
+  "Compare with the gap and the horizon",
+  "Brainstorm one specific idea per library family",
+  "Mark owner dislikes as bias, not evidence",
+  "Score competition from evidence",
+  "Map the idea to library IDs",
+  "Check the card's fit condition",
+  "Pick the card's cheap test",
+  "State the goal and its significance",
+  "List necessary milestones",
+  "Order them by dependency"
+ ],
+ "dependencies": [
+  "A destination that can convert (page, listing, booking or reply path)",
+  "A way to attribute customers to each test (UTMs, unique URL or code, or a 'how did you hear' question)",
+  "Conversion tracking or a manual attribution method",
+  "A destination that matches the message",
+  "A numeric goal with a date (North Star)",
+  "Eligibility and price-fit checks still apply",
+  "Library eligibility (scoring.ts eligibility) and price fit",
+  "A numeric goal with a date"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Sum of test caps must fit the monthly budget band",
+  "labor": "Sum of test hours at or below the owner's stated hours",
+  "capability": "Tracking per test; owner's own mailbox for any cold email",
+  "measurement": "Per-test source tagging and a read date"
+ },
+ "metrics": [
+  "Full cost per customer per test (spend plus owner time)",
+  "Reachable customers estimate vs the goal gap",
+  "Customer fit (order size, early retention)",
+  "Days to first customer",
+  "Cost per acquisition = cost per click / conversion (calc.ts)",
+  "Ratio of cost per customer to value",
+  "Reachable volume",
+  "Ceiling customers within horizon",
+  "Share of gap covered",
+  "Families represented in the candidate set",
+  "Cost per customer trend in the focus channel",
+  "Per card: cost per customer, volume, fit",
+  "Sub-goal attainment per period"
+ ],
+ "guardrails": [
+  "Tests have a spend cap, read date and go band; exempt from scaled-ROI checks, never counted in the forecast total.",
+  "At least one candidate from each eligible channel family (bias check).",
+  "No test exceeds its cap",
+  "No external action without owner approval",
+  "No assumed audience, list, partner or permission",
+  "Hard spend cap and stop date",
+  "No scaled-ROI forecast from a test (BRP-12)",
+  "Verify current platform rules before acting",
+  "Arithmetic in code only",
+  "Reach must carry a source tag",
+  "Competition claims must cite evidence",
+  "Price fit and eligibility are never overridden by a bias argument",
+  "No fake reviews, fake scarcity, misleading stunts",
+  "Platform rules verified at execution time",
+  "Week-1 list of 5 items or fewer (existing lint)"
+ ],
+ "alternatives_when_constrained": [
+  "No budget: unpaid tests only (partner placement, community answers, comparison page, owner-mailbox outreach for B2B)",
+  "No tracking: unique codes or URLs plus a source question before any test",
+  "No owner hours: only channels ClimbOS runs (exec 'auto')",
+  "No ad budget: unpaid tests (direct ask to a small site or newsletter, community post, partner placement)",
+  "No tracking: unique URL or code",
+  "No integration: draft-only campaign",
+  "No reach data: a labelled assumption, with the first test designed to measure reach",
+  "No competitor research: competition stays neutral (50)",
+  "When a card is blocked: the playbook alternatives in contracts.ts",
+  "No clear goal: the diagnosis's binding constraint defines the first milestone"
+ ],
+ "stop_conditions": [
+  "Each test's planned read date",
+  "The plan's day-45 decision point (growth-strategy step 10)",
+  "Planned read date",
+  "Cap reached",
+  "Each plan rebuild; when the baseline grows past a phase boundary",
+  "Each plan rebuild",
+  "Decay trigger",
+  "Per test read date",
+  "Milestone completion",
+  "Weekly check"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Parallel tests on the same audience at the same time blur attribution; separate audiences or tracking",
+  "Slow-signal channels (SEO, content, BD) lose to fast ones at the same read date; judge them on leading indicators against their own windows (Book 05 §9)",
+  "Book-era test sizes ($250 of search ads, a few hundred dollars) are 2014 prices",
+  "Low-ticket products: even a 'cheap' test can't show a viable channel (price fit)",
+  "Reach estimates for organic channels are guesses; tag them",
+  "Overlap between channels (shared audience) inflates totals; ClimbOS already applies PLAY_OVERLAP",
+  "Bias-check ideas can become a channel buffet; they're brainstorm entries, not plan entries",
+  "An 'underused channel' story invented without research",
+  "Dated tactics from the book: like-gated social pages, 'pay with a tweet', freelance long-tail page farms, bought direct-mail lists without checks, copying another product's invite text word for word; verify current platform and legal rules (external_requirement)",
+  "2014 platform names and prices",
+  "An over-pruned path drops maintenance that keeps current revenue (reviews, support)"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: when no eligible channel has first-party results, ClimbOS marks up to 3 top eligible channels as 'test' (not 'primary'). Each gets a cap, a read date and the three questions (cost, volume, fit); 'primary' is assigned only from a readout.",
+    "from": "BK15-K1"
+   },
+   {
+    "rule": "proposed: PB-paid-search-test gains a revise branch. If cost per customer is above value but within an owner-set band and a named lever exists, allow one bounded optimisation round. ClimbOS adopts no default band from this book.",
+    "from": "BK15-K2"
+   },
+   {
+    "rule": "proposed: candidatesFor adds the best eligible channel from each family missing from the top-n, tagged 'bias check', so the agent has to consider or reject it with a reason.",
+    "from": "BK15-K6"
+   },
+   {
+    "rule": "proposed: plans record the goal's significance in one line, and a completed milestone triggers a re-plan prompt.",
+    "from": "BK15-K5"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: when the step-0 audit shows an existing channel supplies most customers below value and isn't flattening, skip new channel tests and focus on that channel.",
+    "from": "BK15-K1"
+   },
+   {
+    "rule": "proposed: a re-run after all tests fail must cite what the failed tests showed (message, funnel step) before adding new channels.",
+    "from": "BK15-K1"
+   },
+   {
+    "rule": "proposed: add an optional 'ceiling' hint per channel (e.g. bounded by list or event size) to the library, used only as a warning, never as a number in owner text.",
+    "from": "BK15-K3"
+   },
+   {
+    "rule": "proposed: competition moves from 50 only with a cited AI delta; prompts forbid 'nobody does X' claims without evidence.",
+    "from": "BK15-K6"
+   },
+   {
+    "rule": "proposed: a focus channel whose logged cost per customer rises across an owner-set number of consecutive reads triggers a Bullseye re-run prompt.",
+    "from": "BK15-K6"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: the sum of test caps and test hours is checked in code against the budget and the owner's hours before the plan is shown.",
+    "from": "BK15-K1"
+   },
+   {
+    "rule": "proposed: add play kind 'test' (or intent 'learning_test', as BRP-12 proposes). It is exempt from the P50 'Loses money' error but must carry a cap, a read date, a stated go band and the label that it can't show scaled ROI.",
+    "from": "BK15-K2"
+   },
+   {
+    "rule": "proposed: when a test or play states reach, code flags any channel whose high-estimate customers within the horizon can't cover the gap, and that channel can't be marked primary or focus.",
+    "from": "BK15-K3"
+   },
+   {
+    "rule": "proposed: trade-show and event break-even uses contribution per sale, not price.",
+    "from": "BK15-K7"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: no channel test launches without a source-tagging method.",
+    "from": "BK15-K2"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: platform-specific tactics from this book are verified against current platform policy before use.",
+    "from": "BK15-K7"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: add library IDs for speaking engagements, publicity stunt (capped moonshot) and customer appreciation.",
+    "from": "BK15-K7"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/growth-strategy/SKILL.md step 8 (candidate v2)",
+  "shared/acquisition/scoring.ts select()",
+  "shared/playbooks/contracts.ts PB-paid-search-test",
+  "docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json"
+ ],
+ "reconciliation_note": "ClimbOS currently picks a primary from priors (scoring.ts select); this versions that (backlog CG-04, CG-05, CG-21, CG-22).",
+ "member_frameworks": [
+  "BK15-K1",
+  "BK15-K2",
+  "BK15-K3",
+  "BK15-K6",
+  "BK15-K7",
+  "BK15-K5"
+ ],
+ "source_references": [
+  "BK15-F2",
+  "BK15-F3",
+  "BK15-F4",
+  "BK15-F5",
+  "BK15-F6",
+  "BK15-F7",
+  "BK15-F9",
+  "BK15-F14",
+  "BK15-F16",
+  "BK15-F22",
+  "BK15-F10",
+  "BK15-F30",
+  "BK15-F13",
+  "BK15-F18",
+  "BK15-F34",
+  "BK15-F19",
+  "BK15-F20",
+  "BK15-F21",
+  "BK15-F24",
+  "BK15-F25",
+  "BK15-F26",
+  "BK15-F27",
+  "BK15-F28",
+  "BK15-F29",
+  "BK15-F31",
+  "BK15-F32",
+  "BK15-F33",
+  "BK15-F35",
+  "BK15-F36",
+  "BK15-F37",
+  "BK15-F38",
+  "BK15-F17"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK15-K1-1",
+  "EV-BK15-K1-2",
+  "EV-BK15-K1-3",
+  "EV-BK15-K2-1",
+  "EV-BK15-K2-2",
+  "EV-BK15-K3-1",
+  "EV-BK15-K3-2",
+  "EV-BK15-K3-3",
+  "EV-BK15-K6-1",
+  "EV-BK15-K6-2",
+  "EV-BK15-K6-3",
+  "EV-BK15-K7-1",
+  "EV-BK15-K7-2",
+  "EV-BK15-K7-3",
+  "EV-BK15-K5-1",
+  "EV-BK15-K5-2"
+ ]
+}

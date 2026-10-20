@@ -1,0 +1,68 @@
+--- a/skills/meta-ads/SKILL.md
++++ b/skills/meta-ads/SKILL.md
+@@ -32,14 +32,14 @@
+ 2. **Size the structure to the budget.**
+    - Daily budget = monthly cap ÷ 30.4. Meta may spend up to 75% over the daily budget on a given day but not more than 7× the daily budget in a calendar week. Tell the owner.
+    - An ad set exits the learning phase after about 50 optimisation events in a week. Estimate weekly budget ÷ expected cost per result. If that is far below 50, use one campaign and one ad set, and consider optimising for a higher-volume event (landing page views, add to cart, leads) until purchase volume exists. Judge on cost per result over 2–3 weeks rather than daily swings.
+-   - Default for small budgets: one campaign (Advantage+ sales for ecommerce, a leads campaign for services), one ad set, broad audience with only location and legally required age limits, Advantage+ placements, and 3–5 concepts as separate ads so results can be read by concept.
++   - Default for small budgets: one campaign (Advantage+ sales for ecommerce, a leads campaign for services), one ad set, broad audience with only location and legally required age limits, Advantage+ placements, and 3–5 concepts as separate ads so results can be read by concept. Narrow only for eligibility, capacity or a listable B2B target [BK11-K4].
+    - Detailed targeting exclusions were removed in 2025. Custom-audience exclusions still work, so exclude existing customers from acquisition campaigns.
+ 
+ 3. **Build the concept matrix.** List candidate values for each dimension, then pick 3–5 combinations where any two concepts differ on at least two of the three:
+    - **Buyer and awareness**: from the positioning (e.g. first-time buyer who has never heard of you, gift buyer, past customer, someone comparing you with the alternative).
+    - **Angle**: problem in VOC words, demonstration or mechanism, social proof, offer, founder story, comparison with the real alternative, objection-buster, occasion or use case.
+    - **Format**: UGC-style vertical video, founder to camera, static with one bold claim, carousel (products, steps or reasons), product demo, testimonial card from a real review.
+-   Tie every angle to evidence (a VOC phrase, a review theme, a confirmed fact). Each concept also needs a visually different first frame, because the first frame is what the system and the viewer see first.
++   Tie every angle to evidence (a VOC phrase, a review theme, a confirmed fact). Each concept also needs a visually different first frame, because the first frame is what the system and the viewer see first. Vary the content, keep the identity: every concept carries the same one or two declared brand cues (brand colour, the owner's face, a recurring format) [BK11-K3].
+ 
+ 4. **Write each concept.** For each:
+    - **Name and logic**: one line covering buyer, awareness, angle and format, plus the evidence behind it.
+@@ -52,11 +52,11 @@
+ 
+ 5. **Write the creative brief** for each concept:
+    - Ratio: 9:16 (1080×1920) for Reels and Stories, 4:5 (1080×1350) for Feed; supply both so Advantage+ placements don't crop badly.
+-   - First 3 seconds: exactly what is on screen and the on-screen text. Show the product, the result or a face in frame 1, not a logo.
++   - First 3 seconds: exactly what is on screen and the on-screen text. Frame 1 shows the product, the result or a face, carrying a declared brand cue (visible branding, brand colour, the owner); the name appears in the opening, on screen or spoken. No logo card, no "Introducing…" [BK10-K5, BK11-K3].
+    - On-screen text for sound-off viewing; captions on any speech.
+    - Shot list or image description with real products, real premises, real people (staff or customers with permission). No stock lifestyle photos.
+    - Safe zones for 9:16: keep text, faces and logos out of the top ~14% and bottom ~35% of the frame, where the interface covers them.
+-   - End frame: offer and price.
++   - End frame: offer, price and the name or logo.
+    - What the owner must film or supply, and roughly how long it takes.
+ 
+ 6. **Decide Advantage+ settings.** State each with a reason, for the owner to approve:
+@@ -68,6 +68,7 @@
+ 7. **Lead ads (services, local, B2B).** Use an instant form with the "higher intent" type (it adds a review step) and 1–2 qualifying questions. Link a privacy policy, which Meta requires. Name the follow-up: who calls or emails, and how fast. Speed of follow-up decides lead quality more than the form.
+ 
+ 8. **Write the test and refresh plan.** Pre-register the rule in one line ("after £X spend per concept, pause any concept above £Y cost per result"), with X and Y derived from the owner's margin or stated target, not invented. Judge by cost per result per concept, not CTR or likes. Replace losers with new concepts, not reworded variants. Refresh when frequency rises and cost per result climbs together. Confirm Pixel plus Conversions API and UTMs on every URL.
++   Report unique reach and frequency beside cost per result; if frequency climbs while reach plateaus, widen within the area or rest the budget [BK11-K4]. context: consumer and repeat-purchase businesses: prefer steady monthly spend to one burst unless sales are seasonal, and judge reach over months, not weeks [BK10-K5].
+ 
+ 9. **Mark everything paused** and list what the owner approves: budget, objective and optimisation event, special-category declaration, Advantage+ settings, every concept.
+ 
+@@ -90,7 +91,8 @@
+ 
+ ## Quality bar
+ 
+-- 3–5 concepts, each differing from every other on at least two of buyer, angle and format, each with a visually distinct first frame.
++- 3–5 concepts, each differing from every other on at least two of buyer, angle and format, each with a visually distinct first frame and the same brand cues.
++- The business is identifiable in the opening and the end frame. Default for consumer and repeat-purchase; context: niche B2B, capacity-limited and early-stage: name clarity first, asset-building optional.
+ - Every hook names a specific situation or outcome inside 125 characters and stands alone.
+ - Each concept's proof and offer come from confirmed facts; the strongest proof appears in the first two lines.
+ - Briefs are shootable by a small business owner: exact frames, on-screen text, safe zones, what to film.
+@@ -111,14 +113,14 @@
+ - Never use personal-attribute phrasing, before-and-after body images, fake play buttons on statics, fake notifications, or sensational shock imagery.
+ - Never invent reviews, UGC creators, customer quotes, press logos, scarcity ("only 3 left") or deadlines.
+ - Never submit "variants" that only change colour, CTA button or a word; that is one concept, not five.
+-- Never open with the brand name or a throat-clearer ("Introducing…", "Meet X", "Are you ready to…").
++- Never open with a brand intro, logo card or throat-clearer ("Introducing…", "Meet X", "Are you ready to…"). A brand cue or the name inside the hook is required, not banned [BK11-K3].
+ - Never use AI tells and hype: elevate, unlock, revolutionary, game-changer, "say goodbye to X and hello to Y", emoji as bullets, more than one exclamation mark.
+ - Never split a small budget into many ad sets by interest or demographic.
+ 
+ ## Checklist before answering
+ 
+ - [ ] Special-category and restricted-content check done and stated.
+-- [ ] 3–5 concepts; any two differ on at least two of buyer, angle, format; first frames differ.
++- [ ] 3–5 concepts; any two differ on at least two of buyer, angle, format; first frames differ; brand cues identical; name or cue in the opening and end frame.
+ - [ ] Each hook works alone and is complete within 125 characters.
+ - [ ] Headlines 27 characters or fewer where possible, none over 40; CTA button matches the goal.
+ - [ ] Every number, review and claim traces to confirmed facts; the ads are complete as written.

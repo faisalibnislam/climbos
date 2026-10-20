@@ -1,0 +1,257 @@
+{
+ "id": "BKP-07",
+ "version": 1,
+ "slug": "stickiness-gate",
+ "title": "Prove stickiness before scaling acquisition or optimising revenue",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether the business has earned the right to scale paid acquisition or optimise revenue from existing customers, and what to measure first if not.",
+ "business_types": [
+  "any; gate evidence differs by model"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Owner wants to raise ad spend or add channels",
+  "Recurring business with no churn or cohort reading"
+ ],
+ "exclusions": [
+  "Capacity binds (delivery first)",
+  "Charging, first-purchase fixes and capped tests (never gated)"
+ ],
+ "required_inputs": [
+  "Activation as value received",
+  "Churn or cohort retention (recurring) or repeat/review/referral signals (one-off)"
+ ],
+ "evidence_requirements": [
+  "activation measured as value received (not setup)",
+  "recurring models: churn or cohort retention",
+  "one-off purchase models: repeat, referral, review or satisfaction signal",
+  "capacity headroom",
+  "Monthly churn or repeat rate by cohort",
+  "Activation rate",
+  "Owner hours available for traction work",
+  "revenue source",
+  "purchase frequency",
+  "for e-commerce: share of past buyers who bought again in 90 days or 12 months",
+  "for marketplaces: share of buyer searches with at least one result, active listings, buyer:seller activity",
+  "revenue per customer per month",
+  "gross margin",
+  "CAC with owner time",
+  "churn or cohort survival",
+  "measured referral rate if counting virality"
+ ],
+ "missing_data_behavior": [
+  "Recurring model, no churn: stickiness 'unproven'; paid only as a capped test; churn added to what to measure.",
+  "One-off model: read delivered-value signals, never a churn rate."
+ ],
+ "decision_branches": [
+  {
+   "if": "Stickiness weak or unproven",
+   "then": "Bankable play fixes activation or retention; paid acquisition only as a capped test with no expand step."
+  },
+  {
+   "if": "Stickiness evidenced and referral base exists",
+   "then": "Referral and word-of-mouth plays rank before paid scale."
+  },
+  {
+   "if": "Stickiness evidenced and churn-weighted payback within horizon",
+   "then": "Scale paid in steps; compare payback by channel."
+  }
+ ],
+ "implementation_steps": [
+  "Run diagnose() as today.",
+  "Compute a separate stage gate in code from the same inputs: stickiness 'evidenced', 'weak' or 'unproven'.",
+  "Attach gate effects to playbook eligibility (expand steps, budget raises, price/upsell on existing base).",
+  "Add the missing stickiness measurement to diagnosis.missing.",
+  "Show the owner one line: 'Scaling paid waits until X is measured' with the number to collect.",
+  "Read the diagnosis constraint",
+  "If leaking: cap acquisition at test level and attack the leak",
+  "Watch whether successive test cohorts retain better",
+  "Classify the revenue source and repeat cycle.",
+  "Pick the model's stickiness signal.",
+  "Compute the model's key ratio in code (repeat rate, empty-search share, ARPPU).",
+  "Compute time to customer breakeven in code.",
+  "Compute churn-weighted payback (existing economics.ts).",
+  "If k is measured, compute effective CAC."
+ ],
+ "dependencies": [
+  "the owner's funnel numbers (diagnosis basis 'measured' or 'partial')",
+  "Cohort or at least monthly churn measurement (BRP-18)",
+  "business type classified",
+  "stickiness evidenced (BK12-K3)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none to compute",
+  "labor": "owner supplies churn or repeat data",
+  "capability": "deterministic code in diagnosis.ts and contracts.ts",
+  "measurement": "activation definition, churn/cohort retention or repeat rate"
+ },
+ "metrics": [
+  "activation rate (value event)",
+  "monthly churn or cohort retention (recurring)",
+  "90-day repeat or review/referral rate (one-off)",
+  "churn-weighted payback",
+  "Monthly churn by cohort",
+  "Steady-state customers = new per month / churn (interpretation)",
+  "90-day repeat purchase rate",
+  "revenue per visitor",
+  "share of searches with ≥1 result",
+  "satisfied transactions share",
+  "day-1/7/30 retention",
+  "ARPPU",
+  "months to customer breakeven",
+  "effective CAC with measured referrals",
+  "magic number (labelled variant)"
+ ],
+ "guardrails": [
+  "Owner can override any gate with a written, logged reason.",
+  "Book benchmarks (e.g. under 5% churn as 'sticky') are dated context, not thresholds.",
+  "gate never blocks charging, first-purchase conversion work or a capped, reversible test",
+  "gate reasons shown to owner; owner can override with a stated reason (approval stays with owner)",
+  "Never scale paid while contribution is negative or retention is broken (growth-strategy Never do)",
+  "loyalty forecasts cap repeat-rate uplift modestly unless the owner has evidence (Hillstrom: annual rate rarely moves >10% relative; dated, grade C)",
+  "spend never above the owner's cap",
+  "benchmarks carry era and basis"
+ ],
+ "alternatives_when_constrained": [
+  "no churn data: run a 30-day cohort read or owner-reported retention, labelled self-reported",
+  "no activation event: interviews to define first value (PB-interviews)",
+  "No cohort data: monthly churn plus interviews (PB-interviews)",
+  "no order export: owner estimate of repeat buyers, labelled self-reported; marketplace with no search logs: manual weekly tally of unanswered requests",
+  "no churn: no-churn payback labelled as an upper bound on speed, no verdict (as Guide 04 DS-C1)"
+ ],
+ "stop_conditions": [
+  "re-evaluate the gate when new churn/cohort data or 30 more days of funnel data arrive",
+  "Each cohort's first renewal",
+  "re-classify when repeat rate trend changes for two quarters",
+  "payback lengthens two periods in a row: pause the raise"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Owner-funded businesses need cash now: charging and conversion fixes are never gated (Buffer, BK12-F40; book says charging early is fine, BK12-F34).",
+  "Network-effect products must seed critical mass before stickiness can be read (BK12-F30).",
+  "The leak may be offer or price, not product (PB-pricing-test)",
+  "A steady test stream on a tiny audience can't reveal cohort differences",
+  "Hybrid models (a SaaS with a marketplace, e-commerce with reviews) need both readings.",
+  "Hillstrom's cut-offs are one consultant's 2012 experience; use the owner's rate and trend.",
+  "Using LTV:CAC ≥ 3 or 'CAC ≤ 1/3 CLV' as pass/fail (Guide 04 DS-C5 forbids).",
+  "Naive LTV from a few months of churn."
+ ],
+ "rule_classes": {
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: diagnose() returns stageGate {stickiness: 'evidenced'|'weak'|'unproven', reason, measureNext}; 'unproven' when a recurring-model business (SaaS, subscription_commerce, mobile_app, gaming, membership) has no churn or cohort retention, or activation is setup-only.",
+    "from": "BK12-K3"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: while stickiness is weak or unproven, paid-acquisition playbooks are eligible only as capped tests (no 'expand' step, no budget raise), and upsell/price optimisation aimed at existing customers is deferred unless the reason is capacity (PB-price-increase under delivery).",
+    "from": "BK12-K3"
+   },
+   {
+    "rule": "proposed: the owner can override any gate with a written reason; the override is logged.",
+    "from": "BK12-K3"
+   },
+   {
+    "rule": "proposed: the 50% time split is stored as founder-stage author advice, not a ClimbOS default; plans use the owner's stated hours.",
+    "from": "BK15-K4"
+   },
+   {
+    "rule": "proposed: do not adopt 'CAC ≤ 1/3 CLV' as a gate; show it only as a dated rule of thumb beside the churn-weighted payback.",
+    "from": "BK12-K7"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: for one-off purchase types, the stickiness gate reads delivered-value signals (completion, reviews, referrals, repeat within the natural cycle) and never a churn rate.",
+    "from": "BK12-K3"
+   },
+   {
+    "rule": "proposed: when activation and purchase-from-activated are both below the owner's own line (or both unreferenced and similar), prefer activation as the constraint (stickiness before revenue) instead of picking the lower raw rate across different denominators.",
+    "from": "BK12-K3"
+   },
+   {
+    "rule": "proposed: under a retention or activation constraint, plans may keep capped acquisition tests but may not include scale plays; the reason states the leak.",
+    "from": "BK15-K4"
+   },
+   {
+    "rule": "proposed: optional inputs repeatBuyers90d/firstTimeBuyers for commerce types; code computes the repeat rate and the brief tells the plays agent whether loyalty plays have room; Hillstrom's bands are shown only as a dated, grade-C reference.",
+    "from": "BK12-K4"
+   },
+   {
+    "rule": "proposed: for marketplace types, when the owner reports a high share of empty searches or unanswered requests, demand plays aimed at buyers are ranked after supply seeding.",
+    "from": "BK12-K4"
+   },
+   {
+    "rule": "proposed: add effectiveCac(paidCac, k) = paidCac × (1 − k) for 0 ≤ k < 1, used only when k is measured from the owner's referral data; label it.",
+    "from": "BK12-K7"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: candidate base-rates rows (dated, grade C): Hillstrom repurchase bands; app day-1 drop; to live under a '2013 practitioner (Lean Analytics)' heading, never in REF.",
+    "from": "BK12-K4"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/agents/diagnosis.ts (new stageGate field)",
+  "shared/playbooks/contracts.ts PB-paid-search-test, PB-referrals (avoid-if-leak made executable)",
+  "docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json"
+ ],
+ "reconciliation_note": "A separate gate field, not a ninth constraint or a reordering (BK12 answer; backlog CG-01, CG-03).",
+ "member_frameworks": [
+  "BK12-K3",
+  "BK15-K4",
+  "BK12-K4",
+  "BK12-K7"
+ ],
+ "source_references": [
+  "BK12-F9",
+  "BK12-F10",
+  "BK12-F18",
+  "BK12-F30",
+  "BK12-F31",
+  "BK12-F34",
+  "BK12-F37",
+  "BK12-F40",
+  "BK12-F42",
+  "BK15-F8",
+  "BK15-F11",
+  "BK15-F12",
+  "BK12-F16",
+  "BK12-F17",
+  "BK12-F22",
+  "BK12-F23",
+  "BK12-F24",
+  "BK12-F25",
+  "BK12-F36",
+  "BK12-F19",
+  "BK12-F32",
+  "BK12-F35",
+  "BK12-F39",
+  "BK12-F44",
+  "BK12-F46"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK12-K3-1",
+  "EV-BK12-K3-2",
+  "EV-BK12-K3-3",
+  "EV-BK12-K3-4",
+  "EV-BK15-K4-1",
+  "EV-BK15-K4-2",
+  "EV-BK12-K4-1",
+  "EV-BK12-K4-2",
+  "EV-BK12-K4-3",
+  "EV-BK12-K7-1",
+  "EV-BK12-K7-2",
+  "EV-BK12-K7-3",
+  "EV-BK12-K7-4"
+ ]
+}

@@ -1,0 +1,1136 @@
+{
+ "reading_id": "BK09a",
+ "book_title": "Founding Sales: The Early Stage Go-to-Market Handbook",
+ "frameworks": [
+  {
+   "id": "BK09a-K1",
+   "name": "Founder-led selling first, scaling later",
+   "decision": "Whether the owner should sell personally now, or hire, outsource or automate outbound.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "pre-revenue",
+    "early"
+   ],
+   "evidence_required": [
+    "customers won through the owner's own conversations",
+    "a repeatable narrative and ICP",
+    "price and margin for value per meeting",
+    "owner hours per week available for selling"
+   ],
+   "prerequisites": [
+    "a price that pays for human selling (BRP-19 / scoring.ts LOW_TICKET_USD_MONTH)"
+   ],
+   "branches": [
+    {
+     "if": "No customers won through owner conversations yet",
+     "then": "Owner sells personally: small list, own conversations, feedback straight into offer and product. Don't recommend hiring a rep, appointment setter or lead-gen agency as the main play."
+    },
+    {
+     "if": "Owner has won several customers with the same narrative to the same ICP and can say why they bought",
+     "then": "Delegating or partly automating outreach can be tested, with the owner reviewing replies and losses."
+    },
+    {
+     "if": "12-month value per customer can't cover owner hours per customer",
+     "then": "Use self-serve or low-touch motions (BRP-19); human selling only for the top segment."
+    },
+    {
+     "if": "Owner has fewer than about 3 hours a week to sell",
+     "then": "Don't plan outbound; plan warm intros (K7) or inbound capture (K8) instead."
+    }
+   ],
+   "steps": [
+    "Confirm price fit for human selling",
+    "Set a 50-100 account list (K3)",
+    "Owner runs outreach and meetings",
+    "Record why each deal was won, lost or deferred",
+    "Review after about 20 qualified conversations: repeatable or not"
+   ],
+   "exceptions_failure_modes": [
+    "The owner hires a rep from a bigger competitor too early: that rep sells to old contacts and can't diagnose why prospects say no",
+    "Treating unscalable work as permanent",
+    "A business that is pure self-serve has no need for this stage"
+   ],
+   "requirements": {
+    "cash": "Little: owner's mailbox and calendar",
+    "labor": "Owner hours: list research, outreach, meetings (about 2 hours per meeting including prep and follow-up, per the book)",
+    "capability": "Owner can explain the problem and price",
+    "measurement": "Replies, meetings held, wins, loss reasons"
+   },
+   "metrics": [
+    "qualified conversations",
+    "meetings held",
+    "win rate among qualified meetings",
+    "owner hours per customer"
+   ],
+   "guardrails": [
+    "Owner time is priced into CAC (cacFull)",
+    "No promise of results from hiring"
+   ],
+   "stop_review": [
+    "After about 20 qualified conversations with no win, review ICP and offer (PB-interviews) before adding volume"
+   ],
+   "alternatives": [
+    "No owner time: PB-referrals or PB-partners",
+    "Low price: self-serve plays (PB-comparison-page, PB-landing-split)"
+   ],
+   "author_refs": [
+    "BK09a-F1",
+    "BK09a-F2",
+    "BK09a-F3",
+    "BK09a-F4",
+    "BK09a-F26"
+   ],
+   "interpretation": "Interpretation (ours): for a ClimbOS owner-operator the 'founder' is the owner. The book's warning against early sales hires maps onto ClimbOS advice not to buy appointment-setting or lead-gen services before the owner's own conversations show the message works.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: when the owner reports no customers won through personal conversations, plans must not lead with hiring a salesperson, outsourced SDR or appointment-setting agency; lead with owner-run outreach, warm intros or inbound capture.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: PB-cold-outreach requires owner selling hours (hours_min about 3 a week) as well as price and mailbox.",
+     "class": "missing_prerequisite"
+    }
+   ],
+   "climbos_location": "shared/playbooks/contracts.ts PB-cold-outreach (requires, lines 229-233); skills/growth-strategy; BRP-19",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/11_sales_partnerships.md §1",
+     "docs/growth-expansion/blog-research/playbooks/BRP-19-sales-touch-fit.json",
+     "shared/playbooks/contracts.ts PB-cold-outreach"
+    ],
+    "note": "Book 11 has a motion ladder but no stage gate for who sells first; BRP-19 decides affordability, not who sells."
+   },
+   "disagreements": "None with the library. Against Skok-style advice (guide 04 DS-02-F10), the book agrees that owner hours must be counted. What decides it: owner-reported win history.",
+   "eval_case_ids": [
+    "EV-BK09a-K1-1",
+    "EV-BK09a-K1-2"
+   ]
+  },
+  {
+   "id": "BK09a-K2",
+   "name": "Problem-first sales narrative with current-solution taxonomy",
+   "decision": "What story and evidence order to use in outreach, the deck and the first meeting, and which proof gaps to fill.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services",
+    "local_services_b2b"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "owner-confirmed problem statement",
+    "who owns the problem at target accounts",
+    "unit cost of the problem (owner or customer inputs)",
+    "what buyers use today",
+    "proof in the buyer's own metrics"
+   ],
+   "prerequisites": [
+    "positioning canvas (skills/positioning steps 2-6)"
+   ],
+   "branches": [
+    {
+     "if": "Buyers today use no solution",
+     "then": "The narrative must show the problem is worth solving; cost-of-problem proof comes first."
+    },
+    {
+     "if": "Buyers use a manual process",
+     "then": "Argue on time cost and fragility of the process."
+    },
+    {
+     "if": "Buyers use a service provider (agency, contractor)",
+     "then": "Argue on cost and control; admit what the provider does well (speed, no in-house labour)."
+    },
+    {
+     "if": "Buyers already pay for a product in the space",
+     "then": "Treat this as a qualification sign (budget and conviction exist); compare on the buyer's metrics."
+    },
+    {
+     "if": "No real, observable change in the market",
+     "then": "Leave out the 'what changed' section; never make up a trend."
+    }
+   ],
+   "steps": [
+    "State the problem so a peer would say 'yes, and...'",
+    "Name the role that owns it at different company sizes",
+    "Calculate the cost of the problem in code from inputs (hard vs soft)",
+    "Classify today's alternatives (none / process / provider / product) with their strengths",
+    "Add the change only if it is real",
+    "Explain how it works by comparison with something the buyer knows",
+    "Attach proof per value theme in the buyer's metrics, or [NEEDS FACT]",
+    "End with the price"
+   ],
+   "exceptions_failure_modes": [
+    "A trend made up to create urgency",
+    "Soft ROI presented as cash",
+    "Proof borrowed from vendor examples (see BK09a-F43)"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "1-2 hours of owner input",
+    "capability": "Owner knows customers' alternatives",
+    "measurement": "Whether prospects agree with the problem framing (meeting notes, replies)"
+   },
+   "metrics": [
+    "share of meetings where the prospect confirms the problem",
+    "objections by narrative step"
+   ],
+   "guardrails": [
+    "Every number comes from confirmed facts or a deterministic calculation",
+    "Positioning swap test still applies"
+   ],
+   "stop_review": [
+    "If most prospects reject the problem framing, go back to positioning and VoC, not more outreach"
+   ],
+   "alternatives": [
+    "No customer evidence: label themes as hypotheses and run PB-interviews"
+   ],
+   "author_refs": [
+    "BK09a-F10",
+    "BK09a-F11",
+    "BK09a-F12",
+    "BK09a-F13",
+    "BK09a-F14",
+    "BK09a-F15"
+   ],
+   "interpretation": "Interpretation (ours): Kazanjy's order matches Dunford's pitch (positioning skill step 11) but adds two useful pieces: cost of the problem as a separate step, and a four-way classification of alternatives that doubles as a qualification signal.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: the positioning pitch narrative includes a cost-of-problem line computed in code from owner or customer inputs, labelled hard or soft.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: tag each competitive alternative as none, process, service provider or product; a prospect already paying a provider or product counts as a nice-to-have fit signal in prospecting.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: 'what has changed' stays optional and is cut when no real, observable change exists (keep positioning step 8).",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/positioning (steps 2, 8, 11); skills/prospecting (nice-to-haves)",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/positioning/SKILL.md step 11",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §5"
+    ],
+    "note": "Candidate v2 of the pitch narrative: adds the cost step and the alternative taxonomy; keeps the stricter trend rule."
+   },
+   "disagreements": "Kazanjy treats 'what changed' as a core step; positioning skill step 8 makes it optional and bans made-up trends. What decides it: whether a real, sourced change exists. Book 11 §5 warns that time saved isn't cash saved, matching the book's soft-ROI caveat.",
+   "eval_case_ids": [
+    "EV-BK09a-K2-1",
+    "EV-BK09a-K2-2"
+   ]
+  },
+  {
+   "id": "BK09a-K3",
+   "name": "Database-free ICP and account sourcing",
+   "decision": "Which 50-100 accounts go on the first list, and how to find them from public sources without a bought or scraped database.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "best-customer traits",
+    "2-4 must-have traits marked observable or not observable",
+    "magnitude signals (how much pain or spend)",
+    "one primary public source that reliably shows the gating trait"
+   ],
+   "prerequisites": [
+    "positioning best-fit segment",
+    "service area"
+   ],
+   "branches": [
+    {
+     "if": "The gating trait is a role at the company (for example in-house marketers)",
+     "then": "Contact-first: find the role on the company's own team or careers pages, then qualify the company."
+    },
+    {
+     "if": "The gating trait is a property of the company (platform, licence, category, paid listing)",
+     "then": "Account-first: directory, registry, licence database, technology fingerprint or marketplace listing, then find the role."
+    },
+    {
+     "if": "A must-have can never be seen publicly (budget, internal tools, volume)",
+     "then": "Don't use it as a list filter. Use observable proxies on the list and move the trait to discovery questions and form fields."
+    },
+    {
+     "if": "A must-have could be seen but wasn't found",
+     "then": "Hold the account (fit 3) per the prospecting skill; don't send."
+    },
+    {
+     "if": "The account is a friend, ex-colleague or incubator peer",
+     "then": "Same ICP test; easy access isn't fit."
+    },
+    {
+     "if": "Very small (rabbit) or very large (elephant) accounts",
+     "then": "Start with the mid band (deer), leaning larger; avoid one elephant dominating revenue."
+    }
+   ],
+   "steps": [
+    "Write the minimum viable criteria (2-4) and why each predicts fit",
+    "List magnitude signals and a simple labelled attractiveness order",
+    "Pick account-first or contact-first by the cheapest gating trait",
+    "Pick one primary public source; use others only to enrich",
+    "Start in the owner's area when in-person meetings help",
+    "Collect 50-100 accounts by hand with source URLs and dates",
+    "Record exclusions with reasons"
+   ],
+   "exceptions_failure_modes": [
+    "Jumping between sources",
+    "Padding with friends",
+    "Using a non-observable trait as a filter, so nothing passes",
+    "Using LinkedIn premium searches through automation"
+   ],
+   "requirements": {
+    "cash": "None to small (registry or directory access)",
+    "labor": "About 10-20 minutes per account by hand (our estimate, not the book's)",
+    "capability": "Reading websites and directories",
+    "measurement": "Share of listed accounts that turn out qualified in conversations"
+   },
+   "metrics": [
+    "accounts listed",
+    "exclusions by reason",
+    "qualified-on-contact rate"
+   ],
+   "guardrails": [
+    "Public business sources only; no bought or scraped lists without a lawful basis",
+    "No LinkedIn scraping (skills/prospecting step 6)",
+    "Jurisdiction filters before outreach"
+   ],
+   "stop_review": [
+    "If fewer than half of contacted accounts confirm the pain, tighten must-haves"
+   ],
+   "alternatives": [
+    "Market too thin publicly: inbound capture (K8) or partners (PB-partners)",
+    "Gating trait not observable at all: lead magnet or content that makes buyers raise their hands (PB-lead-magnet)"
+   ],
+   "author_refs": [
+    "BK09a-F26",
+    "BK09a-F27",
+    "BK09a-F28",
+    "BK09a-F29",
+    "BK09a-F30",
+    "BK09a-F4"
+   ],
+   "interpretation": "Interpretation (ours): the book's method works without a prospect database. It was built by hand from public sources, which is what ClimbOS must do. Its LinkedIn-heavy tooling has to be swapped for company sites, registries, directories, licence databases, public ad libraries and job pages.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: each must-have is tagged observable or not observable; non-observable traits can't be list filters and become discovery or form questions.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: a list uses one primary sourcing source per campaign; extra sources only enrich already-found accounts.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: visible paid tiers (paid directory listing, active ads in a public ad library, a paid booking tool) count as a willingness-to-pay nice-to-have, with source URL.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: never source from bought or scraped contact lists without a recorded lawful basis; prospects come only from public business sources or owner-provided lists with provenance.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "skills/prospecting (steps 3-9); shared/agents/specs.ts ProspectsOutputSchema (1415) and lintProspects (1466)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/prospecting/SKILL.md",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §2"
+    ],
+    "note": "Adds the observable/non-observable split, magnitude ordering, single-source discipline, the availability-bias warning and deer sizing. Keeps the skill's stricter sourcing and compliance."
+   },
+   "disagreements": "The book uses LinkedIn premium search, list-building plugins and personal addresses. ClimbOS forbids all of these. The book also contacts accounts whose hidden traits are unknown, while the skill holds any fit-3 account. Proposed resolution: hold only when an observable must-have wasn't found; traits that can never be observed shouldn't be must-haves. What decides it: whether the trait can be observed.",
+   "eval_case_ids": [
+    "EV-BK09a-K3-1",
+    "EV-BK09a-K3-2",
+    "EV-BK09a-K3-3"
+   ]
+  },
+  {
+   "id": "BK09a-K4",
+   "name": "Point-of-contact discovery and lawful contact routes",
+   "decision": "Who to contact at a qualified account, in what order, and by which allowed route.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "company size band",
+    "team or about page naming roles",
+    "how the email was obtained (published verbatim, role address, owner import)",
+    "country and legal form"
+   ],
+   "prerequisites": [
+    "account qualified (K3)",
+    "jurisdiction rules (skills/prospecting/reference/jurisdiction-rules.md)"
+   ],
+   "branches": [
+    {
+     "if": "1-10 people",
+     "then": "Contact the owner or managing director."
+    },
+    {
+     "if": "Larger, and a role clearly owns the problem or budget",
+     "then": "Contact that role (practice manager, head of marketing)."
+    },
+    {
+     "if": "No person owns the problem at all",
+     "then": "Question whether the account is qualified (BK09a-F11)."
+    },
+    {
+     "if": "Primary contact doesn't answer the sequence",
+     "then": "Then try one complementary contact (the problem owner's internal customer), not everyone at once."
+    },
+    {
+     "if": "Only a role address is published",
+     "then": "Allowed only for 1-10-person companies, with no first name; otherwise contact form, owner phone call or hold."
+    },
+    {
+     "if": "Local business with no published email",
+     "then": "Owner phone call using a gatekeeper-friendly one-line reason, after call-compliance checks; or contact form."
+    },
+    {
+     "if": "Personal webmail or pattern-guessed address",
+     "then": "Personal addresses are never used; pattern guesses follow the skill caps and are blocked where the rules say."
+    }
+   ],
+   "steps": [
+    "Find titles on the company's own pages",
+    "Choose primary and one fallback contact",
+    "Get the route: published business email (verbatim), role address under the rules, form or phone",
+    "Record provenance per field",
+    "Note any real shared connection for K7"
+   ],
+   "exceptions_failure_modes": [
+    "Several simultaneous cold emails into one account",
+    "CEO-first to large companies (assistant filters)",
+    "Assuming a job title proves authority (Book 11 §2)"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "A few minutes per account",
+    "capability": "Reading team pages",
+    "measurement": "Wrong-person reply rate"
+   },
+   "metrics": [
+    "wrong-person replies",
+    "contacts per account",
+    "share with published route"
+   ],
+   "guardrails": [
+    "No personal addresses, LinkedIn scraping or email-finder tools that scrape profiles",
+    "Published-only sending in code (shared/outbound/index.ts:188-209; convex/outboundSending.ts:94)",
+    "No lying to gatekeepers"
+   ],
+   "stop_review": [
+    "Wrong-person replies above about 1 in 5: revisit the role choice (our heuristic)"
+   ],
+   "alternatives": [
+    "No usable route: warm intro (K7), partner (PB-partners), or inbound (K8)"
+   ],
+   "author_refs": [
+    "BK09a-F11",
+    "BK09a-F31",
+    "BK09a-F32",
+    "BK09a-F37"
+   ],
+   "interpretation": "Interpretation (ours): the book's choice of who to contact carries over well. Its methods for finding addresses (personal addresses, pattern hacking, LinkedIn email tools) mostly conflict with ClimbOS policy and must be replaced by published routes, phone or warm intros.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: contact one primary role per account; add one complementary role only after the primary sequence ends without reply.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: personal (non-business) email addresses are never a cold-email route, even when published on a profile.",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: owner phone outreach to businesses needs a call-compliance check (UK TPS/CTPS screening, US mobile and autodialer rules) before ClimbOS suggests it.",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "skills/prospecting steps 5, 8, 10; skills/prospecting/reference/jurisdiction-rules.md; shared/outbound/index.ts publishedEmails",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/prospecting/SKILL.md step 5",
+     "skills/prospecting/reference/jurisdiction-rules.md"
+    ],
+    "note": "Adds cascade order and the complementary-contact fallback; the library has no phone-compliance rules."
+   },
+   "disagreements": "Book: personal addresses are fine and pattern guessing is standard. ClimbOS: never personal; pattern guessing capped and jurisdiction-limited, and code sends only to published addresses. ClimbOS policy decides this.",
+   "eval_case_ids": [
+    "EV-BK09a-K4-1",
+    "EV-BK09a-K4-2",
+    "EV-BK09a-K4-3"
+   ]
+  },
+  {
+   "id": "BK09a-K5",
+   "name": "Outreach message structure and sequence volume",
+   "decision": "How to structure each cold message and the sequence, and how much volume one owner should run.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "one sourced observation per prospect",
+    "value themes from the narrative (K2)",
+    "proof per theme or [NEEDS FACT]",
+    "owner mailbox connected"
+   ],
+   "prerequisites": [
+    "prospect passed K3/K4 and jurisdiction checks",
+    "owner approval of template and sample messages"
+   ],
+   "branches": [
+    {
+     "if": "Strong sourced observation exists",
+     "then": "Step 1: observation, bridge, one outcome with proof, interest question (50-90 words, plain, no links)."
+    },
+    {
+     "if": "Only firmographic personalisation",
+     "then": "Label it weak; research more or drop (cold-outreach step 2)."
+    },
+    {
+     "if": "The narrative has several value themes",
+     "then": "Each follow-up covers one theme or proof (Kazanjy's one thought per email), same thread, 25-60 words."
+    },
+    {
+     "if": "A prospect-specific proof can be made in about 5 minutes (screenshot, short audit)",
+     "then": "Offer it in step 2 or 3 without a link ('Want it?')."
+    },
+    {
+     "if": "Local SMB where phone is the norm",
+     "then": "Optional owner call task between emails, after call-compliance checks; never automated dialling."
+    },
+    {
+     "if": "Owner asks for open tracking or call-on-open",
+     "then": "Decline: tracking is off; use replies."
+    }
+   ],
+   "steps": [
+    "Map narrative themes to steps (1: core outcome, 2: new angle, 3: resource, 4: close-out)",
+    "Write step 1 with the observation",
+    "Write follow-ups that each add something new",
+    "Write a polite close-out with no false finality",
+    "Set volume within the mailbox warm-up cap",
+    "Measure replies and positive replies by step"
+   ],
+   "exceptions_failure_modes": [
+    "Long template-style emails with exclamation marks",
+    "Links or tracking in step 1",
+    "Calendar link in cold steps",
+    "Fake 'Re:' or 'returning your call'",
+    "A break-up email used as a guilt lever"
+   ],
+   "requirements": {
+    "cash": "None beyond the mailbox",
+    "labor": "About 5 minutes per prospect for research and the first line (book's figure for a hand-customised first email)",
+    "capability": "Writing to the skill's rubric",
+    "measurement": "Replies per step, positive replies, meetings"
+   },
+   "metrics": [
+    "reply rate",
+    "positive reply rate",
+    "meetings booked",
+    "bounce and complaint rate"
+   ],
+   "guardrails": [
+    "Owner's own mailbox only, never Resend",
+    "Opt-out honoured immediately",
+    "Footer with identity and address",
+    "No tracking pixels"
+   ],
+   "stop_review": [
+    "PB-cold-outreach stop rule (under 1% reply after 100 contacts)",
+    "Negative-reply circuit breaker"
+   ],
+   "alternatives": [
+    "No mailbox: warm intros (K7) or partners",
+    "Low price: self-serve plays"
+   ],
+   "author_refs": [
+    "BK09a-F21",
+    "BK09a-F33",
+    "BK09a-F34",
+    "BK09a-F35",
+    "BK09a-F36",
+    "BK09a-F41",
+    "BK09a-F19"
+   ],
+   "interpretation": "Interpretation (ours): two parts of the book's structure carry over, splitting the narrative into one-theme follow-ups and personalising with researched fields. Its delivery tactics (tracking, links, meeting asks, a call-heavy 7-day cadence, early or late sends) are dated or conflict with policy.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: follow-up steps are assigned one narrative value theme or proof each, chosen from the positioning hierarchy, so no two steps repeat a theme.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: step 2 or 3 may offer a prospect-specific proof asset made from public evidence, offered without a link.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: the first email carries no booking link; a booking link appears only after the prospect replies with interest.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: book response-rate figures (12% vs 5%, 18% at step 2) are stored as dated vendor examples, never as base rates.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: subject lines starting with 'Re:' or 'Fwd:' on step 1, and any 'returning your call' wording, are lint errors.",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "skills/cold-outreach; shared/agents/specs.ts lintOutreach (1485); shared/outbound/sending.ts composeEmail (67-84); shared/playbooks/contracts.ts PB-cold-outreach (234)",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/cold-outreach/SKILL.md",
+     "shared/playbooks/contracts.ts PB-cold-outreach"
+    ],
+    "note": "Candidate v2 adds theme mapping, custom proof and optional owner call tasks; rejects tracking, step-1 links and meeting CTAs."
+   },
+   "disagreements": "1) Book: step 2 gets the most replies (Outreach data). Skill: 58% of replies come from step 1 (another vendor). Both vendor, both dated; what decides it is the owner's own per-step reply data once there are about 100 contacts. 2) Book: a meeting ask in every email. Skill: interest question first. ClimbOS keeps the interest rung. 3) Inside the library: PB-cold-outreach says one follow-up then stop, the skill and schema say 4 steps on days 0/3/7/14, and code accepts up to 5 (convex/outbound.ts:511); these need reconciling. 4) Code puts 'Book a time' in every footer, including step 1 (sending.ts:75), against the skill.",
+   "eval_case_ids": [
+    "EV-BK09a-K5-1",
+    "EV-BK09a-K5-2",
+    "EV-BK09a-K5-3"
+   ]
+  },
+  {
+   "id": "BK09a-K6",
+   "name": "Demo-setting and first-meeting mechanics",
+   "decision": "How to turn an interested reply into a held, prepared first meeting, and whether a meeting is worth the owner's time.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "the reply text",
+    "owner availability or booking link",
+    "average deal value and meeting-to-win rate (owner estimate)",
+    "price facts or range"
+   ],
+   "prerequisites": [
+    "reply classified (skills/reply-handling)"
+   ],
+   "branches": [
+    {
+     "if": "Positive reply",
+     "then": "Offer two specific slots 2-5 business days out (or the booking link), 20-30 minutes, and ask who else should join."
+    },
+    {
+     "if": "'Not now' with or without a date",
+     "then": "Ask permission to check back (reply-handling); no pushing for 30 seconds now."
+    },
+    {
+     "if": "'How much?' and the price or range is in the facts",
+     "then": "Give the range and what drives it, then offer the meeting; don't hold the price back."
+    },
+    {
+     "if": "'Send me info'",
+     "then": "Ask which part they want, send that one thing."
+    },
+    {
+     "if": "'Not my decision'",
+     "then": "Thank them; ask once who owns it; never hint at going over their head."
+    },
+    {
+     "if": "Meeting value is below the owner's cost of the meeting",
+     "then": "Offer a recorded walk-through or self-serve path instead."
+    }
+   ],
+   "steps": [
+    "Send the calendar invite with location in both fields, a short agenda and a clear title",
+    "Invite everyone the contact names",
+    "Block 15-30 minutes before and after",
+    "Send a reminder email the morning of the meeting",
+    "Prepare one prospect-specific example from the stored evidence",
+    "Record the outcome and next step"
+   ],
+   "exceptions_failure_modes": [
+    "Scheduling by email ping-pong",
+    "Booking more than a week out (book: attendance falls; unquantified)",
+    "Pressure tactics from the book's objection scripts"
+   ],
+   "requirements": {
+    "cash": "None",
+    "labor": "About 2 hours per meeting with prep and follow-up (book)",
+    "capability": "Calendar and booking page",
+    "measurement": "Meetings booked, held, no-shows, next steps"
+   },
+   "metrics": [
+    "booked-to-held rate",
+    "no-show rate",
+    "value per meeting"
+   ],
+   "guardrails": [
+    "Owner approves every reply",
+    "No false urgency or invented slots",
+    "Price only from confirmed facts"
+   ],
+   "stop_review": [
+    "No-show rate high: check lead time and reminders"
+   ],
+   "alternatives": [
+    "No owner availability: recorded demo plus reply-to-ask",
+    "Low deal value: self-serve"
+   ],
+   "author_refs": [
+    "BK09a-F33",
+    "BK09a-F38",
+    "BK09a-F39",
+    "BK09a-F40",
+    "BK09a-F24"
+   ],
+   "interpretation": "Interpretation (ours): the logistics (live booking, short lead time, invite hygiene, morning reminder, time blocks, a short demo when they want to talk now) are sound and cheap. The objection scripts are written to win the meeting at the cost of consent and are overridden by ClimbOS's reply rules.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: compute value per meeting = average deal value x meeting-to-win rate in code, and compare with owner hours x hourly cost before recommending meetings.",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: booking pages offer slots within the next 7-10 days by default.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: confirmed meetings get a calendar invite with agenda and a same-morning reminder email from the owner's mailbox.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/reply-handling; skills/sales-follow-up; shared/outbound/index.ts DEFAULT_BOOKING (46) and openSlots (49); shared/analysis/decisions.ts calculate (234)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/reply-handling/SKILL.md",
+     "skills/sales-follow-up/SKILL.md",
+     "shared/outbound/index.ts"
+    ],
+    "note": "Adds invite and reminder hygiene, the lead-time limit and the value-per-meeting check; rejects the pressure scripts."
+   },
+   "disagreements": "Book: hold back the price, press on 'call me later', hint at escalation. Reply-handling and sales-follow-up: answer price from facts, permission-based check-ins, accept a second no. ClimbOS's consent and honesty rules decide this. The booking horizon (14 days in openSlots) is longer than the book's one week; no data either way.",
+   "eval_case_ids": [
+    "EV-BK09a-K6-1",
+    "EV-BK09a-K6-2"
+   ]
+  },
+  {
+   "id": "BK09a-K7",
+   "name": "Warm-intro prospecting through the owner's network",
+   "decision": "Whether and how to reach already-qualified accounts through people the owner (or advisers) know.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "pre-revenue",
+    "early"
+   ],
+   "evidence_required": [
+    "qualified account list (K3)",
+    "a real relationship between the intermediary and the target, confirmed by the intermediary",
+    "the owner's own connections data (owner-provided)"
+   ],
+   "prerequisites": [
+    "owner willing to ask contacts",
+    "account qualified before looking for a connection"
+   ],
+   "branches": [
+    {
+     "if": "Shared connection found at a qualified account",
+     "then": "Ask the connection if they know the target well; if yes, send them a short ready-to-forward note."
+    },
+    {
+     "if": "Connection knows someone at the account but not the problem owner",
+     "then": "Ask for a forward to that person with a request to point to the right colleague."
+    },
+    {
+     "if": "Intro forwarded, no reply after about a week",
+     "then": "One direct follow-up in the same thread mentioning the intermediary; then stop."
+    },
+    {
+     "if": "Intermediary declines or barely knows the target",
+     "then": "Drop the intro route; standard cold route if eligible."
+    },
+    {
+     "if": "Account not qualified",
+     "then": "No intro request, however good the connection."
+    }
+   ],
+   "steps": [
+    "Owner exports or lists their own connections (no scraping of others' networks)",
+    "Optionally sit with an adviser who browses their own network",
+    "Match to qualified accounts",
+    "Ask intermediaries in one batched message",
+    "Send ready-to-forward notes (why them, why it helps the target, one ask)",
+    "Follow up once directly if forwarded",
+    "Thank intermediaries"
+   ],
+   "exceptions_failure_modes": [
+    "Selling to friends who don't fit",
+    "Claiming a referral that didn't happen",
+    "Asking for a blind introduction that puts the target on the spot"
+   ],
+   "requirements": {
+    "cash": "None (optional small thank-you)",
+    "labor": "1-2 hours per network review session",
+    "capability": "Owner network",
+    "measurement": "Intro requests, forwards, meetings"
+   },
+   "metrics": [
+    "intros requested",
+    "intros made",
+    "meetings from intros",
+    "wins from intros"
+   ],
+   "guardrails": [
+    "Mention the referrer only if they actually forwarded or agreed (skills/reply-handling/SKILL.md:48; skills/cold-outreach/reference/spam-and-ai-tells.md:16)",
+    "No scraping of LinkedIn networks; owner-provided data only",
+    "Disclose any paid referral arrangement"
+   ],
+   "stop_review": [
+    "Network exhausted (book: this runs out); move to cold or partners"
+   ],
+   "alternatives": [
+    "No network: PB-partners or cold outreach",
+    "Customers exist: PB-referrals"
+   ],
+   "author_refs": [
+    "BK09a-F22",
+    "BK09a-F31"
+   ],
+   "interpretation": "Interpretation (ours): this is the best fit in the book for ClimbOS's 'no database' constraint. It needs no list vendor, no customers and no budget, only qualified accounts and the owner's real relationships. The library has no playbook for it (PB-referrals needs 20 customers).",
+   "proposed_rules": [
+    {
+     "rule": "proposed: add playbook PB-warm-intros (requires: B2B types, owner_hours_min 2; no customer minimum), steps: qualify accounts, match connections, request a forwardable intro, one direct follow-up.",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: an intro email may name the intermediary only when the owner confirms the intermediary agreed or forwarded.",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: whether a user's own exported connection data can be processed for outreach under each platform's terms and GDPR needs legal review before it is automated.",
+     "class": "unknown_to_investigate"
+    }
+   ],
+   "climbos_location": "shared/playbooks/contracts.ts (new PB-warm-intros); skills/cold-outreach (intro variant); skills/reply-handling (referral handling)",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "docs/growth-engine/book-review/BK05.md (Ch 6 warm intros)",
+     "shared/playbooks/contracts.ts PB-referrals"
+    ],
+    "note": "BK05 describes warm intros; no typed playbook exists. Differs from PB-referrals (customer-driven, needs 20 customers)."
+   },
+   "disagreements": "The book tracks the forwarded email with a pixel and suggests gift cards per closed deal. ClimbOS has no tracking (ask the intermediary instead) and needs disclosed terms for paid referrals.",
+   "eval_case_ids": [
+    "EV-BK09a-K7-1",
+    "EV-BK09a-K7-2"
+   ]
+  },
+  {
+   "id": "BK09a-K8",
+   "name": "Inbound capture, speed-to-lead and the hard-qualifier reply",
+   "decision": "How to capture demo requests (including those generated by outbound) and how fast and how often to respond.",
+   "business_models": [
+    "b2b_saas",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing"
+   ],
+   "evidence_required": [
+    "which qualifiers can be seen publicly",
+    "owner response capacity",
+    "the request details"
+   ],
+   "prerequisites": [
+    "a website with a request form or booking page"
+   ],
+   "branches": [
+    {
+     "if": "A qualifier can be found from the company domain or site",
+     "then": "Don't ask for it on the form."
+    },
+    {
+     "if": "A qualifier can't be seen (volume, budget, systems used)",
+     "then": "Ask it on the form, one field each."
+    },
+    {
+     "if": "Request is from a qualified account",
+     "then": "Respond within minutes in working hours; book the meeting (K6)."
+    },
+    {
+     "if": "Request looks unqualified from what they gave",
+     "then": "Send a hard-qualifier email: who it's for, why it may not fit, invite correction."
+    },
+    {
+     "if": "Unqualified person at a qualified account",
+     "then": "Ask for the right colleague; qualify the account, not only the lead."
+    },
+    {
+     "if": "No contact after several attempts",
+     "then": "Stop after the agreed cap (sales-follow-up: at most 2 unanswered calls, about 4 touches)."
+    }
+   ],
+   "steps": [
+    "One clear demo or contact call to action",
+    "Short form: name, company, work email, phone, plus non-observable qualifiers",
+    "Show a phone number; send an honest automatic reply",
+    "Notify the owner instantly",
+    "Respond in minutes with an answer and one next step",
+    "Use the hard-qualifier template for likely misfits",
+    "Log attempts and outcomes"
+   ],
+   "exceptions_failure_modes": [
+    "Long forms asking what the site already shows",
+    "Chat widgets with no one answering",
+    "Giving up after one attempt",
+    "Demoing every inbound request"
+   ],
+   "requirements": {
+    "cash": "None to small",
+    "labor": "Owner availability for quick replies",
+    "capability": "Form and notifications",
+    "measurement": "Time to first response, contact rate, meetings"
+   },
+   "metrics": [
+    "median time to first response",
+    "contact rate",
+    "qualified share",
+    "meetings from inbound"
+   ],
+   "guardrails": [
+    "A request isn't marketing consent (sales-follow-up)",
+    "Sensible hours for the lead's time zone"
+   ],
+   "stop_review": [
+    "Response time drifting past an hour in working hours: add an automatic reply or a missed-call text-back (plays-local)"
+   ],
+   "alternatives": [
+    "No site traffic: outbound or warm intros generate the first inbound"
+   ],
+   "author_refs": [
+    "BK09a-F42"
+   ],
+   "interpretation": "Interpretation (ours): this matches existing sales-follow-up and plays-local speed-to-lead guidance. The new B2B pieces are designing the form around what can't be observed, and the hard-qualifier email. The 100x figure is old and from a vendor-linked study; use it as direction only.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: lead forms ask only for qualifiers that can't be found from the company domain; each extra field needs a stated reason.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: likely-unqualified inbound gets a hard-qualifier email instead of a meeting offer.",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: the MIT/InsideSales response-time figure is shown only as a dated, directional example.",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/sales-follow-up (steps 3-5); skills/landing-pages (form design); skills/plays-local (speed-to-lead)",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/sales-follow-up/SKILL.md",
+     "skills/plays-local/SKILL.md (speed-to-lead)"
+    ],
+    "note": "Mostly duplicates speed guidance; adds form-field logic and the hard-qualifier template."
+   },
+   "disagreements": "Book: about 6 attempts. sales-follow-up: at most 2 unanswered calls and about 4 touches. ClimbOS keeps the lower cap; the book's per-attempt gain is a simplification. What decides it: the owner's own contact-rate data.",
+   "eval_case_ids": [
+    "EV-BK09a-K8-1",
+    "EV-BK09a-K8-2",
+    "EV-BK09a-K8-3"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/prospecting/SKILL.md",
+   "change": "Tag each must-have as observable or not observable. Traits that can never be observed can't be list filters and go to discovery or form questions; only observable-but-not-found traits trigger a fit-3 hold.",
+   "why": "Stops the skill holding every account when a key trait is hidden by nature, which Kazanjy routes to discovery.",
+   "refs": [
+    "BK09a-F27",
+    "BK09a-K3"
+   ]
+  },
+  {
+   "skill": "skills/prospecting/SKILL.md",
+   "change": "Add: pick one primary sourcing source per campaign; choose account-first or contact-first by the cheapest gating trait; treat visible paid tiers (paid listings, ads in public ad libraries, paid booking tools) as a willingness-to-pay signal; prefer mid-size accounts and the owner's own area for a first list; owner's friends and contacts must pass the same ICP.",
+   "why": "Concrete, database-free methods from Ch 4 that the skill lacks.",
+   "refs": [
+    "BK09a-F26",
+    "BK09a-F28",
+    "BK09a-F29",
+    "BK09a-F30"
+   ]
+  },
+  {
+   "skill": "skills/prospecting/SKILL.md",
+   "change": "Contact order: one primary problem owner per account; one complementary internal customer only after the primary sequence ends. Never contact several people at one account at the same time.",
+   "why": "Kazanjy's 'grab them all' cascade risks several cold emails into one firm; sequential is safer and still uses his role logic.",
+   "refs": [
+    "BK09a-F31",
+    "BK09a-K4"
+   ]
+  },
+  {
+   "skill": "skills/prospecting/reference/jurisdiction-rules.md",
+   "change": "Add a phone section to be verified by counsel: UK TPS/CTPS screening for business numbers, no personal mobiles, US rules for calls or texts to mobiles, and a do-not-call log. Mark it unknown_to_investigate until checked.",
+   "why": "The book's local-SMB phone-first advice has no compliance counterpart in the library.",
+   "refs": [
+    "BK09a-F23",
+    "BK09a-F32",
+    "BK09a-F37"
+   ]
+  },
+  {
+   "skill": "skills/cold-outreach/SKILL.md",
+   "change": "Candidate v2: map each follow-up to one positioning value theme or proof (no repeats); allow a prospect-specific proof asset built from public evidence in step 2 or 3, offered without a link; add a 'book tactics we don't use' list: open or click tracking, call-on-open, links or booking URL in step 1, 'returning your call', fake 'Re:', break-up emails written to force a reply, 6am or 8pm sends.",
+   "why": "Keeps Kazanjy's useful structure while blocking his dated or deceptive delivery tactics.",
+   "refs": [
+    "BK09a-F19",
+    "BK09a-F21",
+    "BK09a-F34",
+    "BK09a-F35",
+    "BK09a-F36",
+    "BK09a-F37"
+   ]
+  },
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "Pitch narrative (step 11): add a cost-of-problem line (hard vs soft, computed in code from inputs) and tag alternatives as none, process, service provider or product with their genuine strengths. Keep step 8's rule that a trend is optional.",
+   "why": "The Ch 2 narrative adds two pieces Dunford leaves implicit.",
+   "refs": [
+    "BK09a-F10",
+    "BK09a-F12",
+    "BK09a-F13",
+    "BK09a-K2"
+   ]
+  },
+  {
+   "skill": "skills/reply-handling/SKILL.md",
+   "change": "Add explicit counters to common sales-book objection scripts: 'send me info' means ask which part and send that; 'how much' means give the range from facts; 'not my decision' means ask once for the right person and never imply going over their head.",
+   "why": "Founding Sales and similar books train pressure tactics that a model may reproduce when asked to 'handle objections like a pro'.",
+   "refs": [
+    "BK09a-F39",
+    "BK09a-K6"
+   ]
+  },
+  {
+   "skill": "skills/sales-follow-up/SKILL.md",
+   "change": "Add inbound form design (ask only for qualifiers that can't be observed) and a hard-qualifier email template; meeting confirmation with a calendar invite, agenda and same-morning reminder.",
+   "why": "B2B inbound specifics from Ch 5-6.",
+   "refs": [
+    "BK09a-F40",
+    "BK09a-F42",
+    "BK09a-K8"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/outbound/sending.ts:75 (also shared/outbound/index.ts:105)",
+   "gap": "composeEmail adds 'Book a time: <url>' to every step, including step 1. The cold-outreach skill bans links and calendar links in cold steps (step 5 rung 3, step 7).",
+   "proposed_change": "Omit the booking link for cold steps (or step 0 at least) unless the prospect has replied with interest, or make it an explicit owner opt-in noted as against the skill.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/specs.ts:1485-1500 (lintOutreach)",
+   "gap": "No lint for 'Re:'/'Fwd:' on the step-1 subject, URLs in the step-1 body, 'returning your call' or false-familiarity phrases, or more than one question or CTA per step.",
+   "proposed_change": "Add error rules for a first-subject Re:/Fwd: prefix, any http(s) or calendar URL in step 1, and deceptive phrases; warn on more than one question mark.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:234",
+   "gap": "PB-cold-outreach steps say 'One follow-up, then stop'. The cold-outreach skill and the schema comment (specs.ts:1452) use 4 steps on days 0/3/7/14, and convex/outbound.ts:511 keeps up to 5.",
+   "proposed_change": "Reconcile to one default (proposed: 4 steps, matching the skill) and update the playbook's steps text.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/playbooks/contracts.ts:229-233",
+   "gap": "PB-cold-outreach has no hours_min requirement, although research, replies and meetings need owner time (book: about 2 hours per meeting).",
+   "proposed_change": "Add { kind: 'hours_min', hours: 3, why: 'research, replies and calls need owner time' } (heuristic, labelled).",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/analysis/decisions.ts:234-250 (calculate)",
+   "gap": "No deterministic outbound sizing: accounts needed for target meetings, value per meeting (deal value x win rate), owner hours. Models would do this arithmetic in prose.",
+   "proposed_change": "Add an 'outbound_plan' kind that reuses funnelCustomers (shared/growth/calc.ts:16) and returns accounts needed, expected meetings and customers, value per meeting and owner hours.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/outbound/sending.ts:55-57 (followUpAt)",
+   "gap": "Adds calendar days (days x 86,400,000 ms), but OutreachOutputSchema says 'Business days after the first email' (specs.ts:1452), so follow-ups land earlier than intended across weekends.",
+   "proposed_change": "Count business days in the sender's or prospect's calendar, or change the schema comment to calendar days.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/outbound/sending.ts:39-42 (inSendWindow)",
+   "gap": "The send window uses the workspace time zone, not the prospect's; prospects in other zones get off-hours mail. The book stresses timing to the prospect's working day.",
+   "proposed_change": "Store the prospect time zone (from country or address) and use it in inSendWindow and nextSendWindow.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/specs.ts:1480",
+   "gap": "Prospect fit and timing are validated as 0-100, while skills/prospecting step 9 defines fit 1-5 and timing 0-3 with A/B/C priority.",
+   "proposed_change": "Align the scales (convert in code) so the hold rule (fit 3 means don't send) can be enforced.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/specs.ts:1466-1483 (lintProspects)",
+   "gap": "Doesn't check that the ICP excludes some companies, that must-haves are observable, or that the excluded list has reasons.",
+   "proposed_change": "Warn when excluded is empty while prospects exceed about 10; require a reason per excluded entry.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/outbound/index.ts:49 (openSlots horizonDays = 14)",
+   "gap": "Booking links offer slots up to 14 days out; the book suggests within a week for attendance (unquantified).",
+   "proposed_change": "Make the horizon an owner setting with a 7-10 day default; label it a heuristic.",
+   "priority": "P3"
+  }
+ ]
+}

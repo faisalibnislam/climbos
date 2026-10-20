@@ -52,3 +52,5 @@ bench/cache/
 # Reference books (copyrighted source EPUBs; read locally, never committed)
 docs/reference-books/*.epub
 docs/reference-books/*.pdf
+docs/reference-books-2/*.epub
+docs/reference-books-2/*.pdf

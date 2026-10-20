@@ -1,0 +1,182 @@
+{
+ "id": "BKP-05",
+ "version": 1,
+ "slug": "landing-split-v2",
+ "title": "Landing-page or pitch test sized from the owner's baseline",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether a split test can answer the question at the owner's traffic and baseline, and what to do instead when it can't.",
+ "business_types": [
+  "any with a website or sales calls"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "A bold, diagnosed change is ready (BKP-04)",
+  "Owner asks for an A/B test"
+ ],
+ "exclusions": [
+  "Change is a minor tweak with no diagnosed problem",
+  "Test would need longer than the horizon (computed)"
+ ],
+ "required_inputs": [
+  "Weekly eligible visitors or calls",
+  "Baseline rate of the primary metric",
+  "A minimum change worth detecting (owner-confirmed or labelled heuristic)"
+ ],
+ "evidence_requirements": [
+  "Weekly eligible visitors",
+  "Baseline rate of the candidate metric(s)",
+  "Minimum worthwhile effect",
+  "Owner horizon",
+  "Reversibility and cost of the change",
+  "number of qualified first calls per week",
+  "old pitch for comparison",
+  "call notes or recordings with consent"
+ ],
+ "missing_data_behavior": [
+  "Baseline unknown: fall back to the visitor floor and label it heuristic.",
+  "Too slow: pooled pages, an earlier metric, user tests, or a before/after read labelled observational."
+ ],
+ "decision_branches": [
+  {
+   "if": "Computed duration fits the horizon in whole weeks",
+   "then": "Run the split with a numeric guardrail and a harm stop."
+  },
+  {
+   "if": "Too slow but change is cheap and reversible",
+   "then": "Ship it with a pre-registered directional read (threshold set before data)."
+  },
+  {
+   "if": "Founder-led pitch change at a few calls a week",
+   "then": "No statistical test (about 173 calls per version at a 40% baseline and 15-point change); use the trusted-rep judgement test."
+  }
+ ],
+ "implementation_steps": [
+  "Write the decision and minimum worthwhile effect",
+  "Run sampleSize for the outcome and for earlier steps",
+  "Choose the branch",
+  "Pre-register metric, guardrails, end date and decision rule",
+  "Run whole weeks; no peeking",
+  "Read with compareRates and sampleRatio; label strong vs directional",
+  "Pick tester",
+  "Run on real qualified calls",
+  "After each call: where lost, where excited, what was confusing"
+ ],
+ "dependencies": [
+  "Change grounded in diagnosis (BK13-K1)",
+  "Conversion tracking working",
+  "Owner approval for any spend to buy traffic",
+  "K3/K4 storyboard turned into deck, demo, script"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "$0 unless buying traffic",
+  "labor": "1-2 hours setup; ClimbOS computes",
+  "capability": "Split tool or ad-platform experiment",
+  "measurement": "Event on primary metric and guardrails"
+ },
+ "metrics": [
+  "Required weeks",
+  "Primary and guardrail rates per arm",
+  "Expected false wins = tests x alpha",
+  "leading: share of qualified calls progressing to next step",
+  "share of bad-fit leads exiting early",
+  "lagging: close rate, lead quality"
+ ],
+ "guardrails": [
+  "Whole weeks, at least 7 days (existing lint).",
+  "An 85-90% threshold only pre-registered for cheap reversible changes and labelled directional (ExP rule otherwise).",
+  "Whole weeks, at least 7 days",
+  "No early stop on a win; harm stops allowed",
+  "SRM gate",
+  "No causal wording without a valid significant read",
+  "Recording calls needs consent",
+  "No close-rate 'win' claims without adequate sample (decisions.ts sampleSize)"
+ ],
+ "alternatives_when_constrained": [
+  "No randomisation: before/after labelled observational",
+  "No tracking: user tests and owner tallies",
+  "No traffic: message lab in ads (experiment-design) only if budget is approved",
+  "No calls yet: test the insight and perfect-world criteria with 5 customer interviews (PB-interviews)"
+ ],
+ "stop_conditions": [
+  "Planned end reached: decide once",
+  "Guardrail breach: stop",
+  "Weeks exceed horizon: change design",
+  "Fail criteria above",
+  "Positioning version change -> pitch update"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "2-day tests (book's meek-tweaking example) miss weekday cycles",
+  "Pooled pages hide opposite effects",
+  "Rolling out to everyone at once",
+  "Rewriting the core mid-test"
+ ],
+ "rule_classes": {
+  "economic_feasibility": [
+   {
+    "rule": "proposed: compute run time with sampleSize before recommending any page test; tweaks are never tested at small-business volume",
+    "from": "BK13-K4"
+   },
+   {
+    "rule": "proposed: when sampleSize weeks exceed 12 at the owner's call volume, present the pitch test as a qualitative pilot, not an A/B test",
+    "from": "BK14-K5"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: a lowered decision threshold must be set before launch, applies only to reversible low-cost changes, and the readout stays 'directional'",
+    "from": "BK13-K4"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: pooled multi-page tests report a per-page direction check before claiming a pooled effect",
+    "from": "BK13-K4"
+   },
+   {
+    "rule": "proposed: each pitch test logs per-call debrief answers and next-step outcome",
+    "from": "BK14-K5"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: one horizon rule across skill and code (owner horizon, default 6 weeks) instead of 6 weeks in the skill and 12 in decisions.ts",
+    "from": "BK13-K4"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/playbooks/contracts.ts PB-landing-split (candidate v2)",
+  "skills/experiment-design/SKILL.md",
+  "docs/growth-expansion/blog-research/playbooks/BRP-21-experiment-trust-gates.json"
+ ],
+ "reconciliation_note": "Replaces PB-landing-split's fixed 700-visitors-a-week floor with a computed feasibility check (backlog CG-15).",
+ "member_frameworks": [
+  "BK13-K4",
+  "BK14-K5"
+ ],
+ "source_references": [
+  "BK13-F2",
+  "BK13-F7",
+  "BK13-F21",
+  "BK13-F5",
+  "BK14-F26",
+  "BK14-F27",
+  "BK14-F28",
+  "BK14-F29"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK13-K4-1",
+  "EV-BK13-K4-2",
+  "EV-BK13-K4-3",
+  "EV-BK14-K5-1",
+  "EV-BK14-K5-2"
+ ]
+}

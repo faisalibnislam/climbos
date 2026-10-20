@@ -1,0 +1,275 @@
+{
+ "id": "BKP-17",
+ "version": 1,
+ "slug": "pitch-storyboard",
+ "title": "Pitch story for considered purchases",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether the business needs a pitch story, and how to build it from positioning: insight, alternatives as approaches, the agreed ideal, differentiated value, proof, objections, one ask.",
+ "business_types": [
+  "b2b",
+  "agency",
+  "professional_services",
+  "large local jobs (short form)"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Considered purchase where buyers compare approaches",
+  "Positioning exists (even as a thesis)"
+ ],
+ "exclusions": [
+  "Impulse consumer buys",
+  "Urgent phone-booked local work"
+ ],
+ "required_inputs": [
+  "Positioning components",
+  "The champion's shortlist and alternatives (including do nothing)"
+ ],
+ "evidence_requirements": [
+  "how people buy (salesMotion)",
+  "time to buy (salesCycle)",
+  "order size (aov)",
+  "number of people in the decision",
+  "alternatives buyers actually shortlist",
+  "documented five positioning components with evidence",
+  "shortlist data from real deals",
+  "who sits in the first call (champion)",
+  "differentiated value themes",
+  "best-fit traits",
+  "real alternatives with pros/cons evidence",
+  "industry research only if the insight needs backing",
+  "approved pitch storyboard version",
+  "who uses the product vs who buys it",
+  "consent/publishing permission for each channel",
+  "owner-confirmed problem statement",
+  "who owns the problem at target accounts",
+  "unit cost of the problem (owner or customer inputs)",
+  "what buyers use today",
+  "proof in the buyer's own metrics"
+ ],
+ "missing_data_behavior": [
+  "No positioning: do that first (03_positioning).",
+  "Unproven position: pitch is a thesis; review when positioning changes."
+ ],
+ "decision_branches": [
+  {
+   "if": "Large local job (renovation)",
+   "then": "Short 'how to choose' version."
+  },
+  {
+   "if": "Buyer already knows requirements",
+   "then": "Tailored demo; otherwise lead with strongest differentiators."
+  },
+  {
+   "if": "Story works on calls",
+   "then": "Reuse on homepage, buyer's guide and onboarding."
+  }
+ ],
+ "implementation_steps": [
+  "Read salesMotion, salesCycle, aov, complexity and customerType",
+  "Classify considered vs unconsidered",
+  "Pick full, compressed or none",
+  "Record the reason so the owner can override",
+  "Check each component exists with evidence",
+  "Map: insight <- value + best-fit; alternatives <- alternatives; perfect world <- value; introduction <- category; value step <- value + capabilities; proof <- proof",
+  "Take objections and ask from sales history",
+  "Write one insight from value + best-fit (one slide, 1-2 minutes)",
+  "Group alternatives into 2-5 approaches incl. status quo",
+  "For each: pros and cons for this buyer type (few words)",
+  "Pick asset",
+  "Pick the pitch parts it needs",
+  "Keep all assets on one pitch/positioning version",
+  "State the problem so a peer would say 'yes, and...'",
+  "Name the role that owns it at different company sizes",
+  "Calculate the cost of the problem in code from inputs (hard vs soft)"
+ ],
+ "dependencies": [
+  "a sales conversation exists (call, demo, consult, site visit) or a long-form page/video the buyer studies",
+  "positioning canvas from the positioning skill / 03_positioning.md workflow",
+  "BK14-K2 positioning check passed",
+  "prospect already qualified",
+  "K2-K4 storyboard",
+  "positioning canvas (skills/positioning steps 2-6)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "owner or rep time for calls",
+  "capability": "someone who can hold a guided conversation",
+  "measurement": "none to decide"
+ },
+ "metrics": [
+  "share of sales conversations ending with an agreed next step",
+  "components with evidence vs hypothesis",
+  "share of deals where pitched alternatives matched the real shortlist",
+  "setup minutes / call minutes",
+  "share of calls where perfect-world criteria were agreed",
+  "share of disagreements that were bad-fit on review",
+  "buyer's guide downloads -> qualified calls",
+  "activation to first value for product-led onboarding",
+  "share of meetings where the prospect confirms the problem",
+  "objections by narrative step"
+ ],
+ "guardrails": [
+  "The insight is what buyers misunderstand, not 'what changed' or a trend.",
+  "Vision stories suit investors; buyers get a reason to act now, not to wait.",
+  "The gate is a strategic preference, not a hard block; owner can override",
+  "No pitch claim without a positioning component behind it",
+  "Every claim about an alternative needs evidence (review, doc, demo, owner-verified)",
+  "No invented research to back the insight",
+  "No publishing without owner approval",
+  "Buyer's guide comparisons follow the same evidence rule as the pitch",
+  "Marketing consent for guide leads before nurture",
+  "Every number comes from confirmed facts or a deterministic calculation",
+  "Positioning swap test still applies"
+ ],
+ "alternatives_when_constrained": [
+  "No sales conversation at all: carry insight + value themes into the page or a buyer's guide (K7)",
+  "No customers yet: thesis positioning plus broad exposure (BK03 exploration mode)",
+  "No live calls: put insight + approaches on a long-form page or buyer's guide (K7)",
+  "No video budget: long-form page section with the same order",
+  "No sales team: the buyer's guide and page do the teaching",
+  "No customer evidence: label themes as hypotheses and run PB-interviews"
+ ],
+ "stop_conditions": [
+  "Revisit when price, sales motion or buyer group changes",
+  "Positioning review triggers (new shortlisted competitor, capability change, buyer change) also invalidate the pitch version",
+  "Prospects repeatedly don't recognise their situation in the approaches: rewrite alternatives",
+  "Many good-fit prospects disagree at perfect world: positioning problem, go back to K2",
+  "Positioning version change invalidates all derived assets",
+  "If most prospects reject the problem framing, go back to positioning and VoC, not more outreach"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Applying B2B storyboard to a $15 consumer product adds friction",
+  "Treating a high-stakes consumer purchase as unconsidered (toilet case shows guidance helps)",
+  "Pitch built from features because positioning was skipped",
+  "Pitching to the economic buyer in call one when the champion screens vendors",
+  "Trend-as-insight ('more data than ever', 'AI adoption is accelerating')",
+  "Lecture instead of discovery",
+  "Pasting the 8 slides onto the homepage",
+  "Buyer's guide that just lists your features",
+  "A trend made up to create urgency",
+  "Soft ROI presented as cash"
+ ],
+ "rule_classes": {
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: generate a pitch storyboard only when salesMotion is sales_assisted or sales_led, or salesCycle is medium/long, or aov is high; otherwise skip and say why",
+    "from": "BK14-K1"
+   },
+   {
+    "rule": "proposed: cap value themes at three in pitch and messaging outputs",
+    "from": "BK14-K2"
+   },
+   {
+    "rule": "proposed: flag an insight that would read the same for the top competitor (swap test) or matches a generic-trend pattern",
+    "from": "BK14-K3"
+   },
+   {
+    "rule": "proposed: target setup at or under about a fifth of first-call time; warn above",
+    "from": "BK14-K3"
+   },
+   {
+    "rule": "proposed: add 'buyer's guide' as a lead-magnet type for considered B2B purchases, built from insight + approaches",
+    "from": "BK14-K7"
+   },
+   {
+    "rule": "proposed: the positioning pitch narrative includes a cost-of-problem line computed in code from owner or customer inputs, labelled hard or soft.",
+    "from": "BK09a-K2"
+   },
+   {
+    "rule": "proposed: tag each competitive alternative as none, process, service provider or product; a prospect already paying a provider or product counts as a nice-to-have fit signal in prospecting.",
+    "from": "BK09a-K2"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: for local services, use the compressed 'teach how to choose' form only for high-ticket considered jobs",
+    "from": "BK14-K1"
+   },
+   {
+    "rule": "proposed: perfect-world criteria must each map to a value theme; unmapped criteria are dropped",
+    "from": "BK14-K3"
+   },
+   {
+    "rule": "proposed: homepage briefs use category + up to 3 value themes + proof; full storyboard order only for long-form pages, explainers and buyer's guides",
+    "from": "BK14-K7"
+   },
+   {
+    "rule": "proposed: 'what has changed' stays optional and is cut when no real, observable change exists (keep positioning step 8).",
+    "from": "BK09a-K2"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: a pitch artifact must reference a PositioningVersion id; if that version changes, the pitch is marked stale",
+    "from": "BK14-K2"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: claims about a named competitor's limits require cited evidence, as for any comparative claim",
+    "from": "BK14-K3"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/positioning/SKILL.md step 11 (candidate v2)",
+  "docs/growth-expansion/guides/03_positioning.md (v2 section 'From position to pitch')",
+  "docs/research/strategy-positioning.md"
+ ],
+ "reconciliation_note": "Versions Obviously Awesome guidance; new material is the storyboard and the applicability gate.",
+ "member_frameworks": [
+  "BK14-K1",
+  "BK14-K2",
+  "BK14-K3",
+  "BK14-K7",
+  "BK09a-K2"
+ ],
+ "source_references": [
+  "BK14-F1",
+  "BK14-F2",
+  "BK14-F10",
+  "BK14-F31",
+  "BK14-F13",
+  "BK14-F14",
+  "BK14-F15",
+  "BK14-F16",
+  "BK14-F17",
+  "BK14-F6",
+  "BK14-F18",
+  "BK14-F19",
+  "BK14-F20",
+  "BK14-F29",
+  "BK14-F7",
+  "BK14-F30",
+  "BK09a-F10",
+  "BK09a-F11",
+  "BK09a-F12",
+  "BK09a-F13",
+  "BK09a-F14",
+  "BK09a-F15"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK14-K1-1",
+  "EV-BK14-K1-2",
+  "EV-BK14-K1-3",
+  "EV-BK14-K1-4",
+  "EV-BK14-K2-1",
+  "EV-BK14-K2-2",
+  "EV-BK14-K3-1",
+  "EV-BK14-K3-2",
+  "EV-BK14-K3-3",
+  "EV-BK14-K7-1",
+  "EV-BK14-K7-2",
+  "EV-BK14-K7-3",
+  "EV-BK09a-K2-1",
+  "EV-BK09a-K2-2"
+ ]
+}

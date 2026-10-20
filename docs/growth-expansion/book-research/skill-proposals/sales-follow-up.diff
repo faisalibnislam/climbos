@@ -1,0 +1,60 @@
+--- a/skills/sales-follow-up/SKILL.md
++++ b/skills/sales-follow-up/SKILL.md
+@@ -37,6 +37,7 @@
+    - Proof you read their message: echo one or two specifics they gave ("a 3x4m garden room with power").
+    - At most two qualifying questions, the ones that decide the quote (size, date, access, budget).
+    - One clear next step with a concrete option: "I can visit Thursday at 10 or Friday at 2. Which suits?"
++   context: a likely misfit gets the one question that decides fit, not a meeting offer [BK09a-K8].
+    Keep emails to 50-150 words and the first text message to one or two short sentences.
+ 
+ 4. **Write call scripts as guides, not monologues.** For a consented call:
+@@ -47,12 +48,21 @@
+    - **Confirm in writing** by email or text the same day.
+    - **Voicemail:** under 20 seconds: name, business, reason, one useful detail, "I'll also send this by email", the number said twice. Make no more than 2 unanswered call attempts, then switch to email.
+ 
++4a. **Plan a live sales call** only when the price pays for the owner's time [BK09b-K1]. A plan, not a script:
++   - **Prepare:** pain signals, current solution, who decides, unknowns, the call goal. **Open** by agreeing the agenda and that either side may stop if it is not a fit.
++   - **Discover:** the problem, today's workaround and its cost, the cost of doing nothing, who decides, timing. "No budget line" alone is not a disqualifier; "we never pay for help with this" is [BK09b-K2].
++   - **Show** up to three value themes tied to their problem, one proof item each [BK14-K4]. Any insight comes from what only this business delivers, never a trend or "what changed" [BK14-K3]. The usual rival is doing nothing: cost it in their numbers; add no new options [BK14-K6].
++   - **Price:** answer a direct question with the confirmed range; otherwise frame it against their current cost.
++   - **End** with one dated next step or a clear "not a fit", summarised in writing the same day.
++   - context: separate discovery call only if the demo runs over ~15 minutes; slots within 7-10 days, a calendar invite with agenda and a same-morning reminder [BK09a-K6].
++   - No recording or transcription unless the owner confirms consent handling for the jurisdiction.
++
+ 5. **Follow up quotes and proposals with a value-adding cadence.** Default, in business days, maximum 4 touches unless the lead re-engages:
+-   - **Day 0, send:** a 3-line summary above the quote (what they get, the price, when it can start), the one decision needed, and how to accept ("reply 'go ahead' and I'll confirm the date").
++   - **Day 0, send:** a 3-line summary above the quote (what they get, the price, when it can start), the one decision needed, and how to accept ("reply 'go ahead' and I'll confirm the date"). For considered jobs, answer the usual unspoken worry (switching effort, disruption) with real timelines, or a "how to choose" line for high-ticket local jobs; a worry the business can't answer goes to the owner, not the lead [BK14-K4, BK14-K1].
+    - **Day 2, check:** did it arrive and make sense; invite the question people usually have ("most people ask about the foundations; happy to explain").
+    - **Day 5-7, add value:** answer the most likely objection from the objection map with one proof item (a review in the customer's words, a photo of a similar job, the guarantee).
+    - **Day 10-14, close-out:** a clear, kind question: "Shall I keep the quote open, or close the file for now?" Mention the validity date only if the quote really has one.
+-   Every touch must add something new or make deciding easier. Never "just checking in".
++   Every touch must add something new or make deciding easier. Never "just checking in". Send a proposal only when the buyer says they want to buy; every option must be one the owner will deliver, no decoys [BK09b-K6].
+ 
+ 6. **Handle objections with proof, never argument.** For each objection: acknowledge it in the lead's words, ask one clarifying question if the real concern is unclear, answer with one proof item from the facts, then offer a smaller or reversible next step.
+    - **"Too expensive" / "I have a cheaper quote":** ask what the other quote includes; compare like for like on facts (materials, guarantee, timeline); offer a different scope only if the facts list one. Never criticise a competitor, never invent a discount.
+@@ -60,11 +70,13 @@
+    - **"I need to talk to my partner / manager":** offer a short summary they can forward, or a call with both.
+    - **"Never heard of you":** one relevant review or local example from the facts, plus the guarantee if there is one.
+    - **"Send me more info":** ask which part they want to know more about, then send that one thing.
+-   One attempt per objection. If they say no again, accept it.
++   - **Price gap:** ask its size first; small gaps go to trades, large ones to value maths, smaller scope or an exit [BK09b-K3]. Every concession gets something back (volume, term, upfront payment), within owner rules and the price floor computed in code [BK09b-K6].
++   - **"Can we try it first?":** ask what proof would settle it; offer a guided session or a structured pilot with written success criteria, never an open trial of something that needs setup [BK09b-K3].
++   In writing, one evidenced answer per objection. On a live call you may work through distinct objections in turn, one answer each. The same objection repeated, or any clear no, is final in both [BK09b-K3].
+ 
+ 7. **Ask for the decision clearly.** Make the closing ask specific and easy: two concrete options or a one-word reply ("Shall I book you in for the week of 3 November? Reply 'yes' and I'll send the confirmation."). Say you will hold a slot only if the business really will. One ask per message.
+ 
+-8. **Set stop conditions and record the next step.** Stop when the lead decides (either way), opts out, or does not respond after the close-out. "Not now" with a date becomes one agreed check-in, nothing more. A lead who says no gets a gracious closing line and, where honest, a pointer elsewhere if the job is not a fit.
++8. **Set stop conditions and record the next step.** Stop when the lead decides (either way), opts out, or does not respond after the close-out. "Not now" with a date becomes one agreed check-in, nothing more. A lead who says no gets a gracious closing line and, where honest, a pointer elsewhere if the job is not a fit. Every open deal carries a dated next step. One missed meeting: rebook once. Two broken commitments: one clarity email (still a priority?), then close as lost with the reason. Re-contact after a loss or an undated "not now" needs the buyer's permission [BK09b-K4; policy].
+ 
+ 9. **Present the plan for owner approval.** For each lead: the situation in one line, allowed channels and why, each touch with its timing, channel and full text, prepared objection answers, the closing ask, stop conditions, and open `[NEEDS FACT]` items. Nothing is sent without the owner's approval.
+ 
+@@ -97,7 +109,8 @@
+ - [ ] Each channel used is allowed by what the lead gave and agreed to; SMS identifies the business and allows "STOP".
+ - [ ] The first response answers their question, echoes their details and offers one concrete next step.
+ - [ ] Quote follow-ups run day 0 / 2 / 5-7 / 10-14 at most, and each adds something new.
+-- [ ] Every objection answer has acknowledgement, one proof item from the facts and a smaller next step.
++- [ ] Every objection answer has acknowledgement, one proof item from the facts and a smaller next step; one attempt in writing, and a repeated no is final.
++- [ ] Call plans end with a dated next step or a clear exit.
+ - [ ] The closing ask is specific and easy to say yes to; any held slot or deadline is real.
+ - [ ] No invented prices, dates, reviews, discounts or scarcity; gaps are `[NEEDS FACT: …]`.
+ - [ ] No guilt, pressure, competitor criticism or "just checking in".

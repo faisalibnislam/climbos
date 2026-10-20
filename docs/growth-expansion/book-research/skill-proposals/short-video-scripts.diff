@@ -1,0 +1,42 @@
+--- a/skills/short-video-scripts/SKILL.md
++++ b/skills/short-video-scripts/SKILL.md
+@@ -67,12 +67,13 @@
+    - a pattern break (an unexpected action or object in frame);
+    - reply-to-comment.
+    Pick the one where the first frame alone would stop a thumb and the spoken line contains or sets up the search phrase. Never open on a logo, an intro or "Hey guys".
++   **Branding beats** [BK11-K3, BK11-F43]: a brand cue in the opening seconds (the owner or a recurring character, the product with visible branding, the brand colour, or the name on screen or spoken) and again before the CTA. Never end-only branding. A hook-first opening is fine when the cue sits inside it.
+ 5. **Write the beats** as a table with time, visual, on-screen text, and voiceover or spoken line:
+    - **Hook (0–2 s):** the visual pattern break plus the spoken line; the same hook as on-screen text for sound-off viewers.
+    - **Setup (2–7 s):** the problem in one sentence with a real detail.
+    - **Value (7–25 s):** three beats; show, don't describe; one fact per beat; a new shot each beat (3–4 cuts in a process section).
+    - **Proof (25–30 s):** a number, a permitted customer reaction or the result shot.
+-   - **CTA (30–35 s):** one action, spoken and on screen. Shape the end frame so it loops cleanly back to the hook where possible.
++   - **CTA (30–35 s):** one action, spoken and on screen, with the name. Shape the end frame so it loops cleanly back to the hook where possible.
+    Scale timings to the platform and goal, but keep the order.
+ 6. **Write on-screen text** separately from the voiceover: the hook, then one short fact per cut, placed inside the safe zone. On-screen text adds or reinforces; it never repeats the full voiceover as a paragraph.
+ 7. **Write the shot list** the owner can film in one session (aim for under 30 minutes): shot number, framing (close-up, medium, wide, overhead, screen recording), what happens, where, roughly how long, and a practical note (film vertically, window light, wipe the lens, lock focus and exposure, record 2 seconds before and after the action, record clean audio close to the mouth). Use only locations and people confirmed available.
+@@ -86,6 +87,7 @@
+ 
+ - The first frame shows the payoff or a pattern break, and the spoken hook (10 words or fewer) names the viewer's situation or a confirmed number within 2 seconds.
+ - The search phrase is spoken, on screen and in the caption.
++- The business is identifiable within the opening seconds and again before the end.
+ - Every beat shows something; one fact per beat; no beat is a talking description of something that could be shown.
+ - Indistinguishable from good organic content: phone-shot, a person talking like a person, no ad-voice.
+ - The shot list is filmable by the owner on a phone in one session at confirmed locations with confirmed people.
+@@ -96,7 +98,7 @@
+ 
+ ## Never do
+ 
+-- Open with a logo, brand intro, "Hi everyone, welcome back" or "In this video…".
++- Open with a logo, brand intro, "Hi everyone, welcome back" or "In this video…". A brand cue inside the hook is required; that isn't a brand intro.
+ - Write a polished TV-ad script, a voiceover in brochure language, or a script that needs actors, a studio or drone shots.
+ - Script an actor or AI avatar to pose as a customer; invent testimonials, reactions, results or before/after footage.
+ - Mock up an app or website screen; use real screen recordings with real or clearly demo data.
+@@ -110,6 +112,7 @@
+ 
+ - [ ] One idea, under 12 words, tied to one positioning element; search phrase chosen.
+ - [ ] Hook: payoff or pattern-break first frame, spoken line 10 words or fewer, on-screen hook 8 words or fewer, inside 0–2 s.
++- [ ] Brand cue in the opening seconds and again before the CTA; not end-only.
+ - [ ] Beat table with timings, visual, on-screen text and voiceover; one fact per beat.
+ - [ ] Length fits the platform and use (organic 25–35 s TikTok or 20–45 s Reels; TikTok ads 21–34 s recommended).
+ - [ ] Shot list filmable on a phone in one session, with confirmed people and places only.

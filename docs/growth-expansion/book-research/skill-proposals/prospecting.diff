@@ -1,0 +1,73 @@
+--- a/skills/prospecting/SKILL.md
++++ b/skills/prospecting/SKILL.md
+@@ -28,26 +28,31 @@
+ 2. **Mine the best customers for shared, observable traits.** List what the 3 favourite customers have in common: industry, size, location, legal form, how they sell, what tools they use, what was happening when they bought. For each trait ask "why does this make them value the sender?" Keep only traits with a reason. "They are all in Leeds" is a filter only if locality matters to the service.
+ 
+ 3. **Write the ICP.** One sentence ("Independent physiotherapy clinics with 2–10 practitioners in Greater Manchester that still take bookings by phone"), then three lists:
+-   - **Must-haves** (hard filters): 2–4 traits. A prospect failing or not showing any one of them is out or held.
++   - **Must-haves** (hard filters): 2–4 traits. A prospect failing or not showing any one of them is out or held. Tag each must-have observable or not observable from public sources. A trait that can never be observed (budget, internal process, who signs) is not a list filter: make it a discovery question or form field instead [BK09a-K3].
+    - **Nice-to-haves** (soft signals): raise fit but are not required.
+    - **Disqualifiers**: traits that rule a company out even if everything else fits.
+    For each filter, state where you will observe it and why it predicts fit.
++   context: tag what the company uses today as none, an in-house process, a paid service provider or a paid product. Already paying a provider or product for this problem is a nice-to-have [BK09a-K2].
+ 
+ 4. **Translate every filter into something observable on the public web.** Use these filter types:
+    - **Industry**: the site's own service description, schema.org `LocalBusiness` type, directory category, registry SIC or NAICS code.
+    - **Size**: team page count, number of locations, staff named in reviews, registry filings, job ads. Record as a band (1–10, 11–50, 51–200) with the evidence, never as a made-up exact number.
+    - **Geography**: registered or trading address, service-area page, phone prefix, country-code TLD. Country drives the compliance filter in step 8.
+    - **Legal form**: Ltd, LLP, plc, Inc, LLC, sole trader, partnership. Use the site footer, terms page or a business registry such as Companies House. In the UK this decides whether you may email at all.
+-   - **Technology and signals**: website platform (Shopify, WordPress, Wix), booking or checkout method, mail provider from DNS MX, analytics or ad pixels, presence or absence of online booking, review count and rating trend.
++   - **Technology and signals**: website platform (Shopify, WordPress, Wix), booking or checkout method, mail provider from DNS MX, analytics or ad pixels, presence or absence of online booking, review count and rating trend. context: visible paid tiers (a paid directory listing, active ads in a public ad library, a paid booking tool) suggest willingness to pay; record the URL [BK09a-K3].
+    - **Trigger events**: hiring page or job ads, a new location, a new service, a site relaunch, a run of reviews about one problem, a regulatory change that hits their sector, a registry change such as new directors. Note the date of every trigger.
+ 
+ 5. **Name the decision-maker role.** In businesses with 1–10 people it is usually the owner or managing director. In larger ones, name the role that owns the problem the sender solves (practice manager, operations manager, head of marketing). Record title and seniority only from a public source such as the company's own team page.
++   One primary problem owner per account. Add one complementary contact (the person who relies on the problem owner's work) only after the primary sequence has ended with no reply; never email several people at one account at the same time [BK09a-K4]. Phone is not a default route: see "Check before calling" in the jurisdiction reference [BK09a-K4].
+ 
+ 6. **Find companies from public web sources only.** Search category plus location, sector directories and marketplaces, trade association member lists, business registries by SIC code, job boards (for hiring triggers), local news and the sender's competitors' public case studies. Read company websites, registries and directories. Rules:
+    - No LinkedIn scraping and no automated collection from LinkedIn. A LinkedIn URL may be recorded only as a link a human can click.
+    - No logged-in, paywalled or restricted-visibility pages. Respect robots rules.
+    - No personal social profiles, home addresses, personal phone numbers or anything about a person's private life.
+    - Search wide, fetch narrow: shortlist from search results, then fetch only the pages that prove or disprove a must-have.
++   - context: use one primary source per campaign (a directory, a registry code, a job board); other sources only enrich accounts already found. Go account-first or contact-first by whichever must-have rules accounts out most cheaply [BK09a-K3].
++   - context: for a first list, prefer accounts big enough to feel the problem and small enough to decide quickly, in the owner's own area where meeting in person helps. Never pick accounts because they are easy to reach; the owner's friends and contacts pass the same ICP [BK09a-K3].
++   - Never use bought, rented or scraped contact lists without a recorded lawful basis; operator imports keep their provenance [BK09a-K3; policy].
+ 
+ 7. **Qualify each company against the ICP with evidence.** For each must-have, record: the evidence (a short verbatim snippet or a plain observation), the source URL, and the date you saw it. Mark each must-have as met, not met or unknown. Do the same for disqualifiers.
+ 
+@@ -64,12 +69,12 @@
+    See the jurisdiction reference for the full table.
+ 
+ 9. **Score fit and timing, with reasons.**
+-   - **Fit (1–5).** 5: every must-have met with evidence plus 2 or more nice-to-haves. 4: every must-have met with evidence. 3: one must-have unknown but none contradicted (hold for enrichment, do not send yet). 2 or 1: a must-have contradicted or a disqualifier present (exclude).
++   - **Fit (1–5).** 5: every must-have met with evidence plus 2 or more nice-to-haves. 4: every must-have met with evidence. 3: one observable must-have not yet found, none contradicted (hold for enrichment, do not send yet). 2 or 1: a must-have contradicted or a disqualifier present (exclude).
+    - **Timing (0–3).** 3: a specific trigger in the last 90 days with a dated source. 2: a trigger older than 90 days, or an indirect signal such as an open job ad without a date. 1: generic timing only (season, sector news). 0: none found.
+    - **Priority.** A: fit 4–5 and timing 2–3. B: fit 4–5 and timing 0–1, or fit 3 with timing 3 (enrich first). C: everything else that is not excluded.
+    - Write a **why-fit** line that ties evidence to the sender's value theme, a **why-now** line that ties the trigger to a problem, and one **opener candidate**: the single most specific, sourced observation a writer could use. The opener must be about the business, never the person's private life.
+ 
+-10. **Record sources so every later step can be audited.** For each company: name, domain, country, legal form with its source, size band with its source, every evidence item (URL, date seen, snippet), trigger with date, scores and reasons. For each contact: name and title with the page they came from, and how the email was obtained (published verbatim on a URL, pattern-inferred with no more than 3 candidates, verifier result, operator import). Flag "published verbatim" explicitly; Canada and Australia depend on it. Re-verify any address whose check is older than 90 days.
++10. **Record sources so every later step can be audited.** For each company: name, domain, country, legal form with its source, size band with its source, every evidence item (URL, date seen, snippet), trigger with date, scores and reasons. For each contact: name and title with the page they came from, and how the email was obtained (published verbatim on a URL, or an operator import with its provenance) plus any verifier result. Never guess or pattern-build an address [policy; BK09a-K4]. Flag "published verbatim" explicitly; Canada and Australia depend on it. Re-verify any address whose check is older than 90 days.
+ 
+ 11. **Summarise the list.** Give the ICP sentence and filters, the ranked list, an exclusion count by reason, the open `[NEEDS FACT]` items, and the 2–3 enrichment steps that would move the most holds to qualified.
+ 
+@@ -88,16 +93,18 @@
+ 
+ - Never invent or "fill in" a company, person, title, email, headcount, revenue, funding round, review or event. Unknown stays unknown.
+ - Never scrape LinkedIn, use logged-in or restricted pages, or collect personal social profiles, home addresses or personal phone numbers.
+-- Never include Germany or Austria, UK sole traders or partnerships, or pattern-guessed addresses in Canada or Australia.
++- Never include Germany or Austria, UK sole traders or partnerships, or Canadian or Australian addresses that were not published verbatim.
+ - Never treat "unknown" as "meets the filter", and never let a fit-3 hold go to outreach.
+ - Never include existing customers, competitors or suppressed contacts.
+ - Never use sensitive or private-life information (health, family, religion, politics, personal posts) as a signal or opener.
+ - Never pad the list to hit a number. Report the shortfall instead.
+-- Never generate more than 3 pattern-guessed email candidates for one person.
++- Never guess an email address from a naming pattern, and never use a personal (non-business) address as a cold route, even if it is published on a profile [policy; BK09a-K4].
++- Never use a bought, rented or scraped list without a recorded lawful basis [BK09a-K3].
+ 
+ ## Checklist before answering
+ 
+-- [ ] The ICP sentence, must-haves, nice-to-haves and disqualifiers are stated, each with where to observe it and why it predicts fit.
++- [ ] The ICP sentence, must-haves, nice-to-haves and disqualifiers are stated, each with where to observe it and why it predicts fit; every must-have is observable, hidden traits became discovery questions.
++- [ ] One primary source; one contact per account at a time; no bought or scraped list; no guessed addresses.
+ - [ ] Every included company has a source URL and date for each must-have.
+ - [ ] Fit (1–5) and timing (0–3) follow the anchors above, with priority A/B/C assigned.
+ - [ ] Each included company has a why-fit line, a why-now line and one sourced opener candidate about the business.

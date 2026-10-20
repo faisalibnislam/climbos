@@ -1,0 +1,949 @@
+{
+ "reading_id": "BK14",
+ "book_title": "Sales Pitch",
+ "frameworks": [
+  {
+   "id": "BK14-K1",
+   "name": "Pitch applicability gate (considered vs unconsidered purchase)",
+   "decision": "Whether to build a full pitch storyboard, a compressed 'teach how to buy' version, or none",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "developer_tools",
+    "agency",
+    "consulting",
+    "professional_services",
+    "wholesale",
+    "manufacturing",
+    "financial_services",
+    "real_estate",
+    "local_services (high-ticket only)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "how people buy (salesMotion)",
+    "time to buy (salesCycle)",
+    "order size (aov)",
+    "number of people in the decision",
+    "alternatives buyers actually shortlist"
+   ],
+   "prerequisites": [
+    "a sales conversation exists (call, demo, consult, site visit) or a long-form page/video the buyer studies"
+   ],
+   "branches": [
+    {
+     "if": "unconsidered purchase: low price, immediate, single buyer, impulse or habitual (consumer goods, low-ticket apps)",
+     "then": "do not build a pitch storyboard; use offer clarity, landing-page hero and proof (landing-pages skill)"
+    },
+    {
+     "if": "local service booked by phone for an urgent or low-ticket job",
+     "then": "no storyboard; answer price, availability and next step fast (sales-follow-up)"
+    },
+    {
+     "if": "high-ticket considered local or consumer job (renovation, roofing, legal, financial planning)",
+     "then": "compressed guide: 2-3 criteria that actually matter, when the cheaper option is fine, narrowed options, honest recommendation, one next step"
+    },
+    {
+     "if": "considered B2B purchase with several credible alternatives",
+     "then": "full 8-step storyboard"
+    },
+    {
+     "if": "the only real competitor is the status quo or the landscape is very limited",
+     "then": "compressed setup (Gearset-style): insight then perfect world; problem/solution can suffice"
+    },
+    {
+     "if": "buyer is expert and the status quo is near-identical to the product",
+     "then": "a product walkthrough may work; still lead with differentiators"
+    }
+   ],
+   "steps": [
+    "Read salesMotion, salesCycle, aov, complexity and customerType",
+    "Classify considered vs unconsidered",
+    "Pick full, compressed or none",
+    "Record the reason so the owner can override"
+   ],
+   "exceptions_failure_modes": [
+    "Applying B2B storyboard to a $15 consumer product adds friction",
+    "Treating a high-stakes consumer purchase as unconsidered (toilet case shows guidance helps)",
+    "Label-based gating: some B2C purchases are considered and some B2B are not"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner or rep time for calls",
+    "capability": "someone who can hold a guided conversation",
+    "measurement": "none to decide"
+   },
+   "metrics": [
+    "share of sales conversations ending with an agreed next step"
+   ],
+   "guardrails": [
+    "The gate is a strategic preference, not a hard block; owner can override"
+   ],
+   "stop_review": [
+    "Revisit when price, sales motion or buyer group changes"
+   ],
+   "alternatives": [
+    "No sales conversation at all: carry insight + value themes into the page or a buyer's guide (K7)"
+   ],
+   "author_refs": [
+    "BK14-F1",
+    "BK14-F2",
+    "BK14-F10",
+    "BK14-F31"
+   ],
+   "interpretation": "Interpretation: Dunford scopes the method to 'any considered purchase' and uses B2B tech throughout; her toilet anecdote shows the guide principle in a consumer considered purchase. The local-service branches are ClimbOS inference, not author text.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: generate a pitch storyboard only when salesMotion is sales_assisted or sales_led, or salesCycle is medium/long, or aov is high; otherwise skip and say why",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: for local services, use the compressed 'teach how to choose' form only for high-ticket considered jobs",
+     "class": "strategic_preference"
+    }
+   ],
+   "climbos_location": "skills/positioning/SKILL.md step 11; shared/acquisition/scoring.ts:16-18 dimensions as inputs",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/positioning/SKILL.md",
+     "docs/research/strategy-positioning.md",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §1"
+    ],
+    "note": "Positioning skill always writes a pitch and suggests a plumber insight for B2C/local; 11 §1 has a motion ladder. This adds the considered/unconsidered gate from the primary source."
+   },
+   "disagreements": "positioning SKILL.md step 11 and strategy-positioning.md apply the pitch to B2C/local generically; the book scopes it to considered purchases. Decider: the purchase's stakes and decision group, not the business label.",
+   "eval_case_ids": [
+    "EV-BK14-K1-1",
+    "EV-BK14-K1-2",
+    "EV-BK14-K1-3",
+    "EV-BK14-K1-4"
+   ]
+  },
+  {
+   "id": "BK14-K2",
+   "name": "Positioning prerequisites and positioning-to-pitch mapping",
+   "decision": "Whether positioning is ready to build a pitch on, what is pitched, to whom, and which positioning input feeds each step",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "developer_tools",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "pre-launch (thesis)",
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "documented five positioning components with evidence",
+    "shortlist data from real deals",
+    "who sits in the first call (champion)"
+   ],
+   "prerequisites": [
+    "positioning canvas from the positioning skill / 03_positioning.md workflow"
+   ],
+   "branches": [
+    {
+     "if": "any of alternatives, differentiated value or best-fit is undefined or unevidenced",
+     "then": "repair positioning first; pitch output is labelled draft"
+    },
+    {
+     "if": "pre-launch or only a few paying customers",
+     "then": "build the pitch on a 'positioning thesis', kept loose; tighten after paying customers validate"
+    },
+    {
+     "if": "multi-product company",
+     "then": "decide whether the first call pitches the company (then discovery picks products) or one lead product"
+    },
+    {
+     "if": "several stakeholders",
+     "then": "tune to the champion; prepare material the champion can use with IT, users, legal, economic buyer"
+    },
+    {
+     "if": "a competitor never appears on shortlists",
+     "then": "leave it out of the pitch; track it in strategy only"
+    }
+   ],
+   "steps": [
+    "Check each component exists with evidence",
+    "Map: insight <- value + best-fit; alternatives <- alternatives; perfect world <- value; introduction <- category; value step <- value + capabilities; proof <- proof",
+    "Take objections and ask from sales history",
+    "Name the audience (champion) and the pitched unit",
+    "Set review: about twice a year and on market change"
+   ],
+   "exceptions_failure_modes": [
+    "Pitch built from features because positioning was skipped",
+    "Pitching to the economic buyer in call one when the champion screens vendors",
+    "Treating thesis positioning as validated"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "owner plus anyone who talks to customers",
+    "capability": "positioning skill output",
+    "measurement": "list of last deals and who was shortlisted"
+   },
+   "metrics": [
+    "components with evidence vs hypothesis",
+    "share of deals where pitched alternatives matched the real shortlist"
+   ],
+   "guardrails": [
+    "No pitch claim without a positioning component behind it"
+   ],
+   "stop_review": [
+    "Positioning review triggers (new shortlisted competitor, capability change, buyer change) also invalidate the pitch version"
+   ],
+   "alternatives": [
+    "No customers yet: thesis positioning plus broad exposure (BK03 exploration mode)"
+   ],
+   "author_refs": [
+    "BK14-F13",
+    "BK14-F14",
+    "BK14-F15",
+    "BK14-F16",
+    "BK14-F17"
+   ],
+   "interpretation": "Repeat vs new: the five components, their order, the so-what chain, shortlist-only competitors, thesis positioning and periodic review repeat Obviously Awesome (BK03). New: the explicit mapping to pitch steps, champion-first audience, multi-product decision, objections/ask sourced from sales experience. Note the book lists five components and drops OA's optional trend; the pitch's Insight step takes the framing role a trend might have played. Value themes: 'three or fewer' here vs BK03 notes '1-4'.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: a pitch artifact must reference a PositioningVersion id; if that version changes, the pitch is marked stale",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: cap value themes at three in pitch and messaging outputs",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "docs/growth-expansion/guides/03_positioning.md (v2 section 'From position to pitch'); skills/positioning/SKILL.md",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "docs/growth-expansion/guides/03_positioning.md",
+     "docs/growth-engine/book-review/BK03.md",
+     "skills/positioning/SKILL.md"
+    ],
+    "note": "Mostly duplicates BK03 on components; add only the mapping table and champion/multi-product rules as a v2 section of 03_positioning.md, citing BK14 locators. 03_positioning.md already proposes PositioningVersion; extend it with a pitchVersion link."
+   },
+   "disagreements": "BK03 says don't make a positioning statement the primary output; positioning SKILL.md step 9 and specs.ts:53 still centre a positioningStatement. Sales Pitch is consistent with BK03: the usable output is the story, not a statement. Decider: keep the statement as an internal summary only.",
+   "eval_case_ids": [
+    "EV-BK14-K2-1",
+    "EV-BK14-K2-2"
+   ]
+  },
+  {
+   "id": "BK14-K3",
+   "name": "The setup: Insight, Alternatives as approaches, Perfect World agreement gate",
+   "decision": "How to open a sales conversation so the market frame points to the business's differentiated value, and whether the prospect is a fit",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "developer_tools",
+    "agency",
+    "consulting",
+    "professional_services",
+    "high-ticket local (compressed)"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "differentiated value themes",
+    "best-fit traits",
+    "real alternatives with pros/cons evidence",
+    "industry research only if the insight needs backing"
+   ],
+   "prerequisites": [
+    "BK14-K2 positioning check passed",
+    "prospect already qualified"
+   ],
+   "branches": [
+    {
+     "if": "draft insight is a market trend or generic problem every rival solves",
+     "then": "reject; derive the insight backwards from the differentiated value (what must the buyer believe for this value to matter?)"
+    },
+    {
+     "if": "prospect has likely seen a competitor, or it appears in nearly every deal",
+     "then": "name it; otherwise describe the approach group without names"
+    },
+    {
+     "if": "rival would categorise itself differently",
+     "then": "allowed if objectively defensible; never false"
+    },
+    {
+     "if": "prospect disagrees at Perfect World",
+     "then": "treat as likely self-disqualification; move to a graceful exit or clarify, don't push"
+    },
+    {
+     "if": "prospect agrees",
+     "then": "move quickly to the follow-through"
+    },
+    {
+     "if": "limited landscape",
+     "then": "skip explicit pros/cons and go insight -> perfect world"
+    }
+   ],
+   "steps": [
+    "Write one insight from value + best-fit (one slide, 1-2 minutes)",
+    "Group alternatives into 2-5 approaches incl. status quo",
+    "For each: pros and cons for this buyer type (few words)",
+    "Draft discovery questions: how do you handle it today, how is that working, what else are you looking at",
+    "Write perfect-world criteria that combine the good of each approach and avoid the cons; they must map to the value themes",
+    "End with an agreement check"
+   ],
+   "exceptions_failure_modes": [
+    "Trend-as-insight ('more data than ever', 'AI adoption is accelerating')",
+    "Lecture instead of discovery",
+    "Setup runs long and value gets squeezed",
+    "Introducing new options the buyer then goes away to research",
+    "Bad-mouthing or false claims about rivals"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "drafting time; call time",
+    "capability": "honest knowledge of rival approaches",
+    "measurement": "call notes on where prospects agreed/disagreed"
+   },
+   "metrics": [
+    "setup minutes / call minutes",
+    "share of calls where perfect-world criteria were agreed",
+    "share of disagreements that were bad-fit on review"
+   ],
+   "guardrails": [
+    "Every claim about an alternative needs evidence (review, doc, demo, owner-verified)",
+    "No invented research to back the insight"
+   ],
+   "stop_review": [
+    "Prospects repeatedly don't recognise their situation in the approaches: rewrite alternatives",
+    "Many good-fit prospects disagree at perfect world: positioning problem, go back to K2"
+   ],
+   "alternatives": [
+    "No live calls: put insight + approaches on a long-form page or buyer's guide (K7)"
+   ],
+   "author_refs": [
+    "BK14-F6",
+    "BK14-F18",
+    "BK14-F19",
+    "BK14-F20",
+    "BK14-F29",
+    "BK14-F7"
+   ],
+   "interpretation": "New vs Obviously Awesome: OA (ch13 per BK03) sketched a sales story order; Sales Pitch adds insight-from-value, approach grouping, discovery inside Alternatives, the agreement gate and timing. The agreement gate is the most useful decision rule: it turns the pitch into a fit test.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: flag an insight that would read the same for the top competitor (swap test) or matches a generic-trend pattern",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: claims about a named competitor's limits require cited evidence, as for any comparative claim",
+     "class": "external_requirement"
+    },
+    {
+     "rule": "proposed: perfect-world criteria must each map to a value theme; unmapped criteria are dropped",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: target setup at or under about a fifth of first-call time; warn above",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/positioning/SKILL.md step 11; skills/landing-pages/SKILL.md step 4 (B2B order); shared/agents/specs.ts:47-55 (alternatives schema)",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/positioning/SKILL.md",
+     "skills/landing-pages/SKILL.md",
+     "docs/research/strategy-positioning.md",
+     "docs/growth-intelligence/books/11_sales_partnerships.md §3"
+    ],
+    "note": "Existing skills already list insight -> alternatives -> perfect world but define insight as 'what's changed' / 'what changed', which the book names as a common mistake. Version both lines."
+   },
+   "disagreements": "1) landing-pages step 4 and positioning step 11 frame insight as a change/trend; Dunford says trend-led openers can't differentiate. 2) strategy-positioning.md lists Raskin's 'name a shift' narrative for pitch decks; Dunford says vision narratives fit investors and give buyers reasons to delay. Decider: present-tense purchase with a shortlist -> Dunford; investor or category-creation content -> shift narrative acceptable. 3) 11 §3 SPIN discovery is buyer-led; Dunford adds seller teaching. Compatible: ask and teach.",
+   "eval_case_ids": [
+    "EV-BK14-K3-1",
+    "EV-BK14-K3-2",
+    "EV-BK14-K3-3"
+   ]
+  },
+  {
+   "id": "BK14-K4",
+   "name": "The follow-through: Introduction, value-themed demo, matched proof, unspoken objections, easy ask",
+   "decision": "How to show the product, prove it, pre-empt hesitation and choose the next step",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "developer_tools",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "value themes with the features behind each",
+    "proof inventory tagged by industry, role, starting status quo",
+    "common unspoken objections from lost/stalled deals",
+    "the sales process steps"
+   ],
+   "prerequisites": [
+    "K3 setup",
+    "confirmed facts for timelines, certifications, integrations"
+   ],
+   "branches": [
+    {
+     "if": "multi-product / platform / infrastructure product",
+     "then": "introduce with family, platform or 'marketecture' diagram; mark optional add-ons and what is replaced vs connected"
+    },
+    {
+     "if": "product demos well",
+     "then": "demo grouped by value theme, slide before and after"
+    },
+    {
+     "if": "little to show (infrastructure) or highly customised",
+     "then": "slides or example implementation; label what is not in the base product; custom demo becomes the ask"
+    },
+    {
+     "if": "capability is required by everyone (security cert, ERP integration)",
+     "then": "not a value theme; cover it in Objections"
+    },
+    {
+     "if": "a common objection has no good answer",
+     "then": "don't raise it unprompted; log it as a product/offer priority for the owner"
+    },
+    {
+     "if": "prospect is a poor fit",
+     "then": "the ask is a clear, kind exit"
+    }
+   ],
+   "steps": [
+    "One-line category introduction",
+    "Up to three value themes, each: claim, features that deliver it, demo or slide",
+    "Proof per theme matched to the prospect",
+    "Optional: 1-3 unspoken objections with specific answers (deployment time, training, modular start)",
+    "One ask that is easy to say yes to, plus who must be involved"
+   ],
+   "exceptions_failure_modes": [
+    "Feature walkthrough",
+    "Same case study for every prospect",
+    "'Call us with questions' as the ask",
+    "Demo implies custom work is standard",
+    "Proactive objection the business can't answer"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "demo script prep",
+    "capability": "a demo environment or screenshots",
+    "measurement": "next-step agreement per call"
+   },
+   "metrics": [
+    "share of first calls with an agreed next step",
+    "share of bad-fit prospects exiting at call one rather than later"
+   ],
+   "guardrails": [
+    "Deployment times, certifications and customer names only from confirmed facts",
+    "Your own claim is not proof"
+   ],
+   "stop_review": [
+    "If next-step agreement stays low after the test period, check the ask's complexity before the story"
+   ],
+   "alternatives": [
+    "No proof yet: demo the mechanism, offer a pilot as the ask, mark proof as [NEEDS FACT]"
+   ],
+   "author_refs": [
+    "BK14-F8",
+    "BK14-F9",
+    "BK14-F21",
+    "BK14-F22",
+    "BK14-F23",
+    "BK14-F24",
+    "BK14-F25"
+   ],
+   "interpretation": "Mostly new relative to Obviously Awesome. The table-stakes-to-objections rule and 'don't raise what you can't answer' are practical additions not present in existing skills.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: a value theme that every shortlisted alternative also delivers is moved to objections or parity notes",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: every pitch output ends with exactly one primary next step",
+     "class": "contextual_heuristic"
+    },
+    {
+     "rule": "proposed: certifications and deployment-time statements in pitches pass the existing claim lint",
+     "class": "external_requirement"
+    }
+   ],
+   "climbos_location": "skills/sales-follow-up/SKILL.md steps 5-7; skills/positioning/SKILL.md step 11; docs/growth-intelligence/books/11_sales_partnerships.md §5; shared/agents/lint.ts:46-53",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "skills/sales-follow-up/SKILL.md",
+     "docs/growth-intelligence/books/11_sales_partnerships.md",
+     "skills/positioning/SKILL.md"
+    ],
+    "note": "sales-follow-up already has proof-backed objections and a single specific ask; add proactive unspoken objections and the unanswerable-objection rule. Positioning step 11 omits Introduction and Objections; add them."
+   },
+   "disagreements": "11 §5 says the demo should show the customer's priority task, tied to discovery; Dunford says the first-call demo shows your best value regardless of request and customisation waits for call two. Decider: if the buyer is a first-time buyer unsure of criteria -> Dunford; if the buyer arrives with explicit tested requirements (RFP, prior trial) -> tailor, while still covering differentiators.",
+   "eval_case_ids": [
+    "EV-BK14-K4-1",
+    "EV-BK14-K4-2",
+    "EV-BK14-K4-3"
+   ]
+  },
+  {
+   "id": "BK14-K5",
+   "name": "Pitch test, rollout and upkeep (founder-led adaptation)",
+   "decision": "When a new pitch is good enough to adopt, and how to keep it from drifting",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "agency",
+    "consulting",
+    "professional_services"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "number of qualified first calls per week",
+    "old pitch for comparison",
+    "call notes or recordings with consent"
+   ],
+   "prerequisites": [
+    "K3/K4 storyboard turned into deck, demo, script"
+   ],
+   "branches": [
+    {
+     "if": "team has reps",
+     "then": "one respected rep tests on real qualified prospects; builders listen and debrief each call"
+    },
+    {
+     "if": "founder-led sales (usual ClimbOS case)",
+     "then": "owner is the tester; ClimbOS supplies the debrief questions and records the answers"
+    },
+    {
+     "if": "tester wants no more changes and prefers the new pitch",
+     "then": "pass: roll out"
+    },
+    {
+     "if": "tester has used it several times, stopped iterating, still prefers old",
+     "then": "fail: check sales involvement, then positioning"
+    },
+    {
+     "if": "call volume too low for a statistical comparison",
+     "then": "use the qualitative pass/fail plus leading indicators, labelled observational"
+    }
+   ],
+   "steps": [
+    "Pick tester",
+    "Run on real qualified calls",
+    "After each call: where lost, where excited, what was confusing",
+    "Allow wording and small objection fixes only; don't change the core mid-test",
+    "Decide pass/fail",
+    "Roll out: recorded pitch, practice, check before live calls",
+    "Name an owner; recheck on positioning change; recertify periodically"
+   ],
+   "exceptions_failure_modes": [
+    "Rolling out to everyone at once",
+    "Rewriting the core mid-test",
+    "Calling a winner from a handful of calls on close rate",
+    "Pitch drift after rollout",
+    "Tester bias toward the familiar old pitch (author treats preference despite this bias as strong signal)"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "listening and debrief time per call",
+    "capability": "consent to record calls if recording",
+    "measurement": "per-call next-step and fit notes"
+   },
+   "metrics": [
+    "leading: share of qualified calls progressing to next step",
+    "share of bad-fit leads exiting early",
+    "lagging: close rate, lead quality"
+   ],
+   "guardrails": [
+    "Recording calls needs consent",
+    "No close-rate 'win' claims without adequate sample (decisions.ts sampleSize)"
+   ],
+   "stop_review": [
+    "Fail criteria above",
+    "Positioning version change -> pitch update"
+   ],
+   "alternatives": [
+    "No calls yet: test the insight and perfect-world criteria with 5 customer interviews (PB-interviews)"
+   ],
+   "author_refs": [
+    "BK14-F26",
+    "BK14-F27",
+    "BK14-F28",
+    "BK14-F29"
+   ],
+   "interpretation": "New relative to BK03 and the library. The author's pass test is subjective; ClimbOS should keep it but pair it with logged leading indicators and refuse statistical claims at low volume.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: when sampleSize weeks exceed 12 at the owner's call volume, present the pitch test as a qualitative pilot, not an A/B test",
+     "class": "economic_feasibility"
+    },
+    {
+     "rule": "proposed: each pitch test logs per-call debrief answers and next-step outcome",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/experiment-design/SKILL.md; shared/analysis/decisions.ts:152 sampleSize; new PB candidate 'PB-pitch-pilot'",
+   "relation_to_existing": {
+    "type": "new",
+    "targets": [
+     "docs/growth-expansion/guides/06_experimentation.md",
+     "shared/analysis/decisions.ts"
+    ],
+    "note": "No existing pitch-test guidance. Reuses existing sample-size calculator to choose qualitative vs quantitative reading."
+   },
+   "disagreements": "Experimentation guidance prefers measured comparisons; Dunford accepts expert judgement for long cycles. Decider: computed sample size vs call volume.",
+   "eval_case_ids": [
+    "EV-BK14-K5-1",
+    "EV-BK14-K5-2"
+   ]
+  },
+  {
+   "id": "BK14-K6",
+   "name": "'Do nothing' as the main competitor in considered sales",
+   "decision": "What a stalled or lost pipeline is losing to, and what the pitch must compete against",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "agency",
+    "consulting",
+    "professional_services",
+    "high-ticket local"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "closed opportunities coded won / lost-to-competitor / no decision / disqualified",
+    "what the buyer used before"
+   ],
+   "prerequisites": [
+    "a record of recent deals (even a short list from the owner)"
+   ],
+   "branches": [
+    {
+     "if": "no-decision share is high",
+     "then": "work on confidence: clearer criteria (perfect world), proof, deployment-risk answers, smaller first step; not competitor attacks"
+    },
+    {
+     "if": "losses mostly to one rival",
+     "then": "name that rival in alternatives and sharpen differentiated value against it"
+    },
+    {
+     "if": "pitch introduces options the buyer hadn't considered",
+     "then": "remove them; new options delay decisions"
+    },
+    {
+     "if": "few deals (under ~10)",
+     "then": "treat shares as directional; gather loss reasons"
+    }
+   ],
+   "steps": [
+    "Code each closed deal",
+    "Compute no-decision share and decided win rate",
+    "Name the status quo alternative explicitly",
+    "Add a case for change to insight and objections"
+   ],
+   "exceptions_failure_modes": [
+    "Reading no decision as 'they like their current tool'",
+    "Pitching the future vision so buyers wait",
+    "Treating the cited 40-60% as this business's benchmark"
+   ],
+   "requirements": {
+    "cash": "none",
+    "labor": "coding past deals",
+    "capability": "deal history",
+    "measurement": "deal outcome codes"
+   },
+   "metrics": [
+    "no-decision share of closed opportunities",
+    "win rate among decided opportunities"
+   ],
+   "guardrails": [
+    "Reported 40-60% is a cited, dated B2B figure, not a reference range for diagnosis (base-rates.md rule)"
+   ],
+   "stop_review": [
+    "Re-code quarterly"
+   ],
+   "alternatives": [
+    "No deal history: ask the owner for the last 5 that didn't buy and why"
+   ],
+   "author_refs": [
+    "BK14-F3",
+    "BK14-F4",
+    "BK14-F5",
+    "BK14-F10",
+    "BK14-F19"
+   ],
+   "interpretation": "Partly a repeat: 11 §4 and positioning SKILL already include doing nothing and delay as alternatives; voc-research has the habit force. New: no decision is a vote against change driven by fear, and vendors should avoid adding options. Code gap: diagnosis has no sales-stage fields.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: add an optional deal-outcome breakdown to owner inputs; compute no-decision share deterministically",
+     "class": "missing_prerequisite"
+    },
+    {
+     "rule": "proposed: never use the book's 40-60% as a reference range in diagnosis",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "shared/agents/diagnosis.ts:11-26 (OwnerFunnel); skills/sales-follow-up/SKILL.md; docs/growth-intelligence/books/11_sales_partnerships.md §13",
+   "relation_to_existing": {
+    "type": "extends",
+    "targets": [
+     "docs/growth-intelligence/books/11_sales_partnerships.md §4 §13",
+     "skills/positioning/SKILL.md",
+     "skills/voc-research/SKILL.md"
+    ],
+    "note": "Duplicates status-quo-as-alternative; extends with no-decision diagnosis and 'don't add options'."
+   },
+   "disagreements": "None material. Raskin/vision narratives in strategy-positioning.md risk the delay Dunford warns of in sales contexts.",
+   "eval_case_ids": [
+    "EV-BK14-K6-1",
+    "EV-BK14-K6-2"
+   ]
+  },
+  {
+   "id": "BK14-K7",
+   "name": "Reusing the pitch story beyond sales calls",
+   "decision": "Which marketing, website and product assets should carry which parts of the pitch",
+   "business_models": [
+    "b2b_saas",
+    "enterprise_software",
+    "developer_tools",
+    "agency",
+    "consulting",
+    "professional_services",
+    "product-led SaaS"
+   ],
+   "lifecycle_stages": [
+    "early",
+    "growing",
+    "established"
+   ],
+   "evidence_required": [
+    "approved pitch storyboard version",
+    "who uses the product vs who buys it",
+    "consent/publishing permission for each channel"
+   ],
+   "prerequisites": [
+    "K2-K4 storyboard"
+   ],
+   "branches": [
+    {
+     "if": "homepage",
+     "then": "tagline/category + value themes + proof; doesn't need the full story"
+    },
+    {
+     "if": "explainer video or long-form B2B page",
+     "then": "can run most of the arc compressed"
+    },
+    {
+     "if": "considered purchase with first-time buyers",
+     "then": "buyer's guide: insight + approaches -> categorised value/feature checklist saying which buyers need what; doubles as a shopping-intent lead magnet"
+    },
+    {
+     "if": "free tier / trial / product-led",
+     "then": "onboarding, tips and help surface the differentiated value"
+    },
+    {
+     "if": "end users and economic buyer differ",
+     "then": "separate stories; don't put the buyer pitch in the end-user product"
+    },
+    {
+     "if": "conference talk, research report, book",
+     "then": "carry the insight only; no sales pitch on stage"
+    }
+   ],
+   "steps": [
+    "Pick asset",
+    "Pick the pitch parts it needs",
+    "Keep all assets on one pitch/positioning version",
+    "Route claims through the claim lint",
+    "Owner approves before publishing"
+   ],
+   "exceptions_failure_modes": [
+    "Pasting the 8 slides onto the homepage",
+    "Buyer's guide that just lists your features",
+    "Research content that is a disguised trend piece unconnected to the value",
+    "End-user onboarding pitched at the buyer"
+   ],
+   "requirements": {
+    "cash": "low; video costs if made",
+    "labor": "writing time",
+    "capability": "publishing access (owner)",
+    "measurement": "guide downloads that become calls; onboarding reaching first value"
+   },
+   "metrics": [
+    "buyer's guide downloads -> qualified calls",
+    "activation to first value for product-led onboarding"
+   ],
+   "guardrails": [
+    "No publishing without owner approval",
+    "Buyer's guide comparisons follow the same evidence rule as the pitch",
+    "Marketing consent for guide leads before nurture"
+   ],
+   "stop_review": [
+    "Positioning version change invalidates all derived assets"
+   ],
+   "alternatives": [
+    "No video budget: long-form page section with the same order",
+    "No sales team: the buyer's guide and page do the teaching"
+   ],
+   "author_refs": [
+    "BK14-F30",
+    "BK14-F31"
+   ],
+   "interpretation": "Partly versions existing guidance: landing-pages step 4 already maps the sales-narrative order onto B2B pages; Dunford says homepages need not follow it, while explainers and buyer's guides can. Lead-magnets has a local 'questions to ask before you hire' checklist, a buyer's-guide analogue.",
+   "proposed_rules": [
+    {
+     "rule": "proposed: homepage briefs use category + up to 3 value themes + proof; full storyboard order only for long-form pages, explainers and buyer's guides",
+     "class": "strategic_preference"
+    },
+    {
+     "rule": "proposed: add 'buyer's guide' as a lead-magnet type for considered B2B purchases, built from insight + approaches",
+     "class": "contextual_heuristic"
+    }
+   ],
+   "climbos_location": "skills/landing-pages/SKILL.md step 4; skills/lead-magnets/SKILL.md table; skills/lifecycle-email/SKILL.md onboarding",
+   "relation_to_existing": {
+    "type": "versions",
+    "targets": [
+     "skills/landing-pages/SKILL.md",
+     "skills/lead-magnets/SKILL.md",
+     "docs/growth-expansion/guides/03_positioning.md (final paragraph)"
+    ],
+    "note": "03_positioning.md already says keep sales, page and onboarding on one positioning version; BK14 adds which pitch parts each asset uses."
+   },
+   "disagreements": "lead-magnets 'never propose a trend report' vs Dunford's insight-led research: compatible if research tests the insight with real data rather than restating trends. Decider: does the research connect to the differentiated value?",
+   "eval_case_ids": [
+    "EV-BK14-K7-1",
+    "EV-BK14-K7-2",
+    "EV-BK14-K7-3"
+   ]
+  }
+ ],
+ "skill_proposals": [
+  {
+   "skill": "skills/positioning/SKILL.md",
+   "change": "Version step 11 (pitch narrative): (a) gate by purchase type (K1); (b) full order insight -> alternatives (approaches, pros/cons, discovery questions) -> perfect world + agreement check -> introduction (category) -> up to 3 value themes -> proof -> optional unspoken objections -> one ask; (c) replace 'what's changed' with an insight derived from the differentiated value; (d) remove the plumber example or mark it as the compressed local form for high-ticket jobs only.",
+   "why": "Current step omits Introduction, Objections and the agreement gate, and defines insight as a trend, which the book lists as a common mistake.",
+   "refs": [
+    "BK14-F12",
+    "BK14-F18",
+    "BK14-F20",
+    "BK14-F29",
+    "BK14-F1"
+   ]
+  },
+  {
+   "skill": "skills/landing-pages/SKILL.md",
+   "change": "Step 4 B2B order: change 'insight (what changed)' to 'insight that points to the differentiated value'; state that homepages lead with category + value themes and need not follow the story; use the full order for long-form B2B pages and explainers.",
+   "why": "Matches the source; prevents trend-led openers.",
+   "refs": [
+    "BK14-F18",
+    "BK14-F29",
+    "BK14-F30"
+   ]
+  },
+  {
+   "skill": "skills/sales-follow-up/SKILL.md",
+   "change": "Add: proactive answer to the most common unspoken worry (switching or deployment effort, with real timelines) in the day-0 summary for considered jobs; never raise an objection the business can't answer, flag it to the owner instead; for high-ticket local quotes, a 'how to choose' line (2-3 criteria, when cheaper is fine).",
+   "why": "Fear of change drives no decision; toilet-store guide pattern.",
+   "refs": [
+    "BK14-F2",
+    "BK14-F24",
+    "BK14-F25"
+   ]
+  },
+  {
+   "skill": "skills/lead-magnets/SKILL.md",
+   "change": "Add buyer's guide for considered B2B purchases: insight + approaches -> categorised criteria checklist saying who needs what; mark downloads as active-shopping signals.",
+   "why": "Author's preferred pitch-derived content.",
+   "refs": [
+    "BK14-F30"
+   ]
+  },
+  {
+   "skill": "docs/growth-expansion/guides/03_positioning.md",
+   "change": "Add a v2 section 'From position to pitch' with the mapping table, champion-first audience, applicability gate and pitch test; cite BK14 locators. Don't duplicate the five components.",
+   "why": "Version rather than duplicate; the guide's final paragraph already says to turn the position into a sales explanation.",
+   "refs": [
+    "BK14-F16",
+    "BK14-F14",
+    "BK14-F27"
+   ]
+  },
+  {
+   "skill": "docs/growth-intelligence/books/11_sales_partnerships.md",
+   "change": "§3: add two-way teaching discovery for first-time buyers. §5: note first-call demo shows differentiated value; tailored demo in call two unless buyer arrives with tested requirements.",
+   "why": "Resolves the tension with Dunford explicitly.",
+   "refs": [
+    "BK14-F6",
+    "BK14-F8",
+    "BK14-F19"
+   ]
+  },
+  {
+   "skill": "docs/research/strategy-positioning.md",
+   "change": "Replace the secondary-summary citation (Product Andrew, Lenny's) for Sales Pitch with BK14 locators; fix the 'Built for B2B; adapt insight for B2C/local' line to the considered-purchase scope.",
+   "why": "Existing coverage was secondhand.",
+   "refs": [
+    "BK14-F1",
+    "BK14-F12"
+   ]
+  }
+ ],
+ "code_gaps": [
+  {
+   "where": "shared/agents/lint.ts:46-53",
+   "gap": "CLAIMS checks multipliers, 24/7, leadership, user counts, certifications and automation, but not claims about a competitor's limits ('unlike X', 'X lacks/can't'). PB-comparison-page guardrail (shared/playbooks/contracts.ts:121) and pitch alternatives tables depend on this.",
+   "proposed_change": "Add a competitor-limitation pattern requiring the named competitor and the limitation in evidence; error in publishable text.",
+   "priority": "P1"
+  },
+  {
+   "where": "shared/agents/specs.ts:47-55",
+   "gap": "InsightsV2Schema has alternatives (with kind) and a positioningStatement string, but no structured pitch: insight, approach groups with pros/cons, perfect-world criteria, value themes (max 3) with features and proof, objections, ask.",
+   "proposed_change": "Optional pitchStory object, emitted only when the K1 gate passes; perfect-world items must reference a value theme.",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/diagnosis.ts:11-26 and :130-138",
+   "gap": "OwnerFunnel has no sales-stage fields (qualified first calls, next step agreed, decided, no decision), so sales-assisted businesses can't be diagnosed at the pitch stage; diagnose() never returns 'positioning' though COMPETING defines it (:75).",
+   "proposed_change": "Optional deal-outcome counts; compute no-decision share and decided win rate deterministically; no reference range (none reliable).",
+   "priority": "P2"
+  },
+  {
+   "where": "shared/agents/lint.ts:164 (near superlative rule)",
+   "gap": "No check for trend-as-insight openers in pitch or B2B page copy.",
+   "proposed_change": "Warn when an insight/opening line matches generic-trend patterns ('more data than ever', 'AI adoption', 'digital transformation') or passes a competitor swap.",
+   "priority": "P3"
+  },
+  {
+   "where": "shared/agents/specs.ts:1147 with shared/acquisition/scoring.ts:16-18",
+   "gap": "Insights agent always loads the positioning skill, which always writes a pitch; salesMotion/salesCycle/aov dimensions exist but don't gate it.",
+   "proposed_change": "Pass the K1 gate result into the prompt; skip the pitch for unconsidered purchases.",
+   "priority": "P3"
+  }
+ ]
+}

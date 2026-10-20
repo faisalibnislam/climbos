@@ -1,0 +1,123 @@
+{
+ "id": "BKP-27",
+ "version": 1,
+ "slug": "complex-sale-page",
+ "title": "Page structure for complex sales",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "How to structure pages when buyers have many objections: an objection table, lower-commitment next steps and detail on demand.",
+ "business_types": [
+  "b2b",
+  "high-value consumer"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Five or more diagnosed objections",
+  "Long consideration"
+ ],
+ "exclusions": [
+  "Simple purchases"
+ ],
+ "required_inputs": [
+  "Diagnosed objections and counter-evidence"
+ ],
+ "evidence_requirements": [
+  "Objection list with counts (K2)",
+  "Counter-objections from sales, support, chat canned replies or the owner",
+  "The next step options the business can offer (trial, consult, lead magnet, purchase)"
+ ],
+ "missing_data_behavior": [
+  "No diagnosed objections: BKP-04 first."
+ ],
+ "decision_branches": [
+  {
+   "if": "Buyers not ready for a sales call",
+   "then": "Offer a lower-commitment step."
+  }
+ ],
+ "implementation_steps": [
+  "Fill the O/CO table",
+  "Decide the next-step commitment",
+  "Order modules by objection frequency and where each arises",
+  "Write spoiler headings and plain copy (readability test with a real reader)",
+  "Add disclosure and fallbacks (search, FAQ, chat, phone) per economics",
+  "Test with 3-5 users on mobile"
+ ],
+ "dependencies": [
+  "Confirmed facts for every counter",
+  "Mobile rendering checked (hover does not exist on touch)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "$0",
+  "labor": "4-10 hours to draft and test",
+  "capability": "Page editor; ClimbOS drafts table and copy",
+  "measurement": "Scroll/clicks on disclosures if tracked; step conversion"
+ },
+ "metrics": [
+  "Objection coverage (answered / top objections)",
+  "Clicks on primary CTA from each module",
+  "Downstream step rate (to catch deferred persuasion)"
+ ],
+ "guardrails": [
+  "Accordions never hide required terms.",
+  "Price, fees, cancellation and legal terms stay visible",
+  "No invented counters",
+  "Accessible disclosure controls"
+ ],
+ "alternatives_when_constrained": [
+  "No objection data: owner's sales call notes or a recorded 7-minute pitch, transcribed",
+  "No designer: plain sections with alternating backgrounds"
+ ],
+ "stop_conditions": [
+  "User tests still show the top objection unanswered: move its counter higher",
+  "Downstream drop after lowering commitment: revisit the step"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Long pages fail when boring, not when long",
+  "Hidden information can conceal legally required terms"
+ ],
+ "rule_classes": {
+  "strategic_preference": [
+   {
+    "rule": "proposed: a page brief for any offer with 5+ coded objections includes an O/CO table and names where each counter sits",
+    "from": "BK13-K5"
+   }
+  ],
+  "external_requirement": [
+   {
+    "rule": "proposed: progressive disclosure never hides price, mandatory fees, cancellation or other legally required terms",
+    "from": "BK13-K5"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: when a lower-commitment step is proposed, name the downstream metric that checks persuasion was not merely deferred",
+    "from": "BK13-K5"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/landing-pages/SKILL.md",
+  "docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json"
+ ],
+ "reconciliation_note": "Extends landing-pages.",
+ "member_frameworks": [
+  "BK13-K5"
+ ],
+ "source_references": [
+  "BK13-F19",
+  "BK13-F23",
+  "BK13-F26",
+  "BK13-F31"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK13-K5-1",
+  "EV-BK13-K5-2"
+ ]
+}

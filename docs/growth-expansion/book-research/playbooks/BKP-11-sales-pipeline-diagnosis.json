@@ -1,0 +1,301 @@
+{
+ "id": "BKP-11",
+ "version": 1,
+ "slug": "sales-pipeline-diagnosis",
+ "title": "Is the sales pipeline the binding constraint?",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether meetings, proposals, win rate, no-decision losses or the owner's selling time limit growth, and whether more outreach would help or feed a leak.",
+ "business_types": [
+  "agency",
+  "consulting",
+  "professional_services",
+  "b2b_saas",
+  "quote-based local services"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Sales-led or quote-based business",
+  "Owner wants more leads or to hire a seller"
+ ],
+ "exclusions": [
+  "Self-serve purchase with no sales step"
+ ],
+ "required_inputs": [
+  "Meetings booked and held, proposals, won, lost, no-decision, unqualified, over a period",
+  "Owner's maximum meetings a week"
+ ],
+ "evidence_requirements": [
+  "per period: meetings booked, meetings held, proposals/quotes sent, won, lost, unqualified, average won value",
+  "owner selling hours per week and maximum meetings the owner can hold",
+  "deal dates (created, stage changes, won/lost)",
+  "customers won through the owner's own conversations",
+  "a repeatable narrative and ICP",
+  "price and margin for value per meeting",
+  "owner hours per week available for selling",
+  "founder win rate per held meeting over enough decisions",
+  "average deal value and cycle length",
+  "owner time split (prospecting vs selling vs delivery)",
+  "cost of the hire",
+  "closed opportunities coded won / lost-to-competitor / no decision / disqualified",
+  "what the buyer used before",
+  "named customers and their revenue share",
+  "support and integration hours per customer",
+  "sales-stage conversion",
+  "buyer vs user contacts"
+ ],
+ "missing_data_behavior": [
+  "Fewer than about 5 decided deals: counts only, verdict unknown.",
+  "No prior period or target: no verdict (no reliable external sales benchmarks)."
+ ],
+ "decision_branches": [
+  {
+   "if": "Win rate falling or calendar full",
+   "then": "Don't add outreach; fix qualification, proposal or capacity."
+  },
+  {
+   "if": "Many no-decisions",
+   "then": "Treat 'do nothing' as the main rival; pitch and proposal work."
+  },
+  {
+   "if": "Founder win rate unstable",
+   "then": "Don't hire a seller yet."
+  }
+ ],
+ "implementation_steps": [
+  "Count stages over a fixed window (code).",
+  "Compute hold rate, held->proposal, proposal->won, win per held meeting, unqualified share, median days to close (code).",
+  "Compare to the owner's own prior period or stated target; external benchmarks only as grade-D context, never as a verdict.",
+  "Name the weakest link and its competing explanation.",
+  "Daily hygiene: uncovered deals, late-stage deals untouched 7+ days, deals stuck past the owner's typical stage time, past-due next steps.",
+  "Prioritise follow-up from closest-to-money down, by value.",
+  "Confirm price fit for human selling",
+  "Set a 50-100 account list (K3)",
+  "Owner runs outreach and meetings",
+  "Compute expected bookings per seller = meetings per month x win rate x deal value (code).",
+  "Compute cost of sales = seller cost / bookings (code).",
+  "Compare against owner's margin room, not a generic band.",
+  "Code each closed deal",
+  "Compute no-decision share and decided win rate",
+  "Name the status quo alternative explicitly",
+  "List customers with revenue and support hours.",
+  "Compute revenue and support share per customer.",
+  "Document sales stages and conversion after the first few deals."
+ ],
+ "dependencies": [
+  "Stage definitions with entry criteria the owner agrees to",
+  "At least a few closed decisions; otherwise use per-deal review, not rates",
+  "a price that pays for human selling (BRP-19 / scoring.ts LOW_TICKET_USD_MONTH)",
+  "K5 metrics available",
+  "Retention evidence that won clients get value (K7)",
+  "a record of recent deals (even a short list from the owner)",
+  "a customer list"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "none",
+  "labor": "minutes per week to keep stages true",
+  "capability": "CRM stages with dates; deterministic aggregation",
+  "measurement": "stage counts and timestamps"
+ },
+ "metrics": [
+  "meetings booked",
+  "hold rate",
+  "held->proposal",
+  "proposal->won",
+  "win rate per held first meeting",
+  "unqualified share",
+  "median days to close",
+  "open deals without next step",
+  "pipeline value (open, unweighted) and won value",
+  "qualified conversations",
+  "meetings held",
+  "win rate among qualified meetings",
+  "owner hours per customer",
+  "bookings per seller per month",
+  "cost of sales",
+  "ramp time to founder-level win rate",
+  "no-decision share of closed opportunities",
+  "win rate among decided opportunities",
+  "revenue share of top customer",
+  "support hours per customer",
+  "stage-to-stage sales conversion",
+  "time to first value against client baseline"
+ ],
+ "guardrails": [
+  "Book win-rate and show-rate figures are dated venture-SaaS context, never verdicts.",
+  "Few accounts means research is a census, not a sample.",
+  "All arithmetic in code",
+  "No stage-default probabilities (Book 11 prohibited inference)",
+  "Benchmarks from this book are grade D and dated",
+  "Diagnosis hypothesis, not proven cause",
+  "Owner time is priced into CAC (cacFull)",
+  "No promise of results from hiring",
+  "Arithmetic in code",
+  "Book salary and cost-of-sales bands are dated US venture-SaaS context, grade D",
+  "Employment law and contractor rules vary (external)",
+  "Reported 40-60% is a cited, dated B2B figure, not a reference range for diagnosis (base-rates.md rule)",
+  "no customer named publicly without permission"
+ ],
+ "alternatives_when_constrained": [
+  "No CRM data: ask the owner for the six counts for the last 60-90 days",
+  "Very low volume: qualitative review of the last 5 won and 5 lost deals",
+  "No owner time: PB-referrals or PB-partners",
+  "Low price: self-serve plays (PB-comparison-page, PB-landing-split)",
+  "Can't afford a hire: freelance appointment setter on a trial, partners/referrals, or raise price to free founder time (PB-capacity, PB-price-increase)",
+  "No deal history: ask the owner for the last 5 that didn't buy and why",
+  "no CRM: owner's spreadsheet of deals and hours"
+ ],
+ "stop_conditions": [
+  "Re-diagnose each month or after 10 new closed decisions",
+  "If the named constraint does not move after one cycle of fixes, test the competing explanation",
+  "After about 20 qualified conversations with no win, review ICP and offer (PB-interviews) before adding volume",
+  "If a new seller's win rate stays well below founder level after a set ramp, review onboarding before hiring more",
+  "Re-code quarterly",
+  "quarterly customer profitability review"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Stage labels that describe seller activity instead of buyer progress",
+  "Using CRM default stage probabilities as forecasts",
+  "The owner hires a rep from a bigger competitor too early: that rep sells to old contacts and can't diagnose why prospects say no",
+  "Treating unscalable work as permanent",
+  "Premature scaling: hiring sales to 'figure it out'",
+  "Lagged scaling: founder keeps closing when the motion is proven",
+  "Reading no decision as 'they like their current tool'",
+  "Pitching the future vision so buyers wait",
+  "Self-serve SMB SaaS behaves more like consumer funnels.",
+  "Enterprise case-study requests can breach confidentiality; owner approval needed."
+ ],
+ "rule_classes": {
+  "missing_prerequisite": [
+   {
+    "rule": "proposed: For sales-led businesses, diagnosis reads a sales block (booked, held, proposals, won, lost, unqualified, value, owner meeting capacity) and names the weakest link in code.",
+    "from": "BK09b-K5"
+   },
+   {
+    "rule": "proposed: PB-cold-outreach requires owner selling hours (hours_min about 3 a week) as well as price and mailbox.",
+    "from": "BK09a-K1"
+   },
+   {
+    "rule": "proposed: add an optional deal-outcome breakdown to owner inputs; compute no-decision share deterministically",
+    "from": "BK14-K6"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed: Do not recommend more top-of-funnel outreach when win rate per held meeting is below the owner's own target or prior period, unless the owner's calendar is empty and sample size is adequate.",
+    "from": "BK09b-K5"
+   },
+   {
+    "rule": "proposed: When the owner's meeting capacity is >=80% used and win rate is falling, name selling capacity (delivery) as the constraint.",
+    "from": "BK09b-K5"
+   },
+   {
+    "rule": "proposed: Fewer than 5 closed decisions in the window => rates reported as counts with 'too few to judge'.",
+    "from": "BK09b-K5"
+   },
+   {
+    "rule": "proposed: The first sales hire targets the step that limits the owner's selling time (prospecting, selling or delivery), computed from the owner's time split.",
+    "from": "BK09b-K8"
+   },
+   {
+    "rule": "proposed: never use the book's 40-60% as a reference range in diagnosis",
+    "from": "BK14-K6"
+   },
+   {
+    "rule": "proposed: for B2B types with fewer than about 30 customers, diagnosis readings report counts, not rates, and experiment lints block significance-style tests (route to interviews or before/after).",
+    "from": "BK12-K8"
+   }
+  ],
+  "unknown_to_investigate": [
+   {
+    "rule": "proposed: Kazanjy's 15-30% win-rate band may be shown only as 'author view, 2020, venture SaaS, grade D'; it never sets a weak/ok verdict.",
+    "from": "BK09b-K5"
+   }
+  ],
+  "strategic_preference": [
+   {
+    "rule": "proposed: when the owner reports no customers won through personal conversations, plans must not lead with hiring a salesperson, outsourced SDR or appointment-setting agency; lead with owner-run outreach, warm intros or inbound capture.",
+    "from": "BK09a-K1"
+   },
+   {
+    "rule": "proposed: Do not recommend hiring a salesperson until the owner has a stable win rate over enough closed decisions and evidence won clients succeed.",
+    "from": "BK09b-K8"
+   },
+   {
+    "rule": "proposed: when one customer exceeds a large share of revenue (owner-defined), the plan includes a disentanglement step before scale.",
+    "from": "BK12-K8"
+   }
+  ],
+  "economic_feasibility": [
+   {
+    "rule": "proposed: Hiring recommendations show expected bookings and cost of sales computed from the owner's own rates, with ramp time stated as an assumption.",
+    "from": "BK09b-K8"
+   }
+  ]
+ },
+ "versions_existing": [
+  "shared/agents/diagnosis.ts (new optional sales block)",
+  "docs/growth-intelligence/books/11_sales_partnerships.md",
+  "shared/playbooks/contracts.ts PB-capacity"
+ ],
+ "reconciliation_note": "No sales stage exists in diagnosis today (backlog CG-09, CG-10).",
+ "member_frameworks": [
+  "BK09b-K5",
+  "BK09a-K1",
+  "BK09b-K8",
+  "BK14-K6",
+  "BK12-K8"
+ ],
+ "source_references": [
+  "BK09b-F3",
+  "BK09b-F5",
+  "BK09b-F23",
+  "BK09b-F25",
+  "BK09b-F26",
+  "BK09b-F36",
+  "BK09b-F37",
+  "BK09b-F40",
+  "BK09a-F1",
+  "BK09a-F2",
+  "BK09a-F3",
+  "BK09a-F4",
+  "BK09a-F26",
+  "BK09b-F27",
+  "BK09b-F38",
+  "BK09b-F39",
+  "BK09b-F42",
+  "BK09b-F44",
+  "BK09b-F45",
+  "BK14-F3",
+  "BK14-F4",
+  "BK14-F5",
+  "BK14-F10",
+  "BK14-F19",
+  "BK12-F42",
+  "BK12-F52",
+  "BK12-F53",
+  "BK12-F32"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK09b-K5-1",
+  "EV-BK09b-K5-2",
+  "EV-BK09b-K5-3",
+  "EV-BK09b-K5-4",
+  "EV-BK09a-K1-1",
+  "EV-BK09a-K1-2",
+  "EV-BK09b-K8-1",
+  "EV-BK09b-K8-2",
+  "EV-BK14-K6-1",
+  "EV-BK14-K6-2",
+  "EV-BK12-K8-1",
+  "EV-BK12-K8-2",
+  "EV-BK12-K8-3"
+ ]
+}

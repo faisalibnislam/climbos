@@ -1,0 +1,82 @@
+--- a/skills/positioning/SKILL.md
++++ b/skills/positioning/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: positioning
+-description: Build or repair a small business's positioning and messaging using April Dunford's method (competitive alternatives, unique attributes, value, best-fit customers, market frame, optional trend), adapted for an agent working from a website, public research and a few owner answers. Use when a business needs a positioning document, a homepage or pitch narrative, a messaging hierarchy, or before any strategy, ads or landing-page work when the current message is unclear. Produces a positioning canvas with evidence and a confidence label per component, a chosen positioning style with what was rejected, a best-fit segment with trigger and disqualifiers, a messaging hierarchy, a pitch narrative, a swap test and a 2–3 week validation plan.
++description: Build or repair a small business's positioning and messaging using April Dunford's method (competitive alternatives, unique attributes, value, best-fit customers, market frame, optional trend), adapted for an agent working from a website, public research and a few owner answers. Use when a business needs a positioning document, a homepage or pitch narrative, a messaging hierarchy, or before any strategy, ads or landing-page work when the current message is unclear. Produces a positioning canvas with evidence and a confidence label per component, a chosen mode (niche or category buyer) and positioning style with what was rejected, a best-fit segment with trigger and disqualifiers, a messaging hierarchy, a pitch narrative for considered purchases, a swap test and a 2–3 week validation plan.
+ ---
+ 
+ ## Purpose
+@@ -26,23 +26,28 @@
+ 
+ 2. **List competitive alternatives:** what the best-fit customer would do if this business vanished. Include at least one non-product alternative (DIY, spreadsheet, hiring, an incumbent agency, a marketplace, doing nothing). Source each from VoC ("we switched from…", "before this I used…") or owner answers, with counts where you have them.
+ 
+-3. **List unique attributes** versus those alternatives: features, delivery model, expertise, guarantees, speed, locality, pricing model, founder credibility, process. Keep only attributes with evidence (on the site, in reviews, or confirmed by the owner). Delete parity attributes: anything every alternative also has.
++3. **List unique attributes** versus those alternatives: features, delivery model, expertise, guarantees, speed, locality, pricing model, founder credibility, process. Keep only attributes with evidence (on the site, in reviews, or confirmed by the owner). Delete parity attributes from differentiation claims: anything every alternative also has. A differentiator is a benefit; call it durable only with a named barrier (growth-strategy) [BK07-K1].
+ 
+ 4. **Translate each attribute into value with a "so what" chain:** attribute → what it enables → why the customer cares (time, money, risk, status, peace of mind). Stop when you reach something a customer would say out loud. Cluster into 1–3 value themes.
+ 
+ 5. **Ground value in customer evidence.** Attach 2+ verbatim VoC quotes (with source) to each theme. A theme with no customer evidence is a hypothesis; label it so.
+ 
+-6. **Define best-fit customers:** the segment that cares most about those value themes. Use observable traits (company size, job role, life situation, location, budget, tools used), a **trigger event** (the push that starts the search) and **disqualifiers** (who to turn away). No invented personas or demographics.
++**Choose the mode, and record why** [BK10-K4, BK10-K8]:
++- **Niche differentiation** (Dunford; default): B2B/SaaS, considered or complex purchases, early stage or under ~20 customers, capacity-limited services.
++- **Category buyer** (Sharp; default for consumer repeat-purchase and everyday local services with many interchangeable rivals and spare capacity): the segment may be "all category buyers in [area]" and shapes copy and offers, not media reach. Map common buying situations from VoC and search; lead with common ones, not a rare "ownable" one [BK11-K2].
++- context: a real, large functional difference is said in either mode. Both fit (a new café): start niche, keep consistent brand cues, grow area by area. Which wins there is unknown; the record lets outcomes be compared.
+ 
++6. **Define best-fit customers:** the segment that cares most about those value themes. Use observable traits (company size, job role, life situation, location, budget, tools used), a **trigger event** (the push that starts the search) and **disqualifiers** (who to turn away). No invented personas or demographics. If voc-research chose one Job, its struggle is the trigger and its outcome the lead value theme [BK08-K3].
++
+ 7. **Choose a market frame (category).** Write 2–3 candidate frames and test each: does it make the value obvious? Does it set the right price expectation? Would the buyer search for it? Then choose a positioning style:
+-   - **Big fish, small pond** (own a subsegment of an existing category): the default for almost every small business.
++   - **Big fish, small pond** (own a subsegment of an existing category): the default in niche-differentiation mode.
+    - **Head-to-head** (win an existing category on a dimension buyers already value): only if the business can credibly be a top choice.
+    - **Create a new category:** only if no existing frame makes the value obvious and there is budget to educate the market. Small businesses almost never have this budget.
+-   Record what you rejected and why.
++   Record what you rejected and why. New brand, offer or location: state category, name and where to buy before differentiation [BK11-K7].
+ 
+ 8. **Add a trend only if it is real, observable and makes the value more urgent** (a regulation change, a platform shift, AI search changing how buyers research). "AI is changing everything" does not qualify. Optional; skip if nothing qualifies.
+ 
+-9. **Write the positioning statement:** "For [segment with trigger] who currently [alternative], [business] is the [market frame] that [primary value]. Unlike [alternative], we [unique attribute + proof]."
++9. **Write the positioning statement:** "For [segment with trigger] who currently [alternative], [business] is the [market frame] that [primary value]. Unlike [alternative], we [unique attribute + proof]." Keep it as an internal summary; the hierarchy and pitch are what ship [BK14-K2].
+ 
+ 10. **Write the messaging hierarchy:**
+     - One-line positioning (the statement in plain words).
+@@ -51,12 +56,13 @@
+     - Objection-handling lines for the top 3–5 objections from VoC.
+     - Words to use and words to avoid (from the phrase bank; ban superlative fog such as "best-in-class", "seamless", "cutting-edge").
+ 
+-11. **Write the pitch narrative** (Dunford's *Sales Pitch*, adapted): insight (what's changed or what most buyers get wrong; for B2C/local, e.g. "most people pick a plumber on price, then pay twice") → the alternatives and their trade-offs → "perfect world" criteria the buyer should use → differentiated value → proof → ask. Output it as a homepage section order or a 6-slide outline.
++11. **Write the pitch narrative** (Dunford's *Sales Pitch*) for considered purchases only (sales-assisted, longer cycle or high ticket); otherwise skip and say why [BK14-K1]. Order [BK14-K3, BK14-K4]: insight (what buyers get wrong, drawn from your differentiated value, not a trend; flag it if it fits the top competitor too) → alternatives as approaches with genuine strengths, tagged none, process, service provider or product [BK09a-K2] → perfect-world criteria, each mapped to a value theme, with an agreement check → introduction (category) → up to 3 value themes with proof → optional unspoken objections → one ask. Add a cost-of-problem line computed in code, labelled hard or soft [BK09a-K2]. High-ticket local jobs use the short form: teach how to choose ("most people pick a plumber on price, then pay twice"). Output it as a homepage section order or a 6-slide outline.
+ 
+ 12. **Pressure-test.**
+-    - **Swap test:** replace the business name with its top competitor's. If the positioning line or headlines still work, they are not differentiated; return to step 3.
++    - **Swap test:** replace the business name with its top competitor's. If the positioning line or headlines still work, they are not differentiated; return to step 3. Category-buyer mode: advisory for claims, but brand cues must still be unmistakably this business.
+     - **Proof test:** underline every claim; each must have evidence within the hierarchy or a `[NEEDS FACT]`.
+     - **Price test:** does the frame set an expectation that fits the actual price?
++    - **Brand-cue check:** name, look and tagline consistent across site, posts and ads; fame and uniqueness are "unmeasured" without survey data [BK10-K4].
+ 
+ 13. **Label confidence per component:** High = customer evidence (own reviews, owner-confirmed wins and losses); Medium = inferred from public data (competitor reviews, forums); Low = assumption.
+ 
+@@ -67,7 +73,7 @@
+ - **Alternative-first.** The real status-quo alternative is named with evidence of switching.
+ - **Differentiated.** Every unique attribute is evidenced and tied to value; the core line passes the swap test.
+ - **Specific value.** Outcomes are concrete, in customer language, quantified only where data exists.
+-- **Sharp segment.** Observable traits, a trigger event and disqualifiers; never "small businesses" or "everyone".
++- **Sharp segment.** Observable traits, a trigger event and disqualifiers; never "small businesses" or "everyone" (category-buyer mode may use "all category buyers in [area]").
+ - **Reasoned frame.** The category was chosen from alternatives considered; the style is justified and the rejected options recorded.
+ - **Evidence-led.** Verbatim VoC across 3+ sources with counts and links supports each theme.
+ - **Usable messaging.** Headline and subhead options, pillars with proof, objection lines, words to use/avoid and a pitch narrative a copywriter can ship from.
+@@ -91,10 +97,10 @@
+ - [ ] Alternatives include at least one non-product option, with evidence.
+ - [ ] Every unique attribute has evidence; parity attributes removed.
+ - [ ] Each value theme has 2+ verbatim quotes or is labelled a hypothesis.
+-- [ ] Segment has observable traits, a trigger event and disqualifiers.
++- [ ] Mode chosen with reason; segment has observable traits, a trigger event and disqualifiers.
+ - [ ] 2–3 frames considered; style chosen with rejected options and reasons.
+ - [ ] Messaging hierarchy: one-liner, 3 headlines, 3 subheads, 3 pillars with proof, objection lines, words to use/avoid.
+-- [ ] Pitch narrative in section order or 6-slide outline.
++- [ ] Pitch narrative in section order or 6-slide outline, or a skip reason (unconsidered purchase).
+ - [ ] Swap test run and passed; no banned superlatives.
+ - [ ] Confidence label on every component; validation plan with metric, volume, decision rule and dates.
+ - [ ] No invented facts; every gap marked `[NEEDS FACT: …]`.

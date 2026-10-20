@@ -1,0 +1,12 @@
+--- a/skills/plays-saas-b2b/SKILL.md
++++ b/skills/plays-saas-b2b/SKILL.md
+@@ -14,6 +14,9 @@
+ - **Evidence caveat:** most figures are self-reports or from vendors selling the channel (Dupple, Rewardful, UserGems, Crossbeam, Zapier). Plan on the low half, show grades and estimate labels, never promise vendor numbers.
+ - **2026 context:** G2 owns Capterra, Software Advice, GetApp (Feb 2026), concentrating risk. AI engines cite third-party lists and Reddit. LinkedIn TLAs boost non-employee posts. ChatGPT app directory is open.
+ - **Freemium/self-serve under ~$50/seat:** acquisition alone can't pay back. The portfolio must include the conversion engine: the activation milestone (e.g. "first form published with 10 responses"), the moment a paid limit is hit, the in-product upgrade prompt and a 3-email nudge sequence, with signup→activated→paid rates (own data first, else labelled assumptions). Prefer plays that raise seats per account (team invites, agency/partner plans) over paid ads.
++- **B2B evidence** [BK12-K8]: under ~30 customers, report counts, not rates, research every account, and use interviews or before/after instead of significance tests. Track integration and custom-work hours per customer. One customer with a large revenue share: plan a disentanglement step before scale. Mandated logins aren't satisfaction; measure real use. Capture a client baseline before deployment so ROI case studies hold; references and case studies are B2B word of mouth.
++- **Sales hires** [BK09a-K1, BK09b-K8]: context: founder-led selling first; a salesperson, outsourced SDR or appointment setter only after the owner wins deals at a stable rate and won clients succeed. Cost it from the owner's own rates in code; ramp time is an assumption.
++- **Reach** [BK10-K8]: context: "reach all category buyers" means covering the reachable account list over time, from owner-sourced or public data only. Niche positioning stays the default.
+ - **Human in the loop:** for Show HN, Reddit, PR, podcasts and creator posts the owner posts or approves personally; ClimbOS never auto-posts or impersonates.
+ 
+ ## Plays

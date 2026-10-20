@@ -1,0 +1,395 @@
+{
+ "edition": "2026-10-20",
+ "playbooks": [
+  {
+   "id": "BKP-01",
+   "title": "Name the advantage growth comes from, and test its barrier",
+   "file": "BKP-01-advantage-ledger.json",
+   "frameworks": [
+    "BK07-K1",
+    "BK07-K6",
+    "BK07-K2",
+    "BK07-K4",
+    "BK07-K7"
+   ],
+   "versions_existing": [
+    "docs/growth-intelligence/books/01_business_strategy_economics.md (section 9, candidate v2)",
+    "docs/growth-engine/book-review/BK01.md (rules 2 and 5)",
+    "shared/agents/decision.ts"
+   ]
+  },
+  {
+   "id": "BKP-02",
+   "title": "Follow-on value and high-touch renewal (switching costs without traps)",
+   "file": "BKP-02-follow-on-value.json",
+   "frameworks": [
+    "BK07-K5",
+    "BK09b-K7"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-lifecycle-email",
+    "docs/growth-expansion/blog-research/playbooks/BRP-03-package-architecture.json",
+    "skills/retention-lifecycle/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-03",
+   "title": "Customer research: who to learn from, and interviews vs survey",
+   "file": "BKP-03-customer-research-v2.json",
+   "frameworks": [
+    "BK08-K1",
+    "BK08-K3",
+    "BK12-K6"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-interviews (candidate v2)",
+    "skills/voc-research/SKILL.md",
+    "docs/growth-intelligence/books/02_research_positioning.md"
+   ]
+  },
+  {
+   "id": "BKP-04",
+   "title": "Diagnose conversion problems before prescribing fixes",
+   "file": "BKP-04-conversion-diagnosis.json",
+   "frameworks": [
+    "BK13-K1",
+    "BK13-K2",
+    "BK13-K3",
+    "BK08-K2"
+   ],
+   "versions_existing": [
+    "skills/conversion-audit/SKILL.md (candidate v2)",
+    "skills/landing-pages/SKILL.md",
+    "docs/growth-expansion/blog-research/guides/03_voc_conversion_copy.md"
+   ]
+  },
+  {
+   "id": "BKP-05",
+   "title": "Landing-page or pitch test sized from the owner's baseline",
+   "file": "BKP-05-landing-split-v2.json",
+   "frameworks": [
+    "BK13-K4",
+    "BK14-K5"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-landing-split (candidate v2)",
+    "skills/experiment-design/SKILL.md",
+    "docs/growth-expansion/blog-research/playbooks/BRP-21-experiment-trust-gates.json"
+   ]
+  },
+  {
+   "id": "BKP-06",
+   "title": "Customer-value stages and the one gap to close",
+   "file": "BKP-06-customer-value-stages.json",
+   "frameworks": [
+    "BK08-K4",
+    "BK08-K5",
+    "BK08-K6",
+    "BK08-K7",
+    "BK07-K3"
+   ],
+   "versions_existing": [
+    "docs/growth-expansion/blog-research/playbooks/BRP-07-activation-definition.json (candidate v2)",
+    "shared/agents/diagnosis.ts",
+    "shared/playbooks/contracts.ts PB-activation-repair"
+   ]
+  },
+  {
+   "id": "BKP-07",
+   "title": "Prove stickiness before scaling acquisition or optimising revenue",
+   "file": "BKP-07-stickiness-gate.json",
+   "frameworks": [
+    "BK12-K3",
+    "BK15-K4",
+    "BK12-K4",
+    "BK12-K7"
+   ],
+   "versions_existing": [
+    "shared/agents/diagnosis.ts (new stageGate field)",
+    "shared/playbooks/contracts.ts PB-paid-search-test, PB-referrals (avoid-if-leak made executable)",
+    "docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json"
+   ]
+  },
+  {
+   "id": "BKP-08",
+   "title": "One actionable metric per stage, with a sourced line in the sand",
+   "file": "BKP-08-one-metric.json",
+   "frameworks": [
+    "BK12-K1",
+    "BK12-K2",
+    "BK12-K5"
+   ],
+   "versions_existing": [
+    "shared/agents/specs.ts lintStageMetric",
+    "skills/growth-strategy/SKILL.md (North Star by stage)",
+    "docs/growth-expansion/blog-research/playbooks/BRP-18-cohort-retention.json"
+   ]
+  },
+  {
+   "id": "BKP-09",
+   "title": "Test up to three channels in parallel, then focus on results",
+   "file": "BKP-09-bullseye-channel-tests.json",
+   "frameworks": [
+    "BK15-K1",
+    "BK15-K2",
+    "BK15-K3",
+    "BK15-K6",
+    "BK15-K7",
+    "BK15-K5"
+   ],
+   "versions_existing": [
+    "skills/growth-strategy/SKILL.md step 8 (candidate v2)",
+    "shared/acquisition/scoring.ts select()",
+    "shared/playbooks/contracts.ts PB-paid-search-test",
+    "docs/growth-expansion/blog-research/playbooks/BRP-12-paid-test-vs-scale.json"
+   ]
+  },
+  {
+   "id": "BKP-10",
+   "title": "Referral and word-of-mouth with measured loop maths",
+   "file": "BKP-10-referral-calibration.json",
+   "frameworks": [
+    "BK15-K8",
+    "BK11-K5"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-referrals (candidate v2)",
+    "skills/growth-plays/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-11",
+   "title": "Is the sales pipeline the binding constraint?",
+   "file": "BKP-11-sales-pipeline-diagnosis.json",
+   "frameworks": [
+    "BK09b-K5",
+    "BK09a-K1",
+    "BK09b-K8",
+    "BK14-K6",
+    "BK12-K8"
+   ],
+   "versions_existing": [
+    "shared/agents/diagnosis.ts (new optional sales block)",
+    "docs/growth-intelligence/books/11_sales_partnerships.md",
+    "shared/playbooks/contracts.ts PB-capacity"
+   ]
+  },
+  {
+   "id": "BKP-12",
+   "title": "Cold outreach without a prospect database",
+   "file": "BKP-12-cold-outreach-v2.json",
+   "frameworks": [
+    "BK09a-K3",
+    "BK09a-K4",
+    "BK09a-K5",
+    "BK09a-K6"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-cold-outreach (candidate v2)",
+    "skills/prospecting/SKILL.md",
+    "skills/cold-outreach/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-13",
+   "title": "Warm introductions through the owner's network",
+   "file": "BKP-13-warm-intros.json",
+   "frameworks": [
+    "BK09a-K7"
+   ],
+   "versions_existing": [
+    "docs/growth-engine/book-review/BK05.md (warm intros)",
+    "shared/playbooks/contracts.ts PB-referrals"
+   ]
+  },
+  {
+   "id": "BKP-14",
+   "title": "Inbound capture and speed to lead",
+   "file": "BKP-14-inbound-response.json",
+   "frameworks": [
+    "BK09a-K8"
+   ],
+   "versions_existing": [
+    "skills/sales-follow-up/SKILL.md",
+    "skills/plays-local/SKILL.md (speed to lead)"
+   ]
+  },
+  {
+   "id": "BKP-15",
+   "title": "Live sales call: discover, qualify, demonstrate, handle objections",
+   "file": "BKP-15-live-sales-call.json",
+   "frameworks": [
+    "BK09b-K1",
+    "BK09b-K2",
+    "BK09b-K3",
+    "BK14-K4"
+   ],
+   "versions_existing": [
+    "skills/sales-follow-up/SKILL.md (new live-call section)",
+    "docs/growth-intelligence/books/11_sales_partnerships.md sections 3-5",
+    "skills/reply-handling/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-16",
+   "title": "Next steps, stalled deals and negotiation trades",
+   "file": "BKP-16-deal-follow-through.json",
+   "frameworks": [
+    "BK09b-K4",
+    "BK09b-K6"
+   ],
+   "versions_existing": [
+    "docs/growth-intelligence/books/11_sales_partnerships.md sections 6, 7, 13",
+    "skills/sales-follow-up/SKILL.md step 8"
+   ]
+  },
+  {
+   "id": "BKP-17",
+   "title": "Pitch story for considered purchases",
+   "file": "BKP-17-pitch-storyboard.json",
+   "frameworks": [
+    "BK14-K1",
+    "BK14-K2",
+    "BK14-K3",
+    "BK14-K7",
+    "BK09a-K2"
+   ],
+   "versions_existing": [
+    "skills/positioning/SKILL.md step 11 (candidate v2)",
+    "docs/growth-expansion/guides/03_positioning.md (v2 section 'From position to pitch')",
+    "docs/research/strategy-positioning.md"
+   ]
+  },
+  {
+   "id": "BKP-18",
+   "title": "Positioning mode: niche differentiation or category-buyer distinctiveness",
+   "file": "BKP-18-positioning-mode.json",
+   "frameworks": [
+    "BK10-K4",
+    "BK10-K8",
+    "BK11-K2",
+    "BK11-K8"
+   ],
+   "versions_existing": [
+    "skills/positioning/SKILL.md (mode choice)",
+    "docs/growth-expansion/guides/03_positioning.md",
+    "docs/growth-engine/book-review/BK03.md"
+   ]
+  },
+  {
+   "id": "BKP-19",
+   "title": "Consistent brand cues and reach-first media on small budgets",
+   "file": "BKP-19-brand-identity-reach.json",
+   "frameworks": [
+    "BK11-K3",
+    "BK11-K4",
+    "BK10-K5"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-social-content",
+    "skills/meta-ads/SKILL.md",
+    "docs/growth-intelligence/books/10_paid_media_cro.md"
+   ]
+  },
+  {
+   "id": "BKP-20",
+   "title": "Physical availability audit: presence, relevance, prominence",
+   "file": "BKP-20-physical-availability.json",
+   "frameworks": [
+    "BK11-K6"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-local-listing",
+    "skills/conversion-audit/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-21",
+   "title": "Retention vs acquisition: ceiling, replacement and penetration",
+   "file": "BKP-21-retention-acquisition-balance.json",
+   "frameworks": [
+    "BK10-K2",
+    "BK10-K1",
+    "BK10-K3",
+    "BK11-K1"
+   ],
+   "versions_existing": [
+    "shared/agents/diagnosis.ts (retention branch, COMPETING.retention)",
+    "skills/retention-lifecycle/SKILL.md",
+    "docs/growth-expansion/blog-research/guides/02_activation_retention_plg.md"
+   ]
+  },
+  {
+   "id": "BKP-22",
+   "title": "Price promotion break-even before discounting",
+   "file": "BKP-22-promotion-break-even.json",
+   "frameworks": [
+    "BK10-K6"
+   ],
+   "versions_existing": [
+    "skills/retention-lifecycle/SKILL.md (offers)",
+    "shared/analysis/decisions.ts (new calculator)"
+   ]
+  },
+  {
+   "id": "BKP-23",
+   "title": "Loyalty programmes judged with a holdout",
+   "file": "BKP-23-loyalty-evaluation.json",
+   "frameworks": [
+    "BK10-K7"
+   ],
+   "versions_existing": [
+    "skills/plays-local/SKILL.md (#11, #20)",
+    "skills/retention-lifecycle/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-24",
+   "title": "Guarantee design with scenario modelling",
+   "file": "BKP-24-guarantee-rollout.json",
+   "frameworks": [
+    "BK13-K6"
+   ],
+   "versions_existing": [
+    "docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json"
+   ]
+  },
+  {
+   "id": "BKP-25",
+   "title": "Two-stage launch for a new brand, location or product line",
+   "file": "BKP-25-new-brand-launch.json",
+   "frameworks": [
+    "BK11-K7"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-concierge",
+    "skills/positioning/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-26",
+   "title": "Readiness funnels and genuine urgency only",
+   "file": "BKP-26-honest-urgency-readiness.json",
+   "frameworks": [
+    "BK13-K8",
+    "BK13-K7"
+   ],
+   "versions_existing": [
+    "shared/playbooks/contracts.ts PB-lead-magnet, PB-pricing-test",
+    "skills/lead-magnets/SKILL.md"
+   ]
+  },
+  {
+   "id": "BKP-27",
+   "title": "Page structure for complex sales",
+   "file": "BKP-27-complex-sale-page.json",
+   "frameworks": [
+    "BK13-K5"
+   ],
+   "versions_existing": [
+    "skills/landing-pages/SKILL.md",
+    "docs/growth-expansion/blog-research/playbooks/BRP-14-page-question-order-and-risk.json"
+   ]
+  }
+ ]
+}

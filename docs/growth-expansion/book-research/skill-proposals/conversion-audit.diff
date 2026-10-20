@@ -1,0 +1,46 @@
+--- a/skills/conversion-audit/SKILL.md
++++ b/skills/conversion-audit/SKILL.md
+@@ -35,8 +35,10 @@
+ 
+ 3. **5-second clarity test.** From the hero alone, can a stranger say what is offered, for whom, roughly what it costs or what the next step is, and why this over the alternative? Quote the H1 and subhead and give a yes / partly / no for each of the four. Clever, vague or "we"-centred headlines fail.
+ 
+-4. **Offer.** What exactly does the buyer get, at what price, with what risk reversal (guarantee, free quote, trial, cancellation terms) and with what reason to act now? Hidden prices on a page whose visitors are price-shopping are a leak; say so and recommend showing a price, a "from" price or a range only if the owner confirms it. Urgency must be real (a genuine deadline or capacity limit).
++   **Then diagnose before prescribing** [BK13-K1, BK13-K2]. Name the evidence source: user tests, recent buyers' "what nearly stopped you", exit or on-page survey, chat, support or phone-question logs, VoC. Code reasons into problem classes with counts: unclear what it is; unclear why they need it; doubt it works; fit or compatibility; price among qualified buyers; distrust of the company; usability; wants something not offered. Steps 4–12 then check whether the page answers those classes. No evidence: give a diagnosis plan sized to traffic (3–5 hallway tests, a buyer question on the thank-you page or by email, a phone-question log). Recordings, heatmaps and surveys need owner approval, plus consent and masking where privacy law applies; suggest a survey only when expected answers, computed from traffic and a stated rate, fit the horizon. context: weight recent buyers' barriers above non-buyers' price complaints.
+ 
++4. **Offer.** What exactly does the buyer get, at what price, with what risk reversal (guarantee, free quote, trial, cancellation terms) and with what reason to act now? Hidden prices on a page whose visitors are price-shopping are a leak; say so and recommend showing a price, a "from" price or a range only if the owner confirms it. Urgency must be real (a genuine deadline or capacity limit). Recommend a guarantee only when risk or credibility is a top diagnosed problem, typed to the fear (performance, satisfaction, price match), owner-confirmed, with refund exposure checked in code; never present statutory rights as a special guarantee [BK13-K6, CH-C5].
++
+ 5. **Proof hierarchy.** Inventory every proof element and rank it: (1) verifiable number tied to a source; (2) named customer quote with permission; (3) demonstration or mechanism; (4) guarantee or risk reversal; (5) credentials or awards; (6) unspecific superlatives (not proof). Check that proof sits next to the claim it supports and that the strongest proof appears earliest.
+ 
+ 6. **Objection coverage.** Take the top 3–5 objections from the VoC bank (or, without VoC, from reviews and the business type) and find where each is answered. Map each objection to the section where it naturally arises (price near the CTA, area served near the booking form, setup effort near "how it works").
+@@ -60,6 +62,7 @@
+     - **Test:** big swings where the right answer is uncertain (new headline angle, new offer, price display). Hand them to experiment-design with a pre-registered rule.
+     - **Later:** minor polish.
+     Cap the list at 12 findings; lead with the top 3.
++    Each fix-now or test item cites its problem class and count; a remedy matching no diagnosed problem goes to Later unless it's an observable blocker [BK13-K1]. Order: blockers, then comprehension and usability, then persuasion classes; within each, by reach × mention share, computed in code [BK13-K3]. context: if the diagnosis says demand binds, say page work is not the first lever.
+ 
+ 15. **Write each fix in full:** location; what's wrong (quoted or observed); why it costs conversions here (principle plus evidence: VoC count, traffic source, data); the exact change (rewritten copy using only confirmed facts or `[NEEDS FACT]`); expected impact as a hypothesis ("likely to raise form starts from ad traffic because the H1 will repeat the ad's 'same-day' promise"); effort in hours; how to verify (metric, test or check).
+ 
+@@ -68,7 +71,7 @@
+ ## Quality bar
+ 
+ - **Context first:** page job, traffic source and awareness stage drive every judgement.
+-- **Evidence per finding:** a quote or observation from the page, plus VoC, data or a stated principle.
++- **Evidence per finding:** a quote or observation from the page, plus a diagnosed problem class, VoC, data or a stated principle.
+ - **Observed vs inferred:** anything not seen or measured is labelled, with the check that would confirm it.
+ - **Ranked:** blockers first, top 3 named, fix/test/later split, at most 12 items.
+ - **Ready to ship:** fixes include the exact replacement copy or change, not "improve the headline".
+@@ -83,12 +86,14 @@
+ - Recommend dark patterns: fake countdowns or scarcity, hidden fees revealed at checkout, pre-ticked consent boxes, confirmshaming, review gating, forced account creation without need.
+ - Recommend removing legally required information (prices including mandatory fees where required, cancellation rights, privacy notices).
+ - Give generic best-practice lists unconnected to this page ("add social proof", "use a strong CTA").
++- Prescribe testimonials, guarantees, urgency or a new headline with no diagnosed problem behind them.
+ - Recommend A/B tests the page's traffic cannot complete.
+ - Bury the biggest leak under twenty cosmetic notes.
+ 
+ ## Checklist before answering
+ 
+ - [ ] Page type, single job, main traffic source and awareness stage stated.
++- [ ] Evidence source named and reasons coded into problem classes with counts, or a diagnosis plan given.
+ - [ ] Message match checked against the actual ad or source copy (or flagged as unavailable).
+ - [ ] 5-second test answered for what / who / price-or-next-step / why-this, with the hero quoted.
+ - [ ] Offer, proof hierarchy, objections, CTA, friction, mobile, speed, trust and tracking each assessed or marked "not verified".

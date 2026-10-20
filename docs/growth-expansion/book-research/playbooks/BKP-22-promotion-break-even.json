@@ -1,0 +1,136 @@
+{
+ "id": "BKP-22",
+ "version": 1,
+ "slug": "promotion-break-even",
+ "title": "Price promotion break-even before discounting",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "origin": "ClimbOS synthesis (original proposal) from the member frameworks; author guidance is cited by finding id, proposed rules are labelled 'proposed'.",
+ "decision_task": "Whether a discount can pay for itself: the sales lift needed is discount / (margin - discount).",
+ "business_types": [
+  "ecommerce",
+  "retail",
+  "local services",
+  "consumer subscriptions"
+ ],
+ "lifecycle_stages": [
+  "any"
+ ],
+ "applies_when": [
+  "Owner proposes a discount or sale"
+ ],
+ "exclusions": [
+  "Discount at or above margin (always loses)"
+ ],
+ "required_inputs": [
+  "Contribution margin (owner-confirmed)",
+  "Discount"
+ ],
+ "evidence_requirements": [
+  "contribution margin at normal price",
+  "discount depth",
+  "expected volume lift (own history or a range)",
+  "share of promo buyers who bought before",
+  "whether rivals usually match"
+ ],
+ "missing_data_behavior": [
+  "No margin: refuse the calculation and ask for it."
+ ],
+ "decision_branches": [
+  {
+   "if": "Required lift is large",
+   "then": "Prefer non-price offers."
+  },
+  {
+   "if": "Promotion mostly reaches existing buyers",
+   "then": "Expect little new-buyer gain."
+  }
+ ],
+ "implementation_steps": [
+  "Compute required lift (code)",
+  "Compare with expected lift; if unknown use elasticity -2.5 as a labelled central guess",
+  "Subtract a post-promo dip if stockpiling is possible",
+  "Prefer shallow cuts and feature/visibility support over depth",
+  "Report incremental contribution, not volume"
+ ],
+ "dependencies": [
+  "owner confirms margin; ClimbOS never invents an offer"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "forgone margin",
+  "labor": "low",
+  "capability": "sales by day and by customer",
+  "measurement": "baseline vs promo period; share of promo buyers who are new"
+ },
+ "metrics": [
+  "incremental contribution",
+  "share of promo buyers new to the brand",
+  "post-promo dip",
+  "promo frequency"
+ ],
+ "guardrails": [
+  "No fake 'was' prices.",
+  "No discount in a first lifecycle touch (agrees with skills/retention-lifecycle)",
+  "No fake urgency",
+  "Owner confirms every offer"
+ ],
+ "alternatives_when_constrained": [
+  "No margin data: block the promotion recommendation until the owner gives it",
+  "No history: run one shallow, short test with a clear baseline window"
+ ],
+ "stop_conditions": [
+  "Stop repeating a promo whose incremental contribution was negative",
+  "Review promo frequency quarterly"
+ ],
+ "review_triggers": [
+  "Owner's numbers or business type change",
+  "A dated benchmark this playbook mentions is superseded",
+  "Ignoring baseline sales sold at a discount",
+  "Counting promo volume as new customers"
+ ],
+ "rule_classes": {
+  "economic_feasibility": [
+   {
+    "rule": "proposed rule: add promoBreakEven(margin, discount) to shared/analysis/decisions.ts returning required lift = d/(m-d) and blocking promos where d >= m",
+    "from": "BK10-K6"
+   }
+  ],
+  "contextual_heuristic": [
+   {
+    "rule": "proposed rule: a promotion play may not claim new-customer acquisition for an established brand without new-buyer data",
+    "from": "BK10-K6"
+   },
+   {
+    "rule": "proposed rule: elasticity -2.5 is only a labelled fallback, never a forecast",
+    "from": "BK10-K6"
+   }
+  ],
+  "missing_prerequisite": [
+   {
+    "rule": "proposed rule: no promotion recommendation without owner-confirmed margin",
+    "from": "BK10-K6"
+   }
+  ]
+ },
+ "versions_existing": [
+  "skills/retention-lifecycle/SKILL.md (offers)",
+  "shared/analysis/decisions.ts (new calculator)"
+ ],
+ "reconciliation_note": "Book table 10.2 has an arithmetic error at 40% margin and 5% discount (14.3%, not 10%).",
+ "member_frameworks": [
+  "BK10-K6"
+ ],
+ "source_references": [
+  "BK10-F27",
+  "BK10-F28",
+  "BK10-F29",
+  "BK10-F30",
+  "BK10-F34"
+ ],
+ "hypothetical_evaluation_cases": [
+  "EV-BK10-K6-1",
+  "EV-BK10-K6-2",
+  "EV-BK10-K6-3",
+  "EV-BK10-K6-4"
+ ]
+}

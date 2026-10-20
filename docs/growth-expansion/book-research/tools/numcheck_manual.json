@@ -1,0 +1,16 @@
+{"note": "Formulas whose text isn't plain arithmetic. Each gets an explicit expression (checked by validate.py) or an engine/symbolic check with how it was verified.",
+ "entries": [
+  {"formula": "is N*delta < c: 3.8 < 5 (1 = true)", "expr": "190*0.02 < 5"},
+  {"formula": "hypothetical: 500 invited x 0.10 response", "expr": "500*0.10"},
+  {"formula": "hypothetical: 500 invited x 0.15 response", "expr": "500*0.15"},
+  {"formula": "hypothetical: 15 interviews needed / 0.25 acceptance rate = invites", "expr": "15/0.25"},
+  {"formula": "owner_hours = accounts*0.25 + meetings*2 (hypothetical: 50 accounts at 15 min research, 10 meetings at 2 h)", "expr": "50*0.25 + 10*2"},
+  {"formula": "expected_replies = contacts*reply_rate (hypothetical 100*0.03)", "expr": "100*0.03"},
+  {"formula": "max first-day sends = WARMUP.start", "engine": "shared/outbound/sending.ts WARMUP.start", "expected_from_code": 10},
+  {"formula": "expected value of prep per call = deal_value x (win_after - win_before), hypothetical deal_value=20000, 0.25 vs 0.15", "expr": "20000*(0.25-0.15)"},
+  {"formula": "monthly answers = 40 visits/week x 4 weeks x 0.03", "expr": "40*4*0.03"},
+  {"formula": "deals with DIY on shortlist / deals", "expr": "9/10", "inputs": "case inputs: spreadsheet/DIY on 9 of last 10 shortlists"},
+  {"formula": "deals with BigCo on shortlist / deals", "expr": "0/10", "inputs": "case inputs: BigCo on 0 of last 10 shortlists"},
+  {"formula": "themes after moving parity items", "expr": "3-1", "inputs": "3 value themes; SOC 2 is parity (all competitors have it) so moves to objections"},
+  {"formula": "sampleSize(baseline 0.4, minDetectable 0.15) perArm", "engine": "shared/analysis/decisions.ts sampleSize({baseline:0.4,minDetectable:0.15}).perArm", "expected_from_code": 173}
+ ]}

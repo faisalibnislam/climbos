@@ -1,0 +1,45 @@
+--- a/skills/copy-fundamentals/SKILL.md
++++ b/skills/copy-fundamentals/SKILL.md
+@@ -27,7 +27,7 @@
+ ## Procedure
+ 
+ 1. **Settle the five decisions before writing a word.**
+-   - **One reader:** a specific person in a specific moment, not a demographic. "An office manager booking lunch for a 14-person all-hands on Thursday", not "businesses". Pull this from the best-fit customer and trigger event in the positioning.
++   - **One reader:** a specific person in a specific moment, not a demographic. "An office manager booking lunch for a 14-person all-hands on Thursday", not "businesses". Pull this from the best-fit customer and trigger event in the positioning. The moment is a buying situation (category entry point: when, where, with whom, why) [BK11-K2].
+    - **One job:** the single action or belief change this piece is for (book, save, reply, click to the menu, believe that X is possible).
+    - **Awareness level:** unaware, problem-aware, solution-aware, product-aware or most aware. Cold readers get a problem-first or scene-first opening; warm readers get the offer early. Most weak copy pitches a product to people who do not yet feel the problem.
+    - **Proof inventory:** list every number, name, review, guarantee and process detail you are allowed to use for this point. Rank them by the proof hierarchy below.
+@@ -73,13 +73,15 @@
+ - **"So what" chain:** attribute, then what it enables, then why this reader cares (time, money, risk, status, peace of mind). Stop at the reader's reason and write that.
+ - **Concrete-noun count:** each paragraph needs at least one number, name, time, place or physical object.
+ - **Mechanism test:** does the reader learn *how*, not just *that*?
++- **So what? / Yeah, right? test** [BK13-F26]: where a reader would say "so what?", add the benefit; where they'd say "yeah, right", add the feature, mechanism or proof.
+ 
+ ### Readability and rhythm
+ 
+ - Aim for grade 5–8 reading level for consumer audiences; B2B can carry its own jargon if the reader uses it, but no more. Pages written at grade 5–7 have converted at roughly double the median of college-level pages in published benchmark data.
+ - Vary sentence length on purpose. Mix a four-word sentence with a twenty-word one. A run of same-length sentences is an AI tell.
+ - One to three sentences per paragraph on screens. Paragraphs must connect: each should follow from the one before ("so", "because", "which meant", "since then"). Disconnected one-liners are not short paragraphs; they are a list of slogans.
+-- Prefer verbs to nouns ("we check every label" beats "label verification").
++- Prefer verbs to nouns ("we check every label" beats "label verification"). Reach the verb early; replace nominalisations ("make a decision" → "decide") [BK13-F23].
++- Test with a real reader: can a stranger say back what it offers? If not, fix clarity before persuasion. Drafting aid: record yourself explaining the offer, then edit the transcript [BK13-F23].
+ - Count "you/your" against "we/our". In ads and landing copy, "you" leads. In a founder story, "I" is fine because the story is the proof.
+ - Format only when it helps reading: no headers or bold in a 150-word post, no bullets for things that should be sentences.
+ 
+@@ -120,6 +122,8 @@
+ 
+ - Each piece names its reader and angle in one line before you draft it (keep that to yourself; write only the piece).
+ - Vary the format too (carousel vs single image vs reel; story vs list vs question).
++- **Rotate buying situations** [BK11-K2]: one situation per piece; across a set, cover several common ones. context: a new brand leads with common situations, not a rare "ownable" one.
++- **Vary the angle, keep the identity** [BK11-K3, BK10-K4]: make the business identifiable early and more than once (the name or a declared asset: colour, face, recurring format), with the same cues across the set. Default for consumer and repeat-purchase categories. context: niche B2B, capacity-limited and early-stage businesses keep the name clear early; building distinctive assets is optional.
+ - Use facts as support for the angle, not as the angle itself. A post that only lists features is the weakest kind.
+ - **Serve the goal first.** At least one piece sells the goal's own offer directly (the goal is holiday pre-orders → one piece is the holiday pre-order post, with how to order). Never spend the whole set on side topics.
+ - **Fact → benefit.** Every fact is followed by what it means for the reader ("54× smaller script" → "pages load faster, so fewer visitors leave").
+@@ -154,6 +158,7 @@
+ ## Checklist before answering
+ 
+ - [ ] In a set, every piece has a different reader-angle and the facts serve the angle.
++- [ ] The business is identifiable early (name or declared asset), with the same cues across the set.
+ 
+ - [ ] I can name the one reader, their moment, the one job and the awareness level.
+ - [ ] The piece makes one idea, statable in under 12 words.

@@ -1,0 +1,29 @@
+--- a/skills/competitor-teardown/SKILL.md
++++ b/skills/competitor-teardown/SKILL.md
+@@ -26,14 +26,15 @@
+    - **Direct (3–5):** the ones the best-fit buyer actually compares. Find them through high-intent searches (`[service] [city]`, `best [category] for [segment]`, `[business] alternatives`, `[category] vs`), "switched from" mentions in reviews, and category directories (G2 category pages, Clutch, Checkatrade, app-store "similar apps", Amazon search for the product type). For local services: the top map-pack results for the 3 highest-intent queries in the service area.
+    - **Substitutes (2–3), at least one non-product:** DIY, spreadsheet, hiring someone, an incumbent tool used "well enough", a marketplace (Upwork, Etsy, Amazon), or doing nothing. Source them from VoC.
+    - **Aspirational (1–2):** players who set buyer expectations (the national brand, the well-funded app) even if the business can't match them.
+-   Exclude giants the buyer never mentions. State why each one is in the set.
++   Exclude giants the buyer never mentions. State why each one is in the set and its class: incumbent, like-model rival or functional substitute [BK07-K1].
++   context: in consumer and local categories, expect switchers mostly from the biggest rivals, in proportion to size; flag a "closest rival" only with switching evidence. Rank by public size proxies (review count, map-pack rank), never estimates [BK11-K8]. Niche B2B: follow the buyer's shortlist.
+ 
+ 2. **Messaging teardown (each direct competitor).** Capture verbatim with the URL and date: hero headline, subhead, category label used, who it says it's for, top 3 claims, proof types shown (logos, numbers, reviews, awards), primary CTA, risk reducers (trial, guarantee, free quote). Then classify:
+    - Positioning style: head-to-head, niche (big fish, small pond), or category creation.
+    - Main value theme: price, speed, quality, expertise, convenience or specialisation.
+    - 10-second clarity: could a stranger say what it is, who it's for and why it's better? Yes / partly / no, with the reason.
+ 
+-3. **Pricing and offer teardown.** Record: pricing model (per seat, usage, flat, per project, retainer, per job, per head), entry price, the anchor tier (the one designed to look like the obvious choice), free trial / freemium / free quote, contract length and cancellation terms, guarantees, discounts, bundles, lead magnet. Normalise to one comparable unit (per seat per month, per typical job, per order) and show the maths. Hidden pricing is itself a signal; note it.
++3. **Pricing and offer teardown.** Record: pricing model (per seat, usage, flat, per project, retainer, per job, per head), entry price, the anchor tier (the one designed to look like the obvious choice), free trial / freemium / free quote, contract length and cancellation terms, guarantees, discounts, bundles, lead magnet. Normalise to one comparable unit (per seat per month, per typical job, per order) and show the maths. Hidden pricing is itself a signal; note it. Record what each would lose by copying our model (revenue tied to fees, contracts or a channel), from public evidence only; this feeds the counter-positioning test [BK07-K4].
+ 
+ 4. **Channel footprint (observable evidence only).**
+    - **Search:** which high-intent queries they rank for in the results you saw, whether they have comparison, alternatives, pricing or location pages, and whether they are named in AI answers if you checked (state the prompt and date).
+@@ -61,7 +62,7 @@
+    - Price (normalised, with source and date) or "not published".
+    - Weak spots from reviews, with counts.
+    - Where they are genuinely better (be honest; this tells the owner when to walk away or refer).
+-   - Our position against them in one sentence.
++   - Our position against them in one sentence, and whether our advantage has a barrier against them or is copyable [BK07-K1].
+    - A **landmine question**: a fair, verifiable question a buyer can ask that exposes the weak spot ("Is the call-out fee included in the quote?"). It must be true of the competitor based on public evidence, not insinuation.
+ 
+ 10. **Summarise for the owner.** Top 3 gaps ranked by evidence strength and fit with what the business can actually deliver, table-stakes features or proof the business is missing (parity it must reach), and what not to copy.
