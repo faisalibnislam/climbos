@@ -225,3 +225,24 @@ describe("experiment feasibility uses the population's own denominator (Kohavi C
     expect(issues.map((i) => i.message).join(" ")).toMatch(/visitor → purchase/);
   });
 });
+
+describe("follow-up reading (ADM exercise sets)", () => {
+  it("huge counts don't rank two links that convert within 10% of each other", () => {
+    const d = diagnose({ funnel: { leads: 100_000, activated: 30_000, newCustomers: 8_850 }, types: ["b2b_saas"] });
+    expect(d.status).toBe("ambiguous");
+  });
+  it("'behind' averages over the plan's own range: 1 customer against an uncertain 2–10 isn't flagged", () => {
+    // Thin step (1 of 20), so the count decides: P(X ≤ 1) is 0.017 at λ = 6 alone, 0.14 averaged over 2, 6 and 10.
+    const m = { weeklyReach: 10, steps: [{ name: "paid", rate: 0.06 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 };
+    const a = playActuals(m, [0, 1].map((w) => ({ weekStart: w * 604_800_000, reach: 10, steps: [w === 0 ? 1 : 0], spendUsd: 0, ownerHours: 0 })), { p10: 13, p50: 39, p90: 65 }, 13);
+    expect(a.expectedByNow).toMatchObject({ p10: 2, p50: 6, p90: 10 });
+    expect(a.status).not.toBe("behind");
+  });
+  it("selection ranks on expected customers and the alternative must beat the choice on something", () => {
+    const skewed = play("Skewed", { monthlySpendUsd: 100, ownerHoursPerWeek: 1, steps: [{ name: "lead", rate: 0.02, low: 0.01, high: 0.3 }, { name: "paid", rate: 0.2 }] });
+    const steady = play("Steady", { monthlySpendUsd: 100, ownerHoursPerWeek: 1, steps: [{ name: "lead", rate: 0.04 }, { name: "paid", rate: 0.2 }] });
+    const pick = selectPortfolio({ economics: econ, plays: [skewed, steady] }, { monthlyBudgetUsd: 100 })!;
+    expect(pick.selected).toEqual(["Skewed"]);
+    expect(pick.expectedCustomers).toBeGreaterThan(pick.customers);
+  });
+});

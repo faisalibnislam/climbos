@@ -335,6 +335,22 @@ export function combinePlays(values: number[], stages: string[]): number {
   return portfolioCustomers([...free, ...groups.values()], PLAY_OVERLAP) ?? 0;
 }
 
+/** Each play's seeded draws, shuffled with its own seed so plays pair at random (independent); null when no play has ranges. */
+function pairedDraws(ps: PlayLike[]): number[][] | null {
+  const draws = ps.map((p) => simulateSamples(p.model, (p.horizonDays > 0 ? p.horizonDays : 90) / 7, `${p.name}|${p.kind}`));
+  if (draws.every((d) => typeof d === "number")) return null;
+  return draws.map((d, j) => {
+    if (typeof d === "number") return new Array<number>(RUNS).fill(d);
+    const rng = createRng(seedOf(`pair|${ps[j].name}|${j}`));
+    const a = d.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const k = Math.floor(rng.next() * (i + 1));
+      [a[i], a[k]] = [a[k], a[i]];
+    }
+    return a;
+  });
+}
+
 /**
  * The portfolio's new customers over one shared horizon (each play re-run at that horizon, so periods aren't mixed).
  * P50 combines the most-likely counts (the same basis as cost per customer). P10/P90 come from joint seeded draws,
@@ -346,21 +362,9 @@ export function portfolioRange(out: { economics: Economics; plays: PlayLike[] },
   const stages = ps.map(stageOfPlay);
   const heads = ps.map((p) => playMaths(p, out.economics).headline);
   const p50 = combinePlays(heads.map((h) => h.p50), stages);
-  const draws = ps.map((p) => simulateSamples(p.model, (p.horizonDays > 0 ? p.horizonDays : 90) / 7, `${p.name}|${p.kind}`));
-  if (draws.every((d) => typeof d === "number")) return { p10: Math.min(p50, combinePlays(heads.map((h) => h.p10), stages)), p50, p90: Math.max(p50, combinePlays(heads.map((h) => h.p90), stages)) };
-  // Independent draws: shuffle each play's sorted samples with its own seed so draws pair at random.
-  const n = RUNS;
-  const cols = draws.map((d, j) => {
-    if (typeof d === "number") return new Array<number>(n).fill(d);
-    const rng = createRng(seedOf(`pair|${ps[j].name}|${j}`));
-    const a = d.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const k = Math.floor(rng.next() * (i + 1));
-      [a[i], a[k]] = [a[k], a[i]];
-    }
-    return a;
-  });
-  const totals = Array.from({ length: n }, (_, i) => combinePlays(cols.map((c) => c[i]), stages)).sort((a, b) => a - b);
+  const cols = pairedDraws(ps);
+  if (!cols) return { p10: Math.min(p50, combinePlays(heads.map((h) => h.p10), stages)), p50, p90: Math.max(p50, combinePlays(heads.map((h) => h.p90), stages)) };
+  const totals = Array.from({ length: RUNS }, (_, i) => combinePlays(cols.map((c) => c[i]), stages)).sort((a, b) => a - b);
   return { p10: Math.min(p50, quantile(totals, 0.1)), p50, p90: Math.max(p50, quantile(totals, 0.9)) };
 }
 
@@ -370,7 +374,9 @@ export interface PortfolioChoice {
   customers: number;
   spendUsdMonth: number;
   ownerHoursWeek: number;
-  /** Contribution in the horizon minus cost (null when what a customer is worth is unknown; then customers decide). */
+  /** Mean customers over the joint draws (ranking basis); `customers` is the most-likely total shown in the plan. */
+  expectedCustomers: number;
+  /** Expected contribution in the horizon minus cost (null when what a customer is worth is unknown; then expected customers decide). */
   netUsd: number | null;
   /** Every drafted play fits together. */
   allFit: boolean;
@@ -396,7 +402,18 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   const value = customerValue(out.economics);
   const capLimit = limits.newCustomersPerMonth !== undefined ? limits.newCustomersPerMonth * (h / 30) : undefined;
   const losers = new Set(ms.flatMap((m, i) => (m.profitable === false && ps[i].kind !== "moonshot" ? [i] : [])));
-  type Opt = { idx: number[]; customers: number; spend: number; hours: number; net: number | null; cost: number };
+  // Sets are ranked on expected (mean) customers over the joint draws, not the most-likely point: skewed ranges matter (Kochenderfer Ex 4.1, 6.5–6.7).
+  const hp = ps.map((p) => ({ ...p, horizonDays: h }));
+  const cols = pairedDraws(hp);
+  const STRIDE = 4;
+  const expected = (idx: number[]) => {
+    if (!cols) return combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
+    let s = 0;
+    let n = 0;
+    for (let d = 0; d < RUNS; d += STRIDE, n++) s += combinePlays(idx.map((i) => cols[i][d]), idx.map((i) => stages[i]));
+    return s / n;
+  };
+  type Opt = { idx: number[]; customers: number; expectedCustomers: number; spend: number; hours: number; net: number | null; cost: number };
   const opts: Opt[] = [];
   for (let mask = 1; mask < 1 << ps.length; mask++) {
     const idx = ps.map((_, i) => i).filter((i) => mask & (1 << i));
@@ -408,16 +425,18 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     if (limits.monthlyBudgetUsd !== undefined && spend > limits.monthlyBudgetUsd * 1.001) continue;
     if (limits.ownerHoursPerWeek !== undefined && hours > limits.ownerHoursPerWeek + 0.01) continue;
     if (capLimit !== undefined && customers > capLimit * 1.001) continue;
-    opts.push({ idx, customers, spend, hours, cost, net: value === null ? null : customers * value - cost });
+    const expectedCustomers = expected(idx);
+    opts.push({ idx, customers, expectedCustomers, spend, hours, cost, net: value === null ? null : expectedCustomers * value - cost });
   }
-  const score = (o: Opt) => (o.net ?? o.customers);
+  const score = (o: Opt) => (o.net ?? o.expectedCustomers);
   opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
   const best = opts[0];
   const leftWhy = (i: number) => (losers.has(i) ? "loses money at its most-likely rates" : "doesn't fit with the others under the budget, hours or capacity");
   const all = ps.map((_, i) => i);
-  if (!best) return { selected: [], customers: 0, spendUsdMonth: 0, ownerHoursWeek: 0, netUsd: null, allFit: false, left: all.map((i) => ({ name: ps[i].name, why: leftWhy(i) })), runnerUp: null, basis: "No play fits the limits on its own." };
+  if (!best) return { selected: [], customers: 0, spendUsdMonth: 0, expectedCustomers: 0, ownerHoursWeek: 0, netUsd: null, allFit: false, left: all.map((i) => ({ name: ps[i].name, why: leftWhy(i) })), runnerUp: null, basis: "No play fits the limits on its own." };
   const key = (o: Opt) => o.idx.join(",");
-  const runner = opts.find((o) => key(o) !== key(best)) ?? null;
+  // The strongest alternative must beat the choice on something (more customers, less cash or fewer hours); a set worse on every count isn't a trade-off (Kochenderfer Ex 14.5).
+  const runner = opts.find((o) => key(o) !== key(best) && (o.expectedCustomers > best.expectedCustomers + 1e-9 || o.spend < best.spend - 1e-9 || o.hours < best.hours - 1e-9)) ?? null;
   return {
     selected: best.idx.map((i) => ps[i].name),
     customers: best.customers,
@@ -427,7 +446,8 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     allFit: best.idx.length === ps.length,
     left: all.filter((i) => !best.idx.includes(i)).map((i) => ({ name: ps[i].name, why: leftWhy(i) })),
     runnerUp: runner ? { selected: runner.idx.map((i) => ps[i].name), customers: runner.customers, netUsd: runner.net } : null,
-    basis: value === null ? "Ranked by customers (what a customer is worth is unknown)." : "Ranked by contribution in the horizon minus cost, at most-likely rates.",
+    expectedCustomers: best.expectedCustomers,
+    basis: value === null ? "Ranked by expected customers over the input ranges (what a customer is worth is unknown)." : "Ranked by expected contribution in the horizon minus cost, over the input ranges.",
   };
 }
 

@@ -12,7 +12,7 @@ import { betaPosterior, poissonCdf, probBelow } from "../analysis/bayes";
  * - Time zero (Hernán & Robins Ch 22): weeks before the play started aren't its results.
  * - Missing weeks are unknown, not zero (Ch 8 selection; Ch 19 loss to follow-up): no "ahead" while the log has gaps.
  * - Noise (Downey Ch 7, Kochenderfer §4.2): "behind" needs the count to be unlikely under the plan
- *   (Poisson, P ≤ 5% at the expected count), not just below P10; 2 customers against 4 expected is normal noise.
+ *   (Poisson, P ≤ 5% averaged over the plan's range) or a leading step that is clearly short; 2 customers against 4 expected is normal noise.
  */
 const WEEK = 7 * 86_400_000;
 
@@ -76,12 +76,14 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
   const f = Math.min(1, weeks / Math.max(1, horizonWeeks));
   const expectedByNow = { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f };
   // Behind only when the count is unlikely under the plan (not just below P10), and the leading step agrees.
-  const lam = expectedByNow.p50;
-  const surprisinglyLow = lam > 0 && poissonCdf(customers, lam) <= 0.05;
-  const surprisinglyHigh = lam > 0 ? 1 - poissonCdf(customers - 1, lam) <= 0.05 : customers > 0;
+  // The plan's own rate is uncertain too (Kochenderfer Ex 4.1): average the Poisson tail over its P10/P50/P90.
+  const lams = [expectedByNow.p10, expectedByNow.p50, expectedByNow.p90].filter((l) => l > 0);
+  const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
+  const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
+  const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
   const gaps = weeksSinceStart > weeks;
   const status: PlayActuals["status"] =
-    weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh && !gaps ? "ahead" : customers < expectedByNow.p10 && surprisinglyLow && leadingBehind(steps) ? "behind" : "on_track";
+    weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh && !gaps ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
   return {
     weeks,
     reach,
@@ -109,11 +111,11 @@ export function stepTooThin(s: Pick<StepActual, "planned" | "successes" | "trial
   return !stepClearlyShort(s) && probBelow(betaPosterior(s.successes, s.trials), s.planned * 0.5) >= 0.1;
 }
 
-/** The leading step agrees the play is behind: the first step that can be judged is clearly short (when none can, customers decide). */
-function leadingBehind(steps: StepActual[]): boolean {
+/** The first step that can be judged: clearly short, fine, or none judgeable yet ("thin": then the customer count decides). */
+function leading(steps: StepActual[]): "short" | "ok" | "thin" {
   const s = steps.find((x) => !stepTooThin(x));
-  if (!s) return true;
-  return stepClearlyShort(s);
+  if (!s) return "thin";
+  return stepClearlyShort(s) ? "short" : "ok";
 }
 
 /** One line per play for the next plan's brief: observed counts are first-party facts (grade A). */

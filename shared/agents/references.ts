@@ -98,9 +98,11 @@ export const REFERENCES = {
  */
 export const DECISION_THRESHOLDS = {
   id: "DT-posterior-verdicts",
-  version: 1,
+  version: 2,
   weakAt: 0.9,
   preferAt: 0.8,
+  /** Two links within this relative gap aren't ranked, however large the counts. */
+  materialGap: 0.1,
   rationale: "Kochenderfer et al. Ch 6 (choose by expected consequences) and Downey Ch 4 (small samples are wide): a point rate below a reference isn't evidence it is below. 90% and 80% are ClimbOS choices, not book values.",
   class: "strategic_preference" as RuleClass,
   reviewed: REVIEWED,

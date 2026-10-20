@@ -249,8 +249,11 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
       missing.push("purchases from recent leads (the period is shorter than the sales cycle)");
       return out("unknown", "insufficient_evidence", [a, c]);
     }
-    if (pAct >= T.preferAt) return out("activation", "supported", [a, c]);
-    if (1 - pAct >= T.preferAt) return out("conversion", "supported", [c, a]);
+    // Material too: with huge counts a half-point gap is "certain" but not a reason to pick one link (Kochenderfer Ex 19.3).
+    const material = Math.abs(act.rate! - buyFromActive.rate!) / Math.max(act.rate!, buyFromActive.rate!, 1e-9) >= T.materialGap;
+    if (material && pAct >= T.preferAt) return out("activation", "supported", [a, c]);
+    if (material && 1 - pAct >= T.preferAt) return out("conversion", "supported", [c, a]);
+    if (!material) missing.push("nothing: the two links convert within 10% of each other, so neither is clearly the weak one; compare the cost and evidence of fixing each");
     missing.push("more leads through both steps: the two links can't be told apart yet");
     return out("unknown", "ambiguous", pAct >= 0.5 ? [a, c] : [c, a]);
   }
