@@ -29,7 +29,8 @@ describe("Climb AI tools", () => {
   it("every read tool returns real data from the functions it wraps", async () => {
     const t = setup();
     const w = await demo(t, "climb-read@example.com");
-    for (const tool of CLIMB_TOOLS.filter((x) => x.risk === "read" && x.name !== "get_job" && x.name !== "get_draft")) {
+    // Pure tools (calculators) have no workspace data to wrap; they have their own unit tests.
+    for (const tool of CLIMB_TOOLS.filter((x) => x.risk === "read" && !x.local && x.name !== "get_job" && x.name !== "get_draft")) {
       const out = await tool.run!(w.caller, w.slug, tool.input.parse({}) as never);
       expect(out, tool.name).toBeTruthy();
     }

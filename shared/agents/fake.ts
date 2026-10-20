@@ -120,7 +120,12 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month." }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
     // Growth plan: a dated action, not only measurement, and a route to the page (plan lint: never data-only, distribution).
-    const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown; channels?: { cites?: string[] }[]; audiences?: { cites?: string[] }[] };
+    const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown; channels?: { cites?: string[] }[]; audiences?: { cites?: string[] }[]; experiments?: { population?: string; durationDays?: number }[] };
+    // A split or holdout test says how many are eligible (plan lint: experiment feasibility).
+    if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of plan.experiments ?? []) if (x && typeof x === "object") {
+        x.population = "About 1,500 eligible visitors a week (estimate)";
+        x.durationDays = 14;
+      }
     // Cites must resolve to a fact or a page the research read; the fake has neither, so it cites nothing.
     if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of [...(plan.channels ?? []), ...(plan.audiences ?? [])]) if (x && typeof x === "object") x.cites = [];
     if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];

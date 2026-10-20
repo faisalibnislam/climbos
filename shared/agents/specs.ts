@@ -8,6 +8,7 @@ import type { GoalGap, GoalTarget } from "./goal";
 import type { PlanConstraints } from "./types";
 import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
+import { sampleSize } from "../analysis/decisions";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -824,6 +825,47 @@ export function lintCites(out: { channels: { name: string; priority: number; cit
   return issues;
 }
 
+/** "about 400 visitors a week", "1,200 trial users": the first count in a population, and whether it is per week or per month. */
+function eligibleCount(population: string): { n: number; per: "week" | "month" | "total" } | null {
+  const m = population.replace(/(\d),(\d{3})/g, "$1$2").match(/(\d+(?:\.\d+)?)\s*(k)?\b/i);
+  if (!m) return null;
+  const n = Number(m[1]) * (m[2] ? 1000 : 1);
+  const per = /\b(a|per|each|every)\s+week|\bweekly\b|\/\s?w(ee)?k/i.test(population) ? "week" : /\b(a|per|each|every)\s+month|\bmonthly\b|\/\s?mo(nth)?\b/i.test(population) ? "month" : "total";
+  return { n, per };
+}
+
+/** Assumed big-swing test for the feasibility gate: 10% → 15% (a 50% relative lift). Generous on purpose: only clearly impossible tests fail. */
+const FEASIBILITY_BASELINE = 0.1;
+const FEASIBILITY_MDE = 0.05;
+/** "Stop when it's significant": peeking, which makes a fixed-horizon p-value meaningless (BK06 Ch 3). */
+const PEEKING = /\b(as soon as|once|when|until)\b[^.]{0,40}\bsignifican/i;
+
+/**
+ * Expansion slice 3 (BK06 Ch 2, 3, 10–11; BK04 card requirements): an A/B or
+ * holdout test must name how many are eligible, be able to finish in its
+ * duration even for a big swing, and not stop on significance. Otherwise use
+ * a before/after (labelled observational), interviews or an assisted pilot.
+ */
+export function lintExperimentFeasibility(out: { experiments?: { name: string; method: string; population: string; durationDays: number; stoppingRule: string }[] }): LintIssue[] {
+  const issues: LintIssue[] = [];
+  (out.experiments ?? []).forEach((e, i) => {
+    const path = `experiments[${i}]`;
+    if (PEEKING.test(e.stoppingRule)) issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" stops when the result looks significant. Fix the end date or sample in advance and read it once then.`, path: `${path}.stoppingRule` });
+    if (e.method !== "ab_split" && e.method !== "holdout") return;
+    const c = eligibleCount(e.population);
+    if (!c) {
+      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" is a ${e.method === "ab_split" ? "split" : "holdout"} test but doesn't say how many people are eligible (e.g. "about 400 visitors a week"). Without it, nobody can tell if it can finish.`, path: `${path}.population` });
+      return;
+    }
+    const days = Math.max(1, e.durationDays);
+    const available = c.per === "week" ? c.n * (days / 7) : c.n === 0 ? 0 : c.per === "month" ? c.n * (days / 30) : c.n;
+    const need = sampleSize({ baseline: FEASIBILITY_BASELINE, minDetectable: FEASIBILITY_MDE }).total;
+    if (available < need)
+      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available)} people in ${days} days; even a big swing (10% → 15%) needs about ${need}. Use a before/after labelled observational, interviews or an assisted pilot, or one bigger change measured longer.`, path });
+  });
+  return issues;
+}
+
 /** Sending to a list the business already has ("email your list", "newsletter subscribers"). Building a list doesn't match. */
 const USES_LIST = /\b(?:your|existing|current)\s+(?:email\s+|mailing\s+|newsletter\s+)?(?:list|subscribers?|newsletter)\b|\bnewsletter\s+subscribers?\b|\b(?:email|broadcast|send)\w*\s+(?:to\s+)?(?:your|the|existing)\s+(?:\d[\d,]*\s+)?(?:subscribers?|list)\b/i;
 const BUILDS_LIST = /\b(?:start|launch|build|create|grow|set up|collect)\w*\b[^.]{0,40}\b(?:list|newsletter|subscribers?)\b/i;
@@ -1063,7 +1105,7 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
       rubric: rubricOf("growth-strategy"),
       criticSkills: ["experiment-design", "positioning"],
       lint: (out, input) => {
-        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
+        const issues = [...lintPlanning(out, input), ...lintWordCaps(out, PLAN_CAPS), ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`), ...lintNoAudience(out, input.constraints, input.facts.join("\n")), ...lintCites(out, input.facts.length, evidenceOf(input)), ...lintExperimentFeasibility(out), ...lintActionPlan(out, input.constraints?.horizonDays), ...lintPlanDistribution(out, input.constraints?.horizonDays), ...lintAnyPaidPlan([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }, { text: out.northStar?.target ?? "", path: "northStar.target" }]), ...lintStageMetric([{ text: out.northStar?.metric ?? "", path: "northStar.metric" }])];
         if (out.channels.length > 3) issues.push({ severity: "error", rule: "focus", message: `${out.channels.length} active channels; pick 1 primary + 1 secondary (3 at most) and put the rest in "not doing".`, path: "channels" });
         if (out.weekOneChecklist.length > 5) issues.push({ severity: "warn", rule: "focus", message: "Week-1 checklist should have at most 5 items.", path: "weekOneChecklist" });
         // Owner-ready: a number to aim at, and a summary that says what to expect.
