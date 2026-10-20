@@ -19,7 +19,6 @@ import {
   Eye,
   Flag,
   FlaskConical,
-  Gauge,
   Gem,
   Info,
   Lightbulb,
@@ -47,6 +46,8 @@ import { ChartTooltip, CHART, ScatterPlot, SrTable, XTicks, focusRing, niceScale
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "../../../../shared/economics/currency";
+import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
+import type { Diagnosis } from "../../../../shared/agents/diagnosis";
 import { churnOf, ownerHourOf, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
@@ -436,23 +437,45 @@ const NO_ECONOMICS: Economics = { revenuePerCustomerMonthUsd: 0, grossMargin: 0,
 
 const BASIS_TONE: Record<string, Tone> = { assumption_scenario: "amber", sourced_estimate: "blue", unlabelled_scenario: "neutral" };
 
-/** The forecast as a KPI: likely number, unit, low/likely/high range bar and confidence. */
-function Forecast({ f, economics, open = false }: { f: PlayView; economics?: Economics; open?: boolean }) {
+const LEVEL_TONE: Record<EvidenceLevel, Tone> = { strong: "green", some: "amber", weak: "neutral" };
+
+/** Three separate judgments: is the problem real, does this fix work, how firm is the forecast. */
+function ConfidenceChips({ c }: { c: PlayConfidence }) {
+  const rows: { k: keyof PlayConfidence["why"]; label: string }[] = [
+    { k: "problem", label: "Problem" },
+    { k: "fix", label: "Fix" },
+    { k: "forecast", label: "Forecast" },
+  ];
+  return (
+    <ul className="flex flex-wrap gap-1" aria-label="Evidence">
+      {rows.map((r) => (
+        <li key={r.k}>
+          <Tooltip content={c.why[r.k]}>
+            <Badge tone={LEVEL_TONE[c[r.k]]} className="cursor-help">
+              {r.label}: {c[r.k]}
+            </Badge>
+          </Tooltip>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The forecast as a KPI: likely number, unit, low/likely/high range bar and the evidence behind it. */
+function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; economics?: Economics; open?: boolean; diagnosis?: Diagnosis | null }) {
   const k = kindOf(f.kind);
   const max = Math.max(f.p90, 1) * 1.1;
   const pos = (n: number) => Math.min(100, Math.max(0, (n / max) * 100));
   const basis = f.model?.steps?.length ? forecastBasis({ ...f, model: f.model }, economics ?? NO_ECONOMICS).customers : null;
   const scenario = basis?.kind !== "sourced_estimate";
-  const conf = CONFIDENCE[f.confidence] ?? { label: `${f.confidence} confidence`, tone: "neutral" as Tone };
+  const evidence = playConfidence(f as never, economics ?? NO_ECONOMICS, diagnosis);
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-overline">
           {scenario ? "Scenario" : "Forecast"} · {f.horizonDays} days
         </p>
-        <Badge tone={conf.tone} icon={<Gauge />}>
-          {conf.label}
-        </Badge>
+        <ConfidenceChips c={evidence} />
       </div>
       <div className="flex min-w-0 items-baseline gap-2">
         <span className="text-kpi font-semibold tabular-nums text-ink">{fmtN(f.p50)}</span>
@@ -823,7 +846,7 @@ function PlayTargetsBlock({ t, slug, strategyId, playId, canEdit }: { t: PlayTar
   );
 }
 
-function PlayCard({ play, slug, economics, results, planId, targets, canEdit = false }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx; planId?: Id<"strategies">; targets?: PlayTargets; canEdit?: boolean }) {
+function PlayCard({ play, slug, economics, results, planId, targets, canEdit = false, diagnosis }: { play: PlayView; slug: string; economics?: Economics; results?: ResultsCtx; planId?: Id<"strategies">; targets?: PlayTargets; canEdit?: boolean; diagnosis?: Diagnosis | null }) {
   const k = kindOf(play.kind);
   const send = useMutation(api.workspace.sendChat);
   const startPlay = useMutation(api.workspace.startPlay);
@@ -888,7 +911,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
           ) : null}
         </dl>
 
-        <Forecast f={play} economics={economics} open={open} />
+        <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
         {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} canEdit={results.canEdit} /> : null}
@@ -1092,7 +1115,7 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdit = false, focused = false }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean }) {
+export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdit = false, focused = false, diagnosis }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean; diagnosis?: Diagnosis | null }) {
   const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
   // plan_targets workspaces only (null otherwise): named targets per play.
   const targets = useQuery(api.targets.forStrategy, planId ? { slug, strategyId: planId } : "skip");
@@ -1122,7 +1145,7 @@ export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdi
       {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}
       <div className={cn("grid gap-3", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
-          <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} planId={planId} targets={p.id ? targets?.[p.id] : undefined} canEdit={canEdit} />
+          <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} planId={planId} targets={p.id ? targets?.[p.id] : undefined} canEdit={canEdit} diagnosis={diagnosis} />
         ))}
       </div>
     </PlanSection>
