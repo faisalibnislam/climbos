@@ -374,6 +374,17 @@ export default defineSchema({
         updatedAt: v.number(),
       }),
     ),
+    /** The owner's last-period funnel (counts over periodDays); code reads the weakest link from it (shared/agents/diagnosis.ts). */
+    funnel: v.optional(
+      v.object({
+        periodDays: v.number(),
+        visitors: v.optional(v.number()),
+        leads: v.optional(v.number()),
+        activated: v.optional(v.number()),
+        newCustomers: v.optional(v.number()),
+        updatedAt: v.number(),
+      }),
+    ),
     siteHash: v.optional(v.string()),
     siteText: v.optional(v.string()),
     siteCheckedAt: v.optional(v.number()),
@@ -1244,6 +1255,10 @@ export default defineSchema({
         ),
         /** Owner goal vs what the plays support (computed in code; spec §8.1). */
         goalGap: v.optional(v.any()),
+        /** The weakest link computed from the owner's numbers (shared/agents/diagnosis.ts); `diagnosis` is the plan's prose. */
+        constraintDiagnosis: v.optional(v.any()),
+        /** Playbooks that fit and those that didn't, with reasons (shared/playbooks/contracts.ts). */
+        playbooks: v.optional(v.any()),
         /** decision_contract plans: the structured decision the plays rest on (shared/agents/decision.ts, REQ-STRAT-01/02). */
         decision: v.optional(
           v.object({

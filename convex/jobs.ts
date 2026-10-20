@@ -43,6 +43,8 @@ import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
+import { diagnose, diagnosisBrief, type Diagnosis } from "../shared/agents/diagnosis";
+import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
@@ -499,6 +501,22 @@ function planUnknowns(job: JobCtx): string[] {
   ].filter(Boolean);
 }
 
+/** What the playbook contracts need to know about this business (shared/playbooks/contracts.ts). */
+function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis): PlaybookContext {
+  const f = job.business?.funnel;
+  return {
+    types: profile.types,
+    budgetUsd: profile.budgetUsd,
+    ...(f?.visitors !== undefined ? { weeklyVisitors: (f.visitors / (f.periodDays || 30)) * 7 } : {}),
+    ...(job.audience ? { emailAudience: job.audience.consented } : {}),
+    connected: job.capabilities.connected,
+    ...(profile.priceUsdMonth !== undefined ? { priceUsdMonth: profile.priceUsdMonth } : {}),
+    constraint: d.constraint,
+    ...(profile.dims.geography?.value ? { geography: profile.dims.geography.value } : {}),
+    ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
+  };
+}
+
 /** What an agent run reports back for quality and the plan's evidence record. */
 type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
 
@@ -893,11 +911,13 @@ export const buildStrategy = internalAction({
       let channelSummary: string[] = [];
       // Plays research doesn't depend on channel scoring, so it runs alongside it.
       const playsSpec = growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType));
+      // Cycle 2: the weak link and the playbooks that fit are decided in code (after channel scoring) and carried to the plays agent.
+      const decided: { diagnosis?: Diagnosis; ineligible?: { id: string; reasons: string[] }[] } = {};
       const playsInput = (scorecard: string) =>
         agentInput(
           job,
           playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract") }),
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types } },
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
       const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);
@@ -946,12 +966,17 @@ export const buildStrategy = internalAction({
       const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
       const scored = scoreChannels(profile, adjustments, undefined, limits);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
+      const diagnosis = diagnose({ funnel: job.business?.funnel, monthlyChurn: job.business?.unitEconomics?.monthlyChurn, newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth, types: profile.types });
+      const playbookChoice = choosePlaybooks(playbookContext(job, profile, diagnosis));
+      decided.diagnosis = diagnosis;
+      decided.ineligible = playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, reasons }));
+      const decisionBrief = `\n\n${diagnosisBrief(diagnosis)}\n\n${playbookBrief(playbookChoice)}`;
       // 1. Growth plays: the creative, predictable portfolio (own agent: research + play catalogs).
       const playsMeta: AgentMeta = {};
       const planMeta: AgentMeta = {};
       const research = await researchRun;
       const playsDraft = v2
-        ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, { ...playsInput(scorecard), ...(research ? { precomputedResearch: research } : {}) }, startedAt, fixtureIn, playsMeta)
+        ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, { ...playsInput(scorecard + decisionBrief), ...(research ? { precomputedResearch: research } : {}) }, startedAt, fixtureIn, playsMeta)
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
@@ -999,7 +1024,7 @@ export const buildStrategy = internalAction({
       await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal) } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown }) => ({ id: pb.id, name: pb.name, unknown })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null } } : {}) }),
         evidence: JSON.stringify(

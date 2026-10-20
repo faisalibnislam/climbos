@@ -1,3 +1,4 @@
+import type { Diagnosis } from "./diagnosis";
 import type { EvidenceKind } from "./evidenceKind";
 import type { z } from "zod";
 import type { Effort } from "../ai/types";
@@ -114,6 +115,10 @@ export interface PlanConstraints {
   factKinds?: EvidenceKind[];
   /** Acquisition library business types (e.g. desktop_app), for platform rules. */
   businessTypes?: string[];
+  /** The weakest link computed from the owner's numbers; the plays must work on it. */
+  diagnosis?: Diagnosis;
+  /** Playbooks the business isn't eligible for now (ids and reasons); plays can't rely on them. */
+  ineligiblePlaybooks?: { id: string; reasons: string[] }[];
 }
 
 export interface CritiqueResult {

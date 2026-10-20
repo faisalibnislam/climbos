@@ -104,3 +104,65 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
     </Card>
   );
 }
+
+type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number };
+const FUNNEL_FIELDS: { key: Exclude<keyof Funnel, "periodDays">; label: string }[] = [
+  { key: "visitors", label: "Visitors" },
+  { key: "leads", label: "Signups or leads" },
+  { key: "activated", label: "Got first value" },
+  { key: "newCustomers", label: "New paying customers" },
+];
+
+/** The owner's last 30 days: the plan's diagnosis finds the weakest link from these (none are required). */
+export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel: Funnel | null; canEdit: boolean }) {
+  const save = useMutation(api.workspace.setFunnel);
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FUNNEL_FIELDS.map((f) => [f.key, funnel?.[f.key] !== undefined ? String(funnel[f.key]) : ""])));
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    const args: Record<string, number> = {};
+    for (const f of FUNNEL_FIELDS) {
+      const t = vals[f.key]?.trim();
+      if (!t) continue;
+      const n = Number(t.replace(/,/g, ""));
+      if (!Number.isInteger(n) || n < 0) return toast({ tone: "danger", title: `Check: ${f.label}` });
+      args[f.key] = n;
+    }
+    setBusy(true);
+    try {
+      await save({ slug, periodDays: 30, ...args });
+      toast({ tone: "success", title: "Numbers saved. Refresh the plan to use them." });
+    } catch (e) {
+      toast({ tone: "danger", title: errorMessage(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Target className="size-4 shrink-0 text-brand-700" aria-hidden />
+          <h2 className="heading-card">Your last 30 days</h2>
+          <span className="text-xs text-ink-3">Finds your weakest link</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {FUNNEL_FIELDS.map((f) => (
+            <div key={f.key} className="flex flex-col gap-1.5">
+              <label htmlFor={`funnel-${f.key}`} className="truncate text-ui font-medium text-ink">
+                {f.label}
+              </label>
+              <Input id={`funnel-${f.key}`} inputMode="numeric" disabled={!canEdit || busy} placeholder="Unknown" value={vals[f.key] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))} />
+            </div>
+          ))}
+        </div>
+        {canEdit ? (
+          <div>
+            <Button size="sm" onClick={submit} disabled={busy}>
+              {busy ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

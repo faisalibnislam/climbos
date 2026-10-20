@@ -13,7 +13,7 @@ import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import type { Economics } from "../../../../../shared/agents/economics";
-import { SharpenPlan } from "@/components/app/plan/SharpenPlan";
+import { FunnelNumbers, SharpenPlan } from "@/components/app/plan/SharpenPlan";
 import type { QualityFix, QualityState } from "../../../../../shared/agents/quality";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
 import { Audiences, BusinessInsights, Channels, Experiments, PlanBasics, RecentWork, ShortVersion, Sources, type PlanView } from "@/components/app/plan/PlanSections";
@@ -264,6 +264,7 @@ function PlanScreen({ slug }: { slug: string }) {
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} /> : null}
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} /> : null}
+          {s.expert?.plays?.length ? <FunnelNumbers slug={slug} funnel={plan.funnel} canEdit={plan.canEdit} /> : null}
           {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} facts={plan.sources} />

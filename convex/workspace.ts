@@ -430,6 +430,7 @@ export const plan = query({
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
       questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
+      funnel: business?.funnel ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
@@ -482,6 +483,27 @@ export const setUnitEconomics = mutation({
     };
     await ctx.db.patch(business._id, { unitEconomics: next });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
+  },
+});
+
+/** The owner's last-period funnel: the plan's diagnosis reads the weakest link from it (shared/agents/diagnosis.ts). */
+export const setFunnel = mutation({
+  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()) },
+  handler: async (ctx, { slug, periodDays, ...counts }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Add your business first.");
+    if (!(periodDays >= 7 && periodDays <= 365)) throw appError("INVALID", "Pick a period between 7 and 365 days.");
+    for (const [k, n] of Object.entries(counts)) if (n !== undefined && !(Number.isInteger(n) && n >= 0 && n <= 100_000_000)) throw appError("INVALID", `${k} must be a whole number.`);
+    const { visitors, leads, activated, newCustomers } = counts;
+    // Each step can't exceed the one before it (when both are given).
+    const order = [visitors, leads, activated, newCustomers];
+    for (let i = 1; i < order.length; i++) {
+      const prev = order.slice(0, i).reverse().find((x) => x !== undefined);
+      if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ activated ≥ new customers).");
+    }
+    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, updatedAt: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.funnel", subjectType: "business", subjectId: business._id, summary: "Funnel numbers updated." });
   },
 });
 

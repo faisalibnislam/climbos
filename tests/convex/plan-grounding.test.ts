@@ -70,6 +70,22 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     expect((JSON.parse(ev!.data) as PlanEvidence).conflicts?.[0].factIds).toHaveLength(2);
   });
 
+  it("the owner's funnel decides the weak link in code; playbooks are gated and saved with the plan (cycle 2)", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-funnel@example.com");
+    await expect(w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, leads: 10, activated: 50 })).rejects.toThrow(/smaller than the one before/);
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 2000, leads: 100, activated: 12, newCustomers: 3 });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const x = s.expert as { constraintDiagnosis?: { constraint: string; basis: string }; playbooks?: { eligible: { id: string }[]; ineligible: { id: string; reasons: string[] }[] }; diagnosis?: string };
+    expect(x.constraintDiagnosis).toMatchObject({ basis: "measured" });
+    expect(typeof x.diagnosis).toBe("string");
+    expect(x.playbooks?.eligible.length).toBeGreaterThan(0);
+    // No consented contacts: lifecycle email isn't eligible.
+    expect(x.playbooks?.ineligible.map((p) => p.id)).toContain("PB-lifecycle-email");
+  });
+
   it("a plan changed after review can't be approved, but can be sent back; parking a channel doesn't void it", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-change@example.com");
