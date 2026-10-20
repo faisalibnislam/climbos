@@ -4,7 +4,7 @@ import { emitEvent } from "./webhooks";
 import { recordAb, runningTest } from "./abtests";
 import { variantFor } from "../shared/abtest";
 import { can, sha256Hex } from "../shared/policy";
-import { bookingLinkFor, composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
+import { bookingLinkFor, composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, sendMessageId, sendOpKey, sendPayloadHash, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -25,6 +25,13 @@ import { refuseInCopilot } from "./lib/approvals";
 const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
 const DAY = 86_400_000;
 const STOPPED_STAGES: Doc<"prospects">["stage"][] = ["suggested", "replied", "skipped", "lost", "won", "booked"];
+/** Handed to a worker: its random start delay (≤90 s) plus room to begin. Unclaimed after this, it never reached the mailbox. */
+const HAND_LEASE_MS = 10 * 60_000;
+/** Claimed by a worker: longer than an action can run, so a live worker never outlasts it. */
+const SEND_LEASE_MS = 12 * 60_000;
+const MAX_ATTEMPTS = 3;
+/** Clears the worker's hold on a row. */
+const RELEASE = { lease: undefined, leaseExpiresAt: undefined, claimedAt: undefined } as const;
 
 async function isSuppressed(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {
   const hash = await sha256Hex(email.trim().toLowerCase());
@@ -57,10 +64,14 @@ export async function mailboxDay(ctx: QueryCtx | MutationCtx, org: Doc<"organiza
   const overrides = campaigns.flatMap((c) => (c.sending?.dailyCapOverride ? [c.sending.dailyCapOverride] : []));
   const cap = dailyCap(firsts.length ? Math.min(...firsts) : null, now, overrides.length ? Math.min(...overrides) : null);
   const recent = await ctx.db.query("outboundSends").withIndex("by_org_sent", (q) => q.eq("orgId", org._id).gte("sentAt", now - 2 * DAY)).take(500);
-  // Handed to the mailbox but not back yet (ignore any stuck for over an hour).
-  const inFlight = (await ctx.db.query("outboundSends").withIndex("by_status_scheduled", (q) => q.eq("status", "sending").gte("scheduledFor", now - 3_600_000)).take(500)).filter((s) => s.orgId === org._id).length;
+  // Handed to the mailbox but not back yet: a live lease (or, from before leases, under an hour old).
+  const leased = (await ctx.db.query("outboundSends").withIndex("by_status_lease", (q) => q.eq("status", "sending").gt("leaseExpiresAt", now)).take(500)).filter((s) => s.orgId === org._id);
+  const legacy = (await ctx.db.query("outboundSends").withIndex("by_status_scheduled", (q) => q.eq("status", "sending").gte("scheduledFor", now - 3_600_000)).take(500)).filter((s) => s.orgId === org._id && s.leaseExpiresAt === undefined);
+  const inFlight = leased.length + legacy.length;
   const today = localDayKey(now, org.timezone);
-  const sentToday = recent.filter((s) => s.sentAt && (s.status === "sent" || s.status === "bounced") && localDayKey(s.sentAt, org.timezone) === today).length + inFlight;
+  // An email that may have gone out counts against today's cap.
+  const unclear = (await ctx.db.query("outboundSends").withIndex("by_status_lease", (q) => q.eq("status", "uncertain")).take(500)).filter((s) => s.orgId === org._id && s.claimedAt && localDayKey(s.claimedAt, org.timezone) === today).length;
+  const sentToday = recent.filter((s) => s.sentAt && (s.status === "sent" || s.status === "bounced") && localDayKey(s.sentAt, org.timezone) === today).length + inFlight + unclear;
   return { cap, sentToday, inFlight, lastSent: Math.max(0, ...recent.map((s) => s.sentAt ?? 0)) };
 }
 
@@ -105,7 +116,9 @@ export const status = query({
       sending: c.sending ?? null,
       capToday: day.cap,
       sentToday: day.sentToday,
-      counts: { queued: count("queued") + count("sending"), sent: count("sent"), failed: count("failed"), bounced: count("bounced"), canceled: count("canceled") },
+      counts: { queued: count("queued") + count("sending"), sent: count("sent"), failed: count("failed"), bounced: count("bounced"), canceled: count("canceled"), uncertain: count("uncertain") },
+      // May have gone out: the owner checks their Sent folder and says.
+      review: sends.filter((s) => s.status === "uncertain").slice(0, 10).map((s) => ({ id: s._id, to: s.to, step: s.step, reason: s.reviewReason ?? "unverifiable" })),
       next: sends.filter((s) => s.status === "queued").sort((a, b) => a.scheduledFor - b.scheduledFor)[0]?.scheduledFor ?? null,
       recent: sends.filter((s) => s.status !== "queued").slice(0, 20).map((s) => ({ id: s._id, to: s.to, step: s.step, status: s.status, at: s.sentAt ?? s.scheduledFor, error: s.error ?? null })),
       newlyApproved: c.sending ? (await unqueuedApproved(ctx, c)).length : 0,
@@ -179,12 +192,44 @@ export const setPaused = mutation({
 
 /* ---------------- dispatch (cron) ---------------- */
 
+/** Another row already sent, sending or maybe sent under this key: this one is a duplicate. */
+async function keyTaken(ctx: MutationCtx, opKey: string, self: Id<"outboundSends">) {
+  const rows = await ctx.db.query("outboundSends").withIndex("by_op_key", (q) => q.eq("opKey", opKey)).take(10);
+  return rows.some((r) => r._id !== self && (r.status === "sent" || r.status === "sending" || r.status === "uncertain" || r.status === "bounced"));
+}
+
+/**
+ * It may have gone out. Never back to the queue from here: the Sent folder is
+ * checked first (by the Message-ID derived from the key), or the owner decides.
+ */
+async function markUncertain(ctx: MutationCtx, s: Doc<"outboundSends">, reason: NonNullable<Doc<"outboundSends">["reviewReason"]>, error?: string) {
+  await ctx.db.patch(s._id, { status: "uncertain", reviewReason: reason, leaseExpiresAt: undefined, ...(error ? { error: error.slice(0, 300) } : {}) });
+  if (reason === "payload_changed") await askOwner(ctx, s);
+  // A lost answer: give the Sent copy a moment to land before looking.
+  else await ctx.scheduler.runAfter(reason === "no_response" ? 120_000 : 0, internal.mailbox.reconcileOne, { sendId: s._id, lease: s.lease });
+}
+
+async function askOwner(ctx: MutationCtx, s: Doc<"outboundSends">) {
+  await notifyOwners(ctx, s.orgId, `An email to ${s.to} may have sent. Check your Sent folder, then mark it in Outbound.`, "outbound");
+}
+
+/** Leases that ran out: unclaimed ones never reached the mailbox (queue again); claimed ones may have sent (uncertain). */
+async function sweepLeases(ctx: MutationCtx, now: number) {
+  for (const s of await ctx.db.query("outboundSends").withIndex("by_status_lease", (q) => q.eq("status", "sending").lt("leaseExpiresAt", now)).take(100)) {
+    // Handed over before leases existed: give its worker an hour.
+    if (s.leaseExpiresAt === undefined && s.scheduledFor > now - 3_600_000) continue;
+    if (s.leaseExpiresAt !== undefined && !s.claimedAt) await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
+    else await markUncertain(ctx, s, "lease_expired");
+  }
+}
+
 /** Every 5 minutes: hand at most one due email per mailbox to the sender, within its daily cap, spacing and the send window. */
 export const dispatch = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
     if (await fleetStopped(ctx)) return 0;
+    await sweepLeases(ctx, now);
     const byOrg = new Map<Id<"organizations">, Doc<"outboundCampaigns">[]>();
     for (const c of await ctx.db.query("outboundCampaigns").withIndex("by_sending", (q) => q.eq("sending.status", "on")).take(200)) byOrg.set(c.orgId, [...(byOrg.get(c.orgId) ?? []), c]);
     let handed = 0;
@@ -192,7 +237,10 @@ export const dispatch = internalMutation({
       const org = await ctx.db.get(orgId);
       if (!org || org.emergencyStop?.active || org.suspendedAt) continue;
       if (!inSendWindow(now, org.timezone)) continue;
+      // Revoked or expired mailbox: nothing is handed over or retried until it's reconnected.
+      if ((await mailboxOf(ctx, orgId))?.status !== "connected") continue;
       const due: Doc<"outboundSends">[] = [];
+      const approved = new Map<Id<"outboundCampaigns">, string>();
       for (const c of campaigns) {
         // Approval is bound to the exact emails: an edit after approval pauses sending until the owner resumes.
         const hash = await sendingHash(c, c.sending!);
@@ -203,8 +251,10 @@ export const dispatch = internalMutation({
           await notifyOwners(ctx, org._id, `Outbound “${c.title}” paused: the emails changed after you approved them. Review and resume.`, "outbound");
           continue;
         }
+        approved.set(c._id, hash);
         const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).order("desc").take(500);
-        if (!sends.some((s) => s.status === "queued" || s.status === "sending")) {
+        // Done only when every email has its own final result (one sent doesn't finish the rest).
+        if (!sends.some((s) => s.status === "queued" || s.status === "sending" || s.status === "uncertain")) {
           await ctx.db.patch(c._id, { sending: { ...c.sending!, status: "done" } });
           continue;
         }
@@ -214,10 +264,19 @@ export const dispatch = internalMutation({
       // One mailbox: one warm-up cap and one spacing across all its campaigns.
       const day = await mailboxDay(ctx, org, now);
       if (day.inFlight || day.sentToday >= day.cap || now - day.lastSent < (SPACING_MINUTES - 2) * 60_000) continue;
-      const s = due.sort((a, b) => a.scheduledFor - b.scheduledFor)[0];
-      await ctx.db.patch(s._id, { status: "sending", attempts: s.attempts + 1 });
-      await ctx.scheduler.runAfter(Math.floor(Math.random() * 90_000), internal.mailbox.sendOne, { sendId: s._id });
-      handed++;
+      for (const s of due.sort((a, b) => a.scheduledFor - b.scheduledFor)) {
+        const opKey = await sendOpKey({ orgId, prospectId: s.prospectId, step: s.step, contentHash: approved.get(s.campaignId)! });
+        if (await keyTaken(ctx, opKey, s._id)) {
+          await ctx.db.patch(s._id, { status: "canceled", opKey, error: "Duplicate of an email already sent or on its way." });
+          continue;
+        }
+        const lease = `${s.attempts + 1}.${now.toString(36)}`;
+        // A re-approved edit is a new email: its own key, and its payload is bound afresh.
+        await ctx.db.patch(s._id, { status: "sending", attempts: s.attempts + 1, opKey, lease, leaseExpiresAt: now + HAND_LEASE_MS, claimedAt: undefined, reviewReason: undefined, ...(s.opKey !== opKey ? { payloadHash: undefined } : {}) });
+        await ctx.scheduler.runAfter(Math.floor(Math.random() * 90_000), internal.mailbox.sendOne, { sendId: s._id, lease });
+        handed++;
+        break;
+      }
     }
     return handed;
   },
@@ -226,7 +285,7 @@ export const dispatch = internalMutation({
 /**
  * Everything the mailbox sender needs for one email, checked again at send
  * time: null = don't send it (stopped prospect, unsubscribed); hold = not now
- * (paused, emergency stop, content changed), it goes back in the queue.
+ * (paused, emergency stop, content changed, mailbox gone), it goes back in the queue.
  */
 export const prepareSend = internalQuery({
   args: { sendId: v.id("outboundSends") },
@@ -257,47 +316,150 @@ export const prepareSend = internalQuery({
     // The booking link carries the prospect, so a booking stops their sequence and joins their deal.
     const bookingUrl = c.sending.bookingUrl ? bookingLinkFor(c.sending.bookingUrl, p._id) : undefined;
     const email = composeEmail({ step: b ? { ...step, subject: b } : step, stepIndex: s.step, firstLine: p.firstLine, contactName: p.contact, sender: { name: c.sending.senderName, company: c.sending.company, address: c.sending.address, bookingUrl }, unsubscribeUrl: unsub });
-    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo: previous?.messageId ?? null };
+    const inReplyTo = previous?.messageId ?? null;
+    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo, opKey: s.opKey ?? null, payloadHash: await sendPayloadHash({ to: s.to, subject: email.subject, text: email.text, inReplyTo }) };
   },
 });
 
-/** Record a send result; queue the next step (or stop). */
-export const recordSend = internalMutation({
-  args: { sendId: v.id("outboundSends"), ok: v.boolean(), messageId: v.optional(v.string()), error: v.optional(v.string()), skip: v.optional(v.boolean()), hold: v.optional(v.boolean()) },
-  handler: async (ctx, { sendId, ok, messageId, error, skip, hold }) => {
+/**
+ * The one moment a worker may hand this email to the mailbox: it must hold
+ * the current lease, nobody may have claimed it, and the email must be the
+ * one first tried under its key. True = send now.
+ */
+export const claimSend = internalMutation({
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), payloadHash: v.string() },
+  handler: async (ctx, { sendId, lease, payloadHash }) => {
     const s = await ctx.db.get(sendId);
-    if (!s) return;
     const now = Date.now();
-    if (hold) {
+    if (!s || s.status !== "sending" || s.lease !== lease || s.claimedAt) return false;
+    if (s.leaseExpiresAt !== undefined && s.leaseExpiresAt <= now) return false;
+    if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
+      await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });
+      return false;
+    }
+    if (s.payloadHash && s.payloadHash !== payloadHash) {
+      // Same key, different email: an earlier try may have sent the first one.
+      await markUncertain(ctx, s, "payload_changed", "The email changed since the first try.");
+      return false;
+    }
+    await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash });
+    return true;
+  },
+});
+
+/** Sent: record it, then queue the next step once (or stop). */
+async function markSent(ctx: MutationCtx, s: Doc<"outboundSends">, messageId: string | undefined, now: number) {
+  await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId, leaseExpiresAt: undefined, reviewReason: undefined, error: undefined });
+  if (s.step === 0) {
+    const test = await runningTest(ctx, s.campaignId);
+    if (test) await recordAb(ctx, test, variantFor(s.prospectId), "trials");
+  }
+  const c = await ctx.db.get(s.campaignId);
+  const p = await ctx.db.get(s.prospectId);
+  const org = await ctx.db.get(s.orgId);
+  if (c?.sending) await ctx.db.patch(c._id, { sending: { ...c.sending, firstSentAt: c.sending.firstSentAt ?? now, lastSentAt: now } });
+  if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", updatedAt: now });
+  const next = c?.sequence[s.step + 1];
+  if (!c || !next || !org) return;
+  if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", s.prospectId).eq("step", s.step + 1)).first()) return;
+  const gap = next.day - (c.sequence[s.step]?.day ?? 0);
+  await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
+}
+
+/**
+ * Record a worker's result, only from the worker holding the lease. A
+ * success always counts (even after its lease ran out); "unclear" (timeout,
+ * dropped connection) goes to uncertain, never straight back to the queue.
+ */
+export const recordSend = internalMutation({
+  args: {
+    sendId: v.id("outboundSends"),
+    lease: v.optional(v.string()),
+    ok: v.boolean(),
+    messageId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    skip: v.optional(v.boolean()),
+    hold: v.optional(v.boolean()),
+    outcome: v.optional(v.union(v.literal("rejected"), v.literal("auth"), v.literal("unclear"))),
+  },
+  handler: async (ctx, { sendId, lease, ok, messageId, error, skip, hold, outcome }) => {
+    const s = await ctx.db.get(sendId);
+    if (!s || s.lease !== lease) return;
+    const now = Date.now();
+    if (ok) {
+      if (s.status === "sending" || s.status === "uncertain") await markSent(ctx, s, messageId, now);
+      return;
+    }
+    if (s.status !== "sending") return;
+    if (hold || skip) {
+      // Only before the mailbox was reached.
+      if (s.claimedAt) return;
       // Back in the queue for when sending resumes (this attempt doesn't count).
-      await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1) });
+      if (hold) await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
+      else await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
       return;
     }
-    if (skip) {
-      await ctx.db.patch(s._id, { status: "canceled" });
+    if (outcome === "unclear") {
+      await markUncertain(ctx, s, "no_response", error);
       return;
     }
-    if (!ok) {
-      // One retry after 30 minutes, then give up on this email.
-      if (s.attempts < 2) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now + 30 * 60_000, error: error?.slice(0, 300) });
-      else await ctx.db.patch(s._id, { status: "failed", error: error?.slice(0, 300) });
+    if (outcome === "auth") {
+      // The mailbox refused the sign-in (its connection is now marked expired): wait in the queue, no retry.
+      await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), error: "Mailbox sign-in failed", ...RELEASE });
+      await notifyOwners(ctx, s.orgId, "Your mailbox sign-in stopped working. Reconnect it in Connections to keep sending.", "connections");
       return;
     }
-    await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId });
-    if (s.step === 0) {
-      const test = await runningTest(ctx, s.campaignId);
-      if (test) await recordAb(ctx, test, variantFor(s.prospectId), "trials");
+    // The server said no: one retry after 30 minutes, then give up on this email.
+    if (s.attempts < 2) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now + 30 * 60_000, error: error?.slice(0, 300), ...RELEASE });
+    else await ctx.db.patch(s._id, { status: "failed", error: error?.slice(0, 300), ...RELEASE });
+  },
+});
+
+/** What the Sent-folder check needs for one uncertain email (bound to its lease). */
+export const reconcileJob = internalQuery({
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()) },
+  handler: async (ctx, { sendId, lease }) => {
+    const s = await ctx.db.get(sendId);
+    if (!s || s.status !== "uncertain" || s.lease !== lease) return null;
+    const mailbox = await mailboxOf(ctx, s.orgId);
+    return { opKey: s.opKey ?? null, connectionId: mailbox?.status === "connected" ? mailbox._id : null };
+  },
+});
+
+/** The Sent folder's answer: found = sent; not found = send again (same key); null = can't tell, the owner decides. */
+export const recordReconcile = internalMutation({
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), found: v.union(v.boolean(), v.null()), messageId: v.optional(v.string()) },
+  handler: async (ctx, { sendId, lease, found, messageId }) => {
+    const s = await ctx.db.get(sendId);
+    if (!s || s.status !== "uncertain" || s.lease !== lease) return;
+    const now = Date.now();
+    if (found) await markSent(ctx, s, messageId, now);
+    else if (found === false && s.attempts >= MAX_ATTEMPTS) await ctx.db.patch(s._id, { status: "failed", reviewReason: undefined, error: `Not sent after ${MAX_ATTEMPTS} tries.`, ...RELEASE });
+    else if (found === false) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, reviewReason: undefined, error: "Not in your Sent folder; sending again.", ...RELEASE });
+    else {
+      await ctx.db.patch(s._id, { reviewReason: "unverifiable" });
+      await askOwner(ctx, s);
     }
-    const c = await ctx.db.get(s.campaignId);
-    const p = await ctx.db.get(s.prospectId);
-    const org = await ctx.db.get(s.orgId);
-    if (c?.sending) await ctx.db.patch(c._id, { sending: { ...c.sending, firstSentAt: c.sending.firstSentAt ?? now, lastSentAt: now } });
-    if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", updatedAt: now });
-    const next = c?.sequence[s.step + 1];
-    if (c && next && org) {
-      const gap = next.day - (c.sequence[s.step]?.day ?? 0);
-      await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
-    }
+  },
+});
+
+/** The owner checked their Sent folder: it went out, send it again, or skip it. */
+export const resolveUncertain = mutation({
+  args: { slug: v.string(), sendId: v.id("outboundSends"), outcome: v.union(v.literal("sent"), v.literal("resend"), v.literal("skip")) },
+  handler: async (ctx, { slug, sendId, outcome }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
+    const s = assertSameOrg(await ctx.db.get(sendId), org._id, "email");
+    if (s.status !== "uncertain") throw appError("INVALID", "Already handled.");
+    const now = Date.now();
+    if (outcome === "sent") {
+      const mailbox = await mailboxOf(ctx, org._id);
+      await markSent(ctx, s, s.opKey && mailbox?.accountLabel ? sendMessageId(s.opKey, mailbox.accountLabel) : undefined, now);
+    } else if (outcome === "resend") {
+      await refuseInCopilot(ctx, org._id, "send email");
+      // The owner confirmed it didn't go out: the current approved email is bound afresh.
+      await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, payloadHash: undefined, reviewReason: undefined, error: undefined, ...RELEASE });
+    } else await ctx.db.patch(s._id, { status: "canceled", reviewReason: undefined, ...RELEASE });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.send_resolved", subjectType: "campaign", subjectId: s.campaignId, summary: `Unclear email to ${s.to}: ${outcome === "sent" ? "marked sent" : outcome === "resend" ? "sending again" : "skipped"}.` });
   },
 });
 

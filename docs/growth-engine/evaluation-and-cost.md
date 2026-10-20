@@ -397,3 +397,12 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Where it runs:** only where a DNS lookup is passed in (jobs and bench). Other callers keep search only.
 - **Cost per plan (estimated, Luna):** plays research (4 reads) adds 1–4 Responses calls and about 40–80k input tokens, mostly cached, plus 1–3k output: about $0.005–0.01 and 10–40 s. Insights research (8 reads) adds about $0.01–0.03. Prospecting and creator scout (25 reads) can add up to 27 calls and about $0.10–0.15 when uncached. Page reads have no per-call fee. Search calls don't change.
 - **Not yet checked:** a live call to confirm OpenAI accepts the resent output items (stateless) and the chained background calls. Run cost estimates don't include read calls yet. A page could still lead the model to a public URL with data in its query string. The research context is the business brief, so exposure is low.
+
+**Built: cold email sends once (gap 15, Books 13 §7 and 14 §11).** `convex/outboundSending.ts`, `convex/mailbox.ts`; tests in `tests/convex/send-idempotency.test.ts` (fake mailbox, no real sends).
+- **Stable key:** `opKey` = org + prospect + step + approved content hash (`sendOpKey`, no time). The Message-ID is derived from it. A duplicate row with the same key is canceled.
+- **Payload bound:** the first try stores `payloadHash`; a retry with a different email goes to owner review, not out.
+- **Leases:** hand-off and claim leases. Only the lease holder may claim, once. Unclaimed and expired: queued again. Claimed and expired: `uncertain`, never straight to the queue.
+- **Check before resend:** an uncertain email (worker died, timeout, dropped connection) is looked up by Message-ID in the IMAP Sent folder. Found: sent. Not found: sent again with the same Message-ID. Only for Gmail and Microsoft 365 SMTP (they keep a Sent copy). Other mailboxes go to the owner ("It sent / Send again / Skip").
+- **Per recipient:** each row keeps its own result. A campaign is done only when no row is queued, sending or uncertain. A duplicate success report doesn't queue a second follow-up.
+- **Revoked mailbox:** nothing is handed over while it's not connected. A refused sign-in marks it expired and tells the owner. No retries.
+- **Limits:** Sent-folder lookup isn't checked against a live Gmail or Microsoft 365 mailbox yet. A Sent copy that arrives late could cause one resend (the lookup runs at least 2 minutes after a lost answer, 12 after a lease).

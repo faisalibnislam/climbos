@@ -3,7 +3,8 @@
 import { v } from "convex/values";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { isAutoReply, isOptOutReply, MAILBOX_PRESETS, replyText, type MailboxPreset } from "../shared/outbound/sending";
+import { fakeFindSent, fakeSend, FakeWorkerCrash } from "../shared/outbound/fakeMailbox";
+import { isAutoReply, isOptOutReply, MAILBOX_PRESETS, replyText, SENT_COPY_HOSTS, sendMessageId, smtpOutcome, type MailboxPreset } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction } from "./_generated/server";
@@ -13,7 +14,7 @@ import { appError } from "./lib/tenancy";
  * The owner's own mailbox over SMTP (send) and IMAP (replies and bounces),
  * signed in with an app password. Credentials are verified before they're
  * stored (encrypted, like every connection secret) and never returned.
- * Tests replace the transport with CLIMBOS_FAKE_MAILBOX.
+ * Tests replace the transport with CLIMBOS_FAKE_MAILBOX (shared/outbound/fakeMailbox).
  */
 
 interface MailboxSecret {
@@ -77,42 +78,98 @@ export const connect = action({
   },
 });
 
-/** Send one queued email from the owner's mailbox. */
+/**
+ * Is this Message-ID in the Sent folder? null = this mailbox can't be checked
+ * (its SMTP host doesn't keep a Sent copy, or there's no Sent folder).
+ */
+async function findSent(s: MailboxSecret, messageId: string): Promise<boolean | null> {
+  if (!SENT_COPY_HOSTS.includes(s.smtpHost.trim().toLowerCase())) return null;
+  const client = imap(s);
+  await client.connect();
+  try {
+    const sent = (await client.list()).find((b) => b.specialUse === "\\Sent");
+    if (!sent) return null;
+    const lock = await client.getMailboxLock(sent.path);
+    try {
+      const hits = await client.search({ header: { "message-id": messageId } }, { uid: true });
+      return Array.isArray(hits) && hits.length > 0;
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => undefined);
+  }
+}
+
+/**
+ * Send one queued email from the owner's mailbox, at most once: only the
+ * worker holding the lease may claim it, the Message-ID comes from the
+ * send's stable key, and an unclear result is checked, never blindly resent.
+ */
 export const sendOne = internalAction({
-  args: { sendId: v.id("outboundSends") },
-  handler: async (ctx, { sendId }) => {
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()) },
+  handler: async (ctx, { sendId, lease }) => {
     const job = await ctx.runQuery(internal.outboundSending.prepareSend, { sendId });
     if (!job) {
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, skip: true });
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, lease, ok: false, skip: true });
       return;
     }
     if (job.hold) {
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, hold: true });
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, lease, ok: false, hold: true });
       return;
     }
     const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId as Id<"connections"> });
     if (!raw) {
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, error: "Mailbox disconnected" });
+      // Mailbox revoked: back in the queue, not retried until it's reconnected.
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, lease, ok: false, hold: true });
       return;
     }
     const secret = JSON.parse(raw.value) as MailboxSecret;
-    if (process.env.CLIMBOS_FAKE_MAILBOX) {
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: true, messageId: `<fake-${sendId}@climbos.test>` });
+    if (!(await ctx.runMutation(internal.outboundSending.claimSend, { sendId, lease, payloadHash: job.payloadHash }))) return;
+    const messageId = job.opKey ? sendMessageId(job.opKey, secret.email) : undefined;
+    try {
+      const info = process.env.CLIMBOS_FAKE_MAILBOX
+        ? await fakeSend({ messageId: messageId ?? `<fake-${sendId}@climbos.test>`, to: job.to, subject: job.subject, text: job.text })
+        : await transport(secret).sendMail({
+            from: secret.email,
+            to: job.to,
+            subject: job.subject,
+            text: job.text,
+            ...(messageId ? { messageId } : {}),
+            headers: { "List-Unsubscribe": `<${job.unsubscribeUrl}>, <mailto:${secret.email}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+            ...(job.inReplyTo ? { inReplyTo: job.inReplyTo, references: [job.inReplyTo] } : {}),
+          });
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, lease, ok: true, messageId: info.messageId ?? messageId });
+    } catch (e) {
+      // Test only: the worker "dies" after the mailbox took the email; nothing is recorded.
+      if (e instanceof FakeWorkerCrash) return;
+      const outcome = smtpOutcome(e as { code?: string; responseCode?: number });
+      if (outcome === "auth") await ctx.runMutation(internal.connections.markSync, { connectionId: job.connectionId as Id<"connections">, ok: false, error: "Mailbox sign-in failed", expired: true });
+      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, lease, ok: false, error: (e as Error).message, outcome });
+    }
+  },
+});
+
+/** Before any resend of an uncertain email: look for its Message-ID in the Sent folder. */
+export const reconcileOne = internalAction({
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()) },
+  handler: async (ctx, { sendId, lease }) => {
+    const job = await ctx.runQuery(internal.outboundSending.reconcileJob, { sendId, lease });
+    if (!job) return;
+    const raw = job.opKey && job.connectionId ? await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId }) : null;
+    if (!raw || !job.opKey) {
+      await ctx.runMutation(internal.outboundSending.recordReconcile, { sendId, lease, found: null });
       return;
     }
+    const secret = JSON.parse(raw.value) as MailboxSecret;
+    const messageId = sendMessageId(job.opKey, secret.email);
+    let found: boolean | null = null;
     try {
-      const info = await transport(secret).sendMail({
-        from: secret.email,
-        to: job.to,
-        subject: job.subject,
-        text: job.text,
-        headers: { "List-Unsubscribe": `<${job.unsubscribeUrl}>, <mailto:${secret.email}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-        ...(job.inReplyTo ? { inReplyTo: job.inReplyTo, references: [job.inReplyTo] } : {}),
-      });
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: true, messageId: info.messageId });
-    } catch (e) {
-      await ctx.runMutation(internal.outboundSending.recordSend, { sendId, ok: false, error: (e as Error).message });
+      found = process.env.CLIMBOS_FAKE_MAILBOX ? await fakeFindSent(messageId) : await findSent(secret, messageId);
+    } catch {
+      found = null;
     }
+    await ctx.runMutation(internal.outboundSending.recordReconcile, { sendId, lease, found, messageId });
   },
 });
 

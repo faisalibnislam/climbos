@@ -690,14 +690,27 @@ export default defineSchema({
     step: v.number(),
     to: v.string(),
     scheduledFor: v.number(),
-    status: v.union(v.literal("queued"), v.literal("sending"), v.literal("sent"), v.literal("failed"), v.literal("canceled"), v.literal("bounced")),
+    /** uncertain = it may have gone out; never resent until the Sent folder or the owner says. */
+    status: v.union(v.literal("queued"), v.literal("sending"), v.literal("sent"), v.literal("failed"), v.literal("canceled"), v.literal("bounced"), v.literal("uncertain")),
     messageId: v.optional(v.string()),
     sentAt: v.optional(v.number()),
     error: v.optional(v.string()),
     attempts: v.number(),
+    /** Stable key: org, prospect, step and approved content (sendOpKey). Also the Message-ID. */
+    opKey: v.optional(v.string()),
+    /** The exact email first tried under opKey; a different one is refused. */
+    payloadHash: v.optional(v.string()),
+    /** The worker allowed to send now, until leaseExpiresAt. */
+    lease: v.optional(v.string()),
+    leaseExpiresAt: v.optional(v.number()),
+    /** When that worker started handing it to the mailbox. */
+    claimedAt: v.optional(v.number()),
+    reviewReason: v.optional(v.union(v.literal("lease_expired"), v.literal("no_response"), v.literal("payload_changed"), v.literal("unverifiable"))),
     createdAt: v.number(),
   })
     .index("by_status_scheduled", ["status", "scheduledFor"])
+    .index("by_status_lease", ["status", "leaseExpiresAt"])
+    .index("by_op_key", ["opKey"])
     .index("by_campaign", ["campaignId", "createdAt"])
     .index("by_prospect", ["prospectId", "step"])
     .index("by_org_sent", ["orgId", "sentAt"]),

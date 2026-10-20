@@ -83,7 +83,7 @@ export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug:
   );
 }
 
-const STATUS_TEXT: Record<string, string> = { sent: "Sent", failed: "Didn't send", bounced: "Bounced", canceled: "Stopped" };
+const STATUS_TEXT: Record<string, string> = { sent: "Sent", failed: "Didn't send", bounced: "Bounced", canceled: "Stopped", uncertain: "Check" };
 
 type PanelProps = { slug: string; campaignId: Id<"outboundCampaigns">; approvedWithEmail: number; defaultCompany: string; bookingUrl?: string };
 
@@ -101,6 +101,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
   const start = useMutation(api.outboundSending.start);
   const addApproved = useMutation(api.outboundSending.addApproved);
   const pause = useMutation(api.outboundSending.setPaused);
+  const resolve = useMutation(api.outboundSending.resolveUncertain);
   const [senderName, setSenderName] = useState("");
   const [company, setCompany] = useState(defaultCompany);
   const [address, setAddress] = useState("");
@@ -148,6 +149,34 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
               ...(s.counts.bounced ? [{ label: "Bounced", value: s.counts.bounced, tone: "bad" as const }] : []),
             ]}
           />
+          {s.review.length ? (
+            <Callout tone="warning">
+              <p className="font-medium">May have sent. Check your Sent folder.</p>
+              <ul className="mt-1.5 flex flex-col gap-1.5 text-xs">
+                {s.review.map((r) => (
+                  <li key={r.id} className="flex flex-wrap items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate">
+                      {r.to} · email {r.step + 1}
+                      {r.reason === "payload_changed" ? " · changed since first try" : ""}
+                    </span>
+                    {s.can.approve
+                      ? (
+                          [
+                            ["sent", "It sent"],
+                            ["resend", "Send again"],
+                            ["skip", "Skip"],
+                          ] as const
+                        ).map(([outcome, label]) => (
+                          <Button key={outcome} size="sm" variant={outcome === "sent" ? "secondary" : "ghost"} loading={busy === `r:${r.id}:${outcome}`} onClick={() => run(`r:${r.id}:${outcome}`, () => resolve({ slug, sendId: r.id, outcome }), "Saved")}>
+                            {label}
+                          </Button>
+                        ))
+                      : null}
+                  </li>
+                ))}
+              </ul>
+            </Callout>
+          ) : null}
           {s.next && sending.status === "on" ? <p className="text-xs text-ink-3">Next {relativeTime(s.next)} · weekdays 8–17</p> : null}
           <div className="flex flex-wrap gap-2">
             {own ? (
