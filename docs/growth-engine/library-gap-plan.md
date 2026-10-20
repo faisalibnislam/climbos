@@ -18,8 +18,8 @@ Reviewed 2026-10-20 against `growth-engine-v2`. Evidence is file:line at that ti
 | 10 | Whole skill files go into every prompt; nothing is selected by business type, stage or channel | 14 §6 | Backlog (needs a bench check) |
 | 11 | `webFetch` is requested but never sent to OpenAI; the model sees search snippets only | 13 §3 | Built (`fetch_page` tool, not yet evaluated) |
 | **P1: evaluation** | | | |
-| 12 | All 5 bench cases are B2B SaaS. bench/cache already has 8 others | 14 §13 | Backlog (paid) |
-| 13 | Hard failures aren't part of the bench score | 13 §11 | Backlog |
+| 12 | All 5 bench cases are B2B SaaS. bench/cache already has 8 others | 14 §13 | Built (`--cases mixed`); paid run pending |
+| 13 | Hard failures aren't part of the bench score | 13 §11 | Built (`bench/hard.ts`) |
 | 14 | No tests that change one input (budget $600 → $60, no email list, new price) | 14 §13 | Backlog (paid) |
 | **P2 and P3** | | | |
 | 15 | Cold email has no stable idempotency key | 13 §7, 14 §11 | Built |
