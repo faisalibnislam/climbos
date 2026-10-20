@@ -31,7 +31,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { type ActionCtx, internalAction } from "./_generated/server";
 import { fixtureOutput, type FixtureContext } from "./ai/fixtures";
 import { callModel, generateImage, type ModelResult } from "./ai/providers";
-import { fetchCitedPages, researchWebsite } from "./ai/research";
+import { fetchCitedPages, researchWebsite, resolveHost } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch } from "../shared/agents/runtime";
@@ -369,6 +369,8 @@ async function runAgentTask<T>(
         const q = {
           ...req,
           modelKey,
+          // Page reads run on this server: the DNS lookup lets the fetcher refuse private addresses.
+          ...(req.webFetch ? { webFetch: { ...req.webFetch, resolveHost } } : {}),
           ...(background
             ? {
                 background: {
@@ -382,7 +384,11 @@ async function runAgentTask<T>(
             : {}),
         };
         let r = await call(q, rates);
-        if (!r.ok && r.kind === "pending") throw new AgentYield();
+        if (!r.ok && r.kind === "pending") {
+          // A page-reading turn may have finished calls before yielding: meter them now (the resume bills only what follows).
+          if (stepId && r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates) });
+          throw new AgentYield();
+        }
         // A failed background answer can't be resumed: the next attempt starts fresh.
         if (!r.ok && ref && stepId) await ctx.runMutation(internal.engine.setStepProviderRef, { stepId, ref: undefined });
         if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {

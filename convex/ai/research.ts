@@ -13,10 +13,12 @@ import {
 
 /**
  * Bounded public-website research. Untrusted content: the caller wraps every
- * page in <untrusted_content> before it reaches a model. URLs suggested by
+ * page in <untrusted_content> before it reaches a model. Here, URLs suggested by
  * models are never fetched on a model's say-so: only the owner's site and
  * same-origin links, plus (for source checks) pages this run's web search
- * itself returned. Fetched text is only string-matched, never sent to a model.
+ * itself returned. The research model's own page reads (`fetch_page`) are a
+ * separate, capped tool with the same URL, DNS, redirect and robots rules:
+ * shared/ai/pageFetch.ts, given `resolveHost` from here.
  */
 
 export interface ResearchedPage {
@@ -29,7 +31,8 @@ export interface ResearchedPage {
   prices: string[];
 }
 
-async function resolveHost(hostname: string): Promise<string[]> {
+/** Server DNS lookup: every address a host resolves to, for the private-address check. */
+export async function resolveHost(hostname: string): Promise<string[]> {
   const records = await lookup(hostname, { all: true, verbatim: true });
   return records.map((r) => r.address);
 }

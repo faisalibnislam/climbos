@@ -68,8 +68,18 @@ export interface TurnRequest {
     blockedDomains?: string[];
     userLocation?: { country?: string; region?: string; city?: string; timezone?: string };
   };
-  /** Page reads during research (OpenAI web search opens pages itself; kept for budgets). */
-  webFetch?: { maxUses: number; maxContentTokens?: number; allowedDomains?: string[]; blockedDomains?: string[] };
+  /**
+   * Page reads during research: a `fetch_page` tool the adapter runs with ClimbOS's own fetcher
+   * (shared/ai/pageFetch.ts). Offered only with `resolveHost` (server DNS, so private addresses are refused).
+   */
+  webFetch?: {
+    maxUses: number;
+    maxContentTokens?: number;
+    allowedDomains?: string[];
+    blockedDomains?: string[];
+    resolveHost?: (hostname: string) => Promise<string[]>;
+    fetchImpl?: (input: string, init?: RequestInit) => Promise<Response>;
+  };
   /** Client-executed tools (agent loops): a tool call returns the calls to the caller. */
   customTools?: ToolDef[];
   timeoutMs?: number;

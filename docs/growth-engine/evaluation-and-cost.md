@@ -388,3 +388,12 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Slice 10, borrowed uplift:** another business's reported lift can't be a funnel rate or a promise.
 - **Cost:** no extra model calls. The calculator tool may add a Climb AI turn when it's used.
 - **Release:** needs the baseline and comparison runs on the 32 cases plus the end-to-end bench (owner cap).
+
+**Built (not yet evaluated): research reads pages (gap-plan item 11).** `webFetch` was never sent to OpenAI, so research saw search snippets only. No OpenAI SDK is installed and the adapter calls the Responses API directly, so there's no capped page-fetch tool to switch on. Instead, the adapter offers a `fetch_page(url)` function tool and runs it with ClimbOS's own fetcher (`shared/ai/pageFetch.ts`).
+- **Rules (in code):** public http(s) only; private, loopback, link-local and metadata addresses refused, including after DNS and on every redirect. robots.txt honoured; 2 MB and 15 s per page; about 4k tokens of text per page.
+- **Untrusted page text:** it's returned as a tool result inside `<untrusted_content>`. The budget, domain lists and tools are set by code, never by page text.
+- **Budget and sources:** `maxUses` caps real reads (refused URLs don't count), and after `maxUses + 2` rounds the model must answer. Reads count in `webFetches`. Each page read becomes a research source, so source checks can verify it.
+- **Background turns:** follow-up calls chain by `previous_response_id`, with the read count and URLs saved on response metadata. A turn that yields mid-loop now meters the calls it has already made (`convex/jobs.ts`, bench).
+- **Where it runs:** only where a DNS lookup is passed in (jobs and bench). Other callers keep search only.
+- **Cost per plan (estimated, Luna):** plays research (4 reads) adds 1–4 Responses calls and about 40–80k input tokens, mostly cached, plus 1–3k output: about $0.005–0.01 and 10–40 s. Insights research (8 reads) adds about $0.01–0.03. Prospecting and creator scout (25 reads) can add up to 27 calls and about $0.10–0.15 when uncached. Page reads have no per-call fee. Search calls don't change.
+- **Not yet checked:** a live call to confirm OpenAI accepts the resent output items (stateless) and the chained background calls. Run cost estimates don't include read calls yet. A page could still lead the model to a public URL with data in its query string. The research context is the business brief, so exposure is low.
