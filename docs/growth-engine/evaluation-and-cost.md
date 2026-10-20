@@ -364,3 +364,25 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Approval bound to content:** the approval binds to the plan's content hash, and approving re-checks it. `generationCostMicros` is now the run's cost at save.
 - **Unknowns stated:** owner hours and email audience go in the brief and in `quality.unknowns`. `lintNoAudience` blocks sends to a list that isn't there.
 - **Bench parity:** the bench applies the same customer-count check.
+
+**Built (free, offline; no paid run yet): mixed cases and hard-failure scoring** (library-gap-plan items 12 and 13).
+- **Case sets:** `--cases saas` (default, the unchanged B0 five), `--cases mixed`, `--cases all`, or ids mixed in (`mixed,formkit`). An unknown name stops the run.
+- **Mixed set** (from `bench/cache`):
+
+  | Case | Type | Horizon | Ads/month |
+  |---|---|---|---|
+  | Animalz | agency | 90 d | $0 |
+  | Bell Brothers | local service | 60 d | $1,500 |
+  | Tartine | local food | 60 d | $400 |
+  | CrossFit South Brooklyn | local fitness | 60 d | $60 |
+  | Finch | consumer app | 90 d | $1,000 |
+  | Tiny Habits | creator | 90 d | $150 |
+- **Hard failures scored apart from the judge** (`bench/hard.ts`): each strategy output gets the production hard lint. That's the plays lint, plus the final-plan lint as `convex/jobs.ts` runs it.
+  - Any counted finding makes that arm lose the comparison, whatever the judge says. If both arms fail, it's still a loss.
+  - The judge's own call is kept as `judged`.
+  - Results JSON gets `hard` per case. The markdown gets a "Hard failures" table and a "Decided by hard checks" column.
+- **Imported (older) outputs:** plays `invented_fact` findings aren't counted without saved research notes. The channel budget check is skipped when only scorecard rows were saved. Live arms now save both (`evidence`).
+- **Offline re-check of saved 2026-10-19 runs:**
+  - B1/B2 trip `economics` ("loses money") on 4–5 of 5 SaaS plans.
+  - B0 trips `invented_fact`/`consistency` on all 5.
+  - So under this rule, the release check (≥ 4 of 5 wins) first needs plays that don't lose money.

@@ -1,21 +1,26 @@
 /**
- * ClimbOS engine benchmark.
+ * ClimbOS engine benchmark. Costs money (model calls): every run needs an owner-approved --max-usd cap.
+ *
+ * Cases (--cases, see bench/cases.ts): a set name or case ids, mixed freely.
+ *   saas   the 5 owner apps, all B2B SaaS (default; the B0 baseline set)
+ *   mixed  agency, local service, local food, local fitness, consumer app, creator
+ *   all    both
  *
  * Arms:
- *   v1   the original single-call engine (current prompts and schemas)
- *   v0f  a frontier one-shot baseline: Opus 5.5, high effort, same brief and
- *        output schema as v2, same web-search budget, but no skills, no
- *        research phase and no review loop (how most AI tools use a model)
- *   v2o  Engine v2 with Opus drafting   (Opus critic)
- *   v2s  Engine v2 with Sonnet drafting (Opus critic)
- *   v2s1 Engine v2, Sonnet drafting, at most 1 revision
+ *   basic, expert         the production strategy engine as Climb AI Basic (Luna) or Expert (Sol drafts) runs it
+ *   single, single-expert one focused call per mode with the same evidence and calculator, no review loop
+ *   v0f                   frontier one-shot on Sol (strategy: same as single-expert)
+ *   v1                    the original single-call engine
+ *   v2s, v2o, v2s1, v22   content tasks: Engine v2 with Luna / Sol drafting, ≤1 revision, or as shipped
+ *   any name              loaded from an earlier run with --import-arm name=results.json:sourceArm (costs nothing)
  *
- * Judging: blind pairwise comparisons in both orders (a win only counts when
- * both orders agree) by up to three judge models, plus absolute 1–10 expert
- * scores. Outputs are saved for human reading.
+ * Scoring: blind pairwise comparisons in both orders (a win only counts when both orders agree) by the
+ * Sol judge, plus absolute 1–10 scores. Hard failures are scored apart from the judge (bench/hard.ts):
+ * every strategy output is re-linted with the production hard checks, and a plan with a hard finding
+ * loses its comparison whatever the judge says. Release rule: ≥ 4 of 5 wins against the saved B0 baseline.
  *
- *   pnpm bench --cases plausible,fishwife --tasks strategy,linkedin \
- *     --arms basic,expert,single,single-expert --compare basic:single --judges sol --max-usd 20 --blind --label run
+ *   pnpm bench --cases mixed --tasks strategy --arms basic,b0 --import-arm b0=bench/results/….json:basic \
+ *     --compare basic:b0 --judges sol --max-usd 20 --blind --label mixed
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
@@ -41,7 +46,8 @@ import { CURRENT_ROUTING, currentRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { callModel } from "../convex/ai/providers";
 import { fetchCitedPages, researchWebsite } from "../convex/ai/research";
-import { CASES, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
+import { selectCases, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
+import { hardCheck, hardSection, withHardOverride, type HardCheck, type HardEvidence, type LintCase, type PairResult } from "./hard";
 
 // ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
@@ -53,7 +59,7 @@ const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : undefined;
 };
-const caseIds = (arg("cases") ?? CASES.map((c) => c.id).join(",")).split(",");
+const selectedCases = selectCases(arg("cases"));
 const tasks = (arg("tasks") ?? TASKS_ALL.join(",")).split(",") as BenchTask[];
 const label = arg("label") ?? "run";
 const concurrency = Number(arg("concurrency") ?? 6);
@@ -314,6 +320,8 @@ interface ArmResult {
   history?: unknown;
   /** Wall time per phase (label → ms, start offset), to see where a run's time goes. */
   phases?: { label: string; startMs: number; ms: number }[];
+  /** What the writers saw, for the hard checks (not shown to the judge). */
+  evidence?: HardEvidence;
 }
 
 async function runV1(p: Prepared, t: BenchTask): Promise<ArmResult> {
@@ -364,8 +372,20 @@ async function runFrontier(p: Prepared, t: BenchTask): Promise<ArmResult> {
   return r.ok ? { arm: "v0f", ok: true, output: r.output, costMicros: r.costMicros, ms: Date.now() - t0 } : { arm: "v0f", ok: false, error: r.message, costMicros: r.costMicros, ms: Date.now() - t0 };
 }
 
+/** The scorecard block the plays and plan agents get. */
+const scorecardOf = (profile: ReturnType<typeof profileFrom>, scored: ReturnType<typeof scoreChannels>) =>
+  `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
+const baseProfile = (p: Prepared) => profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []), priceUsdMonth: entryPriceUsdMonth(p.profile.facts) });
+/** The scorecard without the channel-fit model's adjustments (deterministic, so imported outputs can be re-checked). */
+const baseScorecard = (p: Prepared) => {
+  const profile = baseProfile(p);
+  return scorecardOf(profile, scoreChannels(profile, adjustmentsFrom({ channels: [] })));
+};
+
 /** The cached insights, as the plan job gives them (same budget). */
 const insightsOf = (p: Prepared) => fitJson(p.insights, 20_000, "insights").text;
+/** What the strategy writers saw, for the hard checks. */
+const lintCase = (p: Prepared): LintCase => ({ c: p.c, brief: brief(p, true), facts: p.profile.facts.map((f) => f.statement), insights: insightsOf(p), scorecard: baseScorecard(p) });
 /** Strategy as in production: channel scoring, then the plays agent, then the plan agent; both arms get the same stages. */
 async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   let cost = 0;
@@ -389,7 +409,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
   try {
     const base = inputFor(p, "strategy");
     // 0. Channel scoring (Acquisition Intelligence), exactly as the plan job runs it.
-    let profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []), priceUsdMonth: entryPriceUsdMonth(p.profile.facts) });
+    let profile = baseProfile(p);
     const candidates = candidatesFor(profile);
     // Arms "basic" and "expert" run the plan exactly as Climb AI Basic / Expert would.
     const mode: AiMode = arm === "expert" ? "expert" : "basic";
@@ -411,7 +431,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
     profile = mergeFit(profile, f, new Set(BUSINESS_TYPES.map((t) => t.key)));
     // As production with decision_contract: owner time and capability limits apply before ranking (no connections in the bench).
     const scored = scoreChannels(profile, adjustmentsFrom(f), undefined, DC ? { ownerHoursPerWeek: base.constraints?.ownerHoursPerWeek, connected: [] } : undefined);
-    const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
+    const scorecard = scorecardOf(profile, scored);
     const playsRun = await runAgent(playsSpec, { ...base, task: playsTask({ scorecard, insights, horizonDays: p.c.horizonDays, decisionContract: DC }), research: researchFor("growth_strategy", playsResearch), ...(resR.value ? { precomputedResearch: resR.value } : {}) }, deps);
     const draft = playsRun.output as PlaysOutput;
     const pages = await fetchCitedPages(citedUrls(draft), (playsRun.research?.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
@@ -432,6 +452,7 @@ async function runStrategyV2(p: Prepared, arm: string): Promise<ArmResult> {
       costMicros: cost,
       ms: Date.now() - t0,
       phases,
+      evidence: { scorecard, sources: (playsRun.research?.sources ?? []).map((x) => x.url), notes: playsRun.research?.notes ?? "", planChannels: (plan.output as { channels?: unknown[] }).channels },
     };
   } catch (e) {
     return { arm, ok: false, error: (e as Error).message, costMicros: cost, ms: Date.now() - t0, phases };
@@ -447,9 +468,7 @@ async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   const t0 = Date.now();
   const mode: AiMode = arm === "single" ? "basic" : "expert";
   const base = inputFor(p, "strategy");
-  const profile = profileFrom({ saved: null, legacyType: null, budgetMinor: p.c.monthlyAdBudget * 100, horizonDays: p.c.horizonDays, legacyTypes: () => (p.c.type === "b2b_saas" ? ["b2b_saas"] : []), priceUsdMonth: entryPriceUsdMonth(p.profile.facts) });
-  const scored = scoreChannels(profile, adjustmentsFrom({ channels: [] }));
-  const scorecard = `\n\nCHANNEL SCORECARD (budget band ${budgetBand(profile.budgetUsd).label}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first:\n${scorecardText(scored)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
+  const scorecard = baseScorecard(p);
   const insights = insightsOf(p);
   const pspec = growthPlaysSpec({}, playCatalogsFor(p.c.type));
   const sspec = strategySpec({});
@@ -470,7 +489,7 @@ async function runStrategySingle(p: Prepared, arm: string): Promise<ArmResult> {
   const pages = await fetchCitedPages(citedUrls(out.portfolio), (r.sources ?? []).map((x) => x.url), urlKey).catch(() => ({}));
   const checked = verifyTags(out.portfolio, { pages });
   const plays = withForecasts({ ...checked, economics: withDerivedAssumed(checked.economics) });
-  return { arm, ok: true, output: { ...out.plan, plays: plays.plays, portfolioNote: plays.portfolioNote, economics: plays.economics }, costMicros: r.costMicros, ms: Date.now() - t0 };
+  return { arm, ok: true, output: { ...out.plan, plays: plays.plays, portfolioNote: plays.portfolioNote, economics: plays.economics }, costMicros: r.costMicros, ms: Date.now() - t0, evidence: { scorecard, sources: (r.sources ?? []).map((x) => x.url) } };
 }
 
 const OUTBOUND_TASK =
@@ -584,10 +603,10 @@ async function judgeOnce(judge: string, p: Prepared, t: BenchTask, a: unknown, b
 /** Both orders; a win counts only if both agree, otherwise a tie. Result is from x's point of view. */
 async function pairwise(judge: string, p: Prepared, t: BenchTask, x: unknown, y: unknown) {
   const [xy, yx] = await Promise.all([judgeOnce(judge, p, t, x, y), judgeOnce(judge, p, t, y, x)]);
-  if (!xy || !yx) return { result: "error" as const, reasons: [] as string[] };
+  if (!xy || !yx) return { result: "error" as PairResult, reasons: [] as string[] };
   const first = xy.winner === "A" ? "win" : xy.winner === "B" ? "loss" : "tie";
   const second = yx.winner === "B" ? "win" : yx.winner === "A" ? "loss" : "tie";
-  return { result: (first === second ? first : "tie") as "win" | "loss" | "tie", reasons: xy.reasons, truthX: xy.truthProblemsA, truthY: xy.truthProblemsB };
+  return { result: (first === second ? first : "tie") as PairResult, reasons: xy.reasons, truthX: xy.truthProblemsA, truthY: xy.truthProblemsB };
 }
 
 const ScoreSchema = z.object({
@@ -632,7 +651,7 @@ async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | 
 
 // ---------- main ----------
 async function main() {
-  const cases = CASES.filter((c) => caseIds.includes(c.id));
+  const cases = selectedCases;
   const prepared = (await pool(cases, 4, prepare)).filter((p): p is Prepared => Boolean(p));
   if (process.argv.includes("--prepare-only")) {
     console.log(`Prepared ${prepared.length}/${cases.length} cases · spent $${(spentMicros / 1e6).toFixed(3)}`);
@@ -647,17 +666,19 @@ async function main() {
   await pool(jobs, concurrency, async ({ p, t }) => {
     const outs: Record<string, ArmResult> = {};
     await Promise.all(arms.map(async (a) => (outs[a] = await runArm(p, t, a))));
+    // Hard checks first, in code: a plan that fails one loses whatever the judge says.
+    const hard: Record<string, HardCheck | null> | undefined = t === "strategy" ? Object.fromEntries(arms.map((a) => [a, outs[a]?.ok ? hardCheck(outs[a].output, lintCase(p), outs[a].evidence) : null])) : undefined;
     const comparisons: Record<string, Record<string, unknown>> = {};
     await Promise.all(
       compare.map(async ([x, y]) => {
         if (!outs[x]?.ok || !outs[y]?.ok) return;
         comparisons[`${x}>${y}`] = {};
-        await Promise.all(judges.map(async (j) => (comparisons[`${x}>${y}`][j] = await pairwise(j, p, t, outs[x].output, outs[y].output))));
+        await Promise.all(judges.map(async (j) => (comparisons[`${x}>${y}`][j] = withHardOverride(await pairwise(j, p, t, outs[x].output, outs[y].output), hard?.[x], hard?.[y]))));
       }),
     );
     const scores: Record<string, Score | null> = {};
     if (pointwise) await Promise.all(arms.map(async (a) => (scores[a] = outs[a]?.ok ? await score(p, t, outs[a].output) : null)));
-    const row = { case: p.c.id, type: p.c.type, task: t, outs, comparisons, scores };
+    const row = { case: p.c.id, type: p.c.type, task: t, outs, comparisons, scores, ...(hard ? { hard } : {}) };
     results.push(row);
     writeFileSync(`${base}.json`, JSON.stringify(results, null, 1)); // incremental, safe to inspect mid-run
     const cmp = Object.entries(comparisons)
@@ -666,7 +687,8 @@ async function main() {
     const sc = Object.entries(scores)
       .map(([a, s]) => `${a}=${s?.overall ?? "–"}`)
       .join(" ");
-    console.log(`  ${p.c.id}/${t}: ${arms.map((a) => `${a} ${outs[a]?.ok ? `$${(outs[a].costMicros / 1e6).toFixed(2)} ${Math.round(outs[a].ms / 1000)}s` : `ERR ${outs[a]?.error?.slice(0, 60)}`}`).join(" | ")} · ${cmp} · ${sc}`);
+    const hd = hard ? ` · hard ${arms.map((a) => `${a}=${hard[a] ? (hard[a]!.skipped ? "–" : hard[a]!.findings.length) : "–"}`).join(" ")}` : "";
+    console.log(`  ${p.c.id}/${t}: ${arms.map((a) => `${a} ${outs[a]?.ok ? `$${(outs[a].costMicros / 1e6).toFixed(2)} ${Math.round(outs[a].ms / 1000)}s` : `ERR ${outs[a]?.error?.slice(0, 60)}`}`).join(" | ")} · ${cmp} · ${sc}${hd}`);
   });
 
   writeFileSync(`${base}.json`, JSON.stringify(results, null, 1));
@@ -710,17 +732,18 @@ function mean(xs: number[]): number {
 }
 
 function summarize(rows: Record<string, unknown>[]): string {
-  type Row = { case: string; task: BenchTask; outs: Record<string, ArmResult>; comparisons: Record<string, Record<string, { result: string; reasons: string[] }>>; scores: Record<string, Score | null> };
+  type Row = { case: string; task: BenchTask; outs: Record<string, ArmResult>; comparisons: Record<string, Record<string, { result: string; reasons: string[]; hardOverride?: string }>>; scores: Record<string, Score | null>; hard?: Record<string, HardCheck | null> };
   const R = rows as unknown as Row[];
   const lines: string[] = [`# Benchmark: ${label} (${new Date().toISOString().slice(0, 10)})`, "", `Cases: ${[...new Set(R.map((r) => r.case))].join(", ")} · Tasks: ${tasks.join(", ")} · Arms: ${arms.join(", ")}`, ""];
-  lines.push("## Pairwise (both orders; a win needs both orders to agree)", "", "| Comparison | Judge | Wins | Ties | Losses | Win rate (excl. ties) |", "|---|---|---|---|---|---|");
+  lines.push("## Pairwise (both orders; a win needs both orders to agree; a hard failure decides first)", "", "| Comparison | Judge | Wins | Ties | Losses | Win rate (excl. ties) | Decided by hard checks |", "|---|---|---|---|---|---|---|");
   for (const [x, y] of compare) {
     for (const j of judges) {
       const res = R.map((r) => r.comparisons[`${x}>${y}`]?.[j]?.result).filter(Boolean) as string[];
       const w = res.filter((s) => s === "win").length;
       const l = res.filter((s) => s === "loss").length;
       const tie = res.filter((s) => s === "tie").length;
-      lines.push(`| ${x} vs ${y} | ${j} | ${w} | ${tie} | ${l} | ${w + l ? Math.round((100 * w) / (w + l)) : "–"}% |`);
+      const byHard = R.filter((r) => r.comparisons[`${x}>${y}`]?.[j]?.hardOverride).length;
+      lines.push(`| ${x} vs ${y} | ${j} | ${w} | ${tie} | ${l} | ${w + l ? Math.round((100 * w) / (w + l)) : "–"}% | ${byHard} |`);
     }
   }
   if (pointwise) {
@@ -734,6 +757,8 @@ function summarize(rows: Record<string, unknown>[]): string {
       lines.push(`| ${dim} | ${arms.map((a) => mean(R.map((r) => r.scores[a]?.[dim]).filter((v): v is number => typeof v === "number")).toFixed(2)).join(" | ")} |`);
     }
   }
+  const hardLines = hardSection(R, arms);
+  if (hardLines.length) lines.push("", ...hardLines);
   lines.push("", "## Cost and time per job (mean)", "", "| Task | " + arms.map((a) => `${a} $ / s`).join(" | ") + " |", `|---|${arms.map(() => "---").join("|")}|`);
   for (const t of tasks) {
     const rs = R.filter((r) => r.task === t);
@@ -745,7 +770,7 @@ function summarize(rows: Record<string, unknown>[]): string {
   for (const r of R) {
     for (const [k, v] of Object.entries(r.comparisons)) {
       const first = v[judges[0]];
-      if (first?.result === "loss") lines.push(`- **${r.case}/${r.task} ${k}**: ${first.reasons.slice(0, 3).join(" / ")}`);
+      if (first?.result === "loss") lines.push(`- **${r.case}/${r.task} ${k}**${first.hardOverride ? ` (hard: ${first.hardOverride})` : ""}: ${first.reasons.slice(0, 3).join(" / ")}`);
     }
   }
   return lines.join("\n");
