@@ -23,7 +23,7 @@ Reviewed 2026-10-20 against `growth-engine-v2`. Evidence is file:line at that ti
 | 14 | No tests that change one input (budget $600 → $60, no email list, new price) | 14 §13 | Backlog (paid) |
 | **P2 and P3** | | | |
 | 15 | Cold email has no stable idempotency key | 13 §7, 14 §11 | Built |
-| 16 | Experiment results are free text, with no correlation vs cause label | 14 §14 | Backlog |
+| 16 | Experiment results are free text, with no correlation vs cause label | 14 §14 | Built |
 
 **Already in place:**
 - Forecasts and cost per customer are calculated in code.

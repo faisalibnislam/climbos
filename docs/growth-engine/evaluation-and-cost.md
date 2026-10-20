@@ -406,3 +406,11 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Per recipient:** each row keeps its own result. A campaign is done only when no row is queued, sending or uncertain. A duplicate success report doesn't queue a second follow-up.
 - **Revoked mailbox:** nothing is handed over while it's not connected. A refused sign-in marks it expired and tells the owner. No retries.
 - **Limits:** Sent-folder lookup isn't checked against a live Gmail or Microsoft 365 mailbox yet. A Sent copy that arrives late could cause one resend (the lookup runs at least 2 minutes after a lost answer, 12 after a lease).
+
+**Built (not yet evaluated): structured experiment outcomes (gap item 16, Book 14 §14, Book 13 §9).**
+- **Outcome per test:** `experiments.analyses` holds eligible, exposed and converted counts, the comparison group, window, source, design, result against the metric and stop rule, and whether the test ran.
+- **Label set in code:** `inferenceOf` (`shared/growth/experimentOutcome.ts`). Platform report → attributed. Holdout or randomized with both groups → incremental. Anything else → observed. Not carried out → not_run.
+- **No overwrite on redefinition:** a changed metric or rule after results is appended and marked `redefined`. The same definition corrects the latest analysis. The original hypothesis, metric and stop rule are never edited.
+- **Owner form:** on each experiment card (`ExperimentOutcome.tsx`) via `playResults.recordExperimentOutcome`. It previews the label before saving.
+- **Learning:** `resultsBrief` adds EXPERIMENT OUTCOMES. Only incremental lines may say "incremental"; observed and attributed lines say they are not proof of cause. Tests that weren't run sit under TESTS NOT RUN, out of the lessons. A redefined result is exploratory and keeps the original verdict.
+- **Not done:** forecast and backtest runs still aren't linked to plays. The UI hasn't been checked in a browser against a live backend.

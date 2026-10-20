@@ -38,6 +38,7 @@ import {
 } from "@/components/icons";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Badge, Callout, Card, CardContent, DataTable, EmptyState, IconTile, Skeleton, Switch, toast, type Tone } from "@/components/ui";
+import { ExperimentOutcome } from "./ExperimentOutcome";
 import { HorizontalBarChart } from "@/components/ds/charts";
 import { cn } from "@/lib/utils";
 import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
@@ -604,7 +605,7 @@ const EXPERIMENT_STATUS: Record<string, { label: string; tone: Tone }> = {
   concluded: { label: "Finished", tone: "green" },
 };
 
-function ExperimentCard({ e }: { e: PlanView["experiments"][number] }) {
+function ExperimentCard({ e, slug, canEdit }: { e: PlanView["experiments"][number]; slug: string; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const st = EXPERIMENT_STATUS[e.status] ?? { label: e.status, tone: "neutral" as Tone };
   const m = METHOD[e.method];
@@ -660,11 +661,12 @@ function ExperimentCard({ e }: { e: PlanView["experiments"][number] }) {
           </div>
         </dl>
       ) : null}
+      {canEdit || e.analyses.length ? <ExperimentOutcome slug={slug} e={e} canEdit={canEdit} /> : null}
     </li>
   );
 }
 
-export function Experiments({ experiments }: { experiments: PlanView["experiments"] }) {
+export function Experiments({ experiments, slug, canEdit }: { experiments: PlanView["experiments"]; slug: string; canEdit: boolean }) {
   return (
     <PlanSection id="experiments-heading" title="Experiments" icon={FlaskConical} intro="Each has a control and stop rule." bare>
       {experiments.length === 0 ? (
@@ -674,7 +676,7 @@ export function Experiments({ experiments }: { experiments: PlanView["experiment
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {experiments.map((e) => (
-            <ExperimentCard key={e.id} e={e} />
+            <ExperimentCard key={e.id} e={e} slug={slug} canEdit={canEdit} />
           ))}
         </ul>
       )}
