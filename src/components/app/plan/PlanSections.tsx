@@ -47,6 +47,7 @@ import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
 import { approvedToast } from "./PlanActions";
+import { FeedbackButton } from "./Feedback";
 import { ProseBullets, toBullets } from "@/components/app/ProseBullets";
 import { Highlight, KeyTakeaways } from "@/components/ds/content";
 
@@ -503,7 +504,10 @@ function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency, fac
             <Lock aria-hidden className="size-3.5" /> {c.dependencies.length ? `${c.dependencies.length} needs first` : "Starts now"}
           </span>
         </span>
-        <DetailsToggle open={open} onToggle={() => setOpen((o) => !o)} controls={panel} />
+        <span className="flex items-center gap-1">
+          {canEdit && strategy.status !== "superseded" ? <FeedbackButton slug={slug} strategyId={strategy.id} subjectKind="channel" subjectKey={c.key} subjectLabel={c.name} /> : null}
+          <DetailsToggle open={open} onToggle={() => setOpen((o) => !o)} controls={panel} />
+        </span>
       </div>
       {open ? (
         <div id={panel} className="grid gap-4 md:grid-cols-3">

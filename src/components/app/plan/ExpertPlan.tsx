@@ -51,6 +51,7 @@ import type { Diagnosis } from "../../../../shared/agents/diagnosis";
 import { churnOf, ownerHourOf, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
+import { FeedbackButton } from "./Feedback";
 import { ProseBullets } from "@/components/app/ProseBullets";
 import { StatBlocks } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
@@ -946,6 +947,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
               <Magic aria-hidden /> Make it happen
             </Button>
             <DetailsToggle open={open} onToggle={() => setOpen((v) => !v)} label="Details" controls={panel} />
+            {canEdit && planId ? <FeedbackButton slug={slug} strategyId={planId} subjectKind="play" subjectKey={play.id ?? play.name} subjectLabel={play.name} /> : null}
           </div>
         </div>
       </div>

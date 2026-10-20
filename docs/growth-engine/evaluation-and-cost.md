@@ -436,3 +436,26 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
   - B1/B2 trip `economics` ("loses money") on 4–5 of 5 SaaS plans.
   - B0 trips `invented_fact`/`consistency` on all 5.
   - So under this rule, the release check (≥ 4 of 5 wins) first needs plays that don't lose money.
+
+**Built (not yet evaluated): cycle 2 from ChatGPT's notes (owner chose all four improvements and build-first), `ENGINE_VERSION` v3.0-diagnosis-playbooks.**
+- **Diagnosis in code** (`shared/agents/diagnosis.ts`):
+  - Reads the weakest link from the owner's "last 30 days" numbers (visitors, leads, first value, new customers), plus churn and capacity.
+  - Reference ranges are used only where `base-rates.md` has them (grade C). Without numbers the result is "unknown", plus what to measure.
+  - The model only explains the result and names a competing explanation.
+  - `lintDiagnosisFit` requires plays to work on a measured activation, conversion, retention or delivery constraint.
+- **Playbook contracts** (`shared/playbooks/contracts.ts`):
+  - 15 typed contracts, each with a decision, the constraint it works on, when it applies and when to avoid it, requirements, steps, outcome, guardrail, stop/revise/expand rules and fallbacks, with sources.
+  - Eligibility is decided in code. The plays agent gets what fits (constraint first) and what doesn't, with the fallback.
+  - `lintEligibility` blocks plays built on an ineligible playbook.
+  - Plans save `constraintDiagnosis` and `playbooks`.
+- **Separate confidence** (`shared/agents/confidence.ts`): problem, fix and forecast evidence per play, computed in code, shown as three chips on each play card.
+- **Failure diagnostics** (`shared/growth/diagnostics.ts`):
+  - Checks in order: did it run, is it measured, was reach short, which step fails, is there enough data.
+  - One next step. More spend only when conversion holds and reach alone is short.
+  - Shown on the plan-vs-actual card and carried into the next plan's brief.
+- **Owner feedback reasons** (`convex/feedback.ts`, `ownerFeedback` table):
+  - Reasons: done (with result), already tried, too expensive, can't do it, wrong fact, not relevant.
+  - A wrong fact goes back to review; the rest reach the next plan as constraints.
+  - Shown on play and channel cards.
+- **Cost:** no extra model calls.
+- **Release:** needs the 32-case comparison and the end-to-end bench (owner cap). UI not yet checked in a browser.

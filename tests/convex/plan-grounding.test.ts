@@ -86,6 +86,29 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     expect(x.playbooks?.ineligible.map((p) => p.id)).toContain("PB-lifecycle-email");
   });
 
+  it("specific owner feedback updates its own record and reaches the next plan (cycle 2)", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-feedback@example.com");
+    const factId = await t.run(async (ctx) => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      return ctx.db.insert("businessFacts", { orgId: w.orgId, businessId: b._id, category: "pricing", statement: "Pro is $99/month", confidence: "high", reviewState: "confirmed", provenance: "researched", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+    });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    await expect(w.client.mutation(api.feedback.give, { slug: w.slug, strategyId: s._id, subjectKind: "play", subjectKey: "p1", subjectLabel: "Referral moment", reason: "done" })).rejects.toThrow(/what happened/);
+    await w.client.mutation(api.feedback.give, { slug: w.slug, strategyId: s._id, subjectKind: "play", subjectKey: "p1", subjectLabel: "Referral moment", reason: "done", note: "12 invites, 2 new customers in 3 weeks" });
+    await w.client.mutation(api.feedback.give, { slug: w.slug, strategyId: s._id, subjectKind: "channel", subjectKey: "search_ads", subjectLabel: "Search ads", reason: "too_expensive" });
+    await w.client.mutation(api.feedback.give, { slug: w.slug, strategyId: s._id, subjectKind: "fact", subjectKey: factId, subjectLabel: "Pro is $99/month", reason: "wrong_fact", note: "Pro is $49" });
+    // A wrong fact goes back to review, so the next plan stops using it.
+    expect((await t.run(async (ctx) => ctx.db.get(factId)))!.reviewState).toBe("needs_review");
+    const rows = await w.client.query(api.feedback.forStrategy, { slug: w.slug, strategyId: s._id });
+    expect(rows.map((r) => r.reason).sort()).toEqual(["done", "too_expensive", "wrong_fact"]);
+    const brief = await t.run(async (ctx) => (await import("../../convex/feedback")).feedbackBrief(ctx as never, w.orgId));
+    expect(brief).toMatch(/Search ads": too expensive for the owner/);
+    expect(brief).toMatch(/DONE BY THE OWNER[\s\S]*12 invites, 2 new customers/);
+  });
+
   it("a plan changed after review can't be approved, but can be sent back; parking a channel doesn't void it", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-change@example.com");

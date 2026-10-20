@@ -799,6 +799,26 @@ export default defineSchema({
     .index("by_strategy", ["strategyId", "playName", "weekStart"])
     .index("by_org", ["orgId", "updatedAt"]),
 
+  /**
+   * Owner feedback on a plan's parts with a specific reason (cycle 2). Each
+   * reason feeds a different record: a wrong fact goes back to review, "done"
+   * keeps the result, the rest reach the next plan as constraints.
+   */
+  ownerFeedback: defineTable({
+    orgId: v.id("organizations"),
+    strategyId: v.id("strategies"),
+    subjectKind: v.union(v.literal("play"), v.literal("channel"), v.literal("fact"), v.literal("plan")),
+    /** Play id or name, channel key, fact id, or "plan". */
+    subjectKey: v.string(),
+    subjectLabel: v.string(),
+    reason: v.union(v.literal("wrong_fact"), v.literal("too_expensive"), v.literal("cannot_implement"), v.literal("already_tried"), v.literal("done"), v.literal("not_relevant")),
+    note: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["orgId", "createdAt"])
+    .index("by_strategy", ["strategyId", "createdAt"]),
+
   /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
   engineQuality: defineTable({
     runId: v.id("workflowRuns"),
