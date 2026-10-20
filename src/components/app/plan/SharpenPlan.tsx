@@ -18,6 +18,9 @@ const UNIT: Record<OwnerQuestion["unit"], { suffix: string; toInput: (v: number)
   count_month: { suffix: "/ month", toInput: (v) => String(Math.round(v)), fromInput: Number },
 };
 
+/** "$125/hour", "34%": a value in its unit, for hint text. */
+const hint = (u: OwnerQuestion["unit"], v: string) => ({ usd_month: `$${v}/month`, usd_hour: `$${v}/hour`, hours_week: `${v} h/week`, share: `${v}%`, share_month: `${v}%/month`, count_month: `${v}/month` })[u];
+
 /** Inputs that accept a range ("3–6"). */
 const RANGE_KEY: Record<string, "revenue" | "margin" | "churn" | undefined> = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" };
 
@@ -104,7 +107,7 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
                   <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-3">{unit.suffix}</span>
                 </div>
                 <p className="text-xs text-ink-3">
-                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${unit.toInput(q.switchValue)} ${unit.suffix}` : `Assumed ${unit.toInput(q.assumed)}`}
+                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : `Assumed ${unit.toInput(q.assumed)}`}
                   {RANGE_KEY[q.key] ? " · a range like 3–6 is fine" : ""}
                 </p>
               </div>

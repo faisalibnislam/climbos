@@ -559,7 +559,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
       {top && top.switchValue !== null ? (
         <p className="text-xs text-ink-2">
           Pays back only if {top.label} is {top.direction === "ge" ? "at least" : "at most"} <span className="font-medium tabular-nums text-ink">{fmtSwitch(top, top.switchValue, money)}</span> (now {fmtSwitch(top, top.assumed, money)})
-          {m.lossChance !== null && m.costUsd > 0 ? ` · ${Math.round(m.lossChance * 100)}% chance it doesn't, if its ranges are right` : ""}.
+          {m.lossChance !== null && m.costUsd > 0 ? ` · ${m.lossChance > 0 && m.lossChance < 0.01 ? "under 1%" : `${Math.round(m.lossChance * 100)}%`} chance it doesn't, if its ranges are right` : ""}.
         </p>
       ) : null}
     </div>
