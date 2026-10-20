@@ -1,0 +1,122 @@
+{
+  "research_cutoff": "2026-10-20",
+  "timestamp_semantics": "Publisher chapter boundaries only; topical labels are paraphrases, not exact quote timing.",
+  "sources": [
+    {
+      "id": "V01",
+      "title": "How To Talk To Users | Startup School",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=z1iF1c8w5Lg",
+      "publication_date": "2022-12-01",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_publisher_description",
+      "coverage": "Transcript retrieved and inspected; audiovisual content not watched; automatic captions may contain errors.",
+      "timestamps": [
+        {
+          "time": "03:23",
+          "scope": "participant selection"
+        },
+        {
+          "time": "05:58",
+          "scope": "interview practice"
+        },
+        {
+          "time": "09:42",
+          "scope": "follow-up questions"
+        },
+        {
+          "time": "14:37",
+          "scope": "prototype sessions"
+        }
+      ]
+    },
+    {
+      "id": "V02",
+      "title": "How to Get Your First Customers | Startup School",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=hyYCn_kAngI",
+      "publication_date": "2022-12-29",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_publisher_description",
+      "coverage": "Transcript retrieved and inspected; audiovisual content not watched; examples and categorical advice not treated as universal evidence.",
+      "timestamps": [
+        {
+          "time": "00:44",
+          "scope": "manual early work"
+        },
+        {
+          "time": "03:40",
+          "scope": "founder sales"
+        },
+        {
+          "time": "08:45",
+          "scope": "funnel discussion"
+        },
+        {
+          "time": "13:50",
+          "scope": "charging"
+        },
+        {
+          "time": "15:24",
+          "scope": "reverse planning"
+        }
+      ]
+    },
+    {
+      "id": "V03",
+      "title": "Gustaf Alstromer - How to Get Users and Grow",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=T9ikpoF2GH0",
+      "supporting_url": "https://www.ycombinator.com/blog/gustaf-alstromer-how-to-get-users-and-grow/",
+      "publication_date": "2018-09-12",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_official_supporting_page",
+      "coverage": "Transcript retrieved and inspected, including retention, channels and experimentation; historical technical and platform claims not imported as current.",
+      "timestamps": [
+        {
+          "time": "15:38",
+          "scope": "retention"
+        },
+        {
+          "time": "20:10",
+          "scope": "growth and marketing responsibilities"
+        },
+        {
+          "time": "20:56",
+          "scope": "channels"
+        },
+        {
+          "time": "34:44",
+          "scope": "paid growth"
+        },
+        {
+          "time": "37:17",
+          "scope": "SEO"
+        },
+        {
+          "time": "45:00",
+          "scope": "experimentation"
+        },
+        {
+          "time": "46:32",
+          "scope": "experiment review"
+        }
+      ]
+    },
+    {
+      "id": "V04",
+      "title": "Get started with app discovery and marketing",
+      "author": "Meghana and Chris (surnames not established)",
+      "publisher": "Apple Developer",
+      "url": "https://developer.apple.com/videos/play/tech-talks/110358/",
+      "publication_date": null,
+      "retrieved_at": "2026-10-20",
+      "access_type": "official_page_transcript",
+      "coverage": "Full official transcript retrieved and inspected; audiovisual content not watched; no timestamps exposed; current limits and platform eligibility require separate verification.",
+      "timestamps": null
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+ "id": "BRP-20",
+ "version": 1,
+ "slug": "cash-trough",
+ "title": "Show the cash low point and the upfront-payment lever",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether the owner can fund a play's growth before it pays back.",
+ "business_types": [
+  "any recurring business"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Any play with spend before contribution arrives, especially when scaling spend."
+ ],
+ "exclusions": [
+  "Businesses paid upfront with contribution at or above CAC in month 0."
+ ],
+ "required_inputs": [
+  "DS-C1"
+ ],
+ "evidence_requirements": [
+  "Monthly spend schedule",
+  "Customers per month",
+  "Contribution timing",
+  "Billing terms"
+ ],
+ "missing_data_behavior": [
+  "Acquisition cost or contribution unknown: no trough shown; ask for them.",
+  "Owner's cash reserve unknown: show the trough and ask whether it's affordable."
+ ],
+ "alternatives_when_constrained": [
+  "Missing timing: assume contribution starts the month after acquisition, labelled."
+ ],
+ "decision_branches": [
+  {
+   "if": "Trough deeper than the owner's stated reserve",
+   "then": "Slow spend, ask for upfront or annual payment, or stage the plays."
+  },
+  {
+   "if": "Paid upfront with contribution at or above CAC",
+   "then": "No trough."
+  }
+ ],
+ "implementation_steps": [
+  "Simulate the monthly cumulative cash for the portfolio over 24 months (DS-FX16).",
+  "Report the lowest cash point, its month and the cash breakeven month.",
+  "Show the effect of annual prepayment or a deposit."
+ ],
+ "dependencies": [
+  "Spend plan",
+  "Unit economics"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "The trough itself",
+  "labor": "None",
+  "tools": "None"
+ },
+ "metrics": [
+  "trough_amount",
+  "trough_month",
+  "cash_breakeven_month"
+ ],
+ "guardrails": [
+  "Do not call a play affordable because value exceeds CAC if the trough is larger than the owner's stated cash."
+ ],
+ "observation_window": "24 months.",
+ "stop_conditions": [
+  "Pause scaling if the observed trough runs deeper than planned by 25% or more."
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/economics.ts:298-319 (lockedNumbers), to be added",
+ "extends_existing": [
+  "shared/agents/economics.ts lockedNumbers (no cash line today)",
+  "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md (cash timing)"
+ ],
+ "source_references": [
+  "DS-01-F8",
+  "DS-01-F9",
+  "DS-07-F1",
+  "DS-07-F2"
+ ],
+ "concepts": [
+  "DS-C7"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "DS-01-F8",
+   "DS-01-F9",
+   "DS-07-F1",
+   "DS-07-F2"
+  ],
+  "interpretation": [
+   "Interpretation: Skok's trough is about venture-funded scaling. For a small owner, the trough is personal cash."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed rule: lockedNumbers adds a line 'lowest cash point −X in month M, breakeven month B'."
+  ],
+  "disagreements": [
+   "None."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV27",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "N": 10,
+    "CAC": 600,
+    "cm": 80,
+    "churn": 0
+   },
+   "expected_behavior": [
+    "trough −25,600 at month 8",
+    "breakeven month 16",
+    "doubling N doubles the trough"
+   ],
+   "hard_failure": [
+    "Reports only per-customer payback",
+    "Calls it affordable without checking cash"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

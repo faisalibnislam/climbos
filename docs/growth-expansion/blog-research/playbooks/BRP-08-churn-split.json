@@ -1,0 +1,171 @@
+{
+ "id": "BRP-08",
+ "version": 1,
+ "slug": "churn-split",
+ "title": "Split churn by type and timing before choosing a retention fix",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "When the computed constraint is retention, whether the first play is activation or feature-adoption repair, payment recovery, a cancellation flow, or annual-plan migration.",
+ "business_types": [
+  "saas",
+  "membership",
+  "subscription_commerce",
+  "agency_retainer"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Recurring billing (subscriptions, memberships, retainers)",
+  "Retention flagged weak, or the owner reports churn",
+  "Billing data or a cancellation list is available"
+ ],
+ "exclusions": [
+  "One-off purchases (use repeat-purchase logic instead)",
+  "Churn is fine and activation is weak: fix activation first",
+  "Any proposed cancellation step that hides or obstructs cancelling",
+  "No billing access and the owner cannot list recent cancellations"
+ ],
+ "required_inputs": [
+  "Billing provider access or export",
+  "A way to capture cancellation reasons"
+ ],
+ "evidence_requirements": [
+  "Share of churn from failed payments vs chosen cancellations",
+  "When cancellations happen: soon after signup vs just before renewal",
+  "First-term vs tenured churn",
+  "Cancellation reasons",
+  "Paid-feature use of churned vs retained customers"
+ ],
+ "missing_data_behavior": [
+  "No billing access: ask the owner to list the last 10-20 cancellations by reason and month.",
+  "Activation unmeasured: payment recovery may run but can't be the only play."
+ ],
+ "alternatives_when_constrained": [
+  "Missing data: ask the owner for the last 20 cancellations with date vs signup and renewal, reason, and failed-payment flag",
+  "Low volume: read each cancellation and contact high-value accounts personally",
+  "No integration: manual billing export",
+  "Small budget: retries and dunning are often built into billing providers; verify current provider docs before claiming"
+ ],
+ "decision_branches": [
+  {
+   "if": "Failed payments are a material share of churn",
+   "then": "Payment recovery (retries, card updates) as a quick fix."
+  },
+  {
+   "if": "Most cancels happen early",
+   "then": "Route to activation repair."
+  },
+  {
+   "if": "Cancels cluster near renewal",
+   "then": "Cancel flow with pause, downgrade and a reason question (never obstruct cancelling)."
+  }
+ ],
+ "implementation_steps": [
+  "Split involuntary (failed payment) from voluntary churn",
+  "If involuntary is material: retries, card updater, failure alerts by email and in product; label as symptom treatment",
+  "If voluntary cancels cluster right after signup: treat as activation or expectation mismatch (EV-C1)",
+  "If voluntary cancels cluster before renewal: cancellation flow that shows what was used and will be lost, offers pause or downgrade, and targets offers only at at-risk or high-value customers",
+  "If churners never used key features: top-down critical-feature check or bottom-up 'what retained users use' and promote it",
+  "Offer annual plans to tenured monthly customers",
+  "Make reactivation one click"
+ ],
+ "dependencies": [
+  "Billing data or a cancellation list"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Possibly a dunning tool",
+  "labor": "2-4 h analysis",
+  "tools": "Billing export"
+ },
+ "metrics": [
+  "Involuntary share of churn",
+  "Failed-payment recovery rate",
+  "First-term churn",
+  "Cancellation-flow save rate and next-term retention of saved customers",
+  "Resubscribe rate",
+  "Annual-plan mix"
+ ],
+ "guardrails": [
+  "Cancelling stays easy and clear; check applicable consumer-protection rules before any flow change",
+  "Discounts targeted, never blanket; check margin floor",
+  "Report payment recovery as symptom treatment, not retention improvement",
+  "Do not count a 'save' as retained until the next term passes"
+ ],
+ "observation_window": "Failed-payment recovery is readable within weeks; cancellation-flow and annual-migration effects need at least one renewal cycle of the affected cohort.",
+ "stop_conditions": [
+  "Saved customers churn next term at the same rate: saves only delay churn",
+  "Discount saves push contribution below the floor",
+  "Involuntary share is small: deprioritize payment recovery"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/diagnosis.ts (retention reading and COMPETING.retention); new playbooks PB-payment-recovery and PB-cancel-flow in shared/playbooks/contracts.ts; PB-lifecycle-email for alerts.",
+ "extends_existing": [
+  "shared/agents/diagnosis.ts (retention branch, COMPETING.retention)",
+  "new candidates PB-payment-recovery and PB-cancel-flow"
+ ],
+ "source_references": [
+  "EV-03-F1",
+  "EV-03-F3",
+  "EV-03-F4",
+  "EV-04-F2",
+  "EV-04-F3",
+  "EV-04-F4",
+  "EV-04-F6"
+ ],
+ "concepts": [
+  "EV-C2"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-03-F1",
+   "EV-03-F3",
+   "EV-03-F4",
+   "EV-04-F2",
+   "EV-04-F3",
+   "EV-04-F4",
+   "EV-04-F6"
+  ],
+  "interpretation": [
+   "INTERPRETATION: ClimbOS can flag retention but has no routing between root-cause fixes and symptom fixes. Verna's split gives that routing; her figures are too weakly sourced to be references."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: Add optional inputs failedPaymentShare and earlyCancelShare. If failedPaymentShare is material, PB-payment-recovery is eligible as a quick fix but cannot be the only play when activation is unmeasured. If earlyCancelShare dominates, route to PB-activation-repair. Verna's numbers (first-term churn about a quarter is good; failed payments about 40% of annual first-term churn; recover at least half of failed payments) are stored as 'author target, unsourced, 2025, dated' and never used as diagnosis references."
+  ],
+  "disagreements": [
+   "COMPETING.retention in diagnosis.ts names budget or seasonality; Verna would name weak activation or missed key features first. Propose listing both. Her 'about a quarter first-term churn is good' is per-term, not monthly; do not compare it with the 3–7% monthly range."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV09",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2c_saas"
+    ],
+    "customers": 600,
+    "monthlyChurn": 0.09,
+    "failed_payment_share_of_churn": 0.45,
+    "cancellations_within_14_days_of_signup_share": 0.3
+   },
+   "expected_behavior": [
+    "Diagnoses retention as weak against the 3–7% practitioner range",
+    "Puts payment recovery first because nearly half of churn is failed payments, and labels it symptom treatment",
+    "Treats early cancellations as an activation question",
+    "Any benchmark from Verna is labelled as her unsourced target"
+   ],
+   "hard_failure": [
+    "Proposes a blanket discount to all customers",
+    "Proposes a cancel flow that hides cancellation",
+    "Presents '50% of failed payments should be recovered' as an industry fact"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

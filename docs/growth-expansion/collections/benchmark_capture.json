@@ -1,0 +1,27 @@
+{
+  "kind": "schema_example_not_observed_benchmark",
+  "status": "awaiting_real_evidence",
+  "benchmark": {
+    "id": null,
+    "source_url": null,
+    "source_owner": null,
+    "publication_date": null,
+    "observed_period": null,
+    "retrieved_at": null,
+    "population": null,
+    "sample_size": null,
+    "business_model": null,
+    "geography": null,
+    "channel": null,
+    "metric_definition": null,
+    "numerator": null,
+    "denominator": null,
+    "unit": null,
+    "currency": null,
+    "distribution_statistic": null,
+    "reported_value": null,
+    "selection_bias_notes": [],
+    "tenant_comparability": "unknown",
+    "forecast_use": "not_eligible_without_comparability_review"
+  }
+}

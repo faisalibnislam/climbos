@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "status": "proposed_reference",
+  "execution_permission": "none",
+  "playbooks": [
+    {
+      "id": "ART-P01",
+      "task": "Assess a proposed growth mechanism",
+      "status": "proposed_reference",
+      "applies_when": ["A team proposes a recurring acquisition or retention mechanism", "A channel plan assumes that current customer activity creates future demand"],
+      "required_inputs": ["tenant-scoped business snapshot", "eligible population definition", "customer action and output", "distribution route", "cost and time assumptions", "available event evidence"],
+      "steps": [
+        "Describe each transition with actor, event, denominator, delay, and evidence reference.",
+        "Identify whether useful output actually reaches a next eligible population; preserve missing links as unknown.",
+        "Check customer value, privacy, product capability, and resource requirements before declaring eligibility.",
+        "Separate measured transition rates from assumptions; request deterministic scenario calculations only with compatible units.",
+        "Propose one bounded test of the weakest consequential link, with effort, observation window, and decision criteria.",
+        "Compare observed results with the original mechanism and retain failures without rewriting the initial prediction."
+      ],
+      "outputs": ["versioned mechanism map", "transition evidence table", "constraints and unresolved links", "bounded experiment proposal"],
+      "stop_conditions": ["No defensible distribution route", "Required product behavior does not exist", "Private customer information would need unauthorized exposure", "Missing data prevents a material economic comparison"],
+      "evidence_refs": ["ART-01"],
+      "acceptance_checks": ["No invented referral behavior", "No forecast of compounding from an unmeasured loop", "Funnel denominators retained where useful"]
+    },
+    {
+      "id": "ART-P02",
+      "task": "Classify initiatives and choose the next investment",
+      "status": "proposed_reference",
+      "applies_when": ["The roadmap contains competing growth projects", "Recent results include a launch spike or an unexplained plateau"],
+      "required_inputs": ["business maturity", "initiative descriptions", "baseline and cohort windows", "cash and labor capacity", "activation and retention evidence", "current constraints"],
+      "steps": [
+        "Assign each initiative a proposed role and explain its actual business mechanism rather than relying on its platform name.",
+        "Record dependencies, continuing resources, expected duration, and what remains after the activity ends.",
+        "Inspect whether demand generation, first value, repeat value, cash, or delivery is the present bottleneck.",
+        "Compare candidate actions under the same capacity and spending constraints.",
+        "Recommend a feasible first commitment and state which result would justify changing the investment sequence.",
+        "Keep launch cohorts distinct from baseline demand during review."
+      ],
+      "outputs": ["initiative-role ledger", "dependency map", "prioritized commitment", "review conditions"],
+      "stop_conditions": ["Launch observations are being extrapolated without evidence", "A hard capacity limit is ignored", "The initiative cannot be connected to a business decision"],
+      "evidence_refs": ["ART-02"],
+      "acceptance_checks": ["Different stages produce different investment choices", "A temporary spike is not labeled a proven recurring stream"]
+    },
+    {
+      "id": "ART-P03",
+      "task": "Select a test for a consequential business uncertainty",
+      "status": "proposed_reference",
+      "applies_when": ["An uncertain assumption controls a product or marketing commitment", "The team has ideas but cannot explain what it needs to learn"],
+      "required_inputs": ["decision and alternatives", "uncertain assumption", "existing evidence", "cash and labor ceilings", "customer access", "next irreversible commitment", "risk constraints"],
+      "steps": [
+        "State what observation could change the decision and which explanations the test must distinguish.",
+        "Separate problem, solution, willingness-to-pay, delivery, and economics questions.",
+        "Generate suitable candidate methods and filter by access, feasibility, risk, time, and budget.",
+        "Compare eligible methods by discriminating evidence and total commitment, not cheapness alone.",
+        "Predefine observations, success and stop criteria, limitations, and the follow-up decision.",
+        "Store the result with evidence strength; do not upgrade directional feedback into a completed transaction."
+      ],
+      "outputs": ["decision-oriented test brief", "rejected-method rationale", "measurement plan", "follow-up decision rule"],
+      "stop_conditions": ["No result could change the decision", "The proposed test cannot observe its claimed outcome", "The business cannot fulfill a promised pilot", "The customer risk is unacceptable"],
+      "evidence_refs": ["ART-03"],
+      "acceptance_checks": ["No universal experiment-count requirement", "Sparse traffic changes test design", "Actual commitments are distinguished from favorable comments"]
+    },
+    {
+      "id": "ART-P04",
+      "task": "Evaluate a candidate ClimbOS engine change",
+      "status": "proposed_reference",
+      "applies_when": ["Changing a model, prompt, retrieval method, tool, or workflow", "Investigating owner reports of recommendation regressions"],
+      "required_inputs": ["baseline version", "candidate version", "frozen business and evidence fixtures", "allowed tools", "cost envelope", "deterministic checks", "reviewer rubric"],
+      "steps": [
+        "Define hard failures separately from graded commercial quality and specify permissible alternative solutions.",
+        "Run comparable cases against baseline and candidate under compatible evidence and resource conditions.",
+        "Check arithmetic, factual support, permissions, tenant boundaries, and resulting state with appropriate validators.",
+        "Review diagnosis, alternatives, feasibility, and uncertainty using calibrated human or model-assisted judgments.",
+        "Inspect failed and disputed traces to separate an agent error from an unfair grader or ambiguous fixture.",
+        "Compare acceptable-decision cost, latency, correction effort, and material regressions before a release decision."
+      ],
+      "outputs": ["versioned comparison report", "hard-failure ledger", "reviewer disagreements", "release or repair recommendation"],
+      "stop_conditions": ["Fabricated material fact", "Unauthorized external effect", "Cross-tenant data exposure", "Material calculation failure", "Noncomparable test conditions"],
+      "evidence_refs": ["ART-04"],
+      "acceptance_checks": ["A polished plan cannot offset a hard failure", "No claimed production improvement without measured results", "OpenAI-first behavior is preserved unless an authorized measured change requires otherwise"]
+    },
+    {
+      "id": "ART-P05",
+      "task": "Build and validate a stage-specific context packet",
+      "status": "proposed_reference",
+      "applies_when": ["A decision needs multiple evidence sources or library chapters", "A long workflow requires retrieval or summary compaction"],
+      "required_inputs": ["trusted tenant identity", "immutable business snapshot", "stage task", "evidence claim IDs", "constraints and unresolved conflicts", "knowledge versions", "context budget"],
+      "steps": [
+        "Route by business mechanism, stage, channel eligibility, and current decision.",
+        "Preserve mandatory identity, budget, capacity, consent, product eligibility, source qualifiers, and action-scope fields.",
+        "Retrieve only relevant theory and examples, keeping formulas with assumptions and source locators.",
+        "Keep structured facts outside summaries so billing periods, currencies, and permission status remain retrievable.",
+        "Validate the compacted packet against known critical constraints and unresolved contradictions.",
+        "Evaluate the packet on decision quality and cost; rebuild it when the task changes materially."
+      ],
+      "outputs": ["versioned context packet", "included and excluded evidence references", "constraint-preservation report", "retrieval gaps"],
+      "stop_conditions": ["Trusted tenant identity unavailable", "A material qualifier was lost", "Untrusted source content attempts to grant action permissions", "Current and historical snapshot facts are mixed"],
+      "evidence_refs": ["ART-05"],
+      "acceptance_checks": ["No-audience constraint survives compaction", "Price period survives retrieval", "Irrelevant long documents do not displace decisive evidence"]
+    },
+    {
+      "id": "ART-P06",
+      "task": "Assess advertising readiness and route operator learning",
+      "status": "proposed_reference",
+      "applies_when": ["An owner requests an advertising plan", "Measurement or operator capability is incomplete"],
+      "required_inputs": ["goal and conversion definition", "account and destination ownership", "measurement inventory", "unit economics", "spending ceiling", "action permissions", "operator learning needs"],
+      "steps": [
+        "Record the available measurement signal and whether it represents a business-relevant outcome.",
+        "Identify material gaps in event implementation, reporting periods, economics, or permissions.",
+        "Prepare a focused implementation handoff or a bounded exploratory plan that states its learning limits.",
+        "Route the operator to relevant public Skillshop training paths without claiming that ClimbOS completed them.",
+        "Recheck current official product documentation before making account-setting or API recommendations.",
+        "Return draft-only output unless trusted execution requirements and explicit action authorization are satisfied."
+      ],
+      "outputs": ["readiness checklist", "measurement handoff", "training-path recommendation", "draft plan with uncertainty"],
+      "stop_conditions": ["Unverified destination or account ownership", "No applicable spending permission", "Invented historical conversion data", "Training access is mistaken for provider authorization"],
+      "evidence_refs": ["ART-06"],
+      "acceptance_checks": ["No certification claim", "Landing-page access scope is stated", "Missing conversion data is represented as unknown"]
+    }
+  ]
+}

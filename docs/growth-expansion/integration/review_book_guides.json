@@ -1,0 +1,243 @@
+{
+  "reviewed_at": "2026-10-20",
+  "reviewer_role": "Independent cross-review by video-module author",
+  "scope": [
+    "guides/01_strategy.md",
+    "guides/02_monetization.md",
+    "guides/03_positioning.md",
+    "guides/04_testing_ideas.md",
+    "guides/05_customer_discovery.md",
+    "guides/06_experimentation.md",
+    "guides/sources-a.json",
+    "guides/sources-b.json",
+    "playbooks/books-a.json",
+    "playbooks/books-b.json"
+  ],
+  "status": "pass_after_one_precision_fix",
+  "blocking_findings": [],
+  "localized_fixes": [
+    {
+      "path": "guides/04_testing_ideas.md",
+      "issue": "The phrase rendered title material could imply visual rendering that this workflow did not establish.",
+      "resolution": "Changed to internal title and copyright text; no uploaded source was modified."
+    }
+  ],
+  "checks": [
+    {
+      "name": "Framework versus implementation attribution",
+      "result": "All six guides explicitly separate attributed concepts from original ClimbOS workflows, schemas, thresholds, examples and acceptance tests."
+    },
+    {
+      "name": "Arithmetic",
+      "result": "Appointment funnel, spare capacity, typical/heavy-use contribution, 30% margin price floor, percentage-point versus relative lift and conversion-count examples recalculated successfully."
+    },
+    {
+      "name": "Overgeneralization",
+      "result": "Guides retain context and exceptions: bounded-loss learning, qualitative evidence, provisional positioning, price discussion stages, low traffic, inconclusive outcomes, and current provider eligibility."
+    },
+    {
+      "name": "Source provenance",
+      "result": "All six source hashes match uploads; all 36 locator paths and ranges resolve to extracted text. Claim scopes were spot-checked against the cited excerpts, including full checks of strategy-as-hypothesis, living business case, A/A tests and sample-ratio mismatch."
+    },
+    {
+      "name": "Practical action",
+      "result": "Each guide provides a next-decision workflow, hypothetical application, record design, guardrails and acceptance criteria; each has two machine-readable playbooks."
+    },
+    {
+      "name": "Playbook syntax and references",
+      "result": "All 12 JSON playbooks parse, contain the required fields, reference existing locators and retain proposed_reference status."
+    },
+    {
+      "name": "Product boundaries",
+      "result": "No assumed prospect database, fabricated Formkit facts or deployed ClimbOS claims found in the reviewed scope."
+    }
+  ],
+  "source_locator_checks": [
+    {
+      "id": "BK01-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK01-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK01-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK01-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK01-L05",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L05",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK02-L06",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L05",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L06",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L07",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L08",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK03-L09",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK04-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK04-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK04-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK04-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK05-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK05-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK05-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK05-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK05-L05",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L01",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L02",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L03",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L04",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L05",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L06",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    },
+    {
+      "id": "BK06-L07",
+      "internal_path_resolves": true,
+      "range_has_text": true
+    }
+  ],
+  "limitations": [
+    "This review read the guide prose and structured playbooks and checked cited excerpts; it is not an exhaustive line-by-line rereading of all six books.",
+    "Testing Business Ideas has layout-fragmented extraction; the guide records this and does not reconstruct missing visual ratings or a complete experiment catalog.",
+    "No fresh broad web research, runtime application audit, real customer experiment, legal review, or production integration test was performed.",
+    "Parseable reference contracts do not establish executable behavior; actual repository implementation and validation remain necessary."
+  ]
+}

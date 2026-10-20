@@ -1,0 +1,1401 @@
+{
+ "source_family": "For Entrepreneurs",
+ "author": "David Skok",
+ "articles": [
+  {
+   "id": "DS-01",
+   "title": "SaaS Metrics 2.0 – A Guide to Measuring and Improving What Matters",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-metrics-2/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from 2012–2013, an 'Update 05/2016' note points to the newer LTV article, and a linked spreadsheet is dated 4/16/2020. The site footer reads ©2000-2021. The article was probably first published around 2013 and amended later.",
+   "sections_read": [
+    "The SaaS P&L / Cash Flow Trough",
+    "Is your SaaS business viable?",
+    "Three uses for the SaaS Guidelines",
+    "The Importance of Customer Retention (Churn)",
+    "The Power of Negative Churn",
+    "Revenue Churn vs Customer Churn",
+    "Getting paid in advance",
+    "Calculating CAC and LTV",
+    "More on Churn: Cohort Analysis",
+    "Guidelines for Churn",
+    "The Importance of Customer Segmentation"
+   ],
+   "findings": [
+    {
+     "id": "DS-01-F1",
+     "kind": "author_guidance",
+     "summary": "Viability comes down to two unit-economics tests: is a customer worth clearly more than they cost to acquire, and how many months does it take to earn the acquisition cost back? The second also governs how much capital growth needs.",
+     "section": "Is your SaaS business viable?",
+     "date_sensitivity": "durable",
+     "limitations": "The tests are framed for venture-backed SaaS. The page itself gives no formula; the formulas are in the definitions supplement (DS-02)."
+    },
+    {
+     "id": "DS-01-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Rules of thumb: LTV above 3× CAC, with top companies at 7–8×. The best companies recover CAC in about 5–7 months, and profitability becomes weak once recovery passes 12 months. Large companies with cheap capital can tolerate longer recovery; startups usually cannot.",
+     "section": "Is your SaaS business viable?",
+     "date_sensitivity": "dated",
+     "limitations": "This is the author's practitioner guidance from about 2011–2013 for venture-backed SaaS with gross margins above 80%, not a survey. The 12-month figure was later relaxed (DS-02-F6, DS-03-F6)."
+    },
+    {
+     "id": "DS-01-F3",
+     "kind": "author_guidance",
+     "summary": "CAC must count all sales and marketing cost, including headcount and programmes that look free, with no exclusions. Segment-level CAC needs explicit allocation rules applied the same way every period. Founders usually underestimate CAC.",
+     "section": "Calculating CAC and LTV / Importance of Customer Segmentation",
+     "date_sensitivity": "durable",
+     "limitations": "The page credits the HubSpot practice it cites to a HubSpot executive. It does not mention founder or owner time explicitly."
+    },
+    {
+     "id": "DS-01-F4",
+     "kind": "formula",
+     "summary": "Customer churn and revenue churn can diverge sharply when customers differ in size, so track both. Net revenue churn nets expansion from remaining customers against revenue lost.",
+     "section": "Revenue Churn vs Customer Churn",
+     "date_sensitivity": "durable",
+     "limitations": "The page illustrates this with one mixed-size example and gives no general correction."
+    },
+    {
+     "id": "DS-01-F5",
+     "kind": "author_guidance",
+     "summary": "Negative churn means expansion from existing customers exceeds revenue lost to cancellations, so the base grows without new customers. The page names two routes: usage or seat-based pricing on a variable axis, and upsell or cross-sell to higher tiers or add-on modules.",
+     "section": "The Power of Negative Churn",
+     "date_sensitivity": "durable",
+     "limitations": "It needs a product with a natural expansion axis, which many small local service businesses lack."
+    },
+    {
+     "id": "DS-01-F6",
+     "kind": "author_guidance",
+     "summary": "Cohort analysis groups customers by start month and tracks them by count and by revenue at the same age. It shows whether churn concentrates early, whether it flattens, and whether a fix improved newer cohorts.",
+     "section": "More on Churn: Cohort Analysis",
+     "date_sensitivity": "durable",
+     "limitations": "Cohorts need months of data and enough customers per cohort to be readable."
+    },
+    {
+     "id": "DS-01-F7",
+     "kind": "survey_or_benchmark",
+     "summary": "Monthly net revenue churn above about 2% is treated as a sign of a fundamental problem to fix before investing in growth.",
+     "section": "Guidelines for Churn",
+     "date_sensitivity": "dated",
+     "limitations": "This is guidance for venture-backed SaaS, not SMB-sold or local businesses. The negative-churn article (DS-06-F5) concedes that small-business churn is structurally higher."
+    },
+    {
+     "id": "DS-01-F8",
+     "kind": "author_guidance",
+     "summary": "Upfront payment, such as annual billing with a discount, eases the cash trough and often lowers churn. Demanding too much upfront can cost bookings, so the trade-off has to be tested. The page tracks this as 'months up front'.",
+     "section": "Getting paid in advance",
+     "date_sensitivity": "durable",
+     "limitations": "Discount size and the effect on bookings vary by business."
+    },
+    {
+     "id": "DS-01-F9",
+     "kind": "author_guidance",
+     "summary": "Subscription businesses show early losses because acquisition is paid up front and recovered over months. Faster bookings growth deepens the cash trough even when the unit economics are good.",
+     "section": "The SaaS P&L / Cash Flow Trough",
+     "date_sensitivity": "durable",
+     "limitations": "The page shows this only through charts. The model is in DS-07."
+    }
+   ]
+  },
+  {
+   "id": "DS-02",
+   "title": "SaaS Metrics 2.0 – Detailed Definitions",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-metrics-2-definitions-2/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image uploads date from 2012–2013, 2016 and 2020, and the text says the 12-month payback guideline was written in 2011. Most formulas are images, so their exact symbolic form was not read. The older URL /saas-metrics-2-definitions/ was also fetched and returned the same supplement in an earlier revision; one summary of it named no author.",
+   "sections_read": [
+    "CAC",
+    "Customer lifetime",
+    "LTV (simple, gross-margin, expansion)",
+    "LTV:CAC",
+    "Months to recover CAC",
+    "Sales efficiency / Magic Number",
+    "MRR / ARR / Net New ARR / bookings / billings / revenue",
+    "Churn, renewal, NRR"
+   ],
+   "findings": [
+    {
+     "id": "DS-02-F1",
+     "kind": "formula",
+     "summary": "With constant churn a cohort decays exponentially, and average lifetime is 1/churn, with churn and lifetime in the same period.",
+     "section": "Customer lifetime",
+     "date_sensitivity": "durable",
+     "limitations": "This assumes constant (memoryless) churn. Annual contracts and early-life churn break that assumption."
+    },
+    {
+     "id": "DS-02-F2",
+     "kind": "formula",
+     "summary": "Simple LTV is ARPA divided by churn, using the same period for both. The gross-margin version multiplies by gross margin. The expansion version takes initial ARPA × GM (a), monthly dollar growth in ARPA × GM (m) and monthly customer churn (c), and assumes constant growth for life.",
+     "section": "LTV",
+     "date_sensitivity": "durable",
+     "limitations": "The author says the expansion model's constant-growth assumption rarely holds. The formula images were not readable, so the closed form in DS-FX7 is the widely cited form of this formula, not verified in this session."
+    },
+    {
+     "id": "DS-02-F3",
+     "kind": "dated_tactic",
+     "summary": "The LTV:CAC > 3 guideline assumes the simple LTV without gross margin and a gross margin of 80% or more. The trend over time matters more than any single reading.",
+     "section": "LTV:CAC",
+     "date_sensitivity": "dated",
+     "limitations": "The threshold does not carry over to low-margin businesses or to a gross-margin-adjusted LTV."
+    },
+    {
+     "id": "DS-02-F4",
+     "kind": "formula",
+     "summary": "Months to recover CAC is the months of a new customer's revenue needed to repay CAC. The text says including the gross-margin adjustment makes it fully accurate.",
+     "section": "Months to recover CAC",
+     "date_sensitivity": "durable",
+     "limitations": "The exact formula is an image. Symbolically it is CAC / (new-customer MRR × GM%), consistent with the text; the image itself was not read."
+    },
+    {
+     "id": "DS-02-F5",
+     "kind": "formula",
+     "summary": "Sales efficiency is gross or net new ARR divided by the previous quarter's sales and marketing spend, lagged because deals take time to close. Ignoring gross margin, efficiency 1 equals 12 months to recover CAC and 0.5 equals 24 months. The author prefers months to recover CAC because it includes gross margin. The Magic Number ignores both gross margin and the services-revenue mix.",
+     "section": "Sales efficiency / Magic Number",
+     "date_sensitivity": "durable",
+     "limitations": "This is a company-level aggregate, not per channel."
+    },
+    {
+     "id": "DS-02-F6",
+     "kind": "dated_tactic",
+     "summary": "The payback guideline was originally under 12 months (written in 2011). The author later said about 20 months is reasonable for enterprise land-and-expand companies and that under 12 is rare in practice.",
+     "section": "Months to recover CAC",
+     "date_sensitivity": "dated",
+     "limitations": "Both figures reflect the venture-capital conditions of their time."
+    },
+    {
+     "id": "DS-02-F7",
+     "kind": "formula",
+     "summary": "The page defines MRR roll-forward and Net New ARR = New + Expansion − Churned. % net MRR churn = % MRR churn − % MRR expansion, and a negative value is the goal. NRR is a cohort's value a year later, including expansion and churn, divided by its starting value.",
+     "section": "Bookings / churn / NRR",
+     "date_sensitivity": "durable",
+     "limitations": "NRR needs revenue tracked per customer per month."
+    },
+    {
+     "id": "DS-02-F8",
+     "kind": "author_guidance",
+     "summary": "Early on, churn can look low because contracts have not yet come up for renewal, so renewal rate is the better guide. Losing a few large customers can matter as much as losing many small ones.",
+     "section": "Renewal rate",
+     "date_sensitivity": "durable",
+     "limitations": "This applies mainly to term contracts."
+    },
+    {
+     "id": "DS-02-F9",
+     "kind": "survey_or_benchmark",
+     "summary": "Most public SaaS companies were described as having NRR of 120% or more, which is growth from existing customers alone.",
+     "section": "NRR",
+     "date_sensitivity": "dated",
+     "limitations": "The figure covers public SaaS at one point in time, not small businesses."
+    },
+    {
+     "id": "DS-02-F10",
+     "kind": "author_guidance",
+     "summary": "Early teams include expensive people who will later serve many customers. The author suggests counting only part of their cost to estimate CAC at scale.",
+     "section": "CAC",
+     "date_sensitivity": "durable",
+     "limitations": "This is right for a team that will scale. It is wrong for an owner-operator whose own hours stay a real cost per customer."
+    },
+    {
+     "id": "DS-02-F11",
+     "kind": "formula",
+     "summary": "Bookings, billings and revenue are distinct. Prepaid but unrecognised amounts sit in deferred revenue. Bookings alone mislead when contract lengths are mixed.",
+     "section": "Bookings / billings / revenue",
+     "date_sensitivity": "durable",
+     "limitations": "These are accounting definitions; local rules may differ."
+    }
+   ]
+  },
+  {
+   "id": "DS-03",
+   "title": "What's your TRUE customer lifetime value (LTV)? – DCF provides the answer",
+   "author": "David Skok (with Stan Reiss)",
+   "canonical_url": "https://www.forentrepreneurs.com/ltv/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. A spreadsheet note is dated 2/23/16, and DS-01 points to it as the 05/2016 replacement, so it was probably published around May 2016. The DCF formulas and LTV tables are images and were not read.",
+   "sections_read": [
+    "Problem with simple LTV",
+    "Negative churn and infinite LTV",
+    "DCF and discount rate",
+    "Formulas (described)",
+    "CORE / gross margin",
+    "Cohort data and real-world model",
+    "Limitations",
+    "Using LTV"
+   ],
+   "findings": [
+    {
+     "id": "DS-03-F1",
+     "kind": "author_guidance",
+     "summary": "Simple LTV (gross profit per account ÷ churn) breaks down when customers stay very long or when net churn is negative: the value becomes unbounded, which is not realistic.",
+     "section": "Problem with simple LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None. This is a mathematical property."
+    },
+    {
+     "id": "DS-03-F2",
+     "kind": "formula",
+     "summary": "The fix is to discount future gross profit with DCF. The suggested default rate is 10% for comparability, with rough ranges of about 15% for predictable private scale-ups and 20–25% for early-stage companies. The model uses a residual value for years beyond the observed data.",
+     "section": "DCF",
+     "date_sensitivity": "dated",
+     "limitations": "These rates reflect the 2016 cost of capital. The structure is durable; the numbers are not."
+    },
+    {
+     "id": "DS-03-F3",
+     "kind": "author_guidance",
+     "summary": "Costs of retention and expansion (CORE), such as account managers and expansion sales, belong in gross margin on the LTV side, not in CAC.",
+     "section": "CORE / gross margin",
+     "date_sensitivity": "durable",
+     "limitations": "This needs a cost split that small owners may not track."
+    },
+    {
+     "id": "DS-03-F4",
+     "kind": "author_guidance",
+     "summary": "Build LTV from cohort data: revenue per customer per month, cohorts overlaid at month 0, and customers tagged by segment. Accuracy in the first one to two years matters most, because discounting shrinks the effect of later years.",
+     "section": "Cohort data",
+     "date_sensitivity": "durable",
+     "limitations": "This needs billing history."
+    },
+    {
+     "id": "DS-03-F5",
+     "kind": "author_guidance",
+     "summary": "Known limitations: churn is not always exponential (annual contracts churn at renewal), expansion is rarely linear, gross margin changes with scale, and discounting revenue penalises companies that bill annually in advance.",
+     "section": "Limitations",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-03-F6",
+     "kind": "dated_tactic",
+     "summary": "The payback target is unchanged: 12 months, or 18 months or more if capital is plentiful. DCF lowers LTV, so the earlier 3× LTV:CAC threshold would need revising, and this article does not give a new number.",
+     "section": "Using LTV",
+     "date_sensitivity": "dated",
+     "limitations": "Tied to capital-market conditions in 2016."
+    },
+    {
+     "id": "DS-03-F7",
+     "kind": "author_guidance",
+     "summary": "Use LTV to compare segments and find levers, not as a precise forecast. CAC and LTV only mean something once acquisition is repeatable; before product-market fit, fix fit first.",
+     "section": "Using LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    }
+   ]
+  },
+  {
+   "id": "DS-04",
+   "title": "Startup Killer: the Cost of Customer Acquisition",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/startup-killer/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from December 2009, so it was probably published around 2009–2010.",
+   "sections_read": [
+    "Core argument",
+    "Computing CAC",
+    "LTV",
+    "Rules of thumb",
+    "Why CAC is underestimated",
+    "Numeric examples (funnel, human touch, field sales)",
+    "Planning guidance",
+    "Ways to reduce CAC"
+   ],
+   "findings": [
+    {
+     "id": "DS-04-F1",
+     "kind": "author_guidance",
+     "summary": "Many failed startups had product-market fit but could not acquire customers for less than they were worth. A viable business model is a fourth success factor alongside team, product and market.",
+     "section": "Core argument",
+     "date_sensitivity": "durable",
+     "limitations": "The author bases this on his own observation of startups, not on a systematic study."
+    },
+    {
+     "id": "DS-04-F2",
+     "kind": "formula",
+     "summary": "CAC is total sales and marketing spend in a period, including salaries and headcount costs, divided by customers acquired in that period. For web businesses whose headcount does not grow with customers, the author says a CAC without headcount is also useful.",
+     "section": "Computing CAC",
+     "date_sensitivity": "durable",
+     "limitations": "Founder time is not addressed. Same-period matching ignores lag."
+    },
+    {
+     "id": "DS-04-F3",
+     "kind": "formula",
+     "summary": "LTV is gross margin over the customer relationship, net of support, installation and servicing costs.",
+     "section": "LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-04-F4",
+     "kind": "dated_tactic",
+     "summary": "Original rules: LTV about 3× CAC, with some public SaaS near 5×, and CAC recovered in under 12 months or growth needs too much capital. Banks and carriers ignore the payback rule because capital is cheap for them.",
+     "section": "Rules of thumb",
+     "date_sensitivity": "dated",
+     "limitations": "Written for venture-backed software around 2009. The author's context is capital scarcity."
+    },
+    {
+     "id": "DS-04-F5",
+     "kind": "author_guidance",
+     "summary": "Media CAC from a funnel is cost per click ÷ (product of conversion rates). Adding human follow-up raises CAC sharply, and field sales adds more again. Build a CAC sensitivity model before launch and measure conversion rates early.",
+     "section": "Numeric examples / Planning guidance",
+     "date_sensitivity": "durable",
+     "limitations": "The page's dollar figures date from 2009 and are not reused here."
+    },
+    {
+     "id": "DS-04-F6",
+     "kind": "author_guidance",
+     "summary": "To reduce CAC: raise conversion rates through testing, and cut human touch with demo videos, published answers to objections, references, comparison pages and touchless conversion. High-touch sales can be restructured through OEM, channel or inside sales.",
+     "section": "Ways to reduce CAC",
+     "date_sensitivity": "durable",
+     "limitations": "Some tactics are specific to B2B software."
+    }
+   ]
+  },
+  {
+   "id": "DS-05",
+   "title": "How Sales Complexity Impacts your Startup's Viability",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/sales-complexity/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from April 2010, and the text cites 2009 results, so it was probably published in 2010. The zone charts are images.",
+   "sections_read": [
+    "Sales complexity categories",
+    "CAC vs complexity",
+    "What drives complexity",
+    "LTV must exceed CAC",
+    "Zone system",
+    "Reducing complexity",
+    "Low Cost Sales Model"
+   ],
+   "findings": [
+    {
+     "id": "DS-05-F1",
+     "kind": "author_guidance",
+     "summary": "Sales models run from freemium and no-touch self-service, through light-touch and high-touch inside sales, to field sales; channel sales is treated separately. CAC rises roughly exponentially, about an order of magnitude per step between models, on the author's rough cost estimates.",
+     "section": "CAC vs complexity",
+     "date_sensitivity": "durable",
+     "limitations": "The author calls the estimates rough and the trend more reliable than the levels. No dollar figures appear in the text."
+    },
+    {
+     "id": "DS-05-F2",
+     "kind": "author_guidance",
+     "summary": "Customer value, pain and urgency set what buyers will pay, and therefore LTV. A product whose value sits below the CAC line for its sales complexity falls in an 'unprofitable zone' where price cannot cover even sales and marketing.",
+     "section": "LTV must exceed CAC / Zones",
+     "date_sensitivity": "durable",
+     "limitations": "No numeric thresholds are given for the line."
+    },
+    {
+     "id": "DS-05-F3",
+     "kind": "author_guidance",
+     "summary": "Complexity drivers include hard evaluation or installation, several approvers, mission-critical risk, slow payback for the buyer, cross-department impact, workflow change, required integrations, no references, confusing pricing and custom contracts.",
+     "section": "What drives complexity",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-05-F4",
+     "kind": "author_guidance",
+     "summary": "The main way to reduce complexity is product and offer redesign: SaaS delivery, free trials, freemium, easier evaluation, web content that answers objections, and partners. Switching to a cheaper channel alone is not enough.",
+     "section": "Reducing complexity",
+     "date_sensitivity": "durable",
+     "limitations": "The examples are 2000s software companies."
+    },
+    {
+     "id": "DS-05-F5",
+     "kind": "reported_case",
+     "summary": "Low-cost sales models (web marketing plus touchless or inside sales) made the SMB market viable and undercut field-sales incumbents, per the companies the author cites.",
+     "section": "Low Cost Sales Model",
+     "date_sensitivity": "dated",
+     "limitations": "These are selected portfolio and peer examples, not a representative sample."
+    }
+   ]
+  },
+  {
+   "id": "DS-06",
+   "title": "Unlocking the Path to Negative Churn",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/why-churn-is-critical-in-saas/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from May 2012, so it was probably published in May 2012. The scenario charts are images.",
+   "sections_read": [
+    "Why churn matters",
+    "How churn limits size",
+    "Negative churn",
+    "Ways to achieve it",
+    "Sales organisation",
+    "When to prioritise",
+    "Tactics to reduce churn",
+    "Small business considerations",
+    "Churn and valuation"
+   ],
+   "findings": [
+    {
+     "id": "DS-06-F1",
+     "kind": "author_guidance",
+     "summary": "A constant churn percentage turns into ever-larger dollar losses as the base grows, so new bookings have to keep rising just to stand still. Growth flattens.",
+     "section": "How churn limits size",
+     "date_sensitivity": "durable",
+     "limitations": "The page shows this only through simulations."
+    },
+    {
+     "id": "DS-06-F2",
+     "kind": "author_guidance",
+     "summary": "In the author's simulation, modest monthly expansion beats eliminating churn: zero churn lifts the end-state well above the churn case, and net expansion lifts it far more.",
+     "section": "Negative churn",
+     "date_sensitivity": "durable",
+     "limitations": "This is a single illustrative model, not empirical data."
+    },
+    {
+     "id": "DS-06-F3",
+     "kind": "author_guidance",
+     "summary": "Track net bookings as three parts: new, expansion and churn. Consider separating new-logo selling from expansion and account-management roles.",
+     "section": "Tracking / Sales org",
+     "date_sensitivity": "durable",
+     "limitations": "Role separation assumes a sales team."
+    },
+    {
+     "id": "DS-06-F4",
+     "kind": "author_guidance",
+     "summary": "Tactics to reduce churn: call churned customers, ideally the CEO; score engagement to flag at-risk accounts; identify sticky features; put strong reps on saves; test longer contracts; and look for churn correlated with segment, size or lead source.",
+     "section": "Tactics to reduce churn",
+     "date_sensitivity": "durable",
+     "limitations": "Contract length trades churn against conversion, so the balance has to be tested."
+    },
+    {
+     "id": "DS-06-F5",
+     "kind": "author_guidance",
+     "summary": "Churn is structurally harder with small-business customers, who fail and cut costs more often, and their budget limits make negative churn harder.",
+     "section": "Small business considerations",
+     "date_sensitivity": "durable",
+     "limitations": "None. This applies directly to ClimbOS's users and their customers."
+    },
+    {
+     "id": "DS-06-F6",
+     "kind": "survey_or_benchmark",
+     "summary": "The page cites a public-market analysis: growth is the top valuation driver, with retention and upsell strong secondary drivers. A few points of retention or upsell were associated with materially higher revenue multiples.",
+     "section": "Churn and valuation",
+     "date_sensitivity": "dated",
+     "limitations": "Secondary citation from the early 2010s, about public SaaS valuations. It does not apply to small-business operations."
+    }
+   ]
+  },
+  {
+   "id": "DS-07",
+   "title": "SaaS Economics – Part 1: The SaaS Cash Flow Trough",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-economics-1/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from December 2010, and a linked model file is dated February 2017, so the attachments were probably replaced later. Charts are images. The model is built around one sales hire, not one customer. Part 2, which covers growth and annual prepayment, was not read.",
+   "sections_read": [
+    "Cash flow trough for a single sales hire",
+    "MRR components",
+    "Lead costs, CAC and LTV",
+    "CAC recovery",
+    "Upfront payment (deferred to Part 2)"
+   ],
+   "findings": [
+    {
+     "id": "DS-07-F1",
+     "kind": "author_guidance",
+     "summary": "Acquisition cost arrives before recurring gross profit, so cumulative cash dips into a trough before recovering. Recovery is where cumulative gross profit, after gross margin, crosses cumulative acquisition spend.",
+     "section": "Cash flow trough",
+     "date_sensitivity": "durable",
+     "limitations": "The example is for one sales hire. The author warns that its numbers vary greatly between businesses."
+    },
+    {
+     "id": "DS-07-F2",
+     "kind": "formula",
+     "summary": "The MRR roll-forward is MRR(t) = MRR(t−1) + new − churned. Cash position is the running sum of gross profit minus sales and marketing spend.",
+     "section": "MRR components",
+     "date_sensitivity": "durable",
+     "limitations": "This ignores billing timing, which Part 2 covers."
+    },
+    {
+     "id": "DS-07-F3",
+     "kind": "author_guidance",
+     "summary": "Marketing spend to feed sales capacity is significant and often overlooked. The model's CAC excludes marketing staff and sales management, and those must be added for a full cost.",
+     "section": "Lead costs, CAC and LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    }
+   ]
+  }
+ ],
+ "not_read": [
+  {
+   "url": "https://www.forentrepreneurs.com/saas-economics-2/",
+   "reason": "Not fetched; budget went to the 7 core pages. Part 2 covers growth hiring and annual prepayment cash effects. The trough conclusions here rely on DS-01 and DS-07."
+  },
+  {
+   "url": "https://www.forentrepreneurs.com/demystifying-churn/",
+   "reason": "Not fetched; overlaps DS-01 and DS-06."
+  },
+  {
+   "url": "https://www.forentrepreneurs.com/multi-axis-pricing-a-key-tool-for-increasing-saas-revenue/",
+   "reason": "Not fetched; it is on expansion pricing design, outside the formula scope."
+  },
+  {
+   "url": "https://www.forentrepreneurs.com/predictable-revenue/",
+   "reason": "Not fetched; outbound process rather than economics."
+  },
+  {
+   "url": "https://www.forentrepreneurs.com/sales-marketing-machine/inbound-marketing/",
+   "reason": "Not fetched; out of scope."
+  },
+  {
+   "url": "SaaS-Metrics spreadsheets linked from DS-01/DS-03 (xlsx)",
+   "reason": "Not downloaded: the task is read-only and file downloads need permission. Spreadsheets are also excluded by the copyright brief."
+  },
+  {
+   "url": "https://web.archive.org/cdx/search/cdx?url=forentrepreneurs.com/*",
+   "reason": "Tried for first-capture dates; WebFetch is blocked from web.archive.org, so publication dates stay null."
+  },
+  {
+   "url": "Formula and chart images on all pages",
+   "reason": "Not readable through WebFetch. Symbolic forms of the image-only formulas are labelled as standard forms, not verified."
+  }
+ ],
+ "formulas": [
+  {
+   "id": "DS-FX1",
+   "name": "Fully loaded CAC",
+   "definition": "All acquisition cost in a period divided by new paying customers in that period: CAC = (media + sales and marketing salaries and headcount costs + tools, agencies and creative + other programme costs) / new_customers. Segment CAC needs explicit, consistent allocation rules.",
+   "units": "currency per customer",
+   "source_ref": "DS-04-F2, DS-01-F3, DS-07-F3",
+   "climbos_current": "shared/growth/calc.ts:34-40 cacFull = (spend + hours × hourlyCost + other) / customers. shared/agents/economics.ts:199-203 calls it with spend over the horizon, owner hours × owner hour value ($50 default, economics.ts:83-88) and other = 0 (economics.ts:203).",
+   "gap": "Matches on headcount: owner time counts as labour, consistent with Skok's no-exclusions rule. Differs because other is hard-coded to 0 (economics.ts:203). Tools, agency or freelance help, creative, list or data purchases and ClimbOS's own subscription and credits are dropped, so CAC is understated against Skok's definition. Media-only CAC (calc.ts:28-32) exists but is not shown next to the full figure."
+  },
+  {
+   "id": "DS-FX2",
+   "name": "Months to recover CAC (simple)",
+   "definition": "CAC / new-customer MRR (ARPA). This is the form behind the 2011 '<12 months' rule; it ignores gross margin and churn.",
+   "units": "months",
+   "source_ref": "DS-01-F2, DS-02-F4",
+   "climbos_current": "Not used as a headline. paybackSimple exists in calc.ts:56-60 but takes contribution, not revenue.",
+   "gap": "None needed. ClimbOS should not use the revenue-only form; Skok himself prefers the gross-margin version."
+  },
+  {
+   "id": "DS-FX3",
+   "name": "Months to recover CAC (gross-margin adjusted)",
+   "definition": "CAC / (ARPA × GM%). The author's 'fully accurate' version. Recovery is per surviving customer and ignores churn.",
+   "units": "months",
+   "source_ref": "DS-02-F4",
+   "climbos_current": "Contribution per month = revenue × grossMargin (calc.ts:43-46; economics.ts:132-137) is used, so ClimbOS is gross-margin adjusted. paybackSimple (calc.ts:56-60) is this formula but is not called by playMaths.",
+   "gap": "Matches on gross margin. ClimbOS goes further by adding churn (DS-FX4). Its payback is therefore longer than Skok's for the same inputs, and Skok's benchmarks, calibrated on this no-churn form, must not be applied to the ClimbOS number unlabelled."
+  },
+  {
+   "id": "DS-FX4",
+   "name": "Churn-weighted (expected) payback — ClimbOS extension, not Skok",
+   "definition": "Find the smallest n where Σ_{t=0}^{n-1} cm·(1−c)^t ≥ CAC. Closed form: n = ln(1 − CAC·c/cm) / ln(1 − c). It never pays back if CAC·c/cm ≥ 1.",
+   "units": "months",
+   "source_ref": "interpretation building on DS-02-F1 (exponential decay) and DS-07-F1 (cumulative recovery)",
+   "climbos_current": "shared/growth/calc.ts:62-71 paybackWithChurn, used at economics.ts:217. The verdict is profitable = CAC ≤ contribution over 12 months (economics.ts:207, 219; horizon economics.ts:89-90).",
+   "gap": "Internally consistent with contributionOver (calc.ts:48-54). It counts the month-0 contribution in full, an assumption that payment arrives in the acquisition month. Stricter than Skok's payback. The locked-numbers line (economics.ts:312-313) should say 'with churn' so it is not compared with '<12 months' benchmarks."
+  },
+  {
+   "id": "DS-FX5",
+   "name": "Average customer lifetime",
+   "definition": "lifetime = 1 / c, where c is the constant churn per period.",
+   "units": "periods",
+   "source_ref": "DS-02-F1",
+   "climbos_current": "calc.ts:104-108 churnFromLifetime = 1 / months, used by economics.ts:126-130 for older plans.",
+   "gap": "Matches, including the constant-churn assumption, which Skok flags as often wrong (DS-03-F5)."
+  },
+  {
+   "id": "DS-FX6",
+   "name": "Simple LTV",
+   "definition": "LTV = ARPA × GM% / c, with the same period for ARPA and c.",
+   "units": "currency per customer",
+   "source_ref": "DS-02-F2, DS-04-F3",
+   "climbos_current": "Not computed. ClimbOS uses 12-month churn-weighted contribution instead (customerValue, economics.ts:139-142; contributionOver calc.ts:48-54).",
+   "gap": "Deliberate and consistent with Skok's own DCF critique (DS-03-F1) and Book 01 §7 (docs/growth-intelligence/books/01_business_strategy_economics.md:84-88). Do not add an uncapped LTV."
+  },
+  {
+   "id": "DS-FX7",
+   "name": "Expansion LTV (constant monthly ARPA growth)",
+   "definition": "Inputs: a = initial monthly ARPA × GM, m = monthly dollar ARPA growth × GM, c = monthly customer churn. The widely cited closed form is LTV = a/c + m/c². The image was not verified in this session.",
+   "units": "currency per customer",
+   "source_ref": "DS-02-F2",
+   "climbos_current": "Not computed. Economics has no expansion field (economics.ts:44-74).",
+   "gap": "ClimbOS cannot represent expansion or negative churn, so it understates value for upsell-heavy businesses. A capped-horizon version is proposed in DS-EX4."
+  },
+  {
+   "id": "DS-FX8",
+   "name": "DCF LTV",
+   "definition": "LTV = Σ_t GP_t × S_t / (1+r)^t + residual, where S_t is survival, GP_t is gross profit per surviving customer including expansion, and r is the discount rate (10% default suggested in 2016).",
+   "units": "currency per customer",
+   "source_ref": "DS-03-F2",
+   "climbos_current": "Not computed; there is no discounting.",
+   "gap": "Over a 12-month horizon, discounting at 10% a year changes value by under about 5%, so it is immaterial. Add it only if the horizon goes past 24 months."
+  },
+  {
+   "id": "DS-FX9",
+   "name": "LTV:CAC",
+   "definition": "LTV / CAC. The guideline of above 3 assumes simple LTV without GM and GM ≥ 80%.",
+   "units": "ratio",
+   "source_ref": "DS-02-F3, DS-04-F4",
+   "climbos_current": "Not computed. The test is CAC ≤ 12-month value (economics.ts:219).",
+   "gap": "Do not import 3×. It assumes lifetime revenue at GM ≥ 80%, while ClimbOS uses 12-month contribution, so the bases differ."
+  },
+  {
+   "id": "DS-FX10",
+   "name": "Customer, revenue and net revenue churn",
+   "definition": "customer churn = lost customers / customers at start. MRR churn = MRR lost from churned and downgraded customers / MRR at start. Expansion = expansion MRR / MRR at start. Net MRR churn = MRR churn − expansion; below 0 means negative churn.",
+   "units": "share per period",
+   "source_ref": "DS-01-F4, DS-02-F7",
+   "climbos_current": "One field, monthlyChurn, described as the 'share of customers lost each month' (economics.ts:48-49; question at economics.ts:382). It is multiplied into revenue value (calc.ts:48-54) and into base losses for goals (shared/agents/goal.ts:71).",
+   "gap": "Logo churn is applied to revenue. When small customers churn more, ClimbOS understates value; when large ones churn more, it overstates. Use revenue churn net of expansion for value and payback, and customer churn for customer-count goals (goal.ts:71)."
+  },
+  {
+   "id": "DS-FX11",
+   "name": "Net revenue retention (NRR)",
+   "definition": "NRR = (cohort MRR at start − churned − contraction + expansion) / cohort MRR at start, measured over a year or a month.",
+   "units": "share",
+   "source_ref": "DS-02-F7",
+   "climbos_current": "Not computed. shared/attribution/cohorts.ts:19-28 stores revenueMinor per cohort month, so the data exists.",
+   "gap": "Derive monthly NRR from cohorts.ts revenue rows."
+  },
+  {
+   "id": "DS-FX12",
+   "name": "MRR roll-forward / Net New MRR",
+   "definition": "MRR_t = MRR_{t−1} + new + expansion − churned. Net New MRR = new + expansion − churned.",
+   "units": "currency per month",
+   "source_ref": "DS-02-F7, DS-07-F2",
+   "climbos_current": "calc.ts:90-94 nextMrr = MRR × (1 − churn) + new × price. It has no expansion term and is not used by economics.ts.",
+   "gap": "Add an expansion term."
+  },
+  {
+   "id": "DS-FX13",
+   "name": "Sales efficiency to payback",
+   "definition": "SE = new ARR in the quarter / S&M spend in the prior quarter. Months to recover CAC ≈ 12 / SE, or 12 / (SE × GM) with gross margin.",
+   "units": "ratio; months",
+   "source_ref": "DS-02-F5",
+   "climbos_current": "Not computed.",
+   "gap": "Useful for an observed, company-level check once billing and spend are connected. The lag (prior-period spend) matters for sales-led businesses. Book 12 (docs/growth-intelligence/books/12_analytics_forecasting_pricing.md:105) states the lag principle; the code does not apply it."
+  },
+  {
+   "id": "DS-FX14",
+   "name": "Steady-state MRR ceiling (interpretation)",
+   "definition": "Growth stops where churned MRR equals new MRR: MRR_max = new MRR per month / monthly revenue churn. With net churn ≤ 0 there is no ceiling.",
+   "units": "currency per month",
+   "source_ref": "interpretation of DS-06-F1; Skok shows this by simulation, not as an equation",
+   "climbos_current": "Not computed.",
+   "gap": "A cheap, explainable 'growth ceiling' line for recurring businesses."
+  },
+  {
+   "id": "DS-FX15",
+   "name": "Funnel media CAC and break-even cost per click",
+   "definition": "Media CAC = CPC / Π(step rates). Break-even CPC = allowable CAC × Π(step rates).",
+   "units": "currency",
+   "source_ref": "DS-04-F5",
+   "climbos_current": "calc.ts:78-88 breakevenCpc and breakevenPerReach. breakevenPerReach is used at economics.ts:218.",
+   "gap": "Matches. ClimbOS uses 12-month churn-weighted value as the allowable CAC."
+  },
+  {
+   "id": "DS-FX16",
+   "name": "Subscription cash trough",
+   "definition": "Cumulative cash_M = Σ_{m=1}^{M} [contribution received in month m − acquisition spend in month m]. The trough is min_M of cumulative cash, and cash breakeven is the first M where cumulative cash ≥ 0.",
+   "units": "currency; months",
+   "source_ref": "DS-07-F1, DS-01-F9",
+   "climbos_current": "Not computed. lockedNumbers (economics.ts:298-319) reports cost and payback but no lowest cash point. Book 12 asks for it (12_analytics_forecasting_pricing.md:141), as does Book 01 (01_business_strategy_economics.md:96).",
+   "gap": "Missing. Owners of small businesses fund the trough themselves."
+  },
+  {
+   "id": "DS-FX17",
+   "name": "CAC-aware minimum price (proposed)",
+   "definition": "The lowest monthly price whose churn-weighted contribution over H months covers CAC: P_min = CAC × c / (GM × (1 − (1−c)^H)), or CAC / (GM × H) when c = 0.",
+   "units": "currency per month",
+   "source_ref": "interpretation of DS-05-F2 (price must cover sales complexity) using DS-FX4",
+   "climbos_current": "shared/analysis/decisions.ts:53-67 priceFloor = unitCost / (1 − targetMargin) covers delivery cost only. decisions.ts:33-51 margin excludes acquisition (it says so at :47).",
+   "gap": "There is no floor that includes acquisition. Static price-fit thresholds (shared/acquisition/scoring.ts:109 LOW_TICKET_USD_MONTH = 25; shared/agents/capacity.ts:14,55 '$300+ 12-month gross profit') stand in for it. They are not Skok-derived: Skok gives no numeric price lines."
+  }
+ ],
+ "worked_examples": [
+  {
+   "id": "DS-EX1",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "ARPA_per_month": 100,
+    "gross_margin": 0.8,
+    "monthly_churn": 0.03
+   },
+   "steps": [
+    "Simple payback (DS-FX2) = 600 / 100 = 6 months.",
+    "Contribution per month cm = 100 × 0.8 = 80.",
+    "GM-adjusted payback (DS-FX3) = 600 / 80 = 7.5 months.",
+    "Churn-weighted payback (DS-FX4): CAC·c/cm = 600 × 0.03 / 80 = 18 / 80 = 0.225.",
+    "1 − 0.225 = 0.775; ln(0.775) = −0.254892; ln(0.97) = −0.030459.",
+    "n = −0.254892 / −0.030459 = 8.368 months.",
+    "12-month value (economics.ts:207) = 80 × (1 − 0.97^12) / 0.03; 0.97^12 = 0.693842; 1 − 0.693842 = 0.306158; 80 × 0.306158 = 24.4926; ÷ 0.03 = 816.42.",
+    "Verdict: 600 ≤ 816.42, so it pays back within 12 months."
+   ],
+   "result": {
+    "payback_simple_months": 6.0,
+    "payback_gm_months": 7.5,
+    "payback_churn_weighted_months": 8.37,
+    "value_12m": 816.42,
+    "profitable": true,
+    "note": "Same inputs give 6, 7.5 or 8.37 months depending on definition. Always label which one."
+   }
+  },
+  {
+   "id": "DS-EX2",
+   "inputs_hypothetical": {
+    "customers_start": {
+     "small_at_50": 80,
+     "large_at_300": 20
+    },
+    "lost": {
+     "small": 10,
+     "large": 1
+    },
+    "expansion_MRR": 1000
+   },
+   "steps": [
+    "Starting MRR = 80 × 50 + 20 × 300 = 4,000 + 6,000 = 10,000.",
+    "Customer churn = (10 + 1) / 100 = 11%.",
+    "Lost MRR = 10 × 50 + 1 × 300 = 500 + 300 = 800, so MRR churn = 800 / 10,000 = 8%.",
+    "Expansion = 1,000 / 10,000 = 10%.",
+    "Net MRR churn = 8% − 10% = −2% (negative churn); monthly NRR = 102%.",
+    "ClimbOS today would take monthlyChurn = 0.11 (economics.ts:382 asks for the share of customers) and apply it to revenue."
+   ],
+   "result": {
+    "customer_churn": 0.11,
+    "mrr_churn": 0.08,
+    "expansion": 0.1,
+    "net_mrr_churn": -0.02,
+    "nrr_month": 1.02,
+    "climbos_churn_used": 0.11
+   }
+  },
+  {
+   "id": "DS-EX3",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "cm_per_month": 80,
+    "monthly_churn": 0.03
+   },
+   "steps": [
+    "Simple LTV (DS-FX6) = 80 / 0.03 = 2,666.67.",
+    "LTV:CAC = 2,666.67 / 600 = 4.44, which 'passes' the dated 3× rule.",
+    "ClimbOS 12-month value = 816.42 (DS-EX1), so 816.42 / 600 = 1.36.",
+    "If net churn were −1% a month, simple LTV = 80 / (−0.01) is negative and meaningless; the true value is unbounded without a horizon or discount (DS-03-F1)."
+   ],
+   "result": {
+    "simple_ltv": 2666.67,
+    "ltv_to_cac": 4.44,
+    "value12_to_cac": 1.36,
+    "note": "The 3× rule cannot be applied to ClimbOS's 12-month value; the bases differ."
+   }
+  },
+  {
+   "id": "DS-EX4",
+   "inputs_hypothetical": {
+    "cm_start": 80,
+    "monthly_logo_churn": 0.03,
+    "monthly_compound_ARPA_growth": 0.01,
+    "horizon_months": 12
+   },
+   "steps": [
+    "Per-month factor r = (1 + 0.01) × (1 − 0.03) = 1.01 × 0.97 = 0.9797.",
+    "r^12 = 0.781839.",
+    "12-month expected contribution = 80 × (1 − 0.781839) / (1 − 0.9797) = 80 × 0.218161 / 0.0203 = 17.45289 / 0.0203 = 859.75.",
+    "Compared with no expansion (816.42), value rises by 43.33 (5.3%)."
+   ],
+   "result": {
+    "value_12m_with_expansion": 859.75,
+    "value_12m_without": 816.42,
+    "uplift": 43.33,
+    "note": "This is the proposed capped-horizon expansion term. It uses compound growth, not Skok's linear m, and is labelled as such."
+   }
+  },
+  {
+   "id": "DS-EX5",
+   "inputs_hypothetical": {
+    "new_customers_per_month": 10,
+    "CAC_paid_in_acquisition_month": 600,
+    "cm_per_month": 80,
+    "contribution_starts": "month after acquisition",
+    "churn": 0,
+    "note": "churn set to 0 to isolate timing"
+   },
+   "steps": [
+    "For one customer cohort a month, net cash in month m = −600N + 80N(m − 1), and cumulative cash after M months = N × [−600M + 40M(M − 1)].",
+    "Monthly net cash turns positive when 80(m − 1) > 600, i.e. m − 1 ≥ 8, so m = 9.",
+    "Trough at M = 8: −600 × 8 + 40 × 8 × 7 = −4,800 + 2,240 = −2,560 per unit of N, so with N = 10 the trough is −25,600.",
+    "Cash breakeven: 40(M − 1) ≥ 600, so M − 1 ≥ 15 and M = 16. Check: −9,600 + 40 × 16 × 15 = −9,600 + 9,600 = 0.",
+    "Doubling growth to N = 20 doubles the trough to −51,200, with the same month-16 breakeven (DS-01-F9).",
+    "If each customer prepaid 12 months of contribution (960) in the acquisition month, then 960 − 600 = +360 per customer and there is no trough (DS-01-F8). This assumes a delivery obligation that is ignored here."
+   ],
+   "result": {
+    "trough_N10": -25600,
+    "trough_month": 8,
+    "cash_breakeven_month": 16,
+    "trough_N20": -51200,
+    "annual_prepay_trough": 0
+   }
+  },
+  {
+   "id": "DS-EX6",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "gross_margin": 0.8,
+    "monthly_churn": 0.03,
+    "horizon_months": 12
+   },
+   "steps": [
+    "1 − 0.97^12 = 0.306158.",
+    "P_min = 600 × 0.03 / (0.8 × 0.306158) = 18 / 0.244926 = 73.49 per month.",
+    "Check: cm = 73.49 × 0.8 = 58.79; 58.79 × 0.306158 / 0.03 = 600.0."
+   ],
+   "result": {
+    "price_min_per_month": 73.49
+   }
+  },
+  {
+   "id": "DS-EX7",
+   "inputs_hypothetical": {
+    "media_spend": 900,
+    "owner_hours": 30,
+    "owner_hour_value": 50,
+    "tools_and_freelance": 150,
+    "new_customers": 6
+   },
+   "steps": [
+    "Media-only CAC = 900 / 6 = 150.",
+    "ClimbOS today (other = 0, economics.ts:203) = (900 + 30 × 50) / 6 = (900 + 1,500) / 6 = 400.",
+    "Fully loaded per Skok = (900 + 1,500 + 150) / 6 = 2,550 / 6 = 425."
+   ],
+   "result": {
+    "cac_media": 150,
+    "cac_climbos_now": 400,
+    "cac_fully_loaded": 425,
+    "understatement": 25
+   }
+  },
+  {
+   "id": "DS-EX8",
+   "inputs_hypothetical": {
+    "CPC": 0.8,
+    "click_to_trial": 0.04,
+    "trial_to_paid": 0.2,
+    "allowable_CAC_12m": 816.42
+   },
+   "steps": [
+    "Clicks per customer = 1 / (0.04 × 0.2) = 1 / 0.008 = 125.",
+    "Media CAC = 125 × 0.8 = 100.",
+    "Break-even CPC = 816.42 × 0.008 = 6.53 (calc.ts:78-82 breakevenCpc)."
+   ],
+   "result": {
+    "media_cac": 100,
+    "breakeven_cpc": 6.53
+   }
+  }
+ ],
+ "concepts": [
+  {
+   "id": "DS-C1",
+   "name": "Label payback by definition; keep the churn-weighted gate",
+   "decision": "Whether a play pays back, and which payback number and benchmark to show the owner.",
+   "applies_when": [
+    "Any play with revenue per customer, gross margin, churn and a CAC."
+   ],
+   "avoid_when": [
+    "Churn is unknown. ClimbOS already returns null (economics.ts:206); keep that behaviour."
+   ],
+   "evidence_required": [
+    "Revenue per customer per month",
+    "Contribution or gross margin with its cost boundary",
+    "Monthly churn with its type (customer or revenue)"
+   ],
+   "prerequisites": [
+    "Fully loaded CAC (DS-C2)"
+   ],
+   "steps": [
+    "Compute the GM-adjusted no-churn payback (DS-FX3) and the churn-weighted payback (DS-FX4).",
+    "Use the churn-weighted figure for the verdict.",
+    "Show both, labelled 'per surviving customer' and 'expected, with churn'.",
+    "When citing external benchmarks, attach their era and basis (no churn, GM ≥ 80%, venture-backed)."
+   ],
+   "alternatives": [
+    "Missing churn: show only the no-churn payback, labelled as an upper bound on speed, with no verdict.",
+    "No cohorts: use the owner's churn, tagged as an assumption.",
+    "Small sample: give a range across churn of 0.5×–2× (economics.ts:405 already does this)."
+   ],
+   "metrics": [
+    "payback_gm_months",
+    "payback_churn_months",
+    "value_12m"
+   ],
+   "guardrails": [
+    "Never compare the churn-weighted payback with Skok's '<12' or '5–7 months' without a label.",
+    "Never present LTV:CAC 3× as a pass/fail test."
+   ],
+   "observation_window": "12 months, the ClimbOS horizon (economics.ts:89-90).",
+   "stop_review": [
+    "Re-run when the owner confirms churn or margin.",
+    "Re-run when observed cohort churn differs from the input by 50% or more."
+   ],
+   "climbos_location": "shared/growth/calc.ts:56-71; shared/agents/economics.ts:207-219, 312-313",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "CAC": 600,
+     "ARPA": 100,
+     "GM": 0.8,
+     "churn": 0.03
+    },
+    "expected_behavior": [
+     "payback_churn = 8.37",
+     "payback_gm = 7.5 shown as secondary",
+     "verdict profitable",
+     "label 'with churn'"
+    ],
+    "hard_failure": [
+     "Reports 6 months (revenue-only)",
+     "Says 'meets the 3× LTV:CAC rule' as the verdict",
+     "Invents churn when it is missing"
+    ]
+   },
+   "author_refs": [
+    "DS-01-F2",
+    "DS-02-F4",
+    "DS-02-F6",
+    "DS-03-F6"
+   ],
+   "interpretation": "Interpretation: Skok's payback is per surviving customer. ClimbOS's is an expected value over a decaying cohort, which is stricter and better suited to owner-funded businesses.",
+   "proposed_rule": "Proposed rule: the locked numbers show 'payback X months with churn (Y months per surviving customer)'. Benchmarks always carry era and basis.",
+   "overlaps_existing": "Book 01 §6 (01_business_strategy_economics.md:78) already asks for cumulative month-by-month payback, and Book 12 (12_analytics_forecasting_pricing.md:111) gives the no-churn example.",
+   "disagreements": "Skok later accepted 18–24 month paybacks for well-capitalised companies. ClimbOS's 12-month horizon follows Skok's own reasoning that startups without cheap capital cannot wait, so for small businesses 12 is defensible."
+  },
+  {
+   "id": "DS-C2",
+   "name": "Fully loaded CAC with a cost boundary, including non-media costs",
+   "decision": "Which costs count in cost per customer.",
+   "applies_when": [
+    "Every play cost and every observed channel CAC."
+   ],
+   "avoid_when": [
+    "Comparing channels on mixed boundaries (Book 01:72)."
+   ],
+   "evidence_required": [
+    "Media spend",
+    "Owner and staff hours with their value",
+    "Tools, freelancers, creative, data and ClimbOS credits attributable to the play"
+   ],
+   "prerequisites": [
+    "A cost-boundary label"
+   ],
+   "steps": [
+    "Add an 'other monthly costs' input per play (tools, freelance, creative, data).",
+    "Pass it to cacFull instead of 0 (economics.ts:203).",
+    "Show media-only CAC next to it (calc.ts:28-32).",
+    "Put retention and account-management costs (Skok's CORE) in gross margin, not in CAC."
+   ],
+   "alternatives": [
+    "Missing hours: use the default $50 per hour (economics.ts:83-88), flagged as assumed.",
+    "No tool costs known: show 0 and mark it 'not included'."
+   ],
+   "metrics": [
+    "cac_media",
+    "cac_full",
+    "cost_boundary"
+   ],
+   "guardrails": [
+    "Do not apply Skok's early-stage practice of counting only part of senior salaries to owner time; for an owner-operator those hours do not scale away (DS-02-F10)."
+   ],
+   "observation_window": "The play horizon (economics.ts:193).",
+   "stop_review": [
+    "Review when a cost category is added or removed."
+   ],
+   "climbos_location": "shared/growth/calc.ts:34-40; shared/agents/economics.ts:199-203, 381",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "media": 900,
+     "hours": 30,
+     "hour_value": 50,
+     "other": 150,
+     "customers": 6
+    },
+    "expected_behavior": [
+     "cac_full = 425",
+     "cac_media = 150 shown"
+    ],
+    "hard_failure": [
+     "Reports 400 with 'fully loaded' label",
+     "Reports 150 as CAC"
+    ]
+   },
+   "author_refs": [
+    "DS-04-F2",
+    "DS-01-F3",
+    "DS-07-F3",
+    "DS-03-F3"
+   ],
+   "interpretation": "Interpretation: valuing owner time at an hourly rate is a ClimbOS extension. It is consistent with Skok's rule of no exclusions, though Skok never mentions founder time.",
+   "proposed_rule": "Proposed rule: cacFull receives the play's non-media costs. The margin question (economics.ts:381) asks for cost 'to deliver and keep' a customer.",
+   "overlaps_existing": "Book 01:72-76 and Book 12:105-111 already define the cost boundary; the code drops 'other'.",
+   "disagreements": "None material."
+  },
+  {
+   "id": "DS-C3",
+   "name": "Separate customer churn, revenue churn and expansion",
+   "decision": "Which churn drives value and payback, and whether expansion counts.",
+   "applies_when": [
+    "Recurring businesses with customers of different sizes, or with upsell, usage or seat pricing."
+   ],
+   "avoid_when": [
+    "One-off purchase businesses: use repeat rate instead."
+   ],
+   "evidence_required": [
+    "Monthly MRR lost from churn and downgrades",
+    "Expansion MRR",
+    "Customer counts"
+   ],
+   "prerequisites": [
+    "Revenue per customer per month (cohorts.ts revenueMinor)"
+   ],
+   "steps": [
+    "Ask or measure customer churn and revenue churn separately.",
+    "Add optional monthly expansion.",
+    "Use net revenue churn for value and payback, capped at 12 months (DS-EX4).",
+    "Use customer churn for customer-count goals (goal.ts:71)."
+   ],
+   "alternatives": [
+    "Missing revenue churn: fall back to customer churn, labelled 'customer churn used as proxy'.",
+    "Small sample: show a range."
+   ],
+   "metrics": [
+    "customer_churn",
+    "mrr_churn",
+    "expansion",
+    "net_mrr_churn",
+    "nrr"
+   ],
+   "guardrails": [
+    "Never let negative net churn produce unbounded value; keep the 12-month cap.",
+    "Expansion must be observed, or tagged as an assumption."
+   ],
+   "observation_window": "Monthly, read over at least 3 complete months.",
+   "stop_review": [
+    "Review if expansion assumed above 0 is not observed within 90 days."
+   ],
+   "climbos_location": "shared/agents/economics.ts:44-74, 382; shared/growth/calc.ts:48-54, 90-94; shared/agents/goal.ts:71",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "customers": {
+      "small_50": 80,
+      "large_300": 20
+     },
+     "lost": {
+      "small": 10,
+      "large": 1
+     },
+     "expansion": 1000
+    },
+    "expected_behavior": [
+     "customer churn 11%",
+     "MRR churn 8%",
+     "net −2%",
+     "value uses net revenue churn, capped"
+    ],
+    "hard_failure": [
+     "Applies 11% to revenue without a label",
+     "Uncapped or infinite value"
+    ]
+   },
+   "author_refs": [
+    "DS-01-F4",
+    "DS-01-F5",
+    "DS-02-F7",
+    "DS-03-F1",
+    "DS-06-F2"
+   ],
+   "interpretation": "Interpretation: ClimbOS's single churn field mixes the customer and revenue concepts.",
+   "proposed_rule": "Proposed rule: add monthlyRevenueChurn and monthlyExpansion as optional inputs. The value formula uses (1 + g)(1 − c_rev), with g and c_rev both observed or tagged as assumed.",
+   "overlaps_existing": "Book 12:49 already warns that accounts and revenue retain differently.",
+   "disagreements": "Skok's expansion LTV uses linear dollar growth; the proposal uses compound growth over 12 months. Both are labelled simplifications."
+  },
+  {
+   "id": "DS-C4",
+   "name": "Cohort survival instead of blended churn when billing data exist",
+   "decision": "Whether to use a single churn rate or the observed survival curve.",
+   "applies_when": [
+    "Payments are connected (convex/analytics.ts:311 computeCohorts) and at least 3 cohorts have 3 or more complete months."
+   ],
+   "avoid_when": [
+    "Cohorts smaller than about 20 customers; show counts instead.",
+    "Annual contracts before their first renewal (DS-02-F8)."
+   ],
+   "evidence_required": [
+    "Monthly cohort retention and revenue (cohorts.ts:19-28)"
+   ],
+   "prerequisites": [
+    "Connected billing"
+   ],
+   "steps": [
+    "Average retention by cohort age, weighted by cohort size.",
+    "Feed the survival curve S_t into the payback and value sum instead of (1 − c)^t.",
+    "Flag early-month churn concentration.",
+    "Compare newer cohorts with older ones to show whether fixes worked."
+   ],
+   "alternatives": [
+    "No cohorts: use the owner's churn as an assumption.",
+    "Small sample: show raw counts and a wide range."
+   ],
+   "metrics": [
+    "retention_by_age",
+    "survival_weighted_value_12m",
+    "first_month_churn"
+   ],
+   "guardrails": [
+    "Immature months stay null, never zero (cohorts.ts:5-7 already does this).",
+    "Do not extrapolate past the observed months without a label."
+   ],
+   "observation_window": "Up to 6 months as computed today (analytics.ts:311 maxMonths 6), extended to 12 for value.",
+   "stop_review": [
+    "Review when a new cohort completes month 3."
+   ],
+   "climbos_location": "shared/attribution/cohorts.ts; convex/analytics.ts:311; shared/agents/economics.ts:126-130",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "cohort_retention": [
+      1,
+      0.8,
+      0.74,
+      0.71
+     ]
+    },
+    "expected_behavior": [
+     "Uses observed S_t for months 0–3",
+     "Labels months 4–11 as a forecast"
+    ],
+    "hard_failure": [
+     "Converts to one blended churn with no label",
+     "Treats incomplete months as churned"
+    ]
+   },
+   "author_refs": [
+    "DS-01-F6",
+    "DS-03-F4",
+    "DS-03-F5",
+    "DS-02-F8"
+   ],
+   "interpretation": "Interpretation: ClimbOS computes cohorts but economics ignores them, so value assumes a constant hazard even when early churn dominates.",
+   "proposed_rule": "Proposed rule: when cohort data meet the minimum, observed survival replaces monthlyChurn in playMaths, tagged 'measured'.",
+   "overlaps_existing": "Book 12 §4 (12_analytics_forecasting_pricing.md:43-53) and Book 01:86-92 already call for cohort-based contribution.",
+   "disagreements": "None."
+  },
+  {
+   "id": "DS-C5",
+   "name": "No uncapped LTV or LTV:CAC 3× gate",
+   "decision": "How to express customer value.",
+   "applies_when": [
+    "Always."
+   ],
+   "avoid_when": [
+    "Never use the uncapped form."
+   ],
+   "evidence_required": [
+    "Same as DS-C1"
+   ],
+   "prerequisites": [],
+   "steps": [
+    "Keep 12-month churn-weighted contribution as the allowable CAC.",
+    "If a longer view is wanted, show 24-month value discounted at a stated rate and labelled as a forecast."
+   ],
+   "alternatives": [
+    "Missing churn: show no value at all (current behaviour)."
+   ],
+   "metrics": [
+    "value_12m"
+   ],
+   "guardrails": [
+    "Never show LTV = ARPA × GM / churn as a headline.",
+    "Never use 3× as a threshold."
+   ],
+   "observation_window": "12 months.",
+   "stop_review": [],
+   "climbos_location": "shared/agents/economics.ts:139-142, 207",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "cm": 80,
+     "churn": 0.03,
+     "CAC": 600
+    },
+    "expected_behavior": [
+     "value 816.42",
+     "ratio, if shown, 1.36, labelled 12-month"
+    ],
+    "hard_failure": [
+     "Shows LTV 2,666.67 as value",
+     "Says 'passes 3×'"
+    ]
+   },
+   "author_refs": [
+    "DS-03-F1",
+    "DS-03-F2",
+    "DS-03-F6",
+    "DS-03-F7",
+    "DS-02-F3"
+   ],
+   "interpretation": "Interpretation: Skok's own 2016 revision supports ClimbOS's capped approach.",
+   "proposed_rule": "Proposed rule: keep as is, and add a lint that rejects any plan text quoting a lifetime value or a 3× rule.",
+   "overlaps_existing": "Book 01 §7 (01_business_strategy_economics.md:82-92); Book 12:109.",
+   "disagreements": "Skok still treats LTV as useful for comparing segments. ClimbOS can compare segments on 12-month value instead."
+  },
+  {
+   "id": "DS-C6",
+   "name": "Match sales touch to customer value (sales-complexity fit)",
+   "decision": "Which acquisition motion a price point can afford.",
+   "applies_when": [
+    "Choosing between self-serve, light-touch outreach and high-touch selling."
+   ],
+   "avoid_when": [
+    "When the play has its own measured CAC; use playMaths instead of the heuristic."
+   ],
+   "evidence_required": [
+    "Price",
+    "Gross margin",
+    "Churn",
+    "Hours per customer of the motion"
+   ],
+   "prerequisites": [
+    "DS-C1, DS-C2"
+   ],
+   "steps": [
+    "Compute the CAC-aware minimum price (DS-FX17) for the motion's expected CAC.",
+    "If price is below it, recommend lowering touch (demo video, comparison page, published objections, trial) or raising value or price.",
+    "Replace the static $25 and $300 thresholds with this computed check where inputs exist."
+   ],
+   "alternatives": [
+    "Missing economics: keep the static heuristic (scoring.ts:109; capacity.ts:14), labelled as a ClimbOS rule of thumb, not Skok's."
+   ],
+   "metrics": [
+    "price_min_per_month",
+    "touch_hours_per_customer"
+   ],
+   "guardrails": [
+    "Do not claim Skok's 10× per tier as a measured number for a given business; it was his rough estimate."
+   ],
+   "observation_window": "Per plan.",
+   "stop_review": [
+    "Review when price or touch level changes."
+   ],
+   "climbos_location": "shared/acquisition/scoring.ts:109-155, 236-245; shared/agents/capacity.ts:14,55; shared/analysis/decisions.ts:53-67",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "price": 49,
+     "GM": 0.8,
+     "churn": 0.03,
+     "outreach_CAC": 600
+    },
+    "expected_behavior": [
+     "P_min 73.49 > 49, so outreach does not pay back",
+     "Recommends self-serve or a lower-touch motion"
+    ],
+    "hard_failure": [
+     "Ranks one-to-one outreach first",
+     "Cites '10×' as a fact about this business"
+    ]
+   },
+   "author_refs": [
+    "DS-05-F1",
+    "DS-05-F2",
+    "DS-05-F4",
+    "DS-04-F5",
+    "DS-04-F6"
+   ],
+   "interpretation": "Interpretation: ClimbOS already encodes Skok's direction but with fixed thresholds that are not derived from his work.",
+   "proposed_rule": "Proposed rule: add a 'cac_price_floor' kind to decisions.ts calculate() using DS-FX17.",
+   "overlaps_existing": "scoring.ts price-fit logic and capacity.ts rule.",
+   "disagreements": "Skok placed channel or partner sales in a danger zone. ClimbOS's partner plays (scoring.ts:119) are lighter-weight referrals; treat them as their own case."
+  },
+  {
+   "id": "DS-C7",
+   "name": "Show the cash trough and the upfront-payment lever",
+   "decision": "Whether the owner can fund a play's growth before it pays back.",
+   "applies_when": [
+    "Any play with spend before contribution arrives, especially when scaling spend."
+   ],
+   "avoid_when": [
+    "Businesses paid upfront with contribution at or above CAC in month 0."
+   ],
+   "evidence_required": [
+    "Monthly spend schedule",
+    "Customers per month",
+    "Contribution timing",
+    "Billing terms"
+   ],
+   "prerequisites": [
+    "DS-C1"
+   ],
+   "steps": [
+    "Simulate the monthly cumulative cash for the portfolio over 24 months (DS-FX16).",
+    "Report the lowest cash point, its month and the cash breakeven month.",
+    "Show the effect of annual prepayment or a deposit."
+   ],
+   "alternatives": [
+    "Missing timing: assume contribution starts the month after acquisition, labelled."
+   ],
+   "metrics": [
+    "trough_amount",
+    "trough_month",
+    "cash_breakeven_month"
+   ],
+   "guardrails": [
+    "Do not call a play affordable because value exceeds CAC if the trough is larger than the owner's stated cash."
+   ],
+   "observation_window": "24 months.",
+   "stop_review": [
+    "Pause scaling if the observed trough runs deeper than planned by 25% or more."
+   ],
+   "climbos_location": "shared/agents/economics.ts:298-319 (lockedNumbers), to be added",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "N": 10,
+     "CAC": 600,
+     "cm": 80,
+     "churn": 0
+    },
+    "expected_behavior": [
+     "trough −25,600 at month 8",
+     "breakeven month 16",
+     "doubling N doubles the trough"
+    ],
+    "hard_failure": [
+     "Reports only per-customer payback",
+     "Calls it affordable without checking cash"
+    ]
+   },
+   "author_refs": [
+    "DS-01-F8",
+    "DS-01-F9",
+    "DS-07-F1",
+    "DS-07-F2"
+   ],
+   "interpretation": "Interpretation: Skok's trough is about venture-funded scaling. For a small owner, the trough is personal cash.",
+   "proposed_rule": "Proposed rule: lockedNumbers adds a line 'lowest cash point −X in month M, breakeven month B'.",
+   "overlaps_existing": "Book 12:141 and Book 01:96 call for it; there is no code yet.",
+   "disagreements": "None."
+  }
+ ]
+}

@@ -1,0 +1,1178 @@
+{
+ "edition": "2026-10-20",
+ "case_origin": "original_synthetic",
+ "execution_status": "not_run_against_engine",
+ "note": "Hypothetical inputs. Expected behaviours are proposed evaluator judgments, not author requirements.",
+ "cases": [
+  {
+   "id": "BR-EV01",
+   "playbook": "BRP-01",
+   "concept": "GU-C1",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether to sell variable-cost work (AI generation, research, messages, jobs) as unlimited, pure pay-as-you-go, or a plan allowance in credits with top-ups, and how to rate each action so heavy users don't erase margin.",
+   "inputs_hypothetical": {
+    "business": "Booking app for salons with AI reply drafting",
+    "customers": 100,
+    "plan_price_usd": 40,
+    "monthly_variable_cost_total_usd": 1200,
+    "top_10pct_cost_share": 0.75,
+    "target_margin": 0.3
+   },
+   "expected_behaviors": [
+    "Notes 70% average margin hides ten customers at about -$50 contribution each",
+    "Proposes an allowance whose full use costs at most $28 plus priced top-ups or a fair-use cap for the heavy tail",
+    "Asks for comprehension testing and a balance display",
+    "Labels the 70–80%/10% concentration figure as the author's experience, not a benchmark"
+   ],
+   "hard_failures": [
+    "Raising price for all customers as the only fix",
+    "Recommending unlimited usage on the strength of expected falling AI costs",
+    "Inventing the customer's cost distribution"
+   ],
+   "source_refs": [
+    "GU-01-F2",
+    "GU-01-F3",
+    "GU-01-F4",
+    "GU-01-F5",
+    "GU-02-F2",
+    "GU-04-F2",
+    "GU-08-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV02",
+   "playbook": "BRP-02",
+   "concept": "GU-C2",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which billing unit fits a business whose product does work for the customer: per person, flat subscription, usage allowance, per completed job/workflow, or per result.",
+   "inputs_hypothetical": {
+    "business": "Two-person lead-gen agency for local contractors",
+    "wants": "charge per booked appointment only",
+    "attribution": "appointments booked through client's own phone line, not tracked",
+    "cash_buffer_months": 1
+   },
+   "expected_behaviors": [
+    "Flags that attribution is not reliable and cash buffer is thin",
+    "Recommends base retainer plus a per-appointment bonus with call tracking, or a fixed package until tracking exists",
+    "States the outcome model's preconditions explicitly"
+   ],
+   "hard_failures": [
+    "Endorsing pure pay-per-result without an attribution method",
+    "Citing the guest author's 'outcome pricing will win' as evidence for this business"
+   ],
+   "source_refs": [
+    "GU-03-F2",
+    "GU-03-F3",
+    "GU-03-F4",
+    "GU-03-F5",
+    "GU-04-F2",
+    "GU-04-F3",
+    "GU-04-F4",
+    "GU-02-F1"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV03",
+   "playbook": "BRP-03",
+   "concept": "GU-C3",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "How to structure tiers and add-ons, and which lever to add when a single flat offer leaves no room for customers to pay more as they get more value.",
+   "inputs_hypothetical": {
+    "business": "Bookkeeping firm, one $300/month package, 60 clients",
+    "observation": "a third of clients ask for payroll and monthly calls",
+    "payroll_cost_hours_per_client": 2
+   },
+   "expected_behaviors": [
+    "Suggests payroll as an add-on (different need, costly to serve) or a premium tier with calls",
+    "Computes revenue lift as uptake × price difference using owner assumptions labelled hypothetical",
+    "Keeps base package delivering full bookkeeping",
+    "Labels the 15–25% uptake range as one author's software experience"
+   ],
+   "hard_failures": [
+    "Moving core bookkeeping into the premium tier",
+    "Promising Kyle's +15% revenue as an expected result"
+   ],
+   "source_refs": [
+    "GU-02-F2",
+    "GU-02-F3",
+    "GU-02-F4",
+    "GU-02-F5",
+    "GU-05-F1",
+    "GU-05-F2",
+    "GU-05-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV04",
+   "playbook": "BRP-04",
+   "concept": "GU-C4",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which try-before-you-buy model to use for a self-serve product or a sampleable service, given acquisition, conversion speed and cash needs.",
+   "inputs_hypothetical": {
+    "business": "Scheduling app for tutors",
+    "visitors_per_month": 1000,
+    "current_model": "freemium",
+    "free_signup_rate": 0.06,
+    "free_to_paid": 0.04,
+    "time_to_first_value_days": 3,
+    "cash_runway_months": 4
+   },
+   "expected_behaviors": [
+    "Compares models on paid per 1,000 visitors with labelled assumptions",
+    "Computes the reverse-trial conversion needed to beat each alternative",
+    "Recommends a test on new signups with a fixed window",
+    "Mentions faster cash from trials given short runway"
+   ],
+   "hard_failures": [
+    "Claiming a trial 'converts 2–3x better' without noting denominators",
+    "Declaring a winner from one week of data"
+   ],
+   "source_refs": [
+    "GU-06-F1",
+    "GU-06-F2",
+    "GU-06-F3",
+    "GU-07-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV05",
+   "playbook": "BRP-04",
+   "concept": "EV-C4",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which free-access configuration a self-serve product should test, and which conversion reference applies to it.",
+   "inputs_hypothetical": {
+    "case_a": {
+     "types": [
+      "b2c_saas"
+     ],
+     "model": "freemium",
+     "leads": 1000,
+     "newCustomers": 20,
+     "paid_features_seen_by_free_users": "rarely"
+    },
+    "case_b": {
+     "types": [
+      "b2b_saas"
+     ],
+     "model": "reverse_trial",
+     "leads": 300,
+     "newCustomers": 36
+    }
+   },
+   "expected_behaviors": [
+    "Case A: proposes a reverse-trial test with end-date disclosure, downgrade to free and a cost cap, and explains why",
+    "Case B: does not label 12% weak solely because it is below the 15–25% no-card trial reference; notes Verna's 10–15% reverse/standard trial figure and that both references are weak"
+   ],
+   "hard_failures": [
+    "Defaults to card-required trial",
+    "No fallback plan after the trial",
+    "Forecasts a 10–40% lift (secondhand claim not in her readable posts)"
+   ],
+   "source_refs": [
+    "EV-05-F1",
+    "EV-05-F2",
+    "EV-05-F3",
+    "EV-05-F4",
+    "EV-08-F3",
+    "EV-10-F1",
+    "EV-11-F1",
+    "EV-12-F1",
+    "EV-06-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV06",
+   "playbook": "BRP-05",
+   "concept": "GU-C5",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "How to describe and price an AI-enabled feature or service on landing and pricing pages.",
+   "inputs_hypothetical": {
+    "business": "Accounting practice",
+    "plan": "add 'AI-powered bookkeeping' and raise monthly fee 20%",
+    "measured_benefit": "none yet"
+   },
+   "expected_behaviors": [
+    "Advises leading with client outcome (e.g., faster month-end close) and measuring before claiming numbers",
+    "Says the AI label alone is unlikely to lift willingness to pay, citing the 767-person study with its caveats",
+    "Separates price decision from label"
+   ],
+   "hard_failures": [
+    "Writing 'AI-powered' headlines with invented time-saved figures",
+    "Endorsing the 20% rise on the AI label alone"
+   ],
+   "source_refs": [
+    "GU-07-F1",
+    "GU-07-F2",
+    "GU-07-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV07",
+   "playbook": "BRP-06",
+   "concept": "GU-C6",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether and how to raise list prices, especially on popular or unlimited plans, without losing price-sensitive customers.",
+   "inputs_hypothetical": {
+    "business": "Dog-walking subscription service",
+    "plans": {
+     "basic": {
+      "customers": 100,
+      "price": 8
+     },
+     "standard": {
+      "customers": 300,
+      "price": 20
+     }
+    },
+    "proposal": "raise everything 30%"
+   },
+   "expected_behaviors": [
+    "Suggests a smaller entry increase that stays below a threshold and a larger core-plan increase if value supports it",
+    "Computes break-even churn",
+    "Separates new vs existing customers and requires notice"
+   ],
+   "hard_failures": [
+    "Applying the PricingSaaS 20% average as a recommended increase",
+    "Raising existing customers' prices without notice"
+   ],
+   "source_refs": [
+    "GU-08-F1",
+    "GU-08-F2",
+    "GU-08-F3",
+    "GU-08-F4",
+    "GU-02-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV08",
+   "playbook": "BRP-07",
+   "concept": "EV-C1",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which event ClimbOS treats as 'activated' when reading the owner's funnel and when running PB-activation-repair.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "periodDays": 30,
+    "visitors": 4000,
+    "leads": 200,
+    "owner_reported_activated": 150,
+    "activated_definition": "created first form",
+    "received_first_response": 30,
+    "newCustomers": 12
+   },
+   "expected_behaviors": [
+    "Flags that 150 counts setup, not value",
+    "Uses or asks for the value-event count (30) and recomputes: activation 15%, activated-to-paid 40%",
+    "Names activation, not conversion, as the binding constraint once the value event is used, and states the diagnosis flips with the definition",
+    "First plan step defines and instruments the value event"
+   ],
+   "hard_failures": [
+    "Accepts 150 as activated without a flag and makes a pricing or checkout change the bankable play",
+    "Invents a value-event count the owner did not give"
+   ],
+   "source_refs": [
+    "EV-02-F1",
+    "EV-02-F2",
+    "EV-02-F3",
+    "EV-02-F4",
+    "EV-03-F1",
+    "EV-03-F2",
+    "EV-06-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV09",
+   "playbook": "BRP-08",
+   "concept": "EV-C2",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "When the computed constraint is retention, whether the first play is activation or feature-adoption repair, payment recovery, a cancellation flow, or annual-plan migration.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2c_saas"
+    ],
+    "customers": 600,
+    "monthlyChurn": 0.09,
+    "failed_payment_share_of_churn": 0.45,
+    "cancellations_within_14_days_of_signup_share": 0.3
+   },
+   "expected_behaviors": [
+    "Diagnoses retention as weak against the 3–7% practitioner range",
+    "Puts payment recovery first because nearly half of churn is failed payments, and labels it symptom treatment",
+    "Treats early cancellations as an activation question",
+    "Any benchmark from Verna is labelled as her unsourced target"
+   ],
+   "hard_failures": [
+    "Proposes a blanket discount to all customers",
+    "Proposes a cancel flow that hides cancellation",
+    "Presents '50% of failed payments should be recovered' as an industry fact"
+   ],
+   "source_refs": [
+    "EV-03-F1",
+    "EV-03-F3",
+    "EV-03-F4",
+    "EV-04-F2",
+    "EV-04-F3",
+    "EV-04-F4",
+    "EV-04-F6"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV10",
+   "playbook": "BRP-09",
+   "concept": "EV-C3",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether to spend effort reactivating past customers before or alongside acquiring new ones, and what to send.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "churned_consented_contacts": 400,
+    "churned_still_on_free": 120,
+    "new_signups_per_month": 60,
+    "major_feature_shipped": true
+   },
+   "expected_behaviors": [
+    "Proposes a two-segment win-back led by the new feature, with a holdout",
+    "Puts trial restarts on the still-active segment",
+    "Does not forecast with the 1–2% figure"
+   ],
+   "hard_failures": [
+    "Generic 'we miss you' blast to all",
+    "Emails contacts without consent",
+    "Uses her illustrative 1–2% as a benchmark"
+   ],
+   "source_refs": [
+    "EV-03-F5",
+    "EV-04-F6"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV11",
+   "playbook": "BRP-10",
+   "concept": "EV-C5",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "What to ask at signup and how to route users to self-serve, automated help or a human.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "leads": 500,
+    "activated_value_event": 50,
+    "profile_answers": {
+     "personal_or_student": 300,
+     "work": 200
+    },
+    "activated_work_users": 44
+   },
+   "expected_behaviors": [
+    "Computes activation within the target segment (22%) vs overall (10%)",
+    "Concludes the low headline rate is mostly signup mix and moves effort toward targeting or positioning, while still checking work-user activation",
+    "Keeps the profiling short and closed-answer"
+   ],
+   "hard_failures": [
+    "Recommends rebuilding onboarding for all users without segmenting",
+    "Makes paid third-party enrichment the primary data source for small businesses",
+    "Adds many open-text questions"
+   ],
+   "source_refs": [
+    "EV-07-F1",
+    "EV-07-F2",
+    "EV-07-F3",
+    "EV-07-F4",
+    "EV-02-F5",
+    "EV-02-F6",
+    "EV-06-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV12",
+   "playbook": "BRP-11",
+   "concept": "EV-C6",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "When the computed constraint is conversion for a self-serve product, which part of the purchase path to fix first.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2c_saas"
+    ],
+    "leads": 1000,
+    "pricing_page_viewers": 80,
+    "checkout_starts": 30,
+    "newCustomers": 25
+   },
+   "expected_behaviors": [
+    "Identifies awareness (8% of signups see pricing) as the weak link while pricing-to-checkout and checkout completion look healthy",
+    "Proposes contextual upsells, not a price cut",
+    "Labels Verna's 25%/25%/50% as unsourced 2024 author benchmarks"
+   ],
+   "hard_failures": [
+    "Discounts price as the first move",
+    "Treats her benchmarks as reliable industry norms"
+   ],
+   "source_refs": [
+    "EV-08-F1",
+    "EV-08-F2",
+    "EV-08-F3",
+    "EV-08-F4"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV13",
+   "playbook": "BRP-12",
+   "concept": "EV-C7",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether ClimbOS recommends scaling paid acquisition, a small capped learning test, or building cheaper channels first.",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "budgetUsd": 500,
+    "visitors_per_month": 1200,
+    "monthlyChurn": null,
+    "conversion_tracking": "pageview only",
+    "owner_goal": "grow with Google Ads"
+   },
+   "expected_behaviors": [
+    "First step: track a paying-customer event and measure churn",
+    "If a test runs, it is capped and framed as a learning question",
+    "Suggests product-led or owned channels alongside",
+    "Labels Verna's 10k visitors and $75k figures as unsourced rules of thumb for venture-stage startups"
+   ],
+   "hard_failures": [
+    "Forecasts scaled ROI from a $500/month test",
+    "Launches without conversion tracking",
+    "Blocks all paid tests by citing the $75k figure as a requirement"
+   ],
+   "source_refs": [
+    "EV-09-F1",
+    "EV-09-F2",
+    "EV-09-F3",
+    "EV-09-F4",
+    "EV-06-F1"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV14",
+   "playbook": "BRP-13",
+   "concept": "CH-C1",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Where to source customer language when a business has few or no own reviews, and how mined themes decide what the page says first.",
+   "inputs_hypothetical": {
+    "business": "New mobile dog-grooming van, 4 own reviews",
+    "competitor_reviews": 60,
+    "adjacent": "Reviews of dog anxiety books and calming products, 80 snippets"
+   },
+   "expected_behaviors": [
+    "Creates three separate pools with their own N",
+    "Labels the adjacent pool and own pool confidence honestly",
+    "Puts the most frequent recurring concern (e.g. a nervous dog) near the top of the page plan with its count",
+    "Marks any headline drawn from one quote as single-source"
+   ],
+   "hard_failures": [
+    "Blends pools into one percentage",
+    "Attributes a book reviewer's words to the groomer's customers",
+    "Invents a count or a review"
+   ],
+   "source_refs": [
+    "CH-01-F1",
+    "CH-01-F2",
+    "CH-01-F3",
+    "CH-01-F4",
+    "CH-02-F4"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV15",
+   "playbook": "BRP-13",
+   "concept": "CH-C2",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "When the business has customers, collect own-customer evidence with a short survey or a one-question post-purchase poll, code it into fixed groups, and map each group to a page section.",
+   "inputs_hypothetical": {
+    "business": "Local bookkeeping firm",
+    "customers": 45,
+    "consent": "service email",
+    "page": "Monthly bookkeeping landing page"
+   },
+   "expected_behaviors": [
+    "Proposes a short survey with owner approval, not an automatic send",
+    "Maps coded hesitations to FAQ entries with counts",
+    "States respondent count and that non-buyers are not represented"
+   ],
+   "hard_failures": [
+    "Sends the survey without approval",
+    "Fabricates responses or quotes",
+    "Publishes respondent words as named testimonials without permission"
+   ],
+   "source_refs": [
+    "CH-02-F1",
+    "CH-02-F2",
+    "CH-03-F1",
+    "CH-03-F2",
+    "CH-03-F3",
+    "CH-03-F4"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV16",
+   "playbook": "BRP-14",
+   "concept": "CH-C3",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "How to order a landing or home page: the opening matches awareness and the inbound message; the body follows the prospect's own question sequence; button copy depends on readiness.",
+   "inputs_hypothetical": {
+    "business": "Window-cleaning service",
+    "traffic": "Facebook ad promising 'first clean half price'",
+    "awareness": "solution-aware",
+    "proof": [
+     "4.8 rating from 31 Google reviews (confirmed)",
+     "fully insured (confirmed)"
+    ]
+   },
+   "expected_behaviors": [
+    "H1 carries the half-price first-clean promise",
+    "Body sections follow the question order with each proof placed once",
+    "Early buttons state the benefit, final button states the booking step",
+    "The test plan measures bookings, not button clicks"
+   ],
+   "hard_failures": [
+    "Invents testimonials or logos to fill the peer-proof step",
+    "Repeats the guarantee in four places",
+    "Judges success on click-through"
+   ],
+   "source_refs": [
+    "CH-04-F1",
+    "CH-04-F2",
+    "CH-04-F3",
+    "CH-04-F4"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV17",
+   "playbook": "BRP-14",
+   "concept": "CH-C5",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which risk reducer an offer, page or email uses: diagnose the single biggest perceived risk and match the reducer to it, instead of defaulting to a guarantee or testimonials.",
+   "inputs_hypothetical": {
+    "business": "Home EV-charger installer",
+    "voc": "18 of 52 competitor reviews mention fear of damage or messy install; 6 mention price",
+    "confirmed_reducers": [
+     "fully insured",
+     "fixed quote after photo survey"
+    ]
+   },
+   "expected_behaviors": [
+    "Picks the fit/will-it-work risk (install mess or damage) as dominant, with counts",
+    "Uses the confirmed insurance and fixed-quote facts near the CTA",
+    "Suggests a tidy-install guarantee to the owner as a labelled suggestion only"
+   ],
+   "hard_failures": [
+    "Writes a money-back guarantee into the copy",
+    "Lists all five risk types in the hero",
+    "Invents a customer count"
+   ],
+   "source_refs": [
+    "CH-06-F1",
+    "CH-06-F2",
+    "CH-06-F4"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV18",
+   "playbook": "BRP-15",
+   "concept": "CH-C4",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "How the ClimbOS LLM critic reviews a draft after lint.ts: staged passes that flag (not rewrite) unclear lines, benefits with no consequence, and claims whose proof type does not match the claim.",
+   "inputs_hypothetical": {
+    "draft_line": "Setup is effortless.",
+    "proof_adjacent": "Rated 4.9 by 200 customers (confirmed)",
+    "facts": "Setup steps: 3 steps, average 10 minutes (confirmed)"
+   },
+   "expected_behaviors": [
+    "Flags a proof-type mismatch: the rating does not show ease",
+    "Suggests using the confirmed 3-step, 10-minute mechanism instead, placed before the setup CTA"
+   ],
+   "hard_failures": [
+    "Invents a setup-time number",
+    "Passes the line because some proof is nearby"
+   ],
+   "source_refs": [
+    "CH-05-F1",
+    "CH-05-F2",
+    "CH-05-F3",
+    "CH-06-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV19",
+   "playbook": "BRP-16",
+   "concept": "CH-C6",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "When an owner has a running flow, ClimbOS first maps it and scores per-email performance and sending practices, protects what works, and only then rewrites.",
+   "inputs_hypothetical": {
+    "flow": "6-email welcome series",
+    "data": "email 4 drives most attributed bookings; email 2 has 1.2% unsubscribe; 30% of contacts exit after email 6 with no next flow"
+   },
+   "expected_behaviors": [
+    "Protects email 4",
+    "Flags email 2 to fix first",
+    "Flags the post-email-6 black hole and proposes a next flow",
+    "Does not judge on opens"
+   ],
+   "hard_failures": [
+    "Rewrites all six emails immediately",
+    "Sets an open-rate target",
+    "Sends or edits live flows without approval"
+   ],
+   "source_refs": [
+    "CH-08-F1",
+    "CH-08-F2",
+    "CH-08-F3",
+    "CH-08-F4",
+    "CH-08-F5"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV20",
+   "playbook": "BRP-16",
+   "concept": "CH-C7",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which onboarding emails a trial or new-account flow needs: one next step per email triggered by what the user has or hasn't done, plus a usage recap and a 'where did you get stuck' question for inactive users.",
+   "inputs_hypothetical": {
+    "product": "Online booking tool for salons",
+    "activation": "first client booking received",
+    "events": [
+     "account created",
+     "services added",
+     "booking link shared"
+    ]
+   },
+   "expected_behaviors": [
+    "Triggers the 'add services' email only if services are not added",
+    "Includes an open stuck question for users inactive for 3 days",
+    "Recap uses only real event counts"
+   ],
+   "hard_failures": [
+    "Sends a feature tour of everything",
+    "Invents usage numbers in the recap",
+    "Cites the 127-trial shares as industry benchmarks"
+   ],
+   "source_refs": [
+    "CH-07-F1",
+    "CH-07-F2",
+    "CH-07-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV21",
+   "playbook": "BRP-17",
+   "concept": "DS-C1",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether a play pays back, and which payback number and benchmark to show the owner.",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "ARPA": 100,
+    "GM": 0.8,
+    "churn": 0.03
+   },
+   "expected_behaviors": [
+    "payback_churn = 8.37",
+    "payback_gm = 7.5 shown as secondary",
+    "verdict profitable",
+    "label 'with churn'"
+   ],
+   "hard_failures": [
+    "Reports 6 months (revenue-only)",
+    "Says 'meets the 3× LTV:CAC rule' as the verdict",
+    "Invents churn when it is missing"
+   ],
+   "source_refs": [
+    "DS-01-F2",
+    "DS-02-F4",
+    "DS-02-F6",
+    "DS-03-F6"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV22",
+   "playbook": "BRP-17",
+   "concept": "DS-C2",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which costs count in cost per customer.",
+   "inputs_hypothetical": {
+    "media": 900,
+    "hours": 30,
+    "hour_value": 50,
+    "other": 150,
+    "customers": 6
+   },
+   "expected_behaviors": [
+    "cac_full = 425",
+    "cac_media = 150 shown"
+   ],
+   "hard_failures": [
+    "Reports 400 with 'fully loaded' label",
+    "Reports 150 as CAC"
+   ],
+   "source_refs": [
+    "DS-04-F2",
+    "DS-01-F3",
+    "DS-07-F3",
+    "DS-03-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV23",
+   "playbook": "BRP-17",
+   "concept": "DS-C3",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which churn drives value and payback, and whether expansion counts.",
+   "inputs_hypothetical": {
+    "customers": {
+     "small_50": 80,
+     "large_300": 20
+    },
+    "lost": {
+     "small": 10,
+     "large": 1
+    },
+    "expansion": 1000
+   },
+   "expected_behaviors": [
+    "customer churn 11%",
+    "MRR churn 8%",
+    "net −2%",
+    "value uses net revenue churn, capped"
+   ],
+   "hard_failures": [
+    "Applies 11% to revenue without a label",
+    "Uncapped or infinite value"
+   ],
+   "source_refs": [
+    "DS-01-F4",
+    "DS-01-F5",
+    "DS-02-F7",
+    "DS-03-F1",
+    "DS-06-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV24",
+   "playbook": "BRP-17",
+   "concept": "DS-C5",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "How to express customer value.",
+   "inputs_hypothetical": {
+    "cm": 80,
+    "churn": 0.03,
+    "CAC": 600
+   },
+   "expected_behaviors": [
+    "value 816.42",
+    "ratio, if shown, 1.36, labelled 12-month"
+   ],
+   "hard_failures": [
+    "Shows LTV 2,666.67 as value",
+    "Says 'passes 3×'"
+   ],
+   "source_refs": [
+    "DS-03-F1",
+    "DS-03-F2",
+    "DS-03-F6",
+    "DS-03-F7",
+    "DS-02-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV25",
+   "playbook": "BRP-18",
+   "concept": "DS-C4",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether to use a single churn rate or the observed survival curve.",
+   "inputs_hypothetical": {
+    "cohort_retention": [
+     1,
+     0.8,
+     0.74,
+     0.71
+    ]
+   },
+   "expected_behaviors": [
+    "Uses observed S_t for months 0–3",
+    "Labels months 4–11 as a forecast"
+   ],
+   "hard_failures": [
+    "Converts to one blended churn with no label",
+    "Treats incomplete months as churned"
+   ],
+   "source_refs": [
+    "DS-01-F6",
+    "DS-03-F4",
+    "DS-03-F5",
+    "DS-02-F8"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV26",
+   "playbook": "BRP-19",
+   "concept": "DS-C6",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which acquisition motion a price point can afford.",
+   "inputs_hypothetical": {
+    "price": 49,
+    "GM": 0.8,
+    "churn": 0.03,
+    "outreach_CAC": 600
+   },
+   "expected_behaviors": [
+    "P_min 73.49 > 49, so outreach does not pay back",
+    "Recommends self-serve or a lower-touch motion"
+   ],
+   "hard_failures": [
+    "Ranks one-to-one outreach first",
+    "Cites '10×' as a fact about this business"
+   ],
+   "source_refs": [
+    "DS-05-F1",
+    "DS-05-F2",
+    "DS-05-F4",
+    "DS-04-F5",
+    "DS-04-F6"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV27",
+   "playbook": "BRP-20",
+   "concept": "DS-C7",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Whether the owner can fund a play's growth before it pays back.",
+   "inputs_hypothetical": {
+    "N": 10,
+    "CAC": 600,
+    "cm": 80,
+    "churn": 0
+   },
+   "expected_behaviors": [
+    "trough −25,600 at month 8",
+    "breakeven month 16",
+    "doubling N doubles the trough"
+   ],
+   "hard_failures": [
+    "Reports only per-customer payback",
+    "Calls it affordable without checking cash"
+   ],
+   "source_refs": [
+    "DS-01-F8",
+    "DS-01-F9",
+    "DS-07-F1",
+    "DS-07-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV28",
+   "playbook": "BRP-21",
+   "concept": "EXP-C1",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "May ClimbOS read or report an effect from this split test yet?",
+   "inputs_hypothetical": {
+    "planned": [
+     50,
+     50
+    ],
+    "observed_control": 230,
+    "observed_treatment": 170,
+    "control_conversions": 23,
+    "treatment_conversions": 26
+   },
+   "expected_behaviors": [
+    "chi-square = 9.00 (expected 200 each; 2 x 30^2/200), p = 0.0027",
+    "not a block at 0.001 or ExP 0.0005, but in the proposed warn tier",
+    "asks which arm lost 30 units and why before reading conversions",
+    "conversion rates 10.0% vs 15.3% are shown only as unverified"
+   ],
+   "hard_failures": [
+    "declares treatment the winner",
+    "drops 60 control rows to make arms equal",
+    "says the split 'fits the plan' with no caution"
+   ],
+   "source_refs": [
+    "EXP-04-F2",
+    "EXP-04-F3",
+    "EXP-04-F4",
+    "EXP-05-F1",
+    "EXP-02-F5"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV29",
+   "playbook": "BRP-21",
+   "concept": "EXP-C2",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Can a recorded outcome say the change caused extra conversions?",
+   "inputs_hypothetical": {
+    "design": "randomized",
+    "planned": [
+     50,
+     50
+    ],
+    "exposed": 120,
+    "conversions": 18,
+    "controlSize": 120,
+    "controlConversions": 12,
+    "plannedEndReached": true
+   },
+   "expected_behaviors": [
+    "SRM passes (120 vs 120)",
+    "rates 15.0% vs 10.0%, +5 points, +50% relative",
+    "two-proportion z p = 0.2416 -> no reliable difference",
+    "line reads 'randomized, no reliable difference' and does not claim 6 incremental conversions"
+   ],
+   "hard_failures": [
+    "prints 'about 6 incremental conversions' as caused",
+    "next plan brief treats the play as a proven win"
+   ],
+   "source_refs": [
+    "EXP-03-F1",
+    "EXP-03-F6",
+    "EXP-04-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV30",
+   "playbook": "BRP-21",
+   "concept": "EXP-C3",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Did the change cause harm that blocks shipping, and may the test stop early for it?",
+   "inputs_hypothetical": {
+    "guardrail": "unsubscribe rate <= 1.0% with at least 500 sends per arm",
+    "control": {
+     "sends": 1000,
+     "unsubscribes": 5
+    },
+    "treatment": {
+     "sends": 1000,
+     "unsubscribes": 12
+    },
+    "goal": "replies up"
+   },
+   "expected_behaviors": [
+    "treatment 1.2% vs control 0.5%: +0.7 points, +140% relative",
+    "Fisher exact p = 0.1418, not significant, but 1.2% > 1.0% bound with 1,000 sends -> guardrail breached",
+    "blocks ship wording even if replies rose",
+    "stop rule 'pause if unsubscribes pass 1%' is accepted, not flagged as peeking"
+   ],
+   "hard_failures": [
+    "calls the unsubscribe rise 'not significant, so safe'",
+    "ships on replies alone",
+    "lint rejects the harm stop as peeking"
+   ],
+   "source_refs": [
+    "EXP-02-F1",
+    "EXP-02-F3",
+    "EXP-05-F1",
+    "EXP-05-F2",
+    "EXP-03-F5",
+    "EXP-07-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV31",
+   "playbook": "BRP-22",
+   "concept": "EXP-C4",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Is the test long enough, and is the effect fading or a one-week artifact?",
+   "inputs_hypothetical": {
+    "week1": {
+     "control": "20/200",
+     "treatment": "30/200"
+    },
+    "week2": {
+     "control": "20/200",
+     "treatment": "22/200"
+    },
+    "change": "new email subject style"
+   },
+   "expected_behaviors": [
+    "week 1 +5 points (10% vs 15%), week 2 +1 point (10% vs 11%)",
+    "week 1 change is 5x week 2 -> 'possible novelty' caution",
+    "week 1 alone: compareRates p = 0.1306, not significant either",
+    "no verdict from week 1"
+   ],
+   "hard_failures": [
+    "reports +50% relative from week 1 as the effect",
+    "accepts a 3-day ab_split"
+   ],
+   "source_refs": [
+    "EXP-02-F6",
+    "EXP-08-F1",
+    "EXP-08-F2",
+    "EXP-08-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV32",
+   "playbook": "BRP-22",
+   "concept": "EXP-C5",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Which primary metric makes this test feasible inside the horizon?",
+   "inputs_hypothetical": {
+    "weeklyEligible": 300,
+    "durationDays": 35,
+    "bookingBaseline": 0.02,
+    "bookingMDE": 0.01,
+    "proxyBaseline": 0.3,
+    "proxyMDE": 0.05
+   },
+   "expected_behaviors": [
+    "current lint passes: 300 x 35/7 = 1,500 >= 1,372 (fixed 10%->15% sizing)",
+    "booking test needs 3,826 per arm, 7,652 total = 26 weeks: flag infeasible",
+    "proxy needs 1,377 per arm, 2,754 total = 10 weeks: feasible within a 90-day plan if extended to 70 days",
+    "triggered example: a 10% relative lift among the 20% of visitors who reach pricing is about 2% site-wide (0.20 x 10%)"
+   ],
+   "hard_failures": [
+    "accepts the 35-day booking test as feasible",
+    "reports the triggered 10% lift as site-wide"
+   ],
+   "source_refs": [
+    "EXP-07-F1",
+    "EXP-07-F2",
+    "EXP-07-F3",
+    "EXP-03-F4",
+    "EXP-01-F2"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  },
+  {
+   "id": "BR-EV33",
+   "playbook": "BRP-23",
+   "concept": "EXP-C6",
+   "origin": "original_synthetic_case",
+   "status": "not_run_against_engine",
+   "task": "Is the owner's split mechanism trustworthy before the first real test?",
+   "inputs_hypothetical": {
+    "dryRunDays": 7,
+    "control_units": 215,
+    "treatment_units": 185,
+    "control_events": [
+     "visit",
+     "form_start",
+     "booking"
+    ],
+    "treatment_events": [
+     "visit",
+     "booking"
+    ]
+   },
+   "expected_behaviors": [
+    "SRM chi-square 2.25, p = 0.1336: split passes",
+    "form_start missing in treatment: dry run fails on event parity",
+    "no conversion-rate verdict"
+   ],
+   "hard_failures": [
+    "passes the dry run because SRM passed",
+    "reports an A/A conversion p-value as proof the system works"
+   ],
+   "source_refs": [
+    "EXP-06-F1",
+    "EXP-06-F3",
+    "EXP-03-F2",
+    "EXP-01-F3"
+   ],
+   "actual_output": null,
+   "observed_result": null
+  }
+ ]
+}

@@ -1,0 +1,244 @@
+[
+  {
+    "id": "BK01-P01",
+    "task": "Produce an evidence-backed strategy decision",
+    "applies_when": [
+      "A business requests a growth plan or material strategy revision."
+    ],
+    "required_inputs": [
+      "tenant-scoped snapshot",
+      "goal and observation window",
+      "budget and capacity",
+      "available evidence and known unknowns"
+    ],
+    "steps": [
+      "Verify business identity and preserve source-reported, measured and assumed fields separately.",
+      "Generate competing diagnoses and attach supporting and contradictory evidence to each.",
+      "Choose a guiding approach that names the constraint, causal mechanism and alternatives deferred.",
+      "Map actions to that approach; record prerequisite, reinforcing and conflicting relationships.",
+      "Check arithmetic, cash timing, delivery capacity and task ownership deterministically.",
+      "Define a near-term discriminating observation and review rule; return a draft decision for owner review."
+    ],
+    "outputs": [
+      "StrategyDecision with evidence and counterevidence",
+      "dependency-aware action set",
+      "deferred opportunities and review triggers"
+    ],
+    "stop_conditions": [
+      "Unresolved business identity",
+      "Material missing input makes the commercial commitment unsafe to estimate",
+      "Task exceeds budget or capacity",
+      "External action lacks applicable authorization"
+    ],
+    "evidence_refs": [
+      "BK01-L01",
+      "BK01-L03",
+      "BK01-L04",
+      "BK01-L05"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK01-P02",
+    "task": "Review an existing plan for strategic coherence",
+    "applies_when": [
+      "An engine or human has proposed a channel or activity plan."
+    ],
+    "required_inputs": [
+      "proposed plan",
+      "underlying evidence",
+      "economic model",
+      "owner constraints"
+    ],
+    "steps": [
+      "Separate goals, diagnosis, policy and actions without assuming that a goal is a diagnosis.",
+      "Flag unsupported claims, conflicting actions and tasks without a stated causal role.",
+      "Identify necessary links whose weakness could neutralize isolated improvements.",
+      "Compare a smaller coherent intervention with the existing plan under equal constraints.",
+      "Treat bounded-loss learning tests separately from commercial scaling; require a learning decision and loss ceiling.",
+      "Return concrete repairs and evidence requests; do not mark the plan executed."
+    ],
+    "outputs": [
+      "coherence review with pass/repair/block reasons",
+      "revised bounded experiment",
+      "assumptions that would reverse the recommendation"
+    ],
+    "stop_conditions": [
+      "Evidence cannot distinguish decisive alternatives",
+      "Conflicting hard constraints remain unresolved",
+      "Review tries to infer outcomes from planned actions"
+    ],
+    "evidence_refs": [
+      "BK01-L01",
+      "BK01-L02",
+      "BK01-L04",
+      "BK01-L05"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK02-P01",
+    "task": "Design a monetization research and package comparison",
+    "applies_when": [
+      "A business is designing or revising an offer, package or pricing model."
+    ],
+    "required_inputs": [
+      "segment hypotheses",
+      "offer capabilities and limitations",
+      "current alternatives",
+      "cost boundary and usage scenarios",
+      "customer-research access"
+    ],
+    "steps": [
+      "Investigate actual expenditures, buying process, problem consequences and switching constraints.",
+      "Present explicit offer alternatives after discovery; label stated price interest separately from a purchase commitment.",
+      "Compare charging units and periods against customer value, expense behavior, predictability and metering feasibility.",
+      "Construct package alternatives that each deliver their advertised outcome.",
+      "Calculate contribution under light, typical and heavy use using declared costs and missing-value behavior.",
+      "Recommend a bounded comprehension and commercial validation test; record uncertain inputs."
+    ],
+    "outputs": [
+      "segment-specific offer alternatives",
+      "evidence-strength map",
+      "deterministic contribution scenarios",
+      "pricing research plan"
+    ],
+    "stop_conditions": [
+      "Advertised outcome cannot be delivered by a package",
+      "Cost or billing unit is undefined",
+      "Model invents willingness-to-pay observations",
+      "Proposed change violates an existing commitment"
+    ],
+    "evidence_refs": [
+      "BK02-L01",
+      "BK02-L02",
+      "BK02-L03",
+      "BK02-L04",
+      "BK02-L05"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK02-P02",
+    "task": "Diagnose disappointing sales before repricing",
+    "applies_when": [
+      "Sales miss a target or a team requests a price reduction."
+    ],
+    "required_inputs": [
+      "offer version",
+      "target and actual sales window",
+      "funnel observations",
+      "buyer objections",
+      "payment and product-health evidence",
+      "contribution scenarios"
+    ],
+    "steps": [
+      "Verify that the transaction and delivery paths work and that the audience matches the intended segment.",
+      "Compare price, comprehension, implementation burden, quality and value as competing explanations.",
+      "Evaluate feasible nonprice responses without treating them as mandatory remedies.",
+      "Calculate the contribution, cash and existing-customer consequences of each price alternative.",
+      "Select a bounded test or a justified correction and preserve the prior forecast.",
+      "Request the required owner authorization for actual price or contract changes."
+    ],
+    "outputs": [
+      "repricing diagnosis",
+      "alternative comparison",
+      "impact model and migration considerations",
+      "reviewable test proposal"
+    ],
+    "stop_conditions": [
+      "Purchase flow is broken and contaminates demand interpretation",
+      "Costs or billing periods are incompatible",
+      "Existing-contract implications are unresolved",
+      "Evidence is too weak for a claimed optimal price"
+    ],
+    "evidence_refs": [
+      "BK02-L05",
+      "BK02-L06"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK03-P01",
+    "task": "Develop a source-backed positioning hypothesis",
+    "applies_when": [
+      "Messaging is confusing, a segment is being selected or a product is entering a new market."
+    ],
+    "required_inputs": [
+      "current customer evidence",
+      "verified product capabilities",
+      "buyer-perceived alternatives",
+      "goal and resource constraints"
+    ],
+    "steps": [
+      "State how the candidate customer sample was selected and retain unhappy or failed-adoption counterexamples.",
+      "Map actual alternatives including manual work or inaction where supported.",
+      "Attach verification to comparative capabilities; mark unsupported comparisons as hypotheses.",
+      "Connect capabilities to customer consequences and the conditions that make those consequences relevant.",
+      "Compare market frames and the expectations each creates; treat trend language as optional.",
+      "Select a provisional or supported position with explicit excluded expectations and review triggers."
+    ],
+    "outputs": [
+      "versioned position with evidence",
+      "comparative capability ledger",
+      "value-mechanism map",
+      "customer-comprehension test"
+    ],
+    "stop_conditions": [
+      "Position depends on unavailable product capabilities",
+      "Competitor weaknesses are invented",
+      "No customer pattern exists but the output claims validation",
+      "Selected category creates a materially misleading promise"
+    ],
+    "evidence_refs": [
+      "BK03-L01",
+      "BK03-L02",
+      "BK03-L03",
+      "BK03-L04",
+      "BK03-L05",
+      "BK03-L06",
+      "BK03-L07"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK03-P02",
+    "task": "Translate a position into consistent reviewable assets",
+    "applies_when": [
+      "A positioning version has been selected for a bounded communication test."
+    ],
+    "required_inputs": [
+      "positioning version",
+      "claim evidence",
+      "destination and audience",
+      "artifact scope",
+      "review and publication permissions"
+    ],
+    "steps": [
+      "Draft a sales explanation, message hierarchy and onboarding promise from the same position.",
+      "Validate material product and comparative claims against the capability ledger.",
+      "Ask representative participants what the offer does, whom it suits and what they expect after purchase.",
+      "Record misunderstandings and distinguish comprehension from persuasion or observed conversion.",
+      "Version repairs and invalidate affected artifacts when capabilities, segment or market assumptions change.",
+      "Prepare an owner review packet; publish only through a separately authorized execution path."
+    ],
+    "outputs": [
+      "linked draft assets",
+      "comprehension findings",
+      "claim-validation report",
+      "invalidation dependencies"
+    ],
+    "stop_conditions": [
+      "Draft implies an unsupported guarantee",
+      "Assets contradict each other or the product",
+      "A change invalidates the approved artifact",
+      "Publishing authority is missing"
+    ],
+    "evidence_refs": [
+      "BK03-L03",
+      "BK03-L08",
+      "BK03-L09"
+    ],
+    "status": "proposed_reference"
+  }
+]

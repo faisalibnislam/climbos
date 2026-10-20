@@ -1,0 +1,165 @@
+{
+ "id": "BRP-06",
+ "version": 1,
+ "slug": "price-increase",
+ "title": "Raise prices plan by plan, with proof of added value",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether and how to raise list prices, especially on popular or unlimited plans, without losing price-sensitive customers.",
+ "business_types": [
+  "saas",
+  "membership",
+  "agency",
+  "local_services",
+  "ecommerce"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Prices unchanged while value or costs rose",
+  "Unlimited or flat top plan attracts heavy users",
+  "Owner considers a single large increase"
+ ],
+ "exclusions": [
+  "Diagnosis points to weak value, delivery or communication (fix those first, BK02)",
+  "Existing contracts forbid changes before renewal",
+  "No record of added value to explain the change"
+ ],
+ "required_inputs": [
+  "Owner authorisation and a reviewed migration plan for existing customers",
+  "Customer communication template"
+ ],
+ "evidence_requirements": [
+  "Revenue and customer counts per plan",
+  "Variable cost per plan, incl. heavy users",
+  "Changelog of value added since last price change",
+  "Price thresholds relevant to the segment",
+  "Contract/notice terms for existing customers"
+ ],
+ "missing_data_behavior": [
+  "No value record since the last price: build the case first; no increase yet.",
+  "Churn sensitivity unknown: show break-even churn; ask the owner to judge."
+ ],
+ "alternatives_when_constrained": [
+  "Low volume: apply to new customers first and observe",
+  "No cost data: raise on new customers only and add a fair-use clause",
+  "Thin evidence: small steps tied to product improvements (BK02 Ch 12)"
+ ],
+ "decision_branches": [
+  {
+   "if": "Value, delivery or communication is the problem",
+   "then": "Fix that first; no increase."
+  },
+  {
+   "if": "Unlimited or flat top plan attracts heavy users",
+   "then": "Change limits before a large price jump."
+  },
+  {
+   "if": "Value grew and costs rose",
+   "then": "Raise the core plan for new buyers first; existing customers only with notice and owner authorisation."
+  }
+ ],
+ "implementation_steps": [
+  "Decide new-customer vs existing-customer scope separately",
+  "Raise most on the plan with the most demonstrated value; protect the entry price below a key threshold",
+  "For unlimited plans, prefer adjusting usage limits or adding a usage component over a very large jump",
+  "Compute the churn level at which revenue and contribution break even",
+  "Announce with the value record and adequate notice",
+  "Monitor churn and downgrades by plan against the break-even"
+ ],
+ "dependencies": [
+  "Contract and notice terms",
+  "A record of added value"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Owner decision + customer notices",
+  "tools": "Billing change"
+ },
+ "metrics": [
+  "Revenue and contribution per plan",
+  "Churn and downgrade rate vs break-even",
+  "New-customer conversion at new price",
+  "Complaints/refunds"
+ ],
+ "guardrails": [
+  "Existing customers get advance notice per terms; no silent changes",
+  "Not a pricing test (PB-pricing-test keeps existing terms unchanged)",
+  "No fake 'was' prices"
+ ],
+ "observation_window": "One renewal cycle for existing customers; 8–12 weeks of new signups.",
+ "stop_conditions": [
+  "Churn exceeds the computed break-even: pause and review",
+  "Conversion of new customers falls sharply: reconsider level or packaging"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "New playbook candidate (PB-price-increase, proposed) beside PB-capacity, whose signature currently captures 'price increase' only as a capacity response; plan engine economics stage; calculator for break-even churn.",
+ "extends_existing": [
+  "shared/playbooks/contracts.ts PB-capacity (price increase as a capacity response)",
+  "docs/growth-engine/book-review/BK02.md (Ch 8, 12)"
+ ],
+ "source_references": [
+  "GU-08-F1",
+  "GU-08-F2",
+  "GU-08-F3",
+  "GU-08-F4",
+  "GU-02-F3"
+ ],
+ "concepts": [
+  "GU-C6"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-08-F1",
+   "GU-08-F2",
+   "GU-08-F3",
+   "GU-08-F4",
+   "GU-02-F3"
+  ],
+  "interpretation": [
+   "Interpretation: the cases show segmentation (protect entry price, raise the core plan, tie to value) and suggest limit changes beat large jumps on unlimited plans; no outcomes were reported, so these are patterns, not proof."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: any price-increase recommendation shows per-plan increases, the break-even churn, scope (new vs existing), required notice and the value record; increases on unlimited plans first consider limit or usage changes."
+  ],
+  "disagreements": [
+   "PB-pricing-test forbids changing existing customers' terms; a price increase is a separate, owner-authorised migration, not a test. 02_monetization requires a reviewed migration plan, consistent with this rule."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV07",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Dog-walking subscription service",
+    "plans": {
+     "basic": {
+      "customers": 100,
+      "price": 8
+     },
+     "standard": {
+      "customers": 300,
+      "price": 20
+     }
+    },
+    "proposal": "raise everything 30%"
+   },
+   "expected_behavior": [
+    "Suggests a smaller entry increase that stays below a threshold and a larger core-plan increase if value supports it",
+    "Computes break-even churn",
+    "Separates new vs existing customers and requires notice"
+   ],
+   "hard_failure": [
+    "Applying the PricingSaaS 20% average as a recommended increase",
+    "Raising existing customers' prices without notice"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

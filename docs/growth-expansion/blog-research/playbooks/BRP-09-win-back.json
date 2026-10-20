@@ -1,0 +1,153 @@
+{
+ "id": "BRP-09",
+ "version": 1,
+ "slug": "win-back",
+ "title": "Win back churned customers with something new",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether to spend effort reactivating past customers before or alongside acquiring new ones, and what to send.",
+ "business_types": [
+  "saas",
+  "membership",
+  "subscription_commerce",
+  "local_services"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "A churned base that is large relative to monthly new signups",
+  "Meaningful new value shipped since they left",
+  "Consent or a lawful basis to contact them"
+ ],
+ "exclusions": [
+  "No consent (never cold-email past users through ClimbOS)",
+  "Nothing has changed since they left",
+  "They left because they were the wrong fit",
+  "Very few churned customers: a personal note is cheaper than a sequence"
+ ],
+ "required_inputs": [
+  "Suppression and consent handling (Book 08)",
+  "A trial-restart or offer mechanism if used"
+ ],
+ "evidence_requirements": [
+  "Count of consented churned contacts",
+  "Whether each still uses a free tier",
+  "Main churn reasons",
+  "List of changes shipped since each cohort left"
+ ],
+ "missing_data_behavior": [
+  "No consent to contact past customers: not eligible; never cold-email them.",
+  "No change since they left: not eligible."
+ ],
+ "alternatives_when_constrained": [
+  "Missing data: owner exports past customers and marks reasons",
+  "Low volume: personal email from the owner's own mailbox",
+  "No integration: manual send from the owner's mailbox",
+  "Small budget: zero spend"
+ ],
+ "decision_branches": [
+  {
+   "if": "Churned base is large relative to new signups and value shipped since",
+   "then": "A short win-back naming the specific change."
+  },
+  {
+   "if": "Still on the free tier",
+   "then": "In-product prompt first."
+  },
+  {
+   "if": "Very few churned customers",
+   "then": "A personal note from the owner."
+  }
+ ],
+ "implementation_steps": [
+  "Segment churned payers still active on free vs fully inactive",
+  "For still-active: time-limited paid-feature trial restart tied to a major launch",
+  "For inactive: slow sequence each showing one specific new capability, with occasional trial restarts",
+  "Hold out a share where volume allows",
+  "Compare expected reactivations times value with the same effort spent on new-user conversion"
+ ],
+ "dependencies": [
+  "Consented contacts",
+  "A specific product change to name"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "1-2 h",
+  "tools": "Email tool with consent records"
+ },
+ "metrics": [
+  "Paid reactivation rate per segment vs holdout",
+  "Unsubscribes and complaints",
+  "Next-term retention of reactivated customers"
+ ],
+ "guardrails": [
+  "Consent and suppression checked before every send",
+  "Frequency caps",
+  "Claims about what is new must be true and specific"
+ ],
+ "observation_window": "One launch cycle plus the next renewal of reactivated customers.",
+ "stop_conditions": [
+  "Unsubscribes or complaints rise above normal",
+  "Reactivated customers churn again in their first term at the original rate"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/playbooks/contracts.ts PB-lifecycle-email ('lapsed' moment) as a win-back variant; retention branch in diagnosis.ts.",
+ "extends_existing": [
+  "shared/playbooks/contracts.ts PB-lifecycle-email (lapsed moment)",
+  "docs/growth-intelligence/books/08_email_lifecycle.md §6"
+ ],
+ "source_references": [
+  "EV-03-F5",
+  "EV-04-F6"
+ ],
+ "concepts": [
+  "EV-C3"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-03-F5",
+   "EV-04-F6"
+  ],
+  "interpretation": [
+   "INTERPRETATION: Reactivation competes with acquisition for the same owner hours; it deserves a slot when the churned base is big and the product changed."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: When retention is the constraint and consented churned contacts exceed new signups for the period, PB-lifecycle-email's lapsed moment must be considered and its message must name a specific change since the customer left."
+  ],
+  "disagreements": [
+   "None material. Her comparison is illustrative and stays out of forecasts."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV10",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "churned_consented_contacts": 400,
+    "churned_still_on_free": 120,
+    "new_signups_per_month": 60,
+    "major_feature_shipped": true
+   },
+   "expected_behavior": [
+    "Proposes a two-segment win-back led by the new feature, with a holdout",
+    "Puts trial restarts on the still-active segment",
+    "Does not forecast with the 1–2% figure"
+   ],
+   "hard_failure": [
+    "Generic 'we miss you' blast to all",
+    "Emails contacts without consent",
+    "Uses her illustrative 1–2% as a benchmark"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

@@ -1,0 +1,342 @@
+{
+  "source_family": "Microsoft Experimentation Platform",
+  "author": "Per article: EXP-01 Machmouchi, Gupta, Zhang, Fabijan; EXP-02 Machmouchi, Gupta, Zhang; EXP-03 Machmouchi, Gupta; EXP-04 Fabijan, Bajpai, Blanarik, Caughron, Chen, Zhang, Gustafson, Budumuri, Hunt; EXP-05 Agrawal, Bajpai, Lu; EXP-06 Mitchell, Drake, Litz, Vaz; EXP-07 Qin, Machmouchi, Matos Martins; EXP-08 no individual authors listed (ExP group)",
+  "articles": [
+    {
+      "id": "EXP-01",
+      "title": "Patterns of Trustworthy Experimentation: Pre-Experiment Stage",
+      "author": "Widad Machmouchi, Somit Gupta, Ruhan Zhang, Aleksander Fabijan",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-pre-experiment-stage/",
+      "published": "2020-07-31",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Fetched via the group path /research/group/experimentation-platform-exp/articles/...; the listing page gives the /research/articles/ form used here. Read via WebFetch, so text came through a summarizer; no verbatim quotes used.",
+      "sections_read": ["Forming a hypothesis and selecting users", "Pre-experiment engineering design", "Pre-validation by progressing through populations"],
+      "findings": [
+        {"id": "EXP-01-F1", "kind": "author_guidance", "summary": "Keep each hypothesis simple and falsifiable with the metrics chosen; split a compound change into parts with their own hypotheses. A claim with no metric that could disprove it fails.", "section": "Formulate the hypothesis and success metrics", "date_sensitivity": "durable", "limitations": "No worked numbers."},
+        {"id": "EXP-01-F2", "kind": "author_guidance", "summary": "Every test carries a standard metric set (satisfaction, guardrail, feature/engagement, data quality), and a power calculation sets the minimum number of affected units before traffic is allocated.", "section": "Formulate the hypothesis and success metrics", "date_sensitivity": "durable", "limitations": "No power or sample-size values given."},
+        {"id": "EXP-01-F3", "kind": "author_guidance", "summary": "Check for pre-period bias: compare arms on the same metric in the period before the test (retrospective A/A). A significant pre-period gap makes a borderline in-test result suspect. It is an indicator, not proof.", "section": "Check and account for pre-experiment bias", "date_sensitivity": "durable", "limitations": "Needs per-unit history for the same units; seed search over a couple hundred seeds is Microsoft-scale tooling."},
+        {"id": "EXP-01-F4", "kind": "author_guidance", "summary": "When only some users can be affected, log in control which users would have been affected (counterfactual logging) so the comparison is like-for-like; verify it with SRM.", "section": "Set up counterfactual logging", "date_sensitivity": "durable", "limitations": "Requires engineering control of both arms; Bing weather example only."},
+        {"id": "EXP-01-F5", "kind": "reported_case", "summary": "Microsoft News: a configuration error removed the search box from both variants of a custom control; it showed only when compared with a standard control that ran no experiment code.", "section": "Use both a custom control and a standard control", "date_sensitivity": "durable", "limitations": "Single case; standard control costs traffic a small business does not have."},
+        {"id": "EXP-01-F6", "kind": "author_guidance", "summary": "Ramp exposure in steps (example 1%, 5%, 10%, then target) and compute metrics at each step; start with dogfood/beta users but treat their result as a milestone, not proof.", "section": "Gradual rollout", "date_sensitivity": "durable", "limitations": "At low traffic a 1% stage has almost no power; only the safety purpose transfers."}
+      ]
+    },
+    {
+      "id": "EXP-02",
+      "title": "Patterns of Trustworthy Experimentation: During-Experiment Stage",
+      "author": "Widad Machmouchi, Somit Gupta, Ruhan Zhang",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-during-experiment-stage/",
+      "published": "2021-01-25",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Full page read via WebFetch. A second URL (?p=720145) resolved to the same article.",
+      "sections_read": ["Measure holistically and frequently", "Monitor metrics to intervene when needed", "Slice the analysis with appropriate segments"],
+      "findings": [
+        {"id": "EXP-02-F1", "kind": "author_guidance", "summary": "Four metric types per test: data quality (incl. SRM), OEC/goal, local feature/diagnostic, guardrail (things that must not get worse, e.g. load time, crashes, abandonment).", "section": "Capture unexpected effects early with a complete metric set", "date_sensitivity": "durable", "limitations": "Examples are product telemetry, not small-business funnels."},
+        {"id": "EXP-02-F2", "kind": "author_guidance", "summary": "Measure a small critical set early and often, but early looks need stricter significance; without very clear movement, wait for the planned end and read the result then.", "section": "Measure early and often", "date_sensitivity": "durable", "limitations": "No stated early-look alpha."},
+        {"id": "EXP-02-F3", "kind": "author_guidance", "summary": "Alert on guardrails and goal metrics using a large movement, a low p-value, or both; alert on SRM early because it usually invalidates the test; auto-stop tests that badly hurt users.", "section": "Set up alerts / Auto-shutdown", "date_sensitivity": "durable", "limitations": "No numeric thresholds in this article."},
+        {"id": "EXP-02-F4", "kind": "reported_case", "summary": "A Bing test with a bug served a 404 page; automatic shutdown limited the harm.", "section": "Auto-shutdown egregious A/B tests", "date_sensitivity": "durable", "limitations": "Anecdote; no magnitudes."},
+        {"id": "EXP-02-F5", "kind": "author_guidance", "summary": "Use segments the treatment cannot change (country, browser, pre-test activity). If the whole test has no SRM, each static segment should also be SRM-free; dynamic segments (e.g. activity buckets) can shift under treatment.", "section": "Use segments that are stable during the test", "date_sensitivity": "durable", "limitations": "Per-segment SRM needs volume per segment."},
+        {"id": "EXP-02-F6", "kind": "reported_case", "summary": "Microsoft News swapped a button and saw a 28% rise in clicks, but a by-date view showed clicks falling day over day (novelty), and the change did not ship. Segment every analysis by date: steady decline suggests novelty; a one-day spike suggests a data problem or a one-off event.", "section": "Segment by date", "date_sensitivity": "durable", "limitations": "Daily granularity assumes enough daily volume; small businesses may need weekly buckets."}
+      ]
+    },
+    {
+      "id": "EXP-03",
+      "title": "Patterns of Trustworthy Experimentation: Post-Experiment Stage",
+      "author": "Widad Machmouchi, Somit Gupta",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-post-experiment-stage/",
+      "published": "2021-12-24",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Not linked from the during-experiment article; found by search and the listing page 2.",
+      "sections_read": ["Verify treatment effects do not invalidate metrics", "Estimate the final impact of the treatment", "Close the loop on experiment results"],
+      "findings": [
+        {"id": "EXP-03-F1", "kind": "author_guidance", "summary": "Before reading behaviour metrics, confirm the setup: counts match the allocation, everyone in the analysis is in the target audience, and the movements the change must cause (e.g. coverage of a new element) actually appear.", "section": "Ensure metric movements align with the test set-up", "date_sensitivity": "durable", "limitations": "Checklist, no thresholds."},
+        {"id": "EXP-03-F2", "kind": "reported_case", "summary": "Skype: treatment improved call-logging reliability and control did not, so metric movements reflected logging, not behaviour. Compute data-quality metrics on every test to catch telemetry changes that differ by arm.", "section": "Check for telemetry-breaking changes", "date_sensitivity": "durable", "limitations": "Single case."},
+        {"id": "EXP-03-F3", "kind": "reported_case", "summary": "Metric-level SRM: in an MSN test treatment drove more homepage loads, the extra loads were slow, and page load time looked worse. A test-level SRM pass does not clear each metric's denominator.", "section": "Check for imbalance in metric observation units", "date_sensitivity": "durable", "limitations": "Detection method described qualitatively."},
+        {"id": "EXP-03-F4", "kind": "author_guidance", "summary": "Triggered analysis (only users the change could affect) gains sensitivity but needs full recall of affected users, no SRM in the triggered set, and a flat triggered-complement; the triggered effect must then be diluted by the trigger rate before claiming a site-wide impact.", "section": "Segment by triggered users / Dilute gains", "date_sensitivity": "durable", "limitations": "Ratio-metric dilution needs a regression method the article only cites."},
+        {"id": "EXP-03-F5", "kind": "author_guidance", "summary": "Clear ship: goal up (or flat in a well-powered test) and guardrails neutral or better. Mixed results (goal up, guardrail down) need trade-off weights set in advance from business direction, not per test.", "section": "Trade off observed metric movements", "date_sensitivity": "durable", "limitations": "No standard weights."},
+        {"id": "EXP-03-F6", "kind": "reported_case", "summary": "Bing: a low-engagement filter change showed a surprising significant satisfaction gain; a re-randomized rerun with more traffic was flat. Surprising results should be reproduced before acting; archive hypotheses and results for later meta-analysis.", "section": "When in doubt, reproduce results / Archive", "date_sensitivity": "durable", "limitations": "Rerun cost is low at Bing scale; for a small business a rerun can take months."}
+      ]
+    },
+    {
+      "id": "EXP-04",
+      "title": "Diagnosing Sample Ratio Mismatch in A/B Testing",
+      "author": "Aleksander Fabijan, Vaibhav Kumar Bajpai, Trevor Blanarik, Max Caughron, Kewei Chen, Ruhan Zhang, Adam Gustafson, Venkata Kavitha Budumuri, Stephen Hunt",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/diagnosing-sample-ratio-mismatch-in-a-b-testing/",
+      "published": "2020-09-14",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Fetched via the group path; the listing gives the /research/articles/ form. No numeric chi-square worked example in the article.",
+      "sections_read": ["Definition", "Frequency", "Taxonomy of causes", "Detection", "Differential diagnosis", "Tooling", "Examples"],
+      "findings": [
+        {"id": "EXP-04-F1", "kind": "survey_or_benchmark", "summary": "About 6% of Microsoft A/B tests have an SRM; LinkedIn reported about 10% of triggered (zoomed-in) tests affected.", "section": "Frequency", "date_sensitivity": "dated", "limitations": "Platform-specific rates; a small business with hand-built splits may see more."},
+        {"id": "EXP-04-F2", "kind": "platform_requirement", "summary": "Every Microsoft test must pass a chi-square SRM check on raw unit counts before any effect is read; ExP flags at p < 0.0005, chosen to limit false alarms, noting real SRMs are usually far below it.", "section": "Detection", "date_sensitivity": "durable", "limitations": "Threshold tuned for thousands of tests a year; at a few hundred units a real skew can sit above it."},
+        {"id": "EXP-04-F3", "kind": "author_guidance", "summary": "Cause taxonomy by stage: assignment (bucketing, bad IDs, carry-over), execution (redirects in one arm, treatment changing engagement), log processing (joins), analysis (biased trigger or segment conditions), plus uneven ramping or self-selection into an arm.", "section": "Taxonomy", "date_sensitivity": "durable", "limitations": "From the authors' KDD 2019 paper; summarized only."},
+        {"id": "EXP-04-F4", "kind": "author_guidance", "summary": "Diagnosis: is the SRM local to a segment or everywhere; does it vanish in the untriggered population (then the trigger is at fault); when did it start; how extreme is the p-value; which arm has extra units (extra treatment units often mean better engagement or filtering); are many tests affected at once (pipeline).", "section": "Differential diagnosis / Tooling", "date_sensitivity": "durable", "limitations": "The 'when did it start' analysis was deferred to a later post."},
+        {"id": "EXP-04-F5", "kind": "reported_case", "summary": "MSN carousel (12 vs 16 cards): engaged treatment users tripped a bot filter and were dropped, which looked like an engagement loss and failed SRM; after the fix the variant was positive.", "section": "Examples", "date_sensitivity": "durable", "limitations": "No counts given."}
+      ]
+    },
+    {
+      "id": "EXP-05",
+      "title": "Alerting in Microsoft's Experimentation Platform (ExP)",
+      "author": "Ankita Agrawal, Vaibhav Kumar Bajpai, Jiannan Lu",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/alerting-in-microsofts-experimentation-platform-exp/",
+      "published": "2021-03-03",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Read via WebFetch; ?p=729247 is the same article.",
+      "sections_read": ["Alert types", "Methodology", "Workflow", "Device ID incident"],
+      "findings": [
+        {"id": "EXP-05-F1", "kind": "author_guidance", "summary": "Two main alerts: SRM (chi-square on randomization-unit counts) and metric out of range, built as an equivalence test against experimenter-set absolute and relative bounds using two one-sided tests.", "section": "Alert types", "date_sensitivity": "durable", "limitations": "Equivalence tests need volume to show a metric is inside a bound; small samples can only show a breach."},
+        {"id": "EXP-05-F2", "kind": "author_guidance", "summary": "Bounds come from domain knowledge, heuristics and history and differ by metric (a few ms of load time ignored; a 0.1% move in a reliability metric can matter). Example: a Bing click-rate alert fires on a 5% or larger drop.", "section": "Methodology", "date_sensitivity": "durable", "limitations": "Bounds are product-specific."},
+        {"id": "EXP-05-F3", "kind": "platform_requirement", "summary": "Many tests, analysis windows and metrics require multiple-testing control; ExP uses Benjamini-Hochberg false discovery rate.", "section": "Methodology", "date_sensitivity": "durable", "limitations": "With one primary and two or three guardrails, BH matters little; tiered bounds matter more."},
+        {"id": "EXP-05-F4", "kind": "author_guidance", "summary": "Alerts go by email with priority P0 (catastrophic), P1 (serious), P2 (possibly wrong); owners can resolve or suppress recurring false alarms; auto-shutdown for some time-critical tests.", "section": "Workflow", "date_sensitivity": "durable", "limitations": "Workflow sized for hundreds of alerts a year."},
+        {"id": "EXP-05-F5", "kind": "reported_case", "summary": "2020: duplicate device IDs were fixed, but the treatment kept reading old IDs and gained extra users; an SRM alert days later led to the fix and a quick restart.", "section": "Device ID incident", "date_sensitivity": "durable", "limitations": "No counts."}
+      ]
+    },
+    {
+      "id": "EXP-06",
+      "title": "p-Values for Your p-Values: Validating Metric Trustworthiness by Simulated A/A Tests",
+      "author": "Carl Mitchell, Andy Drake, Jonathan Litz, Garnet Vaz",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/p-values-for-your-p-values-validating-metric-trustworthiness-by-simulated-a-a-tests/",
+      "published": "2020-10-21",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Found on listing page 3.",
+      "sections_read": ["Why A/A", "Simulated A/A method", "Uniformity checks", "Failure patterns", "Recommendations"],
+      "findings": [
+        {"id": "EXP-06-F1", "kind": "author_guidance", "summary": "Under a true null, p-values should be uniform (about 5% below 0.05). Simulate A/A tests offline by re-hashing historical logs with new seeds; about 100 simulations is usually enough (they ran 200), checked with Anderson-Darling.", "section": "Method", "date_sensitivity": "durable", "limitations": "Needs per-unit historical logs."},
+        {"id": "EXP-06-F2", "kind": "reported_case", "summary": "One user with over a million duplicated clicks pins p-values near 0.32 because the outlier always sits in one arm; capping (e.g. clicks at 50) restores uniformity and sensitivity.", "section": "Failure patterns", "date_sensitivity": "durable", "limitations": "Click-stream example."},
+        {"id": "EXP-06-F3", "kind": "author_guidance", "summary": "Rare-event metrics are unreliable: with 15 users there are only 8 possible splits (15-0 to 8-7), so only 8 distinct p-values exist. Constant metrics give no information.", "section": "Failure patterns", "date_sensitivity": "durable", "limitations": "Directly relevant to small businesses; no general minimum given."},
+        {"id": "EXP-06-F4", "kind": "survey_or_benchmark", "summary": "Across about a dozen products, 10% to 15% of metrics typically failed the uniformity check, up to 30% in some; checks must repeat because outliers appear over time.", "section": "Numeric findings", "date_sensitivity": "dated", "limitations": "July 2020 Microsoft data."}
+      ]
+    },
+    {
+      "id": "EXP-07",
+      "title": "Beyond Power Analysis: Metric Sensitivity Analysis in A/B Tests",
+      "author": "Wen Qin, Widad Machmouchi, Alexandre Matos Martins",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/beyond-power-analysis-metric-sensitivity-in-a-b-tests/",
+      "published": "2021-04-06",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Read alongside the related 'STEDII Properties of a Good Metric' (2022-04-06, Gupta and Machmouchi), which repeats the sensitivity decomposition; STEDII is not listed separately.",
+      "sections_read": ["Problem", "Decomposing sensitivity", "Power analysis", "Movement analysis", "Tips", "Recommendations"],
+      "findings": [
+        {"id": "EXP-07-F1", "kind": "author_guidance", "summary": "Sensitivity = how often the metric really moves (movement probability) times power. A well-powered metric that rarely moves gives few usable results; a null on such a metric says little.", "section": "Decomposing sensitivity", "date_sensitivity": "durable", "limitations": "Movement probability is estimated from a corpus of past tests, which a small business lacks."},
+        {"id": "EXP-07-F2", "kind": "author_guidance", "summary": "Check the minimum detectable effect at typical traffic with the feature team: is a change that size realistic? Teams' Time in App could detect 0.3% with full traffic for a week, judged achievable, yet it still missed changes other metrics caught.", "section": "Power analysis / Movement analysis", "date_sensitivity": "durable", "limitations": "Microsoft Teams scale."},
+        {"id": "EXP-07-F3", "kind": "author_guidance", "summary": "Improve insensitive metrics: cap extremes, log-transform, use proportion metrics (easier to move), conditional averages, predictive proxies for slow goals, and CUPED with pre-period data. Keep hard-to-move top-level metrics as guardrails rather than success metrics (STEDII).", "section": "Tips", "date_sensitivity": "durable", "limitations": "CUPED gains depend on how much pre-period data explains (Deep Dive into Variance Reduction reports many metrics gaining little)."},
+        {"id": "EXP-07-F4", "kind": "author_guidance", "summary": "With a labelled corpus: sensitivity N1/(N1+N2) near 1, false-positive share N3/(N3+N4) near alpha; without labels, compare observed movement rates, trusting differences above 5 points.", "section": "Movement confusion matrix", "date_sensitivity": "durable", "limitations": "Needs many past tests."}
+      ]
+    },
+    {
+      "id": "EXP-08",
+      "title": "External Validity of Online Experiments: Can We Predict the Future?",
+      "author": "Not listed on the page (Microsoft Experimentation Platform group)",
+      "canonical_url": "https://www.microsoft.com/en-us/research/articles/external-validity-of-online-experiments-can-we-predict-the-future/",
+      "published": "2024-11-20",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Author names not present in the fetched text.",
+      "sections_read": ["Day-to-day stability", "7 vs 14 days", "Novelty and primacy", "Recommendations", "Caveats"],
+      "findings": [
+        {"id": "EXP-08-F1", "kind": "survey_or_benchmark", "summary": "Across 1,000+ experiments, adjacent-day effect differences match a normal curve up to about 3 standard errors but have far heavier tails beyond; a day's error bar overstates confidence about the next day.", "section": "Day-to-day stability", "date_sensitivity": "durable", "limitations": "Large-sample average metrics only."},
+        {"id": "EXP-08-F2", "kind": "survey_or_benchmark", "summary": "Going from 7 to 14 days shrank the standard error 83% of the time and grew it 17%; the 14-day estimate fell outside the 7-day 95% interval 9% of the time versus about 5% expected.", "section": "7 vs 14 days", "date_sensitivity": "durable", "limitations": "Restricted to significant 7-day results; the 14-day value is a proxy, not truth."},
+        {"id": "EXP-08-F3", "kind": "author_guidance", "summary": "Run at least a week, extend when effects are still changing, use holdouts or reverse tests to check persistence; novelty/primacy explain part of the drift, outside events the rest.", "section": "Recommendations", "date_sensitivity": "durable", "limitations": "The authors stress these problems are the exception."}
+      ]
+    }
+  ],
+  "not_read": [
+    {"url": "https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/articles/page/2/", "reason": "HTTP 404; listing pages 2 and 3 were read at ?pg=2 and ?pg=3 instead."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/a-a-b-testing-evaluating-microsoft-teams-across-build-releases/", "reason": "Not fetched (build-release A/A'/B is Microsoft infrastructure, low relevance)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/why-tenant-randomized-a-b-test-is-challenging-and-tenant-pairing-may-not-work/", "reason": "Not fetched (enterprise tenant randomization)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/more-trustworthy-a-b-analysis-less-data-sampling-and-more-data-reducing/", "reason": "Not fetched (data pipeline scale)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/it-takes-a-flywheel-to-fly-kickstarting-and-keeping-the-a-b-testing-momentum/", "reason": "Not fetched (organizational adoption)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/deep-dive-into-variance-reduction/", "reason": "Read in full but not selected; used only as a limitation note on CUPED (Var multiplier 1/(1-R^2); many metrics gain 1.05x or less on one surface)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/stedii-properties-of-a-good-metric/", "reason": "Read in full (via ?p=832888) but not selected; overlaps EXP-07."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/treatment-effect-assessment-at-scale-accounting-for-correlated-metrics-and-metric-relevance-in-modern-experimentation/", "reason": "Read in full (2026-07-15) but not selected; scorecards with hundreds of metrics. Takeaway noted in EXP.md: ExP moved from Fisher's method to Benjamini-Hochberg; irrelevant metrics cost power."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/data-quality-fundamental-building-blocks-for-trustworthy-a-b-testing-analysis/", "reason": "Read in full but not selected; overlaps EXP-03 and EXP-06."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/a-b-interactions-a-call-to-relax/", "reason": "Read in full but not selected; concurrent-test interactions were rare (about 1 in 50,000 pair-metric checks in one product)."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/for-event-based-a-b-tests-why-they-are-special/", "reason": "Read in full but not selected; time-boxed event tests, recommends sequential tests if monitoring frequently."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/a-b-testing-and-covid-19-data-driven-decisions-in-times-of-uncertainty/", "reason": "Read in full but not selected; the closest ExP article to 'decisions under uncertainty'. Point: randomized arms share shocks, raw baselines do not."},
+    {"url": "https://www.microsoft.com/en-us/research/articles/measurably-improve-your-product-by-combining-qualitative-and-quantitative-methods/", "reason": "Read in full but not selected; qual+quant workflow, no low-traffic guidance."},
+    {"url": "(no URL found)", "reason": "No ExP article dedicated to 'misleading results / pitfalls' or 'decisions under uncertainty' by that name was found in the three listing pages; Covid-19 and post-experiment articles are the nearest."}
+  ],
+  "climbos_check_gaps": [
+    {"check": "Incremental label without a statistical read", "current": "shared/growth/experimentOutcome.ts:48-54 inferenceOf returns 'incremental' whenever design is randomized/holdout with both groups > 0; :88-93 lift() and :108-113 outcomeLine print 'about N incremental conversions' from the raw rate gap. convex/playResults.ts:121 stores it.", "gap": "No p-value, no planned-split SRM check, no planned-end check before the wording claims caused conversions. Hypothetical 18/120 vs 12/120 prints 'about 6 incremental conversions' while compareRates gives p = 0.2416 (no reliable difference). ExP post-experiment checks (EXP-03-F1) and SRM-first rule (EXP-04-F2) both precede any effect claim.", "proposed_change": "Store the planned split on the experiment; on save run sampleRatio and compareRates (decisions.ts:85, :113). Keep inference 'incremental' (design label) but add a 'reading' field: srm_fail | no_reliable_difference | difference_detected | too_early. outcomeLine only says 'incremental conversions' when reading = difference_detected; otherwise 'randomized, no reliable difference (p=...)'."},
+    {"check": "SRM threshold and diagnosis", "current": "shared/analysis/decisions.ts:120 mismatch at p < 0.001, one note at :126; binary pass/fail.", "gap": "ExP uses p < 0.0005 (EXP-04-F2), so 0.001 is already slightly looser; neither threshold catches a 230/170 split (p = 0.0027). No warn tier (BK06.md:217 already proposes 0.001-0.01 warn) and no diagnosis steps (segment, trigger, direction, start date).", "proposed_change": "Keep 0.001 as the block (fine at small scale). Add warn for 0.001 <= p < 0.01 that hides the 'winner' wording until checked. Return a diagnosis checklist ordered by ExP stage taxonomy (EXP-04-F3/F4) and the direction (which arm is over)."},
+    {"check": "Guardrails required and evaluated", "current": "shared/ai/tasks.ts:94 and convex/schema.ts:1349 guardrails: string[] (may be empty); no lint requires one; outcomes (experimentOutcome.ts:20-45) record no guardrail values.", "gap": "ExP requires guardrails on every test (EXP-01-F2, EXP-02-F1) and ships only when they are neutral or better (EXP-03-F5). BK06 guide line 62 states the same rule but nothing enforces it.", "proposed_change": "Lint: ab_split/holdout must have 1-3 guardrails, each with a numeric harm bound (e.g. 'unsubscribe rate above 1.0%'). Outcome: record guardrail counts per arm; any breached bound blocks 'met' and the ship wording."},
+    {"check": "Harm stop vs peeking", "current": "shared/agents/specs.ts:845 PEEKING regex flags any stoppingRule with as soon as/once/when/until ... significan.", "gap": "ExP explicitly endorses early stops for harm (alerts, auto-shutdown; EXP-02-F3, EXP-05-F4). A rule like 'stop when complaints rise significantly' is flagged as peeking, though a harm stop is legitimate; an efficacy stop is not.", "proposed_change": "Exempt rules whose subject is a guardrail/harm word (complaints, refunds, unsubscribes, errors, cancellations) and whose action is stop/pause; keep the block for stopping on a win. Suggest absolute harm bounds instead of significance for small samples."},
+    {"check": "Minimum duration and whole weeks", "current": "specs.ts:864 uses Math.max(1, durationDays); decisions.ts:149 only notes 'run whole weeks, at least one'.", "gap": "An ab_split with durationDays 3 passes if the population is large. ExP: at least a week; day-to-day effects drift more than error bars imply (EXP-08-F1/F3).", "proposed_change": "Lint error: ab_split/holdout durationDays < 7; warning when not a multiple of 7."},
+    {"check": "Feasibility uses a fixed baseline", "current": "specs.ts:841-843 FEASIBILITY_BASELINE 0.1, MDE 0.05 (needs 1,372 total) for every test regardless of the primary metric.", "gap": "Hypothetical: 300 visitors/week for 35 days = 1,500 > 1,372, so a booking-rate test passes, though a 2% to 3% booking change needs 7,652 (26 weeks). ExP sensitivity = movement probability x power (EXP-07-F1/F2).", "proposed_change": "When the brief has a baseline for primaryMetric, size with it; otherwise keep the generous default but add a warning naming a higher-movement proxy (e.g. 'clicked Book now') and keeping the top-level outcome as a guardrail."},
+    {"check": "Date / novelty view", "current": "Nothing in shared/analysis or shared/growth splits a test result by week; diagnostics.ts:29-62 judges totals only.", "gap": "ExP segments every analysis by date to catch novelty or a one-day data spike (EXP-02-F6). BK06.md:226 proposes a novelty check; not built.", "proposed_change": "Outcome form: optional per-week counts per arm. Flag 'possible novelty' when week-1 absolute change is more than double the later-weeks change, and 'check data' when one week holds most conversions. Label as a caution, not a test, at low n."},
+    {"check": "Data-quality / setup check before reading", "current": "diagnostics.ts:38-44 'measured' check fails only when nothing is recorded after 2+ weeks with 30+ reach; experimentOutcome.ts:59-73 checks count consistency only.", "gap": "ExP checks that the expected movement exists (e.g. the new element was seen), that both arms log the same events, and metric-level imbalance (EXP-03-F1/F2/F3).", "proposed_change": "Outcome form asks 'did the change show in the treatment arm (yes/no/unknown)' and 'are both arms counted the same way'; 'no' or 'unknown' downgrades the reading to exploratory."},
+    {"check": "A/A practice", "current": "Guide 06_experimentation.md:20 mentions A/A; BK06.md:26 cites it; no code path.", "gap": "ExP A/A is simulated on historical logs (EXP-06-F1), which small businesses rarely have; rare-event metrics give only a few possible p-values (EXP-06-F3).", "proposed_change": "Offer a one-week 'dry run' (both arms identical) for owner-built splits: pass if sampleRatio passes and every arm logs the same event types; no p-value verdict on conversions."}
+  ],
+  "concepts": [
+    {
+      "id": "EXP-C1",
+      "name": "Split check before any lift (SRM gate with warn tier and diagnosis)",
+      "decision": "May ClimbOS read or report an effect from this split test yet?",
+      "applies_when": ["ab_split or holdout with a planned allocation", "owner, integration or ad tool reports per-arm counts"],
+      "avoid_when": ["before/after or observational designs (no planned split)", "platform-run tests that do not expose per-arm counts (label attributed)"],
+      "evidence_required": ["planned split", "observed units per arm at the analysis date", "unit definition (visitor, lead, contact)"],
+      "prerequisites": ["assignment done before exposure", "same unit counted in both arms"],
+      "steps": ["Run sampleRatio on planned vs observed", "p < 0.001: block effect, show diagnosis", "0.001 <= p < 0.01: warn, hide winner wording until the owner confirms the cause is ruled out", "Diagnose in order: assignment (manual picking, IDs) -> execution (redirect or extra step in one arm) -> logging (one arm tracked differently, filters) -> analysis (counting only people who reached a step one arm changed)", "Note which arm is over and when the gap began", "Never trim an arm to rebalance"],
+      "alternatives": ["low traffic: switch to alternating weeks or a before/after labelled observational", "no randomization: before/after with confounders", "no instrumentation: manual tally of sends per arm before any outcome count"],
+      "metrics": ["units per arm", "SRM p-value", "direction of imbalance"],
+      "guardrails": ["no effect wording while SRM unresolved"],
+      "observation_window": "Checked at every recorded analysis, cumulative from test start.",
+      "stop_review": ["p < 0.001 unresolved after investigation: stop and restart the test", "imbalance appears after a mid-test change: restart from the change date"],
+      "climbos_location": "shared/analysis/decisions.ts:112-128 (sampleRatio); wire into convex/playResults.ts:108-130 and shared/growth/experimentOutcome.ts",
+      "eval_scenario": {
+        "inputs_hypothetical": {"planned": [50, 50], "observed_control": 230, "observed_treatment": 170, "control_conversions": 23, "treatment_conversions": 26},
+        "expected_behavior": ["chi-square = 9.00 (expected 200 each; 2 x 30^2/200), p = 0.0027", "not a block at 0.001 or ExP 0.0005, but in the proposed warn tier", "asks which arm lost 30 units and why before reading conversions", "conversion rates 10.0% vs 15.3% are shown only as unverified"],
+        "hard_failure": ["declares treatment the winner", "drops 60 control rows to make arms equal", "says the split 'fits the plan' with no caution"]
+      },
+      "author_refs": ["EXP-04-F2", "EXP-04-F3", "EXP-04-F4", "EXP-05-F1", "EXP-02-F5"],
+      "interpretation": "INTERPRETATION: ExP's 0.0005 is tuned for thousands of tests with large arms; at a few hundred units a real skew often lands between 0.001 and 0.01, so a warn tier catches more real problems at an acceptable false-alarm rate for one test at a time.",
+      "proposed_rule": "PROPOSED RULE: block at p < 0.001 (keep), warn at p < 0.01, always print which arm is over and the stage checklist.",
+      "overlaps_existing": "decisions.ts:120 block; BK06.md:217 already proposes the warn band; guide 06 lines 35-39 hypothetical 700/300.",
+      "disagreements": "ExP threshold 0.0005 vs ClimbOS/Kohavi 0.001: not a correction worth making at small scale; the gap is the missing warn tier and diagnosis."
+    },
+    {
+      "id": "EXP-C2",
+      "name": "Incremental wording only after a valid, significant read",
+      "decision": "Can a recorded outcome say the change caused extra conversions?",
+      "applies_when": ["design randomized or holdout", "both arms counted"],
+      "avoid_when": ["SRM failed or warned and unresolved", "planned end not reached", "metric redefined after results (already exploratory)"],
+      "evidence_required": ["per-arm units and conversions", "planned split", "planned end date", "original metric and rule"],
+      "prerequisites": ["EXP-C1 split check passes"],
+      "steps": ["Run sampleRatio", "Run compareRates with plannedEndReached", "Set reading: srm_fail | too_early | no_reliable_difference | difference_detected", "Only difference_detected may print 'about N incremental conversions'", "Surprising large effects (Twyman): add 'replicate before scaling spend'"],
+      "alternatives": ["low traffic: report as directional with the interval of plausible changes", "no randomization: observed label (existing)", "no instrumentation: not_run or owner tally labelled observed"],
+      "metrics": ["absolute change in points", "relative change", "p-value", "method (Fisher or z)"],
+      "guardrails": ["guardrail bounds not breached (EXP-C3)"],
+      "observation_window": "Fixed: the planned duration, read once at the end.",
+      "stop_review": ["no reliable difference: do not scale; decide on cost/simplicity or test a bigger change"],
+      "climbos_location": "shared/growth/experimentOutcome.ts:48-54, :88-93, :102-118; convex/playResults.ts:121",
+      "eval_scenario": {
+        "inputs_hypothetical": {"design": "randomized", "planned": [50, 50], "exposed": 120, "conversions": 18, "controlSize": 120, "controlConversions": 12, "plannedEndReached": true},
+        "expected_behavior": ["SRM passes (120 vs 120)", "rates 15.0% vs 10.0%, +5 points, +50% relative", "two-proportion z p = 0.2416 -> no reliable difference", "line reads 'randomized, no reliable difference' and does not claim 6 incremental conversions"],
+        "hard_failure": ["prints 'about 6 incremental conversions' as caused", "next plan brief treats the play as a proven win"]
+      },
+      "author_refs": ["EXP-03-F1", "EXP-03-F6", "EXP-04-F2"],
+      "interpretation": "INTERPRETATION: ExP treats setup and SRM checks as preconditions for interpreting any metric movement; ClimbOS's design-only 'incremental' label skips them.",
+      "proposed_rule": "PROPOSED RULE: 'incremental' stays a design label; claim wording depends on a computed reading field.",
+      "overlaps_existing": "compareRates already returns the right verdict and notes (decisions.ts:93-108); it is just not used by experimentOutcome.",
+      "disagreements": "None with BK06; this is a wiring gap."
+    },
+    {
+      "id": "EXP-C3",
+      "name": "Guardrails as pre-set harm bounds, with harm stops allowed",
+      "decision": "Did the change cause harm that blocks shipping, and may the test stop early for it?",
+      "applies_when": ["any live test touching customers: email, offers, pricing, booking flow, ads"],
+      "avoid_when": ["data-only plans with no exposure"],
+      "evidence_required": ["1-3 guardrails each with a numeric bound written before launch", "guardrail counts per arm"],
+      "prerequisites": ["guardrail measurable in both arms"],
+      "steps": ["At plan time: name guardrails with bounds (e.g. unsubscribe rate <= 1.0%, refunds <= 2 per 100 orders)", "During test: check bounds weekly; a breach in treatment (with a minimum count) pauses the test: this is a harm stop, not peeking", "At the end: goal up or flat and all guardrails within bounds -> ship-eligible; any breach -> no ship, or an explicit trade-off weighed in advance", "Do not read a non-significant guardrail rise as 'safe'"],
+      "alternatives": ["low traffic: absolute bounds with a minimum count instead of significance", "no randomization: compare guardrail to the pre-period, labelled observed", "no instrumentation: owner-reported complaints/refunds log"],
+      "metrics": ["unsubscribe or complaint rate", "refunds/cancellations", "no-shows", "support contacts", "page errors"],
+      "guardrails": ["the guardrails themselves"],
+      "observation_window": "Same as the test; checked weekly.",
+      "stop_review": ["bound breached with minimum count met: pause and review", "two weekly breaches: stop"],
+      "climbos_location": "shared/ai/tasks.ts:94 (guardrails), shared/agents/specs.ts:845 (PEEKING), :853-871 (lint), shared/growth/experimentOutcome.ts (no guardrail fields)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"guardrail": "unsubscribe rate <= 1.0% with at least 500 sends per arm", "control": {"sends": 1000, "unsubscribes": 5}, "treatment": {"sends": 1000, "unsubscribes": 12}, "goal": "replies up"},
+        "expected_behavior": ["treatment 1.2% vs control 0.5%: +0.7 points, +140% relative", "Fisher exact p = 0.1418, not significant, but 1.2% > 1.0% bound with 1,000 sends -> guardrail breached", "blocks ship wording even if replies rose", "stop rule 'pause if unsubscribes pass 1%' is accepted, not flagged as peeking"],
+        "hard_failure": ["calls the unsubscribe rise 'not significant, so safe'", "ships on replies alone", "lint rejects the harm stop as peeking"]
+      },
+      "author_refs": ["EXP-02-F1", "EXP-02-F3", "EXP-05-F1", "EXP-05-F2", "EXP-03-F5", "EXP-07-F3"],
+      "interpretation": "INTERPRETATION: ExP's 'metric out of range' alert (bounds plus TOST) cannot prove safety at small n, but a breach of an absolute bound is still detectable; so small businesses get the bound half of the method, not the equivalence half.",
+      "proposed_rule": "PROPOSED RULE: ab_split/holdout lint requires 1-3 guardrails with a number; harm-subject stop rules are exempt from PEEKING; any breach blocks 'met'.",
+      "overlaps_existing": "BK06.md:190-194 and guide 06 line 62 say the same; playbooks/contracts.ts has prose guardrails per playbook (e.g. :196 unsubscribes) but no bounds.",
+      "disagreements": "Current PEEKING regex can reject a legitimate harm stop; ExP endorses auto-shutdown for harm."
+    },
+    {
+      "id": "EXP-C4",
+      "name": "Whole weeks and a by-week view for novelty and spikes",
+      "decision": "Is the test long enough, and is the effect fading or a one-week artifact?",
+      "applies_when": ["any ab_split/holdout", "gimmick-prone changes: subject lines, offers, new badges, creative"],
+      "avoid_when": ["time-boxed events (read EXP for event tests; label as event-specific)"],
+      "evidence_required": ["durationDays", "per-week counts per arm (optional but needed for the flag)"],
+      "prerequisites": ["dates recorded"],
+      "steps": ["Lint: durationDays >= 7, warn if not a multiple of 7", "At analysis: show each week's absolute change", "Flag 'possible novelty' if week 1 change is more than double later weeks' change", "Flag 'check data' if one week holds most conversions or a holiday/event falls in it", "If flagged and reversible: extend or rerun before scaling"],
+      "alternatives": ["low traffic: compare week 1 vs the rest only, as a caution", "no randomization: same weekly view on before/after, labelled observed", "no instrumentation: owner notes events per week"],
+      "metrics": ["absolute change per week", "conversions per week per arm"],
+      "guardrails": ["guardrail bounds per week"],
+      "observation_window": "Minimum 7 days; 14+ for gimmick-prone changes (interpretation).",
+      "stop_review": ["novelty flag: rerun or extend before scaling", "spike flag: verify data for that week"],
+      "climbos_location": "shared/agents/specs.ts:864 (duration), shared/analysis/decisions.ts:149 (note only), shared/growth/experimentOutcome.ts (no per-week fields)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"week1": {"control": "20/200", "treatment": "30/200"}, "week2": {"control": "20/200", "treatment": "22/200"}, "change": "new email subject style"},
+        "expected_behavior": ["week 1 +5 points (10% vs 15%), week 2 +1 point (10% vs 11%)", "week 1 change is 5x week 2 -> 'possible novelty' caution", "week 1 alone: compareRates p = 0.1306, not significant either", "no verdict from week 1"],
+        "hard_failure": ["reports +50% relative from week 1 as the effect", "accepts a 3-day ab_split"]
+      },
+      "author_refs": ["EXP-02-F6", "EXP-08-F1", "EXP-08-F2", "EXP-08-F3"],
+      "interpretation": "INTERPRETATION: ExP's daily date segmentation becomes weekly at small-business volume; the flag is a caution because the per-week difference itself is not testable at this n.",
+      "proposed_rule": "PROPOSED RULE: durationDays < 7 is an error for ab_split/holdout; optional weekly counts drive novelty and spike flags.",
+      "overlaps_existing": "BK06.md:203-209 and :226-227 propose novelty and duration checks; not implemented.",
+      "disagreements": "BK06.md:226 suggests flagging a >50% decay from week 1; at small n this will fire on noise often, so keep it a caution label."
+    },
+    {
+      "id": "EXP-C5",
+      "name": "Pick a metric that can move; keep the outcome as a guardrail",
+      "decision": "Which primary metric makes this test feasible inside the horizon?",
+      "applies_when": ["primary metric is a rare outcome (bookings, sales) at low traffic"],
+      "avoid_when": ["the proxy has no plausible link to the outcome", "proxy is easily gamed (clicks via bait)"],
+      "evidence_required": ["weekly eligible units", "baseline for the outcome and for the candidate proxy"],
+      "prerequisites": ["proxy measured in both arms"],
+      "steps": ["Size the outcome with sampleSize at its own baseline", "If weeks exceed the horizon, size a nearer step (e.g. 'clicked Book now')", "Use the proxy as primary, keep bookings as a guardrail/secondary read", "Count only units the change can reach (triggered), and dilute by reach rate before claiming site-wide impact", "If the proxy is still infeasible: before/after or qualitative path"],
+      "alternatives": ["low traffic: one bigger change, longer window, or interviews", "no randomization: before/after on the proxy, labelled observed", "no instrumentation: manual counts of booking clicks for 2 weeks"],
+      "metrics": ["proxy rate", "outcome rate", "trigger rate"],
+      "guardrails": ["outcome rate does not fall", "proxy not gamed"],
+      "observation_window": "Whole weeks from sampleSize, within the plan horizon.",
+      "stop_review": ["proxy up but outcome down: no ship"],
+      "climbos_location": "shared/agents/specs.ts:841-843, :853-871; shared/analysis/decisions.ts:131-153",
+      "eval_scenario": {
+        "inputs_hypothetical": {"weeklyEligible": 300, "durationDays": 35, "bookingBaseline": 0.02, "bookingMDE": 0.01, "proxyBaseline": 0.30, "proxyMDE": 0.05},
+        "expected_behavior": ["current lint passes: 300 x 35/7 = 1,500 >= 1,372 (fixed 10%->15% sizing)", "booking test needs 3,826 per arm, 7,652 total = 26 weeks: flag infeasible", "proxy needs 1,377 per arm, 2,754 total = 10 weeks: feasible within a 90-day plan if extended to 70 days", "triggered example: a 10% relative lift among the 20% of visitors who reach pricing is about 2% site-wide (0.20 x 10%)"],
+        "hard_failure": ["accepts the 35-day booking test as feasible", "reports the triggered 10% lift as site-wide"]
+      },
+      "author_refs": ["EXP-07-F1", "EXP-07-F2", "EXP-07-F3", "EXP-03-F4", "EXP-01-F2"],
+      "interpretation": "INTERPRETATION: ExP's movement probability is estimated from corpora of past tests; ClimbOS can approximate it only with the baseline and MDE, so the actionable part is sizing per metric and using nearer funnel steps.",
+      "proposed_rule": "PROPOSED RULE: size feasibility with the primary metric's baseline when known; suggest the nearest feasible funnel step otherwise.",
+      "overlaps_existing": "BK06.md:174 (surrogate metric), guide 06 lines 41-45 (low-volume paths); decisions.ts:150 already redirects >12-week tests.",
+      "disagreements": "The generous fixed baseline at specs.ts:842 is intentional ('only clearly impossible tests fail'); ExP's sensitivity framing argues it should be metric-specific when the baseline is known."
+    },
+    {
+      "id": "EXP-C6",
+      "name": "Small-business A/A: a dry run of the split, not a p-value study",
+      "decision": "Is the owner's split mechanism trustworthy before the first real test?",
+      "applies_when": ["first owner-built split (two email lists, alternating landing pages, staff assigning leads)", "after a tracking change"],
+      "avoid_when": ["platform-native split tools with proven assignment and exposed counts (still run the SRM check)"],
+      "evidence_required": ["one week of both arms identical", "per-arm units and event types"],
+      "prerequisites": ["the same tracking in both arms"],
+      "steps": ["Run both arms identical for 7 days", "sampleRatio passes (not warn)", "Every event type appears in both arms; no unit in both arms", "Do not judge conversion p-values: rare events give few possible outcomes", "If unit-level history exists (e.g. an email list with past opens), ClimbOS can re-randomize it offline about 100 times in code and check that about 5% fall below 0.05"],
+      "alternatives": ["low traffic: dry run only", "no randomization: skip; use before/after", "no instrumentation: fix tracking first (diagnostics 'tracking' verdict)"],
+      "metrics": ["units per arm", "event types per arm", "share of simulated p-values below 0.05"],
+      "guardrails": ["no customer-visible difference during the dry run"],
+      "observation_window": "7 days.",
+      "stop_review": ["SRM warn or missing events: fix before any real test"],
+      "climbos_location": "New check beside shared/analysis/decisions.ts; guide 06_experimentation.md:20",
+      "eval_scenario": {
+        "inputs_hypothetical": {"dryRunDays": 7, "control_units": 215, "treatment_units": 185, "control_events": ["visit", "form_start", "booking"], "treatment_events": ["visit", "booking"]},
+        "expected_behavior": ["SRM chi-square 2.25, p = 0.1336: split passes", "form_start missing in treatment: dry run fails on event parity", "no conversion-rate verdict"],
+        "hard_failure": ["passes the dry run because SRM passed", "reports an A/A conversion p-value as proof the system works"]
+      },
+      "author_refs": ["EXP-06-F1", "EXP-06-F3", "EXP-03-F2", "EXP-01-F3"],
+      "interpretation": "INTERPRETATION: ExP's A/A is a statistical calibration on large logs; at small scale, its trust-check purpose (assignment and telemetry parity) transfers, its p-value calibration mostly does not.",
+      "proposed_rule": "PROPOSED RULE: recommend a 7-day dry run before an owner's first manual split; pass = SRM pass + event parity.",
+      "overlaps_existing": "BK06.md:26 (A/A ~5% at 0.05); guide 06 line 20 (one A/A does not prove all future tests); diagnostics.ts:38-44 tracking check.",
+      "disagreements": "None; ExP adds the rare-event caution (EXP-06-F3) that BK06 review does not mention."
+    }
+  ]
+}

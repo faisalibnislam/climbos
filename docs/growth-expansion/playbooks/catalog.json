@@ -1,0 +1,336 @@
+{
+  "count": 28,
+  "status": "reference_contracts_require_implementation",
+  "playbooks": [
+    {
+      "id": "BK01-P01",
+      "task": "Produce an evidence-backed strategy decision",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK01-L01",
+        "BK01-L03",
+        "BK01-L04",
+        "BK01-L05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK01-P02",
+      "task": "Review an existing plan for strategic coherence",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK01-L01",
+        "BK01-L02",
+        "BK01-L04",
+        "BK01-L05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK02-P01",
+      "task": "Design a monetization research and package comparison",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK02-L01",
+        "BK02-L02",
+        "BK02-L03",
+        "BK02-L04",
+        "BK02-L05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK02-P02",
+      "task": "Diagnose disappointing sales before repricing",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK02-L05",
+        "BK02-L06"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK03-P01",
+      "task": "Develop a source-backed positioning hypothesis",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK03-L01",
+        "BK03-L02",
+        "BK03-L03",
+        "BK03-L04",
+        "BK03-L05",
+        "BK03-L06",
+        "BK03-L07"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK03-P02",
+      "task": "Translate a position into consistent reviewable assets",
+      "path": "playbooks/books-a.json",
+      "source_refs": [
+        "BK03-L03",
+        "BK03-L08",
+        "BK03-L09"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK04-P01",
+      "task": "Select the next assumption test",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK04-L01",
+        "BK04-L02",
+        "BK04-L03"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK04-P02",
+      "task": "Review evidence and update an investment decision",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK04-L03",
+        "BK04-L04"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK05-P01",
+      "task": "Prepare and synthesize episode-based discovery",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK05-L01",
+        "BK05-L02",
+        "BK05-L04",
+        "BK05-L05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK05-P02",
+      "task": "Review a buyer commitment without inflating pipeline",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK05-L03",
+        "BK05-L05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK06-P01",
+      "task": "Check controlled-experiment readiness",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK06-L01",
+        "BK06-L03",
+        "BK06-L04",
+        "BK06-L06",
+        "BK06-L07"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BK06-P02",
+      "task": "Translate experimental results into a commercial decision",
+      "path": "playbooks/books-b.json",
+      "source_refs": [
+        "BK06-L02",
+        "BK06-L03",
+        "BK06-L04",
+        "BK06-L05",
+        "BK06-L07"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "video-interview-diagnostic",
+      "task": "Investigate an uncertain customer problem before prescribing a solution",
+      "path": "videos/playbooks.json",
+      "source_refs": [
+        "V01"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "video-first-customer-learning",
+      "task": "Design an early customer learning and assisted-adoption program",
+      "path": "videos/playbooks.json",
+      "source_refs": [
+        "V02"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "video-growth-readiness",
+      "task": "Choose the next growth constraint to investigate",
+      "path": "videos/playbooks.json",
+      "source_refs": [
+        "V03"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "video-app-discovery",
+      "task": "Prepare a platform-eligible app discovery experiment",
+      "path": "videos/playbooks.json",
+      "source_refs": [
+        "V04"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P01",
+      "task": "Assess a proposed growth mechanism",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-01"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P02",
+      "task": "Classify initiatives and choose the next investment",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-02"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P03",
+      "task": "Select a test for a consequential business uncertainty",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-03"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P04",
+      "task": "Evaluate a candidate ClimbOS engine change",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-04"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P05",
+      "task": "Build and validate a stage-specific context packet",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-05"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "ART-P06",
+      "task": "Assess advertising readiness and route operator learning",
+      "path": "articles/playbooks.json",
+      "source_refs": [
+        "ART-06"
+      ],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-01-saas",
+      "task": "SaaS: find and repair the constraint to retained value",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-02-macapps",
+      "task": "Mac apps: prove utility and match the distribution path",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-03-agencies",
+      "task": "Agencies: improve qualified demand without overselling delivery",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-04-ecommerce",
+      "task": "Ecommerce: optimize fulfilled contribution, not attributed order value",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-05-localservices",
+      "task": "Local services: turn suitable inquiries into completed appointments",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    },
+    {
+      "id": "BT-06-marketplaces",
+      "task": "Marketplaces: diagnose liquidity at the market-cell level",
+      "path": "collections/business_type_playbooks.json",
+      "source_refs": [],
+      "authorship": "original_climbos_application",
+      "status": "proposed_reference",
+      "execution_permission": "none_from_this_document"
+    }
+  ]
+}

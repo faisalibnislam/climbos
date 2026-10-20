@@ -1,0 +1,154 @@
+{
+  "kind": "policy_reference_registry_not_execution_authorization",
+  "rules": [
+    {
+      "id": "RULE-01",
+      "platform": "Google Search",
+      "source_url": "https://developers.google.com/search/docs/essentials",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": "2025-12-10",
+      "verification_status": "primary_page_read",
+      "verified_scope": "Content eligibility combines technical requirements, spam policies, and best practices; meeting them does not guarantee indexing or serving.",
+      "proposed_preflight_checks": [
+        "Check crawl and index eligibility for the actual URL.",
+        "Check current spam policy before scaling templated content.",
+        "Do not promise ranking or indexing."
+      ],
+      "refresh_triggers": [
+        "Large publishing batch",
+        "Material template or domain change",
+        "Search policy notice or unexpected indexing change"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    },
+    {
+      "id": "RULE-02",
+      "platform": "Apple product page optimization",
+      "source_url": "https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/overview-of-product-page-optimization/",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": null,
+      "verification_status": "primary_page_read",
+      "verified_scope": "The inspected overview scopes native product-page optimization to iOS/iPadOS; Mac availability must not be inferred.",
+      "proposed_preflight_checks": [
+        "Verify the actual app platform, distribution state, role and supported experiment surface.",
+        "Record tested assets, version and locale.",
+        "Use a supported alternative when the desired native experiment is unavailable."
+      ],
+      "refresh_triggers": [
+        "Different platform or storefront",
+        "New app version or asset change",
+        "API or product feature release"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    },
+    {
+      "id": "RULE-03",
+      "platform": "LinkedIn Posts API",
+      "source_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-10",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": "2026-05-13",
+      "verification_status": "primary_page_read",
+      "verified_scope": "Organization and member publishing use distinct scopes and role conditions; the API requires version headers.",
+      "proposed_preflight_checks": [
+        "Verify approved product access and exact scope.",
+        "Verify current author resource and organization role.",
+        "Bind owner approval to destination, artifact, schedule and action."
+      ],
+      "refresh_triggers": [
+        "API version upgrade",
+        "Token refresh or role change",
+        "New author or format"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    },
+    {
+      "id": "RULE-04",
+      "platform": "Meta Pages publishing",
+      "source_url": "https://developers.facebook.com/docs/pages-api/posts/",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": null,
+      "verification_status": "retrieval_blocked",
+      "verified_scope": "Direct retrieval failed; this record establishes no current permission, endpoint or rate-limit claim.",
+      "proposed_preflight_checks": [
+        "Fetch the current official Page publishing documentation before implementation.",
+        "Verify app review, token type, role, scope and endpoint for the exact action.",
+        "Keep execution blocked while eligibility is unresolved."
+      ],
+      "refresh_triggers": [
+        "Every implementation or material publishing-adapter change",
+        "Any access or permission error"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    },
+    {
+      "id": "RULE-05",
+      "platform": "Resend sending eligibility",
+      "source_url": "https://resend.com/legal/acceptable-use",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": "2026-10-13",
+      "verification_status": "primary_page_read",
+      "verified_scope": "The inspected policy requires explicit opt-in and prohibits unsolicited cold outreach, purchased lists, and scraped contacts.",
+      "proposed_preflight_checks": [
+        "Verify recipient eligibility and current suppression immediately before dispatch.",
+        "Check provider content and sending-statistics policies for the actual campaign.",
+        "Owner approval cannot override provider prohibition."
+      ],
+      "refresh_triggers": [
+        "First send for a tenant or audience",
+        "New list source or message purpose",
+        "Policy revision or complaint/bounce incident"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    },
+    {
+      "id": "RULE-06",
+      "platform": "Gmail sender requirements",
+      "source_url": "https://support.google.com/mail/answer/81126?hl=en",
+      "retrieved_at": "2026-10-20",
+      "publication_or_update_date": null,
+      "verification_status": "primary_page_read",
+      "verified_scope": "Requirements differ for personal Gmail senders and the bulk-sender category; authentication, transport and unsubscribe obligations need scope-specific checks.",
+      "proposed_preflight_checks": [
+        "Identify recipient-domain and sender-volume scope.",
+        "Verify current authentication, alignment, transport and unsubscribe requirements.",
+        "Monitor applicable deliverability metrics using their actual definitions."
+      ],
+      "refresh_triggers": [
+        "New sending domain or provider",
+        "Material volume change",
+        "Authentication failure or deliverability incident"
+      ],
+      "current_tenant_eligibility": null,
+      "tenant_eligibility_reason": "Requires current integration, resource, permission, audience and action evidence.",
+      "execution_state": "not_authorized_by_this_reference",
+      "rule_version": 1,
+      "max_age_policy": null,
+      "max_age_note": "Set by the implementer according to volatility and action consequence; no universal freshness interval is asserted."
+    }
+  ]
+}

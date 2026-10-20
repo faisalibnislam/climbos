@@ -1,0 +1,209 @@
+[
+  {
+    "id": "BK01",
+    "title": "Good Strategy/Bad Strategy",
+    "authors": [
+      "Richard Rumelt"
+    ],
+    "original_filename": "Good Strategy, Bad Strategy_ The Difference and why it Matters by Richard P. Rumelt.epub",
+    "sha256": "0e896b4985aa7ff3d16ed25edb0b2112209462a467f7e78521f199c9d6f3679c",
+    "metadata_caveats": [],
+    "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+    "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+    "locators": [
+      {
+        "id": "BK01-L01",
+        "epub_path": "dummy_split_011.html",
+        "block_start": 19,
+        "block_end": 49,
+        "chapter_or_section": "Chapter 5 — The Kernel of Good Strategy",
+        "claim_scope": "Diagnosis, guiding policy and coherent action are connected components of the strategy kernel."
+      },
+      {
+        "id": "BK01-L02",
+        "epub_path": "dummy_split_009.html",
+        "block_start": 19,
+        "block_end": 533,
+        "chapter_or_section": "Chapter 3 — Bad Strategy",
+        "claim_scope": "Strategy quality requires identifying a challenge rather than substituting goals, vague language or inconsistent objectives."
+      },
+      {
+        "id": "BK01-L03",
+        "epub_path": "dummy_split_014.html",
+        "block_start": 30,
+        "block_end": 263,
+        "chapter_or_section": "Chapter 7 — Proximate Objectives",
+        "claim_scope": "Objectives should be feasible and reduce ambiguity in light of organizational capabilities."
+      },
+      {
+        "id": "BK01-L04",
+        "epub_path": "dummy_split_015.html",
+        "block_start": 138,
+        "block_end": 219,
+        "chapter_or_section": "Chapter 8 — Chain-Link Systems",
+        "claim_scope": "Interdependent activities can reinforce strength or constrain isolated improvements."
+      },
+      {
+        "id": "BK01-L05",
+        "epub_path": "dummy_split_024.html",
+        "block_start": 19,
+        "block_end": 22,
+        "chapter_or_section": "Chapter 16 — The Science of Strategy",
+        "claim_scope": "Strategy as hypothesis and execution as a source of proprietary functional knowledge."
+      }
+    ]
+  },
+  {
+    "id": "BK02",
+    "title": "Monetizing Innovation",
+    "authors": [
+      "Madhavan Ramanujam",
+      "Georg Tacke"
+    ],
+    "original_filename": "Monetizing_Innovation_-_Madhavan_Ramanujam.epub",
+    "sha256": "599861973a3a02594491003ad99d8c2002a93afb83f1b7748818eaab75c696cc",
+    "metadata_caveats": [
+      "Package metadata title is “Don’t Price the Product; Product the Price” plus a subtitle; the visible title page names Monetizing Innovation. The visible title page was used to identify the book."
+    ],
+    "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+    "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+    "locators": [
+      {
+        "id": "BK02-L01",
+        "epub_path": "OPS/c04.xhtml",
+        "block_start": 17,
+        "block_end": 22,
+        "chapter_or_section": "Chapter 4 — Willingness to Pay",
+        "claim_scope": "Price and value discussions belong early in product development."
+      },
+      {
+        "id": "BK02-L02",
+        "epub_path": "OPS/c05.xhtml",
+        "block_start": 18,
+        "block_end": 122,
+        "chapter_or_section": "Chapter 5 — Customer Differences",
+        "claim_scope": "Segmentation should reflect customer needs, value and willingness to pay."
+      },
+      {
+        "id": "BK02-L03",
+        "epub_path": "OPS/c06.xhtml",
+        "block_start": 123,
+        "block_end": 159,
+        "chapter_or_section": "Chapter 6 — Configuration and Bundling",
+        "claim_scope": "Offer configuration should reflect the segment rather than simply contain every feature."
+      },
+      {
+        "id": "BK02-L04",
+        "epub_path": "OPS/c07.xhtml",
+        "block_start": 17,
+        "block_end": 20,
+        "chapter_or_section": "Chapter 7 — Monetization Models",
+        "claim_scope": "How a business charges is a distinct design choice from the price point."
+      },
+      {
+        "id": "BK02-L05",
+        "epub_path": "OPS/c09.xhtml",
+        "block_start": 17,
+        "block_end": 21,
+        "chapter_or_section": "Chapter 9 — Outside-In Business Case",
+        "claim_scope": "External willingness-to-pay evidence should inform an evolving business case."
+      },
+      {
+        "id": "BK02-L06",
+        "epub_path": "OPS/c12.xhtml",
+        "block_start": 47,
+        "block_end": 93,
+        "chapter_or_section": "Chapter 12 — Price Integrity",
+        "claim_scope": "Consider nonprice explanations and alternatives before reflexive discounting."
+      }
+    ]
+  },
+  {
+    "id": "BK03",
+    "title": "Obviously Awesome",
+    "authors": [
+      "April Dunford"
+    ],
+    "original_filename": "Obviously Awesome How To Nail Product Positioning So Customers Buy It.epub",
+    "sha256": "c26af73938cc1bc3ca21e3967dc35cd91a3c67a7ee934982b902196ed2734c3e",
+    "metadata_caveats": [
+      "Supplied text contains 2019-era examples; no claim is made that this is the latest revised edition."
+    ],
+    "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+    "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+    "locators": [
+      {
+        "id": "BK03-L01",
+        "epub_path": "OEBPS/Text/chapter3.xhtml",
+        "block_start": 18,
+        "block_end": 68,
+        "chapter_or_section": "Step 1 — Customers Who Love Your Product",
+        "claim_scope": "Positioning needs sufficient customer evidence to reveal a useful pattern."
+      },
+      {
+        "id": "BK03-L02",
+        "epub_path": "OEBPS/Text/chapter6.xhtml",
+        "block_start": 18,
+        "block_end": 63,
+        "chapter_or_section": "Step 4 — Competitive Alternatives",
+        "claim_scope": "Understand alternatives from the customer perspective, including manual and status-quo choices."
+      },
+      {
+        "id": "BK03-L03",
+        "epub_path": "OEBPS/Text/chapter7.xhtml",
+        "block_start": 19,
+        "block_end": 80,
+        "chapter_or_section": "Step 5 — Unique Attributes",
+        "claim_scope": "Comparative capabilities require evidence; consideration and retention attributes can differ."
+      },
+      {
+        "id": "BK03-L04",
+        "epub_path": "OEBPS/Text/chapter8.xhtml",
+        "block_start": 18,
+        "block_end": 116,
+        "chapter_or_section": "Step 6 — Value Themes",
+        "claim_scope": "Relate capabilities to benefits and customer goals."
+      },
+      {
+        "id": "BK03-L05",
+        "epub_path": "OEBPS/Text/chapter9.xhtml",
+        "block_start": 18,
+        "block_end": 104,
+        "chapter_or_section": "Step 7 — Who Cares",
+        "claim_scope": "Value relevance differs by customer and situation."
+      },
+      {
+        "id": "BK03-L06",
+        "epub_path": "OEBPS/Text/chapter10.xhtml",
+        "block_start": 19,
+        "block_end": 244,
+        "chapter_or_section": "Step 8 — Market Frame",
+        "claim_scope": "A market frame should make relevant strengths understandable and requires customer context."
+      },
+      {
+        "id": "BK03-L07",
+        "epub_path": "OEBPS/Text/chapter11.xhtml",
+        "block_start": 16,
+        "block_end": 108,
+        "chapter_or_section": "Step 9 — Optional Trend",
+        "claim_scope": "A trend can support positioning but should not replace a clear market context."
+      },
+      {
+        "id": "BK03-L08",
+        "epub_path": "OEBPS/Text/chapter12.xhtml",
+        "block_start": 16,
+        "block_end": 26,
+        "chapter_or_section": "Step 10 — Capture Positioning",
+        "claim_scope": "Positioning should be shared with sufficient detail for cross-functional use."
+      },
+      {
+        "id": "BK03-L09",
+        "epub_path": "OEBPS/Text/chapter13.xhtml",
+        "block_start": 14,
+        "block_end": 98,
+        "chapter_or_section": "After Positioning",
+        "claim_scope": "Translate positioning into sales and messaging, and review changes through customer perceptions."
+      }
+    ]
+  }
+]

@@ -1,0 +1,169 @@
+{
+ "id": "BRP-07",
+ "version": 1,
+ "slug": "activation-definition",
+ "title": "Count activation at value received, not setup finished",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Which event ClimbOS treats as 'activated' when reading the owner's funnel and when running PB-activation-repair.",
+ "business_types": [
+  "saas",
+  "mobile_app",
+  "desktop_app",
+  "digital_products"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Self-serve software, apps or digital products with signups or trials",
+  "The owner reports an 'activated' count or ClimbOS reads product events",
+  "Collaborative or team products where value needs more than one person"
+ ],
+ "exclusions": [
+  "Service businesses where first value is a delivered job, attended session or first order (keep Book 08's business-specific milestones)",
+  "Too few signups to compare later outcomes of users who did vs did not reach the event: keep the event as a labelled hypothesis",
+  "The owner cannot observe any value event: measure first"
+ ],
+ "required_inputs": [
+  "A countable value event (publish, send, receive, share, export, deploy type action)",
+  "Cohort tracking by signup date"
+ ],
+ "evidence_requirements": [
+  "Separate counts for setup completed and value received in the same signup cohort",
+  "Later paid or retained rate for users who reached each stage vs those who did not",
+  "The product's natural use frequency (daily, weekly, monthly, episodic) for the habit stage"
+ ],
+ "missing_data_behavior": [
+  "Owner reports setup completion as 'activated': label activationKind 'setup' and lower the diagnosis basis to partial.",
+  "No observable value event: first step defines and instruments it."
+ ],
+ "alternatives_when_constrained": [
+  "Missing data: ask the owner to mark 10–20 recent signups as 'got the result' or not and compare who paid",
+  "Low traffic: watch 3–5 new users (PB-activation-repair step) and record where value happens",
+  "No integration: weekly manual count from the owner's admin view",
+  "Small budget: needs no spend"
+ ],
+ "decision_branches": [
+  {
+   "if": "activationKind is value or habit",
+   "then": "Use the count in diagnosis as measured."
+  },
+  {
+   "if": "activationKind is setup or unknown",
+   "then": "Diagnosis partial; define the value event first."
+  },
+  {
+   "if": "Team product",
+   "then": "Activation may be counted at team level."
+  }
+ ],
+ "implementation_steps": [
+  "List setup steps separately from value events",
+  "Name the value event as the moment the user gets a result, using the verb test",
+  "Add a quantity only if the data supports one (her survey example used several responses)",
+  "Define habit as repeat use over a window matched to natural frequency, not 'active last week'",
+  "Compare paid and retained rates of users who reached setup, value and habit",
+  "Choose the earliest stage that clearly separates later payers or retainers",
+  "For team products make collaboration part of the activation event and put the invite in setup"
+ ],
+ "dependencies": [
+  "Event tracking for the value event"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "1-2 h to define; instrumentation time",
+  "tools": "Product analytics or a manual count"
+ },
+ "metrics": [
+  "Setup completion (diagnostic only)",
+  "Value-event rate within a stated window",
+  "Habit-loop rate",
+  "Paid and retained rate conditional on each stage"
+ ],
+ "guardrails": [
+  "Never report setup completion as activation",
+  "No vanity events (logins, page views)",
+  "Pair any activation lift with later retention or paid conversion so empty test activity cannot inflate it"
+ ],
+ "observation_window": "Value event within a product-specific window stated up front; validate the definition over at least one full billing or renewal cycle of the cohort.",
+ "stop_conditions": [
+  "Activated users do not pay or retain better than non-activated: definition is wrong, move it",
+  "Almost everyone reaches the event: it is setup, move it later",
+  "Event cannot be measured reliably: revert to owner-marked sample"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/diagnosis.ts (OwnerFunnel.activated comment lists 'completed setup'; diagnose() activation vs conversion split); shared/playbooks/contracts.ts PB-activation-repair step 1; owner funnel input UI.",
+ "extends_existing": [
+  "shared/agents/diagnosis.ts OwnerFunnel.activated",
+  "shared/playbooks/contracts.ts PB-activation-repair (candidate v2)",
+  "docs/growth-intelligence/books/08_email_lifecycle.md §2"
+ ],
+ "source_references": [
+  "EV-02-F1",
+  "EV-02-F2",
+  "EV-02-F3",
+  "EV-02-F4",
+  "EV-03-F1",
+  "EV-03-F2",
+  "EV-06-F3"
+ ],
+ "concepts": [
+  "EV-C1"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-02-F1",
+   "EV-02-F2",
+   "EV-02-F3",
+   "EV-02-F4",
+   "EV-03-F1",
+   "EV-03-F2",
+   "EV-06-F3"
+  ],
+  "interpretation": [
+   "INTERPRETATION: Verna's setup/aha/habit split maps onto ClimbOS's activation-vs-conversion branch. Counting setup as activation inflates the activation rate and pushes the computed constraint toward 'conversion', which sends owners to price changes when users never got value."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: Change the OwnerFunnel.activated description to 'reached the result (not just finished setup)'. Add activationKind: 'setup' | 'value' | 'habit' | 'unknown'. When it is 'setup' or 'unknown', diagnosis basis drops to 'partial' and the plan's first step must define the value event. Team products may define activation at team level."
+  ],
+  "disagreements": [
+   "diagnosis.ts includes 'completed setup' in the activated count, which Verna explicitly rejects. Her subtitle claim that nearly all monetization and retention problems come from activation is rhetoric, not data; do not encode it as a prior."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV08",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "periodDays": 30,
+    "visitors": 4000,
+    "leads": 200,
+    "owner_reported_activated": 150,
+    "activated_definition": "created first form",
+    "received_first_response": 30,
+    "newCustomers": 12
+   },
+   "expected_behavior": [
+    "Flags that 150 counts setup, not value",
+    "Uses or asks for the value-event count (30) and recomputes: activation 15%, activated-to-paid 40%",
+    "Names activation, not conversion, as the binding constraint once the value event is used, and states the diagnosis flips with the definition",
+    "First plan step defines and instruments the value event"
+   ],
+   "hard_failure": [
+    "Accepts 150 as activated without a flag and makes a pricing or checkout change the bankable play",
+    "Invents a value-event count the owner did not give"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

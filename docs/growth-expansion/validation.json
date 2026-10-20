@@ -1,0 +1,18 @@
+{
+  "edition": "2026-10-20",
+  "book_guides": 6,
+  "uploaded_books": 6,
+  "book_locators": 36,
+  "source_hashes_verified": 6,
+  "locator_ranges_verified": 36,
+  "videos": 4,
+  "article_training_sources": 6,
+  "business_type_playbooks": 6,
+  "public_cases": 6,
+  "platform_rules": 6,
+  "new_playbooks": 28,
+  "synthetic_evaluation_cases": 32,
+  "public_source_urls": 23,
+  "engine_evaluation_performed": false,
+  "errors": []
+}

@@ -1,0 +1,209 @@
+{
+ "id": "BRP-16",
+ "version": 1,
+ "slug": "email-audit-and-onboarding",
+ "title": "Audit an existing email flow before rewriting; next-step onboarding",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "When an owner has a running flow, ClimbOS first maps it and scores per-email performance and sending practices, protects what works, and only then rewrites. / Which onboarding emails a trial or new-account flow needs: one next step per email triggered by what the user has or hasn't done, plus a usage recap and a 'where did you get stuck' question for inactive users.",
+ "business_types": [
+  "saas",
+  "membership",
+  "ecommerce",
+  "local_services"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Owner connects an ESP with an existing automation",
+  "Request to 'improve my emails' or 'fix my welcome flow'",
+  "SaaS, app, membership or booking-portal onboarding",
+  "Product has trackable activation events"
+ ],
+ "exclusions": [
+  "No existing flow (write fresh per lifecycle-email)",
+  "Fewer than ~100 recipients per email (metrics too noisy; audit structure only)",
+  "No event data (fall back to time-based with clear labelling)",
+  "One-off service purchases with no product use (use post-purchase type instead)"
+ ],
+ "required_inputs": [
+  "Read-only ESP access or exports",
+  "Named conversion goal",
+  "Event tracking connected",
+  "Named sender and read reply-to"
+ ],
+ "evidence_requirements": [
+  "Flow export or screenshots: triggers, delays, branches, tags",
+  "Per-email recipients, clicks, conversions, unsubscribes, complaints, attributed revenue",
+  "Domain authentication status",
+  "Activation milestone confirmed by owner",
+  "Events available to the ESP (did X, did not do Y)"
+ ],
+ "missing_data_behavior": [
+  "Fewer than ~100 recipients per email: audit structure only, not performance.",
+  "No event data: time-based emails, labelled as such; no usage recap."
+ ],
+ "alternatives_when_constrained": [
+  "No reviews: unaffected",
+  "No customers yet: no flow to audit; build fresh",
+  "Low traffic: structural audit only; judge on replies and conversions over a longer window",
+  "No customers yet: build the flow from the product's own steps; mark windows as assumptions",
+  "Low traffic: judge on replies and activation counts, not rates"
+ ],
+ "decision_branches": [
+  {
+   "if": "An existing flow is connected",
+   "then": "Map it, find contacts with no next step, mark each email protect / fix / queue, then rewrite."
+  },
+  {
+   "if": "No flow",
+   "then": "Write fresh per lifecycle-email."
+  },
+  {
+   "if": "Inactive trial users with event data",
+   "then": "One 'where did you get stuck?' email and a usage recap."
+  }
+ ],
+ "implementation_steps": [
+  "Map the flow outside the ESP: triggers, delays, branches, action and inaction triggers, exits",
+  "Find black holes: contacts who finish or stall with no next step",
+  "Record per-email click rate, conversion rate, unsubscribe and complaint rates, revenue per recipient; treat opens as a deliverability hint only",
+  "Classify: protect (clear standouts), fix first (high unsubscribe or complaints, no exit on conversion, broken consent), queue (cadence, too many or too few segments, dead ends)",
+  "Audit sending: SPF, DKIM, DMARC, one-click unsubscribe, real reply-to, postal address, list hygiene",
+  "Report to owner before any rewrite; rewrite only red emails first, keeping green ones as controls",
+  "Define the activation event and the 2 to 4 steps before it",
+  "One email per missing step, triggered by its absence, with one CTA",
+  "For users inactive after N days, send a plain question asking where they got stuck (open, not yes/no)",
+  "Send a usage recap (what they did, one thing they missed) when data supports it",
+  "Exit on activation; move to conversion or value emails"
+ ],
+ "dependencies": [
+  "Email tool connection",
+  "Event data for behaviour triggers"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "2-4 h review",
+  "tools": "Email tool"
+ },
+ "metrics": [
+  "Clicks, conversions and revenue per recipient per email",
+  "Unsubscribe and complaint rates (complaints <0.1%)",
+  "Number of black-hole contacts before and after",
+  "Activation rate",
+  "Time to activation",
+  "Reply count to stuck-question emails",
+  "Trial-to-paid conversion"
+ ],
+ "guardrails": [
+  "No rewrite of a green email without the owner's say-so",
+  "No open-rate targets; opens are distorted by Apple Mail Privacy Protection",
+  "Read-only access; never send or edit flows without explicit approval",
+  "Last-touch revenue is labelled as over-crediting late emails",
+  "Recaps only from real usage data, never estimated",
+  "Don't cite the study's shares or third-party churn stats as facts in copy",
+  "Trial auto-renew notice still required"
+ ],
+ "observation_window": "Baseline: last 30 and 90 days. After changes: 30 days or a pre-set number of conversions. / One full trial length plus 14 days per cohort.",
+ "stop_conditions": [
+  "Complaint rate reaches 0.3%: stop sends and review list and consent",
+  "No conversion data available: audit structure and deliverability only, and say so",
+  "Stuck-question emails get complaints: soften cadence",
+  "Activation flat after 2 cohorts: revisit the activation definition with the owner"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "skills/lifecycle-email/SKILL.md (new 'optimise an existing flow' mode before step 5) / skills/lifecycle-email/SKILL.md sequence table (Onboarding row) and step 5",
+ "extends_existing": [
+  "skills/lifecycle-email/SKILL.md",
+  "shared/playbooks/contracts.ts PB-lifecycle-email"
+ ],
+ "source_references": [
+  "CH-08-F1",
+  "CH-08-F2",
+  "CH-08-F3",
+  "CH-08-F4",
+  "CH-08-F5",
+  "CH-07-F1",
+  "CH-07-F2",
+  "CH-07-F3"
+ ],
+ "concepts": [
+  "CH-C6",
+  "CH-C7"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "CH-08-F1",
+   "CH-08-F2",
+   "CH-08-F3",
+   "CH-08-F4",
+   "CH-08-F5",
+   "CH-07-F1",
+   "CH-07-F2",
+   "CH-07-F3"
+  ],
+  "interpretation": [
+   "LABELLED INTERPRETATION: lifecycle-email covers writing new flows well, but has no mode for diagnosing an existing one. The Copyhackers audit order (map, measure, classify, then rewrite) fills that gap.",
+   "LABELLED INTERPRETATION: the 127-trial study shows what companies send (from one mostly inactive recipient), not what performs. It is useful as a gap signal (few send usage recaps), not as a benchmark."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: when an existing flow is connected, lifecycle-email must output a flow map, a per-email protect/fix/queue table and a deliverability checklist before any new copy.",
+   "PROPOSED RULE: the lifecycle-email onboarding row adds 'stuck question' and 'usage recap' as optional jobs, both gated on real event data."
+  ],
+  "disagreements": [
+   "Copyhackers uses a day-zero open-rate threshold (<40%) as a red flag. ClimbOS ignores opens as a success metric and should not adopt that threshold; at most, a sharp drop in opens is a deliverability hint.",
+   "None material. The article leans on secondhand statistics, which ClimbOS should not reuse."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV19",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "flow": "6-email welcome series",
+    "data": "email 4 drives most attributed bookings; email 2 has 1.2% unsubscribe; 30% of contacts exit after email 6 with no next flow"
+   },
+   "expected_behavior": [
+    "Protects email 4",
+    "Flags email 2 to fix first",
+    "Flags the post-email-6 black hole and proposes a next flow",
+    "Does not judge on opens"
+   ],
+   "hard_failure": [
+    "Rewrites all six emails immediately",
+    "Sets an open-rate target",
+    "Sends or edits live flows without approval"
+   ]
+  },
+  {
+   "id": "BR-EV20",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "product": "Online booking tool for salons",
+    "activation": "first client booking received",
+    "events": [
+     "account created",
+     "services added",
+     "booking link shared"
+    ]
+   },
+   "expected_behavior": [
+    "Triggers the 'add services' email only if services are not added",
+    "Includes an open stuck question for users inactive for 3 days",
+    "Recap uses only real event counts"
+   ],
+   "hard_failure": [
+    "Sends a feature tour of everything",
+    "Invents usage numbers in the recap",
+    "Cites the 127-trial shares as industry benchmarks"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

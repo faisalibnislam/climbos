@@ -1,0 +1,249 @@
+{
+ "id": "BRP-04",
+ "version": 1,
+ "slug": "free-access-model",
+ "title": "Free plan vs free trial vs reverse trial",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Which try-before-you-buy model to use for a self-serve product or a sampleable service, given acquisition, conversion speed and cash needs. / Which free-access configuration a self-serve product should test, and which conversion reference applies to it.",
+ "business_types": [
+  "saas",
+  "mobile_app",
+  "desktop_app",
+  "digital_products"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Self-serve software, app or digital product",
+  "Service businesses considering a free first session or sample (by analogy)",
+  "Owner debating freemium vs trial, or conversion from free is low",
+  "Self-serve software with clear paid features",
+  "Low marginal cost per free user, or a budget for it",
+  "A free tier that is useful on its own (needed as the fallback in a reverse trial)"
+ ],
+ "exclusions": [
+  "High-touch sales where trials are run by hand anyway",
+  "Free usage carries material variable cost the business can't fund",
+  "Value can't be experienced within any trial length and there's no free tier option",
+  "High serving cost per free user with no cost cap (AI inference); her 2026 post argues free still pays at Lovable but its conditions are paywalled",
+  "Sales-led, high-price products where self-serve is only defensive",
+  "No meaningful free tier to fall back to",
+  "High risk of repeat-account abuse without a control",
+  "Service and local businesses (not applicable)"
+ ],
+ "required_inputs": [
+  "Feature gating or plan entitlements",
+  "Product analytics for signup, first value and conversion",
+  "Lifecycle emails before trial end",
+  "Billing or plan system that supports time-limited entitlements and a clean downgrade",
+  "Profiling to pick team vs individual trial where relevant (EV-C5)"
+ ],
+ "evidence_requirements": [
+  "Visitor-to-signup and signup-to-paid rates by model (owner data, or labelled fallbacks from base-rates.md)",
+  "Time to first value",
+  "Variable cost per free user",
+  "Cash runway or payback requirement",
+  "Whether value grows with more users (virality/network)",
+  "Current model and conversion by signup cohort",
+  "Marginal cost per free user",
+  "Whether free users ever see paid features",
+  "Post-trial free retention if already running a trial"
+ ],
+ "missing_data_behavior": [
+  "No visitor counts: compare models qualitatively; no per-visitor estimate.",
+  "Two weak references disagree near the observed rate: verdict 'unknown', not 'weak'."
+ ],
+ "alternatives_when_constrained": [
+  "Low traffic: sequential before/after with whole-week cohorts and caveats",
+  "No gating ability: time-limited trial by account flag",
+  "Service business: paid first session at a discount instead of free",
+  "Missing data: measure current conversion by cohort first",
+  "Low traffic: switch all new signups and compare before/after cohorts, labelled observational",
+  "No integration: if plans cannot be time-limited, this is an engineering task, not a ClimbOS action",
+  "Small budget: no media spend needed; watch serving cost"
+ ],
+ "decision_branches": [
+  {
+   "if": "Value is felt within days and acquisition matters",
+   "then": "Reverse trial (full access, then a useful free tier)."
+  },
+  {
+   "if": "Free users cost real money to serve and there's no cap",
+   "then": "Time-limited trial, not freemium."
+  },
+  {
+   "if": "Value needs weeks",
+   "then": "Freemium or a long trial; judge on paid per 1,000 visitors."
+  }
+ ],
+ "implementation_steps": [
+  "Measure time to first value; if longer than a plausible trial, lean freemium or reverse trial",
+  "Estimate paid customers per 1,000 visitors for each model using owner data or labelled assumptions",
+  "Account for timing: trials convert sooner, which matters if cash funds acquisition",
+  "Consider a reverse trial: full features for a limited time, then a free tier",
+  "Test one model change for new signups only; compare paid per visitor, not paid per signup",
+  "Classify the current model",
+  "If freemium converts poorly and free users rarely see paid features, test a reverse trial for new signups: paid features for a fixed period, no card, then free",
+  "State the end date and what happens at the end on the trial screen; list paid benefits over free",
+  "Keep user data on downgrade",
+  "Measure paid conversion and post-downgrade free retention for the same cohorts",
+  "Cap and watch cost per free user and duplicate accounts"
+ ],
+ "dependencies": [
+  "A free tier useful on its own (reverse trial)",
+  "Abuse controls for repeat accounts"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Serving cost of free users",
+  "labor": "Product/billing change",
+  "tools": "Plan gating in the product"
+ },
+ "metrics": [
+  "Paid customers per 1,000 visitors",
+  "Signup-to-paid within a fixed window",
+  "Median days to purchase",
+  "Free-user variable cost",
+  "Retention of converted users by model",
+  "Paid conversion within the cohort window",
+  "Post-downgrade free retention",
+  "Cost per free user",
+  "Duplicate or abusive accounts"
+ ],
+ "guardrails": [
+  "Never compare trial and freemium conversion rates directly (different denominators)",
+  "Clear notice before a trial ends; no silent card charge",
+  "Downgrade keeps the user's data",
+  "No silent auto-charge: no-card by default",
+  "Clear end date and downgrade terms",
+  "Data kept on downgrade",
+  "Abuse monitoring"
+ ],
+ "observation_window": "At least two full trial lengths plus a 30–60 day window for freemium conversions; whole weeks. / Trial length plus one billing period, for both the old and new cohorts to mature.",
+ "stop_conditions": [
+  "Paid per visitor falls versus baseline after the window: revert",
+  "Free-user cost exceeds the agreed budget: tighten the free tier",
+  "Support load from downgrades spikes: improve messaging",
+  "Paid conversion not above the old baseline once cohorts mature",
+  "Free retention falls after downgrade",
+  "Serving cost exceeds the cap"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "Plan engine activation/conversion stage; PB-activation-repair (alternative branch); calculator for paid-per-visitor comparison; base-rates.md fallbacks. / shared/agents/diagnosis.ts REF.trialToPaid and REF.freeToPaid; skills/growth-plays/reference/base-rates.md rows for free plan, no-card trial, card trial; proposed PB-reverse-trial; PB-pricing-test.",
+ "extends_existing": [
+  "skills/growth-plays/reference/base-rates.md (free plan 2-5%, no-card trial 15-25%)",
+  "shared/agents/diagnosis.ts (trial reference)"
+ ],
+ "source_references": [
+  "GU-06-F1",
+  "GU-06-F2",
+  "GU-06-F3",
+  "GU-07-F2",
+  "EV-05-F1",
+  "EV-05-F2",
+  "EV-05-F3",
+  "EV-05-F4",
+  "EV-08-F3",
+  "EV-10-F1",
+  "EV-11-F1",
+  "EV-12-F1",
+  "EV-06-F2"
+ ],
+ "concepts": [
+  "GU-C4",
+  "EV-C4"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-06-F1",
+   "GU-06-F2",
+   "GU-06-F3",
+   "GU-07-F2",
+   "EV-05-F1",
+   "EV-05-F2",
+   "EV-05-F3",
+   "EV-05-F4",
+   "EV-08-F3",
+   "EV-10-F1",
+   "EV-11-F1",
+   "EV-12-F1",
+   "EV-06-F2"
+  ],
+  "interpretation": [
+   "Interpretation: the useful decision variable is paid customers per visitor over a fixed window, with conversion timing as a cash factor; the reverse trial is a hedge when time-to-value is short but acquisition matters.",
+   "INTERPRETATION: Diagnosis compares every SaaS lead-to-paid rate with the no-card trial range. A reverse trial is a different model, and Verna's own figure for trials is lower than ClimbOS's, so the verdict near the boundary is not reliable."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: trial-model recommendations must compute paid per 1,000 visitors and days to cash for each candidate, and must never compare per-trial and per-free-user conversion directly.",
+   "PROPOSED RULE: Add freeModel: 'freemium' | 'opt_in_trial' | 'card_trial' | 'reverse_trial' | 'none' to the owner profile and pick the reference by model. Store Verna's 3–5% freemium and 10–15% trial/reverse trial as 'author benchmark, unsourced, Oct 2024, dated'. When two weak references disagree and the rate falls between them, set verdict 'unknown' rather than 'weak'."
+  ],
+  "disagreements": [
+   "Base-rates implies a much larger gap (roughly 3–12x) between trial and free-plan conversion than GU-06's 2–3x. Not contradictory: different denominators and sources. Resolve by using owner data and per-visitor comparison.",
+   "ClimbOS no-card trial 15–25% vs Verna's 10–15% for trial or reverse trial. Freemium ranges broadly agree (2–5% vs 3–5%). Her freemium/AI-cost conditions are paywalled, so the cost-related avoid_when is ClimbOS's own caution."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV04",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Scheduling app for tutors",
+    "visitors_per_month": 1000,
+    "current_model": "freemium",
+    "free_signup_rate": 0.06,
+    "free_to_paid": 0.04,
+    "time_to_first_value_days": 3,
+    "cash_runway_months": 4
+   },
+   "expected_behavior": [
+    "Compares models on paid per 1,000 visitors with labelled assumptions",
+    "Computes the reverse-trial conversion needed to beat each alternative",
+    "Recommends a test on new signups with a fixed window",
+    "Mentions faster cash from trials given short runway"
+   ],
+   "hard_failure": [
+    "Claiming a trial 'converts 2–3x better' without noting denominators",
+    "Declaring a winner from one week of data"
+   ]
+  },
+  {
+   "id": "BR-EV05",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "case_a": {
+     "types": [
+      "b2c_saas"
+     ],
+     "model": "freemium",
+     "leads": 1000,
+     "newCustomers": 20,
+     "paid_features_seen_by_free_users": "rarely"
+    },
+    "case_b": {
+     "types": [
+      "b2b_saas"
+     ],
+     "model": "reverse_trial",
+     "leads": 300,
+     "newCustomers": 36
+    }
+   },
+   "expected_behavior": [
+    "Case A: proposes a reverse-trial test with end-date disclosure, downgrade to free and a cost cap, and explains why",
+    "Case B: does not label 12% weak solely because it is below the 15–25% no-card trial reference; notes Verna's 10–15% reverse/standard trial figure and that both references are weak"
+   ],
+   "hard_failure": [
+    "Defaults to card-required trial",
+    "No fallback plan after the trial",
+    "Forecasts a 10–40% lift (secondhand claim not in her readable posts)"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

@@ -1,0 +1,616 @@
+{
+  "source_family": "Copyhackers",
+  "author": "Copyhackers (record each article's actual author)",
+  "articles": [
+    {
+      "id": "CH-01",
+      "title": "Amazon review mining for copywriting. What it is, how to do it and where to use it in your copy.",
+      "author": "Joanna Wiebe",
+      "canonical_url": "https://copyhackers.com/2014/10/amazon-review-mining/",
+      "published": null,
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "partial",
+      "access_notes": "Text not gated, and the article prose reads as complete. No date on the page; the URL path gives 2014/10. The review tables and headline graphics are images and were not readable. The embedded video was not transcribed, and the example spreadsheet is an external link that was not opened.",
+      "sections_read": [
+        "Questions to Ask Yourself Before Review Mining to Find the Voice of Customer",
+        "Review mining data should write your copy, you shouldn't write copy.",
+        "How Do You Find Your Message (And Stickier Copy) in the User Reviews on Amazon, TripAdvisor and Other Sites?",
+        "You Like Examples? How's This for a Review Mining Example",
+        "The Winning Message Brought 400% More Clicks Than the Control",
+        "You Won't Just Find Copy in User Reviews – You'll Find the Messages You NEED to Put on the Page",
+        "Sounds Good – But Is Amazon Review Mining as Easy as It Looks?",
+        "Ask Yourself These Questions, In This Order"
+      ],
+      "findings": [
+        {
+          "id": "CH-01-F1",
+          "kind": "author_guidance",
+          "summary": "Review mining is presented as the fallback when you cannot interview, survey or record your own customers or list. Interviews and surveys come first when they are available.",
+          "section": "Questions to Ask Yourself Before Review Mining",
+          "date_sensitivity": "durable",
+          "limitations": "Author opinion. No comparison of source quality is given."
+        },
+        {
+          "id": "CH-01-F2",
+          "kind": "author_guidance",
+          "summary": "Mine reviews of anything that serves the same outcome your prospect wants, not only identical products. In the example, books on the same problem stood in for a service business. Before searching, settle four things in order: the audience, the goals and the solutions they want, what they use today, and where those solutions are discussed online.",
+          "section": "Ask Yourself These Questions, In This Order",
+          "date_sensitivity": "durable",
+          "limitations": "Adjacent-outcome reviewers are not your prospects. Their language may not transfer cleanly."
+        },
+        {
+          "id": "CH-01-F3",
+          "kind": "author_guidance",
+          "summary": "Copy reviewers' exact wording into category tables with minimal summarising. Recurring questions, complaints and phrases decide what goes on the page and in what order. A standout verbatim line can become a headline candidate.",
+          "section": "You Won't Just Find Copy in User Reviews",
+          "date_sensitivity": "durable",
+          "limitations": "The table structure is shown only as images, so it could not be inspected. Choosing the headline from one standout quote is a judgement call, not a frequency rule."
+        },
+        {
+          "id": "CH-01-F4",
+          "kind": "reported_case",
+          "summary": "Case: a rehab-centre client. The author read more than 500 reviews across six books in about 2 to 3 hours. A reviewer-derived headline was tested against the control. It reportedly produced more than 400% more primary-button clicks and more than 20% more lead-form submissions on the next page.",
+          "section": "The Winning Message Brought 400% More Clicks Than the Control",
+          "date_sensitivity": "dated",
+          "limitations": "Single vendor-published case. No sample size, duration, traffic or significance is reported. The click lift is a micro-conversion. The lead-form lift is the more meaningful figure and is much smaller. This is not a forecast."
+        },
+        {
+          "id": "CH-01-F5",
+          "kind": "author_guidance",
+          "summary": "The same review analysis can expose product or feature gaps, not just copy. The example is qualitative and comes from project-management app reviews.",
+          "section": "You Won't Just Find Copy in User Reviews",
+          "date_sensitivity": "durable",
+          "limitations": "Qualitative example only. No outcome reported."
+        }
+      ]
+    },
+    {
+      "id": "CH-02",
+      "title": "7 copywriting research techniques conversion copywriters love",
+      "author": "Jessica Noel (editor: Joanna Wiebe)",
+      "canonical_url": "https://copyhackers.com/2022/06/copywriting-research/",
+      "published": null,
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Text complete and not gated. Promotional banners and a newsletter prompt are present. No date on the page; the URL path gives 2022/06. The linked companion piece on interview question design was not opened.",
+      "sections_read": [
+        "Takeaways",
+        "Conversion copywriters begin with research",
+        "Conversion copywriters rely on a variety of research techniques to gather VOC",
+        "1. Client (and customer) interviews",
+        "2. Surveys",
+        "3. Review mining",
+        "4. Heatmaps and Scrollmaps",
+        "5. Thank you polls",
+        "6. Analytics review",
+        "7. Competitor audits",
+        "How to organize your copywriting research for your conversion copywriting project"
+      ],
+      "findings": [
+        {
+          "id": "CH-02-F1",
+          "kind": "author_guidance",
+          "summary": "Surveys of customers are recommended to capture use scenarios, unexpected results, outcomes in money and time, who influenced the decision, and the anxieties that nearly stopped the purchase. These answers feed objection handling and benefit language directly.",
+          "section": "2. Surveys",
+          "date_sensitivity": "durable",
+          "limitations": "No question set, sample size or response-rate guidance is given."
+        },
+        {
+          "id": "CH-02-F2",
+          "kind": "author_guidance",
+          "summary": "A one-question thank-you poll, shown right after sign-up or first purchase, asks what was going on that brought the person in. The answer reveals the trigger moment, which shapes the hook.",
+          "section": "5. Thank you polls",
+          "date_sensitivity": "durable",
+          "limitations": "Only buyers and sign-ups answer, so it says nothing about non-converters. No analysis method is given."
+        },
+        {
+          "id": "CH-02-F3",
+          "kind": "author_guidance",
+          "summary": "Before writing, get answers on traffic source, time on page, current and past conversion rate, the target rate, and the gap between the page's goal and what visitors actually do. The copywriter needs the answers, not necessarily tool access.",
+          "section": "6. Analytics review",
+          "date_sensitivity": "durable",
+          "limitations": "A list of questions, with no thresholds."
+        },
+        {
+          "id": "CH-02-F4",
+          "kind": "author_guidance",
+          "summary": "Review data comes from people adjacent to your prospects, so treat it as adjacent evidence. Competitor audits are for seeing how others handle objections and positioning, never for copying.",
+          "section": "3. Review mining; 7. Competitor audits",
+          "date_sensitivity": "durable",
+          "limitations": "Stated as cautions without method detail. The '99%' and '90%' figures in the article are rhetorical, not measured."
+        }
+      ]
+    },
+    {
+      "id": "CH-03",
+      "title": "How to use survey data to write a LFSP",
+      "author": "Anna Bolton (presenter) with Joanna Wiebe (host); no byline",
+      "canonical_url": "https://copyhackers.com/how-to-write-a-long-form-sales-page-using-survey-data/",
+      "published": "2019-09-24",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Live tutorial with a video embed and a full transcript, which was read. The date is the 'presented live' date. A referenced Loom video on the theming method and the slide deck were not accessed.",
+      "sections_read": ["How to use survey data to write a LFSP", "TRANSCRIPT (full)"],
+      "findings": [
+        {
+          "id": "CH-03-F1",
+          "kind": "reported_case",
+          "summary": "Recent buyers of a course were surveyed with 22 questions and skip logic. The questions covered how they experienced the problem, how it felt, desired results, what held them back, expectations and why it mattered. The reported response rate was 87%, at about 15 minutes per respondent. The presenter flagged that this engagement may be unusual.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "A highly engaged paid-member list. The response rate will not transfer to a small business's customers. The respondent count is not given."
+        },
+        {
+          "id": "CH-03-F2",
+          "kind": "author_guidance",
+          "summary": "Responses were themed by hand into these groups: problem, pain points, prior attempts, solution, short-term outcomes, buying triggers and objections. The presenter found spreadsheets awkward for qualitative coding.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Manual, single-analyst coding. No inter-rater check or counts were reported."
+        },
+        {
+          "id": "CH-03-F3",
+          "kind": "author_guidance",
+          "summary": "Survey themes map onto page sections. Problem and feeling answers drive the hook and intro. Prior-attempt and fear answers drive the agitation. Voiced objections become the FAQ, and the risk reducer is merged with a final confidence appeal. Before drafting, set the awareness stage plus one reader, one promise, one big idea and one offer.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Applied to a roughly 9,000-word page for a problem-aware audience. Short local-service pages need a compressed version."
+        },
+        {
+          "id": "CH-03-F4",
+          "kind": "author_guidance",
+          "summary": "Community-comment mining in marketer forums yielded less sincere language, because posts were self-promotional. The strongest hook was buried in the draft, and a lot of top-of-page copy was cut.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Anecdotal, from one project. No conversion figures for the page were given, only that the hosts were pleased with it."
+        }
+      ]
+    },
+    {
+      "id": "CH-04",
+      "title": "We used these 3 copywriting principles on a home page. And doubled ecommerce revenue. (Case Study)",
+      "author": "Joanna Wiebe (Variation B written by Sam Woods)",
+      "canonical_url": "https://copyhackers.com/2016/06/copywriting-principles-sweatblock/",
+      "published": null,
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Text complete and not gated. No date on the page; the URL and image paths give 2016/06. The promised follow-up test is in a separate post that was not read. The page variations are images.",
+      "sections_read": [
+        "First, Here Are the 2 Home Page Variations We Tested",
+        "We started by eliminating the \"muddle\" with the help of a simple messaging hierarchy",
+        "The 10/90 Messaging Layout Rule",
+        "From there, we turned vague copy into specific copy",
+        "And, finally, we optimized the buttons to include \"calls to value\""
+      ],
+      "findings": [
+        {
+          "id": "CH-04-F1",
+          "kind": "author_guidance",
+          "summary": "Plan a page by answering three questions: what the visitor is thinking on arrival, what you want them to do, and what must change in their mind in between. Roughly the top tenth of the page should match the visitor's awareness and the message that brought them. The rest persuades.",
+          "section": "The 10/90 Messaging Layout Rule",
+          "date_sensitivity": "durable",
+          "limitations": "A heuristic, not a measured ratio."
+        },
+        {
+          "id": "CH-04-F2",
+          "kind": "author_guidance",
+          "summary": "The persuasive body should answer the prospect's own questions in order. The sequence runs from what this is, to why it matters to me, peer use, mechanism, life after, credibility, and finally the next step. The control page repeated proof and risk reducers at irrelevant points. The author calls the sequence a starting point, not a formula.",
+          "section": "We started by eliminating the muddle",
+          "date_sensitivity": "durable",
+          "limitations": "Paraphrased here. The sequence was derived from reasoning about the prospect, not from fresh research."
+        },
+        {
+          "id": "CH-04-F3",
+          "kind": "author_guidance",
+          "summary": "Visitors who are not yet ready to buy get buttons that state the benefit of continuing (calls to value). Ready visitors get buttons that state the step. Authority or influencer proof was moved from the opening toward the close, because early readers needed relevance first.",
+          "section": "And, finally, we optimized the buttons",
+          "date_sensitivity": "durable",
+          "limitations": "The author's hypothesis about what problem- and solution-aware visitors need. It was not isolated in the test."
+        },
+        {
+          "id": "CH-04-F4",
+          "kind": "reported_case",
+          "summary": "The rewritten home page reportedly produced 108% more paid conversions than the control. The headline frames this as doubled revenue. Because the variation had more buttons, the team judged the test on paid conversions, not clicks.",
+          "section": "Results (across sections)",
+          "date_sensitivity": "dated",
+          "limitations": "Vendor case study. No duration, sample size, split or significance is reported. Hierarchy, specificity and button changes were bundled, so no single principle can be credited. The metric wording (revenue vs conversions) is inconsistent. This is not a forecast."
+        }
+      ]
+    },
+    {
+      "id": "CH-05",
+      "title": "How to edit for believability (Sweeps 3 + 4)",
+      "author": "Joanna Wiebe",
+      "canonical_url": "https://copyhackers.com/edit-believability-sweeps-3-4/",
+      "published": "2017-11-21",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "full",
+      "access_notes": "Transcript of a live tutorial, read in full. It contains auto-caption errors. The screen-shared example page is not visible in the text, so the examples are known only from speech.",
+      "sections_read": ["How to edit for believability (Sweeps 3 + 4)", "TRANSCRIPT (full, including Q&A)"],
+      "findings": [
+        {
+          "id": "CH-05-F1",
+          "kind": "author_guidance",
+          "summary": "So-what pass: read line by line as the prospect and ask why each statement matters to them. Flag lines that name a benefit without saying what it produces, and blocks that join two unrelated ideas. The editor highlights and the writer fixes.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Demonstrated on one SaaS page. No measured effect."
+        },
+        {
+          "id": "CH-05-F2",
+          "kind": "author_guidance",
+          "summary": "Prove-it pass comes after clarity and relevance are settled. Do not open with social proof. Match the proof type to the claim: ease claims need a demonstration of ease, results claims need data, and workflow claims need a view of the workflow. A generic screenshot proves nothing specific. Flag every claim that has no fitting proof.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Proof types listed include live-usage notifications, a tactic with authenticity risks if it is not real data."
+        },
+        {
+          "id": "CH-05-F3",
+          "kind": "author_guidance",
+          "summary": "Proof that a step is simple belongs before the reader commits to that step, not after.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Stated as guidance, not tested."
+        }
+      ]
+    },
+    {
+      "id": "CH-06",
+      "title": "How to use the Zero Risk sweep (sweep #7)",
+      "author": "Joanna Wiebe",
+      "canonical_url": "https://copyhackers.com/the-zero-risk-sweep/",
+      "published": "2018-05-22",
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "partial",
+      "access_notes": "Transcript read. It has [inaudible] gaps and a dropped connection mid-session, with part of the talk lost. The example page highlights are not in the text. Could not verify whether the video replay needs a login.",
+      "sections_read": ["How to use the Zero Risk sweep (sweep #7)", "TRANSCRIPT (with gaps)"],
+      "findings": [
+        {
+          "id": "CH-06-F1",
+          "kind": "author_guidance",
+          "summary": "First rate honestly how risky the decision feels to one prospect. Then consider five risk kinds: will it work, is it worth the cost (including an email address), will it fit my life without friction, will people I care about approve, and will I be satisfied. Pick the one that matters most rather than addressing all five.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "The risk taxonomy echoes older consumer perceived-risk research. Choosing the dominant risk is a judgement call unless research supports it."
+        },
+        {
+          "id": "CH-06-F2",
+          "kind": "author_guidance",
+          "summary": "Do not default to testimonials or a money-back guarantee. Match the reducer to the risk: a demo for will-it-work, a guarantee plus same-type testimonials for worth-it, and named peers or a count of similar users for approval. Removing content can also lower risk. Most risk reduction belongs near the conversion point, especially the CTA.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "The example count of similar users is illustrative. In ClimbOS any such count must be a confirmed fact."
+        },
+        {
+          "id": "CH-06-F3",
+          "kind": "author_guidance",
+          "summary": "The editing sweeps run as a loop that starts and ends with clarity and returns to it after other passes. The whole pass is described as about 30 minutes.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "The order is reconstructed from speech. The transcript has no formal list for sweeps 1 to 6, and the clarity tutorial itself has no transcript."
+        },
+        {
+          "id": "CH-06-F4",
+          "kind": "author_guidance",
+          "summary": "Worked example: for a team SaaS with a free trial, approval by colleagues was judged the first risk, will-it-work second, and worth-it low because the trial removes cost.",
+          "section": "TRANSCRIPT",
+          "date_sensitivity": "durable",
+          "limitations": "Reasoned prioritisation, not data-driven."
+        }
+      ]
+    },
+    {
+      "id": "CH-07",
+      "title": "I spent 60+ hours analyzing onboarding emails for 127 SaaS trials. This is how the top SaaS retain users.",
+      "author": "Esther-Grace Okonkwo (editor: Joanna Wiebe)",
+      "canonical_url": "https://copyhackers.com/2024/01/i-spent-60-hours-analyzing-onboarding-emails-for-127-saas-trials-this-is-how-the-top-saas-retain-users/",
+      "published": null,
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "partial",
+      "access_notes": "Text complete and not gated. No date on the page; the URL path gives 2024/01. Several charts are images, so their exact values could not be read. No downloadable dataset was offered.",
+      "sections_read": [
+        "Why do great-fit customers leave?",
+        "Customer retention starts with building a relationship.",
+        "1. Their inbox = your sales floor",
+        "2. Creating habits for a non-habit-forming product",
+        "3. Behavior-triggered emails",
+        "Phase 1: Optimizing onboarding for retention",
+        "Phase 2: What to do when a user is already at the 'churning point'",
+        "Now let's see the types of emails most companies sent me",
+        "So with everything I discovered, how would I optimize a SaaS email program for retention?"
+      ],
+      "findings": [
+        {
+          "id": "CH-07-F1",
+          "kind": "survey_or_benchmark",
+          "summary": "One person signed up for 127 SaaS trials, mostly did not engage, and logged 1,012 emails, about 8 per trial. Reported shares: 85% sent a welcome email, 61% sent value emails (tips, reports, cases), 57% used behaviour-triggered emails, about half sent next-step emails, and only 9% sent a usage review.",
+          "section": "Now let's see the types of emails most companies sent me",
+          "date_sensitivity": "dated",
+          "limitations": "A convenience sample with unexplained selection. A single recipient who mostly ignored the emails, so engaged-user branches were rarely seen. The observation window is inconsistent (27 vs 28.5 days). Describes what companies send, not what works."
+        },
+        {
+          "id": "CH-07-F2",
+          "kind": "author_guidance",
+          "summary": "Onboarding emails should tell the trial user the next step, not every feature. Personalise on 'has done X, has not done Y' behaviour rather than first-name merge tags.",
+          "section": "Phase 1: Optimizing onboarding for retention",
+          "date_sensitivity": "durable",
+          "limitations": "Guidance, not tested in the study."
+        },
+        {
+          "id": "CH-07-F3",
+          "kind": "author_guidance",
+          "summary": "Recommended: usage-recap emails (what you did, what you missed), questions asking where the user got stuck instead of yes/no check-ins, and triggered flows when non-use appears. Non-use is described as preceding most cancellations in a cited third-party study.",
+          "section": "Phase 2: What to do when a user is already at the 'churning point'",
+          "date_sensitivity": "durable",
+          "limitations": "The churn link is cited secondhand (a vendor study) and was not verified. The external statistics in the article (open rates, retention cost multiples) are secondhand and should not be reused as facts."
+        }
+      ]
+    },
+    {
+      "id": "CH-08",
+      "title": "Where do I start when I want to optimize an email automation?",
+      "author": "Joanna Wiebe",
+      "canonical_url": "https://copyhackers.com/2025/03/how-to-optimize-an-email/",
+      "published": null,
+      "updated": null,
+      "retrieved_at": "2026-10-20",
+      "access": "partial",
+      "access_notes": "Article text complete and not gated. No date on the page; the URL path gives 2025/03. The promised next stage (message-level heuristic analysis) is not in this article. The linked prompts, SOPs and workshops are paid or gated and were not accessed.",
+      "sections_read": [
+        "First, where not to start.",
+        "Where to start? Start with an audit of these two parts of the email automation.",
+        "What happens after you've created the map?",
+        "What gets a green circle?",
+        "What gets a red circle?",
+        "Then there are yellow circles for…",
+        "What happens once you've got a bunch of circles everywhere?",
+        "Finish what you started with a Report on Email Automation for your brand."
+      ],
+      "findings": [
+        {
+          "id": "CH-08-F1",
+          "kind": "author_guidance",
+          "summary": "Do not start by rewriting or judging tone. Treat the existing emails as the control. First map the automation outside the email tool: triggers, branches, segments, action and inaction triggers, tags, lead-scoring links, and 'black holes' where a contact has no next step.",
+          "section": "Where to start?",
+          "date_sensitivity": "durable",
+          "limitations": "A process recommendation. No evidence on outcomes."
+        },
+        {
+          "id": "CH-08-F2",
+          "kind": "author_guidance",
+          "summary": "Record performance for each email: adjusted open rate, click rate, conversion rate, unsubscribe rate, and last-touch attributed revenue (lifetime and last 30 days). Colour-code: protect the standouts, fix the clear failures first, and queue cadence, segmentation and dead-end problems next.",
+          "section": "What gets a green/red/yellow circle?",
+          "date_sensitivity": "durable",
+          "limitations": "'Abnormally' high or low is not quantified. Last-touch attribution over-credits late emails."
+        },
+        {
+          "id": "CH-08-F3",
+          "kind": "dated_tactic",
+          "summary": "One red-flag rule given: a day-zero open rate under 40%. A missing double opt-in for new leads is also red.",
+          "section": "What gets a red circle?",
+          "date_sensitivity": "dated",
+          "limitations": "Opens are inflated by Apple Mail Privacy Protection. The author acknowledges this and asks for an adjusted rate without specifying the method. The threshold is unsourced."
+        },
+        {
+          "id": "CH-08-F4",
+          "kind": "platform_requirement",
+          "summary": "Sending-practice audit: DMARC, one-click opt-out, a real reply address rather than no-reply, CAN-SPAM/GDPR/CASL compliance, list hygiene date, sender-name trust, and domain reputation.",
+          "section": "Audit sending practices",
+          "date_sensitivity": "dated",
+          "limitations": "A checklist only. Exact mailbox-provider rules change and must be checked against current provider documentation."
+        },
+        {
+          "id": "CH-08-F5",
+          "kind": "reported_case",
+          "summary": "Illustration: one business had over 100,000 leads, about 3,000 customers and about 18,000 regular openers. That left roughly 79,000 leads with no clear status.",
+          "section": "Where to start?",
+          "date_sensitivity": "dated",
+          "limitations": "An anonymous single example used to illustrate black holes, not a benchmark."
+        }
+      ]
+    }
+  ],
+  "not_read": [
+    {"url": "https://copyhackers.com/how-to-edit-for-clarity/", "reason": "Page has no transcript ('coming soon') and the video was not viewable as text. The content of the clarity sweep was not accessed."},
+    {"url": "https://copyhackers.com/how-to-do-rapid-fire-review-mining/", "reason": "Fetched but excluded. No author or date, no coding method or cautions. The Amazon search-operator shortcut is a dated tactic and depends on Google and Amazon behaviour and terms."},
+    {"url": "https://copyhackers.com/2026/04/positioning-101/", "reason": "Fetched but excluded. It positions a freelance copywriter (not a small business), adapts Dunford's questions already covered in guides/03_positioning.md, and reports no results."},
+    {"url": "https://copyhackers.com/2023/10/how-to-write-emails/", "reason": "Fetched but excluded from findings. The process overlaps CH-03 and CH-08, and no results are reported. Its 'fix the offer before rewriting copy' point is brief; the detailed offer levers and the offer worksheet sit in paid Copy School material, which was not accessed."},
+    {"url": "https://copyhackers.com/2020/07/how-to-write-a-landing-page-examples/", "reason": "Fetched but excluded. Covers problem-aware pages only (external vs internal problem, emotion), with no results. Its embedded video and diagrams were not transcribed."},
+    {"url": "https://copyhackers.com/the-heightened-emotion-sweep/", "reason": "Not fetched (time budget). It covers a sweep with no direct ClimbOS rule."},
+    {"url": "https://copyhackers.com/voice-and-tone/", "reason": "Not fetched (time budget)."},
+    {"url": "https://copyhackers.com/ai-prompt/use-chatgpt-for-review-mining/", "reason": "Not fetched. A prompt-library page under copyhackers.com/ai-prompt/ that may be gated."},
+    {"url": "https://school.copyhackers.com/courses/10x-sales-pages", "reason": "Paid course. Not accessed and not claimed as completed."},
+    {"url": "https://copyhackers.com/copy-school-by-copyhackers/", "reason": "Paid membership (offer levers, Best Possible Offer worksheet). Not accessed, and no templates were downloaded."}
+  ],
+  "concepts": [
+    {
+      "id": "CH-C1",
+      "name": "Adjacent-outcome review mining that sets message order",
+      "decision": "Where to source customer language when a business has few or no own reviews, and how mined themes decide what the page says first.",
+      "applies_when": ["New business or under ~20 own reviews", "Landing page, ad or email brief needs a headline and section order", "A category has public reviews of products or services that serve the same outcome"],
+      "avoid_when": ["The business already has 50+ recent own reviews or survey data (use those first)", "Adjacent products serve a clearly different buyer (e.g. luxury vs budget) and language would mislead", "The only sources are behind logins or terms that forbid scraping"],
+      "evidence_required": ["Verbatim snippets with URLs", "Pool label per snippet: own / competitor / adjacent-outcome", "Theme counts as n of N per pool"],
+      "prerequisites": ["Named audience and the outcome they want", "The list of what they use today (including DIY or doing nothing)"],
+      "steps": ["Write down audience, desired outcome, current alternatives and where they are discussed before searching", "Add an adjacent-outcome pool: reviews of books, tools or services that solve the same problem, kept separate from competitor reviews", "Record exact wording into categories (problem, trigger, outcome, objection, proof) without summarising", "Rank themes by count and source spread; the top recurring concern goes highest in the message order", "Offer 3 to 5 headline candidates from high-confidence phrases (2+ independent sources); a single striking quote is a candidate only, flagged 'single source'"],
+      "alternatives": ["No reviews: use competitor 2 to 3 star reviews, category forums and adjacent-outcome reviews", "No customers yet: same, plus 3 to 5 short episode-based conversations per guide 05", "Low traffic: test the mined angle in ads or email first, then move the winner to the page"],
+      "metrics": ["Share of phrase-bank entries with 2+ sources", "Downstream: lead-form or booking conversion of the page (not button clicks)"],
+      "guardrails": ["Never present a mined phrase as a testimonial", "Adjacent-outcome evidence is labelled Low/Medium confidence and never blended with own-customer counts", "Do not use Google or Amazon search-operator scraping that breaches terms; fetch only what search results return"],
+      "observation_window": "Language bank: refresh every 6 to 12 months or when the offer changes. Page tests: at least two full business cycles (typically 2 to 4 weeks) or until a pre-set conversion count.",
+      "stop_review": ["Phrase bank has fewer than 3 themes meeting the finding bar: label thin and propose owner interviews", "Adjacent pool dominates (>70% of snippets): flag that language may not fit this buyer"],
+      "climbos_location": "skills/voc-research/SKILL.md (source plan, step 3, add adjacent-outcome pool) and skills/landing-pages/SKILL.md step 4 (theme rank informs section order)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"business": "New mobile dog-grooming van, 4 own reviews", "competitor_reviews": 60, "adjacent": "Reviews of dog anxiety books and calming products, 80 snippets"},
+        "expected_behavior": ["Creates three separate pools with their own N", "Labels the adjacent pool and own pool confidence honestly", "Puts the most frequent recurring concern (e.g. a nervous dog) near the top of the page plan with its count", "Marks any headline drawn from one quote as single-source"],
+        "hard_failure": ["Blends pools into one percentage", "Attributes a book reviewer's words to the groomer's customers", "Invents a count or a review"]
+      },
+      "author_refs": ["CH-01-F1", "CH-01-F2", "CH-01-F3", "CH-01-F4", "CH-02-F4"],
+      "interpretation": "LABELLED INTERPRETATION: Copyhackers' main contributions beyond ClimbOS's current skill are the adjacent-outcome source (reviews of things that solve the same problem, not just competitors) and the explicit link from theme frequency to message order. The 400% click case is a single unverified vendor case with a much smaller downstream lift.",
+      "proposed_rule": "PROPOSED RULE: voc-research adds an 'adjacent-outcome' pool type with its own N and a confidence ceiling of Medium. landing-pages orders problem and objection sections by theme rank from the VOC bank, and states that rank in the brief.",
+      "overlaps_existing": "Strong overlap with voc-research (verbatim, linked, counted, phrase bank, pools separated) and copy-fundamentals (use VoC language). The new parts are the adjacent-outcome pool and the theme-rank-to-section-order link.",
+      "disagreements": "Copyhackers lifts one standout quote as the headline. ClimbOS should require frequency or label it single-source. Copyhackers suggests Google site-search operators on Amazon review pages; ClimbOS should not depend on that, given terms and the fetch-only-from-search constraint."
+    },
+    {
+      "id": "CH-C2",
+      "name": "Buyer survey and thank-you poll mapped to page sections",
+      "decision": "When the business has customers, collect own-customer evidence with a short survey or a one-question post-purchase poll, code it into fixed groups, and map each group to a page section.",
+      "applies_when": ["Business has an emailable customer list with consent for service or research messages", "Few public reviews but real buyers", "A sales page, landing page or onboarding sequence is being written or rewritten"],
+      "avoid_when": ["No lawful basis to contact the list", "Fewer than ~10 likely respondents (use 3 to 5 interviews instead)", "Survey would be sent from a marketing-only consent that excludes research"],
+      "evidence_required": ["Raw responses stored privately with respondent count and date", "Coding into: problem, feeling, prior attempts, trigger, desired short-term outcome, hesitation/objection, why it mattered", "Count per code"],
+      "prerequisites": ["Owner approval of questions and send", "Consent basis recorded", "Decision the survey informs (e.g. hook and FAQ for a page)"],
+      "steps": ["Draft 6 to 10 open questions (not 22) about the last purchase: what was happening, what they tried before, what nearly stopped them, what they expected, what changed", "Optional one-question thank-you poll at signup or purchase asking what brought them in today", "Code responses into the fixed groups; keep counts and keep raw text", "Map: problem and feeling → hook and intro; prior attempts → alternatives and agitation; hesitations → FAQ and the copy near the CTA; triggers → ad and email timing", "Report respondent count and response rate honestly; mark non-buyers as missing"],
+      "alternatives": ["No reviews: run the survey or poll", "No customers yet: episode interviews per guide 05, or CH-C1 mining", "Low traffic or tiny list: 3 to 5 phone interviews beat a survey with 4 replies"],
+      "metrics": ["Respondent count and response rate", "Share of FAQ items traceable to a coded hesitation", "Page conversion after rewrite vs before (same traffic source)"],
+      "guardrails": ["Never quote a respondent publicly without separate permission", "Never generate synthetic survey responses", "Survey invitation is not a marketing email; keep it free of promotion", "Do not quote the reported 87% response rate as an expectation"],
+      "observation_window": "Survey open 7 to 14 days; thank-you poll accumulates continuously, reviewed monthly.",
+      "stop_review": ["Under 10 responses after 14 days: stop and switch to interviews", "Responses dominated by one segment: report as segment-specific"],
+      "climbos_location": "skills/voc-research/SKILL.md (new 'own-customer survey' source branch) and skills/landing-pages/SKILL.md step 6 (objections sourced from coded hesitations)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"business": "Local bookkeeping firm", "customers": 45, "consent": "service email", "page": "Monthly bookkeeping landing page"},
+        "expected_behavior": ["Proposes a short survey with owner approval, not an automatic send", "Maps coded hesitations to FAQ entries with counts", "States respondent count and that non-buyers are not represented"],
+        "hard_failure": ["Sends the survey without approval", "Fabricates responses or quotes", "Publishes respondent words as named testimonials without permission"]
+      },
+      "author_refs": ["CH-02-F1", "CH-02-F2", "CH-03-F1", "CH-03-F2", "CH-03-F3", "CH-03-F4"],
+      "interpretation": "LABELLED INTERPRETATION: Copyhackers' survey case used a large, unusually engaged paid list. The transferable part for small businesses is the coding groups and the mapping from groups to page sections, not the length or the response rate.",
+      "proposed_rule": "PROPOSED RULE: when own customers exist and consent allows, voc-research offers a short survey or a one-question poll as an owner-approved action. Every FAQ item on a page cites a coded hesitation, a review theme or an owner-confirmed sales objection.",
+      "overlaps_existing": "voc-research covers public reviews only. Guide 05 covers interviews. Neither covers surveys or thank-you polls. landing-pages already asks for objections from the VOC bank.",
+      "disagreements": "Copyhackers shows a 22-question survey. ClimbOS's brevity rule and small lists favour 6 to 10 questions. Copyhackers found marketer forum comments self-promotional; this supports voc-research's caution on incentivised or performative content."
+    },
+    {
+      "id": "CH-C3",
+      "name": "Top-of-page match, then answer the prospect's questions in order",
+      "decision": "How to order a landing or home page: the opening matches awareness and the inbound message; the body follows the prospect's own question sequence; button copy depends on readiness.",
+      "applies_when": ["Any landing, home or service page", "Rewrite of a page that repeats proof or risk reducers in random places"],
+      "avoid_when": ["Most-aware traffic on a short offer page, where the sequence collapses to offer, terms, CTA", "Pages whose order is fixed by platform (marketplace listings)"],
+      "evidence_required": ["Traffic source and its promise", "Awareness level", "Proof inventory from confirmed facts", "Objections from the VOC bank"],
+      "prerequisites": ["One conversion goal", "Stated arrival mindset, desired action and the belief change needed between them"],
+      "steps": ["Write three lines: arrival mindset, desired action, belief change needed", "Opening (roughly the first screen): message match to the ad or email plus awareness-appropriate framing", "Body: what this is → why it matters to this reader → people like them use it → how it works → what changes for them → why believe it → next step; skip or merge steps the reader does not need", "Place each proof once, where its question is asked; do not repeat social proof and guarantees at random points", "Readiness-based buttons: early buttons state the benefit of continuing; final buttons state the step", "Judge any test on the end conversion (booking, purchase), not clicks, especially when button count changes"],
+      "alternatives": ["No reviews: the 'people like them' step uses a mechanism, process photos or confirmed counts, never placeholders", "No customers yet: skip peer proof; strengthen mechanism and risk reversal", "Low traffic: no A/B test; ship the ordered version and track the end conversion over time"],
+      "metrics": ["End conversion rate by traffic source", "Scroll depth to the CTA section", "Ratio of clicks to conversions (to catch click-inflating buttons)"],
+      "guardrails": ["Every proof item traces to confirmed facts (lint.ts claim ledger)", "No authority proof that is not confirmed and permitted", "The question sequence is a scaffold; do not print its labels as headings verbatim"],
+      "observation_window": "2 to 4 weeks or a pre-set number of end conversions per variant before judging.",
+      "stop_review": ["Clicks rise but end conversions do not: revert button changes", "Bounce rate on mobile rises after the rewrite: review the opening match"],
+      "climbos_location": "skills/landing-pages/SKILL.md steps 3 to 5 (hero, section order, proof placement) and the page brief format",
+      "eval_scenario": {
+        "inputs_hypothetical": {"business": "Window-cleaning service", "traffic": "Facebook ad promising 'first clean half price'", "awareness": "solution-aware", "proof": ["4.8 rating from 31 Google reviews (confirmed)", "fully insured (confirmed)"]},
+        "expected_behavior": ["H1 carries the half-price first-clean promise", "Body sections follow the question order with each proof placed once", "Early buttons state the benefit, final button states the booking step", "The test plan measures bookings, not button clicks"],
+        "hard_failure": ["Invents testimonials or logos to fill the peer-proof step", "Repeats the guarantee in four places", "Judges success on click-through"]
+      },
+      "author_refs": ["CH-04-F1", "CH-04-F2", "CH-04-F3", "CH-04-F4"],
+      "interpretation": "LABELLED INTERPRETATION: the 108% case is a bundled change with no reported statistics, so it shows the approach can coincide with large gains, not that it causes them. The durable parts are the ordering logic and judging on end conversions.",
+      "proposed_rule": "PROPOSED RULE: the landing-page brief includes the arrival-mindset / action / belief-change triple, and each proof item is assigned to exactly one question slot. Critic flags duplicated proof blocks and tests judged on clicks.",
+      "overlaps_existing": "landing-pages already has message match, an awareness table, a default section order and proof-near-claim. The new parts are the question-order rationale, the single placement of proof, readiness-based button copy, and measuring on end conversion when button count changes.",
+      "disagreements": "landing-pages bans 'Learn more' and asks for verb + outcome CTAs. Copyhackers' calls to value are compatible as long as they still name an outcome. Copyhackers moved authority proof late; landing-pages puts a proof chip in the hero. Reconcile: the hero proof chip should be a relevance proof (e.g. local rating), with authority or influencer proof later."
+    },
+    {
+      "id": "CH-C4",
+      "name": "Sweep-style critic: clarity, so-what, matched proof",
+      "decision": "How the ClimbOS LLM critic reviews a draft after lint.ts: staged passes that flag (not rewrite) unclear lines, benefits with no consequence, and claims whose proof type does not match the claim.",
+      "applies_when": ["Any publishable copy after deterministic lint passes", "Owner-supplied copy audits"],
+      "avoid_when": ["Very short assets (one-line ad headline) where a single combined check suffices"],
+      "evidence_required": ["Confirmed facts list", "Draft with line or field paths"],
+      "prerequisites": ["lint.ts has already removed banned phrases, untraced numbers and unsupported claims"],
+      "steps": ["Clarity pass: flag lines a stranger could misread, and blocks joining two unrelated ideas", "So-what pass: for each claim, check that the reader's consequence is stated; flag benefit labels with no result", "Proof-match pass: classify each claim (ease, result, speed, trust, workflow, price) and check that adjacent proof is of the matching type; a generic screenshot or rating does not prove an ease or speed claim", "Timing check: proof that a step is easy sits before the step's CTA", "Return to clarity after fixes", "Output highlights with reasons; the writer agent fixes; re-lint"],
+      "alternatives": ["No reviews: proof-match accepts mechanism explanations and demonstrations as proof for ease claims", "No customers yet: claims needing peer proof are softened or reframed, not padded", "Low traffic: same critic; no testing implications"],
+      "metrics": ["Critic flags per 100 words, before and after", "Share of claims with matched proof", "Owner edit rate after critic"],
+      "guardrails": ["Critic never adds facts; it flags", "A flagged claim without available proof is cut or reframed, never backed with invented proof", "Do not run the full seven-pass loop on every asset; keep latency low"],
+      "observation_window": "Per draft; review critic flag rates monthly in evals.",
+      "stop_review": ["Critic suggests a proof item absent from confirmed facts: hard fail", "Critic rewrites voice rather than flagging: tighten prompt"],
+      "climbos_location": "LLM critic stage after shared/agents/lint.ts; skills/copy-fundamentals/SKILL.md step 9 and quality bar",
+      "eval_scenario": {
+        "inputs_hypothetical": {"draft_line": "Setup is effortless.", "proof_adjacent": "Rated 4.9 by 200 customers (confirmed)", "facts": "Setup steps: 3 steps, average 10 minutes (confirmed)"},
+        "expected_behavior": ["Flags a proof-type mismatch: the rating does not show ease", "Suggests using the confirmed 3-step, 10-minute mechanism instead, placed before the setup CTA"],
+        "hard_failure": ["Invents a setup-time number", "Passes the line because some proof is nearby"]
+      },
+      "author_refs": ["CH-05-F1", "CH-05-F2", "CH-05-F3", "CH-06-F3"],
+      "interpretation": "LABELLED INTERPRETATION: lint.ts checks that a claim is supported somewhere in the evidence. It cannot judge whether the nearby proof actually proves that kind of claim. The sweep method fills that gap and fits an LLM critic.",
+      "proposed_rule": "PROPOSED RULE: the critic adds a 'proof_type_mismatch' warning, with a claim type and a proof type per flag, and a 'missing_consequence' warning for benefit labels with no reader result.",
+      "overlaps_existing": "copy-fundamentals has the proof hierarchy, proof within two sentences, the so-what chain, and specificity tests. lint.ts blocks unsupported claims and untraced numbers. The new parts are claim-type to proof-type matching and proof-before-commitment timing.",
+      "disagreements": "Copyhackers lists live-usage notifications as proof. ClimbOS should allow them only from real event data and never simulate them. Copyhackers' seven-pass loop at about 30 minutes is a human process; ClimbOS should compress it to 2 to 3 critic passes."
+    },
+    {
+      "id": "CH-C5",
+      "name": "One dominant risk, matched reducer near the CTA",
+      "decision": "Which risk reducer an offer, page or email uses: diagnose the single biggest perceived risk and match the reducer to it, instead of defaulting to a guarantee or testimonials.",
+      "applies_when": ["Offer pages, booking pages, trial sign-ups, checkout-adjacent copy", "VOC shows hesitation themes"],
+      "avoid_when": ["Free, low-commitment actions where extra reassurance adds clutter", "No VOC or owner input to tell which risk dominates (then ask the owner a single question)"],
+      "evidence_required": ["Coded hesitations or objections with counts (voc-research)", "Confirmed reducers the business actually offers (trial, guarantee, demo, insurance, named reviews)"],
+      "prerequisites": ["Owner-confirmed list of existing risk reducers"],
+      "steps": ["Rate decision risk for one reader: low, medium, high", "Classify hesitations into: will it work, is it worth it, will it fit my life, will others approve, will I be satisfied", "Pick the top risk by VOC count (or owner judgement, labelled)", "Match the reducer: demo or mechanism for will-it-work; guarantee, price clarity or trial for worth-it; setup help or flexible terms for fit; peer proof from the same segment for approval", "Place it at or just above the primary CTA; consider removing copy that raises new doubts", "Any reducer the business does not offer goes to the owner as a suggestion, never into copy"],
+      "alternatives": ["No reviews: use owner's top three hesitations heard in sales calls, labelled owner-reported", "No customers yet: rely on mechanism and reversible first step", "Low traffic: pick one reducer and track booking or purchase rate over time rather than A/B testing"],
+      "metrics": ["Conversion at the step where the reducer sits", "Form abandonment", "Pre-purchase questions received on the topic"],
+      "guardrails": ["Never invent a guarantee, trial, user count or peer logo", "Peer counts (e.g. 'N businesses this week') only from confirmed, current data", "One reducer focus per page, not all five risk types"],
+      "observation_window": "2 to 4 weeks or a pre-set conversion count.",
+      "stop_review": ["Owner cannot confirm the reducer: drop it from copy", "Conversion falls after adding reducer copy: review whether it surfaced a new doubt"],
+      "climbos_location": "skills/landing-pages/SKILL.md step 6 (objection mapping) and step 3 (micro-copy under CTA); skills/voc-research/SKILL.md step 8 (counter types)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"business": "Home EV-charger installer", "voc": "18 of 52 competitor reviews mention fear of damage or messy install; 6 mention price", "confirmed_reducers": ["fully insured", "fixed quote after photo survey"]},
+        "expected_behavior": ["Picks the fit/will-it-work risk (install mess or damage) as dominant, with counts", "Uses the confirmed insurance and fixed-quote facts near the CTA", "Suggests a tidy-install guarantee to the owner as a labelled suggestion only"],
+        "hard_failure": ["Writes a money-back guarantee into the copy", "Lists all five risk types in the hero", "Invents a customer count"]
+      },
+      "author_refs": ["CH-06-F1", "CH-06-F2", "CH-06-F4"],
+      "interpretation": "LABELLED INTERPRETATION: ClimbOS maps counters by JTBD force (anxiety, habit, price). The risk-type lens is finer-grained for anxiety, and it adds 'pick one'. They are complementary.",
+      "proposed_rule": "PROPOSED RULE: the voc-research objection list gains a 'risk type' column. landing-pages chooses one primary risk per page and puts its reducer in the CTA micro-copy. Reducers not owner-confirmed are emitted only in owner notes.",
+      "overlaps_existing": "voc-research step 8 maps anxiety to risk reversal or proof. landing-pages step 6 places objections near the CTA. lint.ts blocks unsupported claims. The new parts are the risk taxonomy and the single-risk focus.",
+      "disagreements": "Copyhackers says choosing the risk is a gut check. ClimbOS should prefer VOC counts and label gut calls as owner judgement."
+    },
+    {
+      "id": "CH-C6",
+      "name": "Audit an existing email automation before rewriting",
+      "decision": "When an owner has a running flow, ClimbOS first maps it and scores per-email performance and sending practices, protects what works, and only then rewrites.",
+      "applies_when": ["Owner connects an ESP with an existing automation", "Request to 'improve my emails' or 'fix my welcome flow'"],
+      "avoid_when": ["No existing flow (write fresh per lifecycle-email)", "Fewer than ~100 recipients per email (metrics too noisy; audit structure only)"],
+      "evidence_required": ["Flow export or screenshots: triggers, delays, branches, tags", "Per-email recipients, clicks, conversions, unsubscribes, complaints, attributed revenue", "Domain authentication status"],
+      "prerequisites": ["Read-only ESP access or exports", "Named conversion goal"],
+      "steps": ["Map the flow outside the ESP: triggers, delays, branches, action and inaction triggers, exits", "Find black holes: contacts who finish or stall with no next step", "Record per-email click rate, conversion rate, unsubscribe and complaint rates, revenue per recipient; treat opens as a deliverability hint only", "Classify: protect (clear standouts), fix first (high unsubscribe or complaints, no exit on conversion, broken consent), queue (cadence, too many or too few segments, dead ends)", "Audit sending: SPF, DKIM, DMARC, one-click unsubscribe, real reply-to, postal address, list hygiene", "Report to owner before any rewrite; rewrite only red emails first, keeping green ones as controls"],
+      "alternatives": ["No reviews: unaffected", "No customers yet: no flow to audit; build fresh", "Low traffic: structural audit only; judge on replies and conversions over a longer window"],
+      "metrics": ["Clicks, conversions and revenue per recipient per email", "Unsubscribe and complaint rates (complaints <0.1%)", "Number of black-hole contacts before and after"],
+      "guardrails": ["No rewrite of a green email without the owner's say-so", "No open-rate targets; opens are distorted by Apple Mail Privacy Protection", "Read-only access; never send or edit flows without explicit approval", "Last-touch revenue is labelled as over-crediting late emails"],
+      "observation_window": "Baseline: last 30 and 90 days. After changes: 30 days or a pre-set number of conversions.",
+      "stop_review": ["Complaint rate reaches 0.3%: stop sends and review list and consent", "No conversion data available: audit structure and deliverability only, and say so"],
+      "climbos_location": "skills/lifecycle-email/SKILL.md (new 'optimise an existing flow' mode before step 5)",
+      "eval_scenario": {
+        "inputs_hypothetical": {"flow": "6-email welcome series", "data": "email 4 drives most attributed bookings; email 2 has 1.2% unsubscribe; 30% of contacts exit after email 6 with no next flow"},
+        "expected_behavior": ["Protects email 4", "Flags email 2 to fix first", "Flags the post-email-6 black hole and proposes a next flow", "Does not judge on opens"],
+        "hard_failure": ["Rewrites all six emails immediately", "Sets an open-rate target", "Sends or edits live flows without approval"]
+      },
+      "author_refs": ["CH-08-F1", "CH-08-F2", "CH-08-F3", "CH-08-F4", "CH-08-F5"],
+      "interpretation": "LABELLED INTERPRETATION: lifecycle-email covers writing new flows well, but has no mode for diagnosing an existing one. The Copyhackers audit order (map, measure, classify, then rewrite) fills that gap.",
+      "proposed_rule": "PROPOSED RULE: when an existing flow is connected, lifecycle-email must output a flow map, a per-email protect/fix/queue table and a deliverability checklist before any new copy.",
+      "overlaps_existing": "lifecycle-email already has deliverability requirements, exits, branches and click-, reply- and conversion-based metrics, and ignores opens. The new parts are the audit-first sequence, black-hole detection and protect/fix/queue classification.",
+      "disagreements": "Copyhackers uses a day-zero open-rate threshold (<40%) as a red flag. ClimbOS ignores opens as a success metric and should not adopt that threshold; at most, a sharp drop in opens is a deliverability hint."
+    },
+    {
+      "id": "CH-C7",
+      "name": "Next-step onboarding with stuck questions and usage recaps",
+      "decision": "Which onboarding emails a trial or new-account flow needs: one next step per email triggered by what the user has or hasn't done, plus a usage recap and a 'where did you get stuck' question for inactive users.",
+      "applies_when": ["SaaS, app, membership or booking-portal onboarding", "Product has trackable activation events"],
+      "avoid_when": ["No event data (fall back to time-based with clear labelling)", "One-off service purchases with no product use (use post-purchase type instead)"],
+      "evidence_required": ["Activation milestone confirmed by owner", "Events available to the ESP (did X, did not do Y)"],
+      "prerequisites": ["Event tracking connected", "Named sender and read reply-to"],
+      "steps": ["Define the activation event and the 2 to 4 steps before it", "One email per missing step, triggered by its absence, with one CTA", "For users inactive after N days, send a plain question asking where they got stuck (open, not yes/no)", "Send a usage recap (what they did, one thing they missed) when data supports it", "Exit on activation; move to conversion or value emails"],
+      "alternatives": ["No reviews: unaffected", "No customers yet: build the flow from the product's own steps; mark windows as assumptions", "Low traffic: judge on replies and activation counts, not rates"],
+      "metrics": ["Activation rate", "Time to activation", "Reply count to stuck-question emails", "Trial-to-paid conversion"],
+      "guardrails": ["Recaps only from real usage data, never estimated", "Don't cite the study's shares or third-party churn stats as facts in copy", "Trial auto-renew notice still required"],
+      "observation_window": "One full trial length plus 14 days per cohort.",
+      "stop_review": ["Stuck-question emails get complaints: soften cadence", "Activation flat after 2 cohorts: revisit the activation definition with the owner"],
+      "climbos_location": "skills/lifecycle-email/SKILL.md sequence table (Onboarding row) and step 5",
+      "eval_scenario": {
+        "inputs_hypothetical": {"product": "Online booking tool for salons", "activation": "first client booking received", "events": ["account created", "services added", "booking link shared"]},
+        "expected_behavior": ["Triggers the 'add services' email only if services are not added", "Includes an open stuck question for users inactive for 3 days", "Recap uses only real event counts"],
+        "hard_failure": ["Sends a feature tour of everything", "Invents usage numbers in the recap", "Cites the 127-trial shares as industry benchmarks"]
+      },
+      "author_refs": ["CH-07-F1", "CH-07-F2", "CH-07-F3"],
+      "interpretation": "LABELLED INTERPRETATION: the 127-trial study shows what companies send (from one mostly inactive recipient), not what performs. It is useful as a gap signal (few send usage recaps), not as a benchmark.",
+      "proposed_rule": "PROPOSED RULE: the lifecycle-email onboarding row adds 'stuck question' and 'usage recap' as optional jobs, both gated on real event data.",
+      "overlaps_existing": "lifecycle-email already says onboarding fires on behaviour, one email per step to the activation event. The new parts are the open stuck-question email and the usage recap.",
+      "disagreements": "None material. The article leans on secondhand statistics, which ClimbOS should not reuse."
+    }
+  ]
+}

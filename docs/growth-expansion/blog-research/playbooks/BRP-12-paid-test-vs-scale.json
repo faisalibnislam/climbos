@@ -1,0 +1,160 @@
+{
+ "id": "BRP-12",
+ "version": 1,
+ "slug": "paid-test-vs-scale",
+ "title": "Keep a capped paid test separate from scaling paid",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether ClimbOS recommends scaling paid acquisition, a small capped learning test, or building cheaper channels first.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "The owner asks for ads or the plan considers paid",
+  "A budget exists"
+ ],
+ "exclusions": [
+  "Retention or product fit is unproven",
+  "No conversion tracking",
+  "Landing page not ready",
+  "The budget cannot cover a learning curve and the owner expects scaled returns"
+ ],
+ "required_inputs": [
+  "Tracked paying-customer conversion",
+  "An intent-matched landing page",
+  "Spend caps"
+ ],
+ "evidence_requirements": [
+  "Retention (monthly churn; for B2B, net revenue retention over a year where available)",
+  "Conversion tracking on a business event",
+  "Landing page readiness",
+  "Baseline non-paid traffic",
+  "Budget and how long the owner can fund learning"
+ ],
+ "missing_data_behavior": [
+  "Retention unmeasured: 'scale' not eligible; a capped learning test only.",
+  "No conversion tracking: neither."
+ ],
+ "alternatives_when_constrained": [
+  "Small budget: capped PB-paid-search-test labelled 'cannot show scaled ROI'",
+  "Low traffic: product-led and owned channels first (sharing, referrals, templates, comparison pages)",
+  "Missing data: measurement first",
+  "No integration: draft-only campaign plan"
+ ],
+ "decision_branches": [
+  {
+   "if": "Retention measured, conversion tracked, landing page checked",
+   "then": "'scale' may be recommended within the cap."
+  },
+  {
+   "if": "Otherwise and a budget exists",
+   "then": "'learning_test' with a hard cap and a stated limit: it can't show scaled returns."
+  },
+  {
+   "if": "No budget",
+   "then": "Cheaper channels first."
+  }
+ ],
+ "implementation_steps": [
+  "Check retention before acquisition spend",
+  "Check the landing page (one goal, clear value, fast, mobile, trust signals)",
+  "Check tracking",
+  "Decide fuel (jump-starts a product or content loop) vs engine (must pay back and compound)",
+  "If gates fail but the owner wants a test: run PB-paid-search-test as a capped learning question only",
+  "Avoid known mistakes: bidding on own brand, homepage as destination, unmanaged daily budgets, starting broad, stale creative"
+ ],
+ "dependencies": [
+  "Conversion tracking",
+  "A checked landing page"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Owner's capped ad budget",
+  "labor": "1-2 h a week",
+  "tools": "Ad account (owner-approved), tracking"
+ },
+ "metrics": [
+  "Cost per paying customer vs value",
+  "Payback period",
+  "Retention of the paid cohort vs others"
+ ],
+ "guardrails": [
+  "Hard spend cap and stop date",
+  "Never forecast scaled returns from a small test",
+  "Verify current platform rules before acting"
+ ],
+ "observation_window": "Test: the planned end date in PB-paid-search-test. Scaling decision: paid-cohort retention over at least one renewal cycle.",
+ "stop_conditions": [
+  "Cost per paying customer above value at the planned end",
+  "Paid cohort churns faster than other cohorts"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/playbooks/contracts.ts PB-paid-search-test (budget_min 300); RECONCILIATION.md §4 loops vs bottlenecks; plan agent's paid recommendations.",
+ "extends_existing": [
+  "shared/playbooks/contracts.ts PB-paid-search-test (candidate v2: intent field)"
+ ],
+ "source_references": [
+  "EV-09-F1",
+  "EV-09-F2",
+  "EV-09-F3",
+  "EV-09-F4",
+  "EV-06-F1"
+ ],
+ "concepts": [
+  "EV-C7"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-09-F1",
+   "EV-09-F2",
+   "EV-09-F3",
+   "EV-09-F4",
+   "EV-06-F1"
+  ],
+  "interpretation": [
+   "INTERPRETATION: Her budget and traffic gates are about reaching scaled, efficient paid growth for startups, not about whether a small business may run a bounded test. ClimbOS's $300 minimum is for a readable test. Both can hold if recommendations say which question they answer."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: Add an 'intent' field to paid plays: 'learning_test' | 'scale'. 'scale' requires measured retention, tracked conversion and a passed landing check; 'learning_test' keeps current PB-paid-search-test rules and must state that it cannot establish scaled ROI. Verna's thresholds are stored as 'author rule of thumb, unsourced, Jan 2025, startup context'."
+  ],
+  "disagreements": [
+   "Her budget threshold is about forty times ClimbOS's $300/month test minimum ($75k over six months is about $12.5k a month); reconciled by separating test from scale. Her churn gate has no period and cannot be compared with monthly references. Local businesses with strong search intent may justify paid at lower traffic; that is ClimbOS interpretation, not hers."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV13",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "budgetUsd": 500,
+    "visitors_per_month": 1200,
+    "monthlyChurn": null,
+    "conversion_tracking": "pageview only",
+    "owner_goal": "grow with Google Ads"
+   },
+   "expected_behavior": [
+    "First step: track a paying-customer event and measure churn",
+    "If a test runs, it is capped and framed as a learning question",
+    "Suggests product-led or owned channels alongside",
+    "Labels Verna's 10k visitors and $75k figures as unsourced rules of thumb for venture-stage startups"
+   ],
+   "hard_failure": [
+    "Forecasts scaled ROI from a $500/month test",
+    "Launches without conversion tracking",
+    "Blocks all paid tests by citing the $75k figure as a requirement"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

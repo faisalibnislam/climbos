@@ -1,0 +1,168 @@
+{
+ "id": "BRP-01",
+ "version": 1,
+ "slug": "credit-allowance",
+ "title": "Credit allowance with heavy-user limits",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether to sell variable-cost work (AI generation, research, messages, jobs) as unlimited, pure pay-as-you-go, or a plan allowance in credits with top-ups, and how to rate each action so heavy users don't erase margin.",
+ "business_types": [
+  "saas",
+  "ai_product",
+  "agency_productized",
+  "any business selling variable-cost work"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Delivery cost per customer varies widely with use (AI calls, data lookups, sends, minutes)",
+  "Customers want a predictable bill but usage differs a lot between them",
+  "The business offers several actions with very different cost or value"
+ ],
+ "exclusions": [
+  "Cost per customer is flat and low (credits add confusion for no margin benefit)",
+  "Buyers can't relate credits to anything they value and no estimator can be shown",
+  "No metering exists to count usage per customer"
+ ],
+ "required_inputs": [
+  "Usage metering per customer and action",
+  "Billing that supports allowances and top-ups",
+  "Provider-price registry (book 12 §11)"
+ ],
+ "evidence_requirements": [
+  "Per-customer variable cost for at least one full billing cycle",
+  "Share of total variable cost from the top 10% of customers",
+  "Cost per action type, versioned by date",
+  "Customer comprehension check of the credit unit (can they predict their bill?)"
+ ],
+ "missing_data_behavior": [
+  "No per-customer cost data: recommend metering first; no allowance numbers.",
+  "Cost distribution unknown: present the decision as a hypothesis and ask for the top-10% cost share."
+ ],
+ "alternatives_when_constrained": [
+  "No metering: use a fair-use cap on the top plan and review manually monthly",
+  "Low volume: one plan plus a single paid add-on for the costly action",
+  "Small budget/no billing integration: sell prepaid packs by invoice",
+  "Missing cost data: use provider invoices ÷ active customers as an average and flag distribution as unknown"
+ ],
+ "decision_branches": [
+  {
+   "if": "Cost per customer is flat and low",
+   "then": "Keep a simple plan; credits add confusion."
+  },
+  {
+   "if": "Top-decile customers drive a large share of cost",
+   "then": "Allowance with top-ups; check margin at full use."
+  },
+  {
+   "if": "Buyers can't predict their usage",
+   "then": "Plan tiers with a fair-use cap instead of raw credits; test comprehension."
+  }
+ ],
+ "implementation_steps": [
+  "Compute cost per customer per month; rank customers; record the top-decile cost share",
+  "List actions; set credit rates by value to the buyer, with a floor of cost / (1 − target margin)",
+  "Size each plan's allowance so a customer who uses it all still meets the margin floor",
+  "Offer clearly priced top-ups or a fair-use limit for the heavy tail rather than raising everyone's price",
+  "Show the credit cost before any expensive action and a balance meter; never auto-charge overage without consent",
+  "Re-rate actions when provider costs or value change, with notice"
+ ],
+ "dependencies": [
+  "Usage metering per customer",
+  "Billing that supports top-ups"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Billing tool changes; none required to analyse",
+  "labor": "Owner 2-4 h to review cost data",
+  "tools": "Billing/metering export"
+ },
+ "metrics": [
+  "Contribution margin per customer (distribution, not just average)",
+  "Top-decile share of variable cost",
+  "Share of customers hitting allowance; top-up attach rate",
+  "Billing-surprise support tickets and refunds",
+  "Breakage (unused credits) tracked separately from earned margin"
+ ],
+ "guardrails": [
+  "Fully used allowance meets the margin floor; breakage is never the plan that makes the margin",
+  "No hidden overage; balance and per-action cost visible",
+  "Re-rating applies only with advance notice; purchased credits keep their stated value",
+  "Do not degrade the core promised outcome to save cost"
+ ],
+ "observation_window": "Two full billing cycles after launch or re-rating; heavy-user share reviewed monthly.",
+ "stop_conditions": [
+  "Top-decile customers are contribution-negative after two cycles: re-rate or cap",
+  "Surprise-bill tickets or refunds rise: simplify the unit or add an estimator",
+  "Conversion drops versus the prior flat plan with no margin gain: revert"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "Plan engine (offer/economics diagnosis), PB-pricing-test variant, margin calculator, pricing page advice. Separately: ClimbOS's own credit pricing review (see GU.md arithmetic).",
+ "extends_existing": [
+  "docs/growth-expansion/guides/02_monetization.md (heavy-use scenario)",
+  "shared/analysis/decisions.ts margin/price_floor"
+ ],
+ "source_references": [
+  "GU-01-F2",
+  "GU-01-F3",
+  "GU-01-F4",
+  "GU-01-F5",
+  "GU-02-F2",
+  "GU-04-F2",
+  "GU-08-F3"
+ ],
+ "concepts": [
+  "GU-C1"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-01-F2",
+   "GU-01-F3",
+   "GU-01-F4",
+   "GU-01-F5",
+   "GU-02-F2",
+   "GU-04-F2",
+   "GU-08-F3"
+  ],
+  "interpretation": [
+   "Interpretation: Kyle's case for credits is mainly about cost concentration and the vendor's freedom to re-rate actions; buyer predictability is the cost. For small businesses the same logic applies to any capped package of variable work (e.g., included revisions, call minutes)."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: when a customer's variable cost per account varies by more than a set ratio, the engine checks the top-decile cost share and the margin of a fully used allowance before recommending flat or unlimited pricing; recommendations must pass the margin floor at full allowance use, excluding breakage."
+  ],
+  "disagreements": [
+   "Book 12 warns usage pricing needs clear metering and understanding; GU-01 claims credits feel simple to buyers. Decide by a comprehension test: if owners cannot predict their monthly credit use within a reasonable band, prefer plan tiers with a fair-use cap. GU-03 predicts 10–100x cost falls; GU-01 says newest-model costs had not fallen by late 2025. Rule: price on current observed cost, never on forecast declines."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV01",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Booking app for salons with AI reply drafting",
+    "customers": 100,
+    "plan_price_usd": 40,
+    "monthly_variable_cost_total_usd": 1200,
+    "top_10pct_cost_share": 0.75,
+    "target_margin": 0.3
+   },
+   "expected_behavior": [
+    "Notes 70% average margin hides ten customers at about -$50 contribution each",
+    "Proposes an allowance whose full use costs at most $28 plus priced top-ups or a fair-use cap for the heavy tail",
+    "Asks for comprehension testing and a balance display",
+    "Labels the 70–80%/10% concentration figure as the author's experience, not a benchmark"
+   ],
+   "hard_failure": [
+    "Raising price for all customers as the only fix",
+    "Recommending unlimited usage on the strength of expected falling AI costs",
+    "Inventing the customer's cost distribution"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

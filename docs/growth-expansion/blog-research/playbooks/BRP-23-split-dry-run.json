@@ -1,0 +1,141 @@
+{
+ "id": "BRP-23",
+ "version": 1,
+ "slug": "split-dry-run",
+ "title": "A one-week dry run of an owner-built split before the first test",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Is the owner's split mechanism trustworthy before the first real test?",
+ "business_types": [
+  "any business running its first manual split"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "first owner-built split (two email lists, alternating landing pages, staff assigning leads)",
+  "after a tracking change"
+ ],
+ "exclusions": [
+  "platform-native split tools with proven assignment and exposed counts (still run the SRM check)"
+ ],
+ "required_inputs": [
+  "the same tracking in both arms"
+ ],
+ "evidence_requirements": [
+  "one week of both arms identical",
+  "per-arm units and event types"
+ ],
+ "missing_data_behavior": [
+  "Rare events: judge the dry run on the split and event parity, not on a p-value."
+ ],
+ "alternatives_when_constrained": [
+  "low traffic: dry run only",
+  "no randomization: skip; use before/after",
+  "no instrumentation: fix tracking first (diagnostics 'tracking' verdict)"
+ ],
+ "decision_branches": [
+  {
+   "if": "Platform-native split with exposed counts",
+   "then": "Skip the dry run; still run the split check."
+  },
+  {
+   "if": "Owner-built split (two lists, alternating pages, staff assignment)",
+   "then": "7-day dry run: identical arms, pass = split check + same events logged in both."
+  }
+ ],
+ "implementation_steps": [
+  "Run both arms identical for 7 days",
+  "sampleRatio passes (not warn)",
+  "Every event type appears in both arms; no unit in both arms",
+  "Do not judge conversion p-values: rare events give few possible outcomes",
+  "If unit-level history exists (e.g. an email list with past opens), ClimbOS can re-randomize it offline about 100 times in code and check that about 5% fall below 0.05"
+ ],
+ "dependencies": [
+  "A way to assign and count arms"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "A week of delay",
+  "tools": "The split mechanism"
+ },
+ "metrics": [
+  "units per arm",
+  "event types per arm",
+  "share of simulated p-values below 0.05"
+ ],
+ "guardrails": [
+  "no customer-visible difference during the dry run"
+ ],
+ "observation_window": "7 days.",
+ "stop_conditions": [
+  "SRM warn or missing events: fix before any real test"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "New check beside shared/analysis/decisions.ts; guide 06_experimentation.md:20",
+ "extends_existing": [
+  "shared/growth/diagnostics.ts (tracking check)",
+  "docs/growth-expansion/guides/06_experimentation.md (A/A)"
+ ],
+ "source_references": [
+  "EXP-06-F1",
+  "EXP-06-F3",
+  "EXP-03-F2",
+  "EXP-01-F3"
+ ],
+ "concepts": [
+  "EXP-C6"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EXP-06-F1",
+   "EXP-06-F3",
+   "EXP-03-F2",
+   "EXP-01-F3"
+  ],
+  "interpretation": [
+   "INTERPRETATION: ExP's A/A is a statistical calibration on large logs; at small scale, its trust-check purpose (assignment and telemetry parity) transfers, its p-value calibration mostly does not."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: recommend a 7-day dry run before an owner's first manual split; pass = SRM pass + event parity."
+  ],
+  "disagreements": [
+   "None; ExP adds the rare-event caution (EXP-06-F3) that BK06 review does not mention."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV33",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "dryRunDays": 7,
+    "control_units": 215,
+    "treatment_units": 185,
+    "control_events": [
+     "visit",
+     "form_start",
+     "booking"
+    ],
+    "treatment_events": [
+     "visit",
+     "booking"
+    ]
+   },
+   "expected_behavior": [
+    "SRM chi-square 2.25, p = 0.1336: split passes",
+    "form_start missing in treatment: dry run fails on event parity",
+    "no conversion-rate verdict"
+   ],
+   "hard_failure": [
+    "passes the dry run because SRM passed",
+    "reports an A/A conversion p-value as proof the system works"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

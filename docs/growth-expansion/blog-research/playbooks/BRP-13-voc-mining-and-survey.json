@@ -1,0 +1,217 @@
+{
+ "id": "BRP-13",
+ "version": 1,
+ "slug": "voc-mining-and-survey",
+ "title": "Voice of customer: adjacent reviews, buyer surveys and thank-you polls",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Where to source customer language when a business has few or no own reviews, and how mined themes decide what the page says first. / When the business has customers, collect own-customer evidence with a short survey or a one-question post-purchase poll, code it into fixed groups, and map each group to a page section.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "New business or under ~20 own reviews",
+  "Landing page, ad or email brief needs a headline and section order",
+  "A category has public reviews of products or services that serve the same outcome",
+  "Business has an emailable customer list with consent for service or research messages",
+  "Few public reviews but real buyers",
+  "A sales page, landing page or onboarding sequence is being written or rewritten"
+ ],
+ "exclusions": [
+  "The business already has 50+ recent own reviews or survey data (use those first)",
+  "Adjacent products serve a clearly different buyer (e.g. luxury vs budget) and language would mislead",
+  "The only sources are behind logins or terms that forbid scraping",
+  "No lawful basis to contact the list",
+  "Fewer than ~10 likely respondents (use 3 to 5 interviews instead)",
+  "Survey would be sent from a marketing-only consent that excludes research"
+ ],
+ "required_inputs": [
+  "Named audience and the outcome they want",
+  "The list of what they use today (including DIY or doing nothing)",
+  "Owner approval of questions and send",
+  "Consent basis recorded",
+  "Decision the survey informs (e.g. hook and FAQ for a page)"
+ ],
+ "evidence_requirements": [
+  "Verbatim snippets with URLs",
+  "Pool label per snippet: own / competitor / adjacent-outcome",
+  "Theme counts as n of N per pool",
+  "Raw responses stored privately with respondent count and date",
+  "Coding into: problem, feeling, prior attempts, trigger, desired short-term outcome, hesitation/objection, why it mattered",
+  "Count per code"
+ ],
+ "missing_data_behavior": [
+  "Few own reviews: mine adjacent-outcome reviews as a separate pool, confidence capped at medium.",
+  "Fewer than ~10 likely respondents: 3-5 interviews instead of a survey.",
+  "No lawful basis to contact customers: public sources only."
+ ],
+ "alternatives_when_constrained": [
+  "No reviews: use competitor 2 to 3 star reviews, category forums and adjacent-outcome reviews",
+  "No customers yet: same, plus 3 to 5 short episode-based conversations per guide 05",
+  "Low traffic: test the mined angle in ads or email first, then move the winner to the page",
+  "No reviews: run the survey or poll",
+  "No customers yet: episode interviews per guide 05, or CH-C1 mining",
+  "Low traffic or tiny list: 3 to 5 phone interviews beat a survey with 4 replies"
+ ],
+ "decision_branches": [
+  {
+   "if": "Own customers exist and consent allows research messages",
+   "then": "Short survey (6-10 questions) or a one-question post-purchase poll, owner-approved."
+  },
+  {
+   "if": "No customers yet",
+   "then": "Adjacent-outcome review mining."
+  },
+  {
+   "if": "A single striking quote",
+   "then": "Label it single-source; themes need frequency."
+  }
+ ],
+ "implementation_steps": [
+  "Write down audience, desired outcome, current alternatives and where they are discussed before searching",
+  "Add an adjacent-outcome pool: reviews of books, tools or services that solve the same problem, kept separate from competitor reviews",
+  "Record exact wording into categories (problem, trigger, outcome, objection, proof) without summarising",
+  "Rank themes by count and source spread; the top recurring concern goes highest in the message order",
+  "Offer 3 to 5 headline candidates from high-confidence phrases (2+ independent sources); a single striking quote is a candidate only, flagged 'single source'",
+  "Draft 6 to 10 open questions (not 22) about the last purchase: what was happening, what they tried before, what nearly stopped them, what they expected, what changed",
+  "Optional one-question thank-you poll at signup or purchase asking what brought them in today",
+  "Code responses into the fixed groups; keep counts and keep raw text",
+  "Map: problem and feeling → hook and intro; prior attempts → alternatives and agitation; hesitations → FAQ and the copy near the CTA; triggers → ad and email timing",
+  "Report respondent count and response rate honestly; mark non-buyers as missing"
+ ],
+ "dependencies": [
+  "Owner approval for any survey send"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Owner approves questions; ClimbOS codes answers",
+  "tools": "Survey form; review sources within their terms"
+ },
+ "metrics": [
+  "Share of phrase-bank entries with 2+ sources",
+  "Downstream: lead-form or booking conversion of the page (not button clicks)",
+  "Respondent count and response rate",
+  "Share of FAQ items traceable to a coded hesitation",
+  "Page conversion after rewrite vs before (same traffic source)"
+ ],
+ "guardrails": [
+  "Never present a mined phrase as a testimonial",
+  "Adjacent-outcome evidence is labelled Low/Medium confidence and never blended with own-customer counts",
+  "Do not use Google or Amazon search-operator scraping that breaches terms; fetch only what search results return",
+  "Never quote a respondent publicly without separate permission",
+  "Never generate synthetic survey responses",
+  "Survey invitation is not a marketing email; keep it free of promotion",
+  "Do not quote the reported 87% response rate as an expectation"
+ ],
+ "observation_window": "Language bank: refresh every 6 to 12 months or when the offer changes. Page tests: at least two full business cycles (typically 2 to 4 weeks) or until a pre-set conversion count. / Survey open 7 to 14 days; thank-you poll accumulates continuously, reviewed monthly.",
+ "stop_conditions": [
+  "Phrase bank has fewer than 3 themes meeting the finding bar: label thin and propose owner interviews",
+  "Adjacent pool dominates (>70% of snippets): flag that language may not fit this buyer",
+  "Under 10 responses after 14 days: stop and switch to interviews",
+  "Responses dominated by one segment: report as segment-specific"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "skills/voc-research/SKILL.md (source plan, step 3, add adjacent-outcome pool) and skills/landing-pages/SKILL.md step 4 (theme rank informs section order) / skills/voc-research/SKILL.md (new 'own-customer survey' source branch) and skills/landing-pages/SKILL.md step 6 (objections sourced from coded hesitations)",
+ "extends_existing": [
+  "skills/voc-research/SKILL.md",
+  "shared/playbooks/contracts.ts PB-interviews",
+  "docs/growth-expansion/guides/05_customer_discovery.md"
+ ],
+ "source_references": [
+  "CH-01-F1",
+  "CH-01-F2",
+  "CH-01-F3",
+  "CH-01-F4",
+  "CH-02-F4",
+  "CH-02-F1",
+  "CH-02-F2",
+  "CH-03-F1",
+  "CH-03-F2",
+  "CH-03-F3",
+  "CH-03-F4"
+ ],
+ "concepts": [
+  "CH-C1",
+  "CH-C2"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "CH-01-F1",
+   "CH-01-F2",
+   "CH-01-F3",
+   "CH-01-F4",
+   "CH-02-F4",
+   "CH-02-F1",
+   "CH-02-F2",
+   "CH-03-F1",
+   "CH-03-F2",
+   "CH-03-F3",
+   "CH-03-F4"
+  ],
+  "interpretation": [
+   "LABELLED INTERPRETATION: Copyhackers' main contributions beyond ClimbOS's current skill are the adjacent-outcome source (reviews of things that solve the same problem, not just competitors) and the explicit link from theme frequency to message order. The 400% click case is a single unverified vendor case with a much smaller downstream lift.",
+   "LABELLED INTERPRETATION: Copyhackers' survey case used a large, unusually engaged paid list. The transferable part for small businesses is the coding groups and the mapping from groups to page sections, not the length or the response rate."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: voc-research adds an 'adjacent-outcome' pool type with its own N and a confidence ceiling of Medium. landing-pages orders problem and objection sections by theme rank from the VOC bank, and states that rank in the brief.",
+   "PROPOSED RULE: when own customers exist and consent allows, voc-research offers a short survey or a one-question poll as an owner-approved action. Every FAQ item on a page cites a coded hesitation, a review theme or an owner-confirmed sales objection."
+  ],
+  "disagreements": [
+   "Copyhackers lifts one standout quote as the headline. ClimbOS should require frequency or label it single-source. Copyhackers suggests Google site-search operators on Amazon review pages; ClimbOS should not depend on that, given terms and the fetch-only-from-search constraint.",
+   "Copyhackers shows a 22-question survey. ClimbOS's brevity rule and small lists favour 6 to 10 questions. Copyhackers found marketer forum comments self-promotional; this supports voc-research's caution on incentivised or performative content."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV14",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "New mobile dog-grooming van, 4 own reviews",
+    "competitor_reviews": 60,
+    "adjacent": "Reviews of dog anxiety books and calming products, 80 snippets"
+   },
+   "expected_behavior": [
+    "Creates three separate pools with their own N",
+    "Labels the adjacent pool and own pool confidence honestly",
+    "Puts the most frequent recurring concern (e.g. a nervous dog) near the top of the page plan with its count",
+    "Marks any headline drawn from one quote as single-source"
+   ],
+   "hard_failure": [
+    "Blends pools into one percentage",
+    "Attributes a book reviewer's words to the groomer's customers",
+    "Invents a count or a review"
+   ]
+  },
+  {
+   "id": "BR-EV15",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Local bookkeeping firm",
+    "customers": 45,
+    "consent": "service email",
+    "page": "Monthly bookkeeping landing page"
+   },
+   "expected_behavior": [
+    "Proposes a short survey with owner approval, not an automatic send",
+    "Maps coded hesitations to FAQ entries with counts",
+    "States respondent count and that non-buyers are not represented"
+   ],
+   "hard_failure": [
+    "Sends the survey without approval",
+    "Fabricates responses or quotes",
+    "Publishes respondent words as named testimonials without permission"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

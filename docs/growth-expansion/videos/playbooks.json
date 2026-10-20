@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "playbooks": [
+    {
+      "id": "video-interview-diagnostic",
+      "task": "Investigate an uncertain customer problem before prescribing a solution",
+      "applies_when": [
+        "Problem or buying context is insufficiently evidenced",
+        "Owner can recruit relevant participants through an appropriate channel"
+      ],
+      "required_inputs": [
+        "tenant_id_from_trusted_context",
+        "decision_question",
+        "candidate_segment",
+        "material_assumption",
+        "participant_permission_policy"
+      ],
+      "steps": [
+        "Define the decision and evidence that could change it.",
+        "Recruit contrast cases and label recruitment bias.",
+        "Ask about a recent actual workflow before showing a solution.",
+        "Store observations separately from inferred causes.",
+        "Inspect counterevidence and propose the smallest discriminating next test."
+      ],
+      "outputs": [
+        "research_brief",
+        "observation_ledger",
+        "counterevidence",
+        "next_test"
+      ],
+      "stop_conditions": [
+        "No appropriate permission for recording or reuse",
+        "Participant identity or observation provenance is fabricated",
+        "External contact requested without action-specific eligibility and authority"
+      ],
+      "evidence_refs": [
+        "V01"
+      ],
+      "status": "proposed_reference"
+    },
+    {
+      "id": "video-first-customer-learning",
+      "task": "Design an early customer learning and assisted-adoption program",
+      "applies_when": [
+        "Repeatable acquisition is not established",
+        "A narrow offer can be delivered within a bounded pilot"
+      ],
+      "required_inputs": [
+        "tenant_id_from_trusted_context",
+        "verified_offer",
+        "candidate_segment",
+        "capacity_hours",
+        "cash_loss_ceiling",
+        "stage_metric_definitions"
+      ],
+      "steps": [
+        "Select a reachable high-fit group with a lawful and provider-eligible contact route.",
+        "Specify the pilot promise and delivery burden.",
+        "Track eligible conversation, pilot, payment and activation as distinct events.",
+        "Reverse-model the goal using observed rates or explicit scenarios.",
+        "Review buyer evidence and delivery cost before increasing commitments."
+      ],
+      "outputs": [
+        "pilot_plan",
+        "funnel_scenario",
+        "onboarding_checklist",
+        "review_decision"
+      ],
+      "stop_conditions": [
+        "No verified deliverable offer",
+        "Modeled workload exceeds capacity",
+        "No authorized eligible contact channel",
+        "Unsupported guarantee of customers"
+      ],
+      "evidence_refs": [
+        "V02"
+      ],
+      "status": "proposed_reference"
+    },
+    {
+      "id": "video-growth-readiness",
+      "task": "Choose the next growth constraint to investigate",
+      "applies_when": [
+        "Owner requests acquisition growth",
+        "Product-value and retention evidence can be inspected or collected"
+      ],
+      "required_inputs": [
+        "tenant_id_from_trusted_context",
+        "value_event",
+        "expected_use_cadence",
+        "cohort_counts",
+        "cost_boundary",
+        "capacity_constraints"
+      ],
+      "steps": [
+        "Check whether the value event matches the actual business mechanism.",
+        "Inspect first value and recurrence using sufficiently mature cohorts.",
+        "Separate activation, retention, economics and distribution constraints.",
+        "Choose research, repair or a bounded acquisition experiment.",
+        "Record the disconfirming result that would change the diagnosis."
+      ],
+      "outputs": [
+        "readiness_record",
+        "constraint_diagnosis",
+        "bounded_next_action"
+      ],
+      "stop_conditions": [
+        "Value event is only a vanity proxy",
+        "Retention window is immature for the claimed conclusion",
+        "Lifetime economics depend on unmarked assumptions",
+        "Historical technical advice is presented as current policy"
+      ],
+      "evidence_refs": [
+        "V03"
+      ],
+      "status": "proposed_reference"
+    },
+    {
+      "id": "video-app-discovery",
+      "task": "Prepare a platform-eligible app discovery experiment",
+      "applies_when": [
+        "An app has verified capabilities and an identifiable intended audience",
+        "Current target-platform feature eligibility can be checked"
+      ],
+      "required_inputs": [
+        "tenant_id_from_trusted_context",
+        "target_os",
+        "storefront",
+        "verified_feature_claims",
+        "current_capability_evidence",
+        "destination",
+        "measurement_contract",
+        "budget_policy"
+      ],
+      "steps": [
+        "Verify current platform and account eligibility for the proposed asset or experiment.",
+        "Match audience task, value proposition and product-page message.",
+        "Audit screenshot accuracy and comprehension.",
+        "Align localized listing and post-install experience.",
+        "Measure downstream activation and contribution separately from downloads."
+      ],
+      "outputs": [
+        "capability_matrix",
+        "asset_brief",
+        "measurement_plan",
+        "review_packet"
+      ],
+      "stop_conditions": [
+        "Feature eligibility inferred from a general or old video",
+        "Asset contains unsupported product claims",
+        "Destination or measurement population is ambiguous",
+        "External publishing or spending lacks current authority"
+      ],
+      "evidence_refs": [
+        "V04"
+      ],
+      "status": "proposed_reference"
+    }
+  ]
+}

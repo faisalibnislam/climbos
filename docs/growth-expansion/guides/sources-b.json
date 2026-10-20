@@ -1,0 +1,180 @@
+[
+  {
+    "id": "BK04",
+    "title": "Testing Business Ideas",
+    "authors": [
+      "David J. Bland",
+      "Alex Osterwalder"
+    ],
+    "original_filename": "Testing_Business_Ideas_-_Alexander_Osterwalder.epub",
+    "sha256": "330a4a16466b60e30e39977e8090e7781565924da5ca45081f7eaec5940f4563",
+    "metadata_caveats": [
+      "EPUB creator metadata is Unknown. Visible title/copyright text identifies David J. Bland and Alex Osterwalder.",
+      "Text extraction fragments lines and interleaves multi-column/diagram material. No inaccessible visual rating or full experiment catalog is inferred."
+    ],
+    "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+    "locators": [
+      {
+        "id": "BK04-L01",
+        "epub_path": "index_split_000.html",
+        "block_start": 1406,
+        "block_end": 1550,
+        "chapter_or_section": "Test: Hypothesize",
+        "claim_scope": "Make assumptions explicit; prioritize important weakly evidenced hypotheses; precision and distinct claims."
+      },
+      {
+        "id": "BK04-L02",
+        "epub_path": "index_split_000.html",
+        "block_start": 1559,
+        "block_end": 1588,
+        "chapter_or_section": "Types of hypotheses",
+        "claim_scope": "Desirability, feasibility, and viability risks."
+      },
+      {
+        "id": "BK04-L03",
+        "epub_path": "index_split_000.html",
+        "block_start": 2211,
+        "block_end": 2520,
+        "chapter_or_section": "Learn: Evidence and confidence",
+        "claim_scope": "Evidence versus insight; relative strength of observations and behavior; confidence depends on evidence characteristics."
+      },
+      {
+        "id": "BK04-L04",
+        "epub_path": "index_split_000.html",
+        "block_start": 2633,
+        "block_end": 2678,
+        "chapter_or_section": "Decide",
+        "claim_scope": "Continue testing, revise the business model, or abandon based on evidence; changed models may need retesting."
+      }
+    ]
+  },
+  {
+    "id": "BK05",
+    "title": "The Mom Test",
+    "authors": [
+      "Rob Fitzpatrick"
+    ],
+    "original_filename": "The Mom Test_ How to Talk to Customers by Rob Fitzpatrick.epub",
+    "sha256": "0d0978f4b4d619b835ff84dfae0b0e6d3bec61bfbf76e8a62abc749bc76ed6e0",
+    "metadata_caveats": [
+      "Source locators use EPUB XHTML elements, not a print edition page number."
+    ],
+    "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+    "locators": [
+      {
+        "id": "BK05-L01",
+        "epub_path": "OPS/body5.xhtml",
+        "block_start": 195,
+        "block_end": 215,
+        "chapter_or_section": "Chapter 1: The Mom Test",
+        "claim_scope": "Explore actual circumstances and specific past behavior before pitching."
+      },
+      {
+        "id": "BK05-L02",
+        "epub_path": "OPS/body10.xhtml",
+        "block_start": 42,
+        "block_end": 71,
+        "chapter_or_section": "Chapter 2: Avoiding bad data",
+        "claim_scope": "Compliments, generic predictions, and ideas can create misleading feedback."
+      },
+      {
+        "id": "BK05-L03",
+        "epub_path": "OPS/body15.xhtml",
+        "block_start": 34,
+        "block_end": 71,
+        "chapter_or_section": "Chapter 5: Commitment and advancement",
+        "claim_scope": "Distinguish serious commitments and actual movement toward a sale from pleasant meetings."
+      },
+      {
+        "id": "BK05-L04",
+        "epub_path": "OPS/body25.xhtml",
+        "block_start": 34,
+        "block_end": 99,
+        "chapter_or_section": "Chapter 7: Choosing your customers",
+        "claim_scope": "Broad mixed segments can produce conflicting product feedback and ambiguous learning."
+      },
+      {
+        "id": "BK05-L05",
+        "epub_path": "OPS/body26.xhtml",
+        "block_start": 34,
+        "block_end": 110,
+        "chapter_or_section": "Chapter 8: Running the process",
+        "claim_scope": "Prepare learning questions, share faithful notes, and avoid a single-person learning bottleneck."
+      }
+    ]
+  },
+  {
+    "id": "BK06",
+    "title": "Trustworthy Online Controlled Experiments",
+    "authors": [
+      "Ron Kohavi",
+      "Diane Tang",
+      "Ya Xu"
+    ],
+    "original_filename": "_OceanofPDF.com_Trustworthy_Online_Controlled_Experiments_-_Ron_Kohavi.epub",
+    "sha256": "045028227f6572a78baedb8c2a9f268ae3fe3f0700ddba7f21c8adf4a185a031",
+    "metadata_caveats": [
+      "The EPUB splits chapters into many small files; NCX navigation establishes section context.",
+      "Some formulas, lists, and visual material are not fully represented by paragraph extraction. No exact missing formula or unseen diagram is reconstructed."
+    ],
+    "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+    "locators": [
+      {
+        "id": "BK06-L01",
+        "epub_path": "index_split_034.html",
+        "block_start": 9,
+        "block_end": 98,
+        "chapter_or_section": "Chapter 2: Designing the experiment",
+        "claim_scope": "Practical importance, population, sample sensitivity, duration, seasonality, and exposure."
+      },
+      {
+        "id": "BK06-L02",
+        "epub_path": "index_split_037.html",
+        "block_start": 9,
+        "block_end": 57,
+        "chapter_or_section": "Chapter 2: From results to decisions",
+        "claim_scope": "Measurement, implementation costs, metric trade-offs, and decision consequences."
+      },
+      {
+        "id": "BK06-L03",
+        "epub_path": "index_split_042.html",
+        "block_start": 9,
+        "block_end": 30,
+        "chapter_or_section": "Chapter 3: Peeking at p-values",
+        "claim_scope": "Repeated ordinary significance checking can bias success declarations; method choice matters."
+      },
+      {
+        "id": "BK06-L04",
+        "epub_path": "index_split_141.html",
+        "block_start": 9,
+        "block_end": 48,
+        "chapter_or_section": "Chapter 14: Randomization unit and analysis unit",
+        "claim_scope": "Unit alignment and dependence require appropriate analysis."
+      },
+      {
+        "id": "BK06-L05",
+        "epub_path": "index_split_202.html",
+        "block_start": 9,
+        "block_end": 16,
+        "chapter_or_section": "Chapter 21: Sample ratio mismatch",
+        "claim_scope": "Assignment proportions are a trustworthiness check; unexplained mismatch undermines interpretation."
+      },
+      {
+        "id": "BK06-L06",
+        "epub_path": "index_split_172.html",
+        "block_start": 30,
+        "block_end": 34,
+        "chapter_or_section": "Chapter 19: The A/A test",
+        "claim_scope": "Identical treatments can reveal experimentation infrastructure and analysis defects."
+      },
+      {
+        "id": "BK06-L07",
+        "epub_path": "index_split_212.html",
+        "block_start": 9,
+        "block_end": 10,
+        "chapter_or_section": "Chapter 22: Practical solutions for interference",
+        "claim_scope": "Cross-variant interference can distort estimated effects and full-rollout interpretation."
+      }
+    ]
+  }
+]

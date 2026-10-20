@@ -1,0 +1,140 @@
+{
+ "id": "BRP-05",
+ "version": 1,
+ "slug": "outcome-first-ai-messaging",
+ "title": "Lead with the outcome, not the AI label",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "How to describe and price an AI-enabled feature or service on landing and pricing pages.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Owner adds AI to a product or service and wants to mention it or raise price because of it",
+  "Pricing page or ad copy leads with 'AI-powered'"
+ ],
+ "exclusions": [
+  "Audience is explicitly early adopters or tech buyers seeking AI tools (findings may not apply)",
+  "Disclosure of AI use is required by law or platform policy (disclose, but still lead with benefit)"
+ ],
+ "required_inputs": [
+  "A way to measure the feature's effect (feature flag, before/after)"
+ ],
+ "evidence_requirements": [
+  "Measured outcome of the feature (time saved, errors reduced) from the owner's own users",
+  "Comprehension or preference check of copy variants where traffic allows"
+ ],
+ "missing_data_behavior": [
+  "Audience AI-affinity unknown: default to outcome-first; AI as supporting detail."
+ ],
+ "alternatives_when_constrained": [
+  "No measurement yet: describe the task removed, without numbers",
+  "Low traffic: 5-second or comprehension test with a few customers"
+ ],
+ "decision_branches": [
+  {
+   "if": "Mainstream buyers",
+   "then": "Outcome headline; 'AI' only as how-it-works detail."
+  },
+  {
+   "if": "Audience explicitly seeks AI tools",
+   "then": "AI may appear earlier; still state the outcome."
+  },
+  {
+   "if": "Disclosure is required",
+   "then": "Disclose plainly; lead with the benefit."
+  }
+ ],
+ "implementation_steps": [
+  "Rewrite headline around the customer's result in plain language",
+  "Quantify the gain only with the owner's measured data",
+  "Let users try the feature before it becomes paid where cost allows",
+  "If 'AI' is used, pair it with a concrete use case",
+  "Justify any price change with delivered value, not the AI label"
+ ],
+ "dependencies": [
+  "A stated customer outcome (owner-confirmed or from VOC research, BRP-13)",
+  "Deterministic claim lint (shared/agents/lint.ts) after drafting"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Copy change",
+  "tools": "None"
+ },
+ "metrics": [
+  "Landing conversion",
+  "Upgrade rate to plan containing the feature",
+  "Feature adoption among trial users"
+ ],
+ "guardrails": [
+  "No invented or borrowed performance stats",
+  "Required AI disclosures kept",
+  "No price increase justified solely by 'now with AI'"
+ ],
+ "observation_window": "Whole weeks until each variant has enough visitors for the agreed decision rule; otherwise qualitative test.",
+ "stop_conditions": [
+  "Benefit-led copy underperforms the AI-led version with adequate sample: keep AI framing for this audience"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "Content/copy generation rules, pricing page advice, Climb AI copy review, landing-split playbook (PB-landing-split) hypothesis library.",
+ "extends_existing": [
+  "skills/landing-pages/SKILL.md",
+  "shared/agents/lint.ts lintClaims",
+  "docs/growth-engine/book-review/BK02.md (Ch 10)"
+ ],
+ "source_references": [
+  "GU-07-F1",
+  "GU-07-F2",
+  "GU-07-F3"
+ ],
+ "concepts": [
+  "GU-C5"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-07-F1",
+   "GU-07-F2",
+   "GU-07-F3"
+  ],
+  "interpretation": [
+   "Interpretation: the study supports benefit-first copy for mainstream buyers; it does not show AI mentions harm early-adopter audiences."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: generated copy leads with the customer outcome; 'AI' appears only as supporting detail unless the owner's audience is AI-seeking; no price justification rests on the AI label."
+  ],
+  "disagreements": [
+   "None with BK02. Possible conflict with SEO/AEO advice that favours keyword-heavy 'AI' copy; resolve by keeping AI terms in supporting content and metadata while headlines lead with outcomes."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV06",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Accounting practice",
+    "plan": "add 'AI-powered bookkeeping' and raise monthly fee 20%",
+    "measured_benefit": "none yet"
+   },
+   "expected_behavior": [
+    "Advises leading with client outcome (e.g., faster month-end close) and measuring before claiming numbers",
+    "Says the AI label alone is unlikely to lift willingness to pay, citing the 767-person study with its caveats",
+    "Separates price decision from label"
+   ],
+   "hard_failure": [
+    "Writing 'AI-powered' headlines with invented time-saved figures",
+    "Endorsing the 20% rise on the AI label alone"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

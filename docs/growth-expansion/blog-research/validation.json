@@ -1,0 +1,2307 @@
+{
+ "edition": "2026-10-20",
+ "checks": 460,
+ "failed": 0,
+ "results": [
+  {
+   "check": "json:evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/CH.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/DS.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/EV.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/EXP.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/GU.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:notes/raw_fetch_log.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-01-credit-allowance.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-02-charging-model.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-03-package-architecture.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-04-free-access-model.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-05-outcome-first-ai-messaging.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-06-price-increase.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-07-activation-definition.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-08-churn-split.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-09-win-back.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-10-signup-profiling.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-11-conversion-path-split.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-12-paid-test-vs-scale.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-13-voc-mining-and-survey.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-14-page-question-order-and-risk.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-15-copy-critic-sweeps.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-16-email-audit-and-onboarding.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-17-unit-economics-definitions.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-18-cohort-retention.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-19-sales-touch-fit.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-20-cash-trough.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-21-experiment-trust-gates.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-22-experiment-duration-and-metric.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/BRP-23-split-dry-run.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:playbooks/catalog.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "json:source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "unique:articles",
+   "ok": true,
+   "detail": "43 ids"
+  },
+  {
+   "check": "unique:findings",
+   "ok": true,
+   "detail": "191 ids"
+  },
+  {
+   "check": "unique:concepts",
+   "ok": true,
+   "detail": "33 ids"
+  },
+  {
+   "check": "unique:playbooks",
+   "ok": true,
+   "detail": "23 ids"
+  },
+  {
+   "check": "unique:cases",
+   "ok": true,
+   "detail": "33 ids"
+  },
+  {
+   "check": "catalog:matches_files",
+   "ok": true,
+   "detail": "23 playbooks"
+  },
+  {
+   "check": "catalog:file:BRP-01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "catalog:file:BRP-23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-01",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-01",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-01",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-01:docs/growth-expansion/guides/02_monetization.md",
+   "ok": true,
+   "detail": "docs/growth-expansion/guides/02_monetization.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-01:shared/analysis/decisions.ts",
+   "ok": true,
+   "detail": "shared/analysis/decisions.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-01:BR-EV01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-02",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-02",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-02",
+   "ok": true,
+   "detail": "8 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-02:docs/growth-expansion/guides/02_monetization.md",
+   "ok": true,
+   "detail": "docs/growth-expansion/guides/02_monetization.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-02:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-02:BR-EV02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-03",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-03",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-03",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-03:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-03:docs/growth-engine/book-review/BK02.md",
+   "ok": true,
+   "detail": "docs/growth-engine/book-review/BK02.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-03:BR-EV03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-04",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-04",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-04",
+   "ok": true,
+   "detail": "13 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-04:skills/growth-plays/reference/base-rates.md",
+   "ok": true,
+   "detail": "skills/growth-plays/reference/base-rates.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-04:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": "shared/agents/diagnosis.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-04:BR-EV04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-04:BR-EV05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-05",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-05",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-05",
+   "ok": true,
+   "detail": "3 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-05:skills/landing-pages/SKILL.md",
+   "ok": true,
+   "detail": "skills/landing-pages/SKILL.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-05:shared/agents/lint.ts",
+   "ok": true,
+   "detail": "shared/agents/lint.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-05:docs/growth-engine/book-review/BK02.md",
+   "ok": true,
+   "detail": "docs/growth-engine/book-review/BK02.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-05:BR-EV06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-06",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-06",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-06",
+   "ok": true,
+   "detail": "5 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-06:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-06:docs/growth-engine/book-review/BK02.md",
+   "ok": true,
+   "detail": "docs/growth-engine/book-review/BK02.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-06:BR-EV07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-07",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-07",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-07",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-07:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": "shared/agents/diagnosis.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-07:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-07:docs/growth-intelligence/books/08_email_lifecycle.md",
+   "ok": true,
+   "detail": "docs/growth-intelligence/books/08_email_lifecycle.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-07:BR-EV08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-08",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-08",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-08",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-08:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": "shared/agents/diagnosis.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-08:BR-EV09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-09",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-09",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-09",
+   "ok": true,
+   "detail": "2 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-09:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-09:docs/growth-intelligence/books/08_email_lifecycle.md",
+   "ok": true,
+   "detail": "docs/growth-intelligence/books/08_email_lifecycle.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-09:BR-EV10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-10",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-10",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-10",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-10:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": "shared/agents/diagnosis.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-10:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-10:BR-EV11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-11",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-11",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-11",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-11:shared/agents/diagnosis.ts",
+   "ok": true,
+   "detail": "shared/agents/diagnosis.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-11:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-11:BR-EV12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-12",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-12",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-12",
+   "ok": true,
+   "detail": "5 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-12:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-12:BR-EV13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-13",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-13",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-13",
+   "ok": true,
+   "detail": "11 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-13:skills/voc-research/SKILL.md",
+   "ok": true,
+   "detail": "skills/voc-research/SKILL.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-13:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-13:docs/growth-expansion/guides/05_customer_discovery.md",
+   "ok": true,
+   "detail": "docs/growth-expansion/guides/05_customer_discovery.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-13:BR-EV14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-13:BR-EV15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-14",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-14",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-14",
+   "ok": true,
+   "detail": "7 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-14:skills/landing-pages/SKILL.md",
+   "ok": true,
+   "detail": "skills/landing-pages/SKILL.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-14:skills/copy-fundamentals/SKILL.md",
+   "ok": true,
+   "detail": "skills/copy-fundamentals/SKILL.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-14:shared/agents/lint.ts",
+   "ok": true,
+   "detail": "shared/agents/lint.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-14:BR-EV16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-14:BR-EV17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-15",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-15",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-15",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-15:shared/agents/lint.ts",
+   "ok": true,
+   "detail": "shared/agents/lint.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-15:skills/copy-fundamentals/SKILL.md",
+   "ok": true,
+   "detail": "skills/copy-fundamentals/SKILL.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-15:BR-EV18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-16",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-16",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-16",
+   "ok": true,
+   "detail": "8 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-16:skills/lifecycle-email/SKILL.md",
+   "ok": true,
+   "detail": "skills/lifecycle-email/SKILL.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-16:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-16:BR-EV19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-16:BR-EV20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-17",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-17",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-17",
+   "ok": true,
+   "detail": "16 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-17:shared/agents/economics.ts",
+   "ok": true,
+   "detail": "shared/agents/economics.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-17:shared/analysis/decisions.ts",
+   "ok": true,
+   "detail": "shared/analysis/decisions.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-17:docs/growth-intelligence/books/01_business_strategy_economics.md",
+   "ok": true,
+   "detail": "docs/growth-intelligence/books/01_business_strategy_economics.md"
+  },
+  {
+   "check": "playbook:extends_path:BRP-17:docs/growth-intelligence/books/12_analytics_forecasting_pricing.md",
+   "ok": true,
+   "detail": "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-17:BR-EV21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-17:BR-EV22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-17:BR-EV23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-17:BR-EV24",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-18",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-18",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-18",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-18:convex/analytics.ts",
+   "ok": true,
+   "detail": "convex/analytics.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-18:shared/attribution/cohorts.ts",
+   "ok": true,
+   "detail": "shared/attribution/cohorts.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-18:shared/agents/economics.ts",
+   "ok": true,
+   "detail": "shared/agents/economics.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-18:BR-EV25",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-19",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-19",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-19",
+   "ok": true,
+   "detail": "5 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-19:shared/acquisition/scoring.ts",
+   "ok": true,
+   "detail": "shared/acquisition/scoring.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-19:shared/playbooks/contracts.ts",
+   "ok": true,
+   "detail": "shared/playbooks/contracts.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-19:BR-EV26",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-20",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-20",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-20",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-20:shared/agents/economics.ts",
+   "ok": true,
+   "detail": "shared/agents/economics.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-20:docs/growth-intelligence/books/12_analytics_forecasting_pricing.md",
+   "ok": true,
+   "detail": "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-20:BR-EV27",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-21",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-21",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-21",
+   "ok": true,
+   "detail": "12 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-21:shared/analysis/decisions.ts",
+   "ok": true,
+   "detail": "shared/analysis/decisions.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-21:shared/growth/experimentOutcome.ts",
+   "ok": true,
+   "detail": "shared/growth/experimentOutcome.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-21:shared/agents/specs.ts",
+   "ok": true,
+   "detail": "shared/agents/specs.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-21:BR-EV28",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-21:BR-EV29",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-21:BR-EV30",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-22",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-22",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-22",
+   "ok": true,
+   "detail": "9 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-22:shared/agents/specs.ts",
+   "ok": true,
+   "detail": "shared/agents/specs.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-22:shared/analysis/decisions.ts",
+   "ok": true,
+   "detail": "shared/analysis/decisions.ts"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-22:BR-EV31",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-22:BR-EV32",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:fields:BRP-23",
+   "ok": true,
+   "detail": "all required fields present"
+  },
+  {
+   "check": "playbook:status:BRP-23",
+   "ok": true,
+   "detail": "proposed_reference"
+  },
+  {
+   "check": "playbook:source_refs:BRP-23",
+   "ok": true,
+   "detail": "4 refs"
+  },
+  {
+   "check": "playbook:concepts:BRP-23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "playbook:extends_path:BRP-23:shared/growth/diagnostics.ts",
+   "ok": true,
+   "detail": "shared/growth/diagnostics.ts"
+  },
+  {
+   "check": "playbook:extends_path:BRP-23:docs/growth-expansion/guides/06_experimentation.md",
+   "ok": true,
+   "detail": "docs/growth-expansion/guides/06_experimentation.md"
+  },
+  {
+   "check": "playbook:eval_labelled:BRP-23:BR-EV33",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV01",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV02",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV03",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV04",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV05",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV06",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV07",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV08",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV09",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV10",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV11",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV12",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV13",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV14",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV15",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV17",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV18",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV19",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV21",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV22",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV23",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV24",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV25",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV26",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV27",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV28",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV29",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV30",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV31",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV32",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "case:refs:BR-EV33",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:VALIDATION.md->validation.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:VALIDATION.md->notes/raw_fetch_log.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->guides/",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->playbooks/",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->playbooks/catalog.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->RECONCILIATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->BACKLOG.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->VALIDATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->validation.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->notes/",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->tools/",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->notes/raw_fetch_log.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->VALIDATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:README.md->BACKLOG.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:RECONCILIATION.md->source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:BACKLOG.md->evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../notes/CH.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-13-voc-mining-and-survey.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-13-voc-mining-and-survey.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-14-page-question-order-and-risk.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-15-copy-critic-sweeps.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-14-page-question-order-and-risk.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-16-email-audit-and-onboarding.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../playbooks/BRP-16-email-audit-and-onboarding.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/03_voc_conversion_copy.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../notes/GU.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-01-credit-allowance.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-02-charging-model.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-03-package-architecture.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-04-free-access-model.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-05-outcome-first-ai-messaging.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../playbooks/BRP-06-price-increase.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/01_pricing_packaging_ai_monetization.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../notes/EV.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-07-activation-definition.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-08-churn-split.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-09-win-back.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-04-free-access-model.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-10-signup-profiling.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-11-conversion-path-split.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../playbooks/BRP-12-paid-test-vs-scale.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/02_activation_retention_plg.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../notes/EXP.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-21-experiment-trust-gates.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-21-experiment-trust-gates.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-21-experiment-trust-gates.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-22-experiment-duration-and-metric.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-22-experiment-duration-and-metric.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../playbooks/BRP-23-split-dry-run.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/05_trustworthy_experimentation.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../notes/DS.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-17-unit-economics-definitions.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-17-unit-economics-definitions.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-17-unit-economics-definitions.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-18-cohort-retention.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-17-unit-economics-definitions.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-19-sales-touch-fit.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../playbooks/BRP-20-cash-trough.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:guides/04_subscription_economics.md->../evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/01_strategy.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/02_monetization.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/03_positioning.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/04_testing_ideas.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/05_customer_discovery.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->guides/06_experimentation.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->RECONCILIATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->videos/VIDEO_KNOWLEDGE.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->videos/sources.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->videos/playbooks.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->articles/ARTICLE_KNOWLEDGE.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->articles/sources.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->articles/playbooks.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/BUSINESS_TYPE_PLAYBOOKS.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/business_type_playbooks.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/PUBLIC_CASES.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/public_cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/CUSTOMER_LANGUAGE_CAPTURE.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/PLATFORM_RULES.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/platform_rules.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/LEARNING_COLLECTIONS.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->collections/benchmark_capture.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->integration/CLAUDE_CODE.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->evaluations/README.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->evaluations/export_prompts.py",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->evaluations/check_fixture_math.py",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->playbooks/catalog.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->playbooks/books-a.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->playbooks/books-b.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->SOURCE_REGISTRY.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->QUALITY_REPORT.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->manifest.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/README.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/source_registry.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/guides/",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/playbooks/catalog.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/RECONCILIATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/evaluations/cases.json",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/BACKLOG.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "link:../MASTER_INDEX.md->blog-research/VALIDATION.md",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX1 simple payback 6",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX1 gm payback 7.5",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX1 churn payback 8.37",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX1 value_12m 816.42",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX2 churn 11% / mrr churn 8% / net -2%",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX3 simple LTV 2666.67, ratio 4.44, value12/CAC 1.36",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX4 value with expansion 859.75",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX5 trough -25600 at month 8, breakeven month 16",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX6 CAC-aware price floor 73.49",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX7 CAC 150 / 400 / 425",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:DS-EX8 media CAC 100, break-even CPC 6.53",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:SRM 230/170 chi2 9, p 0.0027",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "calc:two-proportion 18/120 vs 12/120 p 0.2416",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:payback_with_churn 8.37",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:value_12m 816.42",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:cacFull other=0 vs 150 (400 vs 425)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:breakeven_cpc 6.53",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:sampleRatio 230/170 p 0.0027 (passes the 0.001 block, as BACKLOG #2 says)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:sampleRatio 9000/1000 mismatch",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "engine:compareRates 18/120 vs 12/120 p 0.2416",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

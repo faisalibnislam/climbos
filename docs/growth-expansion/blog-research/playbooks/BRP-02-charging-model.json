@@ -1,0 +1,163 @@
+{
+ "id": "BRP-02",
+ "version": 1,
+ "slug": "charging-model",
+ "title": "Choose the billing unit (per seat, flat, usage, per job, per result)",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Which billing unit fits a business whose product does work for the customer: per person, flat subscription, usage allowance, per completed job/workflow, or per result.",
+ "business_types": [
+  "saas",
+  "ai_product",
+  "agency",
+  "professional_services"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Owner is choosing or changing what they charge per (not just how much)",
+  "The product or service automates work previously done by staff or contractors",
+  "Owner is drawn to outcome or success pricing"
+ ],
+ "exclusions": [
+  "Pricing is set by a dominant marketplace or regulation",
+  "Fewer than a handful of customers and no delivery history (start with a simple fixed offer and learn)"
+ ],
+ "required_inputs": [
+  "Job/usage tracking",
+  "Written outcome definition and attribution method if outcome pricing is considered",
+  "Contract or terms template"
+ ],
+ "evidence_requirements": [
+  "Can the outcome be defined, measured and attributed to the business without dispute?",
+  "Variance of delivery cost per job",
+  "Customer's current alternative and its cost (staff time, agency, contractor)",
+  "Customer's need for bill predictability",
+  "Cash buffer to carry delivery cost before outcome fees are paid"
+ ],
+ "missing_data_behavior": [
+  "No outcome definition or attribution method: outcome pricing is not eligible; offer base + bonus or per job.",
+  "Fewer than a handful of customers: start with a simple fixed offer."
+ ],
+ "alternatives_when_constrained": [
+  "Attribution unclear: base fee + capped success bonus",
+  "Low volume: fixed-scope package per job",
+  "No tracking integration: monthly retainer with a stated volume ceiling"
+ ],
+ "decision_branches": [
+  {
+   "if": "Result is measurable, attributable and the owner can carry delivery cost",
+   "then": "Outcome or success pricing may be tested."
+  },
+  {
+   "if": "Work is discrete and countable",
+   "then": "Per-job pricing."
+  },
+  {
+   "if": "Neither",
+   "then": "Flat or seat pricing with an add-on for heavy work."
+  }
+ ],
+ "implementation_steps": [
+  "Describe what the customer values and how they measure it",
+  "Gate outcome pricing: measurable + attributable + performance predictable + cash can carry the lag; otherwise drop to workflow or job pricing, or add an outcome bonus on a base fee",
+  "Gate per-job/workflow pricing: jobs are standard enough to price; cap or surcharge long-running jobs",
+  "Gate usage pricing: volume varies a lot between customers; for small buyers prefer a hybrid (base plan + allowance) over pure pay-as-you-go",
+  "Gate replacement framing (price against a hire): the offer covers a defined role's typical output; price as a share of that cost and expect cheaper copycats",
+  "Compare two or three candidate models with the owner's own numbers before any price-point optimisation"
+ ],
+ "dependencies": [
+  "Written outcome definition (for outcome pricing)",
+  "Cash reserve to wait for outcome payments"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Outcome pricing delays revenue; the owner must fund delivery until results land",
+  "labor": "Owner decision; 1-2 h",
+  "tools": "None to decide"
+ },
+ "metrics": [
+  "Contribution per job and per customer",
+  "Share of disputed outcome invoices",
+  "Days from delivery cost to cash received",
+  "Win rate and churn by model"
+ ],
+ "guardrails": [
+  "Outcome definitions written before work starts; no retroactive redefinition",
+  "No outcome pricing in regulated categories where contingent fees are restricted without owner/legal review",
+  "Show total expected cost range to the buyer"
+ ],
+ "observation_window": "One full sales cycle plus one delivery cycle per model tried; outcome models need at least the attribution window plus payment terms.",
+ "stop_conditions": [
+  "Disputes over outcomes exceed an agreed share: move to base + bonus",
+  "Workflow jobs run margin-negative repeatedly: add caps or re-scope",
+  "Buyers stall on unpredictability: add a base plan or ceiling"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "Plan engine offer/economics stage and Climb AI pricing questions; owner-input form fields (outcome measurability, attribution, cash buffer); new contract field for PB-pricing-test 'billing unit' changes.",
+ "extends_existing": [
+  "docs/growth-expansion/guides/02_monetization.md (compare charging models)",
+  "shared/playbooks/contracts.ts PB-pricing-test"
+ ],
+ "source_references": [
+  "GU-03-F2",
+  "GU-03-F3",
+  "GU-03-F4",
+  "GU-03-F5",
+  "GU-04-F2",
+  "GU-04-F3",
+  "GU-04-F4",
+  "GU-02-F1"
+ ],
+ "concepts": [
+  "GU-C2"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-03-F2",
+   "GU-03-F3",
+   "GU-03-F4",
+   "GU-03-F5",
+   "GU-04-F2",
+   "GU-04-F3",
+   "GU-04-F4",
+   "GU-02-F1"
+  ],
+  "interpretation": [
+   "Interpretation: GU-03's four models map to small-business terms as retainer-per-role, pay-as-you-go, per-job and success fee. The durable content is the gating conditions, not the forecast."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: the engine may recommend outcome or success pricing only when the owner confirms a written outcome definition, an attribution method and cash to carry delivery cost; otherwise it offers base + bonus or per-job pricing and explains which gate failed."
+  ],
+  "disagreements": [
+   "GU-03 (vendor of outcome billing) says outcome pricing wins long term; GU-02 says no model is perfect and to optimise the current one. For small businesses ClimbOS sides with GU-02 by default; outcome pricing only when the gates pass. GU-04's survey shows small-customer sellers prefer hybrids, consistent with 02_monetization's predictability concern."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV02",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Two-person lead-gen agency for local contractors",
+    "wants": "charge per booked appointment only",
+    "attribution": "appointments booked through client's own phone line, not tracked",
+    "cash_buffer_months": 1
+   },
+   "expected_behavior": [
+    "Flags that attribution is not reliable and cash buffer is thin",
+    "Recommends base retainer plus a per-appointment bonus with call tracking, or a fixed package until tracking exists",
+    "States the outcome model's preconditions explicitly"
+   ],
+   "hard_failure": [
+    "Endorsing pure pay-per-result without an attribution method",
+    "Citing the guest author's 'outcome pricing will win' as evidence for this business"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

@@ -1,0 +1,135 @@
+{
+ "id": "BRP-18",
+ "version": 1,
+ "slug": "cohort-retention",
+ "title": "Use cohort survival instead of one churn rate when billing data exist",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether to use a single churn rate or the observed survival curve.",
+ "business_types": [
+  "saas",
+  "membership",
+  "subscription_commerce"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Payments are connected (convex/analytics.ts:311 computeCohorts) and at least 3 cohorts have 3 or more complete months."
+ ],
+ "exclusions": [
+  "Cohorts smaller than about 20 customers; show counts instead.",
+  "Annual contracts before their first renewal (DS-02-F8)."
+ ],
+ "required_inputs": [
+  "Connected billing"
+ ],
+ "evidence_requirements": [
+  "Monthly cohort retention and revenue (cohorts.ts:19-28)"
+ ],
+ "missing_data_behavior": [
+  "Fewer than 3 cohorts with 3+ complete months, or cohorts under ~20 customers: show counts, keep single churn labelled assumed."
+ ],
+ "alternatives_when_constrained": [
+  "No cohorts: use the owner's churn as an assumption.",
+  "Small sample: show raw counts and a wide range."
+ ],
+ "decision_branches": [
+  {
+   "if": "Cohort minimum met",
+   "then": "Observed survival replaces monthly churn, tagged measured."
+  },
+  {
+   "if": "Annual contracts before first renewal",
+   "then": "Don't infer churn yet."
+  }
+ ],
+ "implementation_steps": [
+  "Average retention by cohort age, weighted by cohort size.",
+  "Feed the survival curve S_t into the payback and value sum instead of (1 − c)^t.",
+  "Flag early-month churn concentration.",
+  "Compare newer cohorts with older ones to show whether fixes worked."
+ ],
+ "dependencies": [
+  "Payments connection"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "None",
+  "tools": "Billing integration"
+ },
+ "metrics": [
+  "retention_by_age",
+  "survival_weighted_value_12m",
+  "first_month_churn"
+ ],
+ "guardrails": [
+  "Immature months stay null, never zero (cohorts.ts:5-7 already does this).",
+  "Do not extrapolate past the observed months without a label."
+ ],
+ "observation_window": "Up to 6 months as computed today (analytics.ts:311 maxMonths 6), extended to 12 for value.",
+ "stop_conditions": [
+  "Review when a new cohort completes month 3."
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/attribution/cohorts.ts; convex/analytics.ts:311; shared/agents/economics.ts:126-130",
+ "extends_existing": [
+  "convex/analytics.ts computeCohorts",
+  "shared/attribution/cohorts.ts",
+  "shared/agents/economics.ts"
+ ],
+ "source_references": [
+  "DS-01-F6",
+  "DS-03-F4",
+  "DS-03-F5",
+  "DS-02-F8"
+ ],
+ "concepts": [
+  "DS-C4"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "DS-01-F6",
+   "DS-03-F4",
+   "DS-03-F5",
+   "DS-02-F8"
+  ],
+  "interpretation": [
+   "Interpretation: ClimbOS computes cohorts but economics ignores them, so value assumes a constant hazard even when early churn dominates."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed rule: when cohort data meet the minimum, observed survival replaces monthlyChurn in playMaths, tagged 'measured'."
+  ],
+  "disagreements": [
+   "None."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV25",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "cohort_retention": [
+     1,
+     0.8,
+     0.74,
+     0.71
+    ]
+   },
+   "expected_behavior": [
+    "Uses observed S_t for months 0–3",
+    "Labels months 4–11 as a forecast"
+   ],
+   "hard_failure": [
+    "Converts to one blended churn with no label",
+    "Treats incomplete months as churned"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

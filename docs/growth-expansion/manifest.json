@@ -1,0 +1,229 @@
+{
+  "edition": "2026-10-20",
+  "package_status": "validated",
+  "scope": {
+    "edition": "2026-10-20",
+    "book_guides": 6,
+    "uploaded_books": 6,
+    "book_locators": 36,
+    "source_hashes_verified": 6,
+    "locator_ranges_verified": 36,
+    "videos": 4,
+    "article_training_sources": 6,
+    "business_type_playbooks": 6,
+    "public_cases": 6,
+    "platform_rules": 6,
+    "new_playbooks": 28,
+    "synthetic_evaluation_cases": 32,
+    "public_source_urls": 23,
+    "engine_evaluation_performed": false,
+    "errors": []
+  },
+  "files": [
+    {
+      "path": "MASTER_INDEX.md",
+      "bytes": 7842,
+      "sha256": "fdab15d228074e8d5931c40e8558d7d0990b315946c09ceddaf1562c801bb925"
+    },
+    {
+      "path": "RECONCILIATION.md",
+      "bytes": 11494,
+      "sha256": "28100c9c40a93fd7acac36c9266b6f96726b80746cc11f42714343883f59b1e8"
+    },
+    {
+      "path": "SOURCE_REGISTRY.md",
+      "bytes": 9688,
+      "sha256": "4ea6e06e7c8fbae3c4a22479d56603ba7b47146f6f7cf75aea951307c14d16ea"
+    },
+    {
+      "path": "articles/ARTICLE_KNOWLEDGE.md",
+      "bytes": 15247,
+      "sha256": "705a81ce9b7a294bd7056d715f82593dded04f4ab0bcfda14201bbb6bd21f753"
+    },
+    {
+      "path": "articles/playbooks.json",
+      "bytes": 10525,
+      "sha256": "ace2ddf6d97f26b943b2f6a3b517a8eefdbf3ff2eba654da2a27ffc55ce52ba2"
+    },
+    {
+      "path": "articles/sources.json",
+      "bytes": 4905,
+      "sha256": "05cf48b345e09208a7db97a4449f978945216b27e9e31530648b6b22b674f545"
+    },
+    {
+      "path": "collections/BUSINESS_TYPE_PLAYBOOKS.md",
+      "bytes": 14667,
+      "sha256": "75a9d3e2e987d73dc7b9f1868f353fb175023523ac5c08bf87d1a4056adf4550"
+    },
+    {
+      "path": "collections/CUSTOMER_LANGUAGE_CAPTURE.md",
+      "bytes": 4403,
+      "sha256": "0015a728c0013da02d4a6d2338d2b6ec0c22d6e9144168ea526bd6523ab10b0a"
+    },
+    {
+      "path": "collections/LEARNING_COLLECTIONS.md",
+      "bytes": 2903,
+      "sha256": "ef163c61f2fbbda18a415662215d6852a182f29ea58ceb3111b5109a7b73d247"
+    },
+    {
+      "path": "collections/PLATFORM_RULES.md",
+      "bytes": 4593,
+      "sha256": "f9fcf2d32a038b9e50a6f7b42749173d16a11cfaa2eb5bc6de46486bdab48adc"
+    },
+    {
+      "path": "collections/PUBLIC_CASES.md",
+      "bytes": 6749,
+      "sha256": "e7be018ed8624f88029066fd0fbe27f57a89f9c27d63ed935dda27b9e52effdb"
+    },
+    {
+      "path": "collections/benchmark_capture.json",
+      "bytes": 704,
+      "sha256": "adfe0eed8e2267e9b43455d817316422b1eee62c72fb9cde5b0d2602a9e1894f"
+    },
+    {
+      "path": "collections/business_type_playbooks.json",
+      "bytes": 22588,
+      "sha256": "e198a36191cf87940da2456cfe13d5a760ea659d4a0447fb9a05f83577237c4a"
+    },
+    {
+      "path": "collections/platform_rules.json",
+      "bytes": 7985,
+      "sha256": "cd8da8df7a04718696dac7f6160e367317d0a6d129bec16a041300ff659b236b"
+    },
+    {
+      "path": "collections/public_cases.json",
+      "bytes": 10132,
+      "sha256": "07ccfb706bc9629ed6fde413039c5be8e7ad9f8d07d72214756c0bc43cd60408"
+    },
+    {
+      "path": "collections/sources.json",
+      "bytes": 7710,
+      "sha256": "5617e21bf1699bbc6569826778076f60b20c39de8540a10a10e4e75d7772f03f"
+    },
+    {
+      "path": "evaluations/README.md",
+      "bytes": 5012,
+      "sha256": "cb594e377a86d8b9e5f2e505ac4abaff9cbf1393c95e89a66bccd55b3e67cf73"
+    },
+    {
+      "path": "evaluations/build_fixtures.py",
+      "bytes": 15961,
+      "sha256": "fdf035bb3ad75bd5c8bfdc7f8d72996f1d217080f80f0f6532bb3b5edd0f0dd1"
+    },
+    {
+      "path": "evaluations/cases.json",
+      "bytes": 33574,
+      "sha256": "8b2d7571f289852c32494716c4f65b3a973127f9d512b72d970215eae9a34c9a"
+    },
+    {
+      "path": "evaluations/check_fixture_math.py",
+      "bytes": 1843,
+      "sha256": "4ad9b1310c93a24203eb0e059e71195a2fc21c831a2a9c242472af1e6bbb07e1"
+    },
+    {
+      "path": "evaluations/export_prompts.py",
+      "bytes": 719,
+      "sha256": "16988ac3b2b0f85b5251621b7fd5aa6be4dccb103801d6a713c6738eba3b399a"
+    },
+    {
+      "path": "evaluations/prompts.jsonl",
+      "bytes": 15728,
+      "sha256": "ec51fd45361b2e0300125e6df4893c28f171dac09a49746d3f83bcffbf73f62b"
+    },
+    {
+      "path": "guides/01_strategy.md",
+      "bytes": 8615,
+      "sha256": "ccf0703d9467703201acd9afa7b5fdd7b139362c6d34e9dcedd37458b2fecab4"
+    },
+    {
+      "path": "guides/02_monetization.md",
+      "bytes": 8250,
+      "sha256": "37d52431aab3068476d5d785beeb207e24c72511ef6d1864f21411c4ace199f0"
+    },
+    {
+      "path": "guides/03_positioning.md",
+      "bytes": 8780,
+      "sha256": "6c089523cfa040e41a7b553c7787dcf0be6280466e15e3c400c6cb2392a5ee4d"
+    },
+    {
+      "path": "guides/04_testing_ideas.md",
+      "bytes": 8265,
+      "sha256": "6ebbc7bf12b72bc462f009c5cd1eecad45e5c3cd12278bfa920c12d5c5c4d09f"
+    },
+    {
+      "path": "guides/05_customer_discovery.md",
+      "bytes": 8543,
+      "sha256": "0776a0ee5259e10fdef21ecd355b6433b0469c93406dcb3450b632f342878a44"
+    },
+    {
+      "path": "guides/06_experimentation.md",
+      "bytes": 8825,
+      "sha256": "ecf6aeda939b6d844781f67d4c09f95d006917eb33da4d90f0258353f2ba4c84"
+    },
+    {
+      "path": "guides/sources-a.json",
+      "bytes": 8997,
+      "sha256": "d958091d45e73e4c2d9d136a4468f3523371ccbdc36a073d32c2dcee38df02a5"
+    },
+    {
+      "path": "guides/sources-b.json",
+      "bytes": 7477,
+      "sha256": "f49f36a07fe110eb7c434321154587e5366f20711bde9a10a31512df0bf74945"
+    },
+    {
+      "path": "integration/CLAUDE_CODE.md",
+      "bytes": 5284,
+      "sha256": "457ac5257a8d36d95d4343dc160554173a9bca4f1e5d9b2f88641325ae6963e0"
+    },
+    {
+      "path": "integration/review_book_guides.json",
+      "bytes": 6940,
+      "sha256": "2123c8ac325660c3506952bb976eb096500eb413cf769b6e80341fc4012c5936"
+    },
+    {
+      "path": "integration/validate_pack.py",
+      "bytes": 9017,
+      "sha256": "07379681167c9c30ac12b445cf2a326377925b4f6a9db06ce0bc7483f7549f7e"
+    },
+    {
+      "path": "playbooks/books-a.json",
+      "bytes": 9488,
+      "sha256": "f3e7e43d5d5b2018289f80ced50aad220120a8445a4d53c09e0cc313e3276f9b"
+    },
+    {
+      "path": "playbooks/books-b.json",
+      "bytes": 8594,
+      "sha256": "a7d4aaa9f122b4c268a50f28dcb631b450c064dcb7a18fe30e725e753e7e4bb3"
+    },
+    {
+      "path": "playbooks/catalog.json",
+      "bytes": 10422,
+      "sha256": "f6b5a10a8c28a54275a7357a3ad022e6da23b88a0ec30a15c1876b3763fecdfa"
+    },
+    {
+      "path": "source_registry.json",
+      "bytes": 48051,
+      "sha256": "f8ce2aec45a515b53d1a07041e1b465ab4279aca416a2f78ebcfaec58ff646ac"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 427,
+      "sha256": "2bdf8e88322ff7bfff78ac2cbd58486e935db7a4d7cd6a3cea4ca54f7a24cc74"
+    },
+    {
+      "path": "videos/VIDEO_KNOWLEDGE.md",
+      "bytes": 11069,
+      "sha256": "12f348dc4bcc70a33dde1b1db44b460487196ffb73c1efe113e690657e361fd8"
+    },
+    {
+      "path": "videos/playbooks.json",
+      "bytes": 5661,
+      "sha256": "7b047060974fed86747a4a4f87b88af81eca5c4b73331db25b5ea643e5a486de"
+    },
+    {
+      "path": "videos/sources.json",
+      "bytes": 3952,
+      "sha256": "18df4ee803fa0744e01c47b59df253e66e7e42728c37ce48e4395c8bf558eda8"
+    }
+  ]
+}

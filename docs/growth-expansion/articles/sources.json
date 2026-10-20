@@ -1,0 +1,108 @@
+{
+  "research_date": "2026-10-20",
+  "sources": [
+    {
+      "id": "ART-01",
+      "title": "Growth Loops are the New Funnels",
+      "url": "https://www.reforge.com/blog/growth-loops",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2018-07-31",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; sections on connected growth mechanisms and quantitative modeling.",
+      "evidence_summary": "Growth mechanisms can connect outputs to future inputs.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null
+    },
+    {
+      "id": "ART-02",
+      "title": "The Racecar Growth Framework",
+      "url": "https://www.reforge.com/blog/racecar-growth-framework",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2021-01-21",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; initiative roles and stage-dependent investment priorities.",
+      "evidence_summary": "Different growth investments serve different operating roles.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null
+    },
+    {
+      "id": "ART-03",
+      "title": "How to select the next best test from the Experiment Library",
+      "url": "https://www.strategyzer.com/library/how-to-select-the-next-best-test-from-the-experiment-library",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2020-08-27",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; risk-matched experiment selection and discovery versus validation.",
+      "evidence_summary": "Test selection should match uncertainty and constraints.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null
+    },
+    {
+      "id": "ART-04",
+      "title": "Demystifying evals for AI agents",
+      "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2026-01-09",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; task/trial grading, regression, capability evaluation, and trace review.",
+      "evidence_summary": "Agent evaluation needs outcome checks and calibrated judgments.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": "2026-03-18"
+    },
+    {
+      "id": "ART-05",
+      "title": "Effective context engineering for AI agents",
+      "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2025-09-29",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; context selection, retrieval, compaction, and persistent notes.",
+      "evidence_summary": "Limited context benefits from deliberate selection and preservation.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": "2026-01-06"
+    },
+    {
+      "id": "ART-06",
+      "title": "Google Ads training on Skillshop",
+      "url": "https://skillshop.withgoogle.com/googleads/",
+      "accessed_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "verified_public_landing_page_only",
+      "http_status": 200,
+      "scope": "Public training landing page only; learning-path descriptions and links.",
+      "evidence_summary": "Landing page lists Google Ads training and measurement paths.",
+      "limitations": [
+        "No authenticated course lesson or assessment was accessed.",
+        "No course completion or certification is claimed.",
+        "Landing-page descriptions do not verify runtime API behavior."
+      ],
+      "modified_at": null
+    }
+  ],
+  "raw_source_text_included": false
+}

@@ -1,0 +1,432 @@
+{
+ "edition": "2026-10-20",
+ "kind": "blog_research_playbook_catalog",
+ "count": 23,
+ "playbooks": [
+  {
+   "id": "BRP-01",
+   "title": "Credit allowance with heavy-user limits",
+   "file": "BRP-01-credit-allowance.json",
+   "concepts": [
+    "GU-C1"
+   ],
+   "extends_existing": [
+    "docs/growth-expansion/guides/02_monetization.md (heavy-use scenario)",
+    "shared/analysis/decisions.ts margin/price_floor"
+   ],
+   "business_types": [
+    "saas",
+    "ai_product",
+    "agency_productized",
+    "any business selling variable-cost work"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-02",
+   "title": "Choose the billing unit (per seat, flat, usage, per job, per result)",
+   "file": "BRP-02-charging-model.json",
+   "concepts": [
+    "GU-C2"
+   ],
+   "extends_existing": [
+    "docs/growth-expansion/guides/02_monetization.md (compare charging models)",
+    "shared/playbooks/contracts.ts PB-pricing-test"
+   ],
+   "business_types": [
+    "saas",
+    "ai_product",
+    "agency",
+    "professional_services"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-03",
+   "title": "Tiers, add-ons and one expansion lever at a time",
+   "file": "BRP-03-package-architecture.json",
+   "concepts": [
+    "GU-C3"
+   ],
+   "extends_existing": [
+    "shared/playbooks/contracts.ts PB-pricing-test (candidate v2)",
+    "docs/growth-engine/book-review/BK02.md (Ch 10/11)"
+   ],
+   "business_types": [
+    "saas",
+    "ai_product",
+    "membership",
+    "agency_productized"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-04",
+   "title": "Free plan vs free trial vs reverse trial",
+   "file": "BRP-04-free-access-model.json",
+   "concepts": [
+    "GU-C4",
+    "EV-C4"
+   ],
+   "extends_existing": [
+    "skills/growth-plays/reference/base-rates.md (free plan 2-5%, no-card trial 15-25%)",
+    "shared/agents/diagnosis.ts (trial reference)"
+   ],
+   "business_types": [
+    "saas",
+    "mobile_app",
+    "desktop_app",
+    "digital_products"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-05",
+   "title": "Lead with the outcome, not the AI label",
+   "file": "BRP-05-outcome-first-ai-messaging.json",
+   "concepts": [
+    "GU-C5"
+   ],
+   "extends_existing": [
+    "skills/landing-pages/SKILL.md",
+    "shared/agents/lint.ts lintClaims",
+    "docs/growth-engine/book-review/BK02.md (Ch 10)"
+   ],
+   "business_types": [
+    "any"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-06",
+   "title": "Raise prices plan by plan, with proof of added value",
+   "file": "BRP-06-price-increase.json",
+   "concepts": [
+    "GU-C6"
+   ],
+   "extends_existing": [
+    "shared/playbooks/contracts.ts PB-capacity (price increase as a capacity response)",
+    "docs/growth-engine/book-review/BK02.md (Ch 8, 12)"
+   ],
+   "business_types": [
+    "saas",
+    "membership",
+    "agency",
+    "local_services",
+    "ecommerce"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-07",
+   "title": "Count activation at value received, not setup finished",
+   "file": "BRP-07-activation-definition.json",
+   "concepts": [
+    "EV-C1"
+   ],
+   "extends_existing": [
+    "shared/agents/diagnosis.ts OwnerFunnel.activated",
+    "shared/playbooks/contracts.ts PB-activation-repair (candidate v2)",
+    "docs/growth-intelligence/books/08_email_lifecycle.md §2"
+   ],
+   "business_types": [
+    "saas",
+    "mobile_app",
+    "desktop_app",
+    "digital_products"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-08",
+   "title": "Split churn by type and timing before choosing a retention fix",
+   "file": "BRP-08-churn-split.json",
+   "concepts": [
+    "EV-C2"
+   ],
+   "extends_existing": [
+    "shared/agents/diagnosis.ts (retention branch, COMPETING.retention)",
+    "new candidates PB-payment-recovery and PB-cancel-flow"
+   ],
+   "business_types": [
+    "saas",
+    "membership",
+    "subscription_commerce",
+    "agency_retainer"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-09",
+   "title": "Win back churned customers with something new",
+   "file": "BRP-09-win-back.json",
+   "concepts": [
+    "EV-C3"
+   ],
+   "extends_existing": [
+    "shared/playbooks/contracts.ts PB-lifecycle-email (lapsed moment)",
+    "docs/growth-intelligence/books/08_email_lifecycle.md §6"
+   ],
+   "business_types": [
+    "saas",
+    "membership",
+    "subscription_commerce",
+    "local_services"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-10",
+   "title": "Short signup profiling to test 'wrong-fit signups'",
+   "file": "BRP-10-signup-profiling.json",
+   "concepts": [
+    "EV-C5"
+   ],
+   "extends_existing": [
+    "shared/agents/diagnosis.ts COMPETING.activation",
+    "shared/playbooks/contracts.ts PB-activation-repair"
+   ],
+   "business_types": [
+    "saas",
+    "mobile_app",
+    "digital_products"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-11",
+   "title": "Split 'conversion' into pricing-page reach, pricing to checkout, checkout to paid",
+   "file": "BRP-11-conversion-path-split.json",
+   "concepts": [
+    "EV-C6"
+   ],
+   "extends_existing": [
+    "shared/agents/diagnosis.ts (conversion branch)",
+    "shared/playbooks/contracts.ts PB-pricing-test"
+   ],
+   "business_types": [
+    "saas",
+    "digital_products",
+    "ecommerce"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-12",
+   "title": "Keep a capped paid test separate from scaling paid",
+   "file": "BRP-12-paid-test-vs-scale.json",
+   "concepts": [
+    "EV-C7"
+   ],
+   "extends_existing": [
+    "shared/playbooks/contracts.ts PB-paid-search-test (candidate v2: intent field)"
+   ],
+   "business_types": [
+    "any"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-13",
+   "title": "Voice of customer: adjacent reviews, buyer surveys and thank-you polls",
+   "file": "BRP-13-voc-mining-and-survey.json",
+   "concepts": [
+    "CH-C1",
+    "CH-C2"
+   ],
+   "extends_existing": [
+    "skills/voc-research/SKILL.md",
+    "shared/playbooks/contracts.ts PB-interviews",
+    "docs/growth-expansion/guides/05_customer_discovery.md"
+   ],
+   "business_types": [
+    "any"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-14",
+   "title": "Page order: match the arrival, answer questions in order, one dominant risk",
+   "file": "BRP-14-page-question-order-and-risk.json",
+   "concepts": [
+    "CH-C3",
+    "CH-C5"
+   ],
+   "extends_existing": [
+    "skills/landing-pages/SKILL.md",
+    "skills/copy-fundamentals/SKILL.md",
+    "shared/agents/lint.ts lintClaims"
+   ],
+   "business_types": [
+    "any"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-15",
+   "title": "Critic passes: clarity, so-what, matched proof",
+   "file": "BRP-15-copy-critic-sweeps.json",
+   "concepts": [
+    "CH-C4"
+   ],
+   "extends_existing": [
+    "shared/agents/lint.ts (deterministic layer stays first)",
+    "skills/copy-fundamentals/SKILL.md (proof hierarchy)"
+   ],
+   "business_types": [
+    "any"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-16",
+   "title": "Audit an existing email flow before rewriting; next-step onboarding",
+   "file": "BRP-16-email-audit-and-onboarding.json",
+   "concepts": [
+    "CH-C6",
+    "CH-C7"
+   ],
+   "extends_existing": [
+    "skills/lifecycle-email/SKILL.md",
+    "shared/playbooks/contracts.ts PB-lifecycle-email"
+   ],
+   "business_types": [
+    "saas",
+    "membership",
+    "ecommerce",
+    "local_services"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-17",
+   "title": "Unit economics: fully loaded cost per customer, labelled payback, revenue churn and expansion, no uncapped LTV",
+   "file": "BRP-17-unit-economics-definitions.json",
+   "concepts": [
+    "DS-C1",
+    "DS-C2",
+    "DS-C3",
+    "DS-C5"
+   ],
+   "extends_existing": [
+    "shared/agents/economics.ts (cacFull other=0, single churn)",
+    "shared/analysis/decisions.ts",
+    "docs/growth-intelligence/books/01_business_strategy_economics.md §6-7",
+    "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md"
+   ],
+   "business_types": [
+    "any recurring business",
+    "saas",
+    "membership",
+    "agency_retainer"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-18",
+   "title": "Use cohort survival instead of one churn rate when billing data exist",
+   "file": "BRP-18-cohort-retention.json",
+   "concepts": [
+    "DS-C4"
+   ],
+   "extends_existing": [
+    "convex/analytics.ts computeCohorts",
+    "shared/attribution/cohorts.ts",
+    "shared/agents/economics.ts"
+   ],
+   "business_types": [
+    "saas",
+    "membership",
+    "subscription_commerce"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-19",
+   "title": "Match the sales motion to what a customer is worth",
+   "file": "BRP-19-sales-touch-fit.json",
+   "concepts": [
+    "DS-C6"
+   ],
+   "extends_existing": [
+    "shared/acquisition/scoring.ts price fit",
+    "shared/playbooks/contracts.ts PB-cold-outreach (price_min)"
+   ],
+   "business_types": [
+    "b2b_saas",
+    "agency",
+    "professional_services",
+    "consulting"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-20",
+   "title": "Show the cash low point and the upfront-payment lever",
+   "file": "BRP-20-cash-trough.json",
+   "concepts": [
+    "DS-C7"
+   ],
+   "extends_existing": [
+    "shared/agents/economics.ts lockedNumbers (no cash line today)",
+    "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md (cash timing)"
+   ],
+   "business_types": [
+    "any recurring business"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-21",
+   "title": "Trust gates before reading a test: split check, significant read, guardrails",
+   "file": "BRP-21-experiment-trust-gates.json",
+   "concepts": [
+    "EXP-C1",
+    "EXP-C2",
+    "EXP-C3"
+   ],
+   "extends_existing": [
+    "shared/analysis/decisions.ts sampleRatio/compareRates",
+    "shared/growth/experimentOutcome.ts inferenceOf/outcomeLine",
+    "shared/agents/specs.ts lintExperimentFeasibility (PEEKING)"
+   ],
+   "business_types": [
+    "any business running a split test"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-22",
+   "title": "Whole weeks, a week-by-week view, and a metric that can move",
+   "file": "BRP-22-experiment-duration-and-metric.json",
+   "concepts": [
+    "EXP-C4",
+    "EXP-C5"
+   ],
+   "extends_existing": [
+    "shared/agents/specs.ts lintExperimentFeasibility (fixed 10%->15% baseline)",
+    "shared/analysis/decisions.ts sampleSize"
+   ],
+   "business_types": [
+    "any business running a split test"
+   ],
+   "status": "proposed_reference"
+  },
+  {
+   "id": "BRP-23",
+   "title": "A one-week dry run of an owner-built split before the first test",
+   "file": "BRP-23-split-dry-run.json",
+   "concepts": [
+    "EXP-C6"
+   ],
+   "extends_existing": [
+    "shared/growth/diagnostics.ts (tracking check)",
+    "docs/growth-expansion/guides/06_experimentation.md (A/A)"
+   ],
+   "business_types": [
+    "any business running its first manual split"
+   ],
+   "status": "proposed_reference"
+  }
+ ]
+}

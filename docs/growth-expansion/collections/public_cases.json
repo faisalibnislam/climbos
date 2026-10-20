@@ -1,0 +1,171 @@
+{
+  "kind": "source_reported_public_cases",
+  "cases": [
+    {
+      "id": "CASE-01",
+      "title": "Bing sitelinks: revenue gain with an initial guardrail failure",
+      "business_type": "search_advertising",
+      "source_urls": [
+        "https://blogs.bing.com/search-quality-insights/2013/8/Large-Scale-Experimentation-at-Bing/"
+      ],
+      "publication_date": "2013-08-08",
+      "event_period": "Experiment dates not established; report published August 8, 2013.",
+      "reported_context": "Bing evaluated advertiser sitelinks against revenue and user engagement.",
+      "reported_intervention": "The first design added sitelinks; a revised design reduced occupied space by lowering average ad count.",
+      "reported_outcome": "The initial design increased revenue but harmed user metrics. The revision retained revenue benefit with neutral user impact, according to Bing.",
+      "outcome_class": "negative_guardrail_then_revised_positive",
+      "causal_strength": "source_reported_randomized_experiment",
+      "limitations": [
+        "Company-authored retrospective, not independently reanalyzed.",
+        "Raw data, uncertainty intervals, exact sample and complete guardrail definitions unavailable here.",
+        "Search-ad geometry and population do not establish results for a small SaaS landing page."
+      ],
+      "original_climbos_application": "Require a commercial outcome plus customer-experience guardrails. If one fails, preserve the mechanism hypothesis, inspect the cause, and test a revised design rather than shipping from revenue alone.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    },
+    {
+      "id": "CASE-02",
+      "title": "Power Automate: easier entry did not establish downstream success",
+      "business_type": "ai_software",
+      "source_urls": [
+        "https://www.microsoft.com/en-us/research/articles/experimentation-and-the-north-star-metric/"
+      ],
+      "publication_date": "2023-09-05",
+      "event_period": "Experiment dates not established; report published September 5, 2023.",
+      "reported_context": "Microsoft studied discovery of Copilot-assisted flow creation.",
+      "reported_intervention": "A homepage entry route made access to the experience easier.",
+      "reported_outcome": "Entry increased, but downstream save behavior was worse in the treatment; the report cautions against declaring success from entry alone.",
+      "outcome_class": "negative_downstream_outcome",
+      "causal_strength": "source_reported_randomized_experiment",
+      "limitations": [
+        "Actual data are redacted and funnel description is historical.",
+        "Conditional funnel rates require care; the report is not a complete reusable dataset.",
+        "Saving is itself a proxy, not proof of realized workflow value or revenue."
+      ],
+      "original_climbos_application": "Track the same eligible cohort through recommendation acceptance, completed setup, executed task, and useful outcome. Do not optimize ClimbOS for owners clicking Generate or approving drafts while execution quality falls.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    },
+    {
+      "id": "CASE-03",
+      "title": "Buffer native versus third-party posting: a reported null difference",
+      "business_type": "social_media",
+      "source_urls": [
+        "https://buffer.com/resources/3rd-party-social-media-tools/"
+      ],
+      "publication_date": "2018-01-09",
+      "event_period": "Reported test ran November 27 to December 19, 2017.",
+      "reported_context": "Buffer compared posting methods across social profiles.",
+      "reported_intervention": "Participating brands posted through native interfaces and third-party tools, trying to maintain content quality and timing.",
+      "reported_outcome": "Buffer reported no significant reach or engagement difference in this study.",
+      "outcome_class": "reported_null_difference",
+      "causal_strength": "limited_field_comparison_not_equivalence_proof",
+      "limitations": [
+        "Vendor has a commercial interest in third-party publishing.",
+        "Content was not identical; schedule execution had misses.",
+        "Small per-platform samples and no equivalence margin established here.",
+        "Historical results do not certify October 2026 algorithms or every tool."
+      ],
+      "original_climbos_application": "Treat publishing-method penalties as a testable hypothesis. Verify current technical eligibility separately, then compare suitable content and business outcomes; do not encode a universal platform penalty or universal equivalence.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    },
+    {
+      "id": "CASE-04",
+      "title": "Buffer content refresh month: an informative observational trade-off",
+      "business_type": "content_marketing",
+      "source_urls": [
+        "https://buffer.com/resources/blog-strategies/"
+      ],
+      "publication_date": "2015-08-11",
+      "event_period": "Report describes July 2015; published August 11, 2015.",
+      "reported_context": "Buffer questioned the need for constant new blog content.",
+      "reported_intervention": "For a month it focused on repurposing and refreshing existing material rather than fully new articles.",
+      "reported_outcome": "The report describes a modest total traffic decline, increased organic traffic, and lower social/referral traffic versus the previous month.",
+      "outcome_class": "mixed_observational_result",
+      "causal_strength": "before_after_observation",
+      "limitations": [
+        "No randomized counterfactual.",
+        "Multiple interventions and possible seasonality.",
+        "Existing content inventory was a major starting asset.",
+        "Traffic changes do not establish incremental customers, contribution, or saved labor."
+      ],
+      "original_climbos_application": "Compare create, update, redistribute, and retire options for existing assets. Require inventory and workload evidence, channel-specific effects, and downstream outcomes before treating reduced publishing as a repeatable strategy.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    },
+    {
+      "id": "CASE-05",
+      "title": "Buffer transparent feedback: an operating practice was reversed",
+      "business_type": "team_operations",
+      "source_urls": [
+        "https://buffer.com/resources/transparent-feedback-experiment/"
+      ],
+      "publication_date": "2015-08-17",
+      "event_period": "Early-2015 practice described in an August 17, 2015 retrospective.",
+      "reported_context": "Buffer extended its transparency principle to constructive employee feedback.",
+      "reported_intervention": "It tried public constructive feedback and later returned to private feedback while keeping praise public.",
+      "reported_outcome": "The author reported low participation, enlarged public discussions, and defensiveness; the practice was ended.",
+      "outcome_class": "reported_operational_failure",
+      "causal_strength": "qualitative_first_party_retrospective",
+      "limitations": [
+        "A participant narrative without a controlled comparison.",
+        "No quantified productivity or commercial effect established.",
+        "Not evidence that transparency fails in general.",
+        "Employee-feedback setting differs from customer research."
+      ],
+      "original_climbos_application": "Design correction channels around psychological and practical access. Offer private owner correction and permissioned research channels; do not assume every observation should be shared across a tenant or across customers.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    },
+    {
+      "id": "CASE-06",
+      "title": "Etsy interleaving: validate a faster measurement method before trusting it",
+      "business_type": "marketplace_search",
+      "source_urls": [
+        "https://www.etsy.com/codeascraft/faster-ml-experimentation-at-etsy-with-interleaving"
+      ],
+      "publication_date": "2022-08-08",
+      "event_period": "Engineering report published August 8, 2022; experiment dates not established.",
+      "reported_context": "Etsy sought faster comparisons of search-ranking algorithms.",
+      "reported_intervention": "It built interleaving, then validated with identical-ranker tests and an A/B wrapper checking performance.",
+      "reported_outcome": "Etsy reported neutral identical-ranker outcomes and no negative performance impact in initial validation.",
+      "outcome_class": "measurement_validation",
+      "causal_strength": "source_reported_production_validation",
+      "limitations": [
+        "Method is suited to ordered result sets, not arbitrary interface changes.",
+        "Preference measurement does not replace every business-outcome experiment.",
+        "Published speed improvements are not adopted as ClimbOS forecasts.",
+        "Engineering report, not an independently replicated study."
+      ],
+      "original_climbos_application": "Before trusting a new retrieval ranking or evaluator, test identical alternatives, bias, and latency. Use paired ranking comparisons only for eligible ranking tasks, and retain separate end-to-end business-quality evaluation.",
+      "verification": {
+        "retrieved_at": "2026-10-20",
+        "access_status": "primary_page_read",
+        "independent_replication": false,
+        "raw_data_reanalysis": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "sources": [
+    {
+      "id": "CASE-01-SOURCE",
+      "title": "Bing sitelinks: revenue gain with an initial guardrail failure",
+      "url": "https://blogs.bing.com/search-quality-insights/2013/8/Large-Scale-Experimentation-at-Bing/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2013-08-08",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Company-authored retrospective, not independently reanalyzed.",
+        "Raw data, uncertainty intervals, exact sample and complete guardrail definitions unavailable here.",
+        "Search-ad geometry and population do not establish results for a small SaaS landing page."
+      ]
+    },
+    {
+      "id": "CASE-02-SOURCE",
+      "title": "Power Automate: easier entry did not establish downstream success",
+      "url": "https://www.microsoft.com/en-us/research/articles/experimentation-and-the-north-star-metric/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2023-09-05",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Actual data are redacted and funnel description is historical.",
+        "Conditional funnel rates require care; the report is not a complete reusable dataset.",
+        "Saving is itself a proxy, not proof of realized workflow value or revenue."
+      ]
+    },
+    {
+      "id": "CASE-03-SOURCE",
+      "title": "Buffer native versus third-party posting: a reported null difference",
+      "url": "https://buffer.com/resources/3rd-party-social-media-tools/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2018-01-09",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Vendor has a commercial interest in third-party publishing.",
+        "Content was not identical; schedule execution had misses.",
+        "Small per-platform samples and no equivalence margin established here.",
+        "Historical results do not certify October 2026 algorithms or every tool."
+      ]
+    },
+    {
+      "id": "CASE-04-SOURCE",
+      "title": "Buffer content refresh month: an informative observational trade-off",
+      "url": "https://buffer.com/resources/blog-strategies/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2015-08-11",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "No randomized counterfactual.",
+        "Multiple interventions and possible seasonality.",
+        "Existing content inventory was a major starting asset.",
+        "Traffic changes do not establish incremental customers, contribution, or saved labor."
+      ]
+    },
+    {
+      "id": "CASE-05-SOURCE",
+      "title": "Buffer transparent feedback: an operating practice was reversed",
+      "url": "https://buffer.com/resources/transparent-feedback-experiment/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2015-08-17",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "A participant narrative without a controlled comparison.",
+        "No quantified productivity or commercial effect established.",
+        "Not evidence that transparency fails in general.",
+        "Employee-feedback setting differs from customer research."
+      ]
+    },
+    {
+      "id": "CASE-06-SOURCE",
+      "title": "Etsy interleaving: validate a faster measurement method before trusting it",
+      "url": "https://www.etsy.com/codeascraft/faster-ml-experimentation-at-etsy-with-interleaving",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2022-08-08",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Method is suited to ordered result sets, not arbitrary interface changes.",
+        "Preference measurement does not replace every business-outcome experiment.",
+        "Published speed improvements are not adopted as ClimbOS forecasts.",
+        "Engineering report, not an independently replicated study."
+      ]
+    },
+    {
+      "id": "RULE-01-SOURCE",
+      "title": "Google Search",
+      "url": "https://developers.google.com/search/docs/essentials",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2025-12-10",
+      "access_status": "primary_page_read",
+      "scope": "Content eligibility combines technical requirements, spam policies, and best practices; meeting them does not guarantee indexing or serving.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ]
+    },
+    {
+      "id": "RULE-02-SOURCE",
+      "title": "Apple product page optimization",
+      "url": "https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/overview-of-product-page-optimization/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "primary_page_read",
+      "scope": "The inspected overview scopes native product-page optimization to iOS/iPadOS; Mac availability must not be inferred.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ]
+    },
+    {
+      "id": "RULE-03-SOURCE",
+      "title": "LinkedIn Posts API",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-10",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2026-05-13",
+      "access_status": "primary_page_read",
+      "scope": "Organization and member publishing use distinct scopes and role conditions; the API requires version headers.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ]
+    },
+    {
+      "id": "RULE-04-SOURCE",
+      "title": "Meta Pages publishing",
+      "url": "https://developers.facebook.com/docs/pages-api/posts/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "retrieval_blocked",
+      "scope": "Direct retrieval failed; this record establishes no current permission, endpoint or rate-limit claim.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required.",
+        "Direct retrieval unavailable; no current exact policy assertion."
+      ]
+    },
+    {
+      "id": "RULE-05-SOURCE",
+      "title": "Resend sending eligibility",
+      "url": "https://resend.com/legal/acceptable-use",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2026-10-13",
+      "access_status": "primary_page_read",
+      "scope": "The inspected policy requires explicit opt-in and prohibits unsolicited cold outreach, purchased lists, and scraped contacts.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ]
+    },
+    {
+      "id": "RULE-06-SOURCE",
+      "title": "Gmail sender requirements",
+      "url": "https://support.google.com/mail/answer/81126?hl=en",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "primary_page_read",
+      "scope": "Requirements differ for personal Gmail senders and the bulk-sender category; authentication, transport and unsubscribe obligations need scope-specific checks.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ]
+    }
+  ]
+}

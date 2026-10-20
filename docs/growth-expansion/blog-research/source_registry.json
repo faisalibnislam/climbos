@@ -1,0 +1,3513 @@
+{
+ "edition": "2026-10-20",
+ "kind": "blog_research_source_registry",
+ "families": {
+  "GU": {
+   "publication": "Growth Unhinged",
+   "author": "Kyle Poyar",
+   "home": "https://www.growthunhinged.com/",
+   "retrieved_from_note": "Read from the publisher's legacy Substack archive (kylepoyar.substack.com); growthunhinged.com (beehiiv since 2026-01-12) returned a bot check to every tool and was not bypassed."
+  },
+  "EV": {
+   "publication": "Elena's Growth Scoop",
+   "author": "Elena Verna",
+   "home": "https://www.elenaverna.com/",
+   "retrieved_from_note": "Public posts read in full; paid posts only to the paywall."
+  },
+  "CH": {
+   "publication": "Copyhackers blog",
+   "author": "Copyhackers (per-article authors)",
+   "home": "https://copyhackers.com/blog/",
+   "retrieved_from_note": "Public articles and tutorial transcripts; no courses or gated downloads accessed."
+  },
+  "DS": {
+   "publication": "For Entrepreneurs",
+   "author": "David Skok",
+   "home": "https://www.forentrepreneurs.com/saas-metrics-2/",
+   "retrieved_from_note": "Pages read; formulas and charts embedded as images could not be read."
+  },
+  "EXP": {
+   "publication": "Microsoft Experimentation Platform articles",
+   "author": "Microsoft ExP team (per-article authors)",
+   "home": "https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/articles/",
+   "retrieved_from_note": "Public research articles read in full."
+  }
+ },
+ "articles": [
+  {
+   "id": "GU-01",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "Why everyone’s switching to AI credits",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-credit-pricing",
+   "retrieved_from": "https://kylepoyar.substack.com/p/ai-credit-pricing",
+   "published": "2025-09-03",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-credit-pricing); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Substack marks the post subscriber-only; the public preview shows roughly the first third (about 660 of 1,881 words incl. a sponsor block). Text stops at the heading on what credits mean in practice; implementation guidance after that was not visible. Sponsor: Metronome (usage-billing vendor).",
+   "sections_read": [
+    "Intro (credit adoption by large vendors)",
+    "Why everyone’s switching to AI credits"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 754,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-01-F1",
+     "kind": "dated_tactic",
+     "summary": "Large software vendors (Microsoft, Salesforce, Cursor, OpenAI and many SaaS firms) moved AI features to credit-based pricing during 2025; Kyle argues incumbents adopting it makes credits an accepted way to buy AI, easing adoption for smaller vendors.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Vendor list and timing are as of Sep 2025; adoption by incumbents is not evidence that buyers prefer credits. Cursor's switch drew user pushback, which the author notes."
+    },
+    {
+     "id": "GU-01-F2",
+     "kind": "author_guidance",
+     "summary": "The main barrier to credits is buyer acceptance: credits can feel unpredictable, hard to manage and opaque, and procurement fears runaway cost without visibility.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Opinion; no buyer data shown in the readable portion."
+    },
+    {
+     "id": "GU-01-F3",
+     "kind": "author_guidance",
+     "summary": "Kyle reports, from his own experience, that 70–80% of AI token consumption comes from about 10% of users, and that such heavy users become unprofitable without guardrails.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "durable",
+     "limitations": "Practitioner observation, no sample or method given; grade D for ClimbOS base rates. Concentration will vary by product."
+    },
+    {
+     "id": "GU-01-F4",
+     "kind": "author_guidance",
+     "summary": "Frontier model prices are not falling as fast as many predicted (newest models stay expensive while usage grows), so pricing that assumes costs will collapse soon, such as unlimited plans run at thin or negative margin, is risky.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "dated",
+     "limitations": "Cites a specific model token price as of Aug–Sep 2025; provider prices change often."
+    },
+    {
+     "id": "GU-01-F5",
+     "kind": "author_guidance",
+     "summary": "Credits suit this environment: buyers see a simple usage pool, while the vendor can re-rate actions as costs and value change, price newer high-value actions higher, include some free usage in existing or free plans, and let customers choose how to spend the pool.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "durable",
+     "limitations": "Benefits are asserted; the post's practical section (not visible) may add caveats."
+    }
+   ]
+  },
+  {
+   "id": "GU-02",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "Your pricing is (probably) broken",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/your-pricing-is-broken",
+   "retrieved_from": "https://kylepoyar.substack.com/p/your-pricing-is-broken",
+   "published": "2025-10-22",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-pricing-is-broken); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview showed the intro and the first three pricing models (about 970 of 1,747 words incl. sponsor). Later sections, presumably on usage, credit and outcome models, were not visible. Sponsor: Metronome.",
+   "sections_read": [
+    "Your pricing is (probably) broken (intro)",
+    "1. Flat-fee subscriptions",
+    "2. Feature-based pricing",
+    "3. Seat-based pricing"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1049,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-02-F1",
+     "kind": "author_guidance",
+     "summary": "No pricing model is perfect; the author advises making the most of the current model with targeted fixes rather than chasing newer models such as credits or outcome pricing out of embarrassment.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Based on conversations with about three dozen software founders; anecdotal."
+    },
+    {
+     "id": "GU-02-F2",
+     "kind": "author_guidance",
+     "summary": "Flat-fee or unlimited plans are what customers ask for, but they price out small buyers, undercharge large ones, give no expansion path and allow low or negative margin customers. The fix is to add at least two expansion levers.",
+     "section": "1. Flat-fee subscriptions",
+     "date_sensitivity": "durable",
+     "limitations": "Software-company framing; applies loosely to service retainers."
+    },
+    {
+     "id": "GU-02-F3",
+     "kind": "survey_or_benchmark",
+     "summary": "Kyle's rules of thumb: a premium edition priced 50–100% above base typically sees 15–25% uptake (he equates this to roughly +15% revenue); add-ons usually price at 10–30% of the core product; he cites his own earlier writing that about 1 in 3 B2B contracts include automatic renewal price increases, usually 5–8% a year; lite seats price at 10–40% of a full seat.",
+     "section": "1. Flat-fee subscriptions; 3. Seat-based pricing",
+     "date_sensitivity": "dated",
+     "limitations": "Experience-based ranges from B2B software, no sample stated; escalator figure is self-cited from 2024. Treat as grade C/D priors, not targets."
+    },
+    {
+     "id": "GU-02-F4",
+     "kind": "author_guidance",
+     "summary": "Good-Better-Best tiers fail when plans feel arbitrary and most buyers default to the middle. Remedies: state each plan's purpose in one sentence; launch one or two new features a year as add-ons and fold them into higher tiers roughly every 18 months; consider progressive feature gating that gives every plan a taste of premium features.",
+     "section": "2. Feature-based pricing",
+     "date_sensitivity": "durable",
+     "limitations": "Cadence numbers are the author's heuristic."
+    },
+    {
+     "id": "GU-02-F5",
+     "kind": "author_guidance",
+     "summary": "Seats remain common but weaken as AI reduces headcount and agent value does not scale with logins. Rather than abandoning seats, redefine them: lite seats, minimum seat counts on team plans, usage limits by plan, or pilot usage pricing for select large customers using their past usage as a baseline.",
+     "section": "3. Seat-based pricing",
+     "date_sensitivity": "durable",
+     "limitations": "Examples are large software vendors; small businesses rarely sell seats."
+    }
+   ]
+  },
+  {
+   "id": "GU-03",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "A new framework for AI agent pricing",
+   "author": "Manny Medina (guest; intro by Kyle Poyar)",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-agent-pricing-framework",
+   "retrieved_from": "https://kylepoyar.substack.com/p/ai-agent-pricing-framework",
+   "published": "2025-04-09",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-agent-pricing-framework); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Public (everyone) on the Substack archive; full text read. Diagrams/graphics were images and not read. Author is founder of Paid, a billing platform for results-based AI agent pricing: commercial interest in the outcome model he favours.",
+   "sections_read": [
+    "Intro",
+    "The four AI Agent pricing models dominating the market",
+    "Model 1: Price per agent",
+    "Model 2: Price per agent action",
+    "Model 3: Price per agent workflow",
+    "Model 4: Price per agent outcome",
+    "Future proofing the models",
+    "Decision framework: Choosing the right pricing model for your AI agent"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2146,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-03-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Of 175 signups to Paid at launch, 130 (about 75%) said they were unsure how to price AI features.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Self-selected signups to a pricing-tool vendor, early 2025; shows uncertainty among that audience only."
+    },
+    {
+     "id": "GU-03-F2",
+     "kind": "author_guidance",
+     "summary": "Four agent pricing models: per agent (a fixed fee positioned against a hire), per action (consumption, often tokens or minutes plus margin), per workflow (a completed multi-step process), and per outcome (pay only for a defined result). Hybrids with seats are common.",
+     "section": "The four AI Agent pricing models",
+     "date_sensitivity": "durable",
+     "limitations": "Based on the author's review of 60+ AI agent companies; method not described."
+    },
+    {
+     "id": "GU-03-F3",
+     "kind": "author_guidance",
+     "summary": "Trade-offs: per-agent is predictable and draws on headcount budgets but invites 'same but cheaper' rivals; per-action is transparent but commoditises and tracks falling costs down; per-workflow balances the two but long or complex runs can go margin-negative; per-outcome aligns best with value but needs predictable performance, clear success definitions and attribution, and can lead to bespoke contracts.",
+     "section": "Models 1–4",
+     "date_sensitivity": "durable",
+     "limitations": "Claims about budget size (headcount budget 'at least 10x' tools budget) are unsourced assertions."
+    },
+    {
+     "id": "GU-03-F4",
+     "kind": "author_guidance",
+     "summary": "Decision questions: is the agent replacing a defined headcount (per agent, or time saved × hourly rate for workflows); can the outcome be measured and attributed reliably (per outcome, or outcome bonuses on another model); are tasks varied with unpredictable volume (per action, possibly with a per-agent base).",
+     "section": "Decision framework",
+     "date_sensitivity": "durable",
+     "limitations": "Framework is qualitative; no tested thresholds."
+    },
+    {
+     "id": "GU-03-F5",
+     "kind": "author_guidance",
+     "summary": "The author predicts core model costs will fall 10–100x over 3–5 years, pressuring per-action pricing most, and believes outcome pricing will win long term.",
+     "section": "Future proofing the models",
+     "date_sensitivity": "dated",
+     "limitations": "Forecast plus vendor interest (Paid sells outcome billing). GU-01 notes newest-model prices had not fallen as expected by late 2025."
+    }
+   ]
+  },
+  {
+   "id": "GU-04",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "The state of SaaS pricing",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/the-state-of-usage-based-pricing",
+   "retrieved_from": "https://kylepoyar.substack.com/p/the-state-of-usage-based-pricing",
+   "published": "2024-02-21",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/the-state-of-usage-based-pricing); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview showed about 1,200 of 2,252 words, through the seven hybrid examples. The body of 'Common pitfalls of usage-based pricing' was not visible. Slug says usage-based pricing; displayed title is 'The state of SaaS pricing'.",
+   "sections_read": [
+    "Intro",
+    "What’s happening in the market",
+    "It’s no longer usage-based pricing vs. subscriptions",
+    "Seven hybrid examples (usage-based expansion; usage-based subscriptions; transaction revenue + subscriptions; success-based; usage pricing for specific segments; active-user subscriptions; credit-based ELAs)",
+    "Common pitfalls of usage-based pricing (heading only)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1290,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-04-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "In a survey of private SaaS companies Kyle cites (over 3,000 respondents across six annual surveys, 700+ in 2023, fielded in Q3), usage-based pricing adoption fell from 46% to 41% year on year, with 17% testing it.",
+     "section": "What’s happening in the market",
+     "date_sensitivity": "dated",
+     "limitations": "SaaS-only, venture-oriented respondents, 2022–2023; self-reported; not small local businesses."
+    },
+    {
+     "id": "GU-04-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Most usage-based businesses in that survey use a hybrid of subscription plus usage rather than pure pay-as-you-go, especially those selling to smaller customers who are more sensitive to unplanned bills.",
+     "section": "What’s happening in the market",
+     "date_sensitivity": "dated",
+     "limitations": "Same survey caveats; the readable text gives the direction, not the exact split."
+    },
+    {
+     "id": "GU-04-F3",
+     "kind": "author_guidance",
+     "summary": "The real contrast is not usage vs subscription but flexible, consumption-linked pricing vs rigid upfront commitments tied to access. Hybrid patterns include: usage included in plans with paid overage; plans stepped by usage allowance; subscription plus transaction fees; success fees as an add-on; pay-as-you-go for occasional users; charging only for active users; and committed spend drawn down flexibly.",
+     "section": "It’s no longer usage-based pricing vs. subscriptions",
+     "date_sensitivity": "durable",
+     "limitations": "Examples are large software vendors (as of early 2024); their specific prices are dated."
+    },
+    {
+     "id": "GU-04-F4",
+     "kind": "author_guidance",
+     "summary": "Usage pricing is more than a price change: it touches billing, forecasting, sales compensation and organisation, and usage businesses saw faster revenue deceleration in the 2022–2023 slowdown.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Deceleration claim is stated without the underlying data in the readable part."
+    }
+   ]
+  },
+  {
+   "id": "GU-05",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "Your guide to SaaS packaging 201",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/your-guide-to-saas-packaging-201",
+   "retrieved_from": "https://kylepoyar.substack.com/p/your-guide-to-saas-packaging-201",
+   "published": "2023-09-13",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-guide-to-saas-packaging-201); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the intro and the first two principles (about 750 of 1,717 words). Principle 3 onward was not visible.",
+   "sections_read": [
+    "Intro",
+    "1. Good-Better-Best is the de-facto starting point",
+    "2. Leave room for add-ons – but be selective about it",
+    "3. Each package needs a job in your revenue generation (heading only)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 830,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-05-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Kyle states that about two-thirds of SaaS companies use a three-tier Good-Better-Best lineup.",
+     "section": "1. Good-Better-Best",
+     "date_sensitivity": "dated",
+     "limitations": "No source or sample given in the readable part; SaaS only."
+    },
+    {
+     "id": "GU-05-F2",
+     "kind": "author_guidance",
+     "summary": "Good-Better-Best sits between a single inflexible offer (no upsell) and build-your-own packaging (decision paralysis, nickel-and-diming, more line items to negotiate). It eases choice, segments by willingness to pay, creates an upsell path and funds new products. Default to it when unsure.",
+     "section": "1. Good-Better-Best",
+     "date_sensitivity": "durable",
+     "limitations": "Author notes his principles may conflict and not fit all contexts."
+    },
+    {
+     "id": "GU-05-F3",
+     "kind": "author_guidance",
+     "summary": "Sell a capability as an add-on when it is polarising (a few value it highly), serves a different buyer or budget, replaces spend on another vendor, is adopted much later than purchase, or carries real delivery cost you want only willing payers to use. Keep it to one or two add-ons at first purchase, each easy to explain.",
+     "section": "2. Leave room for add-ons",
+     "date_sensitivity": "durable",
+     "limitations": "Heuristics from B2B software sales; not tested thresholds."
+    }
+   ]
+  },
+  {
+   "id": "GU-06",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "Your guide to reverse trials",
+   "author": "Kyle Poyar (with Lauryn Isford, then Airtable)",
+   "canonical_url": "https://www.growthunhinged.com/p/your-guide-to-reverse-trials",
+   "retrieved_from": "https://kylepoyar.substack.com/p/your-guide-to-reverse-trials",
+   "published": "2022-06-29",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-guide-to-reverse-trials); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the freemium vs trial trade-offs and the reverse-trial definition (about 670 of 2,333 words). The Airtable interview answers were not visible.",
+   "sections_read": [
+    "Intro (freemium vs free trial trade-offs)",
+    "You don’t have to choose",
+    "Inside Airtable’s reverse trial strategy (intro only)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 769,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-06-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Free-trial products see higher free-to-paid conversion than freemium, often 2–3x, while freemium sees higher visitor-to-signup conversion; Kyle links external sources for both.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Linked sources were not read; 2022 PLG software data; the two rates use different denominators (trial starters vs free users)."
+    },
+    {
+     "id": "GU-06-F2",
+     "kind": "author_guidance",
+     "summary": "Choose by trade-off: freemium favours acquisition, longer time-to-value and viral or network products; free trials favour conversion speed and cash payback. He illustrates median time to purchase as perhaps 14 days for trials vs 60–90 for freemium.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Time-to-purchase figures are illustrative ('might be'), not measured."
+    },
+    {
+     "id": "GU-06-F3",
+     "kind": "author_guidance",
+     "summary": "A reverse trial starts new users on a time-limited trial of paid features, then they buy or drop to a permanent free tier, aiming to get both acquisition and conversion and to use loss aversion.",
+     "section": "You don’t have to choose",
+     "date_sensitivity": "durable",
+     "limitations": "Benefit claims rely on general behavioural findings; product-specific results unknown from the readable text."
+    }
+   ]
+  },
+  {
+   "id": "GU-07",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "Customers don't care about your AI feature",
+   "author": "Kristen Berman (guest, Irrational Labs)",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-messaging-study",
+   "retrieved_from": "https://kylepoyar.substack.com/p/ai-messaging-study",
+   "published": "2025-01-29",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-messaging-study); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Public (everyone) on the Substack archive; full text read including the footnote correction. Charts were images; values taken from text only.",
+   "sections_read": [
+    "Intro",
+    "The surprising science behind AI labels and what our research revealed",
+    "So why do companies still overuse “AI” in their marketing?",
+    "How you should market your AI feature (1–4)",
+    "Rethink the AI crutch",
+    "Footnote on WTP correction"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2157,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-07-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "In a controlled experiment with 767 US participants shown landing pages for four real products with or without explicit AI wording, labelling as 'generative AI' significantly lowered expected impact; willingness to pay differed by about $1, not statistically significant; trust was largely unchanged. One product was an exception.",
+     "section": "The surprising science behind AI labels",
+     "date_sensitivity": "dated",
+     "limitations": "Online panel, mostly mainstream users (68% had used AI a few times, 15% daily); not early adopters; stated WTP, not purchases; four products; period late 2024/early 2025; consultancy author."
+    },
+    {
+     "id": "GU-07-F2",
+     "kind": "author_guidance",
+     "summary": "Market AI features by the result: plain-language benefits, specific measured gains (time or money saved), letting users try a feature before it becomes paid (endowment, reverse trial), and when 'AI' must appear, pair it with a clear use case or a benefit-led name.",
+     "section": "How you should market your AI feature",
+     "date_sensitivity": "durable",
+     "limitations": "Recommendations extend beyond what the experiment tested; quoted vendor stats are those vendors' claims."
+    },
+    {
+     "id": "GU-07-F3",
+     "kind": "reported_case",
+     "summary": "A behavioural redesign that framed a setup call as unlocking a device ('their' device) was reported alongside other changes to raise successful device pairing by 90% for a health-device company.",
+     "section": "3. Leverage the Endowment Effect",
+     "date_sensitivity": "durable",
+     "limitations": "Single consultancy case, combined interventions, no baseline given."
+    }
+   ]
+  },
+  {
+   "id": "GU-08",
+   "family": "GU",
+   "publication": "Growth Unhinged",
+   "title": "What I learned from tracking 443 SaaS pricing pages",
+   "author": "John Kotowski and Rob Litterst (guests, PricingSaaS; intro by Kyle Poyar)",
+   "canonical_url": "https://www.growthunhinged.com/p/state-of-saas-pricing-changes-2024",
+   "retrieved_from": "https://kylepoyar.substack.com/p/state-of-saas-pricing-changes-2024",
+   "published": "2024-10-16",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/state-of-saas-pricing-changes-2024); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the Good/Bad/Ugly examples (about 900 of 1,502 words). 'Wider Trends' benchmarks were not visible. Title says 443 pages; text says the firm monitors 3,000+ pages; which index the 42% uses is unclear.",
+   "sections_read": [
+    "Intro",
+    "The Good",
+    "The Bad",
+    "The Ugly",
+    "Wider Trends (heading only)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1032,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "GU-08-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "PricingSaaS reports 42% of companies in its index changed prices in the first three quarters of 2024; Kyle's intro says increases were the most common change, averaging about 20%.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Vendor-run index of public SaaS pricing pages, Q1–Q3 2024; denominator ambiguous (443 vs 3,000+); list prices only, not realised prices."
+    },
+    {
+     "id": "GU-08-F2",
+     "kind": "reported_case",
+     "summary": "Monday.com raised its most popular plan about 20% but its entry plan only 12.5% to keep the entry price under a $10 per-seat threshold, and justified the rise with a visible record of added features.",
+     "section": "The Good",
+     "date_sensitivity": "dated",
+     "limitations": "Public pricing-page observation; outcome (churn, revenue) not reported."
+    },
+    {
+     "id": "GU-08-F3",
+     "kind": "reported_case",
+     "summary": "IFTTT more than doubled (+150%) the price of its unlimited flat-rate top plan while the lower plan rose about 17%; the authors argue adjusting usage limits or a hybrid model would have captured power-user value without such a jump.",
+     "section": "The Bad",
+     "date_sensitivity": "dated",
+     "limitations": "Opinion on a public change; customer reaction not measured."
+    },
+    {
+     "id": "GU-08-F4",
+     "kind": "author_guidance",
+     "summary": "Pricing-page clarity matters: plan names should signal who each plan is for (e.g., not calling a top tier 'Plus'), defaults such as the pre-filled team size shape perceived price and target segment, and confusing ordering, mixed audiences on one grid or many badges hurt comprehension.",
+     "section": "The Good; The Ugly",
+     "date_sensitivity": "durable",
+     "limitations": "Qualitative judgements; no conversion data."
+    }
+   ]
+  },
+  {
+   "id": "EV-01",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "5 of my favorite new retention techniques that you may not have tried",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/5-of-my-favorite-new-retention-techniques",
+   "retrieved_from": "https://www.elenaverna.com/p/5-of-my-favorite-new-retention-techniques",
+   "published": "2026-03-17",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "paywalled",
+   "access_notes": "Marked paid. Only the introduction is public. The five techniques and the two 'laws of retention improvement' are behind the paywall. The intro links to four earlier posts, three of which were read (EV-03, EV-04; voluntary-churn post is paywalled). Method for all records: WebFetch of public pages on 2026-10-20; paid/free flags from the public Substack archive listing. No login, subscription or free-post claim used.",
+   "sections_read": [
+    "Title and subtitle",
+    "Introduction (up to paywall)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 172,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-01-F1",
+     "kind": "author_guidance",
+     "summary": "She treats paid-user retention as the main test of product-market fit and says she keeps finding new levers; she reports that five recently tested techniques each gave a meaningful lift, but the techniques, sizes and conditions are not public.",
+     "section": "Introduction",
+     "date_sensitivity": "durable",
+     "limitations": "No technique, effect size, sample or condition is visible. Nothing from this post can be encoded as a tactic; it only confirms her framing."
+    }
+   ]
+  },
+  {
+   "id": "EV-02",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "I bet you are doing product activation all wrong.",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/hey-b2b-i-bet-you-are-measuring-activation",
+   "retrieved_from": "https://www.elenaverna.com/p/hey-b2b-i-bet-you-are-measuring-activation",
+   "published": "2023-10-05",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible. Final part of a series written with the analytics company June; promotes June's playbook and Reforge courses. Diagrams are images and were not read.",
+   "sections_read": [
+    "Definition of activation",
+    "Setup",
+    "Aha moment",
+    "Habit loop",
+    "Activation vs engagement",
+    "User vs account activation (B2B)",
+    "B2B activation should not always be self-serve",
+    "Onboarding length",
+    "Multiple roles per account"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2078,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-02-F1",
+     "kind": "author_guidance",
+     "summary": "Activation runs from signup to a habit around the core value, in three stages: setup (steps needed to reach value), the aha moment (the user actually receives value, measured quantitatively, not via logins or views), and the first habit loop (repeat use at the product's natural frequency). Setup completion is not value delivery, however polished the setup is.",
+     "section": "Definition; Setup; Aha moment",
+     "date_sensitivity": "durable",
+     "limitations": "She credits the three-stage framing to Reforge. No method is given for picking or validating the metric beyond saying the first habit loop should predict retention and monetization."
+    },
+    {
+     "id": "EV-02-F2",
+     "kind": "author_guidance",
+     "summary": "Habit should be a usage pattern over a window, not 'active last week'. Her examples: active on 3 of 5 days across two weeks for daily products, or 3 of the last 4 weeks for weekly products.",
+     "section": "Habit loop",
+     "date_sensitivity": "durable",
+     "limitations": "Examples, not thresholds validated on any sample."
+    },
+    {
+     "id": "EV-02-F3",
+     "kind": "reported_case",
+     "summary": "From her time at SurveyMonkey and Miro: SurveyMonkey's value event was viewing several survey responses rather than creating a survey; Miro counted accounts as activated only after collaboration with others. At SurveyMonkey, hundreds of separate paid and free accounts inside single companies did not turn into enterprise deals because users worked in silos.",
+     "section": "Aha moment; User vs account activation",
+     "date_sensitivity": "durable",
+     "limitations": "Author's recollection; no retention data published; large collaborative-software context."
+    },
+    {
+     "id": "EV-02-F4",
+     "kind": "author_guidance",
+     "summary": "For B2B, build distribution into setup or the aha (e.g. inviting a colleague, value requiring two or more people), and nudge users whose work domain matches an existing team to join it rather than starting a new account.",
+     "section": "User vs account activation; Multiple roles per account",
+     "date_sensitivity": "durable",
+     "limitations": "Applies to collaborative/team products, not single-user tools."
+    },
+    {
+     "id": "EV-02-F5",
+     "kind": "author_guidance",
+     "summary": "Self-serve onboarding is not always right. Use tech touch (tours, lifecycle email) for small gaps, human touch (calls, chat) for big behaviour changes, complex migrations, enterprise buyers or high-value signups, and education content for people who prefer reading.",
+     "section": "B2B activation should not always be self-serve",
+     "date_sensitivity": "durable",
+     "limitations": "No cost or effect data."
+    },
+    {
+     "id": "EV-02-F6",
+     "kind": "reported_case",
+     "summary": "She reports a three-screen, nine-question onboarding whose drop-off was at most about 10%, without reducing how many users reached the habit loop; mostly very low-intent users left.",
+     "section": "Onboarding length",
+     "date_sensitivity": "dated",
+     "limitations": "Single unnamed case, no sample size, product or date given."
+    },
+    {
+     "id": "EV-02-F7",
+     "kind": "author_guidance",
+     "summary": "Engagement is a later stage than activation. Increasing intensity of use suits social products but can work against productivity tools.",
+     "section": "Activation vs engagement",
+     "date_sensitivity": "durable",
+     "limitations": "Stated without evidence."
+    }
+   ]
+  },
+  {
+   "id": "EV-03",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "Retention: The situationship of SaaS",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/retention-the-situationship-of-saas",
+   "retrieved_from": "https://www.elenaverna.com/p/retention-the-situationship-of-saas",
+   "published": "2025-06-23",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible. Sponsored by Churnkey (a churn-reduction vendor); the sponsor's 20–40% revenue-saving claim is marketing, not evidence, and is not used. Comments only partly visible.",
+   "sections_read": [
+    "Introduction",
+    "Churn starts with poor activation",
+    "It continues with failed feature adoption",
+    "But it can be prevented too",
+    "Finally, try resurrecting the churned users",
+    "A note on team structure",
+    "Churn is feedback"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1510,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-03-F1",
+     "kind": "author_guidance",
+     "summary": "Churn is usually a symptom of weak activation. A common error is defining the aha as a setup step (upload, import, configure, connect); better value events use verbs like publish, send, receive, share, export or deploy.",
+     "section": "Churn starts with poor activation",
+     "date_sensitivity": "durable",
+     "limitations": "Opinion from experience; no controlled data."
+    },
+    {
+     "id": "EV-03-F2",
+     "kind": "author_guidance",
+     "summary": "Some products deliver value once and keep delivering (iteration after publishing; analytics once data is connected); others need the setup repeated to get value again (new surveys, new boards). Repeat-setup products may need a team-level aha to build habit (Miro moved its aha to the team).",
+     "section": "Churn starts with poor activation",
+     "date_sensitivity": "durable",
+     "limitations": "Qualitative examples (Lovable, Amplitude, SurveyMonkey, Miro)."
+    },
+    {
+     "id": "EV-03-F3",
+     "kind": "author_guidance",
+     "summary": "Activated users can still churn when they never find the features their value depends on. Two ways to find them: top-down (list the handful of critical features and check adoption) and bottom-up (find features the best-retained users use consistently and promote them to similar users). Keep a deprecation list for features nobody uses.",
+     "section": "It continues with failed feature adoption",
+     "date_sensitivity": "durable",
+     "limitations": "No data on effect sizes."
+    },
+    {
+     "id": "EV-03-F4",
+     "kind": "author_guidance",
+     "summary": "Voluntary churn can be reduced with offboarding that reminds users what they will lose, offers a pause, or a timely discount; involuntary churn (failed payments, expired cards, aggressive fraud filters) needs retries and recovery flows. Payment recovery treats a symptom and is not a retention strategy.",
+     "section": "But it can be prevented too",
+     "date_sensitivity": "durable",
+     "limitations": "Canva cited as a good offboarding example without data; vendor recommendation is the sponsor."
+    },
+    {
+     "id": "EV-03-F5",
+     "kind": "author_guidance",
+     "summary": "Don't give up on churned users. Generic 'we miss you' messages rarely work because churned users hold an outdated view of the product; show new value. Segment: churned payers still active on free (offer trial restarts timed to major launches) versus fully inactive (slow drip highlighting new capabilities, occasional trial restarts). Her illustration: reactivating 1–2% of past users can rival converting 5% of new users.",
+     "section": "Finally, try resurrecting the churned users",
+     "date_sensitivity": "durable",
+     "limitations": "The 1–2% vs 5% comparison is illustrative, not a benchmark. Most relevant to mature companies with a large churned base."
+    }
+   ]
+  },
+  {
+   "id": "EV-04",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "Subscription churn metrics and benchmarks for operators.",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/subscription-churn-benchmarks-and",
+   "retrieved_from": "https://www.elenaverna.com/p/subscription-churn-benchmarks-and",
+   "published": "2025-03-28",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible. Sponsored by Churnkey, which is also a cited data source. Several benchmarks are in chart images that were not readable; only figures stated in text are recorded. Most text figures have no stated source, sample or period.",
+   "sections_read": [
+    "Not so helpful benchmarks",
+    "NRR benchmark",
+    "Monthly churn rate benchmark",
+    "Operator-focused churn benchmarks",
+    "First-term churn",
+    "Voluntary churn: auto-renew cancellations",
+    "Cancellation reasons",
+    "Involuntary churn",
+    "How about mobile?",
+    "Ten churn tactics",
+    "Other resources"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2076,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-04-F1",
+     "kind": "author_guidance",
+     "summary": "Net revenue retention and monthly churn are investor-level outcomes; they show churn exists but not where it comes from. Benchmarks are reference points, not targets.",
+     "section": "Not so helpful benchmarks",
+     "date_sensitivity": "durable",
+     "limitations": "None beyond being opinion."
+    },
+    {
+     "id": "EV-04-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Most churn by volume and rate happens at the first renewal. She calls roughly a quarter of customers churning after the first term 'good', for both monthly and annual plans; annual plans retain better, so plan mix matters.",
+     "section": "First-term churn",
+     "date_sensitivity": "dated",
+     "limitations": "No source, sample, segment or period stated (post dated March 2025). Not comparable with a monthly churn rate."
+    },
+    {
+     "id": "EV-04-F3",
+     "kind": "survey_or_benchmark",
+     "summary": "Voluntary cancellations (auto-renew turned off) cluster roughly half right after signup and half in the last week before renewal. She sets a goal of recovering at least a fifth of early cancellers; late cancellers are hard to save without discounts. Early auto-renew-off is a leading indicator for testing before renewals arrive.",
+     "section": "Voluntary churn: auto-renew cancellations",
+     "date_sensitivity": "dated",
+     "limitations": "No source, sample or period. The recovery figure is her target, not a measured benchmark."
+    },
+    {
+     "id": "EV-04-F4",
+     "kind": "survey_or_benchmark",
+     "summary": "Involuntary churn is minor in early monthly terms (except where many customers pay by debit card) but large for annual plans: about 40% of annual first-term churn, growing as stored cards age. Insufficient funds is about 40% of involuntary causes. She says at least half of failed payments should be recovered via retries, card updaters and dunning.",
+     "section": "Involuntary churn",
+     "date_sensitivity": "dated",
+     "limitations": "No source or sample named for these figures; recovery figure is a target. Regional breakdown only in charts."
+    },
+    {
+     "id": "EV-04-F5",
+     "kind": "survey_or_benchmark",
+     "summary": "Mobile figures quoted from third parties: average apps lose most daily users within three days of install (Business of Apps), and very low day-30 retention; subscription-app churn figures attributed partly to a 2020 TechCrunch report.",
+     "section": "How about mobile?",
+     "date_sensitivity": "dated",
+     "limitations": "Secondary sources, periods unclear, one figure ambiguous between monthly and first-term. Not used in concepts."
+    },
+    {
+     "id": "EV-04-F6",
+     "kind": "author_guidance",
+     "summary": "Ten tactics she uses broadly: raise paid-feature use; improve activation and watch paid weekly actives; one-click reactivation everywhere (her target: about a tenth of cancellers resubscribe); payment-failure alerts by email and in product; show what the user used and will lose at cancellation; churn-risk scoring with targeted discounts or comped time; pause; downgrade at cancellation; move tenured monthly subscribers to annual (her target: about a fifth by end of year one); personal outreach to high-value accounts. Root causes are poor activation and weak engagement.",
+     "section": "Ten churn tactics",
+     "date_sensitivity": "durable",
+     "limitations": "Targets are hers, unsourced. Tactics are listed without conditions or effect sizes."
+    }
+   ]
+  },
+  {
+   "id": "EV-05",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "Reverse Trials: Examples",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/reverse-trials-examples",
+   "retrieved_from": "https://www.elenaverna.com/p/reverse-trials-examples",
+   "published": "2024-04-12",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible; flow diagrams and screenshots are images (captions only). Comments truncated. Product flows are as observed in April 2024 and may have changed.",
+   "sections_read": [
+    "Introduction",
+    "Reverse trial definition",
+    "Flow comparison",
+    "Canva",
+    "Asana",
+    "Notion",
+    "Airtable",
+    "Dropbox",
+    "Closing",
+    "Visible comments"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 791,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-05-F1",
+     "kind": "author_guidance",
+     "summary": "Instead of choosing between a trial and freemium, start every new signup on a time-limited trial of all or selected paid features, usually with no opt-in and no card, then move non-payers to the free plan. Card-upfront trials deter signups; pure freemium attracts many users but converts few.",
+     "section": "Introduction; Reverse trial definition",
+     "date_sensitivity": "durable",
+     "limitations": "Benefits (acquisition, engagement, conversion, loops) are stated as expectations, not measured results. No explicit 'when not to use' section."
+    },
+    {
+     "id": "EV-05-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "She states that even strong freemium products convert only around 5% of free users.",
+     "section": "Introduction",
+     "date_sensitivity": "dated",
+     "limitations": "No source, sample or period."
+    },
+    {
+     "id": "EV-05-F3",
+     "kind": "dated_tactic",
+     "summary": "Observed patterns (April 2024): Canva, Asana, Airtable and Dropbox profile new users and then show a reverse-trial screen (Canva defaults to a team trial with an individual option; Airtable states the account returns to Free at the end; Asana shows a 30-day trial; Airtable 14 days); Notion's version required a card; Dropbox's was still in A/B testing. Her critique: explain what the trial adds over free and reassure about the timeline.",
+     "section": "Company examples",
+     "date_sensitivity": "dated",
+     "limitations": "Screenshots of flows at one point in time; no outcome data; flows likely changed since."
+    },
+    {
+     "id": "EV-05-F4",
+     "kind": "reported_case",
+     "summary": "Readers in comments raised abuse risk (new accounts after the trial ends) and argued freemium can serve a different purpose (a large free community creating value for a smaller paying group).",
+     "section": "Visible comments",
+     "date_sensitivity": "durable",
+     "limitations": "Reader opinions, not the author's; partially visible."
+    }
+   ]
+  },
+  {
+   "id": "EV-06",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "To PLG or not PLG?",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/to-plg-or-not-plg",
+   "retrieved_from": "https://www.elenaverna.com/p/to-plg-or-not-plg",
+   "published": "2023-08-24",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible; promotes a Reforge course. Growth-model grid is an image. One comment collapsed.",
+   "sections_read": [
+    "Opening",
+    "What growth means",
+    "Growth model menu",
+    "Should you invest in PLG?",
+    "Step 1: Offense or defense",
+    "Step 2: Build your escalator",
+    "Step 3: Map it out"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2123,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-06-F1",
+     "kind": "author_guidance",
+     "summary": "Growth has three levers (acquisition, monetization, retention) and each can be driven by product, marketing or sales. These motions combine rather than compete; early companies usually pick one motion per lever and later layer others in deliberately. Doing all motions at once is a mistake.",
+     "section": "Growth model menu",
+     "date_sensitivity": "durable",
+     "limitations": "Framework, no data."
+    },
+    {
+     "id": "EV-06-F2",
+     "kind": "author_guidance",
+     "summary": "Decide whether product-led is offense (product drives growth and sells itself through sharing, referrals, self-serve activation) or defense (a self-serve tier mainly serves small customers and blocks competitors while sales and partners drive most growth).",
+     "section": "Step 1: Offense or defense",
+     "date_sensitivity": "durable",
+     "limitations": "Examples (Slack, Figma, Salesforce) are large companies."
+    },
+    {
+     "id": "EV-06-F3",
+     "kind": "author_guidance",
+     "summary": "Individual adoption does not automatically lead to company purchases: teams must be activated first (team-level metrics, collaboration in the activation definition, team growth as a buying signal). Check each step for the user's motivation, ability and permission; failing any one stalls it. Free plans or trials alone won't create adoption.",
+     "section": "Step 2: Build your escalator; Step 3: Map it out",
+     "date_sensitivity": "durable",
+     "limitations": "B2B collaborative focus; a commenter noted top-down purchases reverse this logic and the post does not answer that."
+    }
+   ]
+  },
+  {
+   "id": "EV-07",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "Don't reinvent user profiling during onboarding. This is what it should look like.",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/dont-reinvent-user-profiling-during",
+   "retrieved_from": "https://www.elenaverna.com/p/dont-reinvent-user-profiling-during",
+   "published": "2024-12-13",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible. Sponsored by Ahrefs (unrelated to content). Mock-up screens are images.",
+   "sections_read": [
+    "Why profile users",
+    "First-party data first",
+    "How to ask",
+    "Profiling flow: about you, about your company, invite your team, what are you here to do",
+    "How to use the answers",
+    "Pro tips"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2266,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-07-F1",
+     "kind": "author_guidance",
+     "summary": "Profile users at signup so you can judge whether low activation is real inside your target segment, tailor onboarding, and decide who merits sales help. Ask about use (work vs personal), role and seniority, whether they are migrating from another tool, then (business users only) company size and industry if sales uses it, then a team invite, then the job they came to do with closed options plus 'something else'.",
+     "section": "Why profile users; Profiling flow",
+     "date_sensitivity": "durable",
+     "limitations": "B2B self-serve focus."
+    },
+    {
+     "id": "EV-07-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "In her experience, third-party enrichment data is wrong about half or more of the time, and far worse for consumers, freelancers, agencies and small businesses; self-reported data is wrong much less often. A short structured profiling flow costs at most around 15% drop-off, mostly from low-intent users.",
+     "section": "First-party data first; How to ask",
+     "date_sensitivity": "dated",
+     "limitations": "All figures from her experience; no sample, method or period."
+    },
+    {
+     "id": "EV-07-F3",
+     "kind": "author_guidance",
+     "summary": "Conditions: skip company questions for personal use; hide the team-invite step for companies of two people or fewer; never enable domain-join for webmail addresses; ask only questions you will actually use; prefer radio buttons or dropdowns to open text; keep the design plain.",
+     "section": "Profiling flow; Pro tips",
+     "date_sensitivity": "durable",
+     "limitations": "Heuristics."
+    },
+    {
+     "id": "EV-07-F4",
+     "kind": "author_guidance",
+     "summary": "Use answers to segment activation and monetization by use case, attribute revenue to use cases, and read 'something else' answers for emerging needs.",
+     "section": "How to use the answers",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    }
+   ]
+  },
+  {
+   "id": "EV-08",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "The DNA of a Great Pricing Page",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/the-dna-of-a-great-pricing-page",
+   "retrieved_from": "https://www.elenaverna.com/p/the-dna-of-a-great-pricing-page",
+   "published": "2024-10-11",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, full text visible; teardown screenshots are images. Builds partly on Emily Kramer's (MKT1) checklist.",
+   "sections_read": [
+    "Introduction",
+    "Should you show prices publicly?",
+    "What a good pricing page includes",
+    "Skeleton",
+    "Teardowns (Figma, Slack, Miro)",
+    "Add-ons",
+    "Multi-product pricing",
+    "Metrics to track",
+    "Driving traffic to pricing",
+    "Testing"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2884,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-08-F1",
+     "kind": "author_guidance",
+     "summary": "Show prices publicly, including in B2B. A strong page has a clear value metric, about three plans (five at most), key features in a summary table with the full list below, a visible call to action, social proof, a recommended plan, a one-line 'who this is for' per plan, and features that visibly accumulate up the tiers. Pricing belongs in the main navigation; avoid pop-ups.",
+     "section": "Show prices; Includes; Skeleton",
+     "date_sensitivity": "durable",
+     "limitations": "Heuristics from teardowns; sales-led multi-product pages (HubSpot, Salesforce) are excused from some rules."
+    },
+    {
+     "id": "EV-08-F2",
+     "kind": "author_guidance",
+     "summary": "If fewer than about 30% of a plan's customers use a feature, consider making it an add-on rather than bundling it, since bundling unused features can make customers feel overcharged.",
+     "section": "Add-ons",
+     "date_sensitivity": "durable",
+     "limitations": "Rule of thumb, no evidence given."
+    },
+    {
+     "id": "EV-08-F3",
+     "kind": "survey_or_benchmark",
+     "summary": "Her benchmarks for self-serve/freemium: about a quarter of signups visit the pricing page; about a quarter of unique pricing visitors start checkout (in-app); about half of checkouts complete; free-to-paid around 3–5% for freemium and 10–15% for a reverse or standard trial. SurveyMonkey buyers visited pricing about five times before converting.",
+     "section": "Metrics to track",
+     "date_sensitivity": "dated",
+     "limitations": "No source, sample or period (post dated October 2024); likely drawn from her own companies. Use as weak reference only."
+    },
+    {
+     "id": "EV-08-F4",
+     "kind": "author_guidance",
+     "summary": "Each paid feature should have a contextual upsell in the product that leads to pricing; enterprise features such as SSO often lack one. Low checkout completion points to payment methods, currency or billing-timing problems. Test pricing continually; not testing is an untracked test on everyone.",
+     "section": "Driving traffic; Metrics; Testing",
+     "date_sensitivity": "durable",
+     "limitations": "No effect sizes."
+    }
+   ]
+  },
+  {
+   "id": "EV-09",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "When should you invest in paid marketing?",
+   "author": "Elena Verna and Sarah Charlton",
+   "canonical_url": "https://www.elenaverna.com/p/when-should-you-invest-in-paid-marketing",
+   "retrieved_from": "https://www.elenaverna.com/p/when-should-you-invest-in-paid-marketing",
+   "published": "2025-01-24",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Public post, co-authored; full text visible; decision-tree graphic is an image. Comments truncated.",
+   "sections_read": [
+    "Introduction",
+    "Product-market fit",
+    "Landing page readiness",
+    "Traffic volume",
+    "Organic and SEO",
+    "Owned and product-led channels",
+    "Data and tech",
+    "Budget",
+    "Paid as fuel vs engine",
+    "Common mistakes"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2219,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-09-F1",
+     "kind": "author_guidance",
+     "summary": "Gate paid acquisition on: product-market fit shown by retention, a ready landing page (one goal, clear value, fast, mobile, trust signals), an existing base of cheaper traffic so the site can be tested without paid noise, clean tracking with analyst time, and a budget able to absorb a learning curve.",
+     "section": "Decision tree sections 1–6",
+     "date_sensitivity": "durable",
+     "limitations": "Written for venture-style startups; local service businesses are not discussed."
+    },
+    {
+     "id": "EV-09-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Rules of thumb: churn under 25% (period not stated); for B2B, net dollar retention above 100%, which needs 12+ months to observe; roughly 10,000 visitors before relying on paid; more than about $75k over 6+ months to reach scaled, acceptable ROI even on beginner channels; refresh Facebook creative about every 6–8 weeks.",
+     "section": "PMF; Traffic; Budget; Mistakes",
+     "date_sensitivity": "dated",
+     "limitations": "All unsourced; a commenter asked where the $75k came from without an answer. The churn threshold has no period, so it cannot be compared with ClimbOS's monthly reference."
+    },
+    {
+     "id": "EV-09-F3",
+     "kind": "author_guidance",
+     "summary": "Paid can be fuel (jump-starting a product or content loop, where looser ROI is acceptable) or an engine (must pay back fast and compound within the year). Build product-led acquisition (sharing, referrals, user-generated templates) before leaning on paid.",
+     "section": "Owned channels; Paid as fuel vs engine",
+     "date_sensitivity": "durable",
+     "limitations": "No payback number given; links out to Lenny's Newsletter."
+    },
+    {
+     "id": "EV-09-F4",
+     "kind": "dated_tactic",
+     "summary": "Common mistakes: no dedicated owner over agencies, bidding on your own brand, sending all traffic to the homepage, unmanaged daily budgets (she suggests trimming weekend spend toward buyer hours), starting too broad, stale creative. She calls SEO a good bet for now while AI answers erode it.",
+     "section": "Organic and SEO; PSA: common mistakes",
+     "date_sensitivity": "dated",
+     "limitations": "Platform behaviour changes; verify against current ad-platform docs before acting."
+    }
+   ]
+  },
+  {
+   "id": "EV-10",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "How to give away free product and make money doing it",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/how-to-give-away-free-product-and",
+   "retrieved_from": "https://www.elenaverna.com/p/how-to-give-away-free-product-and",
+   "published": "2026-09-08",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "paywalled",
+   "access_notes": "Paid post; only the introduction is public.",
+   "sections_read": [
+    "Introduction (up to paywall)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 252,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-10-F1",
+     "kind": "author_guidance",
+     "summary": "At Lovable (an AI app builder with mostly self-serve revenue and a secondary sales team) she says free access is one of the biggest growth levers despite real per-use AI cost, and argues that worry about AI gross margins is pushing companies to hide the experience users need before paying.",
+     "section": "Introduction",
+     "date_sensitivity": "dated",
+     "limitations": "Her conditions and methods for controlling free-tier cost are paywalled. Single-company context; she is an employee of Lovable."
+    }
+   ]
+  },
+  {
+   "id": "EV-11",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "What The Freemium!?",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/what-the-freemium",
+   "retrieved_from": "https://www.elenaverna.com/p/what-the-freemium",
+   "published": "2023-08-17",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "paywalled",
+   "access_notes": "Paid post; introduction and definition only.",
+   "sections_read": [
+    "Introduction",
+    "Freemium: what is it? (partial)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 258,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-11-F1",
+     "kind": "author_guidance",
+     "summary": "Freemium is a deliberate business model (limited free version, paid features, usage or services), not a plan bolted on to lift conversion; she rejects the view that free users have no value.",
+     "section": "Freemium: what is it?",
+     "date_sensitivity": "durable",
+     "limitations": "Her conditions for when freemium works are paywalled."
+    }
+   ]
+  },
+  {
+   "id": "EV-12",
+   "family": "EV",
+   "publication": "Elena's Growth Scoop",
+   "title": "It's all about trials",
+   "author": "Elena Verna",
+   "canonical_url": "https://www.elenaverna.com/p/trial-configurations-explained",
+   "retrieved_from": "https://www.elenaverna.com/p/trial-configurations-explained",
+   "published": "2023-04-03",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "paywalled",
+   "access_notes": "Paid post; intro and the start of 'Trial or Freemium?' only. Trial configurations, pros/cons are paywalled.",
+   "sections_read": [
+    "Introduction",
+    "Trial or Freemium? (partial)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 245,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EV-12-F1",
+     "kind": "author_guidance",
+     "summary": "Trials are a conversion tool for a paid product; freemium is a business model. The common opt-in short full-product trial is only one configuration and, in her view, leaves value on the table.",
+     "section": "Introduction; Trial or Freemium?",
+     "date_sensitivity": "durable",
+     "limitations": "Configuration details are paywalled."
+    }
+   ]
+  },
+  {
+   "id": "CH-01",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "Amazon review mining for copywriting. What it is, how to do it and where to use it in your copy.",
+   "author": "Joanna Wiebe",
+   "canonical_url": "https://copyhackers.com/2014/10/amazon-review-mining/",
+   "retrieved_from": "https://copyhackers.com/2014/10/amazon-review-mining/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Text not gated, and the article prose reads as complete. No date on the page; the URL path gives 2014/10. The review tables and headline graphics are images and were not readable. The embedded video was not transcribed, and the example spreadsheet is an external link that was not opened.",
+   "sections_read": [
+    "Questions to Ask Yourself Before Review Mining to Find the Voice of Customer",
+    "Review mining data should write your copy, you shouldn't write copy.",
+    "How Do You Find Your Message (And Stickier Copy) in the User Reviews on Amazon, TripAdvisor and Other Sites?",
+    "You Like Examples? How's This for a Review Mining Example",
+    "The Winning Message Brought 400% More Clicks Than the Control",
+    "You Won't Just Find Copy in User Reviews – You'll Find the Messages You NEED to Put on the Page",
+    "Sounds Good – But Is Amazon Review Mining as Easy as It Looks?",
+    "Ask Yourself These Questions, In This Order"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2244,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-01-F1",
+     "kind": "author_guidance",
+     "summary": "Review mining is presented as the fallback when you cannot interview, survey or record your own customers or list. Interviews and surveys come first when they are available.",
+     "section": "Questions to Ask Yourself Before Review Mining",
+     "date_sensitivity": "durable",
+     "limitations": "Author opinion. No comparison of source quality is given."
+    },
+    {
+     "id": "CH-01-F2",
+     "kind": "author_guidance",
+     "summary": "Mine reviews of anything that serves the same outcome your prospect wants, not only identical products. In the example, books on the same problem stood in for a service business. Before searching, settle four things in order: the audience, the goals and the solutions they want, what they use today, and where those solutions are discussed online.",
+     "section": "Ask Yourself These Questions, In This Order",
+     "date_sensitivity": "durable",
+     "limitations": "Adjacent-outcome reviewers are not your prospects. Their language may not transfer cleanly."
+    },
+    {
+     "id": "CH-01-F3",
+     "kind": "author_guidance",
+     "summary": "Copy reviewers' exact wording into category tables with minimal summarising. Recurring questions, complaints and phrases decide what goes on the page and in what order. A standout verbatim line can become a headline candidate.",
+     "section": "You Won't Just Find Copy in User Reviews",
+     "date_sensitivity": "durable",
+     "limitations": "The table structure is shown only as images, so it could not be inspected. Choosing the headline from one standout quote is a judgement call, not a frequency rule."
+    },
+    {
+     "id": "CH-01-F4",
+     "kind": "reported_case",
+     "summary": "Case: a rehab-centre client. The author read more than 500 reviews across six books in about 2 to 3 hours. A reviewer-derived headline was tested against the control. It reportedly produced more than 400% more primary-button clicks and more than 20% more lead-form submissions on the next page.",
+     "section": "The Winning Message Brought 400% More Clicks Than the Control",
+     "date_sensitivity": "dated",
+     "limitations": "Single vendor-published case. No sample size, duration, traffic or significance is reported. The click lift is a micro-conversion. The lead-form lift is the more meaningful figure and is much smaller. This is not a forecast."
+    },
+    {
+     "id": "CH-01-F5",
+     "kind": "author_guidance",
+     "summary": "The same review analysis can expose product or feature gaps, not just copy. The example is qualitative and comes from project-management app reviews.",
+     "section": "You Won't Just Find Copy in User Reviews",
+     "date_sensitivity": "durable",
+     "limitations": "Qualitative example only. No outcome reported."
+    }
+   ]
+  },
+  {
+   "id": "CH-02",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "7 copywriting research techniques conversion copywriters love",
+   "author": "Jessica Noel (editor: Joanna Wiebe)",
+   "canonical_url": "https://copyhackers.com/2022/06/copywriting-research/",
+   "retrieved_from": "https://copyhackers.com/2022/06/copywriting-research/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Text complete and not gated. Promotional banners and a newsletter prompt are present. No date on the page; the URL path gives 2022/06. The linked companion piece on interview question design was not opened.",
+   "sections_read": [
+    "Takeaways",
+    "Conversion copywriters begin with research",
+    "Conversion copywriters rely on a variety of research techniques to gather VOC",
+    "1. Client (and customer) interviews",
+    "2. Surveys",
+    "3. Review mining",
+    "4. Heatmaps and Scrollmaps",
+    "5. Thank you polls",
+    "6. Analytics review",
+    "7. Competitor audits",
+    "How to organize your copywriting research for your conversion copywriting project"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1926,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-02-F1",
+     "kind": "author_guidance",
+     "summary": "Surveys of customers are recommended to capture use scenarios, unexpected results, outcomes in money and time, who influenced the decision, and the anxieties that nearly stopped the purchase. These answers feed objection handling and benefit language directly.",
+     "section": "2. Surveys",
+     "date_sensitivity": "durable",
+     "limitations": "No question set, sample size or response-rate guidance is given."
+    },
+    {
+     "id": "CH-02-F2",
+     "kind": "author_guidance",
+     "summary": "A one-question thank-you poll, shown right after sign-up or first purchase, asks what was going on that brought the person in. The answer reveals the trigger moment, which shapes the hook.",
+     "section": "5. Thank you polls",
+     "date_sensitivity": "durable",
+     "limitations": "Only buyers and sign-ups answer, so it says nothing about non-converters. No analysis method is given."
+    },
+    {
+     "id": "CH-02-F3",
+     "kind": "author_guidance",
+     "summary": "Before writing, get answers on traffic source, time on page, current and past conversion rate, the target rate, and the gap between the page's goal and what visitors actually do. The copywriter needs the answers, not necessarily tool access.",
+     "section": "6. Analytics review",
+     "date_sensitivity": "durable",
+     "limitations": "A list of questions, with no thresholds."
+    },
+    {
+     "id": "CH-02-F4",
+     "kind": "author_guidance",
+     "summary": "Review data comes from people adjacent to your prospects, so treat it as adjacent evidence. Competitor audits are for seeing how others handle objections and positioning, never for copying.",
+     "section": "3. Review mining; 7. Competitor audits",
+     "date_sensitivity": "durable",
+     "limitations": "Stated as cautions without method detail. The '99%' and '90%' figures in the article are rhetorical, not measured."
+    }
+   ]
+  },
+  {
+   "id": "CH-03",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "How to use survey data to write a LFSP",
+   "author": "Anna Bolton (presenter) with Joanna Wiebe (host); no byline",
+   "canonical_url": "https://copyhackers.com/how-to-write-a-long-form-sales-page-using-survey-data/",
+   "retrieved_from": "https://copyhackers.com/how-to-write-a-long-form-sales-page-using-survey-data/",
+   "published": "2019-09-24",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Live tutorial with a video embed and a full transcript, which was read. The date is the 'presented live' date. A referenced Loom video on the theming method and the slide deck were not accessed.",
+   "sections_read": [
+    "How to use survey data to write a LFSP",
+    "TRANSCRIPT (full)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 3481,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-03-F1",
+     "kind": "reported_case",
+     "summary": "Recent buyers of a course were surveyed with 22 questions and skip logic. The questions covered how they experienced the problem, how it felt, desired results, what held them back, expectations and why it mattered. The reported response rate was 87%, at about 15 minutes per respondent. The presenter flagged that this engagement may be unusual.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "A highly engaged paid-member list. The response rate will not transfer to a small business's customers. The respondent count is not given."
+    },
+    {
+     "id": "CH-03-F2",
+     "kind": "author_guidance",
+     "summary": "Responses were themed by hand into these groups: problem, pain points, prior attempts, solution, short-term outcomes, buying triggers and objections. The presenter found spreadsheets awkward for qualitative coding.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Manual, single-analyst coding. No inter-rater check or counts were reported."
+    },
+    {
+     "id": "CH-03-F3",
+     "kind": "author_guidance",
+     "summary": "Survey themes map onto page sections. Problem and feeling answers drive the hook and intro. Prior-attempt and fear answers drive the agitation. Voiced objections become the FAQ, and the risk reducer is merged with a final confidence appeal. Before drafting, set the awareness stage plus one reader, one promise, one big idea and one offer.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Applied to a roughly 9,000-word page for a problem-aware audience. Short local-service pages need a compressed version."
+    },
+    {
+     "id": "CH-03-F4",
+     "kind": "author_guidance",
+     "summary": "Community-comment mining in marketer forums yielded less sincere language, because posts were self-promotional. The strongest hook was buried in the draft, and a lot of top-of-page copy was cut.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Anecdotal, from one project. No conversion figures for the page were given, only that the hosts were pleased with it."
+    }
+   ]
+  },
+  {
+   "id": "CH-04",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "We used these 3 copywriting principles on a home page. And doubled ecommerce revenue. (Case Study)",
+   "author": "Joanna Wiebe (Variation B written by Sam Woods)",
+   "canonical_url": "https://copyhackers.com/2016/06/copywriting-principles-sweatblock/",
+   "retrieved_from": "https://copyhackers.com/2016/06/copywriting-principles-sweatblock/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Text complete and not gated. No date on the page; the URL and image paths give 2016/06. The promised follow-up test is in a separate post that was not read. The page variations are images.",
+   "sections_read": [
+    "First, Here Are the 2 Home Page Variations We Tested",
+    "We started by eliminating the \"muddle\" with the help of a simple messaging hierarchy",
+    "The 10/90 Messaging Layout Rule",
+    "From there, we turned vague copy into specific copy",
+    "And, finally, we optimized the buttons to include \"calls to value\""
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2881,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-04-F1",
+     "kind": "author_guidance",
+     "summary": "Plan a page by answering three questions: what the visitor is thinking on arrival, what you want them to do, and what must change in their mind in between. Roughly the top tenth of the page should match the visitor's awareness and the message that brought them. The rest persuades.",
+     "section": "The 10/90 Messaging Layout Rule",
+     "date_sensitivity": "durable",
+     "limitations": "A heuristic, not a measured ratio."
+    },
+    {
+     "id": "CH-04-F2",
+     "kind": "author_guidance",
+     "summary": "The persuasive body should answer the prospect's own questions in order. The sequence runs from what this is, to why it matters to me, peer use, mechanism, life after, credibility, and finally the next step. The control page repeated proof and risk reducers at irrelevant points. The author calls the sequence a starting point, not a formula.",
+     "section": "We started by eliminating the muddle",
+     "date_sensitivity": "durable",
+     "limitations": "Paraphrased here. The sequence was derived from reasoning about the prospect, not from fresh research."
+    },
+    {
+     "id": "CH-04-F3",
+     "kind": "author_guidance",
+     "summary": "Visitors who are not yet ready to buy get buttons that state the benefit of continuing (calls to value). Ready visitors get buttons that state the step. Authority or influencer proof was moved from the opening toward the close, because early readers needed relevance first.",
+     "section": "And, finally, we optimized the buttons",
+     "date_sensitivity": "durable",
+     "limitations": "The author's hypothesis about what problem- and solution-aware visitors need. It was not isolated in the test."
+    },
+    {
+     "id": "CH-04-F4",
+     "kind": "reported_case",
+     "summary": "The rewritten home page reportedly produced 108% more paid conversions than the control. The headline frames this as doubled revenue. Because the variation had more buttons, the team judged the test on paid conversions, not clicks.",
+     "section": "Results (across sections)",
+     "date_sensitivity": "dated",
+     "limitations": "Vendor case study. No duration, sample size, split or significance is reported. Hierarchy, specificity and button changes were bundled, so no single principle can be credited. The metric wording (revenue vs conversions) is inconsistent. This is not a forecast."
+    }
+   ]
+  },
+  {
+   "id": "CH-05",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "How to edit for believability (Sweeps 3 + 4)",
+   "author": "Joanna Wiebe",
+   "canonical_url": "https://copyhackers.com/edit-believability-sweeps-3-4/",
+   "retrieved_from": "https://copyhackers.com/edit-believability-sweeps-3-4/",
+   "published": "2017-11-21",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Transcript of a live tutorial, read in full. It contains auto-caption errors. The screen-shared example page is not visible in the text, so the examples are known only from speech.",
+   "sections_read": [
+    "How to edit for believability (Sweeps 3 + 4)",
+    "TRANSCRIPT (full, including Q&A)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 6308,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-05-F1",
+     "kind": "author_guidance",
+     "summary": "So-what pass: read line by line as the prospect and ask why each statement matters to them. Flag lines that name a benefit without saying what it produces, and blocks that join two unrelated ideas. The editor highlights and the writer fixes.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Demonstrated on one SaaS page. No measured effect."
+    },
+    {
+     "id": "CH-05-F2",
+     "kind": "author_guidance",
+     "summary": "Prove-it pass comes after clarity and relevance are settled. Do not open with social proof. Match the proof type to the claim: ease claims need a demonstration of ease, results claims need data, and workflow claims need a view of the workflow. A generic screenshot proves nothing specific. Flag every claim that has no fitting proof.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Proof types listed include live-usage notifications, a tactic with authenticity risks if it is not real data."
+    },
+    {
+     "id": "CH-05-F3",
+     "kind": "author_guidance",
+     "summary": "Proof that a step is simple belongs before the reader commits to that step, not after.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Stated as guidance, not tested."
+    }
+   ]
+  },
+  {
+   "id": "CH-06",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "How to use the Zero Risk sweep (sweep #7)",
+   "author": "Joanna Wiebe",
+   "canonical_url": "https://copyhackers.com/the-zero-risk-sweep/",
+   "retrieved_from": "https://copyhackers.com/the-zero-risk-sweep/",
+   "published": "2018-05-22",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Transcript read. It has [inaudible] gaps and a dropped connection mid-session, with part of the talk lost. The example page highlights are not in the text. Could not verify whether the video replay needs a login.",
+   "sections_read": [
+    "How to use the Zero Risk sweep (sweep #7)",
+    "TRANSCRIPT (with gaps)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 3592,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-06-F1",
+     "kind": "author_guidance",
+     "summary": "First rate honestly how risky the decision feels to one prospect. Then consider five risk kinds: will it work, is it worth the cost (including an email address), will it fit my life without friction, will people I care about approve, and will I be satisfied. Pick the one that matters most rather than addressing all five.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "The risk taxonomy echoes older consumer perceived-risk research. Choosing the dominant risk is a judgement call unless research supports it."
+    },
+    {
+     "id": "CH-06-F2",
+     "kind": "author_guidance",
+     "summary": "Do not default to testimonials or a money-back guarantee. Match the reducer to the risk: a demo for will-it-work, a guarantee plus same-type testimonials for worth-it, and named peers or a count of similar users for approval. Removing content can also lower risk. Most risk reduction belongs near the conversion point, especially the CTA.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "The example count of similar users is illustrative. In ClimbOS any such count must be a confirmed fact."
+    },
+    {
+     "id": "CH-06-F3",
+     "kind": "author_guidance",
+     "summary": "The editing sweeps run as a loop that starts and ends with clarity and returns to it after other passes. The whole pass is described as about 30 minutes.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "The order is reconstructed from speech. The transcript has no formal list for sweeps 1 to 6, and the clarity tutorial itself has no transcript."
+    },
+    {
+     "id": "CH-06-F4",
+     "kind": "author_guidance",
+     "summary": "Worked example: for a team SaaS with a free trial, approval by colleagues was judged the first risk, will-it-work second, and worth-it low because the trial removes cost.",
+     "section": "TRANSCRIPT",
+     "date_sensitivity": "durable",
+     "limitations": "Reasoned prioritisation, not data-driven."
+    }
+   ]
+  },
+  {
+   "id": "CH-07",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "I spent 60+ hours analyzing onboarding emails for 127 SaaS trials. This is how the top SaaS retain users.",
+   "author": "Esther-Grace Okonkwo (editor: Joanna Wiebe)",
+   "canonical_url": "https://copyhackers.com/2024/01/i-spent-60-hours-analyzing-onboarding-emails-for-127-saas-trials-this-is-how-the-top-saas-retain-users/",
+   "retrieved_from": "https://copyhackers.com/2024/01/i-spent-60-hours-analyzing-onboarding-emails-for-127-saas-trials-this-is-how-the-top-saas-retain-users/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Text complete and not gated. No date on the page; the URL path gives 2024/01. Several charts are images, so their exact values could not be read. No downloadable dataset was offered.",
+   "sections_read": [
+    "Why do great-fit customers leave?",
+    "Customer retention starts with building a relationship.",
+    "1. Their inbox = your sales floor",
+    "2. Creating habits for a non-habit-forming product",
+    "3. Behavior-triggered emails",
+    "Phase 1: Optimizing onboarding for retention",
+    "Phase 2: What to do when a user is already at the 'churning point'",
+    "Now let's see the types of emails most companies sent me",
+    "So with everything I discovered, how would I optimize a SaaS email program for retention?"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 4448,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-07-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "One person signed up for 127 SaaS trials, mostly did not engage, and logged 1,012 emails, about 8 per trial. Reported shares: 85% sent a welcome email, 61% sent value emails (tips, reports, cases), 57% used behaviour-triggered emails, about half sent next-step emails, and only 9% sent a usage review.",
+     "section": "Now let's see the types of emails most companies sent me",
+     "date_sensitivity": "dated",
+     "limitations": "A convenience sample with unexplained selection. A single recipient who mostly ignored the emails, so engaged-user branches were rarely seen. The observation window is inconsistent (27 vs 28.5 days). Describes what companies send, not what works."
+    },
+    {
+     "id": "CH-07-F2",
+     "kind": "author_guidance",
+     "summary": "Onboarding emails should tell the trial user the next step, not every feature. Personalise on 'has done X, has not done Y' behaviour rather than first-name merge tags.",
+     "section": "Phase 1: Optimizing onboarding for retention",
+     "date_sensitivity": "durable",
+     "limitations": "Guidance, not tested in the study."
+    },
+    {
+     "id": "CH-07-F3",
+     "kind": "author_guidance",
+     "summary": "Recommended: usage-recap emails (what you did, what you missed), questions asking where the user got stuck instead of yes/no check-ins, and triggered flows when non-use appears. Non-use is described as preceding most cancellations in a cited third-party study.",
+     "section": "Phase 2: What to do when a user is already at the 'churning point'",
+     "date_sensitivity": "durable",
+     "limitations": "The churn link is cited secondhand (a vendor study) and was not verified. The external statistics in the article (open rates, retention cost multiples) are secondhand and should not be reused as facts."
+    }
+   ]
+  },
+  {
+   "id": "CH-08",
+   "family": "CH",
+   "publication": "Copyhackers blog",
+   "title": "Where do I start when I want to optimize an email automation?",
+   "author": "Joanna Wiebe",
+   "canonical_url": "https://copyhackers.com/2025/03/how-to-optimize-an-email/",
+   "retrieved_from": "https://copyhackers.com/2025/03/how-to-optimize-an-email/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Article text complete and not gated. No date on the page; the URL path gives 2025/03. The promised next stage (message-level heuristic analysis) is not in this article. The linked prompts, SOPs and workshops are paid or gated and were not accessed.",
+   "sections_read": [
+    "First, where not to start.",
+    "Where to start? Start with an audit of these two parts of the email automation.",
+    "What happens after you've created the map?",
+    "What gets a green circle?",
+    "What gets a red circle?",
+    "Then there are yellow circles for…",
+    "What happens once you've got a bunch of circles everywhere?",
+    "Finish what you started with a Report on Email Automation for your brand."
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1620,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "CH-08-F1",
+     "kind": "author_guidance",
+     "summary": "Do not start by rewriting or judging tone. Treat the existing emails as the control. First map the automation outside the email tool: triggers, branches, segments, action and inaction triggers, tags, lead-scoring links, and 'black holes' where a contact has no next step.",
+     "section": "Where to start?",
+     "date_sensitivity": "durable",
+     "limitations": "A process recommendation. No evidence on outcomes."
+    },
+    {
+     "id": "CH-08-F2",
+     "kind": "author_guidance",
+     "summary": "Record performance for each email: adjusted open rate, click rate, conversion rate, unsubscribe rate, and last-touch attributed revenue (lifetime and last 30 days). Colour-code: protect the standouts, fix the clear failures first, and queue cadence, segmentation and dead-end problems next.",
+     "section": "What gets a green/red/yellow circle?",
+     "date_sensitivity": "durable",
+     "limitations": "'Abnormally' high or low is not quantified. Last-touch attribution over-credits late emails."
+    },
+    {
+     "id": "CH-08-F3",
+     "kind": "dated_tactic",
+     "summary": "One red-flag rule given: a day-zero open rate under 40%. A missing double opt-in for new leads is also red.",
+     "section": "What gets a red circle?",
+     "date_sensitivity": "dated",
+     "limitations": "Opens are inflated by Apple Mail Privacy Protection. The author acknowledges this and asks for an adjusted rate without specifying the method. The threshold is unsourced."
+    },
+    {
+     "id": "CH-08-F4",
+     "kind": "platform_requirement",
+     "summary": "Sending-practice audit: DMARC, one-click opt-out, a real reply address rather than no-reply, CAN-SPAM/GDPR/CASL compliance, list hygiene date, sender-name trust, and domain reputation.",
+     "section": "Audit sending practices",
+     "date_sensitivity": "dated",
+     "limitations": "A checklist only. Exact mailbox-provider rules change and must be checked against current provider documentation."
+    },
+    {
+     "id": "CH-08-F5",
+     "kind": "reported_case",
+     "summary": "Illustration: one business had over 100,000 leads, about 3,000 customers and about 18,000 regular openers. That left roughly 79,000 leads with no clear status.",
+     "section": "Where to start?",
+     "date_sensitivity": "dated",
+     "limitations": "An anonymous single example used to illustrate black holes, not a benchmark."
+    }
+   ]
+  },
+  {
+   "id": "DS-01",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "SaaS Metrics 2.0 – A Guide to Measuring and Improving What Matters",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-metrics-2/",
+   "retrieved_from": "https://www.forentrepreneurs.com/saas-metrics-2/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from 2012–2013, an 'Update 05/2016' note points to the newer LTV article, and a linked spreadsheet is dated 4/16/2020. The site footer reads ©2000-2021. The article was probably first published around 2013 and amended later.",
+   "sections_read": [
+    "The SaaS P&L / Cash Flow Trough",
+    "Is your SaaS business viable?",
+    "Three uses for the SaaS Guidelines",
+    "The Importance of Customer Retention (Churn)",
+    "The Power of Negative Churn",
+    "Revenue Churn vs Customer Churn",
+    "Getting paid in advance",
+    "Calculating CAC and LTV",
+    "More on Churn: Cohort Analysis",
+    "Guidelines for Churn",
+    "The Importance of Customer Segmentation"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 7891,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-01-F1",
+     "kind": "author_guidance",
+     "summary": "Viability comes down to two unit-economics tests: is a customer worth clearly more than they cost to acquire, and how many months does it take to earn the acquisition cost back? The second also governs how much capital growth needs.",
+     "section": "Is your SaaS business viable?",
+     "date_sensitivity": "durable",
+     "limitations": "The tests are framed for venture-backed SaaS. The page itself gives no formula; the formulas are in the definitions supplement (DS-02)."
+    },
+    {
+     "id": "DS-01-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Rules of thumb: LTV above 3× CAC, with top companies at 7–8×. The best companies recover CAC in about 5–7 months, and profitability becomes weak once recovery passes 12 months. Large companies with cheap capital can tolerate longer recovery; startups usually cannot.",
+     "section": "Is your SaaS business viable?",
+     "date_sensitivity": "dated",
+     "limitations": "This is the author's practitioner guidance from about 2011–2013 for venture-backed SaaS with gross margins above 80%, not a survey. The 12-month figure was later relaxed (DS-02-F6, DS-03-F6)."
+    },
+    {
+     "id": "DS-01-F3",
+     "kind": "author_guidance",
+     "summary": "CAC must count all sales and marketing cost, including headcount and programmes that look free, with no exclusions. Segment-level CAC needs explicit allocation rules applied the same way every period. Founders usually underestimate CAC.",
+     "section": "Calculating CAC and LTV / Importance of Customer Segmentation",
+     "date_sensitivity": "durable",
+     "limitations": "The page credits the HubSpot practice it cites to a HubSpot executive. It does not mention founder or owner time explicitly."
+    },
+    {
+     "id": "DS-01-F4",
+     "kind": "formula",
+     "summary": "Customer churn and revenue churn can diverge sharply when customers differ in size, so track both. Net revenue churn nets expansion from remaining customers against revenue lost.",
+     "section": "Revenue Churn vs Customer Churn",
+     "date_sensitivity": "durable",
+     "limitations": "The page illustrates this with one mixed-size example and gives no general correction."
+    },
+    {
+     "id": "DS-01-F5",
+     "kind": "author_guidance",
+     "summary": "Negative churn means expansion from existing customers exceeds revenue lost to cancellations, so the base grows without new customers. The page names two routes: usage or seat-based pricing on a variable axis, and upsell or cross-sell to higher tiers or add-on modules.",
+     "section": "The Power of Negative Churn",
+     "date_sensitivity": "durable",
+     "limitations": "It needs a product with a natural expansion axis, which many small local service businesses lack."
+    },
+    {
+     "id": "DS-01-F6",
+     "kind": "author_guidance",
+     "summary": "Cohort analysis groups customers by start month and tracks them by count and by revenue at the same age. It shows whether churn concentrates early, whether it flattens, and whether a fix improved newer cohorts.",
+     "section": "More on Churn: Cohort Analysis",
+     "date_sensitivity": "durable",
+     "limitations": "Cohorts need months of data and enough customers per cohort to be readable."
+    },
+    {
+     "id": "DS-01-F7",
+     "kind": "survey_or_benchmark",
+     "summary": "Monthly net revenue churn above about 2% is treated as a sign of a fundamental problem to fix before investing in growth.",
+     "section": "Guidelines for Churn",
+     "date_sensitivity": "dated",
+     "limitations": "This is guidance for venture-backed SaaS, not SMB-sold or local businesses. The negative-churn article (DS-06-F5) concedes that small-business churn is structurally higher."
+    },
+    {
+     "id": "DS-01-F8",
+     "kind": "author_guidance",
+     "summary": "Upfront payment, such as annual billing with a discount, eases the cash trough and often lowers churn. Demanding too much upfront can cost bookings, so the trade-off has to be tested. The page tracks this as 'months up front'.",
+     "section": "Getting paid in advance",
+     "date_sensitivity": "durable",
+     "limitations": "Discount size and the effect on bookings vary by business."
+    },
+    {
+     "id": "DS-01-F9",
+     "kind": "author_guidance",
+     "summary": "Subscription businesses show early losses because acquisition is paid up front and recovered over months. Faster bookings growth deepens the cash trough even when the unit economics are good.",
+     "section": "The SaaS P&L / Cash Flow Trough",
+     "date_sensitivity": "durable",
+     "limitations": "The page shows this only through charts. The model is in DS-07."
+    }
+   ]
+  },
+  {
+   "id": "DS-02",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "SaaS Metrics 2.0 – Detailed Definitions",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-metrics-2-definitions-2/",
+   "retrieved_from": "https://www.forentrepreneurs.com/saas-metrics-2-definitions-2/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image uploads date from 2012–2013, 2016 and 2020, and the text says the 12-month payback guideline was written in 2011. Most formulas are images, so their exact symbolic form was not read. The older URL /saas-metrics-2-definitions/ was also fetched and returned the same supplement in an earlier revision; one summary of it named no author.",
+   "sections_read": [
+    "CAC",
+    "Customer lifetime",
+    "LTV (simple, gross-margin, expansion)",
+    "LTV:CAC",
+    "Months to recover CAC",
+    "Sales efficiency / Magic Number",
+    "MRR / ARR / Net New ARR / bookings / billings / revenue",
+    "Churn, renewal, NRR"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 3484,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-02-F1",
+     "kind": "formula",
+     "summary": "With constant churn a cohort decays exponentially, and average lifetime is 1/churn, with churn and lifetime in the same period.",
+     "section": "Customer lifetime",
+     "date_sensitivity": "durable",
+     "limitations": "This assumes constant (memoryless) churn. Annual contracts and early-life churn break that assumption."
+    },
+    {
+     "id": "DS-02-F2",
+     "kind": "formula",
+     "summary": "Simple LTV is ARPA divided by churn, using the same period for both. The gross-margin version multiplies by gross margin. The expansion version takes initial ARPA × GM (a), monthly dollar growth in ARPA × GM (m) and monthly customer churn (c), and assumes constant growth for life.",
+     "section": "LTV",
+     "date_sensitivity": "durable",
+     "limitations": "The author says the expansion model's constant-growth assumption rarely holds. The formula images were not readable, so the closed form in DS-FX7 is the widely cited form of this formula, not verified in this session."
+    },
+    {
+     "id": "DS-02-F3",
+     "kind": "dated_tactic",
+     "summary": "The LTV:CAC > 3 guideline assumes the simple LTV without gross margin and a gross margin of 80% or more. The trend over time matters more than any single reading.",
+     "section": "LTV:CAC",
+     "date_sensitivity": "dated",
+     "limitations": "The threshold does not carry over to low-margin businesses or to a gross-margin-adjusted LTV."
+    },
+    {
+     "id": "DS-02-F4",
+     "kind": "formula",
+     "summary": "Months to recover CAC is the months of a new customer's revenue needed to repay CAC. The text says including the gross-margin adjustment makes it fully accurate.",
+     "section": "Months to recover CAC",
+     "date_sensitivity": "durable",
+     "limitations": "The exact formula is an image. Symbolically it is CAC / (new-customer MRR × GM%), consistent with the text; the image itself was not read."
+    },
+    {
+     "id": "DS-02-F5",
+     "kind": "formula",
+     "summary": "Sales efficiency is gross or net new ARR divided by the previous quarter's sales and marketing spend, lagged because deals take time to close. Ignoring gross margin, efficiency 1 equals 12 months to recover CAC and 0.5 equals 24 months. The author prefers months to recover CAC because it includes gross margin. The Magic Number ignores both gross margin and the services-revenue mix.",
+     "section": "Sales efficiency / Magic Number",
+     "date_sensitivity": "durable",
+     "limitations": "This is a company-level aggregate, not per channel."
+    },
+    {
+     "id": "DS-02-F6",
+     "kind": "dated_tactic",
+     "summary": "The payback guideline was originally under 12 months (written in 2011). The author later said about 20 months is reasonable for enterprise land-and-expand companies and that under 12 is rare in practice.",
+     "section": "Months to recover CAC",
+     "date_sensitivity": "dated",
+     "limitations": "Both figures reflect the venture-capital conditions of their time."
+    },
+    {
+     "id": "DS-02-F7",
+     "kind": "formula",
+     "summary": "The page defines MRR roll-forward and Net New ARR = New + Expansion − Churned. % net MRR churn = % MRR churn − % MRR expansion, and a negative value is the goal. NRR is a cohort's value a year later, including expansion and churn, divided by its starting value.",
+     "section": "Bookings / churn / NRR",
+     "date_sensitivity": "durable",
+     "limitations": "NRR needs revenue tracked per customer per month."
+    },
+    {
+     "id": "DS-02-F8",
+     "kind": "author_guidance",
+     "summary": "Early on, churn can look low because contracts have not yet come up for renewal, so renewal rate is the better guide. Losing a few large customers can matter as much as losing many small ones.",
+     "section": "Renewal rate",
+     "date_sensitivity": "durable",
+     "limitations": "This applies mainly to term contracts."
+    },
+    {
+     "id": "DS-02-F9",
+     "kind": "survey_or_benchmark",
+     "summary": "Most public SaaS companies were described as having NRR of 120% or more, which is growth from existing customers alone.",
+     "section": "NRR",
+     "date_sensitivity": "dated",
+     "limitations": "The figure covers public SaaS at one point in time, not small businesses."
+    },
+    {
+     "id": "DS-02-F10",
+     "kind": "author_guidance",
+     "summary": "Early teams include expensive people who will later serve many customers. The author suggests counting only part of their cost to estimate CAC at scale.",
+     "section": "CAC",
+     "date_sensitivity": "durable",
+     "limitations": "This is right for a team that will scale. It is wrong for an owner-operator whose own hours stay a real cost per customer."
+    },
+    {
+     "id": "DS-02-F11",
+     "kind": "formula",
+     "summary": "Bookings, billings and revenue are distinct. Prepaid but unrecognised amounts sit in deferred revenue. Bookings alone mislead when contract lengths are mixed.",
+     "section": "Bookings / billings / revenue",
+     "date_sensitivity": "durable",
+     "limitations": "These are accounting definitions; local rules may differ."
+    }
+   ]
+  },
+  {
+   "id": "DS-03",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "What's your TRUE customer lifetime value (LTV)? – DCF provides the answer",
+   "author": "David Skok (with Stan Reiss)",
+   "canonical_url": "https://www.forentrepreneurs.com/ltv/",
+   "retrieved_from": "https://www.forentrepreneurs.com/ltv/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. A spreadsheet note is dated 2/23/16, and DS-01 points to it as the 05/2016 replacement, so it was probably published around May 2016. The DCF formulas and LTV tables are images and were not read.",
+   "sections_read": [
+    "Problem with simple LTV",
+    "Negative churn and infinite LTV",
+    "DCF and discount rate",
+    "Formulas (described)",
+    "CORE / gross margin",
+    "Cohort data and real-world model",
+    "Limitations",
+    "Using LTV"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 4208,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-03-F1",
+     "kind": "author_guidance",
+     "summary": "Simple LTV (gross profit per account ÷ churn) breaks down when customers stay very long or when net churn is negative: the value becomes unbounded, which is not realistic.",
+     "section": "Problem with simple LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None. This is a mathematical property."
+    },
+    {
+     "id": "DS-03-F2",
+     "kind": "formula",
+     "summary": "The fix is to discount future gross profit with DCF. The suggested default rate is 10% for comparability, with rough ranges of about 15% for predictable private scale-ups and 20–25% for early-stage companies. The model uses a residual value for years beyond the observed data.",
+     "section": "DCF",
+     "date_sensitivity": "dated",
+     "limitations": "These rates reflect the 2016 cost of capital. The structure is durable; the numbers are not."
+    },
+    {
+     "id": "DS-03-F3",
+     "kind": "author_guidance",
+     "summary": "Costs of retention and expansion (CORE), such as account managers and expansion sales, belong in gross margin on the LTV side, not in CAC.",
+     "section": "CORE / gross margin",
+     "date_sensitivity": "durable",
+     "limitations": "This needs a cost split that small owners may not track."
+    },
+    {
+     "id": "DS-03-F4",
+     "kind": "author_guidance",
+     "summary": "Build LTV from cohort data: revenue per customer per month, cohorts overlaid at month 0, and customers tagged by segment. Accuracy in the first one to two years matters most, because discounting shrinks the effect of later years.",
+     "section": "Cohort data",
+     "date_sensitivity": "durable",
+     "limitations": "This needs billing history."
+    },
+    {
+     "id": "DS-03-F5",
+     "kind": "author_guidance",
+     "summary": "Known limitations: churn is not always exponential (annual contracts churn at renewal), expansion is rarely linear, gross margin changes with scale, and discounting revenue penalises companies that bill annually in advance.",
+     "section": "Limitations",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-03-F6",
+     "kind": "dated_tactic",
+     "summary": "The payback target is unchanged: 12 months, or 18 months or more if capital is plentiful. DCF lowers LTV, so the earlier 3× LTV:CAC threshold would need revising, and this article does not give a new number.",
+     "section": "Using LTV",
+     "date_sensitivity": "dated",
+     "limitations": "Tied to capital-market conditions in 2016."
+    },
+    {
+     "id": "DS-03-F7",
+     "kind": "author_guidance",
+     "summary": "Use LTV to compare segments and find levers, not as a precise forecast. CAC and LTV only mean something once acquisition is repeatable; before product-market fit, fix fit first.",
+     "section": "Using LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    }
+   ]
+  },
+  {
+   "id": "DS-04",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "Startup Killer: the Cost of Customer Acquisition",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/startup-killer/",
+   "retrieved_from": "https://www.forentrepreneurs.com/startup-killer/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from December 2009, so it was probably published around 2009–2010.",
+   "sections_read": [
+    "Core argument",
+    "Computing CAC",
+    "LTV",
+    "Rules of thumb",
+    "Why CAC is underestimated",
+    "Numeric examples (funnel, human touch, field sales)",
+    "Planning guidance",
+    "Ways to reduce CAC"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2876,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-04-F1",
+     "kind": "author_guidance",
+     "summary": "Many failed startups had product-market fit but could not acquire customers for less than they were worth. A viable business model is a fourth success factor alongside team, product and market.",
+     "section": "Core argument",
+     "date_sensitivity": "durable",
+     "limitations": "The author bases this on his own observation of startups, not on a systematic study."
+    },
+    {
+     "id": "DS-04-F2",
+     "kind": "formula",
+     "summary": "CAC is total sales and marketing spend in a period, including salaries and headcount costs, divided by customers acquired in that period. For web businesses whose headcount does not grow with customers, the author says a CAC without headcount is also useful.",
+     "section": "Computing CAC",
+     "date_sensitivity": "durable",
+     "limitations": "Founder time is not addressed. Same-period matching ignores lag."
+    },
+    {
+     "id": "DS-04-F3",
+     "kind": "formula",
+     "summary": "LTV is gross margin over the customer relationship, net of support, installation and servicing costs.",
+     "section": "LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-04-F4",
+     "kind": "dated_tactic",
+     "summary": "Original rules: LTV about 3× CAC, with some public SaaS near 5×, and CAC recovered in under 12 months or growth needs too much capital. Banks and carriers ignore the payback rule because capital is cheap for them.",
+     "section": "Rules of thumb",
+     "date_sensitivity": "dated",
+     "limitations": "Written for venture-backed software around 2009. The author's context is capital scarcity."
+    },
+    {
+     "id": "DS-04-F5",
+     "kind": "author_guidance",
+     "summary": "Media CAC from a funnel is cost per click ÷ (product of conversion rates). Adding human follow-up raises CAC sharply, and field sales adds more again. Build a CAC sensitivity model before launch and measure conversion rates early.",
+     "section": "Numeric examples / Planning guidance",
+     "date_sensitivity": "durable",
+     "limitations": "The page's dollar figures date from 2009 and are not reused here."
+    },
+    {
+     "id": "DS-04-F6",
+     "kind": "author_guidance",
+     "summary": "To reduce CAC: raise conversion rates through testing, and cut human touch with demo videos, published answers to objections, references, comparison pages and touchless conversion. High-touch sales can be restructured through OEM, channel or inside sales.",
+     "section": "Ways to reduce CAC",
+     "date_sensitivity": "durable",
+     "limitations": "Some tactics are specific to B2B software."
+    }
+   ]
+  },
+  {
+   "id": "DS-05",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "How Sales Complexity Impacts your Startup's Viability",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/sales-complexity/",
+   "retrieved_from": "https://www.forentrepreneurs.com/sales-complexity/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from April 2010, and the text cites 2009 results, so it was probably published in 2010. The zone charts are images.",
+   "sections_read": [
+    "Sales complexity categories",
+    "CAC vs complexity",
+    "What drives complexity",
+    "LTV must exceed CAC",
+    "Zone system",
+    "Reducing complexity",
+    "Low Cost Sales Model"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 4756,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-05-F1",
+     "kind": "author_guidance",
+     "summary": "Sales models run from freemium and no-touch self-service, through light-touch and high-touch inside sales, to field sales; channel sales is treated separately. CAC rises roughly exponentially, about an order of magnitude per step between models, on the author's rough cost estimates.",
+     "section": "CAC vs complexity",
+     "date_sensitivity": "durable",
+     "limitations": "The author calls the estimates rough and the trend more reliable than the levels. No dollar figures appear in the text."
+    },
+    {
+     "id": "DS-05-F2",
+     "kind": "author_guidance",
+     "summary": "Customer value, pain and urgency set what buyers will pay, and therefore LTV. A product whose value sits below the CAC line for its sales complexity falls in an 'unprofitable zone' where price cannot cover even sales and marketing.",
+     "section": "LTV must exceed CAC / Zones",
+     "date_sensitivity": "durable",
+     "limitations": "No numeric thresholds are given for the line."
+    },
+    {
+     "id": "DS-05-F3",
+     "kind": "author_guidance",
+     "summary": "Complexity drivers include hard evaluation or installation, several approvers, mission-critical risk, slow payback for the buyer, cross-department impact, workflow change, required integrations, no references, confusing pricing and custom contracts.",
+     "section": "What drives complexity",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    },
+    {
+     "id": "DS-05-F4",
+     "kind": "author_guidance",
+     "summary": "The main way to reduce complexity is product and offer redesign: SaaS delivery, free trials, freemium, easier evaluation, web content that answers objections, and partners. Switching to a cheaper channel alone is not enough.",
+     "section": "Reducing complexity",
+     "date_sensitivity": "durable",
+     "limitations": "The examples are 2000s software companies."
+    },
+    {
+     "id": "DS-05-F5",
+     "kind": "reported_case",
+     "summary": "Low-cost sales models (web marketing plus touchless or inside sales) made the SMB market viable and undercut field-sales incumbents, per the companies the author cites.",
+     "section": "Low Cost Sales Model",
+     "date_sensitivity": "dated",
+     "limitations": "These are selected portfolio and peer examples, not a representative sample."
+    }
+   ]
+  },
+  {
+   "id": "DS-06",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "Unlocking the Path to Negative Churn",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/why-churn-is-critical-in-saas/",
+   "retrieved_from": "https://www.forentrepreneurs.com/why-churn-is-critical-in-saas/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from May 2012, so it was probably published in May 2012. The scenario charts are images.",
+   "sections_read": [
+    "Why churn matters",
+    "How churn limits size",
+    "Negative churn",
+    "Ways to achieve it",
+    "Sales organisation",
+    "When to prioritise",
+    "Tactics to reduce churn",
+    "Small business considerations",
+    "Churn and valuation"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2060,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-06-F1",
+     "kind": "author_guidance",
+     "summary": "A constant churn percentage turns into ever-larger dollar losses as the base grows, so new bookings have to keep rising just to stand still. Growth flattens.",
+     "section": "How churn limits size",
+     "date_sensitivity": "durable",
+     "limitations": "The page shows this only through simulations."
+    },
+    {
+     "id": "DS-06-F2",
+     "kind": "author_guidance",
+     "summary": "In the author's simulation, modest monthly expansion beats eliminating churn: zero churn lifts the end-state well above the churn case, and net expansion lifts it far more.",
+     "section": "Negative churn",
+     "date_sensitivity": "durable",
+     "limitations": "This is a single illustrative model, not empirical data."
+    },
+    {
+     "id": "DS-06-F3",
+     "kind": "author_guidance",
+     "summary": "Track net bookings as three parts: new, expansion and churn. Consider separating new-logo selling from expansion and account-management roles.",
+     "section": "Tracking / Sales org",
+     "date_sensitivity": "durable",
+     "limitations": "Role separation assumes a sales team."
+    },
+    {
+     "id": "DS-06-F4",
+     "kind": "author_guidance",
+     "summary": "Tactics to reduce churn: call churned customers, ideally the CEO; score engagement to flag at-risk accounts; identify sticky features; put strong reps on saves; test longer contracts; and look for churn correlated with segment, size or lead source.",
+     "section": "Tactics to reduce churn",
+     "date_sensitivity": "durable",
+     "limitations": "Contract length trades churn against conversion, so the balance has to be tested."
+    },
+    {
+     "id": "DS-06-F5",
+     "kind": "author_guidance",
+     "summary": "Churn is structurally harder with small-business customers, who fail and cut costs more often, and their budget limits make negative churn harder.",
+     "section": "Small business considerations",
+     "date_sensitivity": "durable",
+     "limitations": "None. This applies directly to ClimbOS's users and their customers."
+    },
+    {
+     "id": "DS-06-F6",
+     "kind": "survey_or_benchmark",
+     "summary": "The page cites a public-market analysis: growth is the top valuation driver, with retention and upsell strong secondary drivers. A few points of retention or upsell were associated with materially higher revenue multiples.",
+     "section": "Churn and valuation",
+     "date_sensitivity": "dated",
+     "limitations": "Secondary citation from the early 2010s, about public SaaS valuations. It does not apply to small-business operations."
+    }
+   ]
+  },
+  {
+   "id": "DS-07",
+   "family": "DS",
+   "publication": "For Entrepreneurs",
+   "title": "SaaS Economics – Part 1: The SaaS Cash Flow Trough",
+   "author": "David Skok",
+   "canonical_url": "https://www.forentrepreneurs.com/saas-economics-1/",
+   "retrieved_from": "https://www.forentrepreneurs.com/saas-economics-1/",
+   "published": null,
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read through WebFetch, which returns the page text after a summarising pass, so this counts as partial access. Formulas and charts embedded as images could not be read. A direct HTML request hit a Cloudflare challenge, so it was not used. The page shows no publication date, and the date is inferred. Image paths are from December 2010, and a linked model file is dated February 2017, so the attachments were probably replaced later. Charts are images. The model is built around one sales hire, not one customer. Part 2, which covers growth and annual prepayment, was not read.",
+   "sections_read": [
+    "Cash flow trough for a single sales hire",
+    "MRR components",
+    "Lead costs, CAC and LTV",
+    "CAC recovery",
+    "Upfront payment (deferred to Part 2)"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 1653,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "DS-07-F1",
+     "kind": "author_guidance",
+     "summary": "Acquisition cost arrives before recurring gross profit, so cumulative cash dips into a trough before recovering. Recovery is where cumulative gross profit, after gross margin, crosses cumulative acquisition spend.",
+     "section": "Cash flow trough",
+     "date_sensitivity": "durable",
+     "limitations": "The example is for one sales hire. The author warns that its numbers vary greatly between businesses."
+    },
+    {
+     "id": "DS-07-F2",
+     "kind": "formula",
+     "summary": "The MRR roll-forward is MRR(t) = MRR(t−1) + new − churned. Cash position is the running sum of gross profit minus sales and marketing spend.",
+     "section": "MRR components",
+     "date_sensitivity": "durable",
+     "limitations": "This ignores billing timing, which Part 2 covers."
+    },
+    {
+     "id": "DS-07-F3",
+     "kind": "author_guidance",
+     "summary": "Marketing spend to feed sales capacity is significant and often overlooked. The model's CAC excludes marketing staff and sales management, and those must be added for a full cost.",
+     "section": "Lead costs, CAC and LTV",
+     "date_sensitivity": "durable",
+     "limitations": "None."
+    }
+   ]
+  },
+  {
+   "id": "EXP-01",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Patterns of Trustworthy Experimentation: Pre-Experiment Stage",
+   "author": "Widad Machmouchi, Somit Gupta, Ruhan Zhang, Aleksander Fabijan",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-pre-experiment-stage/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-pre-experiment-stage/",
+   "published": "2020-07-31",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Fetched via the group path /research/group/experimentation-platform-exp/articles/...; the listing page gives the /research/articles/ form used here. Read via WebFetch, so text came through a summarizer; no verbatim quotes used.",
+   "sections_read": [
+    "Forming a hypothesis and selecting users",
+    "Pre-experiment engineering design",
+    "Pre-validation by progressing through populations"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 4253,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-01-F1",
+     "kind": "author_guidance",
+     "summary": "Keep each hypothesis simple and falsifiable with the metrics chosen; split a compound change into parts with their own hypotheses. A claim with no metric that could disprove it fails.",
+     "section": "Formulate the hypothesis and success metrics",
+     "date_sensitivity": "durable",
+     "limitations": "No worked numbers."
+    },
+    {
+     "id": "EXP-01-F2",
+     "kind": "author_guidance",
+     "summary": "Every test carries a standard metric set (satisfaction, guardrail, feature/engagement, data quality), and a power calculation sets the minimum number of affected units before traffic is allocated.",
+     "section": "Formulate the hypothesis and success metrics",
+     "date_sensitivity": "durable",
+     "limitations": "No power or sample-size values given."
+    },
+    {
+     "id": "EXP-01-F3",
+     "kind": "author_guidance",
+     "summary": "Check for pre-period bias: compare arms on the same metric in the period before the test (retrospective A/A). A significant pre-period gap makes a borderline in-test result suspect. It is an indicator, not proof.",
+     "section": "Check and account for pre-experiment bias",
+     "date_sensitivity": "durable",
+     "limitations": "Needs per-unit history for the same units; seed search over a couple hundred seeds is Microsoft-scale tooling."
+    },
+    {
+     "id": "EXP-01-F4",
+     "kind": "author_guidance",
+     "summary": "When only some users can be affected, log in control which users would have been affected (counterfactual logging) so the comparison is like-for-like; verify it with SRM.",
+     "section": "Set up counterfactual logging",
+     "date_sensitivity": "durable",
+     "limitations": "Requires engineering control of both arms; Bing weather example only."
+    },
+    {
+     "id": "EXP-01-F5",
+     "kind": "reported_case",
+     "summary": "Microsoft News: a configuration error removed the search box from both variants of a custom control; it showed only when compared with a standard control that ran no experiment code.",
+     "section": "Use both a custom control and a standard control",
+     "date_sensitivity": "durable",
+     "limitations": "Single case; standard control costs traffic a small business does not have."
+    },
+    {
+     "id": "EXP-01-F6",
+     "kind": "author_guidance",
+     "summary": "Ramp exposure in steps (example 1%, 5%, 10%, then target) and compute metrics at each step; start with dogfood/beta users but treat their result as a milestone, not proof.",
+     "section": "Gradual rollout",
+     "date_sensitivity": "durable",
+     "limitations": "At low traffic a 1% stage has almost no power; only the safety purpose transfers."
+    }
+   ]
+  },
+  {
+   "id": "EXP-02",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Patterns of Trustworthy Experimentation: During-Experiment Stage",
+   "author": "Widad Machmouchi, Somit Gupta, Ruhan Zhang",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-during-experiment-stage/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-during-experiment-stage/",
+   "published": "2021-01-25",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Full page read via WebFetch. A second URL (?p=720145) resolved to the same article.",
+   "sections_read": [
+    "Measure holistically and frequently",
+    "Monitor metrics to intervene when needed",
+    "Slice the analysis with appropriate segments"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2813,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-02-F1",
+     "kind": "author_guidance",
+     "summary": "Four metric types per test: data quality (incl. SRM), OEC/goal, local feature/diagnostic, guardrail (things that must not get worse, e.g. load time, crashes, abandonment).",
+     "section": "Capture unexpected effects early with a complete metric set",
+     "date_sensitivity": "durable",
+     "limitations": "Examples are product telemetry, not small-business funnels."
+    },
+    {
+     "id": "EXP-02-F2",
+     "kind": "author_guidance",
+     "summary": "Measure a small critical set early and often, but early looks need stricter significance; without very clear movement, wait for the planned end and read the result then.",
+     "section": "Measure early and often",
+     "date_sensitivity": "durable",
+     "limitations": "No stated early-look alpha."
+    },
+    {
+     "id": "EXP-02-F3",
+     "kind": "author_guidance",
+     "summary": "Alert on guardrails and goal metrics using a large movement, a low p-value, or both; alert on SRM early because it usually invalidates the test; auto-stop tests that badly hurt users.",
+     "section": "Set up alerts / Auto-shutdown",
+     "date_sensitivity": "durable",
+     "limitations": "No numeric thresholds in this article."
+    },
+    {
+     "id": "EXP-02-F4",
+     "kind": "reported_case",
+     "summary": "A Bing test with a bug served a 404 page; automatic shutdown limited the harm.",
+     "section": "Auto-shutdown egregious A/B tests",
+     "date_sensitivity": "durable",
+     "limitations": "Anecdote; no magnitudes."
+    },
+    {
+     "id": "EXP-02-F5",
+     "kind": "author_guidance",
+     "summary": "Use segments the treatment cannot change (country, browser, pre-test activity). If the whole test has no SRM, each static segment should also be SRM-free; dynamic segments (e.g. activity buckets) can shift under treatment.",
+     "section": "Use segments that are stable during the test",
+     "date_sensitivity": "durable",
+     "limitations": "Per-segment SRM needs volume per segment."
+    },
+    {
+     "id": "EXP-02-F6",
+     "kind": "reported_case",
+     "summary": "Microsoft News swapped a button and saw a 28% rise in clicks, but a by-date view showed clicks falling day over day (novelty), and the change did not ship. Segment every analysis by date: steady decline suggests novelty; a one-day spike suggests a data problem or a one-off event.",
+     "section": "Segment by date",
+     "date_sensitivity": "durable",
+     "limitations": "Daily granularity assumes enough daily volume; small businesses may need weekly buckets."
+    }
+   ]
+  },
+  {
+   "id": "EXP-03",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Patterns of Trustworthy Experimentation: Post-Experiment Stage",
+   "author": "Widad Machmouchi, Somit Gupta",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-post-experiment-stage/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/patterns-of-trustworthy-experimentation-post-experiment-stage/",
+   "published": "2021-12-24",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Not linked from the during-experiment article; found by search and the listing page 2.",
+   "sections_read": [
+    "Verify treatment effects do not invalidate metrics",
+    "Estimate the final impact of the treatment",
+    "Close the loop on experiment results"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 4123,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-03-F1",
+     "kind": "author_guidance",
+     "summary": "Before reading behaviour metrics, confirm the setup: counts match the allocation, everyone in the analysis is in the target audience, and the movements the change must cause (e.g. coverage of a new element) actually appear.",
+     "section": "Ensure metric movements align with the test set-up",
+     "date_sensitivity": "durable",
+     "limitations": "Checklist, no thresholds."
+    },
+    {
+     "id": "EXP-03-F2",
+     "kind": "reported_case",
+     "summary": "Skype: treatment improved call-logging reliability and control did not, so metric movements reflected logging, not behaviour. Compute data-quality metrics on every test to catch telemetry changes that differ by arm.",
+     "section": "Check for telemetry-breaking changes",
+     "date_sensitivity": "durable",
+     "limitations": "Single case."
+    },
+    {
+     "id": "EXP-03-F3",
+     "kind": "reported_case",
+     "summary": "Metric-level SRM: in an MSN test treatment drove more homepage loads, the extra loads were slow, and page load time looked worse. A test-level SRM pass does not clear each metric's denominator.",
+     "section": "Check for imbalance in metric observation units",
+     "date_sensitivity": "durable",
+     "limitations": "Detection method described qualitatively."
+    },
+    {
+     "id": "EXP-03-F4",
+     "kind": "author_guidance",
+     "summary": "Triggered analysis (only users the change could affect) gains sensitivity but needs full recall of affected users, no SRM in the triggered set, and a flat triggered-complement; the triggered effect must then be diluted by the trigger rate before claiming a site-wide impact.",
+     "section": "Segment by triggered users / Dilute gains",
+     "date_sensitivity": "durable",
+     "limitations": "Ratio-metric dilution needs a regression method the article only cites."
+    },
+    {
+     "id": "EXP-03-F5",
+     "kind": "author_guidance",
+     "summary": "Clear ship: goal up (or flat in a well-powered test) and guardrails neutral or better. Mixed results (goal up, guardrail down) need trade-off weights set in advance from business direction, not per test.",
+     "section": "Trade off observed metric movements",
+     "date_sensitivity": "durable",
+     "limitations": "No standard weights."
+    },
+    {
+     "id": "EXP-03-F6",
+     "kind": "reported_case",
+     "summary": "Bing: a low-engagement filter change showed a surprising significant satisfaction gain; a re-randomized rerun with more traffic was flat. Surprising results should be reproduced before acting; archive hypotheses and results for later meta-analysis.",
+     "section": "When in doubt, reproduce results / Archive",
+     "date_sensitivity": "durable",
+     "limitations": "Rerun cost is low at Bing scale; for a small business a rerun can take months."
+    }
+   ]
+  },
+  {
+   "id": "EXP-04",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Diagnosing Sample Ratio Mismatch in A/B Testing",
+   "author": "Aleksander Fabijan, Vaibhav Kumar Bajpai, Trevor Blanarik, Max Caughron, Kewei Chen, Ruhan Zhang, Adam Gustafson, Venkata Kavitha Budumuri, Stephen Hunt",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/diagnosing-sample-ratio-mismatch-in-a-b-testing/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/diagnosing-sample-ratio-mismatch-in-a-b-testing/",
+   "published": "2020-09-14",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Fetched via the group path; the listing gives the /research/articles/ form. No numeric chi-square worked example in the article.",
+   "sections_read": [
+    "Definition",
+    "Frequency",
+    "Taxonomy of causes",
+    "Detection",
+    "Differential diagnosis",
+    "Tooling",
+    "Examples"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2974,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-04-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "About 6% of Microsoft A/B tests have an SRM; LinkedIn reported about 10% of triggered (zoomed-in) tests affected.",
+     "section": "Frequency",
+     "date_sensitivity": "dated",
+     "limitations": "Platform-specific rates; a small business with hand-built splits may see more."
+    },
+    {
+     "id": "EXP-04-F2",
+     "kind": "platform_requirement",
+     "summary": "Every Microsoft test must pass a chi-square SRM check on raw unit counts before any effect is read; ExP flags at p < 0.0005, chosen to limit false alarms, noting real SRMs are usually far below it.",
+     "section": "Detection",
+     "date_sensitivity": "durable",
+     "limitations": "Threshold tuned for thousands of tests a year; at a few hundred units a real skew can sit above it."
+    },
+    {
+     "id": "EXP-04-F3",
+     "kind": "author_guidance",
+     "summary": "Cause taxonomy by stage: assignment (bucketing, bad IDs, carry-over), execution (redirects in one arm, treatment changing engagement), log processing (joins), analysis (biased trigger or segment conditions), plus uneven ramping or self-selection into an arm.",
+     "section": "Taxonomy",
+     "date_sensitivity": "durable",
+     "limitations": "From the authors' KDD 2019 paper; summarized only."
+    },
+    {
+     "id": "EXP-04-F4",
+     "kind": "author_guidance",
+     "summary": "Diagnosis: is the SRM local to a segment or everywhere; does it vanish in the untriggered population (then the trigger is at fault); when did it start; how extreme is the p-value; which arm has extra units (extra treatment units often mean better engagement or filtering); are many tests affected at once (pipeline).",
+     "section": "Differential diagnosis / Tooling",
+     "date_sensitivity": "durable",
+     "limitations": "The 'when did it start' analysis was deferred to a later post."
+    },
+    {
+     "id": "EXP-04-F5",
+     "kind": "reported_case",
+     "summary": "MSN carousel (12 vs 16 cards): engaged treatment users tripped a bot filter and were dropped, which looked like an engagement loss and failed SRM; after the fix the variant was positive.",
+     "section": "Examples",
+     "date_sensitivity": "durable",
+     "limitations": "No counts given."
+    }
+   ]
+  },
+  {
+   "id": "EXP-05",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Alerting in Microsoft's Experimentation Platform (ExP)",
+   "author": "Ankita Agrawal, Vaibhav Kumar Bajpai, Jiannan Lu",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/alerting-in-microsofts-experimentation-platform-exp/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/alerting-in-microsofts-experimentation-platform-exp/",
+   "published": "2021-03-03",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read via WebFetch; ?p=729247 is the same article.",
+   "sections_read": [
+    "Alert types",
+    "Methodology",
+    "Workflow",
+    "Device ID incident"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2550,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-05-F1",
+     "kind": "author_guidance",
+     "summary": "Two main alerts: SRM (chi-square on randomization-unit counts) and metric out of range, built as an equivalence test against experimenter-set absolute and relative bounds using two one-sided tests.",
+     "section": "Alert types",
+     "date_sensitivity": "durable",
+     "limitations": "Equivalence tests need volume to show a metric is inside a bound; small samples can only show a breach."
+    },
+    {
+     "id": "EXP-05-F2",
+     "kind": "author_guidance",
+     "summary": "Bounds come from domain knowledge, heuristics and history and differ by metric (a few ms of load time ignored; a 0.1% move in a reliability metric can matter). Example: a Bing click-rate alert fires on a 5% or larger drop.",
+     "section": "Methodology",
+     "date_sensitivity": "durable",
+     "limitations": "Bounds are product-specific."
+    },
+    {
+     "id": "EXP-05-F3",
+     "kind": "platform_requirement",
+     "summary": "Many tests, analysis windows and metrics require multiple-testing control; ExP uses Benjamini-Hochberg false discovery rate.",
+     "section": "Methodology",
+     "date_sensitivity": "durable",
+     "limitations": "With one primary and two or three guardrails, BH matters little; tiered bounds matter more."
+    },
+    {
+     "id": "EXP-05-F4",
+     "kind": "author_guidance",
+     "summary": "Alerts go by email with priority P0 (catastrophic), P1 (serious), P2 (possibly wrong); owners can resolve or suppress recurring false alarms; auto-shutdown for some time-critical tests.",
+     "section": "Workflow",
+     "date_sensitivity": "durable",
+     "limitations": "Workflow sized for hundreds of alerts a year."
+    },
+    {
+     "id": "EXP-05-F5",
+     "kind": "reported_case",
+     "summary": "2020: duplicate device IDs were fixed, but the treatment kept reading old IDs and gained extra users; an SRM alert days later led to the fix and a quick restart.",
+     "section": "Device ID incident",
+     "date_sensitivity": "durable",
+     "limitations": "No counts."
+    }
+   ]
+  },
+  {
+   "id": "EXP-06",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "p-Values for Your p-Values: Validating Metric Trustworthiness by Simulated A/A Tests",
+   "author": "Carl Mitchell, Andy Drake, Jonathan Litz, Garnet Vaz",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/p-values-for-your-p-values-validating-metric-trustworthiness-by-simulated-a-a-tests/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/p-values-for-your-p-values-validating-metric-trustworthiness-by-simulated-a-a-tests/",
+   "published": "2020-10-21",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Found on listing page 3.",
+   "sections_read": [
+    "Why A/A",
+    "Simulated A/A method",
+    "Uniformity checks",
+    "Failure patterns",
+    "Recommendations"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2665,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-06-F1",
+     "kind": "author_guidance",
+     "summary": "Under a true null, p-values should be uniform (about 5% below 0.05). Simulate A/A tests offline by re-hashing historical logs with new seeds; about 100 simulations is usually enough (they ran 200), checked with Anderson-Darling.",
+     "section": "Method",
+     "date_sensitivity": "durable",
+     "limitations": "Needs per-unit historical logs."
+    },
+    {
+     "id": "EXP-06-F2",
+     "kind": "reported_case",
+     "summary": "One user with over a million duplicated clicks pins p-values near 0.32 because the outlier always sits in one arm; capping (e.g. clicks at 50) restores uniformity and sensitivity.",
+     "section": "Failure patterns",
+     "date_sensitivity": "durable",
+     "limitations": "Click-stream example."
+    },
+    {
+     "id": "EXP-06-F3",
+     "kind": "author_guidance",
+     "summary": "Rare-event metrics are unreliable: with 15 users there are only 8 possible splits (15-0 to 8-7), so only 8 distinct p-values exist. Constant metrics give no information.",
+     "section": "Failure patterns",
+     "date_sensitivity": "durable",
+     "limitations": "Directly relevant to small businesses; no general minimum given."
+    },
+    {
+     "id": "EXP-06-F4",
+     "kind": "survey_or_benchmark",
+     "summary": "Across about a dozen products, 10% to 15% of metrics typically failed the uniformity check, up to 30% in some; checks must repeat because outliers appear over time.",
+     "section": "Numeric findings",
+     "date_sensitivity": "dated",
+     "limitations": "July 2020 Microsoft data."
+    }
+   ]
+  },
+  {
+   "id": "EXP-07",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "Beyond Power Analysis: Metric Sensitivity Analysis in A/B Tests",
+   "author": "Wen Qin, Widad Machmouchi, Alexandre Matos Martins",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/beyond-power-analysis-metric-sensitivity-in-a-b-tests/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/beyond-power-analysis-metric-sensitivity-in-a-b-tests/",
+   "published": "2021-04-06",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read alongside the related 'STEDII Properties of a Good Metric' (2022-04-06, Gupta and Machmouchi), which repeats the sensitivity decomposition; STEDII is not listed separately.",
+   "sections_read": [
+    "Problem",
+    "Decomposing sensitivity",
+    "Power analysis",
+    "Movement analysis",
+    "Tips",
+    "Recommendations"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 2895,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-07-F1",
+     "kind": "author_guidance",
+     "summary": "Sensitivity = how often the metric really moves (movement probability) times power. A well-powered metric that rarely moves gives few usable results; a null on such a metric says little.",
+     "section": "Decomposing sensitivity",
+     "date_sensitivity": "durable",
+     "limitations": "Movement probability is estimated from a corpus of past tests, which a small business lacks."
+    },
+    {
+     "id": "EXP-07-F2",
+     "kind": "author_guidance",
+     "summary": "Check the minimum detectable effect at typical traffic with the feature team: is a change that size realistic? Teams' Time in App could detect 0.3% with full traffic for a week, judged achievable, yet it still missed changes other metrics caught.",
+     "section": "Power analysis / Movement analysis",
+     "date_sensitivity": "durable",
+     "limitations": "Microsoft Teams scale."
+    },
+    {
+     "id": "EXP-07-F3",
+     "kind": "author_guidance",
+     "summary": "Improve insensitive metrics: cap extremes, log-transform, use proportion metrics (easier to move), conditional averages, predictive proxies for slow goals, and CUPED with pre-period data. Keep hard-to-move top-level metrics as guardrails rather than success metrics (STEDII).",
+     "section": "Tips",
+     "date_sensitivity": "durable",
+     "limitations": "CUPED gains depend on how much pre-period data explains (Deep Dive into Variance Reduction reports many metrics gaining little)."
+    },
+    {
+     "id": "EXP-07-F4",
+     "kind": "author_guidance",
+     "summary": "With a labelled corpus: sensitivity N1/(N1+N2) near 1, false-positive share N3/(N3+N4) near alpha; without labels, compare observed movement rates, trusting differences above 5 points.",
+     "section": "Movement confusion matrix",
+     "date_sensitivity": "durable",
+     "limitations": "Needs many past tests."
+    }
+   ]
+  },
+  {
+   "id": "EXP-08",
+   "family": "EXP",
+   "publication": "Microsoft Experimentation Platform articles",
+   "title": "External Validity of Online Experiments: Can We Predict the Future?",
+   "author": "Not listed on the page (Microsoft Experimentation Platform group)",
+   "canonical_url": "https://www.microsoft.com/en-us/research/articles/external-validity-of-online-experiments-can-we-predict-the-future/",
+   "retrieved_from": "https://www.microsoft.com/en-us/research/articles/external-validity-of-online-experiments-can-we-predict-the-future/",
+   "published": "2024-11-20",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Author names not present in the fetched text.",
+   "sections_read": [
+    "Day-to-day stability",
+    "7 vs 14 days",
+    "Novelty and primacy",
+    "Recommendations",
+    "Caveats"
+   ],
+   "raw_text_check": {
+    "fetched": true,
+    "words": 3622,
+    "method": "raw HTML fetched with the standard library; finding numbers and key terms matched against the page text (see VALIDATION.md)"
+   },
+   "findings": [
+    {
+     "id": "EXP-08-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Across 1,000+ experiments, adjacent-day effect differences match a normal curve up to about 3 standard errors but have far heavier tails beyond; a day's error bar overstates confidence about the next day.",
+     "section": "Day-to-day stability",
+     "date_sensitivity": "durable",
+     "limitations": "Large-sample average metrics only."
+    },
+    {
+     "id": "EXP-08-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Going from 7 to 14 days shrank the standard error 83% of the time and grew it 17%; the 14-day estimate fell outside the 7-day 95% interval 9% of the time versus about 5% expected.",
+     "section": "7 vs 14 days",
+     "date_sensitivity": "durable",
+     "limitations": "Restricted to significant 7-day results; the 14-day value is a proxy, not truth."
+    },
+    {
+     "id": "EXP-08-F3",
+     "kind": "author_guidance",
+     "summary": "Run at least a week, extend when effects are still changing, use holdouts or reverse tests to check persistence; novelty/primacy explain part of the drift, outside events the rest.",
+     "section": "Recommendations",
+     "date_sensitivity": "durable",
+     "limitations": "The authors stress these problems are the exception."
+    }
+   ]
+  }
+ ],
+ "not_read": [
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/t/pricing",
+   "reason": "Pricing tag index blocked by Cloudflare bot verification (403 via WebFetch and curl; browser pane stuck on verification). Not bypassed. Article list built from the publisher's public Substack archive API instead; posts published on beehiiv after 2026-01-12 could not be listed or read."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/",
+   "reason": "Homepage blocked by the same bot verification; 2026 posts (post-migration to beehiiv) unavailable."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/whats-changing-with-ai-monetization",
+   "reason": "Preview read (about half). Not selected: overlaps GU-03 (AI 'FTE' pricing) and its survey figures (2024 SaaS benchmarks: 54% of AI products priced beyond seats) add little durable guidance for small businesses."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/from-selling-access-to-selling-work",
+   "reason": "Preview read (about 40%). Not selected: overlaps GU-03; its value-capture claim (subscriptions capture ~10–15% of claimed value vs ~20–30% for success-based) is the author's unsourced estimate. Section on the downsides of success-based pricing was not visible."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/the-best-growth-tactics-of-2025",
+   "reason": "Fully read (public). Not selected: self-selected poll of 130 readers naming their top experiment; category shares (outbound/ABM 20%, partners 20%, events 16%) are popularity, not effectiveness, and skew B2B software."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/how-to-optimize-your-pricing-page",
+   "reason": "Preview read (about a third). Not selected: overlaps GU-08 and BK02 Ch 10/11 (benefit-led plans; stay under thresholds; charm endings like $9.99 may signal cheap consumer product in B2B)."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/your-guide-to-plg-pricing-201",
+   "reason": "Preview only (~20%); mostly about multi-user software teams, low relevance to small-business owners."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/how-ai-apps-make-money",
+   "reason": "Preview only (~25%): 2024 review of 40 AI app pricing pages (7 in 10 subscription, half with free plan). Dated and descriptive; not selected."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/how-to-optimize-your-free-trial",
+   "reason": "Preview under 10% of text; too little readable to use."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/your-guide-to-price-testing",
+   "reason": "Preview only ~40 words; body not readable."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/free-to-paid-conversion-at-scale",
+   "reason": "Preview ~100 words; body not readable."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/your-guide-to-plg-benchmarks",
+   "reason": "Preview ~40 words; body not readable."
+  },
+  {
+   "family": "GU",
+   "url": "https://www.growthunhinged.com/p/the-ai-churn-wave",
+   "reason": "Preview ~35 words; body not readable."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/how-to-improve-your-voluntary-churn",
+   "reason": "Paywalled (2024-06-06); only title, subtitle (six tactics) and a Churnkey sponsor note visible."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/the-mom-and-pop-saas-era-has-arrived",
+   "reason": "Paywalled (2026-06-18); intro only: argues cheaper building lets domain experts and small businesses build software. No guidance visible."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/congrats-your-sales-problems-in-plg",
+   "reason": "Paywalled (2026-09-11); intro only, no guidance visible."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/why-when-and-how-to-add-sales-to",
+   "reason": "Marked paid in archive (2024-01-11); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/why-ai-doesnt-mean-the-end-of-freemium",
+   "reason": "Marked paid in archive (2025-12-12); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/should-your-new-feature-be-free-or",
+   "reason": "Marked paid in archive (2024-09-20); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/we-stopped-forcing-the-subscription",
+   "reason": "Marked paid in archive (2026-02-13); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/dirty-dozen-of-plg-b2b-saas-health",
+   "reason": "Marked paid in archive (2023-04-07); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/try-this-onboarding-email-series",
+   "reason": "Marked paid in archive (2024-03-07); not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/how-to-grow-word-of-mouth",
+   "reason": "Marked paid in archive (2023-06-16); word-of-mouth loop not read. No free dedicated growth-loops post was found on the site."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/five-plg-tactics-every-sales-led",
+   "reason": "Public (2025-03-17) but not fetched within scope."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/elenas-2024-b2b-product-led-sales",
+   "reason": "Public (2024-08-08) but not fetched; product-led sales is enterprise-leaning."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/examples-of-proven-sales-plays-to",
+   "reason": "Public (2025-02-26) but not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/my-9-favorite-growth-frameworks",
+   "reason": "Public (2024-10-25) but not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/two-ways-to-visualize-importance",
+   "reason": "Public (2024-06-27) but not fetched."
+  },
+  {
+   "family": "EV",
+   "url": "https://www.elenaverna.com/p/what-on-earth-is-going-on-with-ai",
+   "reason": "Public (2026-10-16, AI pricing and packaging) but not fetched; candidate for a follow-up on credit/usage pricing."
+  },
+  {
+   "family": "EV",
+   "url": "https://subscription-stories.castos.com/episodes/freemium-free-trial-and-free-surprises-with-elena-verna-of-reforge-when-does-it-make-sense-to-give-it-away-and-when-doesn39t-it",
+   "reason": "Third-party podcast; out of scope (source family is the newsletter). A secondhand claim of 10–40% conversion lifts from reverse trials appears only in third-party summaries and is excluded."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/how-to-edit-for-clarity/",
+   "reason": "Page has no transcript ('coming soon') and the video was not viewable as text. The content of the clarity sweep was not accessed."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/how-to-do-rapid-fire-review-mining/",
+   "reason": "Fetched but excluded. No author or date, no coding method or cautions. The Amazon search-operator shortcut is a dated tactic and depends on Google and Amazon behaviour and terms."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/2026/04/positioning-101/",
+   "reason": "Fetched but excluded. It positions a freelance copywriter (not a small business), adapts Dunford's questions already covered in guides/03_positioning.md, and reports no results."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/2023/10/how-to-write-emails/",
+   "reason": "Fetched but excluded from findings. The process overlaps CH-03 and CH-08, and no results are reported. Its 'fix the offer before rewriting copy' point is brief; the detailed offer levers and the offer worksheet sit in paid Copy School material, which was not accessed."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/2020/07/how-to-write-a-landing-page-examples/",
+   "reason": "Fetched but excluded. Covers problem-aware pages only (external vs internal problem, emotion), with no results. Its embedded video and diagrams were not transcribed."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/the-heightened-emotion-sweep/",
+   "reason": "Not fetched (time budget). It covers a sweep with no direct ClimbOS rule."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/voice-and-tone/",
+   "reason": "Not fetched (time budget)."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/ai-prompt/use-chatgpt-for-review-mining/",
+   "reason": "Not fetched. A prompt-library page under copyhackers.com/ai-prompt/ that may be gated."
+  },
+  {
+   "family": "CH",
+   "url": "https://school.copyhackers.com/courses/10x-sales-pages",
+   "reason": "Paid course. Not accessed and not claimed as completed."
+  },
+  {
+   "family": "CH",
+   "url": "https://copyhackers.com/copy-school-by-copyhackers/",
+   "reason": "Paid membership (offer levers, Best Possible Offer worksheet). Not accessed, and no templates were downloaded."
+  },
+  {
+   "family": "DS",
+   "url": "https://www.forentrepreneurs.com/saas-economics-2/",
+   "reason": "Not fetched; budget went to the 7 core pages. Part 2 covers growth hiring and annual prepayment cash effects. The trough conclusions here rely on DS-01 and DS-07."
+  },
+  {
+   "family": "DS",
+   "url": "https://www.forentrepreneurs.com/demystifying-churn/",
+   "reason": "Not fetched; overlaps DS-01 and DS-06."
+  },
+  {
+   "family": "DS",
+   "url": "https://www.forentrepreneurs.com/multi-axis-pricing-a-key-tool-for-increasing-saas-revenue/",
+   "reason": "Not fetched; it is on expansion pricing design, outside the formula scope."
+  },
+  {
+   "family": "DS",
+   "url": "https://www.forentrepreneurs.com/predictable-revenue/",
+   "reason": "Not fetched; outbound process rather than economics."
+  },
+  {
+   "family": "DS",
+   "url": "https://www.forentrepreneurs.com/sales-marketing-machine/inbound-marketing/",
+   "reason": "Not fetched; out of scope."
+  },
+  {
+   "family": "DS",
+   "url": "SaaS-Metrics spreadsheets linked from DS-01/DS-03 (xlsx)",
+   "reason": "Not downloaded: the task is read-only and file downloads need permission. Spreadsheets are also excluded by the copyright brief."
+  },
+  {
+   "family": "DS",
+   "url": "https://web.archive.org/cdx/search/cdx?url=forentrepreneurs.com/*",
+   "reason": "Tried for first-capture dates; WebFetch is blocked from web.archive.org, so publication dates stay null."
+  },
+  {
+   "family": "DS",
+   "url": "Formula and chart images on all pages",
+   "reason": "Not readable through WebFetch. Symbolic forms of the image-only formulas are labelled as standard forms, not verified."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/articles/page/2/",
+   "reason": "HTTP 404; listing pages 2 and 3 were read at ?pg=2 and ?pg=3 instead."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/a-a-b-testing-evaluating-microsoft-teams-across-build-releases/",
+   "reason": "Not fetched (build-release A/A'/B is Microsoft infrastructure, low relevance)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/why-tenant-randomized-a-b-test-is-challenging-and-tenant-pairing-may-not-work/",
+   "reason": "Not fetched (enterprise tenant randomization)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/more-trustworthy-a-b-analysis-less-data-sampling-and-more-data-reducing/",
+   "reason": "Not fetched (data pipeline scale)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/it-takes-a-flywheel-to-fly-kickstarting-and-keeping-the-a-b-testing-momentum/",
+   "reason": "Not fetched (organizational adoption)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/deep-dive-into-variance-reduction/",
+   "reason": "Read in full but not selected; used only as a limitation note on CUPED (Var multiplier 1/(1-R^2); many metrics gain 1.05x or less on one surface)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/stedii-properties-of-a-good-metric/",
+   "reason": "Read in full (via ?p=832888) but not selected; overlaps EXP-07."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/treatment-effect-assessment-at-scale-accounting-for-correlated-metrics-and-metric-relevance-in-modern-experimentation/",
+   "reason": "Read in full (2026-07-15) but not selected; scorecards with hundreds of metrics. Takeaway noted in EXP.md: ExP moved from Fisher's method to Benjamini-Hochberg; irrelevant metrics cost power."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/data-quality-fundamental-building-blocks-for-trustworthy-a-b-testing-analysis/",
+   "reason": "Read in full but not selected; overlaps EXP-03 and EXP-06."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/a-b-interactions-a-call-to-relax/",
+   "reason": "Read in full but not selected; concurrent-test interactions were rare (about 1 in 50,000 pair-metric checks in one product)."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/for-event-based-a-b-tests-why-they-are-special/",
+   "reason": "Read in full but not selected; time-boxed event tests, recommends sequential tests if monitoring frequently."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/a-b-testing-and-covid-19-data-driven-decisions-in-times-of-uncertainty/",
+   "reason": "Read in full but not selected; the closest ExP article to 'decisions under uncertainty'. Point: randomized arms share shocks, raw baselines do not."
+  },
+  {
+   "family": "EXP",
+   "url": "https://www.microsoft.com/en-us/research/articles/measurably-improve-your-product-by-combining-qualitative-and-quantitative-methods/",
+   "reason": "Read in full but not selected; qual+quant workflow, no low-traffic guidance."
+  },
+  {
+   "family": "EXP",
+   "url": "(no URL found)",
+   "reason": "No ExP article dedicated to 'misleading results / pitfalls' or 'decisions under uncertainty' by that name was found in the three listing pages; Covid-19 and post-experiment articles are the nearest."
+  }
+ ],
+ "formulas": [
+  {
+   "id": "DS-FX1",
+   "name": "Fully loaded CAC",
+   "definition": "All acquisition cost in a period divided by new paying customers in that period: CAC = (media + sales and marketing salaries and headcount costs + tools, agencies and creative + other programme costs) / new_customers. Segment CAC needs explicit, consistent allocation rules.",
+   "units": "currency per customer",
+   "source_ref": "DS-04-F2, DS-01-F3, DS-07-F3",
+   "climbos_current": "shared/growth/calc.ts:34-40 cacFull = (spend + hours × hourlyCost + other) / customers. shared/agents/economics.ts:199-203 calls it with spend over the horizon, owner hours × owner hour value ($50 default, economics.ts:83-88) and other = 0 (economics.ts:203).",
+   "gap": "Matches on headcount: owner time counts as labour, consistent with Skok's no-exclusions rule. Differs because other is hard-coded to 0 (economics.ts:203). Tools, agency or freelance help, creative, list or data purchases and ClimbOS's own subscription and credits are dropped, so CAC is understated against Skok's definition. Media-only CAC (calc.ts:28-32) exists but is not shown next to the full figure."
+  },
+  {
+   "id": "DS-FX2",
+   "name": "Months to recover CAC (simple)",
+   "definition": "CAC / new-customer MRR (ARPA). This is the form behind the 2011 '<12 months' rule; it ignores gross margin and churn.",
+   "units": "months",
+   "source_ref": "DS-01-F2, DS-02-F4",
+   "climbos_current": "Not used as a headline. paybackSimple exists in calc.ts:56-60 but takes contribution, not revenue.",
+   "gap": "None needed. ClimbOS should not use the revenue-only form; Skok himself prefers the gross-margin version."
+  },
+  {
+   "id": "DS-FX3",
+   "name": "Months to recover CAC (gross-margin adjusted)",
+   "definition": "CAC / (ARPA × GM%). The author's 'fully accurate' version. Recovery is per surviving customer and ignores churn.",
+   "units": "months",
+   "source_ref": "DS-02-F4",
+   "climbos_current": "Contribution per month = revenue × grossMargin (calc.ts:43-46; economics.ts:132-137) is used, so ClimbOS is gross-margin adjusted. paybackSimple (calc.ts:56-60) is this formula but is not called by playMaths.",
+   "gap": "Matches on gross margin. ClimbOS goes further by adding churn (DS-FX4). Its payback is therefore longer than Skok's for the same inputs, and Skok's benchmarks, calibrated on this no-churn form, must not be applied to the ClimbOS number unlabelled."
+  },
+  {
+   "id": "DS-FX4",
+   "name": "Churn-weighted (expected) payback — ClimbOS extension, not Skok",
+   "definition": "Find the smallest n where Σ_{t=0}^{n-1} cm·(1−c)^t ≥ CAC. Closed form: n = ln(1 − CAC·c/cm) / ln(1 − c). It never pays back if CAC·c/cm ≥ 1.",
+   "units": "months",
+   "source_ref": "interpretation building on DS-02-F1 (exponential decay) and DS-07-F1 (cumulative recovery)",
+   "climbos_current": "shared/growth/calc.ts:62-71 paybackWithChurn, used at economics.ts:217. The verdict is profitable = CAC ≤ contribution over 12 months (economics.ts:207, 219; horizon economics.ts:89-90).",
+   "gap": "Internally consistent with contributionOver (calc.ts:48-54). It counts the month-0 contribution in full, an assumption that payment arrives in the acquisition month. Stricter than Skok's payback. The locked-numbers line (economics.ts:312-313) should say 'with churn' so it is not compared with '<12 months' benchmarks."
+  },
+  {
+   "id": "DS-FX5",
+   "name": "Average customer lifetime",
+   "definition": "lifetime = 1 / c, where c is the constant churn per period.",
+   "units": "periods",
+   "source_ref": "DS-02-F1",
+   "climbos_current": "calc.ts:104-108 churnFromLifetime = 1 / months, used by economics.ts:126-130 for older plans.",
+   "gap": "Matches, including the constant-churn assumption, which Skok flags as often wrong (DS-03-F5)."
+  },
+  {
+   "id": "DS-FX6",
+   "name": "Simple LTV",
+   "definition": "LTV = ARPA × GM% / c, with the same period for ARPA and c.",
+   "units": "currency per customer",
+   "source_ref": "DS-02-F2, DS-04-F3",
+   "climbos_current": "Not computed. ClimbOS uses 12-month churn-weighted contribution instead (customerValue, economics.ts:139-142; contributionOver calc.ts:48-54).",
+   "gap": "Deliberate and consistent with Skok's own DCF critique (DS-03-F1) and Book 01 §7 (docs/growth-intelligence/books/01_business_strategy_economics.md:84-88). Do not add an uncapped LTV."
+  },
+  {
+   "id": "DS-FX7",
+   "name": "Expansion LTV (constant monthly ARPA growth)",
+   "definition": "Inputs: a = initial monthly ARPA × GM, m = monthly dollar ARPA growth × GM, c = monthly customer churn. The widely cited closed form is LTV = a/c + m/c². The image was not verified in this session.",
+   "units": "currency per customer",
+   "source_ref": "DS-02-F2",
+   "climbos_current": "Not computed. Economics has no expansion field (economics.ts:44-74).",
+   "gap": "ClimbOS cannot represent expansion or negative churn, so it understates value for upsell-heavy businesses. A capped-horizon version is proposed in DS-EX4."
+  },
+  {
+   "id": "DS-FX8",
+   "name": "DCF LTV",
+   "definition": "LTV = Σ_t GP_t × S_t / (1+r)^t + residual, where S_t is survival, GP_t is gross profit per surviving customer including expansion, and r is the discount rate (10% default suggested in 2016).",
+   "units": "currency per customer",
+   "source_ref": "DS-03-F2",
+   "climbos_current": "Not computed; there is no discounting.",
+   "gap": "Over a 12-month horizon, discounting at 10% a year changes value by under about 5%, so it is immaterial. Add it only if the horizon goes past 24 months."
+  },
+  {
+   "id": "DS-FX9",
+   "name": "LTV:CAC",
+   "definition": "LTV / CAC. The guideline of above 3 assumes simple LTV without GM and GM ≥ 80%.",
+   "units": "ratio",
+   "source_ref": "DS-02-F3, DS-04-F4",
+   "climbos_current": "Not computed. The test is CAC ≤ 12-month value (economics.ts:219).",
+   "gap": "Do not import 3×. It assumes lifetime revenue at GM ≥ 80%, while ClimbOS uses 12-month contribution, so the bases differ."
+  },
+  {
+   "id": "DS-FX10",
+   "name": "Customer, revenue and net revenue churn",
+   "definition": "customer churn = lost customers / customers at start. MRR churn = MRR lost from churned and downgraded customers / MRR at start. Expansion = expansion MRR / MRR at start. Net MRR churn = MRR churn − expansion; below 0 means negative churn.",
+   "units": "share per period",
+   "source_ref": "DS-01-F4, DS-02-F7",
+   "climbos_current": "One field, monthlyChurn, described as the 'share of customers lost each month' (economics.ts:48-49; question at economics.ts:382). It is multiplied into revenue value (calc.ts:48-54) and into base losses for goals (shared/agents/goal.ts:71).",
+   "gap": "Logo churn is applied to revenue. When small customers churn more, ClimbOS understates value; when large ones churn more, it overstates. Use revenue churn net of expansion for value and payback, and customer churn for customer-count goals (goal.ts:71)."
+  },
+  {
+   "id": "DS-FX11",
+   "name": "Net revenue retention (NRR)",
+   "definition": "NRR = (cohort MRR at start − churned − contraction + expansion) / cohort MRR at start, measured over a year or a month.",
+   "units": "share",
+   "source_ref": "DS-02-F7",
+   "climbos_current": "Not computed. shared/attribution/cohorts.ts:19-28 stores revenueMinor per cohort month, so the data exists.",
+   "gap": "Derive monthly NRR from cohorts.ts revenue rows."
+  },
+  {
+   "id": "DS-FX12",
+   "name": "MRR roll-forward / Net New MRR",
+   "definition": "MRR_t = MRR_{t−1} + new + expansion − churned. Net New MRR = new + expansion − churned.",
+   "units": "currency per month",
+   "source_ref": "DS-02-F7, DS-07-F2",
+   "climbos_current": "calc.ts:90-94 nextMrr = MRR × (1 − churn) + new × price. It has no expansion term and is not used by economics.ts.",
+   "gap": "Add an expansion term."
+  },
+  {
+   "id": "DS-FX13",
+   "name": "Sales efficiency to payback",
+   "definition": "SE = new ARR in the quarter / S&M spend in the prior quarter. Months to recover CAC ≈ 12 / SE, or 12 / (SE × GM) with gross margin.",
+   "units": "ratio; months",
+   "source_ref": "DS-02-F5",
+   "climbos_current": "Not computed.",
+   "gap": "Useful for an observed, company-level check once billing and spend are connected. The lag (prior-period spend) matters for sales-led businesses. Book 12 (docs/growth-intelligence/books/12_analytics_forecasting_pricing.md:105) states the lag principle; the code does not apply it."
+  },
+  {
+   "id": "DS-FX14",
+   "name": "Steady-state MRR ceiling (interpretation)",
+   "definition": "Growth stops where churned MRR equals new MRR: MRR_max = new MRR per month / monthly revenue churn. With net churn ≤ 0 there is no ceiling.",
+   "units": "currency per month",
+   "source_ref": "interpretation of DS-06-F1; Skok shows this by simulation, not as an equation",
+   "climbos_current": "Not computed.",
+   "gap": "A cheap, explainable 'growth ceiling' line for recurring businesses."
+  },
+  {
+   "id": "DS-FX15",
+   "name": "Funnel media CAC and break-even cost per click",
+   "definition": "Media CAC = CPC / Π(step rates). Break-even CPC = allowable CAC × Π(step rates).",
+   "units": "currency",
+   "source_ref": "DS-04-F5",
+   "climbos_current": "calc.ts:78-88 breakevenCpc and breakevenPerReach. breakevenPerReach is used at economics.ts:218.",
+   "gap": "Matches. ClimbOS uses 12-month churn-weighted value as the allowable CAC."
+  },
+  {
+   "id": "DS-FX16",
+   "name": "Subscription cash trough",
+   "definition": "Cumulative cash_M = Σ_{m=1}^{M} [contribution received in month m − acquisition spend in month m]. The trough is min_M of cumulative cash, and cash breakeven is the first M where cumulative cash ≥ 0.",
+   "units": "currency; months",
+   "source_ref": "DS-07-F1, DS-01-F9",
+   "climbos_current": "Not computed. lockedNumbers (economics.ts:298-319) reports cost and payback but no lowest cash point. Book 12 asks for it (12_analytics_forecasting_pricing.md:141), as does Book 01 (01_business_strategy_economics.md:96).",
+   "gap": "Missing. Owners of small businesses fund the trough themselves."
+  },
+  {
+   "id": "DS-FX17",
+   "name": "CAC-aware minimum price (proposed)",
+   "definition": "The lowest monthly price whose churn-weighted contribution over H months covers CAC: P_min = CAC × c / (GM × (1 − (1−c)^H)), or CAC / (GM × H) when c = 0.",
+   "units": "currency per month",
+   "source_ref": "interpretation of DS-05-F2 (price must cover sales complexity) using DS-FX4",
+   "climbos_current": "shared/analysis/decisions.ts:53-67 priceFloor = unitCost / (1 − targetMargin) covers delivery cost only. decisions.ts:33-51 margin excludes acquisition (it says so at :47).",
+   "gap": "There is no floor that includes acquisition. Static price-fit thresholds (shared/acquisition/scoring.ts:109 LOW_TICKET_USD_MONTH = 25; shared/agents/capacity.ts:14,55 '$300+ 12-month gross profit') stand in for it. They are not Skok-derived: Skok gives no numeric price lines."
+  }
+ ],
+ "worked_examples": [
+  {
+   "id": "DS-EX1",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "ARPA_per_month": 100,
+    "gross_margin": 0.8,
+    "monthly_churn": 0.03
+   },
+   "steps": [
+    "Simple payback (DS-FX2) = 600 / 100 = 6 months.",
+    "Contribution per month cm = 100 × 0.8 = 80.",
+    "GM-adjusted payback (DS-FX3) = 600 / 80 = 7.5 months.",
+    "Churn-weighted payback (DS-FX4): CAC·c/cm = 600 × 0.03 / 80 = 18 / 80 = 0.225.",
+    "1 − 0.225 = 0.775; ln(0.775) = −0.254892; ln(0.97) = −0.030459.",
+    "n = −0.254892 / −0.030459 = 8.368 months.",
+    "12-month value (economics.ts:207) = 80 × (1 − 0.97^12) / 0.03; 0.97^12 = 0.693842; 1 − 0.693842 = 0.306158; 80 × 0.306158 = 24.4926; ÷ 0.03 = 816.42.",
+    "Verdict: 600 ≤ 816.42, so it pays back within 12 months."
+   ],
+   "result": {
+    "payback_simple_months": 6.0,
+    "payback_gm_months": 7.5,
+    "payback_churn_weighted_months": 8.37,
+    "value_12m": 816.42,
+    "profitable": true,
+    "note": "Same inputs give 6, 7.5 or 8.37 months depending on definition. Always label which one."
+   }
+  },
+  {
+   "id": "DS-EX2",
+   "inputs_hypothetical": {
+    "customers_start": {
+     "small_at_50": 80,
+     "large_at_300": 20
+    },
+    "lost": {
+     "small": 10,
+     "large": 1
+    },
+    "expansion_MRR": 1000
+   },
+   "steps": [
+    "Starting MRR = 80 × 50 + 20 × 300 = 4,000 + 6,000 = 10,000.",
+    "Customer churn = (10 + 1) / 100 = 11%.",
+    "Lost MRR = 10 × 50 + 1 × 300 = 500 + 300 = 800, so MRR churn = 800 / 10,000 = 8%.",
+    "Expansion = 1,000 / 10,000 = 10%.",
+    "Net MRR churn = 8% − 10% = −2% (negative churn); monthly NRR = 102%.",
+    "ClimbOS today would take monthlyChurn = 0.11 (economics.ts:382 asks for the share of customers) and apply it to revenue."
+   ],
+   "result": {
+    "customer_churn": 0.11,
+    "mrr_churn": 0.08,
+    "expansion": 0.1,
+    "net_mrr_churn": -0.02,
+    "nrr_month": 1.02,
+    "climbos_churn_used": 0.11
+   }
+  },
+  {
+   "id": "DS-EX3",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "cm_per_month": 80,
+    "monthly_churn": 0.03
+   },
+   "steps": [
+    "Simple LTV (DS-FX6) = 80 / 0.03 = 2,666.67.",
+    "LTV:CAC = 2,666.67 / 600 = 4.44, which 'passes' the dated 3× rule.",
+    "ClimbOS 12-month value = 816.42 (DS-EX1), so 816.42 / 600 = 1.36.",
+    "If net churn were −1% a month, simple LTV = 80 / (−0.01) is negative and meaningless; the true value is unbounded without a horizon or discount (DS-03-F1)."
+   ],
+   "result": {
+    "simple_ltv": 2666.67,
+    "ltv_to_cac": 4.44,
+    "value12_to_cac": 1.36,
+    "note": "The 3× rule cannot be applied to ClimbOS's 12-month value; the bases differ."
+   }
+  },
+  {
+   "id": "DS-EX4",
+   "inputs_hypothetical": {
+    "cm_start": 80,
+    "monthly_logo_churn": 0.03,
+    "monthly_compound_ARPA_growth": 0.01,
+    "horizon_months": 12
+   },
+   "steps": [
+    "Per-month factor r = (1 + 0.01) × (1 − 0.03) = 1.01 × 0.97 = 0.9797.",
+    "r^12 = 0.781839.",
+    "12-month expected contribution = 80 × (1 − 0.781839) / (1 − 0.9797) = 80 × 0.218161 / 0.0203 = 17.45289 / 0.0203 = 859.75.",
+    "Compared with no expansion (816.42), value rises by 43.33 (5.3%)."
+   ],
+   "result": {
+    "value_12m_with_expansion": 859.75,
+    "value_12m_without": 816.42,
+    "uplift": 43.33,
+    "note": "This is the proposed capped-horizon expansion term. It uses compound growth, not Skok's linear m, and is labelled as such."
+   }
+  },
+  {
+   "id": "DS-EX5",
+   "inputs_hypothetical": {
+    "new_customers_per_month": 10,
+    "CAC_paid_in_acquisition_month": 600,
+    "cm_per_month": 80,
+    "contribution_starts": "month after acquisition",
+    "churn": 0,
+    "note": "churn set to 0 to isolate timing"
+   },
+   "steps": [
+    "For one customer cohort a month, net cash in month m = −600N + 80N(m − 1), and cumulative cash after M months = N × [−600M + 40M(M − 1)].",
+    "Monthly net cash turns positive when 80(m − 1) > 600, i.e. m − 1 ≥ 8, so m = 9.",
+    "Trough at M = 8: −600 × 8 + 40 × 8 × 7 = −4,800 + 2,240 = −2,560 per unit of N, so with N = 10 the trough is −25,600.",
+    "Cash breakeven: 40(M − 1) ≥ 600, so M − 1 ≥ 15 and M = 16. Check: −9,600 + 40 × 16 × 15 = −9,600 + 9,600 = 0.",
+    "Doubling growth to N = 20 doubles the trough to −51,200, with the same month-16 breakeven (DS-01-F9).",
+    "If each customer prepaid 12 months of contribution (960) in the acquisition month, then 960 − 600 = +360 per customer and there is no trough (DS-01-F8). This assumes a delivery obligation that is ignored here."
+   ],
+   "result": {
+    "trough_N10": -25600,
+    "trough_month": 8,
+    "cash_breakeven_month": 16,
+    "trough_N20": -51200,
+    "annual_prepay_trough": 0
+   }
+  },
+  {
+   "id": "DS-EX6",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "gross_margin": 0.8,
+    "monthly_churn": 0.03,
+    "horizon_months": 12
+   },
+   "steps": [
+    "1 − 0.97^12 = 0.306158.",
+    "P_min = 600 × 0.03 / (0.8 × 0.306158) = 18 / 0.244926 = 73.49 per month.",
+    "Check: cm = 73.49 × 0.8 = 58.79; 58.79 × 0.306158 / 0.03 = 600.0."
+   ],
+   "result": {
+    "price_min_per_month": 73.49
+   }
+  },
+  {
+   "id": "DS-EX7",
+   "inputs_hypothetical": {
+    "media_spend": 900,
+    "owner_hours": 30,
+    "owner_hour_value": 50,
+    "tools_and_freelance": 150,
+    "new_customers": 6
+   },
+   "steps": [
+    "Media-only CAC = 900 / 6 = 150.",
+    "ClimbOS today (other = 0, economics.ts:203) = (900 + 30 × 50) / 6 = (900 + 1,500) / 6 = 400.",
+    "Fully loaded per Skok = (900 + 1,500 + 150) / 6 = 2,550 / 6 = 425."
+   ],
+   "result": {
+    "cac_media": 150,
+    "cac_climbos_now": 400,
+    "cac_fully_loaded": 425,
+    "understatement": 25
+   }
+  },
+  {
+   "id": "DS-EX8",
+   "inputs_hypothetical": {
+    "CPC": 0.8,
+    "click_to_trial": 0.04,
+    "trial_to_paid": 0.2,
+    "allowable_CAC_12m": 816.42
+   },
+   "steps": [
+    "Clicks per customer = 1 / (0.04 × 0.2) = 1 / 0.008 = 125.",
+    "Media CAC = 125 × 0.8 = 100.",
+    "Break-even CPC = 816.42 × 0.008 = 6.53 (calc.ts:78-82 breakevenCpc)."
+   ],
+   "result": {
+    "media_cac": 100,
+    "breakeven_cpc": 6.53
+   }
+  }
+ ],
+ "experiment_check_gaps": [
+  {
+   "check": "Incremental label without a statistical read",
+   "current": "shared/growth/experimentOutcome.ts:48-54 inferenceOf returns 'incremental' whenever design is randomized/holdout with both groups > 0; :88-93 lift() and :108-113 outcomeLine print 'about N incremental conversions' from the raw rate gap. convex/playResults.ts:121 stores it.",
+   "gap": "No p-value, no planned-split SRM check, no planned-end check before the wording claims caused conversions. Hypothetical 18/120 vs 12/120 prints 'about 6 incremental conversions' while compareRates gives p = 0.2416 (no reliable difference). ExP post-experiment checks (EXP-03-F1) and SRM-first rule (EXP-04-F2) both precede any effect claim.",
+   "proposed_change": "Store the planned split on the experiment; on save run sampleRatio and compareRates (decisions.ts:85, :113). Keep inference 'incremental' (design label) but add a 'reading' field: srm_fail | no_reliable_difference | difference_detected | too_early. outcomeLine only says 'incremental conversions' when reading = difference_detected; otherwise 'randomized, no reliable difference (p=...)'."
+  },
+  {
+   "check": "SRM threshold and diagnosis",
+   "current": "shared/analysis/decisions.ts:120 mismatch at p < 0.001, one note at :126; binary pass/fail.",
+   "gap": "ExP uses p < 0.0005 (EXP-04-F2), so 0.001 is already slightly looser; neither threshold catches a 230/170 split (p = 0.0027). No warn tier (BK06.md:217 already proposes 0.001-0.01 warn) and no diagnosis steps (segment, trigger, direction, start date).",
+   "proposed_change": "Keep 0.001 as the block (fine at small scale). Add warn for 0.001 <= p < 0.01 that hides the 'winner' wording until checked. Return a diagnosis checklist ordered by ExP stage taxonomy (EXP-04-F3/F4) and the direction (which arm is over)."
+  },
+  {
+   "check": "Guardrails required and evaluated",
+   "current": "shared/ai/tasks.ts:94 and convex/schema.ts:1349 guardrails: string[] (may be empty); no lint requires one; outcomes (experimentOutcome.ts:20-45) record no guardrail values.",
+   "gap": "ExP requires guardrails on every test (EXP-01-F2, EXP-02-F1) and ships only when they are neutral or better (EXP-03-F5). BK06 guide line 62 states the same rule but nothing enforces it.",
+   "proposed_change": "Lint: ab_split/holdout must have 1-3 guardrails, each with a numeric harm bound (e.g. 'unsubscribe rate above 1.0%'). Outcome: record guardrail counts per arm; any breached bound blocks 'met' and the ship wording."
+  },
+  {
+   "check": "Harm stop vs peeking",
+   "current": "shared/agents/specs.ts:845 PEEKING regex flags any stoppingRule with as soon as/once/when/until ... significan.",
+   "gap": "ExP explicitly endorses early stops for harm (alerts, auto-shutdown; EXP-02-F3, EXP-05-F4). A rule like 'stop when complaints rise significantly' is flagged as peeking, though a harm stop is legitimate; an efficacy stop is not.",
+   "proposed_change": "Exempt rules whose subject is a guardrail/harm word (complaints, refunds, unsubscribes, errors, cancellations) and whose action is stop/pause; keep the block for stopping on a win. Suggest absolute harm bounds instead of significance for small samples."
+  },
+  {
+   "check": "Minimum duration and whole weeks",
+   "current": "specs.ts:864 uses Math.max(1, durationDays); decisions.ts:149 only notes 'run whole weeks, at least one'.",
+   "gap": "An ab_split with durationDays 3 passes if the population is large. ExP: at least a week; day-to-day effects drift more than error bars imply (EXP-08-F1/F3).",
+   "proposed_change": "Lint error: ab_split/holdout durationDays < 7; warning when not a multiple of 7."
+  },
+  {
+   "check": "Feasibility uses a fixed baseline",
+   "current": "specs.ts:841-843 FEASIBILITY_BASELINE 0.1, MDE 0.05 (needs 1,372 total) for every test regardless of the primary metric.",
+   "gap": "Hypothetical: 300 visitors/week for 35 days = 1,500 > 1,372, so a booking-rate test passes, though a 2% to 3% booking change needs 7,652 (26 weeks). ExP sensitivity = movement probability x power (EXP-07-F1/F2).",
+   "proposed_change": "When the brief has a baseline for primaryMetric, size with it; otherwise keep the generous default but add a warning naming a higher-movement proxy (e.g. 'clicked Book now') and keeping the top-level outcome as a guardrail."
+  },
+  {
+   "check": "Date / novelty view",
+   "current": "Nothing in shared/analysis or shared/growth splits a test result by week; diagnostics.ts:29-62 judges totals only.",
+   "gap": "ExP segments every analysis by date to catch novelty or a one-day data spike (EXP-02-F6). BK06.md:226 proposes a novelty check; not built.",
+   "proposed_change": "Outcome form: optional per-week counts per arm. Flag 'possible novelty' when week-1 absolute change is more than double the later-weeks change, and 'check data' when one week holds most conversions. Label as a caution, not a test, at low n."
+  },
+  {
+   "check": "Data-quality / setup check before reading",
+   "current": "diagnostics.ts:38-44 'measured' check fails only when nothing is recorded after 2+ weeks with 30+ reach; experimentOutcome.ts:59-73 checks count consistency only.",
+   "gap": "ExP checks that the expected movement exists (e.g. the new element was seen), that both arms log the same events, and metric-level imbalance (EXP-03-F1/F2/F3).",
+   "proposed_change": "Outcome form asks 'did the change show in the treatment arm (yes/no/unknown)' and 'are both arms counted the same way'; 'no' or 'unknown' downgrades the reading to exploratory."
+  },
+  {
+   "check": "A/A practice",
+   "current": "Guide 06_experimentation.md:20 mentions A/A; BK06.md:26 cites it; no code path.",
+   "gap": "ExP A/A is simulated on historical logs (EXP-06-F1), which small businesses rarely have; rare-event metrics give only a few possible p-values (EXP-06-F3).",
+   "proposed_change": "Offer a one-week 'dry run' (both arms identical) for owner-built splits: pass if sampleRatio passes and every arm logs the same event types; no p-value verdict on conversions."
+  }
+ ]
+}

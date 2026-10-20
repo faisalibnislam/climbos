@@ -1,0 +1,241 @@
+[
+  {
+    "id": "BK04-P01",
+    "task": "Select the next assumption test",
+    "applies_when": [
+      "A material business commitment depends on uncertain customer, delivery, or economic assumptions."
+    ],
+    "required_inputs": [
+      "business_snapshot_id",
+      "next_commitment",
+      "segment_definition",
+      "evidence_records",
+      "cash_and_capacity_limits"
+    ],
+    "steps": [
+      "List separate necessary demand, access, delivery, and economics claims; record what changes if each is false.",
+      "Compare commercial consequence with current evidence strength and applicability; preserve unknown values.",
+      "Select the decisive weak assumption and name at least one competing explanation.",
+      "Choose a method that observes the missing evidence; check audience access, effort, budget, and permissions.",
+      "Define eligibility, observation window, success/stop/inconclusive criteria and review owner before testing."
+    ],
+    "outputs": [
+      "assumption_register",
+      "selected_test_brief",
+      "deferred_assumptions",
+      "decision_date"
+    ],
+    "stop_conditions": [
+      "Material business identity unresolved",
+      "No feasible or permitted evidence-collection route",
+      "Test cannot observe its stated hypothesis"
+    ],
+    "evidence_refs": [
+      "BK04-L01",
+      "BK04-L02",
+      "BK04-L03"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK04-P02",
+    "task": "Review evidence and update an investment decision",
+    "applies_when": [
+      "A bounded test has returned evidence or reached its review date."
+    ],
+    "required_inputs": [
+      "test_brief",
+      "raw_observations",
+      "actual_costs",
+      "execution_deviations",
+      "decision_criteria"
+    ],
+    "steps": [
+      "Check that collected observations match the eligible population and planned method.",
+      "Separate observations, interpretations, contradictory cases, and missing outcomes.",
+      "Assess what the evidence supports only within the tested offer, segment, and period.",
+      "Choose continue, revise, stop, or collect better evidence; record the reason and next spending boundary.",
+      "Invalidate affected assumptions after a segment, offer, or delivery-model change."
+    ],
+    "outputs": [
+      "evidence_review",
+      "decision_record",
+      "updated_assumptions",
+      "next_commitment_boundary"
+    ],
+    "stop_conditions": [
+      "Missing observations needed for material conclusion",
+      "Unresolved change makes the test incomparable",
+      "Any external action lacks authorization"
+    ],
+    "evidence_refs": [
+      "BK04-L03",
+      "BK04-L04"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK05-P01",
+    "task": "Prepare and synthesize episode-based discovery",
+    "applies_when": [
+      "A growth or product decision requires understanding actual customer behavior."
+    ],
+    "required_inputs": [
+      "learning_decision",
+      "segment_hypothesis",
+      "participant_roles",
+      "recruitment_route",
+      "recording_and_contact_permissions"
+    ],
+    "steps": [
+      "Choose consequential learning questions and perform available desk research.",
+      "Invite eligible participants neutrally; record incentives and selection limitations.",
+      "Reconstruct a recent task episode: trigger, steps, tools, people, effort, alternatives and consequence.",
+      "Flag compliments and future predictions; seek relevant concrete context without pitching prematurely.",
+      "Store traceable notes separately from interpretations, dissent, and proposed actions.",
+      "Debrief with relevant teammates and define targeted follow-up questions."
+    ],
+    "outputs": [
+      "interview_brief",
+      "episode_observations",
+      "contradiction_register",
+      "follow_up_plan"
+    ],
+    "stop_conditions": [
+      "Participant declines or withdraws permission",
+      "No relevant episode or population fit",
+      "Sensitive material cannot be handled under the agreed access policy"
+    ],
+    "evidence_refs": [
+      "BK05-L01",
+      "BK05-L02",
+      "BK05-L04",
+      "BK05-L05"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK05-P02",
+    "task": "Review a buyer commitment without inflating pipeline",
+    "applies_when": [
+      "An offer discussion has a legitimate next buyer step to evaluate."
+    ],
+    "required_inputs": [
+      "offer_version",
+      "buyer_context",
+      "requested_next_step",
+      "observed_response",
+      "follow_up_permission"
+    ],
+    "steps": [
+      "Distinguish discovery from offer discussion and identify who controls the decision.",
+      "Record the exact time, data, introduction, payment or other commitment requested.",
+      "Record acceptance, conditions, refusal, or deferral without converting compliments into intent.",
+      "Track whether the agreed step actually occurs before advancing pipeline state.",
+      "Use refusal or delay as learning evidence; avoid pressuring an unsuitable participant.",
+      "Check recipient and provider eligibility before any permitted follow-up."
+    ],
+    "outputs": [
+      "commitment_record",
+      "pipeline_evidence",
+      "unresolved_objections",
+      "next_step_status"
+    ],
+    "stop_conditions": [
+      "No appropriate next commercial step",
+      "Contact permission absent",
+      "Model attempts to fabricate acceptance or a purchase probability"
+    ],
+    "evidence_refs": [
+      "BK05-L03",
+      "BK05-L05"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK06-P01",
+    "task": "Check controlled-experiment readiness",
+    "applies_when": [
+      "A proposed change has a measurable outcome and a feasible eligible population."
+    ],
+    "required_inputs": [
+      "hypothesis",
+      "eligible_population",
+      "assignment_unit",
+      "metric_definitions",
+      "minimum_worthwhile_effect",
+      "analysis_method",
+      "budget",
+      "observation_horizon"
+    ],
+    "steps": [
+      "Assess sample feasibility and outcome delay using a trusted statistical implementation.",
+      "Align assignment and analysis units; review clustering, contamination, and interference.",
+      "Verify assignment, exposure and event logging; inspect A/A evidence where appropriate.",
+      "Choose and lock fixed-horizon or suitable sequential decision rules before outcomes.",
+      "Define primary metric, material guardrails, safety stops and data-quality checks.",
+      "Return a feasible alternative learning method when a useful effect cannot be resolved in the available horizon."
+    ],
+    "outputs": [
+      "experiment_plan",
+      "readiness_result",
+      "quality_check_spec",
+      "alternative_learning_plan_if_needed"
+    ],
+    "stop_conditions": [
+      "Instrumentation not trustworthy",
+      "No feasible sample plan for the stated decision",
+      "Permissions or material safety conditions unresolved"
+    ],
+    "evidence_refs": [
+      "BK06-L01",
+      "BK06-L03",
+      "BK06-L04",
+      "BK06-L06",
+      "BK06-L07"
+    ],
+    "status": "proposed_reference"
+  },
+  {
+    "id": "BK06-P02",
+    "task": "Translate experimental results into a commercial decision",
+    "applies_when": [
+      "A planned experiment reaches analysis or a material stopping condition."
+    ],
+    "required_inputs": [
+      "locked_analysis_plan",
+      "assignment_and_exposure_counts",
+      "outcome_data",
+      "quality_checks",
+      "guardrail_results",
+      "implementation_costs"
+    ],
+    "steps": [
+      "Check missing data, sample ratio mismatch, exposure integrity and unplanned changes before interpreting uplift.",
+      "Compute the planned estimate and interval with appropriate dependence and multiplicity treatment.",
+      "Label absolute percentage-point and relative effects correctly; preserve denominators.",
+      "Compare uncertainty with commercial importance, costs, downstream quality, and guardrails.",
+      "Return ship, stop, revise, investigate, or inconclusive with documented reasoning.",
+      "Preserve the original plan and record post-launch follow-up rather than rewriting history."
+    ],
+    "outputs": [
+      "quality_report",
+      "effect_and_uncertainty",
+      "decision_record",
+      "follow_up_measurement"
+    ],
+    "stop_conditions": [
+      "Unresolved validity failure",
+      "Material guardrail violation",
+      "Unapproved attempt to alter analysis to create a winner"
+    ],
+    "evidence_refs": [
+      "BK06-L02",
+      "BK06-L03",
+      "BK06-L04",
+      "BK06-L05",
+      "BK06-L07"
+    ],
+    "status": "proposed_reference"
+  }
+]

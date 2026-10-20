@@ -1,0 +1,200 @@
+{
+ "id": "BRP-22",
+ "version": 1,
+ "slug": "experiment-duration-and-metric",
+ "title": "Whole weeks, a week-by-week view, and a metric that can move",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Is the test long enough, and is the effect fading or a one-week artifact? / Which primary metric makes this test feasible inside the horizon?",
+ "business_types": [
+  "any business running a split test"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "any ab_split/holdout",
+  "gimmick-prone changes: subject lines, offers, new badges, creative",
+  "primary metric is a rare outcome (bookings, sales) at low traffic"
+ ],
+ "exclusions": [
+  "time-boxed events (read EXP for event tests; label as event-specific)",
+  "the proxy has no plausible link to the outcome",
+  "proxy is easily gamed (clicks via bait)"
+ ],
+ "required_inputs": [
+  "dates recorded",
+  "proxy measured in both arms"
+ ],
+ "evidence_requirements": [
+  "durationDays",
+  "per-week counts per arm (optional but needed for the flag)",
+  "weekly eligible units",
+  "baseline for the outcome and for the candidate proxy"
+ ],
+ "missing_data_behavior": [
+  "Primary metric baseline unknown: keep the generous default and suggest a higher-volume step.",
+  "No weekly counts: no novelty check; label it."
+ ],
+ "alternatives_when_constrained": [
+  "low traffic: compare week 1 vs the rest only, as a caution",
+  "no randomization: same weekly view on before/after, labelled observed",
+  "no instrumentation: owner notes events per week",
+  "low traffic: one bigger change, longer window, or interviews",
+  "no randomization: before/after on the proxy, labelled observed",
+  "no instrumentation: manual counts of booking clicks for 2 weeks"
+ ],
+ "decision_branches": [
+  {
+   "if": "durationDays < 7",
+   "then": "Error for split/holdout tests."
+  },
+  {
+   "if": "Primary outcome too rare to read in time",
+   "then": "Primary = nearest feasible funnel step; outcome kept as a guardrail."
+  },
+  {
+   "if": "Week-1 effect much larger than later weeks",
+   "then": "Caution: possible novelty (a label, not a verdict at small n)."
+  }
+ ],
+ "implementation_steps": [
+  "Lint: durationDays >= 7, warn if not a multiple of 7",
+  "At analysis: show each week's absolute change",
+  "Flag 'possible novelty' if week 1 change is more than double later weeks' change",
+  "Flag 'check data' if one week holds most conversions or a holiday/event falls in it",
+  "If flagged and reversible: extend or rerun before scaling",
+  "Size the outcome with sampleSize at its own baseline",
+  "If weeks exceed the horizon, size a nearer step (e.g. 'clicked Book now')",
+  "Use the proxy as primary, keep bookings as a guardrail/secondary read",
+  "Count only units the change can reach (triggered), and dilute by reach rate before claiming site-wide impact",
+  "If the proxy is still infeasible: before/after or qualitative path"
+ ],
+ "dependencies": [
+  "Baseline for the primary metric when known"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "None",
+  "tools": "Weekly counts per arm"
+ },
+ "metrics": [
+  "absolute change per week",
+  "conversions per week per arm",
+  "proxy rate",
+  "outcome rate",
+  "trigger rate"
+ ],
+ "guardrails": [
+  "guardrail bounds per week",
+  "outcome rate does not fall",
+  "proxy not gamed"
+ ],
+ "observation_window": "Minimum 7 days; 14+ for gimmick-prone changes (interpretation). / Whole weeks from sampleSize, within the plan horizon.",
+ "stop_conditions": [
+  "novelty flag: rerun or extend before scaling",
+  "spike flag: verify data for that week",
+  "proxy up but outcome down: no ship"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/specs.ts:864 (duration), shared/analysis/decisions.ts:149 (note only), shared/growth/experimentOutcome.ts (no per-week fields) / shared/agents/specs.ts:841-843, :853-871; shared/analysis/decisions.ts:131-153",
+ "extends_existing": [
+  "shared/agents/specs.ts lintExperimentFeasibility (fixed 10%->15% baseline)",
+  "shared/analysis/decisions.ts sampleSize"
+ ],
+ "source_references": [
+  "EXP-02-F6",
+  "EXP-08-F1",
+  "EXP-08-F2",
+  "EXP-08-F3",
+  "EXP-07-F1",
+  "EXP-07-F2",
+  "EXP-07-F3",
+  "EXP-03-F4",
+  "EXP-01-F2"
+ ],
+ "concepts": [
+  "EXP-C4",
+  "EXP-C5"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EXP-02-F6",
+   "EXP-08-F1",
+   "EXP-08-F2",
+   "EXP-08-F3",
+   "EXP-07-F1",
+   "EXP-07-F2",
+   "EXP-07-F3",
+   "EXP-03-F4",
+   "EXP-01-F2"
+  ],
+  "interpretation": [
+   "INTERPRETATION: ExP's daily date segmentation becomes weekly at small-business volume; the flag is a caution because the per-week difference itself is not testable at this n.",
+   "INTERPRETATION: ExP's movement probability is estimated from corpora of past tests; ClimbOS can approximate it only with the baseline and MDE, so the actionable part is sizing per metric and using nearer funnel steps."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: durationDays < 7 is an error for ab_split/holdout; optional weekly counts drive novelty and spike flags.",
+   "PROPOSED RULE: size feasibility with the primary metric's baseline when known; suggest the nearest feasible funnel step otherwise."
+  ],
+  "disagreements": [
+   "BK06.md:226 suggests flagging a >50% decay from week 1; at small n this will fire on noise often, so keep it a caution label.",
+   "The generous fixed baseline at specs.ts:842 is intentional ('only clearly impossible tests fail'); ExP's sensitivity framing argues it should be metric-specific when the baseline is known."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV31",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "week1": {
+     "control": "20/200",
+     "treatment": "30/200"
+    },
+    "week2": {
+     "control": "20/200",
+     "treatment": "22/200"
+    },
+    "change": "new email subject style"
+   },
+   "expected_behavior": [
+    "week 1 +5 points (10% vs 15%), week 2 +1 point (10% vs 11%)",
+    "week 1 change is 5x week 2 -> 'possible novelty' caution",
+    "week 1 alone: compareRates p = 0.1306, not significant either",
+    "no verdict from week 1"
+   ],
+   "hard_failure": [
+    "reports +50% relative from week 1 as the effect",
+    "accepts a 3-day ab_split"
+   ]
+  },
+  {
+   "id": "BR-EV32",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "weeklyEligible": 300,
+    "durationDays": 35,
+    "bookingBaseline": 0.02,
+    "bookingMDE": 0.01,
+    "proxyBaseline": 0.3,
+    "proxyMDE": 0.05
+   },
+   "expected_behavior": [
+    "current lint passes: 300 x 35/7 = 1,500 >= 1,372 (fixed 10%->15% sizing)",
+    "booking test needs 3,826 per arm, 7,652 total = 26 weeks: flag infeasible",
+    "proxy needs 1,377 per arm, 2,754 total = 10 weeks: feasible within a 90-day plan if extended to 70 days",
+    "triggered example: a 10% relative lift among the 20% of visitors who reach pricing is about 2% site-wide (0.20 x 10%)"
+   ],
+   "hard_failure": [
+    "accepts the 35-day booking test as feasible",
+    "reports the triggered 10% lift as site-wide"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

@@ -1,0 +1,277 @@
+{
+ "id": "BRP-21",
+ "version": 1,
+ "slug": "experiment-trust-gates",
+ "title": "Trust gates before reading a test: split check, significant read, guardrails",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "May ClimbOS read or report an effect from this split test yet? / Can a recorded outcome say the change caused extra conversions? / Did the change cause harm that blocks shipping, and may the test stop early for it?",
+ "business_types": [
+  "any business running a split test"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "ab_split or holdout with a planned allocation",
+  "owner, integration or ad tool reports per-arm counts",
+  "design randomized or holdout",
+  "both arms counted",
+  "any live test touching customers: email, offers, pricing, booking flow, ads"
+ ],
+ "exclusions": [
+  "before/after or observational designs (no planned split)",
+  "platform-run tests that do not expose per-arm counts (label attributed)",
+  "SRM failed or warned and unresolved",
+  "planned end not reached",
+  "metric redefined after results (already exploratory)",
+  "data-only plans with no exposure"
+ ],
+ "required_inputs": [
+  "assignment done before exposure",
+  "same unit counted in both arms",
+  "EXP-C1 split check passes",
+  "guardrail measurable in both arms"
+ ],
+ "evidence_requirements": [
+  "planned split",
+  "observed units per arm at the analysis date",
+  "unit definition (visitor, lead, contact)",
+  "per-arm units and conversions",
+  "planned end date",
+  "original metric and rule",
+  "1-3 guardrails each with a numeric bound written before launch",
+  "guardrail counts per arm"
+ ],
+ "missing_data_behavior": [
+  "Per-arm counts unknown: no effect read; label 'attributed' if a platform reports it.",
+  "Planned split unknown: ask before any read.",
+  "No guardrails set: the test can't be marked 'met'."
+ ],
+ "alternatives_when_constrained": [
+  "low traffic: switch to alternating weeks or a before/after labelled observational",
+  "no randomization: before/after with confounders",
+  "no instrumentation: manual tally of sends per arm before any outcome count",
+  "low traffic: report as directional with the interval of plausible changes",
+  "no randomization: observed label (existing)",
+  "no instrumentation: not_run or owner tally labelled observed",
+  "low traffic: absolute bounds with a minimum count instead of significance",
+  "no randomization: compare guardrail to the pre-period, labelled observed",
+  "no instrumentation: owner-reported complaints/refunds log"
+ ],
+ "decision_branches": [
+  {
+   "if": "Split check fails (p < 0.001)",
+   "then": "Block; diagnose by stage."
+  },
+  {
+   "if": "Split check warns (p < 0.01)",
+   "then": "Hide winner wording until checked."
+  },
+  {
+   "if": "Valid split but not significant",
+   "then": "'No reliable difference', never 'about N incremental'."
+  },
+  {
+   "if": "A guardrail is breached",
+   "then": "Block 'met'; harm stops are allowed early."
+  }
+ ],
+ "implementation_steps": [
+  "Run sampleRatio on planned vs observed",
+  "p < 0.001: block effect, show diagnosis",
+  "0.001 <= p < 0.01: warn, hide winner wording until the owner confirms the cause is ruled out",
+  "Diagnose in order: assignment (manual picking, IDs) -> execution (redirect or extra step in one arm) -> logging (one arm tracked differently, filters) -> analysis (counting only people who reached a step one arm changed)",
+  "Note which arm is over and when the gap began",
+  "Never trim an arm to rebalance",
+  "Run sampleRatio",
+  "Run compareRates with plannedEndReached",
+  "Set reading: srm_fail | too_early | no_reliable_difference | difference_detected",
+  "Only difference_detected may print 'about N incremental conversions'",
+  "Surprising large effects (Twyman): add 'replicate before scaling spend'",
+  "At plan time: name guardrails with bounds (e.g. unsubscribe rate <= 1.0%, refunds <= 2 per 100 orders)",
+  "During test: check bounds weekly; a breach in treatment (with a minimum count) pauses the test: this is a harm stop, not peeking",
+  "At the end: goal up or flat and all guardrails within bounds -> ship-eligible; any breach -> no ship, or an explicit trade-off weighed in advance",
+  "Do not read a non-significant guardrail rise as 'safe'"
+ ],
+ "dependencies": [
+  "Per-arm counts",
+  "Planned allocation",
+  "1-3 guardrails with a numeric harm bound"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Owner enters counts",
+  "tools": "Split tool or manual split"
+ },
+ "metrics": [
+  "units per arm",
+  "SRM p-value",
+  "direction of imbalance",
+  "absolute change in points",
+  "relative change",
+  "p-value",
+  "method (Fisher or z)",
+  "unsubscribe or complaint rate",
+  "refunds/cancellations",
+  "no-shows",
+  "support contacts",
+  "page errors"
+ ],
+ "guardrails": [
+  "no effect wording while SRM unresolved",
+  "guardrail bounds not breached (EXP-C3)",
+  "the guardrails themselves"
+ ],
+ "observation_window": "Checked at every recorded analysis, cumulative from test start. / Fixed: the planned duration, read once at the end. / Same as the test; checked weekly.",
+ "stop_conditions": [
+  "p < 0.001 unresolved after investigation: stop and restart the test",
+  "imbalance appears after a mid-test change: restart from the change date",
+  "no reliable difference: do not scale; decide on cost/simplicity or test a bigger change",
+  "bound breached with minimum count met: pause and review",
+  "two weekly breaches: stop"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/analysis/decisions.ts:112-128 (sampleRatio); wire into convex/playResults.ts:108-130 and shared/growth/experimentOutcome.ts / shared/growth/experimentOutcome.ts:48-54, :88-93, :102-118; convex/playResults.ts:121 / shared/ai/tasks.ts:94 (guardrails), shared/agents/specs.ts:845 (PEEKING), :853-871 (lint), shared/growth/experimentOutcome.ts (no guardrail fields)",
+ "extends_existing": [
+  "shared/analysis/decisions.ts sampleRatio/compareRates",
+  "shared/growth/experimentOutcome.ts inferenceOf/outcomeLine",
+  "shared/agents/specs.ts lintExperimentFeasibility (PEEKING)"
+ ],
+ "source_references": [
+  "EXP-04-F2",
+  "EXP-04-F3",
+  "EXP-04-F4",
+  "EXP-05-F1",
+  "EXP-02-F5",
+  "EXP-03-F1",
+  "EXP-03-F6",
+  "EXP-02-F1",
+  "EXP-02-F3",
+  "EXP-05-F2",
+  "EXP-03-F5",
+  "EXP-07-F3"
+ ],
+ "concepts": [
+  "EXP-C1",
+  "EXP-C2",
+  "EXP-C3"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EXP-04-F2",
+   "EXP-04-F3",
+   "EXP-04-F4",
+   "EXP-05-F1",
+   "EXP-02-F5",
+   "EXP-03-F1",
+   "EXP-03-F6",
+   "EXP-02-F1",
+   "EXP-02-F3",
+   "EXP-05-F2",
+   "EXP-03-F5",
+   "EXP-07-F3"
+  ],
+  "interpretation": [
+   "INTERPRETATION: ExP's 0.0005 is tuned for thousands of tests with large arms; at a few hundred units a real skew often lands between 0.001 and 0.01, so a warn tier catches more real problems at an acceptable false-alarm rate for one test at a time.",
+   "INTERPRETATION: ExP treats setup and SRM checks as preconditions for interpreting any metric movement; ClimbOS's design-only 'incremental' label skips them.",
+   "INTERPRETATION: ExP's 'metric out of range' alert (bounds plus TOST) cannot prove safety at small n, but a breach of an absolute bound is still detectable; so small businesses get the bound half of the method, not the equivalence half."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: block at p < 0.001 (keep), warn at p < 0.01, always print which arm is over and the stage checklist.",
+   "PROPOSED RULE: 'incremental' stays a design label; claim wording depends on a computed reading field.",
+   "PROPOSED RULE: ab_split/holdout lint requires 1-3 guardrails with a number; harm-subject stop rules are exempt from PEEKING; any breach blocks 'met'."
+  ],
+  "disagreements": [
+   "ExP threshold 0.0005 vs ClimbOS/Kohavi 0.001: not a correction worth making at small scale; the gap is the missing warn tier and diagnosis.",
+   "None with BK06; this is a wiring gap.",
+   "Current PEEKING regex can reject a legitimate harm stop; ExP endorses auto-shutdown for harm."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV28",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "planned": [
+     50,
+     50
+    ],
+    "observed_control": 230,
+    "observed_treatment": 170,
+    "control_conversions": 23,
+    "treatment_conversions": 26
+   },
+   "expected_behavior": [
+    "chi-square = 9.00 (expected 200 each; 2 x 30^2/200), p = 0.0027",
+    "not a block at 0.001 or ExP 0.0005, but in the proposed warn tier",
+    "asks which arm lost 30 units and why before reading conversions",
+    "conversion rates 10.0% vs 15.3% are shown only as unverified"
+   ],
+   "hard_failure": [
+    "declares treatment the winner",
+    "drops 60 control rows to make arms equal",
+    "says the split 'fits the plan' with no caution"
+   ]
+  },
+  {
+   "id": "BR-EV29",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "design": "randomized",
+    "planned": [
+     50,
+     50
+    ],
+    "exposed": 120,
+    "conversions": 18,
+    "controlSize": 120,
+    "controlConversions": 12,
+    "plannedEndReached": true
+   },
+   "expected_behavior": [
+    "SRM passes (120 vs 120)",
+    "rates 15.0% vs 10.0%, +5 points, +50% relative",
+    "two-proportion z p = 0.2416 -> no reliable difference",
+    "line reads 'randomized, no reliable difference' and does not claim 6 incremental conversions"
+   ],
+   "hard_failure": [
+    "prints 'about 6 incremental conversions' as caused",
+    "next plan brief treats the play as a proven win"
+   ]
+  },
+  {
+   "id": "BR-EV30",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "guardrail": "unsubscribe rate <= 1.0% with at least 500 sends per arm",
+    "control": {
+     "sends": 1000,
+     "unsubscribes": 5
+    },
+    "treatment": {
+     "sends": 1000,
+     "unsubscribes": 12
+    },
+    "goal": "replies up"
+   },
+   "expected_behavior": [
+    "treatment 1.2% vs control 0.5%: +0.7 points, +140% relative",
+    "Fisher exact p = 0.1418, not significant, but 1.2% > 1.0% bound with 1,000 sends -> guardrail breached",
+    "blocks ship wording even if replies rose",
+    "stop rule 'pause if unsubscribes pass 1%' is accepted, not flagged as peeking"
+   ],
+   "hard_failure": [
+    "calls the unsubscribe rise 'not significant, so safe'",
+    "ships on replies alone",
+    "lint rejects the harm stop as peeking"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

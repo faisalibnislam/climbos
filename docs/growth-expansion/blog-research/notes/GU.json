@@ -1,0 +1,997 @@
+{
+ "source_family": "Growth Unhinged",
+ "author": "Kyle Poyar",
+ "articles": [
+  {
+   "id": "GU-01",
+   "title": "Why everyone’s switching to AI credits",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-credit-pricing",
+   "published": "2025-09-03",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-credit-pricing); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Substack marks the post subscriber-only; the public preview shows roughly the first third (about 660 of 1,881 words incl. a sponsor block). Text stops at the heading on what credits mean in practice; implementation guidance after that was not visible. Sponsor: Metronome (usage-billing vendor).",
+   "sections_read": [
+    "Intro (credit adoption by large vendors)",
+    "Why everyone’s switching to AI credits"
+   ],
+   "findings": [
+    {
+     "id": "GU-01-F1",
+     "kind": "dated_tactic",
+     "summary": "Large software vendors (Microsoft, Salesforce, Cursor, OpenAI and many SaaS firms) moved AI features to credit-based pricing during 2025; Kyle argues incumbents adopting it makes credits an accepted way to buy AI, easing adoption for smaller vendors.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Vendor list and timing are as of Sep 2025; adoption by incumbents is not evidence that buyers prefer credits. Cursor's switch drew user pushback, which the author notes."
+    },
+    {
+     "id": "GU-01-F2",
+     "kind": "author_guidance",
+     "summary": "The main barrier to credits is buyer acceptance: credits can feel unpredictable, hard to manage and opaque, and procurement fears runaway cost without visibility.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Opinion; no buyer data shown in the readable portion."
+    },
+    {
+     "id": "GU-01-F3",
+     "kind": "author_guidance",
+     "summary": "Kyle reports, from his own experience, that 70–80% of AI token consumption comes from about 10% of users, and that such heavy users become unprofitable without guardrails.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "durable",
+     "limitations": "Practitioner observation, no sample or method given; grade D for ClimbOS base rates. Concentration will vary by product."
+    },
+    {
+     "id": "GU-01-F4",
+     "kind": "author_guidance",
+     "summary": "Frontier model prices are not falling as fast as many predicted (newest models stay expensive while usage grows), so pricing that assumes costs will collapse soon, such as unlimited plans run at thin or negative margin, is risky.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "dated",
+     "limitations": "Cites a specific model token price as of Aug–Sep 2025; provider prices change often."
+    },
+    {
+     "id": "GU-01-F5",
+     "kind": "author_guidance",
+     "summary": "Credits suit this environment: buyers see a simple usage pool, while the vendor can re-rate actions as costs and value change, price newer high-value actions higher, include some free usage in existing or free plans, and let customers choose how to spend the pool.",
+     "section": "Why everyone’s switching to AI credits",
+     "date_sensitivity": "durable",
+     "limitations": "Benefits are asserted; the post's practical section (not visible) may add caveats."
+    }
+   ]
+  },
+  {
+   "id": "GU-02",
+   "title": "Your pricing is (probably) broken",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/your-pricing-is-broken",
+   "published": "2025-10-22",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-pricing-is-broken); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview showed the intro and the first three pricing models (about 970 of 1,747 words incl. sponsor). Later sections, presumably on usage, credit and outcome models, were not visible. Sponsor: Metronome.",
+   "sections_read": [
+    "Your pricing is (probably) broken (intro)",
+    "1. Flat-fee subscriptions",
+    "2. Feature-based pricing",
+    "3. Seat-based pricing"
+   ],
+   "findings": [
+    {
+     "id": "GU-02-F1",
+     "kind": "author_guidance",
+     "summary": "No pricing model is perfect; the author advises making the most of the current model with targeted fixes rather than chasing newer models such as credits or outcome pricing out of embarrassment.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Based on conversations with about three dozen software founders; anecdotal."
+    },
+    {
+     "id": "GU-02-F2",
+     "kind": "author_guidance",
+     "summary": "Flat-fee or unlimited plans are what customers ask for, but they price out small buyers, undercharge large ones, give no expansion path and allow low or negative margin customers. The fix is to add at least two expansion levers.",
+     "section": "1. Flat-fee subscriptions",
+     "date_sensitivity": "durable",
+     "limitations": "Software-company framing; applies loosely to service retainers."
+    },
+    {
+     "id": "GU-02-F3",
+     "kind": "survey_or_benchmark",
+     "summary": "Kyle's rules of thumb: a premium edition priced 50–100% above base typically sees 15–25% uptake (he equates this to roughly +15% revenue); add-ons usually price at 10–30% of the core product; he cites his own earlier writing that about 1 in 3 B2B contracts include automatic renewal price increases, usually 5–8% a year; lite seats price at 10–40% of a full seat.",
+     "section": "1. Flat-fee subscriptions; 3. Seat-based pricing",
+     "date_sensitivity": "dated",
+     "limitations": "Experience-based ranges from B2B software, no sample stated; escalator figure is self-cited from 2024. Treat as grade C/D priors, not targets."
+    },
+    {
+     "id": "GU-02-F4",
+     "kind": "author_guidance",
+     "summary": "Good-Better-Best tiers fail when plans feel arbitrary and most buyers default to the middle. Remedies: state each plan's purpose in one sentence; launch one or two new features a year as add-ons and fold them into higher tiers roughly every 18 months; consider progressive feature gating that gives every plan a taste of premium features.",
+     "section": "2. Feature-based pricing",
+     "date_sensitivity": "durable",
+     "limitations": "Cadence numbers are the author's heuristic."
+    },
+    {
+     "id": "GU-02-F5",
+     "kind": "author_guidance",
+     "summary": "Seats remain common but weaken as AI reduces headcount and agent value does not scale with logins. Rather than abandoning seats, redefine them: lite seats, minimum seat counts on team plans, usage limits by plan, or pilot usage pricing for select large customers using their past usage as a baseline.",
+     "section": "3. Seat-based pricing",
+     "date_sensitivity": "durable",
+     "limitations": "Examples are large software vendors; small businesses rarely sell seats."
+    }
+   ]
+  },
+  {
+   "id": "GU-03",
+   "title": "A new framework for AI agent pricing",
+   "author": "Manny Medina (guest; intro by Kyle Poyar)",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-agent-pricing-framework",
+   "published": "2025-04-09",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-agent-pricing-framework); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Public (everyone) on the Substack archive; full text read. Diagrams/graphics were images and not read. Author is founder of Paid, a billing platform for results-based AI agent pricing: commercial interest in the outcome model he favours.",
+   "sections_read": [
+    "Intro",
+    "The four AI Agent pricing models dominating the market",
+    "Model 1: Price per agent",
+    "Model 2: Price per agent action",
+    "Model 3: Price per agent workflow",
+    "Model 4: Price per agent outcome",
+    "Future proofing the models",
+    "Decision framework: Choosing the right pricing model for your AI agent"
+   ],
+   "findings": [
+    {
+     "id": "GU-03-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Of 175 signups to Paid at launch, 130 (about 75%) said they were unsure how to price AI features.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Self-selected signups to a pricing-tool vendor, early 2025; shows uncertainty among that audience only."
+    },
+    {
+     "id": "GU-03-F2",
+     "kind": "author_guidance",
+     "summary": "Four agent pricing models: per agent (a fixed fee positioned against a hire), per action (consumption, often tokens or minutes plus margin), per workflow (a completed multi-step process), and per outcome (pay only for a defined result). Hybrids with seats are common.",
+     "section": "The four AI Agent pricing models",
+     "date_sensitivity": "durable",
+     "limitations": "Based on the author's review of 60+ AI agent companies; method not described."
+    },
+    {
+     "id": "GU-03-F3",
+     "kind": "author_guidance",
+     "summary": "Trade-offs: per-agent is predictable and draws on headcount budgets but invites 'same but cheaper' rivals; per-action is transparent but commoditises and tracks falling costs down; per-workflow balances the two but long or complex runs can go margin-negative; per-outcome aligns best with value but needs predictable performance, clear success definitions and attribution, and can lead to bespoke contracts.",
+     "section": "Models 1–4",
+     "date_sensitivity": "durable",
+     "limitations": "Claims about budget size (headcount budget 'at least 10x' tools budget) are unsourced assertions."
+    },
+    {
+     "id": "GU-03-F4",
+     "kind": "author_guidance",
+     "summary": "Decision questions: is the agent replacing a defined headcount (per agent, or time saved × hourly rate for workflows); can the outcome be measured and attributed reliably (per outcome, or outcome bonuses on another model); are tasks varied with unpredictable volume (per action, possibly with a per-agent base).",
+     "section": "Decision framework",
+     "date_sensitivity": "durable",
+     "limitations": "Framework is qualitative; no tested thresholds."
+    },
+    {
+     "id": "GU-03-F5",
+     "kind": "author_guidance",
+     "summary": "The author predicts core model costs will fall 10–100x over 3–5 years, pressuring per-action pricing most, and believes outcome pricing will win long term.",
+     "section": "Future proofing the models",
+     "date_sensitivity": "dated",
+     "limitations": "Forecast plus vendor interest (Paid sells outcome billing). GU-01 notes newest-model prices had not fallen as expected by late 2025."
+    }
+   ]
+  },
+  {
+   "id": "GU-04",
+   "title": "The state of SaaS pricing",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/the-state-of-usage-based-pricing",
+   "published": "2024-02-21",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/the-state-of-usage-based-pricing); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview showed about 1,200 of 2,252 words, through the seven hybrid examples. The body of 'Common pitfalls of usage-based pricing' was not visible. Slug says usage-based pricing; displayed title is 'The state of SaaS pricing'.",
+   "sections_read": [
+    "Intro",
+    "What’s happening in the market",
+    "It’s no longer usage-based pricing vs. subscriptions",
+    "Seven hybrid examples (usage-based expansion; usage-based subscriptions; transaction revenue + subscriptions; success-based; usage pricing for specific segments; active-user subscriptions; credit-based ELAs)",
+    "Common pitfalls of usage-based pricing (heading only)"
+   ],
+   "findings": [
+    {
+     "id": "GU-04-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "In a survey of private SaaS companies Kyle cites (over 3,000 respondents across six annual surveys, 700+ in 2023, fielded in Q3), usage-based pricing adoption fell from 46% to 41% year on year, with 17% testing it.",
+     "section": "What’s happening in the market",
+     "date_sensitivity": "dated",
+     "limitations": "SaaS-only, venture-oriented respondents, 2022–2023; self-reported; not small local businesses."
+    },
+    {
+     "id": "GU-04-F2",
+     "kind": "survey_or_benchmark",
+     "summary": "Most usage-based businesses in that survey use a hybrid of subscription plus usage rather than pure pay-as-you-go, especially those selling to smaller customers who are more sensitive to unplanned bills.",
+     "section": "What’s happening in the market",
+     "date_sensitivity": "dated",
+     "limitations": "Same survey caveats; the readable text gives the direction, not the exact split."
+    },
+    {
+     "id": "GU-04-F3",
+     "kind": "author_guidance",
+     "summary": "The real contrast is not usage vs subscription but flexible, consumption-linked pricing vs rigid upfront commitments tied to access. Hybrid patterns include: usage included in plans with paid overage; plans stepped by usage allowance; subscription plus transaction fees; success fees as an add-on; pay-as-you-go for occasional users; charging only for active users; and committed spend drawn down flexibly.",
+     "section": "It’s no longer usage-based pricing vs. subscriptions",
+     "date_sensitivity": "durable",
+     "limitations": "Examples are large software vendors (as of early 2024); their specific prices are dated."
+    },
+    {
+     "id": "GU-04-F4",
+     "kind": "author_guidance",
+     "summary": "Usage pricing is more than a price change: it touches billing, forecasting, sales compensation and organisation, and usage businesses saw faster revenue deceleration in the 2022–2023 slowdown.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Deceleration claim is stated without the underlying data in the readable part."
+    }
+   ]
+  },
+  {
+   "id": "GU-05",
+   "title": "Your guide to SaaS packaging 201",
+   "author": "Kyle Poyar",
+   "canonical_url": "https://www.growthunhinged.com/p/your-guide-to-saas-packaging-201",
+   "published": "2023-09-13",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-guide-to-saas-packaging-201); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the intro and the first two principles (about 750 of 1,717 words). Principle 3 onward was not visible.",
+   "sections_read": [
+    "Intro",
+    "1. Good-Better-Best is the de-facto starting point",
+    "2. Leave room for add-ons – but be selective about it",
+    "3. Each package needs a job in your revenue generation (heading only)"
+   ],
+   "findings": [
+    {
+     "id": "GU-05-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Kyle states that about two-thirds of SaaS companies use a three-tier Good-Better-Best lineup.",
+     "section": "1. Good-Better-Best",
+     "date_sensitivity": "dated",
+     "limitations": "No source or sample given in the readable part; SaaS only."
+    },
+    {
+     "id": "GU-05-F2",
+     "kind": "author_guidance",
+     "summary": "Good-Better-Best sits between a single inflexible offer (no upsell) and build-your-own packaging (decision paralysis, nickel-and-diming, more line items to negotiate). It eases choice, segments by willingness to pay, creates an upsell path and funds new products. Default to it when unsure.",
+     "section": "1. Good-Better-Best",
+     "date_sensitivity": "durable",
+     "limitations": "Author notes his principles may conflict and not fit all contexts."
+    },
+    {
+     "id": "GU-05-F3",
+     "kind": "author_guidance",
+     "summary": "Sell a capability as an add-on when it is polarising (a few value it highly), serves a different buyer or budget, replaces spend on another vendor, is adopted much later than purchase, or carries real delivery cost you want only willing payers to use. Keep it to one or two add-ons at first purchase, each easy to explain.",
+     "section": "2. Leave room for add-ons",
+     "date_sensitivity": "durable",
+     "limitations": "Heuristics from B2B software sales; not tested thresholds."
+    }
+   ]
+  },
+  {
+   "id": "GU-06",
+   "title": "Your guide to reverse trials",
+   "author": "Kyle Poyar (with Lauryn Isford, then Airtable)",
+   "canonical_url": "https://www.growthunhinged.com/p/your-guide-to-reverse-trials",
+   "published": "2022-06-29",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/your-guide-to-reverse-trials); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the freemium vs trial trade-offs and the reverse-trial definition (about 670 of 2,333 words). The Airtable interview answers were not visible.",
+   "sections_read": [
+    "Intro (freemium vs free trial trade-offs)",
+    "You don’t have to choose",
+    "Inside Airtable’s reverse trial strategy (intro only)"
+   ],
+   "findings": [
+    {
+     "id": "GU-06-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "Free-trial products see higher free-to-paid conversion than freemium, often 2–3x, while freemium sees higher visitor-to-signup conversion; Kyle links external sources for both.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Linked sources were not read; 2022 PLG software data; the two rates use different denominators (trial starters vs free users)."
+    },
+    {
+     "id": "GU-06-F2",
+     "kind": "author_guidance",
+     "summary": "Choose by trade-off: freemium favours acquisition, longer time-to-value and viral or network products; free trials favour conversion speed and cash payback. He illustrates median time to purchase as perhaps 14 days for trials vs 60–90 for freemium.",
+     "section": "Intro",
+     "date_sensitivity": "durable",
+     "limitations": "Time-to-purchase figures are illustrative ('might be'), not measured."
+    },
+    {
+     "id": "GU-06-F3",
+     "kind": "author_guidance",
+     "summary": "A reverse trial starts new users on a time-limited trial of paid features, then they buy or drop to a permanent free tier, aiming to get both acquisition and conversion and to use loss aversion.",
+     "section": "You don’t have to choose",
+     "date_sensitivity": "durable",
+     "limitations": "Benefit claims rely on general behavioural findings; product-specific results unknown from the readable text."
+    }
+   ]
+  },
+  {
+   "id": "GU-07",
+   "title": "Customers don't care about your AI feature",
+   "author": "Kristen Berman (guest, Irrational Labs)",
+   "canonical_url": "https://www.growthunhinged.com/p/ai-messaging-study",
+   "published": "2025-01-29",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "full",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/ai-messaging-study); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Public (everyone) on the Substack archive; full text read including the footnote correction. Charts were images; values taken from text only.",
+   "sections_read": [
+    "Intro",
+    "The surprising science behind AI labels and what our research revealed",
+    "So why do companies still overuse “AI” in their marketing?",
+    "How you should market your AI feature (1–4)",
+    "Rethink the AI crutch",
+    "Footnote on WTP correction"
+   ],
+   "findings": [
+    {
+     "id": "GU-07-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "In a controlled experiment with 767 US participants shown landing pages for four real products with or without explicit AI wording, labelling as 'generative AI' significantly lowered expected impact; willingness to pay differed by about $1, not statistically significant; trust was largely unchanged. One product was an exception.",
+     "section": "The surprising science behind AI labels",
+     "date_sensitivity": "dated",
+     "limitations": "Online panel, mostly mainstream users (68% had used AI a few times, 15% daily); not early adopters; stated WTP, not purchases; four products; period late 2024/early 2025; consultancy author."
+    },
+    {
+     "id": "GU-07-F2",
+     "kind": "author_guidance",
+     "summary": "Market AI features by the result: plain-language benefits, specific measured gains (time or money saved), letting users try a feature before it becomes paid (endowment, reverse trial), and when 'AI' must appear, pair it with a clear use case or a benefit-led name.",
+     "section": "How you should market your AI feature",
+     "date_sensitivity": "durable",
+     "limitations": "Recommendations extend beyond what the experiment tested; quoted vendor stats are those vendors' claims."
+    },
+    {
+     "id": "GU-07-F3",
+     "kind": "reported_case",
+     "summary": "A behavioural redesign that framed a setup call as unlocking a device ('their' device) was reported alongside other changes to raise successful device pairing by 90% for a health-device company.",
+     "section": "3. Leverage the Endowment Effect",
+     "date_sensitivity": "durable",
+     "limitations": "Single consultancy case, combined interventions, no baseline given."
+    }
+   ]
+  },
+  {
+   "id": "GU-08",
+   "title": "What I learned from tracking 443 SaaS pricing pages",
+   "author": "John Kotowski and Rob Litterst (guests, PricingSaaS; intro by Kyle Poyar)",
+   "canonical_url": "https://www.growthunhinged.com/p/state-of-saas-pricing-changes-2024",
+   "published": "2024-10-16",
+   "updated": null,
+   "retrieved_at": "2026-10-20",
+   "access": "partial",
+   "access_notes": "Read via the publisher's legacy Substack archive (kylepoyar.substack.com/p/state-of-saas-pricing-changes-2024); the canonical beehiiv site growthunhinged.com returned a Cloudflare bot-verification page to every fetch (WebFetch 403, curl 403, browser pane stuck on 'Performing security verification'), which was not bypassed. Subscriber-only on Substack; preview covered the Good/Bad/Ugly examples (about 900 of 1,502 words). 'Wider Trends' benchmarks were not visible. Title says 443 pages; text says the firm monitors 3,000+ pages; which index the 42% uses is unclear.",
+   "sections_read": [
+    "Intro",
+    "The Good",
+    "The Bad",
+    "The Ugly",
+    "Wider Trends (heading only)"
+   ],
+   "findings": [
+    {
+     "id": "GU-08-F1",
+     "kind": "survey_or_benchmark",
+     "summary": "PricingSaaS reports 42% of companies in its index changed prices in the first three quarters of 2024; Kyle's intro says increases were the most common change, averaging about 20%.",
+     "section": "Intro",
+     "date_sensitivity": "dated",
+     "limitations": "Vendor-run index of public SaaS pricing pages, Q1–Q3 2024; denominator ambiguous (443 vs 3,000+); list prices only, not realised prices."
+    },
+    {
+     "id": "GU-08-F2",
+     "kind": "reported_case",
+     "summary": "Monday.com raised its most popular plan about 20% but its entry plan only 12.5% to keep the entry price under a $10 per-seat threshold, and justified the rise with a visible record of added features.",
+     "section": "The Good",
+     "date_sensitivity": "dated",
+     "limitations": "Public pricing-page observation; outcome (churn, revenue) not reported."
+    },
+    {
+     "id": "GU-08-F3",
+     "kind": "reported_case",
+     "summary": "IFTTT more than doubled (+150%) the price of its unlimited flat-rate top plan while the lower plan rose about 17%; the authors argue adjusting usage limits or a hybrid model would have captured power-user value without such a jump.",
+     "section": "The Bad",
+     "date_sensitivity": "dated",
+     "limitations": "Opinion on a public change; customer reaction not measured."
+    },
+    {
+     "id": "GU-08-F4",
+     "kind": "author_guidance",
+     "summary": "Pricing-page clarity matters: plan names should signal who each plan is for (e.g., not calling a top tier 'Plus'), defaults such as the pre-filled team size shape perceived price and target segment, and confusing ordering, mixed audiences on one grid or many badges hurt comprehension.",
+     "section": "The Good; The Ugly",
+     "date_sensitivity": "durable",
+     "limitations": "Qualitative judgements; no conversion data."
+    }
+   ]
+  }
+ ],
+ "not_read": [
+  {
+   "url": "https://www.growthunhinged.com/t/pricing",
+   "reason": "Pricing tag index blocked by Cloudflare bot verification (403 via WebFetch and curl; browser pane stuck on verification). Not bypassed. Article list built from the publisher's public Substack archive API instead; posts published on beehiiv after 2026-01-12 could not be listed or read."
+  },
+  {
+   "url": "https://www.growthunhinged.com/",
+   "reason": "Homepage blocked by the same bot verification; 2026 posts (post-migration to beehiiv) unavailable."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/whats-changing-with-ai-monetization",
+   "reason": "Preview read (about half). Not selected: overlaps GU-03 (AI 'FTE' pricing) and its survey figures (2024 SaaS benchmarks: 54% of AI products priced beyond seats) add little durable guidance for small businesses."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/from-selling-access-to-selling-work",
+   "reason": "Preview read (about 40%). Not selected: overlaps GU-03; its value-capture claim (subscriptions capture ~10–15% of claimed value vs ~20–30% for success-based) is the author's unsourced estimate. Section on the downsides of success-based pricing was not visible."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/the-best-growth-tactics-of-2025",
+   "reason": "Fully read (public). Not selected: self-selected poll of 130 readers naming their top experiment; category shares (outbound/ABM 20%, partners 20%, events 16%) are popularity, not effectiveness, and skew B2B software."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/how-to-optimize-your-pricing-page",
+   "reason": "Preview read (about a third). Not selected: overlaps GU-08 and BK02 Ch 10/11 (benefit-led plans; stay under thresholds; charm endings like $9.99 may signal cheap consumer product in B2B)."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/your-guide-to-plg-pricing-201",
+   "reason": "Preview only (~20%); mostly about multi-user software teams, low relevance to small-business owners."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/how-ai-apps-make-money",
+   "reason": "Preview only (~25%): 2024 review of 40 AI app pricing pages (7 in 10 subscription, half with free plan). Dated and descriptive; not selected."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/how-to-optimize-your-free-trial",
+   "reason": "Preview under 10% of text; too little readable to use."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/your-guide-to-price-testing",
+   "reason": "Preview only ~40 words; body not readable."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/free-to-paid-conversion-at-scale",
+   "reason": "Preview ~100 words; body not readable."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/your-guide-to-plg-benchmarks",
+   "reason": "Preview ~40 words; body not readable."
+  },
+  {
+   "url": "https://www.growthunhinged.com/p/the-ai-churn-wave",
+   "reason": "Preview ~35 words; body not readable."
+  }
+ ],
+ "concepts": [
+  {
+   "id": "GU-C1",
+   "name": "Credit allowance with heavy-user guardrails",
+   "decision": "Whether to sell variable-cost work (AI generation, research, messages, jobs) as unlimited, pure pay-as-you-go, or a plan allowance in credits with top-ups, and how to rate each action so heavy users don't erase margin.",
+   "applies_when": [
+    "Delivery cost per customer varies widely with use (AI calls, data lookups, sends, minutes)",
+    "Customers want a predictable bill but usage differs a lot between them",
+    "The business offers several actions with very different cost or value"
+   ],
+   "avoid_when": [
+    "Cost per customer is flat and low (credits add confusion for no margin benefit)",
+    "Buyers can't relate credits to anything they value and no estimator can be shown",
+    "No metering exists to count usage per customer"
+   ],
+   "evidence_required": [
+    "Per-customer variable cost for at least one full billing cycle",
+    "Share of total variable cost from the top 10% of customers",
+    "Cost per action type, versioned by date",
+    "Customer comprehension check of the credit unit (can they predict their bill?)"
+   ],
+   "prerequisites": [
+    "Usage metering per customer and action",
+    "Billing that supports allowances and top-ups",
+    "Provider-price registry (book 12 §11)"
+   ],
+   "steps": [
+    "Compute cost per customer per month; rank customers; record the top-decile cost share",
+    "List actions; set credit rates by value to the buyer, with a floor of cost / (1 − target margin)",
+    "Size each plan's allowance so a customer who uses it all still meets the margin floor",
+    "Offer clearly priced top-ups or a fair-use limit for the heavy tail rather than raising everyone's price",
+    "Show the credit cost before any expensive action and a balance meter; never auto-charge overage without consent",
+    "Re-rate actions when provider costs or value change, with notice"
+   ],
+   "alternatives": [
+    "No metering: use a fair-use cap on the top plan and review manually monthly",
+    "Low volume: one plan plus a single paid add-on for the costly action",
+    "Small budget/no billing integration: sell prepaid packs by invoice",
+    "Missing cost data: use provider invoices ÷ active customers as an average and flag distribution as unknown"
+   ],
+   "metrics": [
+    "Contribution margin per customer (distribution, not just average)",
+    "Top-decile share of variable cost",
+    "Share of customers hitting allowance; top-up attach rate",
+    "Billing-surprise support tickets and refunds",
+    "Breakage (unused credits) tracked separately from earned margin"
+   ],
+   "guardrails": [
+    "Fully used allowance meets the margin floor; breakage is never the plan that makes the margin",
+    "No hidden overage; balance and per-action cost visible",
+    "Re-rating applies only with advance notice; purchased credits keep their stated value",
+    "Do not degrade the core promised outcome to save cost"
+   ],
+   "observation_window": "Two full billing cycles after launch or re-rating; heavy-user share reviewed monthly.",
+   "stop_review": [
+    "Top-decile customers are contribution-negative after two cycles: re-rate or cap",
+    "Surprise-bill tickets or refunds rise: simplify the unit or add an estimator",
+    "Conversion drops versus the prior flat plan with no margin gain: revert"
+   ],
+   "climbos_location": "Plan engine (offer/economics diagnosis), PB-pricing-test variant, margin calculator, pricing page advice. Separately: ClimbOS's own credit pricing review (see GU.md arithmetic).",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Booking app for salons with AI reply drafting",
+     "customers": 100,
+     "plan_price_usd": 40,
+     "monthly_variable_cost_total_usd": 1200,
+     "top_10pct_cost_share": 0.75,
+     "target_margin": 0.3
+    },
+    "expected_behavior": [
+     "Notes 70% average margin hides ten customers at about -$50 contribution each",
+     "Proposes an allowance whose full use costs at most $28 plus priced top-ups or a fair-use cap for the heavy tail",
+     "Asks for comprehension testing and a balance display",
+     "Labels the 70–80%/10% concentration figure as the author's experience, not a benchmark"
+    ],
+    "hard_failure": [
+     "Raising price for all customers as the only fix",
+     "Recommending unlimited usage on the strength of expected falling AI costs",
+     "Inventing the customer's cost distribution"
+    ]
+   },
+   "author_refs": [
+    "GU-01-F2",
+    "GU-01-F3",
+    "GU-01-F4",
+    "GU-01-F5",
+    "GU-02-F2",
+    "GU-04-F2",
+    "GU-08-F3"
+   ],
+   "interpretation": "Interpretation: Kyle's case for credits is mainly about cost concentration and the vendor's freedom to re-rate actions; buyer predictability is the cost. For small businesses the same logic applies to any capped package of variable work (e.g., included revisions, call minutes).",
+   "proposed_rule": "Proposed ClimbOS rule: when a customer's variable cost per account varies by more than a set ratio, the engine checks the top-decile cost share and the margin of a fully used allowance before recommending flat or unlimited pricing; recommendations must pass the margin floor at full allowance use, excluding breakage.",
+   "overlaps_existing": "Extends guides/02_monetization.md (heavy-use scenario, allowance + top-up hypothesis) and growth-intelligence book 12 §10–11 (distribution over average, reserve cost before expensive work). Adds the concentration metric, re-rating, and the breakage rule. Versions PB-pricing-test with a credit/allowance variant.",
+   "disagreements": "Book 12 warns usage pricing needs clear metering and understanding; GU-01 claims credits feel simple to buyers. Decide by a comprehension test: if owners cannot predict their monthly credit use within a reasonable band, prefer plan tiers with a fair-use cap. GU-03 predicts 10–100x cost falls; GU-01 says newest-model costs had not fallen by late 2025. Rule: price on current observed cost, never on forecast declines."
+  },
+  {
+   "id": "GU-C2",
+   "name": "Charging-model eligibility gates (seat, flat, usage-hybrid, workflow, outcome)",
+   "decision": "Which billing unit fits a business whose product does work for the customer: per person, flat subscription, usage allowance, per completed job/workflow, or per result.",
+   "applies_when": [
+    "Owner is choosing or changing what they charge per (not just how much)",
+    "The product or service automates work previously done by staff or contractors",
+    "Owner is drawn to outcome or success pricing"
+   ],
+   "avoid_when": [
+    "Pricing is set by a dominant marketplace or regulation",
+    "Fewer than a handful of customers and no delivery history (start with a simple fixed offer and learn)"
+   ],
+   "evidence_required": [
+    "Can the outcome be defined, measured and attributed to the business without dispute?",
+    "Variance of delivery cost per job",
+    "Customer's current alternative and its cost (staff time, agency, contractor)",
+    "Customer's need for bill predictability",
+    "Cash buffer to carry delivery cost before outcome fees are paid"
+   ],
+   "prerequisites": [
+    "Job/usage tracking",
+    "Written outcome definition and attribution method if outcome pricing is considered",
+    "Contract or terms template"
+   ],
+   "steps": [
+    "Describe what the customer values and how they measure it",
+    "Gate outcome pricing: measurable + attributable + performance predictable + cash can carry the lag; otherwise drop to workflow or job pricing, or add an outcome bonus on a base fee",
+    "Gate per-job/workflow pricing: jobs are standard enough to price; cap or surcharge long-running jobs",
+    "Gate usage pricing: volume varies a lot between customers; for small buyers prefer a hybrid (base plan + allowance) over pure pay-as-you-go",
+    "Gate replacement framing (price against a hire): the offer covers a defined role's typical output; price as a share of that cost and expect cheaper copycats",
+    "Compare two or three candidate models with the owner's own numbers before any price-point optimisation"
+   ],
+   "alternatives": [
+    "Attribution unclear: base fee + capped success bonus",
+    "Low volume: fixed-scope package per job",
+    "No tracking integration: monthly retainer with a stated volume ceiling"
+   ],
+   "metrics": [
+    "Contribution per job and per customer",
+    "Share of disputed outcome invoices",
+    "Days from delivery cost to cash received",
+    "Win rate and churn by model"
+   ],
+   "guardrails": [
+    "Outcome definitions written before work starts; no retroactive redefinition",
+    "No outcome pricing in regulated categories where contingent fees are restricted without owner/legal review",
+    "Show total expected cost range to the buyer"
+   ],
+   "observation_window": "One full sales cycle plus one delivery cycle per model tried; outcome models need at least the attribution window plus payment terms.",
+   "stop_review": [
+    "Disputes over outcomes exceed an agreed share: move to base + bonus",
+    "Workflow jobs run margin-negative repeatedly: add caps or re-scope",
+    "Buyers stall on unpredictability: add a base plan or ceiling"
+   ],
+   "climbos_location": "Plan engine offer/economics stage and Climb AI pricing questions; owner-input form fields (outcome measurability, attribution, cash buffer); new contract field for PB-pricing-test 'billing unit' changes.",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Two-person lead-gen agency for local contractors",
+     "wants": "charge per booked appointment only",
+     "attribution": "appointments booked through client's own phone line, not tracked",
+     "cash_buffer_months": 1
+    },
+    "expected_behavior": [
+     "Flags that attribution is not reliable and cash buffer is thin",
+     "Recommends base retainer plus a per-appointment bonus with call tracking, or a fixed package until tracking exists",
+     "States the outcome model's preconditions explicitly"
+    ],
+    "hard_failure": [
+     "Endorsing pure pay-per-result without an attribution method",
+     "Citing the guest author's 'outcome pricing will win' as evidence for this business"
+    ]
+   },
+   "author_refs": [
+    "GU-03-F2",
+    "GU-03-F3",
+    "GU-03-F4",
+    "GU-03-F5",
+    "GU-04-F2",
+    "GU-04-F3",
+    "GU-04-F4",
+    "GU-02-F1"
+   ],
+   "interpretation": "Interpretation: GU-03's four models map to small-business terms as retainer-per-role, pay-as-you-go, per-job and success fee. The durable content is the gating conditions, not the forecast.",
+   "proposed_rule": "Proposed ClimbOS rule: the engine may recommend outcome or success pricing only when the owner confirms a written outcome definition, an attribution method and cash to carry delivery cost; otherwise it offers base + bonus or per-job pricing and explains which gate failed.",
+   "overlaps_existing": "Extends guides/02_monetization.md ('compare charging models before optimizing a price point') and book 12 §10 with explicit eligibility gates. Complements BK02 Ch 8 strategy-type eligibility (penetration/skimming/maximisation), which covers price level, not billing unit.",
+   "disagreements": "GU-03 (vendor of outcome billing) says outcome pricing wins long term; GU-02 says no model is perfect and to optimise the current one. For small businesses ClimbOS sides with GU-02 by default; outcome pricing only when the gates pass. GU-04's survey shows small-customer sellers prefer hybrids, consistent with 02_monetization's predictability concern."
+  },
+  {
+   "id": "GU-C3",
+   "name": "Package architecture and expansion levers",
+   "decision": "How to structure tiers and add-ons, and which lever to add when a single flat offer leaves no room for customers to pay more as they get more value.",
+   "applies_when": [
+    "One flat price for everyone, little or no expansion revenue",
+    "Best customers clearly get more value than others",
+    "A new capability is launching and the owner asks whether to include it or charge for it"
+   ],
+   "avoid_when": [
+    "Customer count too small to tell segments apart (start with one offer plus one add-on)",
+    "Tier differences would gate something the entry plan needs to deliver its promise",
+    "Operating more packages would overload support or billing"
+   ],
+   "evidence_required": [
+    "Segments with different jobs or willingness to pay (interviews, purchase data)",
+    "Which features or services customers name as the reason they buy",
+    "Adoption timing of features after purchase",
+    "Cost to deliver each capability"
+   ],
+   "prerequisites": [
+    "Ability to bill tiers/add-ons",
+    "Plan entitlements written down"
+   ],
+   "steps": [
+    "Write one sentence per plan: who it is for and why they buy",
+    "Default to three tiers when segments differ; one offer when they don't",
+    "Run the add-on test for each capability: polarising, different buyer/budget, replaces another vendor, adopted later, or costly to serve",
+    "Limit first purchase to one or two add-ons",
+    "Pick one expansion lever to test: premium tier, paid add-on, usage limit by tier, lite access level, minimum team size, or a disclosed annual escalator on new contracts",
+    "Fold proven add-ons into a higher tier periodically to keep the lineup simple"
+   ],
+   "alternatives": [
+    "Low traffic: offer the premium option in sales conversations and log acceptance before publishing",
+    "Service business: premium = faster turnaround or priority access; add-on = optional extra service",
+    "No billing integration: separate invoice line items"
+   ],
+   "metrics": [
+    "Premium uptake share",
+    "Add-on attach rate",
+    "Revenue per customer and contribution per customer",
+    "Downgrades and cannibalisation from top tier",
+    "'Which plan?' questions and plan-choice time"
+   ],
+   "guardrails": [
+    "Entry plan must deliver its advertised outcome",
+    "No decoy-only tiers (BK02 rule)",
+    "Escalators disclosed at signup, applied only per contract terms",
+    "Existing customers' terms unchanged during tests (PB-pricing-test)"
+   ],
+   "observation_window": "At least one full renewal or repurchase cycle; 8–12 weeks of new signups for uptake reads, longer at low volume.",
+   "stop_review": [
+    "Premium uptake well below plan and base conversion falls: rethink tier boundaries",
+    "Add-on causes billing confusion or complaints: bundle it",
+    "More than two add-ons routinely needed: repackage"
+   ],
+   "climbos_location": "Pricing page advice, plan engine offer stage, PB-pricing-test (versioned variant: 'add an expansion lever'), Climb AI packaging Q&A, revenue calculator.",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Bookkeeping firm, one $300/month package, 60 clients",
+     "observation": "a third of clients ask for payroll and monthly calls",
+     "payroll_cost_hours_per_client": 2
+    },
+    "expected_behavior": [
+     "Suggests payroll as an add-on (different need, costly to serve) or a premium tier with calls",
+     "Computes revenue lift as uptake × price difference using owner assumptions labelled hypothetical",
+     "Keeps base package delivering full bookkeeping",
+     "Labels the 15–25% uptake range as one author's software experience"
+    ],
+    "hard_failure": [
+     "Moving core bookkeeping into the premium tier",
+     "Promising Kyle's +15% revenue as an expected result"
+    ]
+   },
+   "author_refs": [
+    "GU-02-F2",
+    "GU-02-F3",
+    "GU-02-F4",
+    "GU-02-F5",
+    "GU-05-F1",
+    "GU-05-F2",
+    "GU-05-F3"
+   ],
+   "interpretation": "Interpretation: the add-on test is the most transferable piece for small businesses; numeric uptake and pricing ratios are software heuristics to use only as starting assumptions.",
+   "proposed_rule": "Proposed ClimbOS rule: every package recommendation states each plan's buyer and reason in one sentence, passes the add-on test for each extra, and shows expansion revenue as uptake × price difference with owner-supplied or clearly labelled assumed uptake.",
+   "overlaps_existing": "Extends guides/02_monetization.md (coherent package boundaries) and BK02 review Ch 10/11 (benefit lines per plan, compromise tier, no decoys). New: add-on eligibility test, expansion-lever menu, rebundling cadence. Versions PB-pricing-test.",
+   "disagreements": "BK02 Ch 11 treats a middle tier as a compromise-effect tactic; GU-02 warns everyone defaulting to the middle can be a symptom of arbitrary plans. Decide by plan-choice data: if most buyers choose the middle and the top tier sees near-zero uptake, revisit boundaries rather than adding anchors."
+  },
+  {
+   "id": "GU-C4",
+   "name": "Free plan vs free trial vs reverse trial",
+   "decision": "Which try-before-you-buy model to use for a self-serve product or a sampleable service, given acquisition, conversion speed and cash needs.",
+   "applies_when": [
+    "Self-serve software, app or digital product",
+    "Service businesses considering a free first session or sample (by analogy)",
+    "Owner debating freemium vs trial, or conversion from free is low"
+   ],
+   "avoid_when": [
+    "High-touch sales where trials are run by hand anyway",
+    "Free usage carries material variable cost the business can't fund",
+    "Value can't be experienced within any trial length and there's no free tier option"
+   ],
+   "evidence_required": [
+    "Visitor-to-signup and signup-to-paid rates by model (owner data, or labelled fallbacks from base-rates.md)",
+    "Time to first value",
+    "Variable cost per free user",
+    "Cash runway or payback requirement",
+    "Whether value grows with more users (virality/network)"
+   ],
+   "prerequisites": [
+    "Feature gating or plan entitlements",
+    "Product analytics for signup, first value and conversion",
+    "Lifecycle emails before trial end"
+   ],
+   "steps": [
+    "Measure time to first value; if longer than a plausible trial, lean freemium or reverse trial",
+    "Estimate paid customers per 1,000 visitors for each model using owner data or labelled assumptions",
+    "Account for timing: trials convert sooner, which matters if cash funds acquisition",
+    "Consider a reverse trial: full features for a limited time, then a free tier",
+    "Test one model change for new signups only; compare paid per visitor, not paid per signup"
+   ],
+   "alternatives": [
+    "Low traffic: sequential before/after with whole-week cohorts and caveats",
+    "No gating ability: time-limited trial by account flag",
+    "Service business: paid first session at a discount instead of free"
+   ],
+   "metrics": [
+    "Paid customers per 1,000 visitors",
+    "Signup-to-paid within a fixed window",
+    "Median days to purchase",
+    "Free-user variable cost",
+    "Retention of converted users by model"
+   ],
+   "guardrails": [
+    "Never compare trial and freemium conversion rates directly (different denominators)",
+    "Clear notice before a trial ends; no silent card charge",
+    "Downgrade keeps the user's data"
+   ],
+   "observation_window": "At least two full trial lengths plus a 30–60 day window for freemium conversions; whole weeks.",
+   "stop_review": [
+    "Paid per visitor falls versus baseline after the window: revert",
+    "Free-user cost exceeds the agreed budget: tighten the free tier",
+    "Support load from downgrades spikes: improve messaging"
+   ],
+   "climbos_location": "Plan engine activation/conversion stage; PB-activation-repair (alternative branch); calculator for paid-per-visitor comparison; base-rates.md fallbacks.",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Scheduling app for tutors",
+     "visitors_per_month": 1000,
+     "current_model": "freemium",
+     "free_signup_rate": 0.06,
+     "free_to_paid": 0.04,
+     "time_to_first_value_days": 3,
+     "cash_runway_months": 4
+    },
+    "expected_behavior": [
+     "Compares models on paid per 1,000 visitors with labelled assumptions",
+     "Computes the reverse-trial conversion needed to beat each alternative",
+     "Recommends a test on new signups with a fixed window",
+     "Mentions faster cash from trials given short runway"
+    ],
+    "hard_failure": [
+     "Claiming a trial 'converts 2–3x better' without noting denominators",
+     "Declaring a winner from one week of data"
+    ]
+   },
+   "author_refs": [
+    "GU-06-F1",
+    "GU-06-F2",
+    "GU-06-F3",
+    "GU-07-F2"
+   ],
+   "interpretation": "Interpretation: the useful decision variable is paid customers per visitor over a fixed window, with conversion timing as a cash factor; the reverse trial is a hedge when time-to-value is short but acquisition matters.",
+   "proposed_rule": "Proposed ClimbOS rule: trial-model recommendations must compute paid per 1,000 visitors and days to cash for each candidate, and must never compare per-trial and per-free-user conversion directly.",
+   "overlaps_existing": "Extends skills/growth-plays/reference/base-rates.md (free plan 2–5%, trial 15–25%, card-required 40–60%; grade C) with the denominator caveat and reverse-trial option; complements PB-activation-repair. No existing reverse-trial coverage found in docs/skills/shared.",
+   "disagreements": "Base-rates implies a much larger gap (roughly 3–12x) between trial and free-plan conversion than GU-06's 2–3x. Not contradictory: different denominators and sources. Resolve by using owner data and per-visitor comparison."
+  },
+  {
+   "id": "GU-C5",
+   "name": "Lead with the outcome, not the AI label",
+   "decision": "How to describe and price an AI-enabled feature or service on landing and pricing pages.",
+   "applies_when": [
+    "Owner adds AI to a product or service and wants to mention it or raise price because of it",
+    "Pricing page or ad copy leads with 'AI-powered'"
+   ],
+   "avoid_when": [
+    "Audience is explicitly early adopters or tech buyers seeking AI tools (findings may not apply)",
+    "Disclosure of AI use is required by law or platform policy (disclose, but still lead with benefit)"
+   ],
+   "evidence_required": [
+    "Measured outcome of the feature (time saved, errors reduced) from the owner's own users",
+    "Comprehension or preference check of copy variants where traffic allows"
+   ],
+   "prerequisites": [
+    "A way to measure the feature's effect (feature flag, before/after)"
+   ],
+   "steps": [
+    "Rewrite headline around the customer's result in plain language",
+    "Quantify the gain only with the owner's measured data",
+    "Let users try the feature before it becomes paid where cost allows",
+    "If 'AI' is used, pair it with a concrete use case",
+    "Justify any price change with delivered value, not the AI label"
+   ],
+   "alternatives": [
+    "No measurement yet: describe the task removed, without numbers",
+    "Low traffic: 5-second or comprehension test with a few customers"
+   ],
+   "metrics": [
+    "Landing conversion",
+    "Upgrade rate to plan containing the feature",
+    "Feature adoption among trial users"
+   ],
+   "guardrails": [
+    "No invented or borrowed performance stats",
+    "Required AI disclosures kept",
+    "No price increase justified solely by 'now with AI'"
+   ],
+   "observation_window": "Whole weeks until each variant has enough visitors for the agreed decision rule; otherwise qualitative test.",
+   "stop_review": [
+    "Benefit-led copy underperforms the AI-led version with adequate sample: keep AI framing for this audience"
+   ],
+   "climbos_location": "Content/copy generation rules, pricing page advice, Climb AI copy review, landing-split playbook (PB-landing-split) hypothesis library.",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Accounting practice",
+     "plan": "add 'AI-powered bookkeeping' and raise monthly fee 20%",
+     "measured_benefit": "none yet"
+    },
+    "expected_behavior": [
+     "Advises leading with client outcome (e.g., faster month-end close) and measuring before claiming numbers",
+     "Says the AI label alone is unlikely to lift willingness to pay, citing the 767-person study with its caveats",
+     "Separates price decision from label"
+    ],
+    "hard_failure": [
+     "Writing 'AI-powered' headlines with invented time-saved figures",
+     "Endorsing the 20% rise on the AI label alone"
+    ]
+   },
+   "author_refs": [
+    "GU-07-F1",
+    "GU-07-F2",
+    "GU-07-F3"
+   ],
+   "interpretation": "Interpretation: the study supports benefit-first copy for mainstream buyers; it does not show AI mentions harm early-adopter audiences.",
+   "proposed_rule": "Proposed ClimbOS rule: generated copy leads with the customer outcome; 'AI' appears only as supporting detail unless the owner's audience is AI-seeking; no price justification rests on the AI label.",
+   "overlaps_existing": "Extends BK02 review Ch 10 (benefits not features, no unproven advantages) with direct evidence on AI labels. Mentions of 'AI-powered' exist in docs/research/acquisition-framework.md and channel-content.md; check those for conflicting copy advice.",
+   "disagreements": "None with BK02. Possible conflict with SEO/AEO advice that favours keyword-heavy 'AI' copy; resolve by keeping AI terms in supporting content and metadata while headlines lead with outcomes."
+  },
+  {
+   "id": "GU-C6",
+   "name": "Segmented price increase with value proof",
+   "decision": "Whether and how to raise list prices, especially on popular or unlimited plans, without losing price-sensitive customers.",
+   "applies_when": [
+    "Prices unchanged while value or costs rose",
+    "Unlimited or flat top plan attracts heavy users",
+    "Owner considers a single large increase"
+   ],
+   "avoid_when": [
+    "Diagnosis points to weak value, delivery or communication (fix those first, BK02)",
+    "Existing contracts forbid changes before renewal",
+    "No record of added value to explain the change"
+   ],
+   "evidence_required": [
+    "Revenue and customer counts per plan",
+    "Variable cost per plan, incl. heavy users",
+    "Changelog of value added since last price change",
+    "Price thresholds relevant to the segment",
+    "Contract/notice terms for existing customers"
+   ],
+   "prerequisites": [
+    "Owner authorisation and a reviewed migration plan for existing customers",
+    "Customer communication template"
+   ],
+   "steps": [
+    "Decide new-customer vs existing-customer scope separately",
+    "Raise most on the plan with the most demonstrated value; protect the entry price below a key threshold",
+    "For unlimited plans, prefer adjusting usage limits or adding a usage component over a very large jump",
+    "Compute the churn level at which revenue and contribution break even",
+    "Announce with the value record and adequate notice",
+    "Monitor churn and downgrades by plan against the break-even"
+   ],
+   "alternatives": [
+    "Low volume: apply to new customers first and observe",
+    "No cost data: raise on new customers only and add a fair-use clause",
+    "Thin evidence: small steps tied to product improvements (BK02 Ch 12)"
+   ],
+   "metrics": [
+    "Revenue and contribution per plan",
+    "Churn and downgrade rate vs break-even",
+    "New-customer conversion at new price",
+    "Complaints/refunds"
+   ],
+   "guardrails": [
+    "Existing customers get advance notice per terms; no silent changes",
+    "Not a pricing test (PB-pricing-test keeps existing terms unchanged)",
+    "No fake 'was' prices"
+   ],
+   "observation_window": "One renewal cycle for existing customers; 8–12 weeks of new signups.",
+   "stop_review": [
+    "Churn exceeds the computed break-even: pause and review",
+    "Conversion of new customers falls sharply: reconsider level or packaging"
+   ],
+   "climbos_location": "New playbook candidate (PB-price-increase, proposed) beside PB-capacity, whose signature currently captures 'price increase' only as a capacity response; plan engine economics stage; calculator for break-even churn.",
+   "eval_scenario": {
+    "inputs_hypothetical": {
+     "business": "Dog-walking subscription service",
+     "plans": {
+      "basic": {
+       "customers": 100,
+       "price": 8
+      },
+      "standard": {
+       "customers": 300,
+       "price": 20
+      }
+     },
+     "proposal": "raise everything 30%"
+    },
+    "expected_behavior": [
+     "Suggests a smaller entry increase that stays below a threshold and a larger core-plan increase if value supports it",
+     "Computes break-even churn",
+     "Separates new vs existing customers and requires notice"
+    ],
+    "hard_failure": [
+     "Applying the PricingSaaS 20% average as a recommended increase",
+     "Raising existing customers' prices without notice"
+    ]
+   },
+   "author_refs": [
+    "GU-08-F1",
+    "GU-08-F2",
+    "GU-08-F3",
+    "GU-08-F4",
+    "GU-02-F3"
+   ],
+   "interpretation": "Interpretation: the cases show segmentation (protect entry price, raise the core plan, tie to value) and suggest limit changes beat large jumps on unlimited plans; no outcomes were reported, so these are patterns, not proof.",
+   "proposed_rule": "Proposed ClimbOS rule: any price-increase recommendation shows per-plan increases, the break-even churn, scope (new vs existing), required notice and the value record; increases on unlimited plans first consider limit or usage changes.",
+   "overlaps_existing": "Extends BK02 review (Ch 8 increase cadence; Ch 12 small steps tied to improvements) and PB-capacity (price increase as a capacity response). Fills the gap where 'price increase' routes only to delivery/capacity in shared/agents/diagnosis.ts.",
+   "disagreements": "PB-pricing-test forbids changing existing customers' terms; a price increase is a separate, owner-authorised migration, not a test. 02_monetization requires a reviewed migration plan, consistent with this rule."
+  }
+ ]
+}

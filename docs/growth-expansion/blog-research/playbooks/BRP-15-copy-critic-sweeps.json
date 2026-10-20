@@ -1,0 +1,141 @@
+{
+ "id": "BRP-15",
+ "version": 1,
+ "slug": "copy-critic-sweeps",
+ "title": "Critic passes: clarity, so-what, matched proof",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "How the ClimbOS LLM critic reviews a draft after lint.ts: staged passes that flag (not rewrite) unclear lines, benefits with no consequence, and claims whose proof type does not match the claim.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "pre_launch",
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Any publishable copy after deterministic lint passes",
+  "Owner-supplied copy audits"
+ ],
+ "exclusions": [
+  "Very short assets (one-line ad headline) where a single combined check suffices"
+ ],
+ "required_inputs": [
+  "lint.ts has already removed banned phrases, untraced numbers and unsupported claims"
+ ],
+ "evidence_requirements": [
+  "Confirmed facts list",
+  "Draft with line or field paths"
+ ],
+ "missing_data_behavior": [
+  "No proof available for a claim: flag it; the writer softens or drops it."
+ ],
+ "alternatives_when_constrained": [
+  "No reviews: proof-match accepts mechanism explanations and demonstrations as proof for ease claims",
+  "No customers yet: claims needing peer proof are softened or reframed, not padded",
+  "Low traffic: same critic; no testing implications"
+ ],
+ "decision_branches": [
+  {
+   "if": "Very short asset",
+   "then": "One combined check."
+  },
+  {
+   "if": "Proof type doesn't fit the claim",
+   "then": "Warn proof_type_mismatch with claim and proof types."
+  },
+  {
+   "if": "Benefit with no reader result",
+   "then": "Warn missing_consequence."
+  }
+ ],
+ "implementation_steps": [
+  "Clarity pass: flag lines a stranger could misread, and blocks joining two unrelated ideas",
+  "So-what pass: for each claim, check that the reader's consequence is stated; flag benefit labels with no result",
+  "Proof-match pass: classify each claim (ease, result, speed, trust, workflow, price) and check that adjacent proof is of the matching type; a generic screenshot or rating does not prove an ease or speed claim",
+  "Timing check: proof that a step is easy sits before the step's CTA",
+  "Return to clarity after fixes",
+  "Output highlights with reasons; the writer agent fixes; re-lint"
+ ],
+ "dependencies": [
+  "Deterministic lint passes first"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "Model tokens only",
+  "labor": "None for owner",
+  "tools": "Critic prompt/rubric"
+ },
+ "metrics": [
+  "Critic flags per 100 words, before and after",
+  "Share of claims with matched proof",
+  "Owner edit rate after critic"
+ ],
+ "guardrails": [
+  "Critic never adds facts; it flags",
+  "A flagged claim without available proof is cut or reframed, never backed with invented proof",
+  "Do not run the full seven-pass loop on every asset; keep latency low"
+ ],
+ "observation_window": "Per draft; review critic flag rates monthly in evals.",
+ "stop_conditions": [
+  "Critic suggests a proof item absent from confirmed facts: hard fail",
+  "Critic rewrites voice rather than flagging: tighten prompt"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "LLM critic stage after shared/agents/lint.ts; skills/copy-fundamentals/SKILL.md step 9 and quality bar",
+ "extends_existing": [
+  "shared/agents/lint.ts (deterministic layer stays first)",
+  "skills/copy-fundamentals/SKILL.md (proof hierarchy)"
+ ],
+ "source_references": [
+  "CH-05-F1",
+  "CH-05-F2",
+  "CH-05-F3",
+  "CH-06-F3"
+ ],
+ "concepts": [
+  "CH-C4"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "CH-05-F1",
+   "CH-05-F2",
+   "CH-05-F3",
+   "CH-06-F3"
+  ],
+  "interpretation": [
+   "LABELLED INTERPRETATION: lint.ts checks that a claim is supported somewhere in the evidence. It cannot judge whether the nearby proof actually proves that kind of claim. The sweep method fills that gap and fits an LLM critic."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: the critic adds a 'proof_type_mismatch' warning, with a claim type and a proof type per flag, and a 'missing_consequence' warning for benefit labels with no reader result."
+  ],
+  "disagreements": [
+   "Copyhackers lists live-usage notifications as proof. ClimbOS should allow them only from real event data and never simulate them. Copyhackers' seven-pass loop at about 30 minutes is a human process; ClimbOS should compress it to 2 to 3 critic passes."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV18",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "draft_line": "Setup is effortless.",
+    "proof_adjacent": "Rated 4.9 by 200 customers (confirmed)",
+    "facts": "Setup steps: 3 steps, average 10 minutes (confirmed)"
+   },
+   "expected_behavior": [
+    "Flags a proof-type mismatch: the rating does not show ease",
+    "Suggests using the confirmed 3-step, 10-minute mechanism instead, placed before the setup CTA"
+   ],
+   "hard_failure": [
+    "Invents a setup-time number",
+    "Passes the line because some proof is nearby"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

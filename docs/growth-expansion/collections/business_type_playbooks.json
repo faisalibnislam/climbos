@@ -1,0 +1,498 @@
+{
+  "edition": "2026-10-20",
+  "kind": "original_operational_reference",
+  "playbooks": [
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-01-saas",
+      "title": "SaaS: find and repair the constraint to retained value",
+      "business_type": "saas",
+      "applies_when": [
+        "Recurring software product with a defined useful customer outcome."
+      ],
+      "required_inputs": [
+        "Target segment and buying situation",
+        "Activation event and window",
+        "Signup and paid cohorts",
+        "Collected revenue and refunds",
+        "Retention observation window",
+        "Usage costs and support effort",
+        "Existing audience permission",
+        "Owner labor and spending ceilings"
+      ],
+      "decision_branches": [
+        {
+          "if": "No observed problem or buying evidence",
+          "then": "Run customer episode research before scaling traffic."
+        },
+        {
+          "if": "Qualified users arrive but cannot reach first value",
+          "then": "Observe the task and remove one verified obstacle."
+        },
+        {
+          "if": "Activated customers leave before repeat value",
+          "then": "Investigate product fit and recurring usefulness before paid expansion."
+        },
+        {
+          "if": "Retention, economics, and capacity support expansion",
+          "then": "Test one eligible distribution mechanism with explicit downside."
+        }
+      ],
+      "steps": [
+        "Define eligibility and exclude irrelevant signups from the decision population.",
+        "Reconcile acquisition, activation, payments, cancellations, and refunds at account grain.",
+        "Interview or observe recent eligible users around the last incomplete task; preserve dissenting cases.",
+        "Select an intervention that changes one plausible cause, not every funnel stage at once.",
+        "Estimate cohort contribution and support burden; reserve the experiment budget.",
+        "Launch only after concrete approval, track first value and downstream paid quality, and review after outcomes mature."
+      ],
+      "metrics": [
+        {
+          "name": "activation_rate",
+          "formula": "eligible accounts reaching first value within window / eligible new accounts"
+        },
+        {
+          "name": "observed_cohort_contribution",
+          "formula": "cohort net revenue over fixed horizon - included cohort service costs"
+        },
+        {
+          "name": "support_minutes_per_activated_account",
+          "formula": "eligible support minutes / activated eligible accounts"
+        }
+      ],
+      "stop_conditions": [
+        "Broken account identity or payment reconciliation",
+        "Change makes task completion worse beyond declared guardrail",
+        "Budget or support capacity exhausted",
+        "Observation window incomplete: return pending, not a success claim"
+      ],
+      "hypothetical_application": "Hypothetical: a team has qualified trials but no activation instrumentation. ClimbOS first specifies the event and observes setup. It does not invent a trial-to-paid projection or prescribe a broadcast to an audience that has not opted in.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    },
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-02-macapps",
+      "title": "Mac apps: prove utility and match the distribution path",
+      "business_type": "macapps",
+      "applies_when": [
+        "Native macOS utility or application with verifiable compatibility and distribution method."
+      ],
+      "required_inputs": [
+        "Supported macOS versions and hardware",
+        "App Store versus direct distribution",
+        "Useful task and time to first success",
+        "Install and launch denominators",
+        "Crash or failure observations",
+        "License model and maintenance obligations",
+        "Refunds and support cost",
+        "Available analytics and consent"
+      ],
+      "decision_branches": [
+        {
+          "if": "Install or first task fails",
+          "then": "Fix reliability and compatibility before increasing discovery."
+        },
+        {
+          "if": "Traffic reaches listing but promise is misunderstood",
+          "then": "Test asset comprehension with suitable users."
+        },
+        {
+          "if": "Native store experiment is not eligible for the actual platform",
+          "then": "Choose a supported external test or qualitative method; label confounding."
+        },
+        {
+          "if": "Stable task success and sustainable economics",
+          "then": "Test one relevant community, search, partner, or editorial route."
+        }
+      ],
+      "steps": [
+        "Confirm actual supported platform, build, pricing, and capabilities before drafting claims.",
+        "Map the complete path from discovery to download, launch, first successful task, and retained use.",
+        "Review support and crash evidence by build and machine type where permission allows.",
+        "Prepare a benefit-led asset sequence using real product captures and accurate limitations.",
+        "Select only platform-supported experiment methods; preserve concurrent version changes.",
+        "Evaluate useful adoption, refunds, reliability, and support alongside installation counts."
+      ],
+      "metrics": [
+        {
+          "name": "first_task_success",
+          "formula": "eligible installs completing the useful task / eligible measured installs"
+        },
+        {
+          "name": "net_license_contribution",
+          "formula": "net license revenue - defined payment, distribution, serving, and support costs"
+        },
+        {
+          "name": "refund_rate",
+          "formula": "refunded purchases / purchases in the same matured purchase cohort"
+        }
+      ],
+      "stop_conditions": [
+        "Unsupported store feature assumed available",
+        "Material crash or compatibility issue unresolved",
+        "Claim cannot be demonstrated in the current build",
+        "New build changes test assets or task behavior without recording contamination"
+      ],
+      "hypothetical_application": "Hypothetical: a clipboard utility gains downloads but users cannot understand its permissions. The next intervention clarifies the permission-dependent task and tests task completion. It does not assume iOS product-page optimization is available to a Mac App Store product.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    },
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-03-agencies",
+      "title": "Agencies: improve qualified demand without overselling delivery",
+      "business_type": "agencies",
+      "applies_when": [
+        "Project or retainer service with scarce expert labor and contractual scope."
+      ],
+      "required_inputs": [
+        "Offer scope and exclusions",
+        "Qualified buyer definition",
+        "Recent won/lost/deferred opportunities",
+        "Delivery hours and available start slots",
+        "Proposal and sales effort",
+        "Payment schedule and collection history",
+        "Gross and contribution cost boundaries",
+        "Proof-use permissions"
+      ],
+      "decision_branches": [
+        {
+          "if": "Delivery slots are full",
+          "then": "Prioritize fit, pricing, scheduling, or qualified referrals over lead volume."
+        },
+        {
+          "if": "Calls occur but buyers do not progress",
+          "then": "Diagnose qualification, proof, offer, and buying-process uncertainty."
+        },
+        {
+          "if": "Few relevant opportunities exist",
+          "then": "Test one narrow offer and reachable segment."
+        },
+        {
+          "if": "Projects sell but cash or margins are weak",
+          "then": "Review scope, change control, deposits, and collection before expansion."
+        }
+      ],
+      "steps": [
+        "Define a repeatable service outcome and the client obligations needed to deliver it.",
+        "Map lead-to-cash using buyer-observable progress rather than seller optimism.",
+        "Reconstruct a recent win and a recent loss; separate unsupported explanations.",
+        "Create one proof asset with verified role, scope, result, and permission.",
+        "Estimate delivery load and proposal effort under downside win-rate scenarios.",
+        "Approve a bounded prospecting or inbound experiment with a capacity-aware booking limit."
+      ],
+      "metrics": [
+        {
+          "name": "project_contribution",
+          "formula": "net project revenue - defined incremental delivery and service costs"
+        },
+        {
+          "name": "delivery_load",
+          "formula": "committed delivery hours / available delivery hours over the same period"
+        },
+        {
+          "name": "qualified_opportunity_progression",
+          "formula": "eligible opportunities reaching buyer-verified next stage / eligible opportunities"
+        }
+      ],
+      "stop_conditions": [
+        "Committed delivery exceeds approved capacity",
+        "Project scope or commercial terms unclear",
+        "Evidence asset contains unverified customer results",
+        "Contact source or sending provider is ineligible"
+      ],
+      "hypothetical_application": "Hypothetical: a design studio can start two projects next month but its campaign predicts six. ClimbOS limits bookings, offers later start dates transparently, or recommends capacity changes. It does not call six simultaneous wins an unconditional success.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    },
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-04-ecommerce",
+      "title": "Ecommerce: optimize fulfilled contribution, not attributed order value",
+      "business_type": "ecommerce",
+      "applies_when": [
+        "Physical or digital commerce with product availability, fulfillment, and return obligations."
+      ],
+      "required_inputs": [
+        "SKU-level net prices and costs",
+        "Inventory and replenishment timing",
+        "Fulfillment and shipping cost",
+        "Returns and refunds by cohort",
+        "Promotion calendar",
+        "Payment fees",
+        "Repeat purchase behavior",
+        "Media attribution and store revenue definitions"
+      ],
+      "decision_branches": [
+        {
+          "if": "Inventory or fulfillment cannot support demand",
+          "then": "Repair availability, lead times, or a truthful waitlist before promotion."
+        },
+        {
+          "if": "High conversion is offset by returns or discounts",
+          "then": "Investigate product fit and net contribution."
+        },
+        {
+          "if": "Qualified visitors abandon the purchase task",
+          "then": "Diagnose total price, delivery, trust, payment, and device-specific failure."
+        },
+        {
+          "if": "Economics survive downside and stock is ready",
+          "then": "Test a bounded offer or acquisition route."
+        }
+      ],
+      "steps": [
+        "Reconcile SKU availability, net revenue, discounts, tax treatment, refunds, and fulfillment.",
+        "Trace a representative order from discovery to delivery and return.",
+        "Choose a specific obstacle and ensure the test can be fulfilled honestly.",
+        "Model order contribution before and after acquisition, then model cash tied in stock.",
+        "Set guardrails for refunds, complaints, delivery delays, and stock-outs.",
+        "Review matured outcomes before treating gross sales or platform ROAS as business profit."
+      ],
+      "metrics": [
+        {
+          "name": "order_contribution_before_acquisition",
+          "formula": "net order revenue - product, payment, packaging, fulfillment, and expected return costs included in policy"
+        },
+        {
+          "name": "incremental_contribution",
+          "formula": "estimated incremental contribution from treatment - incremental campaign cost"
+        },
+        {
+          "name": "on_time_fulfillment",
+          "formula": "eligible orders fulfilled within promised window / eligible fulfilled orders"
+        }
+      ],
+      "stop_conditions": [
+        "Stock mismatch or misleading delivery promise",
+        "Negative expected contribution outside approved learning loss",
+        "Checkout tracking cannot reconcile to orders",
+        "Return window has not matured: distinguish provisional from final"
+      ],
+      "hypothetical_application": "Hypothetical: a store increases sales with a large discount while shipping and returns erase the margin. ClimbOS flags net contribution and tests value communication or bundle economics before repeating the promotion.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    },
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-05-localservices",
+      "title": "Local services: turn suitable inquiries into completed appointments",
+      "business_type": "localservices",
+      "applies_when": [
+        "Appointment-based or service-area business with finite schedule and delivery geography."
+      ],
+      "required_inputs": [
+        "Service area and travel constraints",
+        "Service types and qualifications",
+        "Booking capacity and hours",
+        "Inquiry source and response records",
+        "Cancellation and no-show rules",
+        "Completed appointments and collected revenue",
+        "Local proof and review permissions",
+        "Current listings and contact information"
+      ],
+      "decision_branches": [
+        {
+          "if": "Bookings are unavailable in target area or time",
+          "then": "Fix schedule or targeting before buying more inquiries."
+        },
+        {
+          "if": "Inquiries arrive but response is late",
+          "then": "Repair ownership and response workflow."
+        },
+        {
+          "if": "Bookings do not become completed services",
+          "then": "Investigate fit, scheduling, reminders, deposits, and attendance barriers."
+        },
+        {
+          "if": "Reliable completion and economics exist",
+          "then": "Test eligible local search, partnerships, or referrals."
+        }
+      ],
+      "steps": [
+        "Verify services, geographic eligibility, contact details, and actual available slots.",
+        "Map inquiry, response, qualification, booking, attendance, completion, and payment.",
+        "Review a small set of lost inquiries with permission; distinguish no answer from poor fit.",
+        "Improve one friction point and create a human escalation path.",
+        "Prepare truthful service and locality assets without inventing locations or reviews.",
+        "Measure completed profitable appointments, response effort, and customer complaints."
+      ],
+      "metrics": [
+        {
+          "name": "inquiry_to_completion",
+          "formula": "eligible inquiries resulting in completed service within window / eligible inquiries"
+        },
+        {
+          "name": "response_time",
+          "formula": "first useful response timestamp - eligible inquiry timestamp"
+        },
+        {
+          "name": "contribution_per_slot",
+          "formula": "net collected revenue minus included service costs / occupied eligible slots"
+        }
+      ],
+      "stop_conditions": [
+        "Service-area mismatch",
+        "No capacity within promised window",
+        "Regulated claim lacks appropriate evidence or review",
+        "Automated response cannot handle urgent or sensitive inquiry: escalate"
+      ],
+      "hypothetical_application": "Hypothetical: a repair service receives many inquiries outside its travel area. ClimbOS fixes qualification and targeting rather than interpreting every rejected inquiry as a sales failure.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    },
+    {
+      "status": "proposed_reference",
+      "authorship": "original_climbos_design",
+      "version": 1,
+      "external_execution_permission": "none",
+      "global_conditions": [
+        "Verify current business facts and canonical identity.",
+        "Use explicit unknowns for missing observations.",
+        "Require authorized audience, action scope, budget, and capacity before execution.",
+        "Check current provider rules; a connected account is not authorization."
+      ],
+      "id": "BT-06-marketplaces",
+      "title": "Marketplaces: diagnose liquidity at the market-cell level",
+      "business_type": "marketplaces",
+      "applies_when": [
+        "Business connecting distinct supply and demand participants for a transaction."
+      ],
+      "required_inputs": [
+        "Participant roles and transaction definition",
+        "Market cell: geography, category, time, or use case",
+        "Available supply and active demand",
+        "Search-to-match and transaction events",
+        "Quality, cancellation, dispute, and trust signals",
+        "Take rate and subsidies",
+        "Acquisition by side",
+        "Interference and measurement constraints"
+      ],
+      "decision_branches": [
+        {
+          "if": "Demand cannot find suitable available supply",
+          "then": "Improve supply coverage or narrow the market cell before demand expansion."
+        },
+        {
+          "if": "Supply is idle despite qualified demand",
+          "then": "Investigate discovery, trust, pricing, and matching rules."
+        },
+        {
+          "if": "Transactions occur only with unsustainable subsidies",
+          "then": "Model unsubsidized behavior and contribution."
+        },
+        {
+          "if": "Cross-side effects contaminate individual tests",
+          "then": "Choose a suitable cluster, geography, or other defensible design."
+        }
+      ],
+      "steps": [
+        "Define the smallest useful market cell and map both sides of the transaction.",
+        "Measure availability and match failure reasons without averaging incompatible cells.",
+        "Check participant quality and the operational burden of disputes or cancellation.",
+        "Choose a targeted intervention on the constrained side and model the effect on the other side.",
+        "Select measurement that addresses interference and participant spillovers.",
+        "Evaluate completed quality transactions, repeat use, net contribution, and trust guardrails before expansion."
+      ],
+      "metrics": [
+        {
+          "name": "qualified_match_rate",
+          "formula": "eligible demand requests receiving a suitable available match / eligible demand requests"
+        },
+        {
+          "name": "transaction_contribution",
+          "formula": "net platform revenue - defined processing, servicing, subsidy, and risk costs"
+        },
+        {
+          "name": "cell_liquidity",
+          "formula": "report match rate and time to match by defined cell; do not substitute one universal score"
+        }
+      ],
+      "stop_conditions": [
+        "Supply quality or safety guardrail breached",
+        "Subsidy exceeds authorized loss budget",
+        "Individual randomization invalidated by substantial spillovers",
+        "Reported growth is only migration from another market cell"
+      ],
+      "hypothetical_application": "Hypothetical: a services marketplace has strong citywide signups but poor evening availability in one neighborhood. ClimbOS narrows the cell and investigates supply coverage rather than recommending citywide demand ads.",
+      "outputs": [
+        "diagnosis_with_evidence",
+        "selected_intervention_and_alternatives",
+        "bounded_experiment",
+        "measurement_contract",
+        "owner_review_packet"
+      ]
+    }
+  ]
+}

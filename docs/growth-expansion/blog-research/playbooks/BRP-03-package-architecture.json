@@ -1,0 +1,161 @@
+{
+ "id": "BRP-03",
+ "version": 1,
+ "slug": "package-architecture",
+ "title": "Tiers, add-ons and one expansion lever at a time",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "How to structure tiers and add-ons, and which lever to add when a single flat offer leaves no room for customers to pay more as they get more value.",
+ "business_types": [
+  "saas",
+  "ai_product",
+  "membership",
+  "agency_productized"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "One flat price for everyone, little or no expansion revenue",
+  "Best customers clearly get more value than others",
+  "A new capability is launching and the owner asks whether to include it or charge for it"
+ ],
+ "exclusions": [
+  "Customer count too small to tell segments apart (start with one offer plus one add-on)",
+  "Tier differences would gate something the entry plan needs to deliver its promise",
+  "Operating more packages would overload support or billing"
+ ],
+ "required_inputs": [
+  "Ability to bill tiers/add-ons",
+  "Plan entitlements written down"
+ ],
+ "evidence_requirements": [
+  "Segments with different jobs or willingness to pay (interviews, purchase data)",
+  "Which features or services customers name as the reason they buy",
+  "Adoption timing of features after purchase",
+  "Cost to deliver each capability"
+ ],
+ "missing_data_behavior": [
+  "No plan-choice data: one offer plus one add-on; uptake assumptions labelled.",
+  "Segments can't be told apart: don't add tiers."
+ ],
+ "alternatives_when_constrained": [
+  "Low traffic: offer the premium option in sales conversations and log acceptance before publishing",
+  "Service business: premium = faster turnaround or priority access; add-on = optional extra service",
+  "No billing integration: separate invoice line items"
+ ],
+ "decision_branches": [
+  {
+   "if": "Most buyers pick the middle and the top tier is near zero",
+   "then": "Revisit tier boundaries before adding anchors."
+  },
+  {
+   "if": "A capability helps only some customers and isn't needed for the core promise",
+   "then": "Add-on."
+  },
+  {
+   "if": "The entry plan can't deliver its own promise",
+   "then": "Move the capability down; don't gate it."
+  }
+ ],
+ "implementation_steps": [
+  "Write one sentence per plan: who it is for and why they buy",
+  "Default to three tiers when segments differ; one offer when they don't",
+  "Run the add-on test for each capability: polarising, different buyer/budget, replaces another vendor, adopted later, or costly to serve",
+  "Limit first purchase to one or two add-ons",
+  "Pick one expansion lever to test: premium tier, paid add-on, usage limit by tier, lite access level, minimum team size, or a disclosed annual escalator on new contracts",
+  "Fold proven add-ons into a higher tier periodically to keep the lineup simple"
+ ],
+ "dependencies": [
+  "Billing that supports add-ons or tiers"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None to test on new buyers",
+  "labor": "Owner 2-3 h; support load per extra plan",
+  "tools": "Pricing page edit"
+ },
+ "metrics": [
+  "Premium uptake share",
+  "Add-on attach rate",
+  "Revenue per customer and contribution per customer",
+  "Downgrades and cannibalisation from top tier",
+  "'Which plan?' questions and plan-choice time"
+ ],
+ "guardrails": [
+  "Entry plan must deliver its advertised outcome",
+  "No decoy-only tiers (BK02 rule)",
+  "Escalators disclosed at signup, applied only per contract terms",
+  "Existing customers' terms unchanged during tests (PB-pricing-test)"
+ ],
+ "observation_window": "At least one full renewal or repurchase cycle; 8–12 weeks of new signups for uptake reads, longer at low volume.",
+ "stop_conditions": [
+  "Premium uptake well below plan and base conversion falls: rethink tier boundaries",
+  "Add-on causes billing confusion or complaints: bundle it",
+  "More than two add-ons routinely needed: repackage"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "Pricing page advice, plan engine offer stage, PB-pricing-test (versioned variant: 'add an expansion lever'), Climb AI packaging Q&A, revenue calculator.",
+ "extends_existing": [
+  "shared/playbooks/contracts.ts PB-pricing-test (candidate v2)",
+  "docs/growth-engine/book-review/BK02.md (Ch 10/11)"
+ ],
+ "source_references": [
+  "GU-02-F2",
+  "GU-02-F3",
+  "GU-02-F4",
+  "GU-02-F5",
+  "GU-05-F1",
+  "GU-05-F2",
+  "GU-05-F3"
+ ],
+ "concepts": [
+  "GU-C3"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "GU-02-F2",
+   "GU-02-F3",
+   "GU-02-F4",
+   "GU-02-F5",
+   "GU-05-F1",
+   "GU-05-F2",
+   "GU-05-F3"
+  ],
+  "interpretation": [
+   "Interpretation: the add-on test is the most transferable piece for small businesses; numeric uptake and pricing ratios are software heuristics to use only as starting assumptions."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed ClimbOS rule: every package recommendation states each plan's buyer and reason in one sentence, passes the add-on test for each extra, and shows expansion revenue as uptake × price difference with owner-supplied or clearly labelled assumed uptake."
+  ],
+  "disagreements": [
+   "BK02 Ch 11 treats a middle tier as a compromise-effect tactic; GU-02 warns everyone defaulting to the middle can be a symptom of arbitrary plans. Decide by plan-choice data: if most buyers choose the middle and the top tier sees near-zero uptake, revisit boundaries rather than adding anchors."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV03",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Bookkeeping firm, one $300/month package, 60 clients",
+    "observation": "a third of clients ask for payroll and monthly calls",
+    "payroll_cost_hours_per_client": 2
+   },
+   "expected_behavior": [
+    "Suggests payroll as an add-on (different need, costly to serve) or a premium tier with calls",
+    "Computes revenue lift as uptake × price difference using owner assumptions labelled hypothetical",
+    "Keeps base package delivering full bookkeeping",
+    "Labels the 15–25% uptake range as one author's software experience"
+   ],
+   "hard_failure": [
+    "Moving core bookkeeping into the premium tier",
+    "Promising Kyle's +15% revenue as an expected result"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

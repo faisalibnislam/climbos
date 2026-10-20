@@ -1,0 +1,291 @@
+{
+ "id": "BRP-17",
+ "version": 1,
+ "slug": "unit-economics-definitions",
+ "title": "Unit economics: fully loaded cost per customer, labelled payback, revenue churn and expansion, no uncapped LTV",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Whether a play pays back, and which payback number and benchmark to show the owner. / Which costs count in cost per customer. / Which churn drives value and payback, and whether expansion counts. / How to express customer value.",
+ "business_types": [
+  "any recurring business",
+  "saas",
+  "membership",
+  "agency_retainer"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Any play with revenue per customer, gross margin, churn and a CAC.",
+  "Every play cost and every observed channel CAC.",
+  "Recurring businesses with customers of different sizes, or with upsell, usage or seat pricing.",
+  "Always."
+ ],
+ "exclusions": [
+  "Churn is unknown. ClimbOS already returns null (economics.ts:206); keep that behaviour.",
+  "Comparing channels on mixed boundaries (Book 01:72).",
+  "One-off purchase businesses: use repeat rate instead.",
+  "Never use the uncapped form."
+ ],
+ "required_inputs": [
+  "Fully loaded CAC (DS-C2)",
+  "A cost-boundary label",
+  "Revenue per customer per month (cohorts.ts revenueMinor)"
+ ],
+ "evidence_requirements": [
+  "Revenue per customer per month",
+  "Contribution or gross margin with its cost boundary",
+  "Monthly churn with its type (customer or revenue)",
+  "Media spend",
+  "Owner and staff hours with their value",
+  "Tools, freelancers, creative, data and ClimbOS credits attributable to the play",
+  "Monthly MRR lost from churn and downgrades",
+  "Expansion MRR",
+  "Customer counts",
+  "Same as DS-C1"
+ ],
+ "missing_data_behavior": [
+  "Churn unknown: value and payback stay null (current behaviour).",
+  "Non-media costs unknown: ask; label CAC as excluding them.",
+  "Expansion unknown: assume none and say so."
+ ],
+ "alternatives_when_constrained": [
+  "Missing churn: show only the no-churn payback, labelled as an upper bound on speed, with no verdict.",
+  "No cohorts: use the owner's churn, tagged as an assumption.",
+  "Small sample: give a range across churn of 0.5×–2× (economics.ts:405 already does this).",
+  "Missing hours: use the default $50 per hour (economics.ts:83-88), flagged as assumed.",
+  "No tool costs known: show 0 and mark it 'not included'.",
+  "Missing revenue churn: fall back to customer churn, labelled 'customer churn used as proxy'.",
+  "Small sample: show a range.",
+  "Missing churn: show no value at all (current behaviour)."
+ ],
+ "decision_branches": [
+  {
+   "if": "Small customers churn more than large",
+   "then": "Revenue churn below customer churn: use revenue churn for value."
+  },
+  {
+   "if": "Expansion revenue exists",
+   "then": "Add a capped-horizon expansion term."
+  },
+  {
+   "if": "Someone quotes LTV or 3x",
+   "then": "Replace with 12-month value; benchmarks carry era and basis."
+  }
+ ],
+ "implementation_steps": [
+  "Compute the GM-adjusted no-churn payback (DS-FX3) and the churn-weighted payback (DS-FX4).",
+  "Use the churn-weighted figure for the verdict.",
+  "Show both, labelled 'per surviving customer' and 'expected, with churn'.",
+  "When citing external benchmarks, attach their era and basis (no churn, GM ≥ 80%, venture-backed).",
+  "Add an 'other monthly costs' input per play (tools, freelance, creative, data).",
+  "Pass it to cacFull instead of 0 (economics.ts:203).",
+  "Show media-only CAC next to it (calc.ts:28-32).",
+  "Put retention and account-management costs (Skok's CORE) in gross margin, not in CAC.",
+  "Ask or measure customer churn and revenue churn separately.",
+  "Add optional monthly expansion.",
+  "Use net revenue churn for value and payback, capped at 12 months (DS-EX4).",
+  "Use customer churn for customer-count goals (goal.ts:71).",
+  "Keep 12-month churn-weighted contribution as the allowable CAC.",
+  "If a longer view is wanted, show 24-month value discounted at a stated rate and labelled as a forecast."
+ ],
+ "dependencies": [
+  "Owner unit economics",
+  "Billing data for revenue churn"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Owner answers 2-4 questions",
+  "tools": "Billing export (optional)"
+ },
+ "metrics": [
+  "payback_gm_months",
+  "payback_churn_months",
+  "value_12m",
+  "cac_media",
+  "cac_full",
+  "cost_boundary",
+  "customer_churn",
+  "mrr_churn",
+  "expansion",
+  "net_mrr_churn",
+  "nrr"
+ ],
+ "guardrails": [
+  "Never compare the churn-weighted payback with Skok's '<12' or '5–7 months' without a label.",
+  "Never present LTV:CAC 3× as a pass/fail test.",
+  "Do not apply Skok's early-stage practice of counting only part of senior salaries to owner time; for an owner-operator those hours do not scale away (DS-02-F10).",
+  "Never let negative net churn produce unbounded value; keep the 12-month cap.",
+  "Expansion must be observed, or tagged as an assumption.",
+  "Never show LTV = ARPA × GM / churn as a headline.",
+  "Never use 3× as a threshold."
+ ],
+ "observation_window": "12 months, the ClimbOS horizon (economics.ts:89-90). / The play horizon (economics.ts:193). / Monthly, read over at least 3 complete months. / 12 months.",
+ "stop_conditions": [
+  "Re-run when the owner confirms churn or margin.",
+  "Re-run when observed cohort churn differs from the input by 50% or more.",
+  "Review when a cost category is added or removed.",
+  "Review if expansion assumed above 0 is not observed within 90 days."
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/growth/calc.ts:56-71; shared/agents/economics.ts:207-219, 312-313 / shared/growth/calc.ts:34-40; shared/agents/economics.ts:199-203, 381 / shared/agents/economics.ts:44-74, 382; shared/growth/calc.ts:48-54, 90-94; shared/agents/goal.ts:71 / shared/agents/economics.ts:139-142, 207",
+ "extends_existing": [
+  "shared/agents/economics.ts (cacFull other=0, single churn)",
+  "shared/analysis/decisions.ts",
+  "docs/growth-intelligence/books/01_business_strategy_economics.md §6-7",
+  "docs/growth-intelligence/books/12_analytics_forecasting_pricing.md"
+ ],
+ "source_references": [
+  "DS-01-F2",
+  "DS-02-F4",
+  "DS-02-F6",
+  "DS-03-F6",
+  "DS-04-F2",
+  "DS-01-F3",
+  "DS-07-F3",
+  "DS-03-F3",
+  "DS-01-F4",
+  "DS-01-F5",
+  "DS-02-F7",
+  "DS-03-F1",
+  "DS-06-F2",
+  "DS-03-F2",
+  "DS-03-F7",
+  "DS-02-F3"
+ ],
+ "concepts": [
+  "DS-C1",
+  "DS-C2",
+  "DS-C3",
+  "DS-C5"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "DS-01-F2",
+   "DS-02-F4",
+   "DS-02-F6",
+   "DS-03-F6",
+   "DS-04-F2",
+   "DS-01-F3",
+   "DS-07-F3",
+   "DS-03-F3",
+   "DS-01-F4",
+   "DS-01-F5",
+   "DS-02-F7",
+   "DS-03-F1",
+   "DS-06-F2",
+   "DS-03-F2",
+   "DS-03-F7",
+   "DS-02-F3"
+  ],
+  "interpretation": [
+   "Interpretation: Skok's payback is per surviving customer. ClimbOS's is an expected value over a decaying cohort, which is stricter and better suited to owner-funded businesses.",
+   "Interpretation: valuing owner time at an hourly rate is a ClimbOS extension. It is consistent with Skok's rule of no exclusions, though Skok never mentions founder time.",
+   "Interpretation: ClimbOS's single churn field mixes the customer and revenue concepts.",
+   "Interpretation: Skok's own 2016 revision supports ClimbOS's capped approach."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed rule: the locked numbers show 'payback X months with churn (Y months per surviving customer)'. Benchmarks always carry era and basis.",
+   "Proposed rule: cacFull receives the play's non-media costs. The margin question (economics.ts:381) asks for cost 'to deliver and keep' a customer.",
+   "Proposed rule: add monthlyRevenueChurn and monthlyExpansion as optional inputs. The value formula uses (1 + g)(1 − c_rev), with g and c_rev both observed or tagged as assumed.",
+   "Proposed rule: keep as is, and add a lint that rejects any plan text quoting a lifetime value or a 3× rule."
+  ],
+  "disagreements": [
+   "Skok later accepted 18–24 month paybacks for well-capitalised companies. ClimbOS's 12-month horizon follows Skok's own reasoning that startups without cheap capital cannot wait, so for small businesses 12 is defensible.",
+   "None material.",
+   "Skok's expansion LTV uses linear dollar growth; the proposal uses compound growth over 12 months. Both are labelled simplifications.",
+   "Skok still treats LTV as useful for comparing segments. ClimbOS can compare segments on 12-month value instead."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV21",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "CAC": 600,
+    "ARPA": 100,
+    "GM": 0.8,
+    "churn": 0.03
+   },
+   "expected_behavior": [
+    "payback_churn = 8.37",
+    "payback_gm = 7.5 shown as secondary",
+    "verdict profitable",
+    "label 'with churn'"
+   ],
+   "hard_failure": [
+    "Reports 6 months (revenue-only)",
+    "Says 'meets the 3× LTV:CAC rule' as the verdict",
+    "Invents churn when it is missing"
+   ]
+  },
+  {
+   "id": "BR-EV22",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "media": 900,
+    "hours": 30,
+    "hour_value": 50,
+    "other": 150,
+    "customers": 6
+   },
+   "expected_behavior": [
+    "cac_full = 425",
+    "cac_media = 150 shown"
+   ],
+   "hard_failure": [
+    "Reports 400 with 'fully loaded' label",
+    "Reports 150 as CAC"
+   ]
+  },
+  {
+   "id": "BR-EV23",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "customers": {
+     "small_50": 80,
+     "large_300": 20
+    },
+    "lost": {
+     "small": 10,
+     "large": 1
+    },
+    "expansion": 1000
+   },
+   "expected_behavior": [
+    "customer churn 11%",
+    "MRR churn 8%",
+    "net −2%",
+    "value uses net revenue churn, capped"
+   ],
+   "hard_failure": [
+    "Applies 11% to revenue without a label",
+    "Uncapped or infinite value"
+   ]
+  },
+  {
+   "id": "BR-EV24",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "cm": 80,
+    "churn": 0.03,
+    "CAC": 600
+   },
+   "expected_behavior": [
+    "value 816.42",
+    "ratio, if shown, 1.36, labelled 12-month"
+   ],
+   "hard_failure": [
+    "Shows LTV 2,666.67 as value",
+    "Says 'passes 3×'"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

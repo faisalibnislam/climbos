@@ -1,0 +1,1161 @@
+{
+  "edition": "2026-10-20",
+  "sources": [
+    {
+      "id": "BK01",
+      "title": "Good Strategy/Bad Strategy",
+      "authors": [
+        "Richard Rumelt"
+      ],
+      "original_filename": "Good Strategy, Bad Strategy_ The Difference and why it Matters by Richard P. Rumelt.epub",
+      "sha256": "0e896b4985aa7ff3d16ed25edb0b2112209462a467f7e78521f199c9d6f3679c",
+      "metadata_caveats": [],
+      "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+      "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+      "locators": [
+        {
+          "id": "BK01-L01",
+          "epub_path": "dummy_split_011.html",
+          "block_start": 19,
+          "block_end": 49,
+          "chapter_or_section": "Chapter 5 — The Kernel of Good Strategy",
+          "claim_scope": "Diagnosis, guiding policy and coherent action are connected components of the strategy kernel."
+        },
+        {
+          "id": "BK01-L02",
+          "epub_path": "dummy_split_009.html",
+          "block_start": 19,
+          "block_end": 533,
+          "chapter_or_section": "Chapter 3 — Bad Strategy",
+          "claim_scope": "Strategy quality requires identifying a challenge rather than substituting goals, vague language or inconsistent objectives."
+        },
+        {
+          "id": "BK01-L03",
+          "epub_path": "dummy_split_014.html",
+          "block_start": 30,
+          "block_end": 263,
+          "chapter_or_section": "Chapter 7 — Proximate Objectives",
+          "claim_scope": "Objectives should be feasible and reduce ambiguity in light of organizational capabilities."
+        },
+        {
+          "id": "BK01-L04",
+          "epub_path": "dummy_split_015.html",
+          "block_start": 138,
+          "block_end": 219,
+          "chapter_or_section": "Chapter 8 — Chain-Link Systems",
+          "claim_scope": "Interdependent activities can reinforce strength or constrain isolated improvements."
+        },
+        {
+          "id": "BK01-L05",
+          "epub_path": "dummy_split_024.html",
+          "block_start": 19,
+          "block_end": 22,
+          "chapter_or_section": "Chapter 16 — The Science of Strategy",
+          "claim_scope": "Strategy as hypothesis and execution as a source of proprietary functional knowledge."
+        }
+      ],
+      "registry_record_file": "guides/sources-a.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "BK02",
+      "title": "Monetizing Innovation",
+      "authors": [
+        "Madhavan Ramanujam",
+        "Georg Tacke"
+      ],
+      "original_filename": "Monetizing_Innovation_-_Madhavan_Ramanujam.epub",
+      "sha256": "599861973a3a02594491003ad99d8c2002a93afb83f1b7748818eaab75c696cc",
+      "metadata_caveats": [
+        "Package metadata title is “Don’t Price the Product; Product the Price” plus a subtitle; the visible title page names Monetizing Innovation. The visible title page was used to identify the book."
+      ],
+      "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+      "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+      "locators": [
+        {
+          "id": "BK02-L01",
+          "epub_path": "OPS/c04.xhtml",
+          "block_start": 17,
+          "block_end": 22,
+          "chapter_or_section": "Chapter 4 — Willingness to Pay",
+          "claim_scope": "Price and value discussions belong early in product development."
+        },
+        {
+          "id": "BK02-L02",
+          "epub_path": "OPS/c05.xhtml",
+          "block_start": 18,
+          "block_end": 122,
+          "chapter_or_section": "Chapter 5 — Customer Differences",
+          "claim_scope": "Segmentation should reflect customer needs, value and willingness to pay."
+        },
+        {
+          "id": "BK02-L03",
+          "epub_path": "OPS/c06.xhtml",
+          "block_start": 123,
+          "block_end": 159,
+          "chapter_or_section": "Chapter 6 — Configuration and Bundling",
+          "claim_scope": "Offer configuration should reflect the segment rather than simply contain every feature."
+        },
+        {
+          "id": "BK02-L04",
+          "epub_path": "OPS/c07.xhtml",
+          "block_start": 17,
+          "block_end": 20,
+          "chapter_or_section": "Chapter 7 — Monetization Models",
+          "claim_scope": "How a business charges is a distinct design choice from the price point."
+        },
+        {
+          "id": "BK02-L05",
+          "epub_path": "OPS/c09.xhtml",
+          "block_start": 17,
+          "block_end": 21,
+          "chapter_or_section": "Chapter 9 — Outside-In Business Case",
+          "claim_scope": "External willingness-to-pay evidence should inform an evolving business case."
+        },
+        {
+          "id": "BK02-L06",
+          "epub_path": "OPS/c12.xhtml",
+          "block_start": 47,
+          "block_end": 93,
+          "chapter_or_section": "Chapter 12 — Price Integrity",
+          "claim_scope": "Consider nonprice explanations and alternatives before reflexive discounting."
+        }
+      ],
+      "registry_record_file": "guides/sources-a.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "BK03",
+      "title": "Obviously Awesome",
+      "authors": [
+        "April Dunford"
+      ],
+      "original_filename": "Obviously Awesome How To Nail Product Positioning So Customers Buy It.epub",
+      "sha256": "c26af73938cc1bc3ca21e3967dc35cd91a3c67a7ee934982b902196ed2734c3e",
+      "metadata_caveats": [
+        "Supplied text contains 2019-era examples; no claim is made that this is the latest revised edition."
+      ],
+      "coverage_note": "Targeted substantive reading of the cited chapter passages and surrounding context for analytical ClimbOS adaptation; not an exhaustive page-by-page review or reproduction.",
+      "locator_method": "EPUB internal path plus zero-based XML element index recorded as block in analysis extraction. Index counts all XML elements in the document; only selected textual elements are displayed. No print page equivalence asserted.",
+      "locators": [
+        {
+          "id": "BK03-L01",
+          "epub_path": "OEBPS/Text/chapter3.xhtml",
+          "block_start": 18,
+          "block_end": 68,
+          "chapter_or_section": "Step 1 — Customers Who Love Your Product",
+          "claim_scope": "Positioning needs sufficient customer evidence to reveal a useful pattern."
+        },
+        {
+          "id": "BK03-L02",
+          "epub_path": "OEBPS/Text/chapter6.xhtml",
+          "block_start": 18,
+          "block_end": 63,
+          "chapter_or_section": "Step 4 — Competitive Alternatives",
+          "claim_scope": "Understand alternatives from the customer perspective, including manual and status-quo choices."
+        },
+        {
+          "id": "BK03-L03",
+          "epub_path": "OEBPS/Text/chapter7.xhtml",
+          "block_start": 19,
+          "block_end": 80,
+          "chapter_or_section": "Step 5 — Unique Attributes",
+          "claim_scope": "Comparative capabilities require evidence; consideration and retention attributes can differ."
+        },
+        {
+          "id": "BK03-L04",
+          "epub_path": "OEBPS/Text/chapter8.xhtml",
+          "block_start": 18,
+          "block_end": 116,
+          "chapter_or_section": "Step 6 — Value Themes",
+          "claim_scope": "Relate capabilities to benefits and customer goals."
+        },
+        {
+          "id": "BK03-L05",
+          "epub_path": "OEBPS/Text/chapter9.xhtml",
+          "block_start": 18,
+          "block_end": 104,
+          "chapter_or_section": "Step 7 — Who Cares",
+          "claim_scope": "Value relevance differs by customer and situation."
+        },
+        {
+          "id": "BK03-L06",
+          "epub_path": "OEBPS/Text/chapter10.xhtml",
+          "block_start": 19,
+          "block_end": 244,
+          "chapter_or_section": "Step 8 — Market Frame",
+          "claim_scope": "A market frame should make relevant strengths understandable and requires customer context."
+        },
+        {
+          "id": "BK03-L07",
+          "epub_path": "OEBPS/Text/chapter11.xhtml",
+          "block_start": 16,
+          "block_end": 108,
+          "chapter_or_section": "Step 9 — Optional Trend",
+          "claim_scope": "A trend can support positioning but should not replace a clear market context."
+        },
+        {
+          "id": "BK03-L08",
+          "epub_path": "OEBPS/Text/chapter12.xhtml",
+          "block_start": 16,
+          "block_end": 26,
+          "chapter_or_section": "Step 10 — Capture Positioning",
+          "claim_scope": "Positioning should be shared with sufficient detail for cross-functional use."
+        },
+        {
+          "id": "BK03-L09",
+          "epub_path": "OEBPS/Text/chapter13.xhtml",
+          "block_start": 14,
+          "block_end": 98,
+          "chapter_or_section": "After Positioning",
+          "claim_scope": "Translate positioning into sales and messaging, and review changes through customer perceptions."
+        }
+      ],
+      "registry_record_file": "guides/sources-a.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "BK04",
+      "title": "Testing Business Ideas",
+      "authors": [
+        "David J. Bland",
+        "Alex Osterwalder"
+      ],
+      "original_filename": "Testing_Business_Ideas_-_Alexander_Osterwalder.epub",
+      "sha256": "330a4a16466b60e30e39977e8090e7781565924da5ca45081f7eaec5940f4563",
+      "metadata_caveats": [
+        "EPUB creator metadata is Unknown. Visible title/copyright text identifies David J. Bland and Alex Osterwalder.",
+        "Text extraction fragments lines and interleaves multi-column/diagram material. No inaccessible visual rating or full experiment catalog is inferred."
+      ],
+      "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+      "locators": [
+        {
+          "id": "BK04-L01",
+          "epub_path": "index_split_000.html",
+          "block_start": 1406,
+          "block_end": 1550,
+          "chapter_or_section": "Test: Hypothesize",
+          "claim_scope": "Make assumptions explicit; prioritize important weakly evidenced hypotheses; precision and distinct claims."
+        },
+        {
+          "id": "BK04-L02",
+          "epub_path": "index_split_000.html",
+          "block_start": 1559,
+          "block_end": 1588,
+          "chapter_or_section": "Types of hypotheses",
+          "claim_scope": "Desirability, feasibility, and viability risks."
+        },
+        {
+          "id": "BK04-L03",
+          "epub_path": "index_split_000.html",
+          "block_start": 2211,
+          "block_end": 2520,
+          "chapter_or_section": "Learn: Evidence and confidence",
+          "claim_scope": "Evidence versus insight; relative strength of observations and behavior; confidence depends on evidence characteristics."
+        },
+        {
+          "id": "BK04-L04",
+          "epub_path": "index_split_000.html",
+          "block_start": 2633,
+          "block_end": 2678,
+          "chapter_or_section": "Decide",
+          "claim_scope": "Continue testing, revise the business model, or abandon based on evidence; changed models may need retesting."
+        }
+      ],
+      "registry_record_file": "guides/sources-b.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "BK05",
+      "title": "The Mom Test",
+      "authors": [
+        "Rob Fitzpatrick"
+      ],
+      "original_filename": "The Mom Test_ How to Talk to Customers by Rob Fitzpatrick.epub",
+      "sha256": "0d0978f4b4d619b835ff84dfae0b0e6d3bec61bfbf76e8a62abc749bc76ed6e0",
+      "metadata_caveats": [
+        "Source locators use EPUB XHTML elements, not a print edition page number."
+      ],
+      "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+      "locators": [
+        {
+          "id": "BK05-L01",
+          "epub_path": "OPS/body5.xhtml",
+          "block_start": 195,
+          "block_end": 215,
+          "chapter_or_section": "Chapter 1: The Mom Test",
+          "claim_scope": "Explore actual circumstances and specific past behavior before pitching."
+        },
+        {
+          "id": "BK05-L02",
+          "epub_path": "OPS/body10.xhtml",
+          "block_start": 42,
+          "block_end": 71,
+          "chapter_or_section": "Chapter 2: Avoiding bad data",
+          "claim_scope": "Compliments, generic predictions, and ideas can create misleading feedback."
+        },
+        {
+          "id": "BK05-L03",
+          "epub_path": "OPS/body15.xhtml",
+          "block_start": 34,
+          "block_end": 71,
+          "chapter_or_section": "Chapter 5: Commitment and advancement",
+          "claim_scope": "Distinguish serious commitments and actual movement toward a sale from pleasant meetings."
+        },
+        {
+          "id": "BK05-L04",
+          "epub_path": "OPS/body25.xhtml",
+          "block_start": 34,
+          "block_end": 99,
+          "chapter_or_section": "Chapter 7: Choosing your customers",
+          "claim_scope": "Broad mixed segments can produce conflicting product feedback and ambiguous learning."
+        },
+        {
+          "id": "BK05-L05",
+          "epub_path": "OPS/body26.xhtml",
+          "block_start": 34,
+          "block_end": 110,
+          "chapter_or_section": "Chapter 8: Running the process",
+          "claim_scope": "Prepare learning questions, share faithful notes, and avoid a single-person learning bottleneck."
+        }
+      ],
+      "registry_record_file": "guides/sources-b.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "BK06",
+      "title": "Trustworthy Online Controlled Experiments",
+      "authors": [
+        "Ron Kohavi",
+        "Diane Tang",
+        "Ya Xu"
+      ],
+      "original_filename": "_OceanofPDF.com_Trustworthy_Online_Controlled_Experiments_-_Ron_Kohavi.epub",
+      "sha256": "045028227f6572a78baedb8c2a9f268ae3fe3f0700ddba7f21c8adf4a185a031",
+      "metadata_caveats": [
+        "The EPUB splits chapters into many small files; NCX navigation establishes section context.",
+        "Some formulas, lists, and visual material are not fully represented by paragraph extraction. No exact missing formula or unseen diagram is reconstructed."
+      ],
+      "coverage_note": "Targeted analytical inspection of the cited substantive sections and relevant navigation. Not a claim of exhaustive line-by-line review or independent verification of the books' historical company examples.",
+      "locators": [
+        {
+          "id": "BK06-L01",
+          "epub_path": "index_split_034.html",
+          "block_start": 9,
+          "block_end": 98,
+          "chapter_or_section": "Chapter 2: Designing the experiment",
+          "claim_scope": "Practical importance, population, sample sensitivity, duration, seasonality, and exposure."
+        },
+        {
+          "id": "BK06-L02",
+          "epub_path": "index_split_037.html",
+          "block_start": 9,
+          "block_end": 57,
+          "chapter_or_section": "Chapter 2: From results to decisions",
+          "claim_scope": "Measurement, implementation costs, metric trade-offs, and decision consequences."
+        },
+        {
+          "id": "BK06-L03",
+          "epub_path": "index_split_042.html",
+          "block_start": 9,
+          "block_end": 30,
+          "chapter_or_section": "Chapter 3: Peeking at p-values",
+          "claim_scope": "Repeated ordinary significance checking can bias success declarations; method choice matters."
+        },
+        {
+          "id": "BK06-L04",
+          "epub_path": "index_split_141.html",
+          "block_start": 9,
+          "block_end": 48,
+          "chapter_or_section": "Chapter 14: Randomization unit and analysis unit",
+          "claim_scope": "Unit alignment and dependence require appropriate analysis."
+        },
+        {
+          "id": "BK06-L05",
+          "epub_path": "index_split_202.html",
+          "block_start": 9,
+          "block_end": 16,
+          "chapter_or_section": "Chapter 21: Sample ratio mismatch",
+          "claim_scope": "Assignment proportions are a trustworthiness check; unexplained mismatch undermines interpretation."
+        },
+        {
+          "id": "BK06-L06",
+          "epub_path": "index_split_172.html",
+          "block_start": 30,
+          "block_end": 34,
+          "chapter_or_section": "Chapter 19: The A/A test",
+          "claim_scope": "Identical treatments can reveal experimentation infrastructure and analysis defects."
+        },
+        {
+          "id": "BK06-L07",
+          "epub_path": "index_split_212.html",
+          "block_start": 9,
+          "block_end": 10,
+          "chapter_or_section": "Chapter 22: Practical solutions for interference",
+          "claim_scope": "Cross-variant interference can distort estimated effects and full-rollout interpretation."
+        }
+      ],
+      "registry_record_file": "guides/sources-b.json",
+      "kind": "uploaded_book"
+    },
+    {
+      "id": "V01",
+      "title": "How To Talk To Users | Startup School",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=z1iF1c8w5Lg",
+      "publication_date": "2022-12-01",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_publisher_description",
+      "coverage": "Transcript retrieved and inspected; audiovisual content not watched; automatic captions may contain errors.",
+      "timestamps": [
+        {
+          "time": "03:23",
+          "scope": "participant selection"
+        },
+        {
+          "time": "05:58",
+          "scope": "interview practice"
+        },
+        {
+          "time": "09:42",
+          "scope": "follow-up questions"
+        },
+        {
+          "time": "14:37",
+          "scope": "prototype sessions"
+        }
+      ],
+      "registry_record_file": "videos/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "V02",
+      "title": "How to Get Your First Customers | Startup School",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=hyYCn_kAngI",
+      "publication_date": "2022-12-29",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_publisher_description",
+      "coverage": "Transcript retrieved and inspected; audiovisual content not watched; examples and categorical advice not treated as universal evidence.",
+      "timestamps": [
+        {
+          "time": "00:44",
+          "scope": "manual early work"
+        },
+        {
+          "time": "03:40",
+          "scope": "founder sales"
+        },
+        {
+          "time": "08:45",
+          "scope": "funnel discussion"
+        },
+        {
+          "time": "13:50",
+          "scope": "charging"
+        },
+        {
+          "time": "15:24",
+          "scope": "reverse planning"
+        }
+      ],
+      "registry_record_file": "videos/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "V03",
+      "title": "Gustaf Alstromer - How to Get Users and Grow",
+      "author": "Gustaf Alströmer",
+      "publisher": "Y Combinator",
+      "url": "https://www.youtube.com/watch?v=T9ikpoF2GH0",
+      "supporting_url": "https://www.ycombinator.com/blog/gustaf-alstromer-how-to-get-users-and-grow/",
+      "publication_date": "2018-09-12",
+      "retrieved_at": "2026-10-20",
+      "access_type": "youtube_processor_transcript_and_official_supporting_page",
+      "coverage": "Transcript retrieved and inspected, including retention, channels and experimentation; historical technical and platform claims not imported as current.",
+      "timestamps": [
+        {
+          "time": "15:38",
+          "scope": "retention"
+        },
+        {
+          "time": "20:10",
+          "scope": "growth and marketing responsibilities"
+        },
+        {
+          "time": "20:56",
+          "scope": "channels"
+        },
+        {
+          "time": "34:44",
+          "scope": "paid growth"
+        },
+        {
+          "time": "37:17",
+          "scope": "SEO"
+        },
+        {
+          "time": "45:00",
+          "scope": "experimentation"
+        },
+        {
+          "time": "46:32",
+          "scope": "experiment review"
+        }
+      ],
+      "registry_record_file": "videos/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "V04",
+      "title": "Get started with app discovery and marketing",
+      "author": "Meghana and Chris (surnames not established)",
+      "publisher": "Apple Developer",
+      "url": "https://developer.apple.com/videos/play/tech-talks/110358/",
+      "publication_date": null,
+      "retrieved_at": "2026-10-20",
+      "access_type": "official_page_transcript",
+      "coverage": "Full official transcript retrieved and inspected; audiovisual content not watched; no timestamps exposed; current limits and platform eligibility require separate verification.",
+      "timestamps": null,
+      "registry_record_file": "videos/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-01",
+      "title": "Growth Loops are the New Funnels",
+      "url": "https://www.reforge.com/blog/growth-loops",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2018-07-31",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; sections on connected growth mechanisms and quantitative modeling.",
+      "evidence_summary": "Growth mechanisms can connect outputs to future inputs.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null,
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-02",
+      "title": "The Racecar Growth Framework",
+      "url": "https://www.reforge.com/blog/racecar-growth-framework",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2021-01-21",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; initiative roles and stage-dependent investment priorities.",
+      "evidence_summary": "Different growth investments serve different operating roles.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null,
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-03",
+      "title": "How to select the next best test from the Experiment Library",
+      "url": "https://www.strategyzer.com/library/how-to-select-the-next-best-test-from-the-experiment-library",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2020-08-27",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; risk-matched experiment selection and discovery versus validation.",
+      "evidence_summary": "Test selection should match uncertainty and constraints.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": null,
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-04",
+      "title": "Demystifying evals for AI agents",
+      "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2026-01-09",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; task/trial grading, regression, capability evaluation, and trace review.",
+      "evidence_summary": "Agent evaluation needs outcome checks and calibrated judgments.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": "2026-03-18",
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-05",
+      "title": "Effective context engineering for AI agents",
+      "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+      "accessed_at": "2026-10-20",
+      "publication_date": "2025-09-29",
+      "access_status": "verified_primary_article_page",
+      "http_status": 200,
+      "scope": "Public article; context selection, retrieval, compaction, and persistent notes.",
+      "evidence_summary": "Limited context benefits from deliberate selection and preservation.",
+      "limitations": [
+        "Framework guidance is not measured ClimbOS performance.",
+        "Linked paid courses were not accessed.",
+        "Original applications and playbooks are proposed implementation rules, not publisher prescriptions."
+      ],
+      "modified_at": "2026-01-06",
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ART-06",
+      "title": "Google Ads training on Skillshop",
+      "url": "https://skillshop.withgoogle.com/googleads/",
+      "accessed_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "verified_public_landing_page_only",
+      "http_status": 200,
+      "scope": "Public training landing page only; learning-path descriptions and links.",
+      "evidence_summary": "Landing page lists Google Ads training and measurement paths.",
+      "limitations": [
+        "No authenticated course lesson or assessment was accessed.",
+        "No course completion or certification is claimed.",
+        "Landing-page descriptions do not verify runtime API behavior."
+      ],
+      "modified_at": null,
+      "registry_record_file": "articles/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-01-SOURCE",
+      "title": "Bing sitelinks: revenue gain with an initial guardrail failure",
+      "url": "https://blogs.bing.com/search-quality-insights/2013/8/Large-Scale-Experimentation-at-Bing/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2013-08-08",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Company-authored retrospective, not independently reanalyzed.",
+        "Raw data, uncertainty intervals, exact sample and complete guardrail definitions unavailable here.",
+        "Search-ad geometry and population do not establish results for a small SaaS landing page."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-02-SOURCE",
+      "title": "Power Automate: easier entry did not establish downstream success",
+      "url": "https://www.microsoft.com/en-us/research/articles/experimentation-and-the-north-star-metric/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2023-09-05",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Actual data are redacted and funnel description is historical.",
+        "Conditional funnel rates require care; the report is not a complete reusable dataset.",
+        "Saving is itself a proxy, not proof of realized workflow value or revenue."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-03-SOURCE",
+      "title": "Buffer native versus third-party posting: a reported null difference",
+      "url": "https://buffer.com/resources/3rd-party-social-media-tools/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2018-01-09",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Vendor has a commercial interest in third-party publishing.",
+        "Content was not identical; schedule execution had misses.",
+        "Small per-platform samples and no equivalence margin established here.",
+        "Historical results do not certify October 2026 algorithms or every tool."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-04-SOURCE",
+      "title": "Buffer content refresh month: an informative observational trade-off",
+      "url": "https://buffer.com/resources/blog-strategies/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2015-08-11",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "No randomized counterfactual.",
+        "Multiple interventions and possible seasonality.",
+        "Existing content inventory was a major starting asset.",
+        "Traffic changes do not establish incremental customers, contribution, or saved labor."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-05-SOURCE",
+      "title": "Buffer transparent feedback: an operating practice was reversed",
+      "url": "https://buffer.com/resources/transparent-feedback-experiment/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2015-08-17",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "A participant narrative without a controlled comparison.",
+        "No quantified productivity or commercial effect established.",
+        "Not evidence that transparency fails in general.",
+        "Employee-feedback setting differs from customer research."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "CASE-06-SOURCE",
+      "title": "Etsy interleaving: validate a faster measurement method before trusting it",
+      "url": "https://www.etsy.com/codeascraft/faster-ml-experimentation-at-etsy-with-interleaving",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2022-08-08",
+      "access_status": "primary_page_read",
+      "scope": "Historical first-party case, as described in public_cases.json.",
+      "limitations": [
+        "Method is suited to ordered result sets, not arbitrary interface changes.",
+        "Preference measurement does not replace every business-outcome experiment.",
+        "Published speed improvements are not adopted as ClimbOS forecasts.",
+        "Engineering report, not an independently replicated study."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-01-SOURCE",
+      "title": "Google Search",
+      "url": "https://developers.google.com/search/docs/essentials",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2025-12-10",
+      "access_status": "primary_page_read",
+      "scope": "Content eligibility combines technical requirements, spam policies, and best practices; meeting them does not guarantee indexing or serving.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-02-SOURCE",
+      "title": "Apple product page optimization",
+      "url": "https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/overview-of-product-page-optimization/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "primary_page_read",
+      "scope": "The inspected overview scopes native product-page optimization to iOS/iPadOS; Mac availability must not be inferred.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-03-SOURCE",
+      "title": "LinkedIn Posts API",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-10",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2026-05-13",
+      "access_status": "primary_page_read",
+      "scope": "Organization and member publishing use distinct scopes and role conditions; the API requires version headers.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-04-SOURCE",
+      "title": "Meta Pages publishing",
+      "url": "https://developers.facebook.com/docs/pages-api/posts/",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "retrieval_blocked",
+      "scope": "Direct retrieval failed; this record establishes no current permission, endpoint or rate-limit claim.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required.",
+        "Direct retrieval unavailable; no current exact policy assertion."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-05-SOURCE",
+      "title": "Resend sending eligibility",
+      "url": "https://resend.com/legal/acceptable-use",
+      "retrieved_at": "2026-10-20",
+      "publication_date": "2026-10-13",
+      "access_status": "primary_page_read",
+      "scope": "The inspected policy requires explicit opt-in and prohibits unsolicited cold outreach, purchased lists, and scraped contacts.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "RULE-06-SOURCE",
+      "title": "Gmail sender requirements",
+      "url": "https://support.google.com/mail/answer/81126?hl=en",
+      "retrieved_at": "2026-10-20",
+      "publication_date": null,
+      "access_status": "primary_page_read",
+      "scope": "Requirements differ for personal Gmail senders and the bulk-sender category; authentication, transport and unsubscribe obligations need scope-specific checks.",
+      "limitations": [
+        "Living documentation; implementation-time preflight required."
+      ],
+      "registry_record_file": "collections/sources.json",
+      "kind": "public_source"
+    },
+    {
+      "id": "ENGINE_POLICY",
+      "title": "Original ClimbOS reconciliation and execution policy proposals",
+      "kind": "original_policy",
+      "registry_record_file": "RECONCILIATION.md",
+      "verification_status": "proposed_not_empirically_validated",
+      "publication_date": "2026-10-20"
+    }
+  ],
+  "locator_count": 36,
+  "locators": [
+    {
+      "id": "BK01-L01",
+      "epub_path": "dummy_split_011.html",
+      "block_start": 19,
+      "block_end": 49,
+      "chapter_or_section": "Chapter 5 — The Kernel of Good Strategy",
+      "claim_scope": "Diagnosis, guiding policy and coherent action are connected components of the strategy kernel.",
+      "book_id": "BK01"
+    },
+    {
+      "id": "BK01-L02",
+      "epub_path": "dummy_split_009.html",
+      "block_start": 19,
+      "block_end": 533,
+      "chapter_or_section": "Chapter 3 — Bad Strategy",
+      "claim_scope": "Strategy quality requires identifying a challenge rather than substituting goals, vague language or inconsistent objectives.",
+      "book_id": "BK01"
+    },
+    {
+      "id": "BK01-L03",
+      "epub_path": "dummy_split_014.html",
+      "block_start": 30,
+      "block_end": 263,
+      "chapter_or_section": "Chapter 7 — Proximate Objectives",
+      "claim_scope": "Objectives should be feasible and reduce ambiguity in light of organizational capabilities.",
+      "book_id": "BK01"
+    },
+    {
+      "id": "BK01-L04",
+      "epub_path": "dummy_split_015.html",
+      "block_start": 138,
+      "block_end": 219,
+      "chapter_or_section": "Chapter 8 — Chain-Link Systems",
+      "claim_scope": "Interdependent activities can reinforce strength or constrain isolated improvements.",
+      "book_id": "BK01"
+    },
+    {
+      "id": "BK01-L05",
+      "epub_path": "dummy_split_024.html",
+      "block_start": 19,
+      "block_end": 22,
+      "chapter_or_section": "Chapter 16 — The Science of Strategy",
+      "claim_scope": "Strategy as hypothesis and execution as a source of proprietary functional knowledge.",
+      "book_id": "BK01"
+    },
+    {
+      "id": "BK02-L01",
+      "epub_path": "OPS/c04.xhtml",
+      "block_start": 17,
+      "block_end": 22,
+      "chapter_or_section": "Chapter 4 — Willingness to Pay",
+      "claim_scope": "Price and value discussions belong early in product development.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK02-L02",
+      "epub_path": "OPS/c05.xhtml",
+      "block_start": 18,
+      "block_end": 122,
+      "chapter_or_section": "Chapter 5 — Customer Differences",
+      "claim_scope": "Segmentation should reflect customer needs, value and willingness to pay.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK02-L03",
+      "epub_path": "OPS/c06.xhtml",
+      "block_start": 123,
+      "block_end": 159,
+      "chapter_or_section": "Chapter 6 — Configuration and Bundling",
+      "claim_scope": "Offer configuration should reflect the segment rather than simply contain every feature.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK02-L04",
+      "epub_path": "OPS/c07.xhtml",
+      "block_start": 17,
+      "block_end": 20,
+      "chapter_or_section": "Chapter 7 — Monetization Models",
+      "claim_scope": "How a business charges is a distinct design choice from the price point.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK02-L05",
+      "epub_path": "OPS/c09.xhtml",
+      "block_start": 17,
+      "block_end": 21,
+      "chapter_or_section": "Chapter 9 — Outside-In Business Case",
+      "claim_scope": "External willingness-to-pay evidence should inform an evolving business case.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK02-L06",
+      "epub_path": "OPS/c12.xhtml",
+      "block_start": 47,
+      "block_end": 93,
+      "chapter_or_section": "Chapter 12 — Price Integrity",
+      "claim_scope": "Consider nonprice explanations and alternatives before reflexive discounting.",
+      "book_id": "BK02"
+    },
+    {
+      "id": "BK03-L01",
+      "epub_path": "OEBPS/Text/chapter3.xhtml",
+      "block_start": 18,
+      "block_end": 68,
+      "chapter_or_section": "Step 1 — Customers Who Love Your Product",
+      "claim_scope": "Positioning needs sufficient customer evidence to reveal a useful pattern.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L02",
+      "epub_path": "OEBPS/Text/chapter6.xhtml",
+      "block_start": 18,
+      "block_end": 63,
+      "chapter_or_section": "Step 4 — Competitive Alternatives",
+      "claim_scope": "Understand alternatives from the customer perspective, including manual and status-quo choices.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L03",
+      "epub_path": "OEBPS/Text/chapter7.xhtml",
+      "block_start": 19,
+      "block_end": 80,
+      "chapter_or_section": "Step 5 — Unique Attributes",
+      "claim_scope": "Comparative capabilities require evidence; consideration and retention attributes can differ.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L04",
+      "epub_path": "OEBPS/Text/chapter8.xhtml",
+      "block_start": 18,
+      "block_end": 116,
+      "chapter_or_section": "Step 6 — Value Themes",
+      "claim_scope": "Relate capabilities to benefits and customer goals.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L05",
+      "epub_path": "OEBPS/Text/chapter9.xhtml",
+      "block_start": 18,
+      "block_end": 104,
+      "chapter_or_section": "Step 7 — Who Cares",
+      "claim_scope": "Value relevance differs by customer and situation.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L06",
+      "epub_path": "OEBPS/Text/chapter10.xhtml",
+      "block_start": 19,
+      "block_end": 244,
+      "chapter_or_section": "Step 8 — Market Frame",
+      "claim_scope": "A market frame should make relevant strengths understandable and requires customer context.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L07",
+      "epub_path": "OEBPS/Text/chapter11.xhtml",
+      "block_start": 16,
+      "block_end": 108,
+      "chapter_or_section": "Step 9 — Optional Trend",
+      "claim_scope": "A trend can support positioning but should not replace a clear market context.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L08",
+      "epub_path": "OEBPS/Text/chapter12.xhtml",
+      "block_start": 16,
+      "block_end": 26,
+      "chapter_or_section": "Step 10 — Capture Positioning",
+      "claim_scope": "Positioning should be shared with sufficient detail for cross-functional use.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK03-L09",
+      "epub_path": "OEBPS/Text/chapter13.xhtml",
+      "block_start": 14,
+      "block_end": 98,
+      "chapter_or_section": "After Positioning",
+      "claim_scope": "Translate positioning into sales and messaging, and review changes through customer perceptions.",
+      "book_id": "BK03"
+    },
+    {
+      "id": "BK04-L01",
+      "epub_path": "index_split_000.html",
+      "block_start": 1406,
+      "block_end": 1550,
+      "chapter_or_section": "Test: Hypothesize",
+      "claim_scope": "Make assumptions explicit; prioritize important weakly evidenced hypotheses; precision and distinct claims.",
+      "book_id": "BK04"
+    },
+    {
+      "id": "BK04-L02",
+      "epub_path": "index_split_000.html",
+      "block_start": 1559,
+      "block_end": 1588,
+      "chapter_or_section": "Types of hypotheses",
+      "claim_scope": "Desirability, feasibility, and viability risks.",
+      "book_id": "BK04"
+    },
+    {
+      "id": "BK04-L03",
+      "epub_path": "index_split_000.html",
+      "block_start": 2211,
+      "block_end": 2520,
+      "chapter_or_section": "Learn: Evidence and confidence",
+      "claim_scope": "Evidence versus insight; relative strength of observations and behavior; confidence depends on evidence characteristics.",
+      "book_id": "BK04"
+    },
+    {
+      "id": "BK04-L04",
+      "epub_path": "index_split_000.html",
+      "block_start": 2633,
+      "block_end": 2678,
+      "chapter_or_section": "Decide",
+      "claim_scope": "Continue testing, revise the business model, or abandon based on evidence; changed models may need retesting.",
+      "book_id": "BK04"
+    },
+    {
+      "id": "BK05-L01",
+      "epub_path": "OPS/body5.xhtml",
+      "block_start": 195,
+      "block_end": 215,
+      "chapter_or_section": "Chapter 1: The Mom Test",
+      "claim_scope": "Explore actual circumstances and specific past behavior before pitching.",
+      "book_id": "BK05"
+    },
+    {
+      "id": "BK05-L02",
+      "epub_path": "OPS/body10.xhtml",
+      "block_start": 42,
+      "block_end": 71,
+      "chapter_or_section": "Chapter 2: Avoiding bad data",
+      "claim_scope": "Compliments, generic predictions, and ideas can create misleading feedback.",
+      "book_id": "BK05"
+    },
+    {
+      "id": "BK05-L03",
+      "epub_path": "OPS/body15.xhtml",
+      "block_start": 34,
+      "block_end": 71,
+      "chapter_or_section": "Chapter 5: Commitment and advancement",
+      "claim_scope": "Distinguish serious commitments and actual movement toward a sale from pleasant meetings.",
+      "book_id": "BK05"
+    },
+    {
+      "id": "BK05-L04",
+      "epub_path": "OPS/body25.xhtml",
+      "block_start": 34,
+      "block_end": 99,
+      "chapter_or_section": "Chapter 7: Choosing your customers",
+      "claim_scope": "Broad mixed segments can produce conflicting product feedback and ambiguous learning.",
+      "book_id": "BK05"
+    },
+    {
+      "id": "BK05-L05",
+      "epub_path": "OPS/body26.xhtml",
+      "block_start": 34,
+      "block_end": 110,
+      "chapter_or_section": "Chapter 8: Running the process",
+      "claim_scope": "Prepare learning questions, share faithful notes, and avoid a single-person learning bottleneck.",
+      "book_id": "BK05"
+    },
+    {
+      "id": "BK06-L01",
+      "epub_path": "index_split_034.html",
+      "block_start": 9,
+      "block_end": 98,
+      "chapter_or_section": "Chapter 2: Designing the experiment",
+      "claim_scope": "Practical importance, population, sample sensitivity, duration, seasonality, and exposure.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L02",
+      "epub_path": "index_split_037.html",
+      "block_start": 9,
+      "block_end": 57,
+      "chapter_or_section": "Chapter 2: From results to decisions",
+      "claim_scope": "Measurement, implementation costs, metric trade-offs, and decision consequences.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L03",
+      "epub_path": "index_split_042.html",
+      "block_start": 9,
+      "block_end": 30,
+      "chapter_or_section": "Chapter 3: Peeking at p-values",
+      "claim_scope": "Repeated ordinary significance checking can bias success declarations; method choice matters.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L04",
+      "epub_path": "index_split_141.html",
+      "block_start": 9,
+      "block_end": 48,
+      "chapter_or_section": "Chapter 14: Randomization unit and analysis unit",
+      "claim_scope": "Unit alignment and dependence require appropriate analysis.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L05",
+      "epub_path": "index_split_202.html",
+      "block_start": 9,
+      "block_end": 16,
+      "chapter_or_section": "Chapter 21: Sample ratio mismatch",
+      "claim_scope": "Assignment proportions are a trustworthiness check; unexplained mismatch undermines interpretation.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L06",
+      "epub_path": "index_split_172.html",
+      "block_start": 30,
+      "block_end": 34,
+      "chapter_or_section": "Chapter 19: The A/A test",
+      "claim_scope": "Identical treatments can reveal experimentation infrastructure and analysis defects.",
+      "book_id": "BK06"
+    },
+    {
+      "id": "BK06-L07",
+      "epub_path": "index_split_212.html",
+      "block_start": 9,
+      "block_end": 10,
+      "chapter_or_section": "Chapter 22: Practical solutions for interference",
+      "claim_scope": "Cross-variant interference can distort estimated effects and full-rollout interpretation.",
+      "book_id": "BK06"
+    }
+  ],
+  "source_types_separate": true
+}

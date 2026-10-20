@@ -1,0 +1,164 @@
+{
+ "id": "BRP-10",
+ "version": 1,
+ "slug": "signup-profiling",
+ "title": "Short signup profiling to test 'wrong-fit signups'",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "What to ask at signup and how to route users to self-serve, automated help or a human.",
+ "business_types": [
+  "saas",
+  "mobile_app",
+  "digital_products"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Self-serve signups with mixed intent (personal vs work, small vs larger companies)",
+  "Activation is the constraint and the competing explanation is wrong-fit signups",
+  "B2B products where some signups merit sales or onboarding help"
+ ],
+ "exclusions": [
+  "A question will not change any segment, message or route",
+  "Single-segment products",
+  "Personal-use signups (skip company questions)",
+  "Teams of two or fewer (skip the team-invite step)",
+  "Webmail domains (never auto-join by domain)"
+ ],
+ "required_inputs": [
+  "Ability to add closed-answer questions to signup",
+  "Privacy notice covering what is collected"
+ ],
+ "evidence_requirements": [
+  "Signup volume and current activation",
+  "Owner's target customer description",
+  "Whether any human help capacity exists"
+ ],
+ "missing_data_behavior": [
+  "No segment data: add 1-3 closed questions; the next diagnosis reads activation in the target segment."
+ ],
+ "alternatives_when_constrained": [
+  "Missing data: start with one question (work vs personal)",
+  "Low traffic: owner reviews each signup's answers by hand",
+  "No integration: add a field to the existing signup form",
+  "Small budget: avoid paid enrichment; for small businesses and consumers she finds it mostly wrong"
+ ],
+ "decision_branches": [
+  {
+   "if": "A question won't change a segment, message or route",
+   "then": "Don't ask it."
+  },
+  {
+   "if": "Some signups merit a human and the owner has stated capacity",
+   "then": "Route them to a call."
+  },
+  {
+   "if": "Personal-use signups",
+   "then": "Skip company questions."
+  }
+ ],
+ "implementation_steps": [
+  "Ask use (work or personal), role, and new vs migrating",
+  "Ask company size or industry only for work use and only if used",
+  "Offer a team invite for teams above two",
+  "Ask the job they came to do with closed options plus 'something else'",
+  "Segment activation and paid by answers",
+  "Route: migrations or high-value signups to a human; small gaps to in-app or email help; readers to docs"
+ ],
+ "dependencies": [
+  "Editable signup flow"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Product change",
+  "tools": "Signup form"
+ },
+ "metrics": [
+  "Profiling completion and drop-off vs prior baseline",
+  "Activation and paid rate by segment",
+  "Share of 'something else' answers"
+ ],
+ "guardrails": [
+  "Collect only what is used and disclose it",
+  "Closed inputs, plain design",
+  "Measure drop-off rather than assume her 10–15% figure"
+ ],
+ "observation_window": "Until each key segment has enough signups to compare activation; state the count before starting.",
+ "stop_conditions": [
+  "Drop-off at profiling clearly above prior baseline and total activated users fall: shorten",
+  "No segment differs in activation: profiling adds no decision value, cut to one question"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/diagnosis.ts COMPETING.activation (wrong-fit signups); PB-activation-repair; Book 08 §5 segmentation.",
+ "extends_existing": [
+  "shared/agents/diagnosis.ts COMPETING.activation",
+  "shared/playbooks/contracts.ts PB-activation-repair"
+ ],
+ "source_references": [
+  "EV-07-F1",
+  "EV-07-F2",
+  "EV-07-F3",
+  "EV-07-F4",
+  "EV-02-F5",
+  "EV-02-F6",
+  "EV-06-F3"
+ ],
+ "concepts": [
+  "EV-C5"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-07-F1",
+   "EV-07-F2",
+   "EV-07-F3",
+   "EV-07-F4",
+   "EV-02-F5",
+   "EV-02-F6",
+   "EV-06-F3"
+  ],
+  "interpretation": [
+   "INTERPRETATION: diagnosis.ts already names wrong-fit signups as the competing explanation for weak activation but gives no way to test it. Profiling is that test."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: When the constraint is activation and no segment data exists, the plan's first step adds one to three closed profiling questions and the next diagnosis reads activation within the target segment. Routing to a human requires stated owner capacity."
+  ],
+  "disagreements": [
+   "Common advice to minimize onboarding questions conflicts with her view that a short structured profile costs little. Treat her drop-off figures as untested hypotheses and measure."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV11",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2b_saas"
+    ],
+    "leads": 500,
+    "activated_value_event": 50,
+    "profile_answers": {
+     "personal_or_student": 300,
+     "work": 200
+    },
+    "activated_work_users": 44
+   },
+   "expected_behavior": [
+    "Computes activation within the target segment (22%) vs overall (10%)",
+    "Concludes the low headline rate is mostly signup mix and moves effort toward targeting or positioning, while still checking work-user activation",
+    "Keeps the profiling short and closed-answer"
+   ],
+   "hard_failure": [
+    "Recommends rebuilding onboarding for all users without segmenting",
+    "Makes paid third-party enrichment the primary data source for small businesses",
+    "Adds many open-text questions"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

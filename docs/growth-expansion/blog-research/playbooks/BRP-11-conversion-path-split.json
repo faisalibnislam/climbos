@@ -1,0 +1,155 @@
+{
+ "id": "BRP-11",
+ "version": 1,
+ "slug": "conversion-path-split",
+ "title": "Split 'conversion' into pricing-page reach, pricing to checkout, checkout to paid",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "When the computed constraint is conversion for a self-serve product, which part of the purchase path to fix first.",
+ "business_types": [
+  "saas",
+  "digital_products",
+  "ecommerce"
+ ],
+ "lifecycle_stages": [
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Self-serve paid plans with a pricing page and online checkout",
+  "Conversion flagged as the weak link"
+ ],
+ "exclusions": [
+  "Quote-based or custom-priced sales (use sales-stage logic)",
+  "Too few pricing-page visitors to read the link rates: use a heuristic review instead",
+  "Local services that sell by call or booking"
+ ],
+ "required_inputs": [
+  "Page and checkout events, or owner counts from site analytics and billing"
+ ],
+ "evidence_requirements": [
+  "Share of signups who view pricing",
+  "Unique pricing visitors who start checkout",
+  "Checkouts that complete",
+  "Payment failures at checkout",
+  "Which in-product triggers lead to upgrade"
+ ],
+ "missing_data_behavior": [
+  "No pricing-path counts: first step collects them; meanwhile a heuristic pricing-page review only.",
+  "Too few pricing-page visitors: heuristic review, no rate comparison."
+ ],
+ "alternatives_when_constrained": [
+  "Low traffic: heuristic page review and 3–5 user walkthroughs",
+  "Missing data: site analytics page views plus billing export",
+  "No integration: owner-run counts",
+  "Small budget: no spend needed"
+ ],
+ "decision_branches": [
+  {
+   "if": "Few active users see pricing",
+   "then": "Contextual upgrade prompts at the moment of need."
+  },
+  {
+   "if": "Pricing to checkout is weakest",
+   "then": "Package/price test (PB-pricing-test)."
+  },
+  {
+   "if": "Checkout to paid is weakest",
+   "then": "Fix checkout failures (payment methods, errors, surprises)."
+  }
+ ],
+ "implementation_steps": [
+  "Compute the three link rates for one cohort",
+  "Low awareness: add contextual upsells where each paid feature is hit in the product",
+  "Low pricing-to-checkout: review structure (about three plans, clear value metric, recommended plan, who each plan is for, accumulating features, price visible, pricing in navigation)",
+  "Low checkout completion: check payment methods, currency and billing timing",
+  "Consider add-ons for features few customers on a plan use",
+  "Change one thing for new buyers and read it via PB-pricing-test"
+ ],
+ "dependencies": [
+  "Analytics on pricing page and checkout"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "1-3 h",
+  "tools": "Analytics"
+ },
+ "metrics": [
+  "Pricing-page awareness rate",
+  "Pricing-to-checkout rate",
+  "Checkout completion",
+  "Payment success rate",
+  "Visits before purchase"
+ ],
+ "guardrails": [
+  "No decoy tiers or hidden costs (existing PB-pricing-test guardrail)",
+  "Plan labels such as 'most popular' must be true",
+  "Existing customers' terms unchanged"
+ ],
+ "observation_window": "Whole weeks until each link has a readable count; for price changes use PB-pricing-test's window.",
+ "stop_conditions": [
+  "Fixed link improves but paid conversion is flat: the constraint moved, recompute",
+  "Contribution per customer falls"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/agents/diagnosis.ts 'purchase' reading and playStage 'conversion'; PB-pricing-test in shared/playbooks/contracts.ts.",
+ "extends_existing": [
+  "shared/agents/diagnosis.ts (conversion branch)",
+  "shared/playbooks/contracts.ts PB-pricing-test"
+ ],
+ "source_references": [
+  "EV-08-F1",
+  "EV-08-F2",
+  "EV-08-F3",
+  "EV-08-F4"
+ ],
+ "concepts": [
+  "EV-C6"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "EV-08-F1",
+   "EV-08-F2",
+   "EV-08-F3",
+   "EV-08-F4"
+  ],
+  "interpretation": [
+   "INTERPRETATION: ClimbOS's conversion branch currently goes straight to package or price. Many self-serve conversion problems are discovery or checkout problems that a price test would not fix."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: When conversion binds for a self-serve type and pricing-path counts exist, compute the three sub-links and require the bankable play to target the weakest. If counts are missing, the first step collects them. PB-pricing-test is preferred only when pricing-to-checkout is the weak sub-link."
+  ],
+  "disagreements": [
+   "None with the library. Her case for public prices in B2B may conflict with owners running custom quotes; treat as a test, not a rule."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV12",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "types": [
+     "b2c_saas"
+    ],
+    "leads": 1000,
+    "pricing_page_viewers": 80,
+    "checkout_starts": 30,
+    "newCustomers": 25
+   },
+   "expected_behavior": [
+    "Identifies awareness (8% of signups see pricing) as the weak link while pricing-to-checkout and checkout completion look healthy",
+    "Proposes contextual upsells, not a price cut",
+    "Labels Verna's 25%/25%/50% as unsourced 2024 author benchmarks"
+   ],
+   "hard_failure": [
+    "Discounts price as the first move",
+    "Treats her benchmarks as reliable industry norms"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

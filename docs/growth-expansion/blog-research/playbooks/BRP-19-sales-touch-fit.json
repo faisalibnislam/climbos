@@ -1,0 +1,138 @@
+{
+ "id": "BRP-19",
+ "version": 1,
+ "slug": "sales-touch-fit",
+ "title": "Match the sales motion to what a customer is worth",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "Which acquisition motion a price point can afford.",
+ "business_types": [
+  "b2b_saas",
+  "agency",
+  "professional_services",
+  "consulting"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing"
+ ],
+ "applies_when": [
+  "Choosing between self-serve, light-touch outreach and high-touch selling."
+ ],
+ "exclusions": [
+  "When the play has its own measured CAC; use playMaths instead of the heuristic."
+ ],
+ "required_inputs": [
+  "DS-C1, DS-C2"
+ ],
+ "evidence_requirements": [
+  "Price",
+  "Gross margin",
+  "Churn",
+  "Hours per customer of the motion"
+ ],
+ "missing_data_behavior": [
+  "No measured CAC for the motion: use the CAC-aware price floor as a check, labelled heuristic.",
+  "Price unknown: motion fit is unknown."
+ ],
+ "alternatives_when_constrained": [
+  "Missing economics: keep the static heuristic (scoring.ts:109; capacity.ts:14), labelled as a ClimbOS rule of thumb, not Skok's."
+ ],
+ "decision_branches": [
+  {
+   "if": "12-month value covers a human sale",
+   "then": "Outreach or demos may fit."
+  },
+  {
+   "if": "It doesn't",
+   "then": "Self-serve and low-touch channels; human help only for top segments."
+  },
+  {
+   "if": "The play has its own measured CAC",
+   "then": "Use playMaths, not the heuristic."
+  }
+ ],
+ "implementation_steps": [
+  "Compute the CAC-aware minimum price (DS-FX17) for the motion's expected CAC.",
+  "If price is below it, recommend lowering touch (demo video, comparison page, published objections, trial) or raising value or price.",
+  "Replace the static $25 and $300 thresholds with this computed check where inputs exist."
+ ],
+ "dependencies": [
+  "Owner price and margin"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None to decide",
+  "labor": "Owner sales hours if chosen",
+  "tools": "None"
+ },
+ "metrics": [
+  "price_min_per_month",
+  "touch_hours_per_customer"
+ ],
+ "guardrails": [
+  "Do not claim Skok's 10× per tier as a measured number for a given business; it was his rough estimate."
+ ],
+ "observation_window": "Per plan.",
+ "stop_conditions": [
+  "Review when price or touch level changes."
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "shared/acquisition/scoring.ts:109-155, 236-245; shared/agents/capacity.ts:14,55; shared/analysis/decisions.ts:53-67",
+ "extends_existing": [
+  "shared/acquisition/scoring.ts price fit",
+  "shared/playbooks/contracts.ts PB-cold-outreach (price_min)"
+ ],
+ "source_references": [
+  "DS-05-F1",
+  "DS-05-F2",
+  "DS-05-F4",
+  "DS-04-F5",
+  "DS-04-F6"
+ ],
+ "concepts": [
+  "DS-C6"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "DS-05-F1",
+   "DS-05-F2",
+   "DS-05-F4",
+   "DS-04-F5",
+   "DS-04-F6"
+  ],
+  "interpretation": [
+   "Interpretation: ClimbOS already encodes Skok's direction but with fixed thresholds that are not derived from his work."
+  ],
+  "proposed_climbos_rule": [
+   "Proposed rule: add a 'cac_price_floor' kind to decisions.ts calculate() using DS-FX17."
+  ],
+  "disagreements": [
+   "Skok placed channel or partner sales in a danger zone. ClimbOS's partner plays (scoring.ts:119) are lighter-weight referrals; treat them as their own case."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV26",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "price": 49,
+    "GM": 0.8,
+    "churn": 0.03,
+    "outreach_CAC": 600
+   },
+   "expected_behavior": [
+    "P_min 73.49 > 49, so outreach does not pay back",
+    "Recommends self-serve or a lower-touch motion"
+   ],
+   "hard_failure": [
+    "Ranks one-to-one outreach first",
+    "Cites '10×' as a fact about this business"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}

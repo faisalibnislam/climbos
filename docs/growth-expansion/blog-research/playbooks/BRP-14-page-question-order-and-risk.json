@@ -1,0 +1,209 @@
+{
+ "id": "BRP-14",
+ "version": 1,
+ "slug": "page-question-order-and-risk",
+ "title": "Page order: match the arrival, answer questions in order, one dominant risk",
+ "status": "proposed_reference",
+ "edition": "2026-10-20",
+ "decision_task": "How to order a landing or home page: the opening matches awareness and the inbound message; the body follows the prospect's own question sequence; button copy depends on readiness. / Which risk reducer an offer, page or email uses: diagnose the single biggest perceived risk and match the reducer to it, instead of defaulting to a guarantee or testimonials.",
+ "business_types": [
+  "any"
+ ],
+ "lifecycle_stages": [
+  "early",
+  "growing",
+  "established"
+ ],
+ "applies_when": [
+  "Any landing, home or service page",
+  "Rewrite of a page that repeats proof or risk reducers in random places",
+  "Offer pages, booking pages, trial sign-ups, checkout-adjacent copy",
+  "VOC shows hesitation themes"
+ ],
+ "exclusions": [
+  "Most-aware traffic on a short offer page, where the sequence collapses to offer, terms, CTA",
+  "Pages whose order is fixed by platform (marketplace listings)",
+  "Free, low-commitment actions where extra reassurance adds clutter",
+  "No VOC or owner input to tell which risk dominates (then ask the owner a single question)"
+ ],
+ "required_inputs": [
+  "One conversion goal",
+  "Stated arrival mindset, desired action and the belief change needed between them",
+  "Owner-confirmed list of existing risk reducers"
+ ],
+ "evidence_requirements": [
+  "Traffic source and its promise",
+  "Awareness level",
+  "Proof inventory from confirmed facts",
+  "Objections from the VOC bank",
+  "Coded hesitations or objections with counts (voc-research)",
+  "Confirmed reducers the business actually offers (trial, guarantee, demo, insurance, named reviews)"
+ ],
+ "missing_data_behavior": [
+  "No VOC to tell which risk dominates: ask the owner one question; label it owner judgement.",
+  "Reducer not offered by the business (e.g. a guarantee): owner note only, never in copy."
+ ],
+ "alternatives_when_constrained": [
+  "No reviews: the 'people like them' step uses a mechanism, process photos or confirmed counts, never placeholders",
+  "No customers yet: skip peer proof; strengthen mechanism and risk reversal",
+  "Low traffic: no A/B test; ship the ordered version and track the end conversion over time",
+  "No reviews: use owner's top three hesitations heard in sales calls, labelled owner-reported",
+  "No customers yet: rely on mechanism and reversible first step",
+  "Low traffic: pick one reducer and track booking or purchase rate over time rather than A/B testing"
+ ],
+ "decision_branches": [
+  {
+   "if": "Most-aware traffic on a short offer",
+   "then": "Offer, terms, CTA."
+  },
+  {
+   "if": "Problem-aware traffic",
+   "then": "Follow the prospect's question order; each proof once."
+  },
+  {
+   "if": "Dominant risk is will-it-work / worth-it / approval",
+   "then": "Demo / guarantee + same-type proof / named peers, near the CTA."
+  }
+ ],
+ "implementation_steps": [
+  "Write three lines: arrival mindset, desired action, belief change needed",
+  "Opening (roughly the first screen): message match to the ad or email plus awareness-appropriate framing",
+  "Body: what this is → why it matters to this reader → people like them use it → how it works → what changes for them → why believe it → next step; skip or merge steps the reader does not need",
+  "Place each proof once, where its question is asked; do not repeat social proof and guarantees at random points",
+  "Readiness-based buttons: early buttons state the benefit of continuing; final buttons state the step",
+  "Judge any test on the end conversion (booking, purchase), not clicks, especially when button count changes",
+  "Rate decision risk for one reader: low, medium, high",
+  "Classify hesitations into: will it work, is it worth it, will it fit my life, will others approve, will I be satisfied",
+  "Pick the top risk by VOC count (or owner judgement, labelled)",
+  "Match the reducer: demo or mechanism for will-it-work; guarantee, price clarity or trial for worth-it; setup help or flexible terms for fit; peer proof from the same segment for approval",
+  "Place it at or just above the primary CTA; consider removing copy that raises new doubts",
+  "Any reducer the business does not offer goes to the owner as a suggestion, never into copy"
+ ],
+ "dependencies": [
+  "VOC bank (BRP-13)"
+ ],
+ "cash_and_labor_requirements": {
+  "cash": "None",
+  "labor": "Copy drafting",
+  "tools": "Page editor"
+ },
+ "metrics": [
+  "End conversion rate by traffic source",
+  "Scroll depth to the CTA section",
+  "Ratio of clicks to conversions (to catch click-inflating buttons)",
+  "Conversion at the step where the reducer sits",
+  "Form abandonment",
+  "Pre-purchase questions received on the topic"
+ ],
+ "guardrails": [
+  "Every proof item traces to confirmed facts (lint.ts claim ledger)",
+  "No authority proof that is not confirmed and permitted",
+  "The question sequence is a scaffold; do not print its labels as headings verbatim",
+  "Never invent a guarantee, trial, user count or peer logo",
+  "Peer counts (e.g. 'N businesses this week') only from confirmed, current data",
+  "One reducer focus per page, not all five risk types"
+ ],
+ "observation_window": "2 to 4 weeks or a pre-set number of end conversions per variant before judging. / 2 to 4 weeks or a pre-set conversion count.",
+ "stop_conditions": [
+  "Clicks rise but end conversions do not: revert button changes",
+  "Bounce rate on mobile rises after the rewrite: review the opening match",
+  "Owner cannot confirm the reducer: drop it from copy",
+  "Conversion falls after adding reducer copy: review whether it surfaced a new doubt"
+ ],
+ "review_triggers": [
+  "Owner corrects an input this playbook relies on",
+  "A metric or guardrail crosses its bound",
+  "The underlying source or platform rule changes"
+ ],
+ "climbos_location": "skills/landing-pages/SKILL.md steps 3 to 5 (hero, section order, proof placement) and the page brief format / skills/landing-pages/SKILL.md step 6 (objection mapping) and step 3 (micro-copy under CTA); skills/voc-research/SKILL.md step 8 (counter types)",
+ "extends_existing": [
+  "skills/landing-pages/SKILL.md",
+  "skills/copy-fundamentals/SKILL.md",
+  "shared/agents/lint.ts lintClaims"
+ ],
+ "source_references": [
+  "CH-04-F1",
+  "CH-04-F2",
+  "CH-04-F3",
+  "CH-04-F4",
+  "CH-06-F1",
+  "CH-06-F2",
+  "CH-06-F4"
+ ],
+ "concepts": [
+  "CH-C3",
+  "CH-C5"
+ ],
+ "guidance_layers": {
+  "author_guidance": [
+   "CH-04-F1",
+   "CH-04-F2",
+   "CH-04-F3",
+   "CH-04-F4",
+   "CH-06-F1",
+   "CH-06-F2",
+   "CH-06-F4"
+  ],
+  "interpretation": [
+   "LABELLED INTERPRETATION: the 108% case is a bundled change with no reported statistics, so it shows the approach can coincide with large gains, not that it causes them. The durable parts are the ordering logic and judging on end conversions.",
+   "LABELLED INTERPRETATION: ClimbOS maps counters by JTBD force (anxiety, habit, price). The risk-type lens is finer-grained for anxiety, and it adds 'pick one'. They are complementary."
+  ],
+  "proposed_climbos_rule": [
+   "PROPOSED RULE: the landing-page brief includes the arrival-mindset / action / belief-change triple, and each proof item is assigned to exactly one question slot. Critic flags duplicated proof blocks and tests judged on clicks.",
+   "PROPOSED RULE: the voc-research objection list gains a 'risk type' column. landing-pages chooses one primary risk per page and puts its reducer in the CTA micro-copy. Reducers not owner-confirmed are emitted only in owner notes."
+  ],
+  "disagreements": [
+   "landing-pages bans 'Learn more' and asks for verb + outcome CTAs. Copyhackers' calls to value are compatible as long as they still name an outcome. Copyhackers moved authority proof late; landing-pages puts a proof chip in the hero. Reconcile: the hero proof chip should be a relevance proof (e.g. local rating), with authority or influencer proof later.",
+   "Copyhackers says choosing the risk is a gut check. ClimbOS should prefer VOC counts and label gut calls as owner judgement."
+  ]
+ },
+ "hypothetical_evaluation_cases": [
+  {
+   "id": "BR-EV16",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Window-cleaning service",
+    "traffic": "Facebook ad promising 'first clean half price'",
+    "awareness": "solution-aware",
+    "proof": [
+     "4.8 rating from 31 Google reviews (confirmed)",
+     "fully insured (confirmed)"
+    ]
+   },
+   "expected_behavior": [
+    "H1 carries the half-price first-clean promise",
+    "Body sections follow the question order with each proof placed once",
+    "Early buttons state the benefit, final button states the booking step",
+    "The test plan measures bookings, not button clicks"
+   ],
+   "hard_failure": [
+    "Invents testimonials or logos to fill the peer-proof step",
+    "Repeats the guarantee in four places",
+    "Judges success on click-through"
+   ]
+  },
+  {
+   "id": "BR-EV17",
+   "label": "hypothetical",
+   "inputs_hypothetical": {
+    "business": "Home EV-charger installer",
+    "voc": "18 of 52 competitor reviews mention fear of damage or messy install; 6 mention price",
+    "confirmed_reducers": [
+     "fully insured",
+     "fixed quote after photo survey"
+    ]
+   },
+   "expected_behavior": [
+    "Picks the fit/will-it-work risk (install mess or damage) as dominant, with counts",
+    "Uses the confirmed insurance and fixed-quote facts near the CTA",
+    "Suggests a tidy-install guarantee to the owner as a labelled suggestion only"
+   ],
+   "hard_failure": [
+    "Writes a money-back guarantee into the copy",
+    "Lists all five risk types in the hero",
+    "Invents a customer count"
+   ]
+  }
+ ],
+ "notes": "Proposed reference contract. Not executable; does not authorize publishing, sending or spending. Numbers in source references are dated author figures, never forecasts."
+}
