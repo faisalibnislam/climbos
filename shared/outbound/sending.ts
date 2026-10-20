@@ -1,3 +1,4 @@
+import { sha256Hex } from "../policy";
 import { mergeEmail } from "./index";
 
 /**
@@ -141,3 +142,43 @@ export const MAILBOX_PRESETS = {
 } as const;
 
 export type MailboxPreset = keyof typeof MAILBOX_PRESETS;
+
+/* ---------------- one send, once (Book 13 §7, Book 14 §11) ---------------- */
+
+/**
+ * The stable key for one cold email: workspace, prospect, sequence step and
+ * the approved content. Never a time, so a retry of the same email has the
+ * same key, and a re-approved edit gets a new one.
+ */
+export function sendOpKey(a: { orgId: string; prospectId: string; step: number; contentHash: string }): Promise<string> {
+  return sha256Hex(`cold-email:v1|${a.orgId}|${a.prospectId}|${a.step}|${a.contentHash}`);
+}
+
+/** The exact email under a key; a retry with a different one is refused. */
+export function sendPayloadHash(p: { to: string; subject: string; text: string; inReplyTo: string | null }): Promise<string> {
+  return sha256Hex(JSON.stringify([p.to.trim().toLowerCase(), p.subject, p.text, p.inReplyTo ?? ""]));
+}
+
+/** Message-ID derived from the key, so the mailbox's Sent folder can be checked before any resend. */
+export function sendMessageId(opKey: string, fromEmail: string): string {
+  const domain = fromEmail.split("@")[1]?.toLowerCase() || "climbos.app";
+  return `<climbos.${opKey.slice(0, 40)}@${domain}>`;
+}
+
+/**
+ * SMTP hosts known to copy each sent email into the Sent folder, where IMAP
+ * can find it by Message-ID. Other mailboxes can't be checked: an unclear
+ * send there waits for the owner instead of being resent.
+ */
+export const SENT_COPY_HOSTS = ["smtp.gmail.com", "smtp.office365.com", "smtp-mail.outlook.com"];
+
+/**
+ * Whether a failed SMTP send may still have gone out. A server answer
+ * (4xx/5xx) or a failure before the message was handed over means no; a
+ * timeout or dropped connection means maybe.
+ */
+export function smtpOutcome(e: { code?: string; responseCode?: number }): "rejected" | "auth" | "unclear" {
+  if (e.code === "EAUTH" || e.responseCode === 535 || e.responseCode === 534) return "auth";
+  if (e.responseCode || ["EENVELOPE", "EMESSAGE", "EDNS"].includes(e.code ?? "")) return "rejected";
+  return "unclear";
+}
