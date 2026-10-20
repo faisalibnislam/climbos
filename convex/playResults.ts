@@ -1,3 +1,4 @@
+import { diagnoseShortfall, shortfallLine } from "../shared/growth/diagnostics";
 import { v } from "convex/values";
 import { internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -28,7 +29,7 @@ function playsOf(s: Doc<"strategies">): SavedPlay[] {
   return ((s.expert?.plays ?? []) as SavedPlay[]).filter((p) => p.model?.steps?.length);
 }
 
-async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; actuals: PlayActuals; entries: Doc<"playResults">[] }[]> {
+async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; entries: Doc<"playResults">[] }[]> {
   const out = [];
   const all = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400);
   for (const p of playsOf(s)) {
@@ -36,7 +37,7 @@ async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: 
     const entries = all.filter((e) => (p.id && e.playId ? e.playId === p.id : e.playName === p.name)).slice(0, 60);
     if (!entries.length) continue;
     const weeks = (p.horizonDays || 90) / 7;
-    out.push({ name: p.name, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks) });
+    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, actuals: playActuals(p.model!, entries, { p10: p.p10 ?? 0, p50: p.p50 ?? 0, p90: p.p90 ?? 0 }, weeks) });
   }
   return out;
 }
@@ -150,7 +151,13 @@ async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<
 export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(4);
   const lines: string[] = [];
-  for (const s of plans) for (const r of await actualsFor(ctx, s)) if (lines.length < 6) lines.push(`- ${resultsLine(r.name, r.actuals)}`);
+  for (const s of plans)
+    for (const r of await actualsFor(ctx, s))
+      if (lines.length < 6) {
+        lines.push(`- ${resultsLine(r.name, r.actuals)}`);
+        // A play that's behind gets a diagnosis, not more budget (cycle 2).
+        if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }))}`);
+      }
   const { tested, notRun } = await outcomeLines(ctx, plans);
   const parts = [
     lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",

@@ -1,0 +1,67 @@
+/**
+ * Why a play is behind (cycle 2 failure diagnostics; BK06 Ch 3 Twyman's law
+ * "check the data before believing the result", pack LEARNING_COLLECTIONS
+ * "a campaign that never ran says nothing about the channel"). Checks run in
+ * order and the first failing one decides the next step; more spend is only
+ * suggested when reach is the sole shortfall and conversion holds.
+ */
+import type { PlayActuals } from "./actuals";
+
+export type ShortfallVerdict = "not_run" | "tracking" | "reach" | "conversion" | "reach_only" | "too_few" | "fine";
+
+export interface ShortfallCheck {
+  check: "executed" | "measured" | "reach" | "conversion" | "sample";
+  status: "pass" | "fail" | "unknown";
+  detail: string;
+}
+
+export interface Shortfall {
+  verdict: ShortfallVerdict;
+  checks: ShortfallCheck[];
+  /** One next step for the owner. */
+  next: string;
+  /** Only true when conversion holds and reach alone is short. */
+  moreSpendJustified: boolean;
+}
+
+const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}): Shortfall {
+  const checks: ShortfallCheck[] = [];
+  const stop = play.killIf ? ` Your stop rule: ${play.killIf}` : "";
+  // 1. Did it run?
+  if (a.weeks === 0 || a.reach === 0) {
+    checks.push({ check: "executed", status: "fail", detail: a.weeks === 0 ? "No weeks logged." : "Nobody was reached in the weeks logged." });
+    return { verdict: "not_run", checks, next: "It hasn't run yet, so it says nothing about the channel. Start it (or log what happened) before judging.", moreSpendJustified: false };
+  }
+  checks.push({ check: "executed", status: "pass", detail: `${a.weeks} week${a.weeks === 1 ? "" : "s"} logged, ${a.reach} reached.` });
+  // 2. Is it being measured? Reach with nothing at all recorded downstream for 2+ weeks.
+  const recorded = a.steps.reduce((s, x) => s + x.successes, 0);
+  if (a.weeks >= 2 && recorded === 0 && a.reach >= 30) {
+    checks.push({ check: "measured", status: "fail", detail: `${a.reach} reached but nothing recorded at "${a.steps[0]?.name ?? "the first step"}".` });
+    return { verdict: "tracking", checks, next: "Check the tracking first: people were reached but no step recorded anything. A broken count looks like a failed play.", moreSpendJustified: false };
+  }
+  checks.push({ check: "measured", status: "pass", detail: "Steps are being recorded." });
+  // 3. Did it reach the planned people?
+  const reachShort = a.reachVsPlan !== null && a.reachVsPlan < 0.5;
+  checks.push({ check: "reach", status: a.reachVsPlan === null ? "unknown" : reachShort ? "fail" : "pass", detail: a.reachVsPlan === null ? "No planned reach to compare." : `Reach is ${pct(a.reachVsPlan)} of the plan.` });
+  // 4. Which step converts worse than planned (with enough people to tell)?
+  const weak = a.steps.find((s) => s.trials >= 30 && s.observed !== null && s.observed < s.planned * 0.5);
+  const thin = a.steps.every((s) => s.trials < 30);
+  const thinAny = a.steps.some((s) => s.trials < 30);
+  checks.push({ check: "conversion", status: weak ? "fail" : thin ? "unknown" : "pass", detail: weak ? `"${weak.name}" converts ${pct(weak.observed!)} vs ${pct(weak.planned)} planned (${weak.successes}/${weak.trials}).` : thin ? "Too few people at each step to judge conversion." : "Steps convert at or near plan." });
+  if (weak) return { verdict: "conversion", checks, next: `Fix "${weak.name}" before adding people: test one change at that step.${stop}`, moreSpendJustified: false };
+  if (reachShort && !thin) return { verdict: "reach_only", checks, next: `Conversion holds; only reach is short. Fix the route to the page, or raise spend within the cap.${stop}`, moreSpendJustified: true };
+  if (reachShort) return { verdict: "reach", checks, next: `Reach is short and there are too few people to judge conversion. Fix the route first; don't add spend yet.${stop}`, moreSpendJustified: false };
+  // 5. Enough to judge every step?
+  if (thinAny) {
+    checks.push({ check: "sample", status: "unknown", detail: `${a.customers} customers so far vs about ${Math.round(a.expectedByNow.p50)} expected.` });
+    return { verdict: "too_few", checks, next: `Too few people to read yet. Keep running to the planned end before changing anything.${stop}`, moreSpendJustified: false };
+  }
+  return { verdict: "fine", checks, next: "No single step is failing; results are within the noise. Keep going to the planned end.", moreSpendJustified: false };
+}
+
+/** One line for the next plan's brief, so a behind play is diagnosed rather than fed more budget. */
+export function shortfallLine(name: string, s: Shortfall): string {
+  return `${name}: behind. ${s.next}${s.moreSpendJustified ? "" : " Don't raise its spend."}`;
+}

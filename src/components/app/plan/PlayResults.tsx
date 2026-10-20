@@ -9,6 +9,7 @@ import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
+import { diagnoseShortfall, type Shortfall } from "../../../../shared/growth/diagnostics";
 import { cn } from "@/lib/utils";
 
 const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: LucideIcon }> = {
@@ -19,6 +20,18 @@ const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: L
 };
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+
+/** Why a play is behind, checked in order (ran? measured? reach? which step?), with one next step. */
+function ShortfallNote({ s }: { s: Shortfall }) {
+  const failed = s.checks.find((c) => c.status === "fail");
+  return (
+    <div className="flex flex-col gap-1 rounded-[var(--radius-control)] bg-red-100 px-2 py-1.5 text-xs text-red-800">
+      <p className="font-semibold">{s.next}</p>
+      {failed ? <p>{failed.detail}</p> : null}
+      {!s.moreSpendJustified ? <p className="text-red-800/80">Don&apos;t raise spend until this is fixed.</p> : null}
+    </div>
+  );
+}
 const r1 = (x: number) => (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10);
 
 /** Plan vs actual for one play, and a weekly log (spec §28). */
@@ -64,6 +77,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, canEdi
               </Badge>
             ) : null}
           </div>
+          {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals)} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
               .filter((s) => s.trials > 0)
