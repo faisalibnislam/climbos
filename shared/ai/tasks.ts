@@ -297,9 +297,10 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
   return `<untrusted_content source="${safeSource}">\n${clean}\n</untrusted_content>`;
 }
 
-export function factsBlock(facts: { statement: string; category: string }[]): string {
+/** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
+export function factsBlock(facts: { statement: string; category: string; kind?: string }[]): string {
   if (facts.length === 0) return "CONFIRMED FACTS: (none yet — keep claims general)";
-  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads):\n${facts.map((f, i) => `[${i}] (${f.category}) ${f.statement}`).join("\n")}`;
+  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}) ${f.statement}`).join("\n")}`;
 }
 
 /**

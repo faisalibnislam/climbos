@@ -34,6 +34,8 @@ import { capsHint, PLAN_CAPS } from "../../shared/agents/wordCaps";
 import type { AgentInput } from "../../shared/agents/types";
 import { CLIMB_CONFIG } from "../../convex/lib/climbConfig";
 import { climbToolDefs, toolByName } from "../../convex/lib/climbTools";
+import { evidenceKind } from "../../shared/agents/evidenceKind";
+import { platformNotes } from "../../shared/acquisition/platformRules";
 import { LIBRARY_TYPE, loadCases, loadPrompts, PLAN_CASES, type ExpansionCase } from "./cases";
 
 // ---------- args ----------
@@ -158,11 +160,22 @@ const humanKey = (k: string) => k.replace(/_/g, " ");
 function planInput(c: ExpansionCase): AgentInput {
   const budget = Number((c.inputs as Record<string, unknown>).monthly_ad_ceiling_usd ?? NaN);
   const facts = Object.entries(c.inputs).map(([k, v]) => `${humanKey(k)}: ${typeof v === "string" ? v : JSON.stringify(v)} (owner-reported)`);
+  const inputs = c.inputs as Record<string, unknown>;
+  const slots = Number(inputs.weekly_open_slots ?? NaN);
+  const type = LIBRARY_TYPE[c.business_type];
   return {
     task: "",
     brief: [`BUSINESS: Synthetic evaluation case ${c.id} (${humanKey(c.business_type)}). No website; only the owner's inputs below are known.`, `TYPE: ${LIBRARY_TYPE[c.business_type] ?? "unknown"} · CURRENCY: USD`, `GOAL: ${c.task} (horizon 90 days${Number.isFinite(budget) ? `, ad budget ${budget} USD/month ceiling` : ", ad budget not given"})`, `CONFIRMED FACTS:\n${facts.map((f, i) => `[${i}] ${f}`).join("\n")}`].join("\n"),
     facts,
-    constraints: { ...(Number.isFinite(budget) ? { monthlyAdBudgetUsd: budget } : {}), currency: "USD" },
+    // As production builds them: evidence kinds from the facts' wording, library type, a local area and delivery limit when the inputs say so.
+    constraints: {
+      ...(Number.isFinite(budget) ? { monthlyAdBudgetUsd: budget } : {}),
+      currency: "USD",
+      factKinds: facts.map((f) => evidenceKind(f, "owner_supplied")),
+      ...(type ? { businessTypes: [type] } : {}),
+      ...(c.business_type === "local_service" ? { serviceArea: "local" } : {}),
+      ...(Number.isFinite(slots) ? { newCustomersPerMonth: Math.round(slots * 4.3) } : {}),
+    },
   };
 }
 
@@ -192,11 +205,11 @@ async function runPlan(c: ExpansionCase): Promise<ExpansionRow> {
   try {
     const base = planInput(c);
     const playsSpec = basic(growthPlaysSpec({}, playCatalogsFor(LIBRARY_TYPE[c.business_type])));
-    const playsRun = await runAgent(playsSpec, { ...base, task: playsTask({ scorecard: "", insights: "(none yet)", horizonDays: 90 }) }, deps);
+    const playsRun = await runAgent(playsSpec, { ...base, task: playsTask({ scorecard: "", insights: "(none yet)", horizonDays: 90, engines: platformNotes(base.constraints?.businessTypes ?? []) }), constraints: { ...base.constraints, horizonDays: 90 } }, deps);
     const draft = playsRun.output as PlaysOutput;
     const plays = withForecasts({ ...draft, economics: withDerivedAssumed(draft.economics) }) as PlaysOutput;
     const locked = lockedNumbers(plays, { statement: c.task, target: null, horizonDays: 90 });
-    const input: AgentInput = { ...base, task: planTask({ locked, plays, scorecard: "", insights: "(none yet)", horizonDays: 90 }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays, 90), horizonDays: 90, forecastCustomers: forecastCustomers(plays, 90) } };
+    const input: AgentInput = { ...base, task: planTask({ locked, plays, scorecard: "", insights: "(none yet)", horizonDays: 90, engines: platformNotes(base.constraints?.businessTypes ?? []) }), constraints: { ...base.constraints, lockedCustomers: portfolioP50(plays, 90), horizonDays: 90, forecastCustomers: forecastCustomers(plays, 90) } };
     const planRun = await runAgent(basic(strategySpec({})), input, deps);
     const sspec = strategySpec({});
     const plan = (await reconcile({ turn, plan: planRun.output, locked, schema: sspec.schema as never, lint: (o) => sspec.lint?.(o as never, input) ?? [], caps: capsHint(PLAN_CAPS) })).plan as Record<string, unknown>;

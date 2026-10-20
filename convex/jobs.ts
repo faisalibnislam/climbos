@@ -42,6 +42,7 @@ import { reconcile } from "../shared/agents/consistency";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
+import { platformNotes } from "../shared/acquisition/platformRules";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
@@ -478,6 +479,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
+    factKinds: job.facts.map((f) => f.evidenceKind),
     ...extra,
   };
 }
@@ -495,13 +497,14 @@ function planUnknowns(job: JobCtx): string[] {
 type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
-function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string): PlanConstraints {
+function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[]): PlanConstraints {
   const h = job.goal?.horizonDays ?? 90;
   const t = job.goal?.target;
   return constraintsOf(job, {
     lockedCustomers: portfolioP50(plays, job.goal?.horizonDays),
     horizonDays: h,
     ...(serviceArea ? { serviceArea } : {}),
+    ...(businessTypes?.length ? { businessTypes } : {}),
     forecastCustomers: forecastCustomers(plays, h),
     goalNumbers: [t?.baseline, t?.desired, t && t.baseline !== null && t.desired !== null ? t.desired - t.baseline : null].filter((n): n is number => typeof n === "number" && n > 0),
   });
@@ -887,8 +890,8 @@ export const buildStrategy = internalAction({
       const playsInput = (scorecard: string) =>
         agentInput(
           job,
-          playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities), decisionContract: hasFlag(job, "decision_contract") }),
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}) } },
+          playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract") }),
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
       const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);
@@ -959,8 +962,8 @@ export const buildStrategy = internalAction({
         hasFlag(job, "lean_plan") ? { ...strategySpec(), drafts: 1, effort: { ...strategySpec().effort, draft: "medium" } } : strategySpec(),
         agentInput(
           job,
-          planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }),
-          plays ? { constraints: lockedConstraints(job, plays, profile.dims.geography?.value) } : {},
+          planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}` }),
+          plays ? { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types) } : {},
         ),
         startedAt,
         {
@@ -975,7 +978,7 @@ export const buildStrategy = internalAction({
       // Final consistency pass: one editor reconciles the plan with the locked numbers.
       // The final checks see what the writers read (research notes and pages), so cited pages resolve.
       const planLintInput = plays
-        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: capabilityContext(job.capabilities) }), { constraints: lockedConstraints(job, plays, profile.dims.geography?.value) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
+        ? { ...agentInput(job, planTask({ locked, plays, scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}` }), { constraints: lockedConstraints(job, plays, profile.dims.geography?.value, profile.types) }), untrustedContext: [research?.notes ?? "", playsMeta.notes ?? "", planMeta.notes ?? "", ...[...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])].map((x) => x.url)].join("\n") }
         : null;
       if (plays && locked && planLintInput) strategy = await consistencyStep(ctx, job, 190, strategy, locked, planLintInput);
       // Quality is separate from the run finishing: hard checks on the final plan (after the consistency pass) count too.

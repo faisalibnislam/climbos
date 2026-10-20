@@ -1,3 +1,4 @@
+import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor } from "../shared/economics/currency";
@@ -83,7 +84,7 @@ export const jobContext = internalQuery({
       business,
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? await resultsBrief(ctx, org._id) : "",
-      facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category })),
+      facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,

@@ -131,7 +131,7 @@ async function main() {
     graded.push({ case_id: row.case_id, surface: row.surface, ok: row.ok, numbers, judgement: j, hard_fail: !row.ok || (ok && (j as Judgement).hard_failures.some((h) => h.present)), total });
     console.log(` ${row.case_id} ${row.surface}: ${total ?? "—"}/14${graded[graded.length - 1].hard_fail ? " HARD FAIL" : ""} · numbers ${numbers.filter((n) => n.found).length}/${numbers.length}`);
   }
-  let pairs: { case_id: string; surface: string; winner: string }[] = [];
+  const pairs: { case_id: string; surface: string; winner: string }[] = [];
   if (againstFile) {
     const other = JSON.parse(readFileSync(againstFile, "utf8")) as Run;
     const byKey = new Map(other.rows.map((r) => [`${r.case_id}|${r.surface}`, r]));

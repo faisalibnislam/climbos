@@ -372,3 +372,19 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Conflicting facts:** `findConflicts` covers two prices for one tier (same currency and period) and two trial lengths. Both values go in the brief, the evidence record and on the review card.
 - **Also fixed:** a channel's ad spend is saved in the currency's own minor units.
 - **Cost:** no extra model calls. The plan output adds a few tokens per channel.
+
+**Built (not yet evaluated): knowledge expansion slices 0, 1, 3, 4, 5, 6, 9 and 10, `ENGINE_VERSION` v2.9-expansion-checks.** Plan: `docs/growth-engine/expansion-integration-plan.md`.
+- **Slice 0, 32-case harness:** `bench/expansion/run.ts` and `grade.ts`.
+  - Climb AI's real prompt, model and tools on all 32 cases; the plan path on 6.
+  - Number checks run in code; a blind judge scores the 7-point rubric, and any hard failure fails the case.
+  - Pairwise mode and a blind packet for owner review.
+  - Dry run with the fake model only; no paid run.
+- **Slice 1, decision calculators:** in `shared/analysis/`, exposed as the Climb AI `calculate` tool: margin, price floor, rate comparison, sample ratio, sample size, before/after.
+- **Slice 3, experiment feasibility:** split and holdout tests must name an eligible count and be able to finish; "stop when significant" is blocked.
+- **Slice 4, capacity and service area:** a new owner input for new customers a month, a hard capacity rule on forecasts, and service-area targeting for local or regional paid reach.
+- **Slice 5, claim ledger:** speed multipliers, 24/7, leadership, user counts, awards and full automation need evidence.
+- **Slice 6, evidence strength:** each fact is labelled by kind (site says, stated opinion, behaviour, commitment, measured); proof-of-demand language needs more than opinions.
+- **Slice 9, platform rules:** planning notes (RULE-01/02/05/06); Mac apps can't plan App Store product page tests.
+- **Slice 10, borrowed uplift:** another business's reported lift can't be a funnel rate or a promise.
+- **Cost:** no extra model calls. The calculator tool may add a Climb AI turn when it's used.
+- **Release:** needs the baseline and comparison runs on the 32 cases plus the end-to-end bench (owner cap).

@@ -1,3 +1,4 @@
+import type { EvidenceKind } from "./evidenceKind";
 import type { z } from "zod";
 import type { Effort } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
@@ -109,6 +110,10 @@ export interface PlanConstraints {
   newCustomersPerMonth?: number;
   /** Where customers can be served (acquisition geography): local or regional limits paid reach. */
   serviceArea?: string;
+  /** Each confirmed fact's strength as evidence (shared/agents/evidenceKind.ts); proof-of-demand language needs more than opinions. */
+  factKinds?: EvidenceKind[];
+  /** Acquisition library business types (e.g. desktop_app), for platform rules. */
+  businessTypes?: string[];
 }
 
 export interface CritiqueResult {

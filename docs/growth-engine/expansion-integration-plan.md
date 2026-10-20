@@ -1,6 +1,11 @@
 # Integrating the knowledge expansion and the six reference books
 
-Written 2026-10-20 against `growth-engine-v2` @ 2f88495. **This is a plan.** No application code changed for it.
+Written 2026-10-20 against `growth-engine-v2` @ 2f88495.
+
+**Status (2026-10-20):**
+- **Built:** slices 0, 1, 3, 4, 5, 6, 9 and 10 (commits 1257f9c through the v2.9 commit). Not evaluated with a paid run (owner chose build only).
+- **Not started:** slices 2, 7 and 8 (prompt changes that need the bench) and 11 (knowledge docs).
+- **Book check:** the six-book verification of the pack is in section 6.
 
 **Inputs read:**
 - `docs/growth-expansion/`: index, RECONCILIATION, CLAUDE_CODE, six guides, evaluation pack, business-type playbooks, platform rules, public cases.
@@ -131,3 +136,36 @@ Code and a dry run with the fake model need no spend.
 5. Slice 11 (knowledge docs) can start any time; it changes no app code.
 
 Nothing here publishes, sends, spends or deploys.
+
+## 6. Verification of the expansion pack against the six books (2026-10-20)
+
+The pack was written by a third party, so six read-only reviews checked its locators, its attributions to authors, and its reconciliation, playbook and case links against the actual EPUBs. They also read the chapters the pack skipped. Full notes, in our own words with chapter references, are in `docs/growth-engine/book-review/BK01–BK06.md`. BK04's notes include an original 44-entry catalogue of the book's experiments.
+
+| Book | OK / Minor / Wrong | What matters |
+|---|---|---|
+| BK01 Rumelt | 17 / 13 / 1 | **Wrong:** one locator range (L05) misses its claim. Chain-link nuance is lost: improving one link can show no gain until others improve. Several BK01 tags are tenuous. |
+| BK02 Monetizing | 25 / 8 / 0 | Chapter labels are paraphrased. The pack softens Ch 12's three-non-price-options-before-a-discount rule and presents the survey downgrade as the authors' view. The cost floor is a viability check only (the authors attack cost-plus pricing). |
+| BK03 Obviously Awesome | 17 / 13 / 0 | Four locators stop short of their claims. The pack waters down Dunford's defaults: Big Fish Small Pond for small firms, a new category as a last resort, lead with what buyers weigh before purchase. |
+| BK04 Testing Business Ideas | 14 / 9 / 0 | It skipped the 44-test library and the book's evidence gradient and rule-of-thumb targets. The disclosure rule for Wizard of Oz tests is ClimbOS policy, not the book's. |
+| BK05 Mom Test | 22 / 5 / 0 | One "original" prompt is the book's own example. Commitment types should be time, reputation and cash, not "data access". |
+| BK06 Kohavi | 31 / 2 / 0 | Faithful. The gaps are citation gaps, and the chapters that matter most for small businesses (Ch 10–11 observational designs, Ch 6–7 metrics) were skipped. |
+
+**Not readable:**
+- BK02 and BK06 figures and equations, which are images.
+- BK04's icon ratings and diagrams.
+- A few cut-off example passages.
+
+**Provenance flag:**
+- The Monetizing Innovation and Trustworthy Online Controlled Experiments EPUBs carry an "OceanofPDF.com" watermark, which suggests unofficial copies.
+- The owner should confirm licensed copies before the product relies on adaptations from them.
+
+**What this changes:**
+- Slice 11's knowledge docs should fix the WRONG locator and the softened rules.
+- Gap knowledge to add:
+  - BK04 test catalogue with its requirements as gates;
+  - BK06 design ladder and metric rules;
+  - BK03 frame-selection defaults;
+  - BK02 pricing-strategy document and under-pricing signals;
+  - BK01 outside view, focus and growth-source checks;
+  - BK05 signal taxonomy and stop rules.
+- Labels: author concepts vs ClimbOS policy.
