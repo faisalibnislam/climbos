@@ -1,0 +1,44 @@
+playbook_id: launch_readiness_v1
+status: proposed
+business_snapshot_id: fixture_snapshot_01
+launch_id: fixture_launch_01
+scope:
+  target_segment: independent_professional_fixture
+  offer_version: offer_fixture_v1
+  product_version: product_fixture_v1
+  timezone: Asia/Dhaka
+gates:
+  truth:
+    blocking: true
+    requires:
+      - current_claim_evidence
+      - consistent_price_and_terms
+  transaction:
+    blocking: true
+    requires:
+      - verified_signup_path
+      - verified_access_confirmation
+  value:
+    blocking: true
+    requires:
+      - eligible_user_completes_core_job
+  operations:
+    blocking: true
+    requires:
+      - named_support_owner
+      - pause_and_recovery_procedure
+budget:
+  cash_ceiling_usd: 100
+  labor_ceiling_hours: 20
+  paid_media_authorized: false
+approvals:
+  content_review_required: true
+  external_execution_authorization_required: true
+stop_conditions:
+  - core_path_unavailable
+  - material_claim_incorrect
+  - cash_ceiling_exceeded
+outputs:
+  - readiness_decision
+  - blocking_issues
+  - owner_review_packet

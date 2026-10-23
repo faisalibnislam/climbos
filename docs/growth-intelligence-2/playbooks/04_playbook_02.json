@@ -1,0 +1,30 @@
+{
+  "playbook_id": "launch_learning_v1",
+  "status": "proposed",
+  "cohort": {
+    "entry_event": "eligible_account_signup",
+    "launch_version": "fixture_launch_v1",
+    "window_start": "2026-10-20T00:00:00+06:00",
+    "window_end": "2026-10-27T00:00:00+06:00"
+  },
+  "metrics": {
+    "primary": "accounts_completing_verified_first_value",
+    "secondary": ["paid_continuations", "qualified_inquiries"],
+    "guardrails": ["support_hours", "refunds", "complaints", "variable_delivery_cost"]
+  },
+  "hypotheses": [
+    {
+      "id": "fixture_h1",
+      "statement": "A clear starting example reduces input confusion",
+      "required_observations": ["setup_attempt", "input_error", "first_value_event"]
+    }
+  ],
+  "decision_policy": {
+    "insufficient_data": "extend_observation_without_claiming_a_winner",
+    "activation_failure": "investigate_workflow_before_scaling_traffic",
+    "economic_failure": "review_offer_cost_and_segment",
+    "scale": "requires_current_quality_and_budget_review"
+  },
+  "causal_claim_allowed": false,
+  "automatic_external_execution": false
+}

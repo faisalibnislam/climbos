@@ -1,0 +1,117 @@
+{
+  "research_cutoff": "2026-10-19",
+  "sources": [
+    {
+      "id": "E01",
+      "title": "Google \u2014 Email sender guidelines",
+      "url": "https://support.google.com/mail/answer/81126?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Personal Gmail sender authentication, bulk requirements, alignment and unsubscribe",
+      "evidence_summary": "Official primary page directly retrieved; summarizes current published requirements.",
+      "books": [
+        8
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "E02",
+      "title": "Yahoo Sender Hub \u2014 FAQs",
+      "url": "https://senders.yahooinc.com/faqs/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Unsubscribe processing deadline and distinct provider policy",
+      "evidence_summary": "Official indexed FAQ says unsubscribe requests must be honored within two days. Both FAQ and best-practices direct retrieval returned errors/429; exact policy must be reverified before implementation.",
+      "books": [
+        8
+      ],
+      "verification_status": "primary_search_index_only"
+    },
+    {
+      "id": "E03",
+      "title": "Resend \u2014 Acceptable Use Policy",
+      "url": "https://resend.com/legal/acceptable-use",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2026-10-13",
+      "claim_scope": "Opt-in, prohibited unsolicited outreach and provider sending-statistics conditions",
+      "evidence_summary": "Directly retrieved policy prohibits cold outreach, purchased lists and scraped contacts; explicit opt-in; complaint below 0.08% and bounce below 4%.",
+      "books": [
+        8,
+        9
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "E04",
+      "title": "Resend \u2014 Idempotency Keys",
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Supported deduplication keys and finite retention window",
+      "evidence_summary": "Directly retrieved provider documentation states 24-hour retention and repeated-request deduplication.",
+      "books": [
+        8
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "S01",
+      "title": "LinkedIn \u2014 Posts API",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-10",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2026-05-13",
+      "claim_scope": "Organization/member publishing scopes, supported formats, headers and response identifiers",
+      "evidence_summary": "October 2026 version directly retrieved; requires version headers; distinct organization/member permissions and role conditions.",
+      "books": [
+        9
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "S02",
+      "title": "Meta \u2014 Facebook Pages API",
+      "url": "https://developers.facebook.com/documentation/pages-api.md/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Capability-level publishing permission overview",
+      "evidence_summary": "Official indexed content identifies pages_manage_posts; direct retrieval failed/429. Exact integration requirements must be freshly checked.",
+      "books": [
+        9
+      ],
+      "verification_status": "primary_search_index_only"
+    },
+    {
+      "id": "S03",
+      "title": "Meta \u2014 Instagram Content Publishing",
+      "url": "https://developers.facebook.com/documentation/instagram-platform/content-publishing.md/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Capability-level distinction between login paths and publishing scope families",
+      "evidence_summary": "Official indexed content distinguishes Instagram Login and Facebook Login permission sets; direct retrieval failed. No fixed limits inferred.",
+      "books": [
+        9
+      ],
+      "verification_status": "primary_search_index_only"
+    },
+    {
+      "id": "S04",
+      "title": "LinkedIn \u2014 Getting Access to LinkedIn APIs",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2025-06-26",
+      "claim_scope": "Product access and permission scope distinctions",
+      "evidence_summary": "Official documentation distinguishes self-service member share scope from restricted product and organization capabilities.",
+      "books": [
+        9
+      ],
+      "verification_status": "verified_primary_page"
+    }
+  ],
+  "limitations": [
+    "Meta official documentation was available in search-index excerpts but not through direct full-page retrieval; implementation gates require fresh primary verification.",
+    "Dynamic provider policies and versioned APIs can change after retrieval.",
+    "Frameworks and operating policies are original synthesis; hypothetical examples are not empirical benchmarks.",
+    "No live ClimbOS integrations or customer outcome experiments were executed.",
+    "Yahoo FAQ was supported by official indexed content; direct retrieval returned 429. Book explicitly avoids unsupported exact bulk-volume definitions."
+  ]
+}

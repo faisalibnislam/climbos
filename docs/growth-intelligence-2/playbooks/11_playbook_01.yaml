@@ -1,0 +1,33 @@
+playbook_id: opportunity_qualification_v1
+mode: recommendation_only
+input_requirements:
+  tenant_id: required
+  opportunity_id: required
+  business_snapshot_id: required
+  offer_catalog_version: required
+fields:
+  customer_problem:
+    state: unknown
+    evidence_ids: []
+  quantified_value:
+    state: unknown
+    evidence_ids: []
+  buying_authority:
+    state: unknown
+    evidence_ids: []
+  evaluation_criteria:
+    state: unknown
+    evidence_ids: []
+  decision_and_paper_process:
+    state: unknown
+    evidence_ids: []
+  next_mutual_action:
+    state: unknown
+    evidence_ids: []
+allowed_states: [unknown, reported, verified, contradicted, obsolete]
+outputs: [eligibility, missing_evidence, suggested_questions, next_action]
+prohibited_inferences:
+  - job_title_proves_authority
+  - friendly_contact_proves_champion
+  - stage_label_proves_win_probability
+execution_enabled: false

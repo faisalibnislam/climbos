@@ -1,0 +1,35 @@
+id: b14-growth-plan-run
+version: 1
+mode: analysis_and_draft
+inputs:
+  required:
+    - tenant_id
+    - business_snapshot_id
+    - goal_id
+    - budget_policy_id
+    - knowledge_edition
+stages:
+  - id: evidence
+    output: evidence_pack
+    on_missing_material_fact: preserve_unknown_and_request_targeted_evidence
+  - id: diagnosis
+    output: diagnosis_with_alternatives
+    requires: [evidence_pack]
+  - id: modeling
+    output: deterministic_scenarios
+    requires: [diagnosis_with_alternatives]
+  - id: planning
+    output: versioned_action_plan
+    requires: [deterministic_scenarios]
+  - id: validation
+    output: validation_report
+    requires: [versioned_action_plan]
+  - id: review
+    output: owner_decision
+    requires: [validation_report]
+hard_failures:
+  - invented_material_fact
+  - incorrect_material_calculation
+  - tenant_scope_violation
+  - budget_reservation_failure
+execution_access: none

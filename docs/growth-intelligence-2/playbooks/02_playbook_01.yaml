@@ -1,0 +1,40 @@
+playbook_id: customer_episode_discovery_v1
+status: proposed
+objective: choose_a_feasible_initial_segment
+inputs:
+  business_snapshot_id: fixture_snapshot_01
+  decision_id: fixture_segment_decision_01
+  authorized_dataset_ids: []
+  evidence_required: true
+recruitment:
+  categories:
+    - recent_buyer
+    - evaluated_without_buying
+    - former_user
+  contact_database_available: false
+  sending_authorization_required: true
+interview:
+  start_with: most_recent_relevant_episode
+  extract:
+    - trigger
+    - sequence
+    - existing_alternative
+    - buying_roles
+    - switching_barriers
+    - concrete_consequences
+  prohibited:
+    - invented_quotes
+    - synthetic_participants_as_evidence
+analysis:
+  unit_of_comparison: account_buying_situation
+  retain_negative_cases: true
+  unknown_value: null
+output:
+  evidence_ledger: required
+  candidate_segments: required
+  contradictions: required
+  decision_recommendation: provisional
+execution:
+  publish: false
+  send_messages: false
+  spend_money: false

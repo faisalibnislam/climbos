@@ -1,0 +1,116 @@
+{
+  "sources": [
+    {
+      "id": "R02-01",
+      "title": "Jobs to Be Done Theory",
+      "url": "https://www.christenseninstitute.org/theory/jobs-to-be-done/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Circumstance and progress lens; functional, social, emotional dimensions.",
+      "evidence_summary": "Circumstance and progress lens; functional, social, emotional dimensions.",
+      "books": [
+        "02"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R02-02",
+      "title": "The Value Proposition Canvas",
+      "url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Customer profile and value-map distinction; hypothesis testing.",
+      "evidence_summary": "Customer profile and value-map distinction; hypothesis testing.",
+      "books": [
+        "02"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R02-03",
+      "title": "Introducing Structured Outputs in the API",
+      "url": "https://openai.com/index/introducing-structured-outputs-in-the-api/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2024-08-06",
+      "claim_scope": "Schema-constrained output capability; not truthfulness guarantee.",
+      "evidence_summary": "Schema-constrained output capability; not truthfulness guarantee.",
+      "books": [
+        "02"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R04-01",
+      "title": "Product Hunt Launch Guide",
+      "url": "https://www.producthunt.com/launch",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Platform community, product submissions, feedback context.",
+      "evidence_summary": "Platform community, product submissions, feedback context.",
+      "books": [
+        "04"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R04-02",
+      "title": "How to promote your Product Hunt launch",
+      "url": "https://www.producthunt.com/launch/sharing-your-launch",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Restrictions on explicit upvote requests and manipulative promotion.",
+      "evidence_summary": "Restrictions on explicit upvote requests and manipulative promotion.",
+      "books": [
+        "04"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R04-03",
+      "title": "Preparing for launch",
+      "url": "https://www.producthunt.com/launch/preparing-for-launch",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Readiness matters; no guaranteed best launch day.",
+      "evidence_summary": "Readiness matters; no guaranteed best launch day.",
+      "books": [
+        "04"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R04-04",
+      "title": "Scheduled Functions",
+      "url": "https://docs.convex.dev/scheduling/scheduled-functions",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Future function scheduling; side-effect boundaries remain application responsibility.",
+      "evidence_summary": "Future function scheduling; side-effect boundaries remain application responsibility.",
+      "books": [
+        "04"
+      ],
+      "verification_status": "primary_page_opened"
+    },
+    {
+      "id": "R04-05",
+      "title": "Idempotency Keys",
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Provider supports idempotency keys for duplicate requests subject to documented conditions.",
+      "evidence_summary": "Provider supports idempotency keys for duplicate requests subject to documented conditions.",
+      "books": [
+        "04"
+      ],
+      "verification_status": "primary_page_opened"
+    }
+  ],
+  "research_limitations": [
+    "Selected primary pages checked; not an exhaustive systematic literature review.",
+    "Cutoff October 19, 2026; no future October coverage claimed.",
+    "Unknown publication dates remain null; retrieval date is not publication date.",
+    "All original operating thresholds, schedules and financial illustrations are proposed or hypothetical.",
+    "Y Combinator interview URL attempted but returned 404; excluded from references.",
+    "No ClimbOS repository implementation audit performed; architecture content is proposed and aligned to provided master brief."
+  ]
+}

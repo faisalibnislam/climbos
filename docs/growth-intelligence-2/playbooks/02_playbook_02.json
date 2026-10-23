@@ -1,0 +1,25 @@
+{
+  "playbook_id": "position_evaluation_v1",
+  "status": "proposed",
+  "position": {
+    "segment_id": "fixture_segment_agency_handoffs",
+    "situation": "Repeated sales-to-delivery handoffs",
+    "desired_outcome": "A complete information handoff",
+    "mechanism_claim_id": null,
+    "alternative_ids": ["fixture_manual_checklist"]
+  },
+  "gates": [
+    {"id": "product_truth", "pass_requires": "All capability claims resolve to approved evidence"},
+    {"id": "eligibility", "pass_requires": "Segment can use the actual offer"},
+    {"id": "comprehension", "pass_requires": "Reviewers can state task and intended user without coaching"}
+  ],
+  "comparison_criteria": ["relevance", "credibility", "difference", "commercial_feasibility"],
+  "unknown_policy": "Do not replace missing evidence with a score",
+  "output": {
+    "decision": "provisional",
+    "approved_for_publication": false,
+    "required_evidence_ids": [],
+    "reasons_against": [],
+    "next_test": "Observed completion of a real eligible workflow"
+  }
+}

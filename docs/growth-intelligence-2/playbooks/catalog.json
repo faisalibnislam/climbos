@@ -1,0 +1,257 @@
+{
+  "status": "reference_only",
+  "playbooks": [
+    {
+      "id": "b01-p01",
+      "book": "01",
+      "source_path": "books/01_business_strategy_economics.md",
+      "path": "playbooks/01_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "cdd1eddabc83dc8a8381fb8ff37662a64e7ad238d6b0adedd81eba32e5e42691"
+    },
+    {
+      "id": "b01-p02",
+      "book": "01",
+      "source_path": "books/01_business_strategy_economics.md",
+      "path": "playbooks/01_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "4a31cedcdfced7c60e2d26626485aa754cfb9fad00221e7c351fde4980d1bd5d"
+    },
+    {
+      "id": "b02-p01",
+      "book": "02",
+      "source_path": "books/02_research_positioning.md",
+      "path": "playbooks/02_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "a263d032777be66da98f65bda4e579db7937edb457fe4b6e111056c53f485cc9"
+    },
+    {
+      "id": "b02-p02",
+      "book": "02",
+      "source_path": "books/02_research_positioning.md",
+      "path": "playbooks/02_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "74dffa14923d670f7ec172c8a1aaffbc99d74175ef339f84d6f1edce209b624f"
+    },
+    {
+      "id": "b03-p01",
+      "book": "03",
+      "source_path": "books/03_growth_experimentation.md",
+      "path": "playbooks/03_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "ceada803cad138cb3e0f8243bdb7333d22ec02f06a62f04094c838487eb82130"
+    },
+    {
+      "id": "b03-p02",
+      "book": "03",
+      "source_path": "books/03_growth_experimentation.md",
+      "path": "playbooks/03_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "80865462b8059a67c63cb78f90e20c2cac7288475fe9c8afa067b4743ac15e3d"
+    },
+    {
+      "id": "b04-p01",
+      "book": "04",
+      "source_path": "books/04_gtm_launches.md",
+      "path": "playbooks/04_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "f90b2463e6010da218d4f5d28ce868978a6f152d59032736c80cb20296c7b9c0"
+    },
+    {
+      "id": "b04-p02",
+      "book": "04",
+      "source_path": "books/04_gtm_launches.md",
+      "path": "playbooks/04_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "acaaef790a0e4a7a87edd65da67abd29f66989ffe4bc863497280c1e75fc7eb7"
+    },
+    {
+      "id": "b05-p01",
+      "book": "05",
+      "source_path": "books/05_channel_strategy.md",
+      "path": "playbooks/05_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "6ba7184a7384c8a76e37bbadf025f803c6e2b6dcde612e519bfe497b91167bc5"
+    },
+    {
+      "id": "b05-p02",
+      "book": "05",
+      "source_path": "books/05_channel_strategy.md",
+      "path": "playbooks/05_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "756d3a93ead22ab368ddc12093df39ea7ddd3d398d23092a838fbfb3837123f4"
+    },
+    {
+      "id": "b06-p01",
+      "book": "06",
+      "source_path": "books/06_seo_content_ai_search.md",
+      "path": "playbooks/06_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "f2b24156841d3acb87a4ffb7fde8cad6663c3bf1c3f42ca5edbeac69a4e13e44"
+    },
+    {
+      "id": "b06-p02",
+      "book": "06",
+      "source_path": "books/06_seo_content_ai_search.md",
+      "path": "playbooks/06_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "43faa9ec7f972b78bbcc6b9774c88e1e865c1cc3329864a5355721a44675bf27"
+    },
+    {
+      "id": "b07-p01",
+      "book": "07",
+      "source_path": "books/07_app_store_optimization.md",
+      "path": "playbooks/07_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "f1ae53e5aea33d0e3033047f29c7f71dc06d137ae9189ff211b6ea733149f06a"
+    },
+    {
+      "id": "b07-p02",
+      "book": "07",
+      "source_path": "books/07_app_store_optimization.md",
+      "path": "playbooks/07_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "8656c74e3b5caaac6a9ce3bc20d7a217f20486672cbfa7ef0c44d2397a56c2f0"
+    },
+    {
+      "id": "b08-p01",
+      "book": "08",
+      "source_path": "books/08_email_lifecycle.md",
+      "path": "playbooks/08_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "a45477d268aafdfc23c2fc320a66dbfbce5b180bf5b9d9098872c0836be5718b"
+    },
+    {
+      "id": "b08-p02",
+      "book": "08",
+      "source_path": "books/08_email_lifecycle.md",
+      "path": "playbooks/08_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "c43bcf0bd77977f4ef15ec2090feb9560b9cf60c718d2ac8b12d2320d655b9a4"
+    },
+    {
+      "id": "b09-p01",
+      "book": "09",
+      "source_path": "books/09_social_community.md",
+      "path": "playbooks/09_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "37ace871e88f63750fb638a48d62e08b5c3f2fdda8fb88b6c9167c38a9bd194a"
+    },
+    {
+      "id": "b09-p02",
+      "book": "09",
+      "source_path": "books/09_social_community.md",
+      "path": "playbooks/09_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "e8458caa7f8e8f69853f8a89d8a25b84275f51adf063ec52aea9857a71d021dd"
+    },
+    {
+      "id": "b10-p01",
+      "book": "10",
+      "source_path": "books/10_paid_media_cro.md",
+      "path": "playbooks/10_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "a7b382f26c36cb7a7557d32c4506d96d6c668366509cf3b24e9318a63bd91237"
+    },
+    {
+      "id": "b10-p02",
+      "book": "10",
+      "source_path": "books/10_paid_media_cro.md",
+      "path": "playbooks/10_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "c5ffd44174b0ff2fe43cdcfb4b9a32e98f0cf3ab0308fc4902d3ddd9f65b52b4"
+    },
+    {
+      "id": "b11-p01",
+      "book": "11",
+      "source_path": "books/11_sales_partnerships.md",
+      "path": "playbooks/11_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "7a0fe434de09f16eaac0b048af8ca12077d7b49aa08f5b00d9ca1dc187bdb71c"
+    },
+    {
+      "id": "b11-p02",
+      "book": "11",
+      "source_path": "books/11_sales_partnerships.md",
+      "path": "playbooks/11_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "10f24424b4ac02b269ca6c10ccb2c18a5c70945f53ad993d62574619469afcc0"
+    },
+    {
+      "id": "b12-p01",
+      "book": "12",
+      "source_path": "books/12_analytics_forecasting_pricing.md",
+      "path": "playbooks/12_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "ffa66ad502a2685915f76b2b207d7fb2e87644d07df395b551bf60a53f9fb2b8"
+    },
+    {
+      "id": "b12-p02",
+      "book": "12",
+      "source_path": "books/12_analytics_forecasting_pricing.md",
+      "path": "playbooks/12_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "2388cfd561b4e3bf4df25ce2e7e9c89171d3dfeb568de895b06656943ed424e2"
+    },
+    {
+      "id": "b13-p01",
+      "book": "13",
+      "source_path": "books/13_ai_native_marketing.md",
+      "path": "playbooks/13_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "00ad7aece43cbf75cd65cc52a13ffbbc6ad91b99b78b74c9dbef84d8d1e320fb"
+    },
+    {
+      "id": "b13-p02",
+      "book": "13",
+      "source_path": "books/13_ai_native_marketing.md",
+      "path": "playbooks/13_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "5a8f8a284eaaf27dce923412042e5711a015b9cfbc448e74d7b09b02292c5aea"
+    },
+    {
+      "id": "b14-p01",
+      "book": "14",
+      "source_path": "books/14_climbos_execution_engine.md",
+      "path": "playbooks/14_playbook_01.yaml",
+      "format": "yaml",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "3f640be523d03f4c4fecf53ba3b07d6778bc1d5b8080baf507fa1a9856f42a04"
+    },
+    {
+      "id": "b14-p02",
+      "book": "14",
+      "source_path": "books/14_climbos_execution_engine.md",
+      "path": "playbooks/14_playbook_02.json",
+      "format": "json",
+      "schema_status": "task_specific_reference_contract_not_executable",
+      "sha256": "1cc69fa83d6684bf3ed84e82019055cdf139d34c491aa0b91adad6709637ffd2"
+    }
+  ]
+}

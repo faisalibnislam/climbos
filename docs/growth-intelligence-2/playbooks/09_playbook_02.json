@@ -1,0 +1,29 @@
+{
+  "playbook_id": "community_pilot_v1",
+  "status": "proposed",
+  "purpose": "validate_recurring_member_to_member_value",
+  "required_decisions": [
+    "shared_member_job",
+    "founding_cohort_definition",
+    "steward_owner",
+    "participation_rules",
+    "pilot_window",
+    "review_criteria"
+  ],
+  "ritual": {
+    "type": "implementation_clinic",
+    "frequency": "owner_configured",
+    "member_outcome": "leave_with_a_clear_next_step"
+  },
+  "metrics": {
+    "returning_participant_rate": "returning_participants / eligible_prior_participants",
+    "peer_resolution_share": "questions_resolved_with_peer_help / resolved_questions",
+    "steward_hours": "recorded_operating_hours"
+  },
+  "zero_denominator_behavior": "report_not_computable",
+  "automation": {
+    "allowed": ["draft_summaries", "suggest_routing", "prepare_agendas"],
+    "human_review": ["member_removal", "public_commitments", "sensitive_support"]
+  },
+  "continuation_decision": ["continue", "refine", "pause", "close_with_member_notice"]
+}

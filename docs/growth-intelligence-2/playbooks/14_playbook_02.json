@@ -1,0 +1,20 @@
+{
+  "id": "b14-action-envelope",
+  "version": 1,
+  "status": "proposed_contract",
+  "required_fields": [
+    "tenant_id", "operation_id", "artifact_hash", "destination_id",
+    "action_type", "approval_id", "approval_expires_at",
+    "budget_reservation_id", "idempotency_key", "payload_hash"
+  ],
+  "preflight": [
+    "verify_current_tenant_access",
+    "match_approved_artifact_and_destination",
+    "check_action_specific_permissions",
+    "check_current_eligibility_and_suppressions",
+    "check_budget_and_capacity",
+    "reject_conflicting_duplicate_payload"
+  ],
+  "unknown_remote_result": "reconcile_before_retry",
+  "material_change": "invalidate_approval_and_return_for_review"
+}

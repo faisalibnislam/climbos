@@ -1,0 +1,31 @@
+playbook_id: channel_eligibility_and_selection_v1
+status: proposed
+module: ChannelIntelligence
+inputs:
+  business_snapshot_id: required
+  audience_evidence_ids: required
+  budget_ceiling: nullable
+  labor_hours_available: nullable
+  contribution_model_id: nullable
+  channel_candidates: required
+gates:
+  - serviceability_confirmed
+  - audience_access_plausible
+  - platform_activity_permitted
+  - required_assets_available_or_scheduled
+  - fulfillment_capacity_sufficient
+  - meaningful_measurement_plan_exists
+  - external_action_authorization_checked
+comparison_dimensions:
+  - audience_fit
+  - economic_plausibility
+  - evidence_strength
+  - speed_to_decision
+  - labor_capacity_fit
+  - transferable_asset_creation
+outputs:
+  candidate_status: [eligible, blocked, unknown]
+  recommendation: nullable
+  reversing_assumptions: required
+  deferred_alternatives: required
+  action_permissions_granted: false

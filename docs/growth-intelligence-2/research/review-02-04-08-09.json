@@ -1,0 +1,187 @@
+{
+  "reviewer": "independent_book_10_11_author",
+  "reviewed_at": "2026-10-19",
+  "scope": [
+    "substantive completeness",
+    "formula consistency",
+    "hypothetical versus factual examples",
+    "source qualification",
+    "cross-book contradictions",
+    "no prospect database",
+    "Resend eligibility"
+  ],
+  "checks": [
+    {
+      "path": "books/02_research_positioning.md",
+      "substantive_completeness": "pass",
+      "assessment": "Full prose treatment, operational decision guidance, hypothetical applications, implementation sequence, two machine-readable playbooks, ClimbOS implementation and references; no starter/outline markers found.",
+      "formula_review": "pass",
+      "hypothetical_examples_labeled": true,
+      "source_qualification": "pass",
+      "no_assumed_prospect_database": "pass",
+      "resend_eligibility": "conditional_use_and_authorization_not_assumed",
+      "stack_alignment": "Convex/Vercel/Resend, OpenAI-first; proposed implementation distinguished from shipped capability",
+      "new_blocking_issues": []
+    },
+    {
+      "path": "books/04_gtm_launches.md",
+      "substantive_completeness": "pass",
+      "assessment": "Full prose treatment, operational decision guidance, hypothetical applications, implementation sequence, two machine-readable playbooks, ClimbOS implementation and references; no starter/outline markers found.",
+      "formula_review": "pass_after_localized_fix",
+      "hypothetical_examples_labeled": true,
+      "source_qualification": "pass",
+      "no_assumed_prospect_database": "pass",
+      "resend_eligibility": "conditional_use_and_authorization_not_assumed",
+      "stack_alignment": "Convex/Vercel/Resend, OpenAI-first; proposed implementation distinguished from shipped capability",
+      "new_blocking_issues": []
+    },
+    {
+      "path": "books/08_email_lifecycle.md",
+      "substantive_completeness": "pass",
+      "assessment": "Full prose treatment, operational decision guidance, hypothetical applications, implementation sequence, two machine-readable playbooks, ClimbOS implementation and references; no starter/outline markers found.",
+      "formula_review": "pass",
+      "hypothetical_examples_labeled": true,
+      "source_qualification": "pass_with_documented_access_limitations",
+      "no_assumed_prospect_database": "pass",
+      "resend_eligibility": "explicit_opt_in_gate",
+      "stack_alignment": "Convex/Vercel/Resend, OpenAI-first; proposed implementation distinguished from shipped capability",
+      "new_blocking_issues": []
+    },
+    {
+      "path": "books/09_social_community.md",
+      "substantive_completeness": "pass",
+      "assessment": "Full prose treatment, operational decision guidance, hypothetical applications, implementation sequence, two machine-readable playbooks, ClimbOS implementation and references; no starter/outline markers found.",
+      "formula_review": "pass",
+      "hypothetical_examples_labeled": true,
+      "source_qualification": "pass_with_documented_access_limitations",
+      "no_assumed_prospect_database": "pass",
+      "resend_eligibility": "conditional_use_and_authorization_not_assumed",
+      "stack_alignment": "Convex/Vercel/Resend, OpenAI-first; proposed implementation distinguished from shipped capability",
+      "new_blocking_issues": []
+    }
+  ],
+  "issues": [
+    {
+      "id": "REV-04-01",
+      "severity": "material_arithmetic_scope_ambiguity",
+      "status": "fixed",
+      "path": "books/04_gtm_launches.md",
+      "section": "7. Plan launch economics with scenarios",
+      "finding": "Original fully loaded launch cost included incremental delivery cost, while break-even denominator used contribution per customer net of variable service costs, risking double deduction of delivery.",
+      "fix": "Replaced acquisition cost formula with acquisition cash plus acquisition labor; delivery is deducted once in per-customer contribution; break-even uses the matching acquisition numerator."
+    },
+    {
+      "id": "REV-08-01",
+      "severity": "minor_evidence_overstatement",
+      "status": "fixed",
+      "path": "books/08_email_lifecycle.md",
+      "section": "6. Write emails that complete one job",
+      "finding": "A screenshot alone cannot prove a real or functioning interface exists.",
+      "fix": "Replaced with verified screenshot illustrating interface, without establishing customer results or working behavior."
+    },
+    {
+      "id": "REV-SOURCE-01",
+      "severity": "implementation_verification_caveat",
+      "status": "already_disclosed_no_change",
+      "paths": [
+        "books/08_email_lifecycle.md",
+        "books/09_social_community.md"
+      ],
+      "finding": "Yahoo FAQ and several Meta endpoints are only search-visible or blocked; independent direct retrieval also failed for Yahoo and LinkedIn October version.",
+      "assessment": "Books already require implementation-time verification, restrict blocked Meta evidence to capability overview, and distinguish access, permission and execution. No unsupported universal eligibility inferred."
+    }
+  ],
+  "arithmetic_spot_checks": [
+    {
+      "book": 2,
+      "calculation": "4*4*3*0.6/3",
+      "expected": 9.6,
+      "status": "pass"
+    },
+    {
+      "book": 2,
+      "calculation": "5*2*1*0.4/4",
+      "expected": 1.0,
+      "status": "pass"
+    },
+    {
+      "book": 2,
+      "calculation": "20*12/60*30",
+      "expected": 120,
+      "status": "pass"
+    },
+    {
+      "book": 4,
+      "calculation": "300*0.10*0.40*0.25",
+      "expected": 3,
+      "status": "pass"
+    },
+    {
+      "book": 4,
+      "calculation": "(100+20*25)/3",
+      "expected": 200,
+      "status": "pass"
+    },
+    {
+      "book": 8,
+      "calculation": "2000*0.02*60-500",
+      "expected": 1900,
+      "status": "pass"
+    },
+    {
+      "book": 8,
+      "calculation": "45/1000-30/1000",
+      "expected": 0.015,
+      "status": "pass"
+    },
+    {
+      "book": 9,
+      "calculation": "5000*0.02*0.10*1000*0.20",
+      "expected": 2000,
+      "status": "pass"
+    }
+  ],
+  "independently_rechecked_sources": [
+    {
+      "url": "https://resend.com/legal/acceptable-use",
+      "status": "full_primary_page_verified",
+      "details": "October 13 2026 update, unsolicited/cold/purchased/scraped prohibition, explicit opt-in condition, complaint below 0.08%, bounce below 4%."
+    },
+    {
+      "url": "https://support.google.com/mail/answer/81126?hl=en",
+      "status": "full_primary_page_verified",
+      "details": "Authentication, bulk sender guidance, alignment, one-click unsubscribe and below-0.3% stated ceiling; policy not treated as desirable operating target."
+    },
+    {
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "status": "full_primary_page_verified",
+      "details": "24-hour deduplication supported; books correctly retain application-level durable ledger and reconciliation."
+    },
+    {
+      "url": "https://www.producthunt.com/launch/sharing-your-launch",
+      "status": "full_primary_page_verified",
+      "details": "Specific upvote requests, incentivized voting and unsolicited scraping/spam prohibited as described."
+    },
+    {
+      "url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+      "status": "official_search_content_verified",
+      "details": "Customer jobs/pains/gains and offer value map consistent with conceptual use."
+    },
+    {
+      "url": "https://www.christenseninstitute.org/theory/jobs-to-be-done/",
+      "status": "official_search_content_verified",
+      "details": "Functional/social/emotional dimensions and circumstances consistent with conceptual use."
+    }
+  ],
+  "changed_paths": [
+    "books/04_gtm_launches.md",
+    "books/08_email_lifecycle.md"
+  ],
+  "overall": "pass_after_two_localized_correctness_fixes",
+  "remaining_root_checks": [
+    "master word count",
+    "all machine-readable schemas",
+    "global link registry",
+    "global Resend eligibility consistency especially Book 11"
+  ]
+}

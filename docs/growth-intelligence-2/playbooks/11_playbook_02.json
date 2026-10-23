@@ -1,0 +1,27 @@
+{
+  "playbook_id": "partner_pilot_review_v1",
+  "required_inputs": [
+    "joint_customer_problem",
+    "partner_contribution",
+    "owner_contribution",
+    "approved_terms",
+    "pilot_outcomes",
+    "support_costs"
+  ],
+  "eligibility_gates": [
+    "customer_value_plausible",
+    "claims_supported",
+    "data_permissions_defined",
+    "support_ownership_defined"
+  ],
+  "measures": [
+    "activated_partners",
+    "qualified_introductions",
+    "customer_outcomes",
+    "collected_revenue",
+    "contribution_after_partner_costs"
+  ],
+  "decisions": ["continue", "repair", "expand_bounded_pilot", "stop"],
+  "external_actions_require": ["scoped_approval", "recipient_verification"],
+  "on_missing_economic_input": "return_unknown_and_request_input"
+}

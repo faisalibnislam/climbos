@@ -1,0 +1,10 @@
+{
+  "id": "aso.experiment.v1",
+  "required": ["app_id", "platform", "locale", "hypothesis", "asset_versions", "metric_definition"],
+  "design": {"assignment": "verify_native_or_observational", "decision_rule": "declare_before_start"},
+  "metric": {"numerator": "required", "denominator": "required", "cohort_window": "required"},
+  "guardrails": ["activation", "refunds", "support_issues", "contribution"],
+  "result_states": ["running", "more_data_needed", "inconclusive", "decision_ready"],
+  "publication": {"automatic": false, "approval_binds_asset_version": true},
+  "forbidden": ["invented_volume", "unsupported_capability", "fabricated_reviews", "causal_claim_from_uncontrolled_comparison"]
+}

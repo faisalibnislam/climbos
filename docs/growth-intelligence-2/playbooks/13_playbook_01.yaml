@@ -1,0 +1,34 @@
+playbook_id: ai.growth_plan_pipeline.v1
+mode: prepare_for_owner_review
+stack:
+  state: convex
+  interface: vercel
+  notifications: resend
+  default_generation_provider: openai
+inputs:
+  required:
+    - authenticated_tenant_context
+    - business_snapshot_id
+    - goal
+  nullable:
+    - cash_budget
+    - labor_capacity
+stages:
+  - id: research
+    tools: [approved_read_only_sources]
+    output: evidence_pack
+    stop_rules: [decision_supported, research_budget_reached, source_unavailable]
+  - id: diagnose
+    output: bottleneck_and_alternatives
+  - id: calculate
+    implementation: deterministic_domain_library
+    output: feasibility_and_scenarios
+  - id: recommend
+    output: bounded_strategy_options
+  - id: validate
+    checks: [schema, evidence_ids, units, budget, capacity, factual_support]
+    maximum_repairs: 2
+  - id: owner_review
+    output: reviewable_plan
+external_execution_tools: []
+terminal_states: [ready_for_review, needs_input, blocked, failed, cancelled]
