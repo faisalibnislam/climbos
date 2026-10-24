@@ -506,7 +506,7 @@ function planContext(job: JobCtx): string {
   const approved = job.strategy && (job.strategy.status === "approved" || pinnedSuperseded)
     ? approvedPlanContext(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) })
     : "";
-  const planContextText = approved ? `\n\nAPPROVED GROWTH PLAN (saved plan version and context snapshot):\n${untrusted("approved plan", approved, 6_000)}` : "";
+  const planContextText = approved ? `\n\nAPPROVED GROWTH PLAN (saved plan version and context snapshot):\n${untrusted("approved plan", approved, 12_000)}` : "";
   const researchText = businessResearchContext(insights);
   return `${planContextText}${researchText}${marketChangeContext(job)}`;
 }

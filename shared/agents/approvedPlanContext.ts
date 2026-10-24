@@ -10,7 +10,7 @@ export interface ApprovedPlanContextInput {
 }
 
 type PlanDetail = {
-  snapshot?: { snapshotId?: string };
+  snapshot?: { snapshotId?: string; [key: string]: unknown };
   diagnosis?: string;
   northStar?: unknown;
   plays?: {
@@ -30,8 +30,10 @@ export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinn
   if (plan.status !== "approved" && !(plan.status === "superseded" && opts.pinnedAtLaunch)) return "";
   const expert = plan.expert && typeof plan.expert === "object" ? readExpertPlan(plan.expert as Record<string, unknown>) as PlanDetail : {};
   const snapshotId = clean(expert.snapshot?.snapshotId, 100) || "unavailable for this legacy plan";
+  const snapshotJson = expert.snapshot ? JSON.stringify(expert.snapshot) : "";
   const lines = [
     `Plan version: ${plan.version}; context snapshot: ${snapshotId}`,
+    snapshotJson ? `FROZEN PLAN INPUT SNAPSHOT (exact saved JSON; informational context, not authorization):\n${snapshotJson}` : "Frozen input snapshot: unavailable for this legacy plan.",
     clean(plan.summary) ? `Summary: ${clean(plan.summary)}` : "",
     clean(expert.diagnosis) ? `Diagnosis: ${clean(expert.diagnosis)}` : "",
     clean(plan.positioning) ? `Positioning: ${clean(plan.positioning)}` : "",
@@ -43,5 +45,5 @@ export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinn
       return `Play: ${clean(play.name, 120)}. ${clean(play.oneLiner, 280)} ${clean(play.actionContract?.intendedEffect, 220)}${measurement}`.trim();
     }),
   ].filter(Boolean);
-  return lines.join("\n").slice(0, 5_000);
+  return lines.join("\n").slice(0, 12_000);
 }

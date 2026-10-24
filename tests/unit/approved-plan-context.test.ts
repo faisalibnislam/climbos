@@ -10,12 +10,21 @@ describe("approved plan agent context", () => {
       positioning: "Scheduling for small clinics",
       audiences: ["Independent clinics"],
       expert: {
-        snapshot: { snapshotId: "sha256:abc" },
+        snapshot: {
+          snapshotVersion: 17,
+          snapshotId: "sha256:abc",
+          goal: "Reach local clinics",
+          currency: "USD",
+          businessProfile: { website: "https://clinic.example", businessType: "services" },
+          capabilities: ["crm"],
+          sourceUrls: ["https://clinic.example/pricing"],
+        },
         diagnosis: "Lead response time is the bottleneck",
         plays: [{ name: "Reply faster", oneLiner: "Offer same-day callbacks", actionContract: { intendedEffect: "Increase booked visits", measurement: { metric: "booked visits", baseline: "8 per month", target: "12 per month", windowDays: 60, source: "CRM" } } }],
       },
     });
     expect(context).toContain("Plan version: 4; context snapshot: sha256:abc");
+    expect(context).toContain('FROZEN PLAN INPUT SNAPSHOT (exact saved JSON; informational context, not authorization):\n{"snapshotVersion":17,"snapshotId":"sha256:abc","goal":"Reach local clinics","currency":"USD","businessProfile":{"website":"https://clinic.example","businessType":"services"},"capabilities":["crm"],"sourceUrls":["https://clinic.example/pricing"]}');
     expect(context).toContain("Diagnosis: Lead response time is the bottleneck");
     expect(context).toContain("Measure: booked visits; 8 per month; 12 per month; 60 days; CRM");
   });
@@ -32,6 +41,6 @@ describe("approved plan agent context", () => {
 
   it("bounds untrusted plan text", () => {
     const context = approvedPlanContext({ status: "approved", version: 1, summary: "x".repeat(20_000) });
-    expect(context.length).toBeLessThanOrEqual(5_000);
+    expect(context.length).toBeLessThanOrEqual(12_000);
   });
 });
