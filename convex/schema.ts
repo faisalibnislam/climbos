@@ -333,6 +333,7 @@ export const runStatusValidator = v.union(
 
 export const providerValidator = v.union(
   v.literal("website"),
+  v.literal("wordpress"),
   v.literal("ga4"),
   v.literal("search_console"),
   v.literal("google_ads"),

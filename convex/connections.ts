@@ -96,6 +96,7 @@ export const CATALOG: { provider: OurProvider; group: "measure" | "publish" | "a
   { provider: "tiktok", group: "publish" },
   { provider: "pinterest", group: "publish" },
   { provider: "youtube", group: "publish" },
+  { provider: "wordpress", group: "publish" },
   { provider: "google_ads", group: "advertise" },
   { provider: "meta_ads", group: "advertise" },
   { provider: "email_resend", group: "email" },
@@ -207,6 +208,23 @@ export const list = query({
                 reason: "Not available: ClimbOS doesn't sell or include contact data, and no licensed provider is connected.",
                 fix: "Work with leads you already have, or ask us about connecting your own licensed provider.",
               },
+            ],
+          };
+        }
+        if (provider === "wordpress") {
+          return {
+            provider,
+            group,
+            name: "WordPress",
+            description: "Connect a WordPress user with a revocable Application Password. ClimbOS verifies HTTPS access and the ability to edit posts.",
+            connection: conn
+              ? { status: conn.status, accountLabel: conn.accountLabel ?? null, externalAccountId: conn.externalAccountId ?? null, lastSyncAt: conn.lastSyncAt ?? null, expiresAt: null, isFixture: conn.isFixture, lastSyncError: conn.lastSyncError ?? null }
+              : null,
+            connectMethod: "wordpress_app_password" as const,
+            capabilities: [
+              { capability: "wordpress.manual_export", label: "Article draft and export", state: "ready" as const, reason: "You can always review and export an approved ClimbOS article.", fix: "" },
+              { capability: "wordpress.authenticate", label: "Secure WordPress connection", state: conn?.status === "connected" ? "ready" as const : "setup_needed" as const, reason: conn?.status === "connected" ? "The stored Application Password was accepted and the account can edit posts." : "No WordPress account is connected.", fix: conn?.status === "connected" ? "" : "Connect using a revocable Application Password over HTTPS." },
+              { capability: "wordpress.create_draft", label: "Create a WordPress draft", state: "unavailable" as const, reason: "WordPress draft creation is not enabled yet; this connection currently verifies access only.", fix: "Use the signed content approval webhook or export pack for now." },
             ],
           };
         }

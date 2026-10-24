@@ -1,4 +1,9 @@
+"use node";
+
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 import { v } from "convex/values";
 import { aiReferralAttribution, runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
@@ -18,6 +23,7 @@ import { parseRevenueCsv } from "../shared/integrations/csvRevenue";
 import { classifyStripeKey, importStripeRevenue } from "../shared/integrations/stripeRevenue";
 import { listSegments } from "../shared/integrations/resendMarketing";
 import { inspectSearchUrl, listSites as listSearchConsoleSites, querySearchAnalytics, searchConsolePropertyMatchesWebsite, type SearchUrlInspection } from "../shared/integrations/searchConsole";
+import { probeWordPressCredentials } from "../shared/integrations/wordpress";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
@@ -55,6 +61,51 @@ export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "g
 const REFRESH_MARGIN_MS = 5 * 60_000;
 const SEARCH_CONSOLE_ROW_LIMIT = 1_000;
 const SEARCH_CONSOLE_MAX_PAGES = 3;
+
+/** Pin authenticated WordPress requests to the public address validated immediately beforehand. */
+function wordpressPinnedFetch(url: string, init: RequestInit | undefined, addresses: string[]): Promise<Response> {
+  const parsed = new URL(url);
+  const address = addresses[0];
+  const family = address ? isIP(address) : 0;
+  if (parsed.protocol !== "https:" || !address || !family) return Promise.reject(new Error("WordPress requests require a validated public HTTPS address."));
+  const headers: Record<string, string> = {};
+  new Headers(init?.headers).forEach((value, key) => { headers[key] = value; });
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks: Buffer[] = [];
+    const req = httpsRequest(parsed, {
+      method: init?.method ?? "GET",
+      headers,
+      signal: init?.signal ?? undefined,
+      timeout: 8_000,
+      lookup: (_hostname, options, callback) => {
+        if (options.all) callback(null, [{ address, family }]);
+        else callback(null, address, family);
+      },
+    }, (res) => {
+      res.on("data", (chunk: Buffer | string) => {
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 100_000) {
+          req.destroy(new Error("WordPress response exceeded its size limit."));
+          return;
+        }
+        chunks.push(bytes);
+      });
+      res.on("end", () => {
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(res.headers)) {
+          if (Array.isArray(value)) value.forEach((part) => headers.append(key, part));
+          else if (typeof value === "string") headers.set(key, value);
+        }
+        resolve(new Response(Buffer.concat(chunks), { status: res.statusCode ?? 502, headers }));
+      });
+      res.on("error", reject);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
 
 /** Scopes we ask for, used when the token response doesn't echo them back. */
 const REQUESTED_SCOPES: Record<string, string[]> = {
@@ -217,6 +268,46 @@ export const connectApiKey = action({
     return { ok: true, message: "Connected." };
   },
 });
+
+/** Verify a revocable WordPress Application Password before storing it encrypted. */
+export const connectWordPress = action({
+  args: { slug: v.string(), siteUrl: v.string(), username: v.string(), applicationPassword: v.string() },
+  handler: async (ctx, { slug, siteUrl, username, applicationPassword }): Promise<{ ok: boolean; message: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") return { ok: false, message: "Demo workspaces can't connect real accounts." };
+    let validatedAddresses: string[] = [];
+    const probe = await probeWordPressCredentials({ siteUrl, username, applicationPassword }, {
+      resolveHost: async (hostname) => {
+        validatedAddresses = (await lookup(hostname, { all: true, verbatim: true })).map((entry) => entry.address);
+        return validatedAddresses;
+      },
+      fetchImpl: (url, init) => wordpressPinnedFetch(url, init, validatedAddresses),
+    });
+    if (!probe.ok) {
+      const message = probe.reason === "credentials" ? "WordPress rejected the username or Application Password. Check it and try again."
+        : probe.reason === "permission" ? "This WordPress user needs permission to edit posts. Use an account with the edit_posts capability."
+          : probe.reason === "unsafe_host" ? "That site resolves to a private or reserved network address, so ClimbOS will not send credentials there."
+            : probe.reason === "invalid_site" ? "Enter the public HTTPS address of your WordPress site, without a query or fragment."
+              : probe.reason === "unsupported" ? "The site did not return the expected WordPress REST API response, or redirected the request. Check that its REST API is enabled."
+                : "ClimbOS couldn't reach the site's WordPress REST API. Check the address and try again.";
+      return { ok: false, message };
+    }
+    await ctx.runMutation(internal.connections.storeConnection, {
+      orgId: access.orgId,
+      userId: access.userId,
+      provider: "wordpress",
+      secret: JSON.stringify({ siteUrl: probe.siteUrl, username: username.trim(), applicationPassword: applicationPassword.replace(/\s+/gu, "") }),
+      secretKind: "api_key",
+      scopes: ["wordpress.users.read_self", "wordpress.posts.edit"],
+      accountLabel: `${probe.accountName} · ${new URL(probe.siteUrl).host}`.slice(0, 200),
+      externalAccountId: probe.siteUrl,
+      accountType: "wordpress_application_password",
+    });
+    return { ok: true, message: "WordPress access verified and the credential stored encrypted." };
+  },
+});
+
 
 export const revokeProviderToken = internalAction({
   args: { connectionId: v.id("connections"), secretIds: v.optional(v.array(v.id("connectionSecrets"))) },

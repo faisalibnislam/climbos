@@ -44,6 +44,7 @@ import { AudienceSummary, ContactsCsvDialog } from "./ContactsCsvDialog";
 import { CAPABILITY_STATE, CONNECTION_STATUS, isPast, SYNCABLE, type CapabilityState } from "./labels";
 import { RevenueCsvDialog } from "./RevenueCsvDialog";
 import { SearchConsoleSetup } from "./SearchConsoleSetup";
+import { WordPressConnectDialog } from "./WordPressConnectDialog";
 
 export type ConnectionsData = FunctionReturnType<typeof api.connections.list>;
 export type ConnectionItem = ConnectionsData["items"][number];
@@ -276,6 +277,14 @@ function Actions({
             {connected ? "Replace key" : "Add key"}
           </Button>
         }
+      />,
+    );
+  } else if (item.connectMethod === "wordpress_app_password" && p === "wordpress") {
+    buttons.push(
+      <WordPressConnectDialog
+        key="wordpress"
+        slug={slug}
+        trigger={<Button variant="secondary" disabled={disabled}>{connected ? "Replace Application Password" : "Connect WordPress"}</Button>}
       />,
     );
   } else if (item.connectMethod === "file_upload" && p === "csv_revenue") {
