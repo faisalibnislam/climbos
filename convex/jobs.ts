@@ -48,6 +48,7 @@ import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
 import { growthKnowledgeContext } from "../shared/knowledge/retrieve";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis } from "../shared/agents/diagnosis";
+import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { planTask, playsTask } from "../shared/agents/planTasks";
@@ -600,6 +601,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     `BUSINESS: ${b?.name ?? job.org.name}${b?.website ? ` (${b.website})` : ""}`,
     b?.summary ? `SUMMARY: ${b.summary}` : "",
     `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
+    businessLifecycleContext(b?.lifecycleStage?.stage, b?.lifecycleStage?.updatedAt),
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
@@ -689,10 +691,10 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 4,
+    snapshotVersion: 5,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
-    business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
+    business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
     brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, doNots: job.brand.doNots, updatedAt: job.brand.updatedAt } : null,
     goal,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
@@ -706,7 +708,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 4,
+    snapshotVersion: 5,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -723,6 +725,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
     insightsHash,
     sourceUrls: readUrls,
     capabilities,
+    ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
     ...(ownerEconomics ? { ownerEconomics } : {}),
     ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),
     ...(job.platformSourceConcentration ? { channelOutcomes: job.platformSourceConcentration } : {}),

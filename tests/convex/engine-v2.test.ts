@@ -49,6 +49,7 @@ describe("Engine v2 wiring", () => {
   it("runs a growth plan as draft + review steps, meters every call and reconciles once", async () => {
     const t = setup();
     const w = await workspace(t, "v2-plan@example.com");
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "early_traction" });
     const now = Date.now();
     await w.client.mutation(api.analytics.importPlatformClaims, {
       slug: w.slug,
@@ -144,7 +145,8 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(4);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(5);
+    expect(strategy?.expert?.snapshot?.businessLifecycleStage).toMatchObject({ stage: "early_traction", provenance: "owner_reported" });
     expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
     expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
       paymentCount: 2,

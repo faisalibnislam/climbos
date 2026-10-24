@@ -362,6 +362,19 @@ export default defineSchema({
       v.literal("physical_products"),
       v.literal("other"),
     ),
+    /** Owner-selected lifecycle stage; this is not inferred from website copy or treated as performance evidence. */
+    lifecycleStage: v.optional(v.object({
+      stage: v.union(
+        v.literal("idea_validation"),
+        v.literal("pre_launch"),
+        v.literal("early_traction"),
+        v.literal("growth"),
+        v.literal("maturity"),
+        v.literal("decline"),
+      ),
+      provenance: v.literal("owner_reported"),
+      updatedAt: v.number(),
+    })),
     summary: v.optional(v.string()),
     /** Where happy customers leave a review (e.g. the Google review link). */
     reviewUrl: v.optional(v.string()),
@@ -1356,7 +1369,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1373,6 +1386,7 @@ export default defineSchema({
             insightsHash: v.string(),
             sourceUrls: v.array(v.string()),
             capabilities: v.array(v.string()),
+            businessLifecycleStage: v.optional(v.union(v.object({ stage: v.string(), provenance: v.literal("owner_reported"), updatedAt: v.number() }), v.null())),
             ownerEconomics: v.optional(v.any()),
             refundExposure: v.optional(v.object({
               currency: v.string(),

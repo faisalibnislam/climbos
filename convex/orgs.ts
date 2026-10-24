@@ -19,6 +19,7 @@ import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } fro
 import { chargeableAccess, isPaid } from "./lib/access";
 import { can } from "../shared/policy";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { BUSINESS_LIFECYCLE_STAGES } from "../shared/agents/lifecycle";
 
 function slugify(name: string): string {
   const base = name
@@ -299,6 +300,7 @@ export const onboardingState = query({
             website: business.website ?? null,
             summary: business.summary ?? null,
             businessType: business.businessType,
+            lifecycleStage: business.lifecycleStage ?? null,
             researchStatus: business.researchStatus,
             successEvents: business.successEvents,
             currency: business.currency,
@@ -464,10 +466,12 @@ export const saveBusinessDetails = mutation({
     ),
     currency: v.optional(v.string()),
     timezone: v.optional(v.string()),
+    /** Owner-reported business stage; null clears it. Website copy never sets this field. */
+    lifecycleStage: v.optional(v.union(v.literal("idea_validation"), v.literal("pre_launch"), v.literal("early_traction"), v.literal("growth"), v.literal("maturity"), v.literal("decline"), v.null())),
     successEvents: v.optional(v.array(v.object({ key: v.string(), label: v.string(), definition: v.string(), confirmed: v.boolean() }))),
   },
   handler: async (ctx, args) => {
-    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const { org, user, role } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -478,21 +482,27 @@ export const saveBusinessDetails = mutation({
     const website = args.website === undefined ? undefined : args.website.trim() ? normalizeWebsite(args.website) : "";
     if (website === undefined && args.website?.trim()) throw appError("INVALID", "That doesn't look like a website address. Try something like example.com.");
     const businessChanged = Boolean((args.name && args.name.trim() !== business.name) || (website !== undefined && website !== (business.website ?? "")) || (args.businessType && args.businessType !== business.businessType));
+    const stageChanged = args.lifecycleStage !== undefined && args.lifecycleStage !== (business.lifecycleStage?.stage ?? null);
+    if (args.lifecycleStage !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only a workspace owner or admin can set the business stage.");
+    if (args.lifecycleStage !== undefined && args.lifecycleStage !== null && !(BUSINESS_LIFECYCLE_STAGES as readonly string[]).includes(args.lifecycleStage)) throw appError("INVALID", "Choose a valid business stage.");
+    const now = Date.now();
     await ctx.db.patch(business._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(website !== undefined ? { website: website || undefined } : {}),
       ...(args.businessType ? { businessType: args.businessType } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
+      ...(stageChanged ? { lifecycleStage: args.lifecycleStage === null ? undefined : { stage: args.lifecycleStage!, provenance: "owner_reported" as const, updatedAt: now } } : {}),
       ...(args.successEvents ? { successEvents: args.successEvents.slice(0, 6) } : {}),
       ...(businessChanged ? { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now() } : {}),
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
     await ctx.db.patch(org._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
     });
+    if (stageChanged) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.lifecycle_stage_changed", summary: args.lifecycleStage === null ? "Cleared the owner-reported business stage." : `Set the owner-reported business stage to ${args.lifecycleStage!.replace(/_/g, " ")}.` });
   },
 });
 
