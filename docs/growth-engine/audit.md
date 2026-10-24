@@ -22,11 +22,11 @@ Mode: AUDIT_AND_DESIGN (spec §00, §01, §30). Date: 2026-10-18. Code at `38326
 | Item | Value | Where |
 |---|---|---|
 | API | Responses API, `instructions` + `input`, strict `json_schema` | `shared/ai/openai.ts` |
-| Models | Basic: `gpt-6-luna` everywhere. Expert: `gpt-6.1-sol` drafts and revisions; critic is Luna | `shared/agents/routes.ts:35` |
+| Models | Basic and Expert start on `gpt-6-luna`; paid Expert may use `gpt-6.1-sol` for an eligible revision after an evidence-backed critic escalation | `shared/agents/routes.ts`, `shared/agents/runtime.ts`, `convex/jobs.ts` |
 | Effort | Draft high, critic medium/low; `thinkingOff` → `none` | `shared/agents/specs.ts` `base()`, `openai.ts` `effortFor` |
 | Long turns | Background mode (`store:true`), resumed by `providerRef` | `convex/jobs.ts:331` |
 | Retries | Rate limit ≤10 s sleep; one lint repair; `repair_budget` / `uncertain` stop states | `convex/jobs.ts:191-273` |
-| Cost | Reservation before run; `recordUsage` per step. Basic 26 credits, Expert 133 | `shared/economics/credits.ts` |
+| Cost | Reservation before run; extra review and measured Expert escalation are reserved before each call. Growth-plan starting estimate: Basic 26 credits, Expert 19 | `shared/economics/credits.ts`, `convex/jobs.ts` |
 | Email | Plan engine does not use Resend | `convex/jobs.ts` (no reference) |
 
 ## 2. Verified defects
