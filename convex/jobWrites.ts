@@ -4,7 +4,7 @@ import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor } from "../shared/economics/currency";
 import { creditsToMicros } from "../shared/economics/credits";
-import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
+import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
@@ -85,6 +85,7 @@ export const jobContext = internalQuery({
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       specialist: run.customAgentSnapshot ?? null,
+      agentArchetype: run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null,
       org,
       business,
       /** Plans start from what earlier plays actually did. */
@@ -684,6 +685,7 @@ export const saveChatResult = internalMutation({
     if (specialist) specialistBudgetMicros = Math.max(0, specialistBudgetMicros - run.estimateMicros);
     for (const a of selectedActions) {
       const job = jobForAction(a.kind, a.channel);
+      const builtinAgent = specialist ? null : agentForAction(a.kind, a.channel, a.brief ?? "");
       const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
       const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
@@ -707,7 +709,7 @@ export const saveChatResult = internalMutation({
               : "A note for your team. No cost.",
         kind: a.kind,
         roles: plan?.roles ?? ["coo"],
-        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}) }),
+        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}), ...(builtinAgent ? { agentArchetypeId: builtinAgent.id } : {}) }),
         costEstimateMicros: cost,
         externalEffect: external,
         status: overSpecialistBudget ? "blocked" : job || a.kind === "note" || isLink ? "proposed" : "blocked",

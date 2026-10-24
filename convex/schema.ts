@@ -1947,6 +1947,8 @@ export default defineSchema({
     /** Profile and originating request let budgets and outcome reporting follow child work. */
     customAgentId: v.optional(v.id("customAgents")),
     customAgentParentRunId: v.optional(v.id("workflowRuns")),
+    /** Built-in specialist selected by the coordinator for this action. */
+    agentArchetypeId: v.optional(v.string()),
     /** Immutable profile context used by this run and any action runs it starts. */
     customAgentSnapshot: v.optional(v.object({
       archetypeId: v.string(),

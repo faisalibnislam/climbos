@@ -172,13 +172,15 @@ export const today = query({
 function cardView(c: Doc<"actionCards">) {
   const payload = (() => {
     try {
-      return JSON.parse(c.payload) as { job?: string | null; channel?: string };
+      return JSON.parse(c.payload) as { job?: string | null; channel?: string; agentArchetypeId?: string };
     } catch {
       return {};
     }
   })();
   return {
     job: payload.job ?? null,
+    agentId: payload.agentArchetypeId ?? null,
+    agentName: payload.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(payload.agentArchetypeId)?.name ?? null : null,
     channel: payload.channel ?? "",
     id: c._id,
     title: c.title,

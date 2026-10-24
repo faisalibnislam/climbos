@@ -102,6 +102,7 @@ export async function createRunWithReservation(
     aiMode?: "basic" | "expert";
     customAgentId?: Id<"customAgents">;
     customAgentParentRunId?: Id<"workflowRuns">;
+    agentArchetypeId?: string;
   },
 ): Promise<Id<"workflowRuns">> {
   const { org } = params;
@@ -138,6 +139,12 @@ export async function createRunWithReservation(
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
   if (params.customAgentParentRunId && !params.customAgentId) {
     throw appError("INVALID", "Specialist action runs must identify their specialist profile.");
+  }
+  if (params.customAgentId && params.agentArchetypeId) {
+    throw appError("INVALID", "Choose either a custom specialist or a built-in specialist for this run.");
+  }
+  if (params.agentArchetypeId && !AGENT_ARCHETYPE_BY_ID.has(params.agentArchetypeId)) {
+    throw appError("INVALID", "This specialist role is no longer available.");
   }
   let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
   if (params.customAgentId) {
@@ -198,6 +205,7 @@ export async function createRunWithReservation(
     orgId: org._id,
     ...(params.customAgentId ? { customAgentId: params.customAgentId } : {}),
     ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
+    ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
     ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),

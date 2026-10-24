@@ -172,7 +172,7 @@ export const start = mutation({
 /** Create a campaign and its research run (also used by wishes). */
 export async function startCampaign(
   ctx: MutationCtx,
-  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; customAgentId?: Id<"customAgents">; customAgentParentRunId?: Id<"workflowRuns">; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
+  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; customAgentId?: Id<"customAgents">; customAgentParentRunId?: Id<"workflowRuns">; agentArchetypeId?: string; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
 ): Promise<Id<"outboundCampaigns">> {
   const { org, brief } = p;
   const busy = await ctx.db
@@ -183,7 +183,7 @@ export async function startCampaign(
   if (busy?.status === "researching") throw appError("INVALID", "Your team is already searching. It'll be ready in a few minutes.");
   const creators = p.kind === "creators";
   const plan = planJob("outbound", { quantity: brief.count }, { fixture: org.kind === "demo" });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", customAgentId: p.customAgentId, customAgentParentRunId: p.customAgentParentRunId });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", customAgentId: p.customAgentId, customAgentParentRunId: p.customAgentParentRunId, agentArchetypeId: p.agentArchetypeId });
   const now = Date.now();
   // Older campaigns stay in the pipeline but leave the main view. Their sending pauses (resume it from Send).
   if (busy && busy.status !== "archived") {

@@ -131,7 +131,7 @@ export const AUTO_RUN_KINDS = new Set(["generate_content", "refresh_plan", "rese
  */
 export const WISH_AUTO_BUDGET_MICROS = 5_000_000;
 
-export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string };
+export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string; agentArchetypeId?: string };
 
 /**
  * Start exactly the job an action card describes, with the owner's brief.
@@ -157,14 +157,14 @@ export async function startCardRun(
   if (job === "outbound") {
     // Outbound owns its campaign record; the card follows its run.
     const brief = { who: (payload.brief ?? "").slice(0, 300), where: "", count: Math.max(5, Math.min(Math.round(payload.quantity || 15), 30)) };
-    await startCampaign(ctx, { org, userId: p.userId, brief, auto: p.auto, cardId: card._id, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined });
+    await startCampaign(ctx, { org, userId: p.userId, brief, auto: p.auto, cardId: card._id, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
     const fresh = await ctx.db.get(card._id);
     return fresh?.runId ?? null;
   }
   const images = job === "content_social" ? 1 : 0;
   const aiMode = await resolveAiMode(ctx, org, job);
   const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo", mode: aiMode });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
   await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
   const brief = payload.brief?.slice(0, 1500) || undefined;
   if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {

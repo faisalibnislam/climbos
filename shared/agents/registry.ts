@@ -55,3 +55,29 @@ export const AGENT_ARCHETYPES: readonly AgentArchetype[] = Object.freeze([
 export const AGENT_ARCHETYPE_BY_ID = new Map(AGENT_ARCHETYPES.map((agent) => [agent.id, agent]));
 export const READ_ONLY_ACTIONS = researchActions;
 export const DRAFT_ACTIONS = allDraftActions;
+
+/** Assign each coordinator-approved action to the smallest matching built-in specialist. */
+export function agentForAction(kind: string, channel = "", brief = ""): AgentArchetype | null {
+  const normalizedChannel = channel.trim().toLowerCase();
+  const normalizedBrief = brief.toLowerCase();
+  let id: string | undefined;
+  if (kind === "refresh_plan") id = "chief_growth_strategist";
+  else if (kind === "generate_content") {
+    if (["email"].includes(normalizedChannel)) id = "email_marketing";
+    else if (["google_search_ad", "meta_ad", "ads"].includes(normalizedChannel)) id = "performance_marketing";
+    else if (["blog", "website", "seo"].includes(normalizedChannel)) id = "seo_intelligence";
+    else id = "social_media_marketing";
+  } else if (kind === "research") {
+    if (/competitor|competitive|alternative|comparison/.test(normalizedBrief)) id = "competitive_intelligence";
+    else if (/customer|interview|review|feedback|retention/.test(normalizedBrief)) id = "customer_research";
+    else if (/seo|search|aeo|geo|answer engine/.test(normalizedBrief)) id = "seo_intelligence";
+    else id = "market_research";
+  } else if (kind === "analyze_results") id = "analytics_attribution";
+  else if (kind === "find_customers") id = "lead_intelligence";
+  else if (kind === "schedule_content") id = "social_media_marketing";
+  else if (kind === "ad_change") id = "performance_marketing";
+  else if (kind === "email_send") id = "email_marketing";
+  else if (kind === "set_up_autopilot") id = "chief_growth_strategist";
+  else if (kind === "connect_account" || kind === "note") id = "quality_assurance";
+  return id ? AGENT_ARCHETYPE_BY_ID.get(id) ?? null : null;
+}

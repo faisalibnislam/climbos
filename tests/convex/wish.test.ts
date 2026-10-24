@@ -28,9 +28,11 @@ describe("wishes", () => {
     });
     expect(reply.understood).toMatch(/holiday pre-order/i);
     const social = cards.find((c) => c!.kind === "generate_content" && JSON.parse(c!.payload).channel === "instagram")!;
+    expect(JSON.parse(social.payload).agentArchetypeId).toBe("social_media_marketing");
     expect(social.status === "running" || social.status === "done").toBe(true); // started by itself
     expect(JSON.parse(social.payload).brief).toContain("Dec 20");
     const run = runs.find((r) => r._id === social.runId)!;
+    expect(run.agentArchetypeId).toBe("social_media_marketing");
     expect(JSON.parse(run.input).brief).toContain("Dec 20");
     expect(run.status).toBe("verified");
     // Every card that started is internal-only.
