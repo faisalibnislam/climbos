@@ -13,6 +13,16 @@ describe("reviews engine", () => {
     delete process.env.CLIMBOS_FAKE_MAILBOX;
   });
 
+  it("holds sensitive public reviews for owner review and blocks AI drafting", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "sensitive-review@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "I was injured by an unsafe product and will contact my lawyer.", source: "google" });
+    const [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
+    expect(review).toMatchObject({ status: "escalated", reviewSafety: { categories: ["legal", "health_safety"] } });
+    await expect(owner.client.mutation(api.inbox.draftReply, { slug, id: review.id })).rejects.toThrow(/sensitive issue.*owner should review/i);
+  });
+
   it("asks won customers from the mailbox, tracks the click and routes private notes to the Inbox", async () => {
     const t = setup();
     const owner = await asNewUser(t, "reviews@example.com");

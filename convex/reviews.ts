@@ -9,6 +9,7 @@ import { appError, requireOrgAccess } from "./lib/tenancy";
 import { sha256Hex } from "../shared/policy";
 import { unsubscribeToken } from "../shared/outbound/sending";
 import { serverSecret } from "./lib/crypto";
+import { reviewSafetySignals } from "../shared/reviews/safety";
 
 /**
  * Reviews engine. Every customer is sent to the public review site (no
@@ -178,6 +179,7 @@ export const addReview = mutation({
     if (!text) throw appError("INVALID", "Paste the review text.");
     const now = Date.now();
     const rating = a.rating ? Math.max(1, Math.min(5, Math.round(a.rating))) : null;
-    return ctx.db.insert("communityMessages", { orgId: org._id, channel: a.source.slice(0, 30) || "google", kind: "review", externalId: `review:${now}`, authorName: a.author.trim().slice(0, 80) || "Reviewer", text: `${rating ? `${"★".repeat(rating)}${"☆".repeat(5 - rating)}\n\n` : ""}${text}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
+    const safetyCategories = reviewSafetySignals(text);
+    return ctx.db.insert("communityMessages", { orgId: org._id, channel: a.source.slice(0, 30) || "google", kind: "review", externalId: `review:${now}`, authorName: a.author.trim().slice(0, 80) || "Reviewer", text: `${rating ? `${"★".repeat(rating)}${"☆".repeat(5 - rating)}\n\n` : ""}${text}`, receivedAt: now, status: safetyCategories.length ? "escalated" : "new", ...(safetyCategories.length ? { reviewSafety: { categories: safetyCategories, detectedAt: now } } : {}), createdAt: now, updatedAt: now });
   },
 });

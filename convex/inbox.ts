@@ -44,6 +44,7 @@ function view(m: Doc<"communityMessages">, drafting = false) {
     read: Boolean(m.readAt),
     suggestedReply: m.suggestedReply ?? null,
     finalReply: m.finalReply ?? null,
+    reviewSafety: m.reviewSafety ?? null,
     draftRunId: m.draftRunId ?? null,
     /** A draft is being written right now (a failed or finished run doesn't block the button). */
     drafting,
@@ -106,6 +107,7 @@ export const draftReply = mutation({
   args: { slug: v.string(), id: v.id("communityMessages") },
   handler: async (ctx, { slug, id }) => {
     const { org, user, m } = await own(ctx, slug, id, "edit");
+    if (m.kind === "review" && m.reviewSafety?.categories.length) throw appError("INVALID", "This review may involve a sensitive issue. An owner should review it directly; AI drafting is paused.");
     const runId = await createRunWithReservation(ctx, { org, kind: "inbox_reply", title: `Reply to ${m.authorName}`, roles: ["customer_success_manager"], input: { messageId: id }, steps: [{ kind: "model", role: "customer_success_manager", modelKey: MODEL, inputBudget: 6_000, outputBudget: 1_200 }], meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
     await ctx.db.patch(id, { draftRunId: runId, readAt: m.readAt ?? Date.now(), updatedAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.inbox.writeReply, { messageId: id, runId });
@@ -126,7 +128,7 @@ export const replyContext = internalQuery({
     const org = await ctx.db.get(m.orgId);
     return {
       run,
-      message: { kind: m.kind, from: m.authorName, subject: m.subject ?? "", text: m.text },
+      message: { kind: m.kind, from: m.authorName, subject: m.subject ?? "", text: m.text, reviewSafety: m.reviewSafety ?? null },
       business: { name: business?.name ?? org?.name ?? "", summary: business?.summary ?? "", voice: brand?.voice ?? "", website: business?.website ?? "" },
       prospect: prospect ? { company: prospect.company, why: prospect.why, firstLine: prospect.firstLine } : null,
       bookingUrl: page && (await bookingLive(ctx, page)) ? (m.prospectId ? bookingLinkFor(`${process.env.SITE_URL ?? "https://climbos.app"}/book/${page.slug}`, m.prospectId) : `${process.env.SITE_URL ?? "https://climbos.app"}/book/${page.slug}`) : null,
@@ -164,6 +166,11 @@ export const writeReply = internalAction({
   handler: async (ctx, { messageId, runId }) => {
     const c = await ctx.runQuery(internal.inbox.replyContext, { messageId, runId });
     if (!c) return;
+    if (c.message.kind === "review" && c.message.reviewSafety?.categories.length) {
+      await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "This review needs direct owner review before an AI reply can be drafted." });
+      await ctx.runMutation(internal.inbox.clearDraft, { messageId, runId });
+      return;
+    }
     const rates = getRateVersion(c.run.rateVersionId);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Draft the reply", role: "customer_success_manager" });

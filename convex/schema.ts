@@ -2455,6 +2455,11 @@ export default defineSchema({
         reason: v.string(),
       }),
     ),
+    /** Owner-review routing for potentially sensitive public reviews; signals are not verified claims. */
+    reviewSafety: v.optional(v.object({
+      categories: v.array(v.union(v.literal("legal"), v.literal("health_safety"), v.literal("discrimination"), v.literal("payment"), v.literal("privacy"))),
+      detectedAt: v.number(),
+    })),
     suggestedReply: v.optional(v.string()),
     finalReply: v.optional(v.string()),
     status: v.union(v.literal("new"), v.literal("suggested"), v.literal("replied"), v.literal("dismissed"), v.literal("escalated")),

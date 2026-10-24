@@ -10,7 +10,7 @@ import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Badge, Button, Card, CardContent, EmptyState, Segmented, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, EmptyState, Segmented, Textarea, toast } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const BOXES = [
@@ -18,6 +18,7 @@ const BOXES = [
   { value: "done" as const, label: "Done" },
 ];
 const ICONS = { email: Mail, booking: CalendarCheck, chat: MessageCircle, review: Star, form: FileText } as Record<string, typeof Mail>;
+const REVIEW_SAFETY_LABELS: Record<string, string> = { legal: "legal concern", health_safety: "health or safety concern", discrimination: "discrimination or harassment concern", payment: "payment concern", privacy: "privacy concern" };
 
 /** Unified inbox: replies, bookings and chats in one place, with drafted answers. */
 export default function InboxPage() {
@@ -111,6 +112,11 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         </div>
         {m.subject ? <p className="text-sm font-medium text-ink">{m.subject}</p> : null}
         <p className="whitespace-pre-wrap text-sm text-ink-2">{m.text}</p>
+        {m.kind === "review" && m.reviewSafety?.categories.length ? (
+          <Callout tone="danger" title="Owner review needed">
+            This review may involve a {m.reviewSafety.categories.map((category) => REVIEW_SAFETY_LABELS[category] ?? "sensitive concern").join(" or ")}. This is a routing signal, not a verified finding. ClimbOS has paused AI drafting; an owner should review the issue and reply directly on the review platform.
+          </Callout>
+        ) : null}
         {m.finalReply && m.status === "replied" ? (
           <div className="rounded-lg border border-line bg-surface-2 p-3">
             <p className="mb-1 text-xs font-medium text-ink-3">You replied</p>
@@ -120,9 +126,9 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         {!done && m.kind !== "booking" ? (
           <div className="flex flex-col gap-2">
             {drafting && m.draftRunId ? <RunProgressCompact slug={slug} runId={m.draftRunId} /> : null}
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write a reply" : m.kind === "review" ? "Draft, then post under the review" : "Draft, then post on the platform"} />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write a reply" : m.kind === "review" ? m.reviewSafety?.categories.length ? "Write a reply after owner review" : "Draft, then post under the review" : "Draft, then post on the platform"} />
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" loading={busy === "draft"} disabled={drafting} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
+              <Button variant="secondary" loading={busy === "draft"} disabled={drafting || Boolean(m.reviewSafety?.categories.length)} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
                 <Magic aria-hidden /> {m.suggestedReply ? "Redraft" : "Draft"}
               </Button>
               {m.canReply ? (

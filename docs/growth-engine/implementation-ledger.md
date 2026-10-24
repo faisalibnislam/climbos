@@ -50,6 +50,8 @@ Issue 101/106 now applies ClimbOS's existing Search Readiness evaluator to each 
 
 The same static audit now counts malformed JSON among the first 50 JSON-LD blocks examined and presents a syntax-repair finding distinct from missing structured data. Its wording asks owners to verify consistency with visible page content and explicitly does not claim rich-result eligibility, ranking, or AI citations; extraction and readiness fixtures cover malformed blocks.
 
+Sensitive public reviews now receive a conservative, rule-based safety signal for legal, health/safety, discrimination, payment, and privacy language. Matching reviews enter the escalated Inbox state, show an owner-review notice, and are blocked from AI reply drafting; ordinary feedback and standalone refund requests remain draft-eligible. These English-language term matches are routing hints, not verified claims or legal classifications, and no public reply is sent by ClimbOS.
+
 Urgency copy without matching current, affirmative availability or deadline evidence now hard-fails content lint. The same rules are also hard plan-quality failures, preventing unsupported scarcity or expiring-offer language from being approved to drive work. Confirmed quantities and end dates must match the claim. Regression coverage exercises both copy lint and the plan execution gate; this does not verify that owner-supplied evidence itself is accurate.
 
 Issue 38 now reports how many distinct same-site URL candidates were found in the bounded sitemap and homepage-link discovery, alongside how many sampled pages were attempted and read. Older saved audit checkpoints fall back to their recorded sample size. The UI explicitly says this is not a complete crawl, avoiding the implication that a handful of pages represent the whole site. Sitemap discovery is capped and only the selected sample is fetched; undiscovered URLs and JavaScript-only links remain unknown.
@@ -312,7 +314,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 | REQ-REV-01 | blocked + missing | S11 | `schema.ts:61-81` | No GBP provider. Needs Google API access approval |
 | REQ-REV-02 | missing | S11 | — | |
 | REQ-REV-03 | partial | S11 | `inbox.ts:181` | No templates or policy |
-| REQ-REV-04 | partial | S11 | prompt | No sensitive-topic routing |
+| REQ-REV-04 | partial | S11 | `shared/reviews/safety.ts`, `reviews.ts`, `inbox.ts`, `src/app/app/[organization]/inbox/page.tsx` | A bounded English-language signal identifies legal, health/safety, discrimination, payment, and privacy terms. Matching pasted reviews are labeled escalated, show the detected categories, and cannot be sent to the AI reply writer; routing tests verify the alert does not assert the claim is true. **Gap:** lexical coverage can miss indirect or non-English concerns and is not a complete legal/medical/safety classifier; broader policy templates and human evaluation remain needed. |
 | REQ-REV-05 | missing | S11 | — | |
 | REQ-REV-06 | partial | S11 | `reviews.ts:173` | Paste a review, then draft. No platform link or "mark done" |
 
