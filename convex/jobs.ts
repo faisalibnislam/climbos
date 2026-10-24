@@ -504,7 +504,18 @@ function planContext(job: JobCtx): string {
     : "";
   const planContextText = approved ? `\n\nAPPROVED GROWTH PLAN (saved plan version and context snapshot):\n${untrusted("approved plan", approved, 6_000)}` : "";
   const researchText = businessResearchContext(insights);
-  return `${planContextText}${researchText}`;
+  return `${planContextText}${researchText}${marketChangeContext(job)}`;
+}
+
+/** Monitored competitor-page changes are source claims and model summaries, not customer evidence. */
+function marketChangeContext(job: JobCtx): string {
+  const rows = job.marketChanges.slice(0, 6);
+  if (!rows.length) return "";
+  const context = rows.map(({ at, name, summary, bullets, soWhat, sourceUrls, evidence }) => ({
+    observedAt: new Date(at).toISOString(), name, summary, bullets, interpretation: soWhat, sourceUrls,
+    changedPageText: evidence,
+  }));
+  return `\n\nRECENT MONITORED COMPETITOR PAGE CHANGES (source-reported changes; summaries and implications are model interpretations, not verified customer preferences, demand, or competitive performance). Use only as a signal to reassess strategy; cite the provided pages and changed text when making a specific statement. Do not claim why customers choose a competitor from these changes alone.\n${untrusted("competitor market signals", JSON.stringify(context), 5_000)}`;
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
@@ -692,7 +703,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 14,
+    snapshotVersion: 15,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -707,12 +718,13 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     flags,
     insightsHash,
     businessResearchAt: job.business?.insights?.generatedAt ?? null,
+    marketChangeVersions: job.marketChanges.map(({ id, at }) => ({ id, at })),
     sourceUrls: readUrls,
     knowledgeReferences,
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 14,
+    snapshotVersion: 15,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -742,6 +754,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
       .sort((a, b) => a.channelId.localeCompare(b.channelId)),
     businessResearchAt: job.business?.insights?.generatedAt ?? null,
+    marketChangeVersions: job.marketChanges.map(({ id, at }) => ({ id, at })),
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
     brandProfile: job.brand ? {
       voice: job.brand.voice,
@@ -1109,7 +1122,7 @@ export const buildStrategy = internalAction({
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
       const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
-      const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}`;
+      const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}${marketChangeContext(job)}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
       // Speed: a first take in about a minute, running alongside the real work (never blocking it).
       const firstTake = quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)"}`);

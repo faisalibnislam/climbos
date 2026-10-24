@@ -97,6 +97,10 @@ export const jobContext = internalQuery({
     const strategy = requestedStrategy?.orgId === org._id
       ? requestedStrategy
       : recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
+    const marketChanges = await ctx.db.query("competitorChanges")
+      .withIndex("by_org_at", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(8);
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
@@ -171,6 +175,8 @@ export const jobContext = internalQuery({
       agentArchetype: run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null,
       org,
       business,
+      /** Recent, source-backed competitor page changes are market signals, not customer evidence. */
+      marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
       facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
