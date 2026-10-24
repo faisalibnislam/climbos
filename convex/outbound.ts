@@ -146,6 +146,7 @@ export const get = query({
           publicEmail: p.publicEmail ?? null,
           audienceSize: p.audienceSize ?? null,
           contentLanguage: p.contentLanguage ?? null,
+          audienceLocation: p.audienceLocation ?? null,
           contentSamples: p.contentSamples ?? [],
           collaborationConcept: p.collaborationConcept ?? null,
           check: p.check ?? null,
@@ -648,11 +649,13 @@ export const saveResult = internalMutation({
       if (existing) {
         const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
         const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
+        const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
         const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
         const playIds = c.playId && !(existing.playIds ?? []).includes(c.playId) ? [...(existing.playIds ?? []), c.playId] : undefined;
         const creatorUpdates = c.kind === "creators" ? {
           ...(audienceSize ? { audienceSize } : {}),
           ...(contentLanguage ? { contentLanguage } : {}),
+          ...(audienceLocation ? { audienceLocation } : {}),
           ...(contentSamples.length ? { contentSamples } : {}),
           ...(typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         } : {};
@@ -664,6 +667,7 @@ export const saveResult = internalMutation({
       }
       const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
       const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
+      const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
       const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
       await ctx.db.insert("prospects", {
         orgId: c.orgId,
@@ -688,6 +692,7 @@ export const saveResult = internalMutation({
         ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
         ...(audienceSize ? { audienceSize } : {}),
         ...(contentLanguage ? { contentLanguage } : {}),
+        ...(audienceLocation ? { audienceLocation } : {}),
         ...(contentSamples.length ? { contentSamples } : {}),
         ...(c.kind === "creators" && typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         createdAt: now,

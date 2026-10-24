@@ -2241,6 +2241,8 @@ export const ProspectsOutputSchema = z.object({
       audienceSize: z.object({ value: z.string().min(1).max(100), sourceUrl: z.string().url() }).optional(),
       /** Language stated or clearly labeled on a cited creator profile/content page. */
       contentLanguage: z.object({ value: z.string().min(1).max(80), sourceUrl: z.string().url() }).optional(),
+      /** Audience location explicitly stated by a cited source; do not substitute creator location. */
+      audienceLocation: z.object({ value: z.string().min(1).max(100), sourceUrl: z.string().url() }).optional(),
       /** Visible post metrics copied from each exact public content page; not evidence of audience quality or sales. */
       contentSamples: z.array(z.object({
         url: z.string().url(),
@@ -2345,7 +2347,7 @@ function lintCreators(out: ProspectsOutput, input: AgentInput): LintIssue[] {
     if (seen.has(key)) issues.push({ severity: "error", rule: "duplicate", message: `${p.company} is listed twice.`, path });
     seen.add(key);
     if (!p.evidence.some((e) => /^https?:\/\//.test(e.url))) issues.push({ severity: "error", rule: "evidence", message: `${p.company}: cite the profile or a recent post.`, path: `${path}.evidence` });
-    for (const [field, detail] of [["audienceSize", p.audienceSize], ["contentLanguage", p.contentLanguage]] as const) {
+    for (const [field, detail] of [["audienceSize", p.audienceSize], ["contentLanguage", p.contentLanguage], ["audienceLocation", p.audienceLocation]] as const) {
       if (!detail) continue;
       if (!citedCreatorFact(detail, p.evidence)) {
         issues.push({ severity: "error", rule: "creator_fact_source", message: `${p.company}: ${field} must match text recorded from its exact cited evidence URL; leave it unknown if the source doesn't show it.`, path: `${path}.${field}` });
@@ -2465,7 +2467,7 @@ Only report what you actually found, with URLs.`,
         maxFetches: 25,
         brief: `Find real creators and influencers whose audience matches the buyers of ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}, from public pages only.
 1. Work out 3-5 audience niches from the positioning, then search the platforms that fit (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts), creator lists and directories.
-2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, location if stated, recent activity, and one recent post that shows fit (URL + what it's about).
+2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, creator location, separately stated audience location if available, recent activity, and one recent post that shows fit (URL + what it's about). Do not infer audience location from creator location.
 3. Find the contact route: a business email published in bio/link-in-bio/site/media kit (copy verbatim), else the DM or form route. Never guess an email.
 4. For up to 5 recent content examples per creator, record the exact content URL, format, and visible views/likes/comments exactly as shown; omit metrics that aren't visible. Do not calculate engagement rates or infer audience quality, authenticity, reach, response, or sales from those counts.
 5. Skip inactive accounts, off-niche creators and anyone promoting a direct competitor. Do not label an audience as fake or bought without reliable evidence. Gather ~1.5x what's needed; record a URL for every observation.`,

@@ -51,10 +51,11 @@ describe("creator identity (REQ-TARGET-03)", () => {
 });
 
 describe("source-bound creator facts (REQ-CREATOR-01)", () => {
-  const evidence = [{ url: "https://instagram.com/ana", observation: "12k followers. English language cooking tutorials." }];
+  const evidence = [{ url: "https://instagram.com/ana", observation: "12k followers. English language cooking tutorials. Audience: UK." }];
   it("keeps the exact displayed value and exact source URL", () => {
     expect(citedCreatorFact({ value: "12k followers", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "12k followers", sourceUrl: evidence[0].url });
     expect(citedCreatorFact({ value: "English", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "English", sourceUrl: evidence[0].url });
+    expect(citedCreatorFact({ value: "UK", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "UK", sourceUrl: evidence[0].url });
   });
   it("rejects a value absent from the observation or a different source URL", () => {
     expect(citedCreatorFact({ value: "120k followers", sourceUrl: evidence[0].url }, evidence)).toBeNull();
@@ -76,7 +77,7 @@ describe("source-bound creator facts (REQ-CREATOR-01)", () => {
     const profile = "https://instagram.com/ana";
     const post = "https://instagram.com/p/ana1";
     const fullEvidence = [...evidence, { url: post, observation: "3.2k views, 210 likes, 14 comments on a cooking reel" }];
-    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence: fullEvidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile }, contentSamples: [{ url: post, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }] };
+    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence: fullEvidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile }, audienceLocation: { value: "UK", sourceUrl: profile }, contentSamples: [{ url: post, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }] };
     const output = { icp: { summary: "Cooking creators", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" }, prospects: [prospect, { ...prospect, company: "Bea", website: "https://instagram.com/bea" }, { ...prospect, company: "Cam", website: "https://instagram.com/cam" }], excluded: [] };
     const spec = creatorScoutSpec();
     const input = { task: "", brief: "", facts: [], untrustedContext: [] };

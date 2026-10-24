@@ -1012,6 +1012,8 @@ export default defineSchema({
     audienceSize: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
     /** Creator language copied from public profile/content evidence; absent means unknown. */
     contentLanguage: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
+    /** Audience geography is distinct from creator location and retained only with exact source evidence. */
+    audienceLocation: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
     /** Exact visible counts from a bounded set of public content examples; descriptive, not a performance forecast. */
     contentSamples: v.optional(v.array(v.object({
       url: v.string(),
