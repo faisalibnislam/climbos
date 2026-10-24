@@ -7,6 +7,7 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { forecastCalibration, playActuals, resultsLine, type PlayActuals } from "../shared/growth/actuals";
 import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
 import type { PlayModel } from "../shared/agents/economics";
+import { formatMoney, minorToMajor } from "../shared/economics/currency";
 
 /**
  * Learning from outcomes (spec §28): the owner logs what each play did each
@@ -166,15 +167,53 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
         if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }))}`);
       }
     }
+  const wonDealLines = await wonDealsByPlay(ctx, orgId, plans);
   const cal = forecastCalibration(matured);
   const { tested, notRun } = await outcomeLines(ctx, plans);
   const parts = [
     cal.verdict !== "too_few_plays" ? `FORECAST CALIBRATION (computed; plays that ran their full horizon): ${cal.inside} of ${cal.matured} landed inside their P10–P90 range (an 80% range, so about ${cal.expected} expected).${cal.verdict === "overconfident" ? ` That few is unlikely by chance (P = ${cal.pTooFew}): past ranges were too narrow, so widen this plan's ranges and lean on measured rates.` : " Consistent with the stated ranges."}` : "",
     lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",
+    wonDealLines.length ? `WON DEALS ASSOCIATED WITH PLAYS (owner-entered CRM stages and values; target links show association, not attribution or causation; these are not retained revenue):\n${wonDealLines.join("\n")}` : "",
     tested.length ? `EXPERIMENT OUTCOMES (owner-reviewed; each label says what it can claim: OBSERVED and ATTRIBUTED are not proof of cause; only INCREMENTAL compared with a group that didn't get the change, so only those may be called incremental):\n${tested.join("\n")}` : "",
     notRun.length ? `TESTS NOT RUN (the plan wasn't carried out; draw no lesson about these channels):\n${notRun.join("\n")}` : "",
   ];
   return parts.filter(Boolean).join("\n\n");
+}
+
+/** Attribute a CRM win only as an owner-reported association through a stable target play ID. */
+async function wonDealsByPlay(ctx: QueryCtx, orgId: Id<"organizations">, plans: Doc<"strategies">[]): Promise<string[]> {
+  const byId = new Map<string, { name: string; since: number }>();
+  for (const strategy of plans) {
+    for (const play of playsOf(strategy)) {
+      if (!play.id) continue;
+      const prior = byId.get(play.id);
+      byId.set(play.id, { name: play.name, since: Math.min(prior?.since ?? strategy.createdAt, strategy.createdAt) });
+    }
+  }
+  if (!byId.size) return [];
+  const deals = await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", orgId).eq("stage", "won")).take(500);
+  const totals = new Map<string, { count: number; values: Map<string, number>; unvalued: number }>();
+  for (const deal of deals) {
+    if (!deal.prospectId || deal.wonAt === undefined) continue;
+    const prospect = await ctx.db.get(deal.prospectId);
+    if (!prospect || prospect.orgId !== orgId) continue;
+    for (const playId of new Set(prospect.playIds ?? [])) {
+      const play = byId.get(playId);
+      if (!play || deal.wonAt < play.since) continue;
+      const entry = totals.get(playId) ?? { count: 0, values: new Map<string, number>(), unvalued: 0 };
+      entry.count += 1;
+      if (deal.valueMinor === undefined) entry.unvalued += 1;
+      else entry.values.set(deal.currency, (entry.values.get(deal.currency) ?? 0) + deal.valueMinor);
+      totals.set(playId, entry);
+    }
+  }
+  return [...totals.entries()].map(([id, result]) => {
+    const play = byId.get(id)!;
+    const amounts = [...result.values.entries()].map(([currency, minor]) => formatMoney(minorToMajor(minor, currency), currency));
+    const value = amounts.length ? `; recorded deal value ${amounts.join(", ")}` : "";
+    const missing = result.unvalued ? `; ${result.unvalued} deal value${result.unvalued === 1 ? "" : "s"} not recorded` : "";
+    return `- ${play.name}: ${result.count} owner-marked won CRM deal${result.count === 1 ? "" : "s"}${value}${missing}`;
+  }).slice(0, 6);
 }
 
 export const briefFor = internalQuery({
