@@ -1,6 +1,6 @@
-import { attribute } from "./attribution";
+import { netMinor } from "./attribution";
 import { dedupeRevenueEvents } from "./dedupe";
-import type { RevenueEvent, Touch } from "./types";
+import type { RevenueEvent } from "./types";
 
 const PLATFORM_BY_SOURCE: Record<string, string> = {
   google: "Google",
@@ -62,25 +62,53 @@ export function platformConcentration(
   ));
   if (!events.length) return null;
 
-  const touches: Touch[] = events.flatMap((event) => {
-    const label = platformLabel(event.utmSource, event.utmMedium);
-    return label && event.customerRef
-      ? [{ customerRef: event.customerRef, source: event.source, occurredAt: event.occurredAt - 1, channel: label }]
-      : [];
-  });
-  const result = attribute(events, touches, { model: "last_touch", lookbackDays: 30 });
-  const currency = result.byCurrency[options.currency];
-  if (!currency) return null;
-  const ranked = Object.entries(currency.channels)
-    .map(([source, totals]) => ({ source, net: totals.netRevenueMinor, conversions: totals.conversions }))
+  const ordered = [...events].sort((a, b) => a.occurredAt - b.occurredAt || a.id.localeCompare(b.id));
+  const lastTouch = new Map<string, { occurredAt: number; label: string }>();
+  const channelByOrder = new Map<string, string>();
+  const revenueBySource = new Map<string, number>();
+  let attributedConversions = 0;
+  let totalConversions = 0;
+  const touchKey = (event: RevenueEvent) => event.customerRef ? `${event.source}\u0000${event.customerRef}` : null;
+  const orderKey = (event: RevenueEvent) => event.orderRef ? `${event.source}\u0000${event.currency}\u0000${event.orderRef}` : null;
+
+  for (const event of ordered) {
+    const key = touchKey(event);
+    const directLabel = event.kind === "refund" ? null : platformLabel(event.utmSource, event.utmMedium);
+    // Revenue imports represent a purchase touch one millisecond before charge time.
+    if (key && directLabel) lastTouch.set(key, { occurredAt: event.occurredAt - 1, label: directLabel });
+    const priorTouch = key ? lastTouch.get(key) : undefined;
+    const eligibleTouch = priorTouch && priorTouch.occurredAt <= event.occurredAt && event.occurredAt - priorTouch.occurredAt <= 30 * 86_400_000
+      ? priorTouch.label
+      : null;
+    const order = orderKey(event);
+    const source = event.kind === "refund"
+      ? (order ? channelByOrder.get(order) : undefined) ?? eligibleTouch
+      : directLabel ?? eligibleTouch;
+    const net = netMinor(event);
+
+    if (event.kind === "refund") {
+      if (source) revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
+      continue;
+    }
+
+    totalConversions++;
+    if (order && source && !channelByOrder.has(order)) channelByOrder.set(order, source);
+    if (source) {
+      attributedConversions++;
+      revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
+    }
+  }
+
+  const ranked = [...revenueBySource.entries()]
+    .map(([source, net]) => ({ source, net }))
     .filter((row) => row.net > 0)
     .sort((a, b) => b.net - a.net || a.source.localeCompare(b.source));
   const attributedPositiveNetMinor = ranked.reduce((sum, row) => sum + row.net, 0);
   return {
     currency: options.currency,
     eventCount: events.length,
-    attributedConversions: Object.values(currency.channels).reduce((sum, totals) => sum + totals.conversions, 0),
-    totalConversions: events.filter((event) => event.kind !== "refund").length,
+    attributedConversions,
+    totalConversions,
     attributedPositiveNetMinor,
     topSource: ranked[0]?.source ?? null,
     topSourceShare: attributedPositiveNetMinor ? (ranked[0]?.net ?? 0) / attributedPositiveNetMinor : null,
