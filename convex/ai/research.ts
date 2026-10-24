@@ -227,9 +227,9 @@ async function sitemapPages(origin: string, robots: string | null): Promise<stri
   return pages;
 }
 
-export async function researchWebsite(website: string, extraPages: number): Promise<{ pages: ResearchedPage[]; pagesFetched: number }> {
+export async function researchWebsite(website: string, extraPages: number): Promise<{ pages: ResearchedPage[]; pagesFetched: number; discoveredCandidates: number }> {
   const url = normalizeWebsite(website);
-  if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0 };
+  if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0, discoveredCandidates: 0 };
   const origin = new URL(url).origin;
   const robotsRead = await robotsFor(origin).catch((): RobotsRead => ({ status: "unavailable", body: null }));
   const robots = robotsRead.body;
@@ -238,12 +238,12 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   const pages: ResearchedPage[] = [];
   let fetched = 0;
   if (!allowed(url)) {
-    return { pages: [{ url, text: "", status: "blocked_by_robots", prices: [] }], pagesFetched: 0 };
+    return { pages: [{ url, text: "", status: "blocked_by_robots", prices: [] }], pagesFetched: 0, discoveredCandidates: 1 };
   }
   const home = await fetchOne(url, robotsRead);
   fetched++;
   pages.push(home);
-  if (home.status !== "ok" || extraPages <= 0) return { pages, pagesFetched: fetched };
+  if (home.status !== "ok" || extraPages <= 0) return { pages, pagesFetched: fetched, discoveredCandidates: 1 };
 
   // Combine robots-declared sitemap URLs with same-origin homepage links. Both are
   // discovery hints only; neither proves that a search engine indexed a page.
@@ -268,6 +268,9 @@ export async function researchWebsite(website: string, extraPages: number): Prom
     .filter((c): c is { u: string; rank: number } => c !== null)
     // Most useful kind first; within a kind, the shortest (top-level) path.
     .sort((a, b) => a.rank - b.rank || a.u.length - b.u.length);
+  // This is the number of distinct same-site candidates found in the bounded
+  // sitemap/homepage-link inventory, not a claim that every site URL was found.
+  const discoveredCandidates = ranked.length + 1;
   // One page of each kind before a second page of any kind.
   const firsts = ranked.filter((c, i, all) => all.findIndex((x) => x.rank === c.rank) === i);
   const candidates = [...firsts, ...ranked.filter((c) => !firsts.includes(c))].slice(0, extraPages).map((c) => c.u);
@@ -280,7 +283,7 @@ export async function researchWebsite(website: string, extraPages: number): Prom
     pages.push(await fetchOne(c, robotsRead));
     fetched++;
   }
-  return { pages, pagesFetched: fetched };
+  return { pages, pagesFetched: fetched, discoveredCandidates };
 }
 
 /**

@@ -1889,15 +1889,17 @@ export const conversionAudit = internalAction({
       let text = "";
       let pages: { url: string; status: "read" | "blocked_by_robots" | "failed" }[] = [];
       let pagesFetched = 0;
+      let discoveredCandidates = 0;
       let seoReadiness: SiteSeoReadiness = { state: "unavailable", pagesSampled: 0, pagesWithStaticHtml: 0, pages: [], findings: [] };
       if (step.checkpoint !== undefined) {
         try {
           const checkpoint = JSON.parse(String(step.checkpoint)) as unknown;
           if (checkpoint && typeof checkpoint === "object" && "text" in checkpoint) {
-            const saved = checkpoint as { text?: unknown; pages?: typeof pages; pagesFetched?: unknown; seoReadiness?: unknown };
+            const saved = checkpoint as { text?: unknown; pages?: typeof pages; pagesFetched?: unknown; discoveredCandidates?: unknown; seoReadiness?: unknown };
             text = typeof saved.text === "string" ? saved.text : "";
             pages = Array.isArray(saved.pages) ? saved.pages : [];
             pagesFetched = typeof saved.pagesFetched === "number" ? saved.pagesFetched : 0;
+            discoveredCandidates = typeof saved.discoveredCandidates === "number" ? saved.discoveredCandidates : pages.length;
             if (saved.seoReadiness && typeof saved.seoReadiness === "object") seoReadiness = saved.seoReadiness as SiteSeoReadiness;
           } else text = typeof checkpoint === "string" ? checkpoint : String(step.checkpoint);
         } catch { text = String(step.checkpoint); }
@@ -1906,6 +1908,7 @@ export const conversionAudit = internalAction({
         if (!job.run.isFixture && website) {
           const res = await researchWebsite(website, 4);
           pages = res.pages.map((p) => ({ url: p.url, status: p.status === "ok" ? "read" : p.status }));
+          discoveredCandidates = res.discoveredCandidates;
           seoReadiness = siteSeoReadiness(res.pages);
           pagesFetched = res.pagesFetched;
           text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, `TITLE: ${p.title ?? ""}\nDESCRIPTION: ${p.description ?? ""}\nHEADINGS: ${(p.headings ?? []).join(" | ")}\nPAGE TEXT:\n${p.text}`, 4_200)).join("\n\n");
@@ -1914,7 +1917,7 @@ export const conversionAudit = internalAction({
             records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
-        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched, seoReadiness }) });
+        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched, discoveredCandidates, seoReadiness }) });
       }
       const workspaceSocialPosts = job.run.isFixture ? [] : await ctx.runQuery(internal.content.auditPublishedSocial, { orgId: job.org._id, limit: 10 });
       const socialCoverage: { source: "climbos" | "facebook" | "instagram" | "linkedin"; state: "reviewed" | "not_connected" | "not_authorized" | "unavailable" | "no_posts"; postsReviewed: number }[] = [
@@ -2029,7 +2032,7 @@ export const conversionAudit = internalAction({
       if (socialPosts.length === 0) socialReview.summary = "No post captions were available to review. See source coverage for whether accounts were connected, authorized, or unavailable. Any content-mix ideas are hypotheses to test.";
       safeOutput.socialReview = socialReview;
       safeOutput.auditCoverage = {
-        website: { requested: Boolean(website), requestedUrl: website ?? null, pagesAttempted: pages.length, pagesRead: pages.filter((page) => page.status === "read").length, pages },
+        website: { requested: Boolean(website), requestedUrl: website ?? null, discoveredCandidates, pagesSampled: pages.length, pagesAttempted: pages.length, pagesRead: pages.filter((page) => page.status === "read").length, pages },
         performance,
         seoReadiness,
         searchConsole: propertyMatches && searchConsole ? { state: inspectedSearchRows.length ? "matched_to_read_pages" : "property_matched_no_rows_for_read_pages", property: searchConsole.property, startDate: searchConsole.startDate, endDate: searchConsole.endDate, observedRows: inspectedSearchRows.length, truncated: searchConsole.truncated } : { state: searchConsole ? "not_used_property_mismatch" : "no_snapshot" },
