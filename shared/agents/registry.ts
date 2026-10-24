@@ -60,20 +60,49 @@ export const DRAFT_ACTIONS = allDraftActions;
 export function agentForAction(kind: string, channel = "", brief = ""): AgentArchetype | null {
   const normalizedChannel = channel.trim().toLowerCase();
   const normalizedBrief = brief.toLowerCase();
+  const mentions = (...terms: string[]) => terms.some((term) => normalizedBrief.includes(term));
   let id: string | undefined;
-  if (kind === "refresh_plan") id = "chief_growth_strategist";
+  if (kind === "refresh_plan") {
+    if (mentions("go to market", "go-to-market", "launch", "market entry")) id = "gtm_strategy";
+    else if (mentions("diagnos", "root cause", "biggest problem", "business weakness")) id = "business_diagnosis";
+    else if (mentions("price", "packaging", "monetiz")) id = "pricing_strategy";
+    else if (mentions("retention", "churn", "renewal", "reactivat")) id = "customer_retention";
+    else id = "chief_growth_strategist";
+  }
   else if (kind === "generate_content") {
-    if (["email"].includes(normalizedChannel)) id = "email_marketing";
+    if (normalizedChannel === "email") id = mentions("onboard", "activation", "retention", "reactivat", "nurture") ? "lifecycle_marketing" : "email_marketing";
     else if (["google_search_ad", "meta_ad", "ads"].includes(normalizedChannel)) id = "performance_marketing";
-    else if (["blog", "website", "seo"].includes(normalizedChannel)) id = "seo_intelligence";
+    else if (["blog", "website", "seo"].includes(normalizedChannel)) id = mentions("aeo", "geo", "answer engine", "ai search") ? "aeo_geo_intelligence" : mentions("technical seo", "search console", "ranking") ? "seo_intelligence" : "content_marketing";
+    else if (mentions("press release", "media pitch", "public announcement", "crisis response")) id = "pr_communications";
+    else if (mentions("product launch", "positioning", "product messaging")) id = "product_marketing";
+    else if (mentions("brand voice", "brand awareness", "brand campaign")) id = "brand_marketing";
+    else if (mentions("creative concept", "visual concept", "creative variant")) id = "marketing_creative";
     else id = "social_media_marketing";
   } else if (kind === "research") {
-    if (/competitor|competitive|alternative|comparison/.test(normalizedBrief)) id = "competitive_intelligence";
-    else if (/customer|interview|review|feedback|retention/.test(normalizedBrief)) id = "customer_research";
-    else if (/seo|search|aeo|geo|answer engine/.test(normalizedBrief)) id = "seo_intelligence";
+    if (mentions("competitor", "competitive", "alternative", "comparison")) id = "competitive_intelligence";
+    else if (mentions("aeo", "geo", "answer engine", "ai search visibility")) id = "aeo_geo_intelligence";
+    else if (mentions("technical seo", "search console", "keyword", "search ranking")) id = "seo_intelligence";
+    else if (mentions("pricing", "price", "packaging", "willingness to pay")) id = "pricing_strategy";
+    else if (mentions("sales", "deal", "pipeline", "buyer signal", "objection")) id = "sales_intelligence";
+    else if (mentions("customer retention", "churn", "renewal", "reactivation")) id = "customer_retention";
+    else if (mentions("conversion", "landing page", "funnel", "checkout")) id = "conversion_optimization";
+    else if (mentions("customer", "interview", "review", "feedback", "satisfaction")) id = "customer_research";
+    else if (mentions("product adoption", "activation", "onboarding", "product led")) id = "product_growth";
+    else if (mentions("product", "positioning", "differentiation")) id = "product_marketing";
+    else if (mentions("partnership", "affiliate", "co-marketing", "distribution partner")) id = "partnership_marketing";
+    else if (mentions("event", "conference", "webinar", "local campaign")) id = "field_marketing";
+    else if (mentions("brand", "messaging", "reputation", "press")) id = "brand_marketing";
+    else if (mentions("diagnos", "root cause", "business weakness", "bottleneck")) id = "business_diagnosis";
+    else if (mentions("swot", "strategic analysis", "strengths and weaknesses")) id = "swot_strategic_analysis";
     else id = "market_research";
-  } else if (kind === "analyze_results") id = "analytics_attribution";
-  else if (kind === "find_customers") id = "lead_intelligence";
+  } else if (kind === "analyze_results") {
+    if (mentions("forecast", "revenue projection", "scenario")) id = "forecasting";
+    else if (mentions("revenue", "profit", "margin", "unit economics")) id = "revenue_intelligence";
+    else if (mentions("sales", "deal", "pipeline", "buyer signal")) id = "sales_intelligence";
+    else if (mentions("retention", "churn", "renewal")) id = "customer_retention";
+    else if (mentions("paid campaign", "ad spend", "roas", "cost per acquisition")) id = "performance_marketing";
+    else id = "analytics_attribution";
+  } else if (kind === "find_customers") id = mentions("partner", "affiliate", "co-marketing") ? "partnership_marketing" : "lead_intelligence";
   else if (kind === "schedule_content") id = "social_media_marketing";
   else if (kind === "ad_change") id = "performance_marketing";
   else if (kind === "email_send") id = "email_marketing";
