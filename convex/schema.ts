@@ -349,7 +349,8 @@ export default defineSchema({
     version: v.number(),
   })
     .index("by_registry_id", ["registryId"])
-    .index("by_status_requested", ["status", "requestedAt"]),
+    .index("by_status_requested", ["status", "requestedAt"])
+    .index("by_status_next_check", ["status", "nextCheckAt"]),
 
   /** Candidate source changes staged for human review; never consumed by production retrieval. */
   growthKnowledgeProposals: defineTable({

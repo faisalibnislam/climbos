@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import registry from "../docs/growth-intelligence/source_registry.json";
-import { makeFunctionReference, type FunctionReference } from "convex/server";
-import type { Id } from "./_generated/dataModel";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { appError } from "./lib/tenancy";
 import { requireStaff } from "./lib/staff";
+import { sourceFreshness } from "../shared/knowledge/freshness";
 
 /** Staff-only source freshness controls. A detected change is evidence to review, never an update. */
 export const listSources = query({
@@ -45,8 +45,7 @@ export const requestRefresh = mutation({
         requestedAt: now, version: 0,
       });
     await ctx.db.patch(sourceId, { status: "queued", url: registered.url, title: registered.title, requestedBy: user._id, requestedAt: now, lastError: undefined });
-    const refresh = makeFunctionReference<"action", { sourceId: Id<"growthKnowledgeSources"> }, unknown>("knowledgeActions:refreshSource") as unknown as FunctionReference<"action", "internal", { sourceId: Id<"growthKnowledgeSources"> }, unknown>;
-    await ctx.scheduler.runAfter(0, refresh, { sourceId });
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.refreshSource, { sourceId });
     return sourceId;
   },
 });
@@ -74,6 +73,49 @@ export const markChecking = internalMutation({
     if (!source || source.status !== "queued") return null;
     await ctx.db.patch(sourceId, { status: "checking" });
     return source;
+  },
+});
+
+/** Bounded queue of previously fetched, registry-eligible sources whose recheck is due. */
+export const dueRefreshes = internalQuery({
+  args: { now: v.number(), limit: v.optional(v.number()) },
+  handler: async (ctx, { now, limit }) => {
+    const take = Math.max(1, Math.min(10, Math.floor(limit ?? 5)));
+    const candidates = (await Promise.all(
+      (["baseline_set", "unchanged"] as const).map((status) =>
+        ctx.db.query("growthKnowledgeSources")
+          .withIndex("by_status_next_check", (q) => q.eq("status", status).lte("nextCheckAt", now))
+          .take(take),
+      ),
+    )).flat().sort((a, b) => (a.nextCheckAt ?? 0) - (b.nextCheckAt ?? 0) || a._id.localeCompare(b._id));
+    const due = [];
+    for (const source of candidates) {
+      const registered = registry.sources.find((item) => item.registry_id === source.registryId);
+      if (!registered || source.nextCheckAt === undefined || source.nextCheckAt > now) continue;
+      const freshness = sourceFreshness(registered, now);
+      if (freshness.status !== "recheck_due" || !freshness.directPageRead) continue;
+      due.push(source._id);
+      if (due.length >= take) break;
+    }
+    return due;
+  },
+});
+
+/** Atomically claims one due source and prevents duplicate cron dispatch. */
+export const queueDueRefresh = internalMutation({
+  args: { sourceId: v.id("growthKnowledgeSources"), now: v.number() },
+  handler: async (ctx, { sourceId, now }) => {
+    const source = await ctx.db.get(sourceId);
+    if (!source || !["baseline_set", "unchanged"].includes(source.status) || source.nextCheckAt === undefined || source.nextCheckAt > now) return null;
+    const pending = await ctx.db.query("growthKnowledgeProposals")
+      .withIndex("by_source_version", (q) => q.eq("sourceId", sourceId))
+      .order("desc")
+      .first();
+    if (pending?.status === "pending_review") return null;
+    const registered = registry.sources.find((item) => item.registry_id === source.registryId);
+    if (!registered || sourceFreshness(registered, now).status !== "recheck_due") return null;
+    await ctx.db.patch(sourceId, { status: "queued", requestedAt: now, lastError: undefined });
+    return sourceId;
   },
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 
 describe("governed knowledge refresh", () => {
@@ -26,5 +26,21 @@ describe("governed knowledge refresh", () => {
     const support = await asNewUser(t, "support@example.com");
     await expect(support.client.mutation(api.knowledge.requestRefresh, { registryId: "SRC-001" })).rejects.toThrow(/staff role/);
     await expect(support.client.query(api.knowledge.listSources, {})).resolves.toEqual([]);
+  });
+
+  it("queues only due direct-page sources and atomically claims each scheduled check", async () => {
+    const t = setup();
+    const ops = await asNewUser(t, "ops@example.com");
+    const sourceId = await ops.client.mutation(api.knowledge.requestRefresh, { registryId: "SRC-004" });
+    const now = Date.parse("2026-10-27T00:00:00.000Z");
+    await t.run((ctx) => ctx.db.patch(sourceId, {
+      status: "unchanged", checkedAt: now - 8 * 24 * 60 * 60 * 1000, nextCheckAt: now - 1,
+      contentHash: "sha256:reviewed", contentText: "Reviewed source baseline", version: 1,
+    }));
+
+    await expect(t.query(internal.knowledge.dueRefreshes, { now, limit: 5 })).resolves.toEqual([sourceId]);
+    await expect(t.mutation(internal.knowledge.queueDueRefresh, { sourceId, now })).resolves.toBe(sourceId);
+    await expect(t.mutation(internal.knowledge.queueDueRefresh, { sourceId, now })).resolves.toBeNull();
+    await expect(t.query(internal.knowledge.dueRefreshes, { now, limit: 5 })).resolves.toEqual([]);
   });
 });

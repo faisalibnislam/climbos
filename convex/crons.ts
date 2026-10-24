@@ -49,5 +49,7 @@ crons.daily("digests", { hourUTC: 13, minuteUTC: 0 }, internal.maintenance.sendD
 // Competitor watch: Monday mornings, before the weekly report.
 crons.weekly("competitor watch", { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0 }, internal.competitors.weekly, {});
 crons.daily("refresh due competitor research", { hourUTC: 8, minuteUTC: 15 }, internal.competitorDiscovery.refreshDue, {});
+// Recheck only previously fetched sources due under the registry cadence; changes remain staff-review proposals.
+crons.daily("refresh due growth knowledge sources", { hourUTC: 8, minuteUTC: 30 }, internal.knowledgeRefreshCron.refreshDue, {});
 
 export default crons;

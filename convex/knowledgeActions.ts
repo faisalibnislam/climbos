@@ -5,7 +5,7 @@ import { lookup } from "node:dns/promises";
 import { v } from "convex/values";
 import registry from "../docs/growth-intelligence/source_registry.json";
 import { internal } from "./_generated/api";
-import { action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import { extractPageContent, isPathAllowed, safeFetchPage } from "../shared/integrations/website";
 import { sourceFreshness } from "../shared/knowledge/freshness";
 
@@ -22,7 +22,7 @@ function diffLines(before: string, after: string) {
 }
 
 /** Fetches one manually requested source, records a bounded hash diff, and never promotes content. */
-export const refreshSource = action({
+export const refreshSource = internalAction({
   args: { sourceId: v.id("growthKnowledgeSources") },
   handler: async (ctx, { sourceId }) => {
     const source = await ctx.runMutation(internal.knowledge.markChecking, { sourceId });
