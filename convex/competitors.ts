@@ -87,14 +87,16 @@ export const checkNow = mutation({
 });
 
 export const watchesFor = internalQuery({
-  args: { watchIds: v.array(v.id("competitorWatches")) },
-  handler: async (ctx, { watchIds }) => (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active)),
+  args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")) },
+  handler: async (ctx, { orgId, watchIds }) =>
+    (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId)),
 });
 
 export const saveCheck = internalMutation({
-  args: { watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), error: v.optional(v.string()) },
-  handler: async (ctx, { watchId, hash, text, sourceUrls, error }) => {
-    if (!(await ctx.db.get(watchId))) return;
+  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), error: v.optional(v.string()) },
+  handler: async (ctx, { orgId, watchId, hash, text, sourceUrls, error }) => {
+    const watch = await ctx.db.get(watchId);
+    if (!watch || watch.orgId !== orgId) return;
     await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastSourceUrls: sourceUrls?.slice(0, 5), lastError: undefined });
   },
 });
@@ -116,6 +118,8 @@ export const startSummaryRun = internalMutation({
 export const recordChange = internalMutation({
   args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })) },
   handler: async (ctx, a) => {
+    const watch = await ctx.db.get(a.watchId);
+    if (!watch || watch.orgId !== a.orgId) throw appError("NOT_FOUND", "Competitor watch not found.");
     const now = Date.now();
     await ctx.db.insert("competitorChanges", {
       ...a,

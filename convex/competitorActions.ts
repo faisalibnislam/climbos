@@ -59,12 +59,12 @@ const RULES = `You compare two versions of a competitor's website for a small-bu
 export const check = internalAction({
   args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")) },
   handler: async (ctx, { orgId, watchIds }) => {
-    const watches = await ctx.runQuery(internal.competitors.watchesFor, { watchIds });
+    const watches = await ctx.runQuery(internal.competitors.watchesFor, { orgId, watchIds });
     const changed: { id: Id<"competitorWatches">; name: string; before: string[]; after: string[]; sourceUrls: string[] }[] = [];
     for (const w of watches) {
       const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${w.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}`, sourceUrls: [w.url] } : await readSite(w.url);
       if ("error" in site) {
-        await ctx.runMutation(internal.competitors.saveCheck, { watchId: w._id, error: site.error });
+        await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, error: site.error });
         continue;
       }
       const lines = normaliseForDiff(site.text);
@@ -73,7 +73,7 @@ export const check = internalAction({
         const before = w.lastText.split("\n");
         if (meaningful(diffLines(before, lines))) changed.push({ id: w._id, name: w.name, before, after: lines, sourceUrls: [...new Set([...(w.lastSourceUrls ?? [w.url]), ...site.sourceUrls])] });
       }
-      await ctx.runMutation(internal.competitors.saveCheck, { watchId: w._id, hash, text: lines.join("\n"), sourceUrls: site.sourceUrls });
+      await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, hash, text: lines.join("\n"), sourceUrls: site.sourceUrls });
     }
     if (!changed.length) return;
     const runId = await ctx.runMutation(internal.competitors.startSummaryRun, { orgId, count: changed.length });

@@ -55,4 +55,26 @@ describe("competitor watch", () => {
     expect(report.competitors[0].sourceUrls).toEqual(["https://rival.example"]);
     expect(report.competitors[0].observedAt).toBeTruthy();
   });
+
+  it("does not load or write a competitor watch under another workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "watch-tenancy@example.com");
+    const a = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Workspace A" });
+    await makePaid(t, a.orgId);
+    const b = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Workspace B" });
+    const watchId = await owner.client.mutation(api.competitors.add, { slug: a.slug, name: "Rival", url: "rival.example" });
+
+    expect(await t.query(internal.competitors.watchesFor, { orgId: b.orgId, watchIds: [watchId] })).toEqual([]);
+    await t.mutation(internal.competitors.saveCheck, { orgId: b.orgId, watchId, hash: "cross-tenant", text: "must not be stored" });
+    await expect(t.mutation(internal.competitors.recordChange, {
+      orgId: b.orgId,
+      watchId,
+      name: "Rival",
+      summary: "Cross-tenant write",
+      bullets: [],
+    })).rejects.toThrow(/Competitor watch not found/);
+
+    const stored = await t.run((ctx) => ctx.db.get(watchId));
+    expect(stored?.lastHash).toBeUndefined();
+  });
 });
