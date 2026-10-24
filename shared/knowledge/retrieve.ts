@@ -1,5 +1,6 @@
 import library from "./growthLibrary.generated.json";
 import sourceRegistry from "../../docs/growth-intelligence/source_registry.json";
+import { sourceFreshness, type SourceFreshness } from "./freshness";
 
 type KnowledgeRecord = (typeof library.records)[number];
 export interface KnowledgeSourceReference {
@@ -9,6 +10,7 @@ export interface KnowledgeSourceReference {
   retrievedAt: string;
   publicationDate: string | null;
   claims: { sourceId: string; scope: string; verificationStatus: string }[];
+  freshness: SourceFreshness;
 }
 export type RetrievedKnowledge = Pick<KnowledgeRecord, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { content: string; score: number; sources: KnowledgeSourceReference[] };
 export interface KnowledgeReferenceSet {
@@ -53,6 +55,7 @@ const sourceRefsFor = (content: string): KnowledgeSourceReference[] => {
       retrievedAt: source.retrieved_at,
       publicationDate: source.publication_date,
       claims: source.records.slice(0, 3).map((claim) => ({ sourceId: claim.source_id, scope: claim.claim_scope, verificationStatus: claim.verification_status })),
+      freshness: sourceFreshness(source),
     });
     if (refs.length >= 3) break;
   }
@@ -91,7 +94,7 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
   for (const { doc, score } of ranked) {
     if (budget < 300) break;
     const sources = sourceRefsFor(doc.record.content);
-    const sourceText = sources.length ? `\nSources (general guidance only; see dates and registry status): ${sources.map((source) => `[${source.registryId}] ${source.title} · ${source.retrievedAt} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : "";
+    const sourceText = sources.length ? `\nSources (general guidance only; check dates/status before using for current platform or legal decisions): ${sources.map((source) => `[${source.registryId}] ${source.title} · checked ${source.retrievedAt} · review ${source.freshness.status}${source.freshness.nextCheckAt ? ` by ${source.freshness.nextCheckAt.slice(0, 10)}` : ""} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : "";
     const header = `[${doc.record.kind} · Book ${doc.record.bookId} · ${doc.record.heading} · docs/growth-intelligence/${doc.record.path} · sha256:${doc.record.sha256}]${sourceText}\n`;
     const available = Math.max(0, budget - header.length);
     if (available < 100) break;
@@ -113,8 +116,8 @@ export function knowledgeReferenceSet(records: readonly RetrievedKnowledge[]): K
 export function formatGrowthKnowledge(records: readonly RetrievedKnowledge[]): string {
   if (!records.length) return "";
   return [
-    `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute. Registry dates show when the source was checked, not that it is still current.`,
-    ...records.map((record) => `[${record.kind} · Book ${record.bookId} · ${record.heading} · docs/growth-intelligence/${record.path} · sha256:${record.sha256}]${record.sources.length ? `\nSources (general guidance only): ${record.sources.map((source) => `[${source.registryId}] ${source.title} · retrieved ${source.retrievedAt} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : ""}\n${record.content}`),
+    `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute. A registry retrieval date records a check, not the source's publication or current accuracy. For current platform, API, pricing, or legal decisions, do not rely on a source marked recheck_due, direct_check_required, or not_scheduled without a fresh primary-source check.`,
+    ...records.map((record) => `[${record.kind} · Book ${record.bookId} · ${record.heading} · docs/growth-intelligence/${record.path} · sha256:${record.sha256}]${record.sources.length ? `\nSources (general guidance only): ${record.sources.map((source) => `[${source.registryId}] ${source.title} · checked ${source.retrievedAt} · review ${source.freshness.status}${source.freshness.nextCheckAt ? ` by ${source.freshness.nextCheckAt.slice(0, 10)}` : ""} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : ""}\n${record.content}`),
   ].join("\n\n---\n\n");
 }
 

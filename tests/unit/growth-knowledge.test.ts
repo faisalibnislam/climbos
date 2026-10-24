@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import library from "@shared/knowledge/growthLibrary.generated.json";
 import { formatGrowthKnowledge, growthKnowledgeContext, knowledgeReferenceSet, retrieveGrowthKnowledge } from "@shared/knowledge/retrieve";
+import { sourceFreshness } from "@shared/knowledge/freshness";
 
 describe("growth intelligence retrieval", () => {
   it("indexes the committed books and reference playbooks with their source hashes", () => {
@@ -49,8 +50,22 @@ describe("growth intelligence retrieval", () => {
     expect(cited?.sources[0].claims[0]).toMatchObject({ sourceId: expect.stringMatching(/^B01-/u), scope: expect.any(String), verificationStatus: expect.any(String) });
     const context = formatGrowthKnowledge(records);
     expect(context).toContain("Sources (general guidance only)");
-    expect(context).toContain("Registry dates show when the source was checked");
+    expect(context).toContain("A registry retrieval date records a check");
     const references = knowledgeReferenceSet(records);
-    expect(references.records.find((record) => record.sources.length > 0)?.sources[0].registryId).toMatch(/^SRC-/u);
+    expect(references.records.find((record) => record.sources.length > 0)?.sources[0]).toMatchObject({
+      registryId: expect.stringMatching(/^SRC-/u),
+      freshness: { status: expect.any(String), checkedAt: "2026-10-19T00:00:00.000Z" },
+    });
+  });
+
+  it("marks weekly official sources for recheck and search-index-only sources for direct review", () => {
+    const checkedRecently = sourceFreshness({ url: "https://docs.convex.dev/functions/actions", retrieved_at: "2026-10-19", records: [{ verification_status: "verified_primary_page" }] }, Date.parse("2026-10-24T00:00:00Z"));
+    expect(checkedRecently).toMatchObject({ status: "checked_recently", cadenceDays: 7, directPageRead: true, nextCheckAt: "2026-10-26T00:00:00.000Z" });
+    const due = sourceFreshness({ url: "https://docs.convex.dev/functions/actions", retrieved_at: "2026-10-19", records: [{ verification_status: "verified_primary_page" }] }, Date.parse("2026-10-27T00:00:00Z"));
+    expect(due.status).toBe("recheck_due");
+    const searchOnly = sourceFreshness({ url: "https://developers.facebook.com/documentation/pages-api.md/", retrieved_at: "2026-10-19", records: [{ verification_status: "primary_search_index_only" }] }, Date.parse("2026-10-20T00:00:00Z"));
+    expect(searchOnly).toMatchObject({ status: "direct_check_required", nextCheckAt: null, directPageRead: false });
+    const stable = sourceFreshness({ url: "https://www.isc.hbs.edu/strategy/creating-a-successful-strategy/Pages/default.aspx", retrieved_at: "2026-10-19", records: [{ verification_status: "verified_primary_page" }] }, Date.parse("2026-10-27T00:00:00Z"));
+    expect(stable.status).toBe("not_scheduled");
   });
 });

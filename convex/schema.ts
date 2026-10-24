@@ -1411,7 +1411,7 @@ export default defineSchema({
             knowledgeReferences: v.optional(v.object({
               edition: v.string(),
               researchCutoff: v.string(),
-              records: v.array(v.object({ id: v.string(), kind: v.string(), bookId: v.string(), heading: v.string(), path: v.string(), sha256: v.string(), sources: v.optional(v.array(v.object({ registryId: v.string(), url: v.string(), title: v.string(), retrievedAt: v.string(), publicationDate: v.union(v.string(), v.null()), claims: v.array(v.object({ sourceId: v.string(), scope: v.string(), verificationStatus: v.string() })) }))) })),
+              records: v.array(v.object({ id: v.string(), kind: v.string(), bookId: v.string(), heading: v.string(), path: v.string(), sha256: v.string(), sources: v.optional(v.array(v.object({ registryId: v.string(), url: v.string(), title: v.string(), retrievedAt: v.string(), publicationDate: v.union(v.string(), v.null()), claims: v.array(v.object({ sourceId: v.string(), scope: v.string(), verificationStatus: v.string() })), freshness: v.optional(v.object({ status: v.union(v.literal("checked_recently"), v.literal("recheck_due"), v.literal("direct_check_required"), v.literal("not_scheduled"), v.literal("invalid_check_date")), checkedAt: v.union(v.string(), v.null()), nextCheckAt: v.union(v.string(), v.null()), cadenceDays: v.union(v.number(), v.null()), directPageRead: v.boolean() })) }))) })),
             })),
             ownerEconomics: v.optional(v.any()),
             refundExposure: v.optional(v.object({
