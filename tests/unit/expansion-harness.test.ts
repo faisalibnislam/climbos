@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { checkNumbers, statesNumber } from "../../bench/expansion/numeric";
-import { loadCases, loadPrompts, PLAN_CASES, LIBRARY_TYPE } from "../../bench/expansion/cases";
+import { loadCases, loadPrompts, PLAN_CASES, LIBRARY_TYPE, RUBRIC } from "../../bench/expansion/cases";
 import { judgePrompt, summarize, type GradedRow } from "../../bench/expansion/grade";
+import { createHumanReviewPacket, summarizeHumanReview, type ExpansionRun } from "../../bench/expansion/human-review";
 
 /** The 32-case expansion harness: fair inputs, deterministic number checks, honest summaries. */
 describe("expansion cases", () => {
@@ -64,5 +65,61 @@ describe("summary", () => {
     const s = summarize(rows);
     expect(s).toMatchObject({ runs: 3, failed_runs: 1, hard_fails: 2, numbers_found: "0/1", mean_total: 12 });
     expect(s.dims.business_fit).toBe(1);
+  });
+});
+
+describe("blinded human review", () => {
+  const allCases = loadCases();
+  const selected = allCases.filter((c) => ["EV01", "EV06"].includes(c.id));
+  const run = (label: string, suffix: string): ExpansionRun => ({
+    meta: { label },
+    rows: selected.map((c) => ({ case_id: c.id, surface: "advisor", ok: true, response: `${suffix} ${c.id}`, tool_calls: [], cost_micros: 0, elapsed_seconds: 1 })),
+  });
+
+  it("exports reproducible, blinded paired answers with a separate arm key", () => {
+    const first = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "review-seed");
+    const again = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "review-seed");
+    expect(first.packet).toEqual(again.packet);
+    expect(first.key).toEqual(again.key);
+    expect(first.packet.items).toHaveLength(2);
+    expect(JSON.stringify(first.packet)).not.toContain("baseline");
+    expect(JSON.stringify(first.packet)).not.toContain("candidate response");
+    for (const item of first.packet.items) {
+      const baselineLabel = first.key.mapping[item.item_id].baseline;
+      expect(baselineLabel === "A" ? item.answer_a : item.answer_b).toMatch(/^one /);
+      expect(baselineLabel === "A" ? item.answer_b : item.answer_a).toMatch(/^two /);
+    }
+    for (const item of first.packet.items) {
+      expect(Object.keys(item.ratings.answer_a)).toHaveLength(7);
+      expect(Object.values(item.ratings.hard_failures_a)).toContain(null);
+    }
+  });
+
+  it("summarizes human scores and preferences using the private randomized mapping", () => {
+    const { packet, key } = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "other-seed");
+    packet.reviewer_id = "reviewer-1";
+    for (const item of packet.items) {
+      item.ratings.answer_a = Object.fromEntries(RUBRIC.map(({ key: k }) => [k, 2])) as typeof item.ratings.answer_a;
+      item.ratings.answer_b = Object.fromEntries(RUBRIC.map(({ key: k }) => [k, 1])) as typeof item.ratings.answer_b;
+      item.ratings.hard_failures_a = Object.fromEntries(Object.keys(item.ratings.hard_failures_a).map((k) => [k, false]));
+      item.ratings.hard_failures_b = Object.fromEntries(Object.keys(item.ratings.hard_failures_b).map((k) => [k, false]));
+      item.ratings.preferred = key.mapping[item.item_id].baseline;
+    }
+    const summary = summarizeHumanReview(packet, key);
+    expect(summary).toMatchObject({ reviewed: 2, incomplete: 0, pairwise: { baseline: 2, candidate: 0, tie: 0 }, hard_failures: { baseline: 0, candidate: 0 } });
+    const baselineA = Object.values(key.mapping).filter((m) => m.baseline === "A").length;
+    expect(summary.mean_scores.evidence_integrity).toEqual({ baseline: baselineA ? 2 : 1, candidate: baselineA ? 1 : 2 });
+    expect(Object.values(summary.by_business_type).reduce((n, g) => n + g.reviewed, 0)).toBe(2);
+  });
+
+  it("rejects mismatched and malformed review files and reports incomplete rows", () => {
+    const { packet, key } = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "seed-3");
+    packet.reviewer_id = "reviewer-1";
+    expect(() => summarizeHumanReview(packet, { ...key, packet_id: "wrong" })).toThrow(/do not match/);
+    const changed = structuredClone(packet);
+    changed.items[0].answer_a += " edited";
+    expect(() => summarizeHumanReview(changed, key)).toThrow(/content changed/);
+    expect(() => createHumanReviewPacket(run("baseline", "one"), { ...run("candidate", "two"), rows: [] }, allCases, "seed-3")).toThrow(/same case\/surface/);
+    expect(summarizeHumanReview(packet, key)).toMatchObject({ reviewed: 0, incomplete: 2 });
   });
 });
