@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { AGENT_ARCHETYPES, agentForAction } from "../../shared/agents/registry";
+import { AGENT_ARCHETYPES, agentForAction, archetypeInstruction } from "../../shared/agents/registry";
 
 describe("specialist registry", () => {
   it("maps all 30 requested specialist identities to reusable ClimbOS roles", () => {
     expect(AGENT_ARCHETYPES).toHaveLength(30);
     expect(new Set(AGENT_ARCHETYPES.map((agent) => agent.id)).size).toBe(30);
-    expect(AGENT_ARCHETYPES.every((agent) => agent.name && agent.objective && agent.role && agent.defaultActions.length)).toBe(true);
+    expect(AGENT_ARCHETYPES.every((agent) => agent.name && agent.objective && agent.role && agent.defaultActions.length && agent.successMeasures.outputQuality && agent.successMeasures.businessOutcome && agent.successMeasures.guardrail)).toBe(true);
+    expect(new Set(AGENT_ARCHETYPES.map((agent) => agent.successMeasures.businessOutcome)).size).toBeGreaterThan(20);
+  });
+
+  it("gives specialists measurable, evidence-bound success contracts", () => {
+    const instruction = archetypeInstruction(AGENT_ARCHETYPES.find((agent) => agent.id === "performance_marketing")!);
+    expect(instruction).toContain("Incremental qualified customers or contribution after media cost");
+    expect(instruction).toContain("platform ROAS are not causal lift");
+    expect(instruction).toContain("source, cohort, period, and denominator");
+    expect(instruction).toContain("does not authorize external actions");
   });
 
   it("routes coordinator actions to the smallest relevant built-in specialist", () => {
