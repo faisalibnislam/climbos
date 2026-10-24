@@ -95,6 +95,7 @@ import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
+import { customerNeedPerMonth } from "../shared/agents/goal";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -1147,6 +1148,7 @@ export const buildStrategy = internalAction({
           funnel: job.business?.funnel,
           monthlyChurn: job.business?.unitEconomics?.monthlyChurn,
           newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+          ...(job.goal?.target ? { customerTargetPerMonth: customerNeedPerMonth(job.goal.target, job.goal.horizonDays, job.business?.unitEconomics?.monthlyChurn ?? null) ?? undefined } : {}),
           types,
           ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
         });

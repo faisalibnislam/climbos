@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lockedNumbers, playsGoalGap, portfolioRange } from "../../shared/agents/economics";
-import { goalGap } from "../../shared/agents/goal";
+import { customerNeedPerMonth, goalGap } from "../../shared/agents/goal";
 import { lintPlanFit } from "../../shared/agents/specs";
 
 /** S3 (spec §8.1): goal, scenario and gap stay separate. */
@@ -8,6 +8,16 @@ const range = (p50: number) => ({ p10: p50 * 0.5, p50, p90: p50 * 1.5 });
 const DAYS_PER_MONTH = 365.25 / 12;
 
 describe("goal gap", () => {
+  it("converts incremental customer goals to a monthly pace and includes known churn for total goals", () => {
+    expect(customerNeedPerMonth({ metric: "customers", baseline: null, desired: 30, mode: "incremental" }, 90, null)).toBeCloseTo(30 / (90 / (365.25 / 12)), 8);
+    const total = customerNeedPerMonth({ metric: "customers", baseline: 20, desired: 50, mode: "total" }, 90, 0.05);
+    expect(total).toBeCloseTo((30 + 20 * (1 - (1 - 0.05) ** (90 / (365.25 / 12)))) / (90 / (365.25 / 12)), 8);
+  });
+  it("does not understate a total goal when the existing customer's churn is unknown", () => {
+    expect(customerNeedPerMonth({ metric: "customers", baseline: 20, desired: 50, mode: "total" }, 90, null)).toBeNull();
+    expect(customerNeedPerMonth({ metric: "customers", baseline: 0, desired: 30, mode: "total" }, 90, null)).not.toBeNull();
+    expect(customerNeedPerMonth({ metric: "revenue_month", baseline: 100, desired: 200, mode: "incremental" }, 90, 0)).toBeNull();
+  });
   it("'50 customers by day 90' from 20 means 30 more plus expected losses, not 50 new", () => {
     const g = goalGap({ metric: "customers", baseline: 20, desired: 50, mode: "total" }, 90, range(25), { churn: 0.05, revenuePerCustomerMonth: 30 });
     const lost = 20 * (1 - 0.95 ** (90 / DAYS_PER_MONTH));

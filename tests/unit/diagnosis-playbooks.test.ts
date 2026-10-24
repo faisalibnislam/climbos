@@ -91,8 +91,21 @@ describe("diagnosis", () => {
     expect(diagnose({ funnel: { periodDays: 30, leads: 20, qualifiedLeads: 8, activated: 4 } })).toMatchObject({ status: "conflicting_inputs" });
     expect(diagnose({ funnel: { periodDays: 30, leads: 20, qualifiedLeads: 8, qualificationDefinition: "Has a current project", activated: 9 } })).toMatchObject({ status: "conflicting_inputs" });
   });
-  it("healthy conversion with few visitors is demand", () => {
-    expect(diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"] }).constraint).toBe("demand");
+  it("uses an owner-stated goal pace instead of a universal visitor-count cutoff", () => {
+    const inputs = { funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" as const }, types: ["b2b_saas"] };
+    const withoutGoal = diagnose(inputs);
+    expect(withoutGoal.constraint).toBe("unknown");
+    expect(diagnose({ ...inputs, customerTargetPerMonth: 20 })).toMatchObject({
+      constraint: "demand",
+      status: "supported",
+      hypotheses: [{ goalGap: { currentCustomersPerMonth: 10, targetCustomersPerMonth: 20, probabilityVisitorToCustomerRateBelowNeeded: expect.any(Number) } }],
+    });
+    expect(diagnosisBrief(diagnose({ ...inputs, customerTargetPerMonth: 20 }))).toMatch(/supports a reach\/volume gap but does not establish its cause/);
+    const uncertain = diagnose({ ...inputs, customerTargetPerMonth: 10.5 });
+    expect(uncertain).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", nextMeasurement: { priority: "decision_critical" } });
+    expect(uncertain.nextMeasurement?.reason).toMatch(/Do not prescribe more traffic from this count alone/);
+    // With the same known conversion and a larger audience, target gap—not an arbitrary 1,000 visitor line—drives the diagnosis.
+    expect(diagnose({ funnel: { visitors: 3_000, leads: 400, newCustomers: 100, signupKind: "trial_no_card" }, types: ["b2b_saas"], customerTargetPerMonth: 150 }).constraint).toBe("demand");
     // Without the signup model there is no reference, so "healthy" can't be judged (decision books: CG-02).
     const unknownModel = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10 }, types: ["b2b_saas"] });
     expect(unknownModel.constraint).toBe("unknown");
@@ -119,7 +132,7 @@ describe("diagnosis", () => {
     expect(playStage("win-back email for cancelled customers")).toBe("retention");
   });
   it("does not mistake an unclassified play for demand generation", () => {
-    const d = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"] });
+    const d = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"], customerTargetPerMonth: 20 });
     expect(d).toMatchObject({ constraint: "demand", status: "supported" });
     expect(lintDiagnosisFit([{ name: "Improve the pricing page", oneLiner: "Clarify the plan comparison" }], d)).toMatchObject([{ rule: "diagnosis_fit" }]);
     expect(lintDiagnosisFit([{ name: "Search ads", oneLiner: "Reach more qualified visitors" }], d)).toEqual([]);

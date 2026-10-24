@@ -38,6 +38,21 @@ const DAYS_PER_MONTH = 365.25 / 12;
 const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
 
 /**
+ * Convert an owner-stated customer goal into the monthly new-customer pace it
+ * requires. Total goals with an existing base stay unknown when churn is
+ * unknown, because ignoring losses would understate the required pace.
+ */
+export function customerNeedPerMonth(target: GoalTarget | null | undefined, horizonDays: number, churn: number | null): number | null {
+  if (!target || target.metric !== "customers" || !finite(target.desired) || target.desired < 0 || !finite(horizonDays) || horizonDays <= 0) return null;
+  const months = horizonDays / DAYS_PER_MONTH;
+  if (target.mode === "incremental") return target.desired / months;
+  if (!finite(target.baseline) || target.baseline < 0) return null;
+  if (target.baseline > 0 && (!finite(churn) || churn < 0 || churn > 1)) return null;
+  const lost = target.baseline === 0 ? 0 : target.baseline * (1 - (1 - churn!) ** months);
+  return Math.max(0, target.desired - target.baseline + lost) / months;
+}
+
+/**
  * Compare the owner's target with the plays' scenario.
  * `customers` is the plays' new-customer range over the goal horizon; `revenuePerCustomerMonth`
  * converts it to monthly revenue for revenue goals. Unknown inputs give an unknown gap, never a default.

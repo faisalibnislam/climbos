@@ -57,6 +57,8 @@ export interface DiagnosisContext {
   types?: string[];
   /** Typical days from lead to purchase; a shorter period can't show purchases yet. */
   salesCycleDays?: number;
+  /** Owner-stated goal converted to the new-customer pace required over its horizon. */
+  customerTargetPerMonth?: number;
 }
 
 export interface StageReading {
@@ -88,6 +90,8 @@ export interface Hypothesis {
   against: string[];
   /** The measurement that would tell this hypothesis apart from the others. */
   discriminate: string;
+  /** Present only when demand is a gap relative to an explicit owner goal. */
+  goalGap?: { currentCustomersPerMonth: number; targetCustomersPerMonth: number; probabilityVisitorToCustomerRateBelowNeeded: number };
 }
 
 export interface NextMeasurement {
@@ -131,7 +135,7 @@ const SAAS = new Set(["b2b_saas", "b2c_saas", "ai_product", "developer_tools", "
 const T = DECISION_THRESHOLDS;
 
 const COMPETING: Record<BindingConstraint | "unknown", string> = {
-  demand: "The few who arrive may be the wrong people (positioning or targeting), not too few people.",
+  demand: "The goal may need more customer volume, but the cause could be reach, audience fit, seasonality or the size of the reachable market.",
   activation: "Signups may be the wrong fit (traffic quality or promise mismatch) rather than the product being hard to start.",
   conversion: "Price or packaging may block the purchase rather than the product failing to show value.",
   offer: "Buyers may not understand the offer (communication) rather than not wanting it.",
@@ -146,7 +150,7 @@ const COMPETING: Record<BindingConstraint | "unknown", string> = {
 const DISCRIMINATE: Partial<Record<BindingConstraint, string>> = {
   activation: "Ask 5–10 recent signups who didn't reach first value what stopped them, and check where they came from: wrong-fit traffic points to targeting, right-fit people stalling points to onboarding.",
   conversion: "Ask activated people who didn't buy why not, and record the reason (price, package, timing, trust) for each.",
-  demand: "Compare lead quality by source for a week: if the right people convert well, more of them helps; if not, fix targeting first.",
+  demand: "Compare qualified lead and paid-customer rates by source for a full buying cycle; more reach only helps if the added people are a fit.",
   retention: "List the last 10–20 cancellations by reason and month (failed payment, early, near renewal).",
   delivery: "Count turned-away or delayed jobs for two weeks.",
 };
@@ -179,6 +183,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null && !(Number.isFinite(ctx.monthlyChurn) && ctx.monthlyChurn >= 0 && ctx.monthlyChurn <= 1)) conflicts.push("Monthly churn must be a share between 0 and 100%.");
   if (ctx.salesCycleDays !== undefined && !(Number.isFinite(ctx.salesCycleDays) && ctx.salesCycleDays > 0)) conflicts.push("Sales cycle length must be a number of days greater than zero.");
   if (ctx.newCustomersPerMonth !== undefined && ctx.newCustomersPerMonth !== null && !(Number.isFinite(ctx.newCustomersPerMonth) && ctx.newCustomersPerMonth >= 0)) conflicts.push("Capacity must be a number of zero or more new customers a month.");
+  if (ctx.customerTargetPerMonth !== undefined && !(Number.isFinite(ctx.customerTargetPerMonth) && ctx.customerTargetPerMonth >= 0)) conflicts.push("The customer goal pace must be a number of zero or more new customers a month.");
 
   // Do not round malformed measurements into posterior evidence or show them as readings.
   if (conflicts.length) {
@@ -338,8 +343,32 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     ]);
   }
   // Downstream fine and few people arriving: demand.
-  if (f.visitors !== undefined && f.leads !== undefined && weakOverall === false && perMonth(f.visitors) < 1000)
-    return out("demand", "supported", [hyp("demand", `${Math.round(perMonth(f.visitors))} visitors a month; lead → paid is at or above the reference`, null, ["Downstream converts normally."], [COMPETING.demand])]);
+  if (f.visitors !== undefined && f.leads !== undefined && f.newCustomers !== undefined && weakOverall === false && ctx.customerTargetPerMonth !== undefined && ctx.customerTargetPerMonth > 0) {
+    const currentCustomersPerMonth = perMonth(f.newCustomers);
+    if (currentCustomersPerMonth < ctx.customerTargetPerMonth) {
+      const goalMeasurement = f.visitors > 0 ? probBelow(betaPosterior(f.newCustomers, f.visitors), Math.min(1, ctx.customerTargetPerMonth / perMonth(f.visitors))) : f.newCustomers === 0 ? 1 : 0;
+      if (goalMeasurement >= T.weakAt) {
+        const h = hyp(
+          "demand",
+          `Current measured customer volume is ${r2(currentCustomersPerMonth)} a month against the owner-stated goal pace of ${r2(ctx.customerTargetPerMonth)} a month; there is ${pct(goalMeasurement)} probability that the visitor → paying-customer rate is below the rate needed to meet the goal at today's visitor volume.`,
+          null,
+          ["Current customer volume is below the explicit owner goal, the visitor → customer rate is likely insufficient at current reach, and the measured SaaS lead → paid rate is not flagged as weak."],
+          [COMPETING.demand],
+        );
+        h.goalGap = { currentCustomersPerMonth: r2(currentCustomersPerMonth), targetCustomersPerMonth: r2(ctx.customerTargetPerMonth), probabilityVisitorToCustomerRateBelowNeeded: r2(goalMeasurement) };
+        return out("demand", "supported", [h]);
+      }
+      const reason = "the observed visitor → paying-customer count is too uncertain to tell whether current reach can meet the goal";
+      missing.push("another full buying-cycle count of visitors and new paying customers");
+      const uncertain = out("unknown", "insufficient_evidence", []);
+      uncertain.nextMeasurement = {
+        action: "Track visitors and new paying customers over another full buying cycle, using the same definitions and channel coverage.",
+        reason: `Current customer volume is below the owner-stated goal pace, but ${reason}. Do not prescribe more traffic from this count alone.`,
+        priority: "decision_critical",
+      };
+      return uncertain;
+    }
+  }
   return out("unknown", "insufficient_evidence", []);
 }
 
@@ -355,9 +384,12 @@ export function diagnosisBrief(d: Diagnosis): string {
     const next = d.nextMeasurement ? [`NEXT MEASUREMENT (${d.nextMeasurement.priority === "decision_critical" ? "needed before a firm decision" : "most useful next"}): ${d.nextMeasurement.action} Why: ${d.nextMeasurement.reason}`] : [];
     return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
   }
+  const goalGap = d.hypotheses?.find((h) => h.goalGap)?.goalGap;
   const alt = d.hypotheses?.slice(1).filter((h) => h.probability !== null);
   return [
-    `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the numbers point to ${d.constraint} as the weakest link. This is an observation about where people drop, not a proven cause.`,
+    goalGap
+      ? `DIAGNOSIS (computed from owner-reported goal and funnel data): current customer volume is about ${goalGap.currentCustomersPerMonth}/month against a goal pace of ${goalGap.targetCustomersPerMonth}/month. At today's visitor volume, there is ${pct(goalGap.probabilityVisitorToCustomerRateBelowNeeded)} probability that the visitor → paying-customer rate is below what the goal needs. This supports a reach/volume gap but does not establish its cause.`
+      : `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the numbers point to ${d.constraint} as the weakest link. This is an observation about where people drop, not a proven cause.`,
     ...d.readings.map(reading),
     ...(alt?.length ? [`Alternative still possible: ${alt.map((h) => `${h.constraint} (P weaker ${h.probability})`).join(", ")}.`] : []),
     ...lever,
