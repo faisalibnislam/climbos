@@ -647,6 +647,8 @@ export default defineSchema({
     logoStorageId: v.optional(v.id("_storage")),
     /** Voice learning: short rules learned from how the owner edits drafts. */
     learnedRules: v.optional(v.array(v.object({ text: v.string(), at: v.number() }))),
+    /** Explicit owner/admin opt-in; absent legacy values remain disabled. */
+    voiceLearningEnabled: v.optional(v.boolean()),
     updatedAt: v.number(),
   }).index("by_business", ["businessId"]),
 

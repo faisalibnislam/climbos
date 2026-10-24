@@ -21,9 +21,9 @@ describe("brand kit + voice learning", () => {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
       await ctx.db.insert("brandProfiles", { orgId: orgId as Id<"organizations">, businessId: business!._id, voice: "Plain", toneWords: [], colors: [], doNots: [], updatedAt: Date.now() });
     });
-    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"] });
+    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"], voiceLearningEnabled: true });
     let b = await owner.client.query(api.brand.get, { slug });
-    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"] });
+    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], voiceLearningEnabled: true });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm"], colors: ["#123456"], doNots: ["No emojis"] });
     expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual(["Example with spacing", "Second example", "Third example"]);
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: [] });
@@ -39,5 +39,36 @@ describe("brand kit + voice learning", () => {
     expect(b.pending).toBe(0);
     await owner.client.mutation(api.brand.removeRule, { slug, index: 0 });
     expect((await owner.client.query(api.brand.get, { slug })).learnedRules.length).toBe(b.learnedRules.length - 1);
+  });
+
+  it("keeps voice learning off by default and deletes samples and rules when consent is withdrawn", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "voice-consent@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Consent Co" });
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
+      await ctx.db.insert("brandProfiles", { orgId: orgId as Id<"organizations">, businessId: business!._id, voice: "Plain", toneWords: [], colors: [], doNots: [], learnedRules: [{ text: "No emojis", at: Date.now() }], updatedAt: Date.now() });
+    });
+    expect((await owner.client.query(api.brand.get, { slug })).voiceLearningEnabled).toBe(false);
+    await t.run(async (ctx) => {
+      const { recordVoiceSample } = await import("../../convex/brand");
+      await recordVoiceSample(ctx, orgId as Id<"organizations">, "email", "AI draft with enough length to compare", "Owner version has enough length to compare.");
+    });
+    expect((await owner.client.query(api.brand.get, { slug })).pending).toBe(0);
+
+    await owner.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], voiceLearningEnabled: true });
+    await t.run(async (ctx) => {
+      const { recordVoiceSample } = await import("../../convex/brand");
+      for (let i = 0; i < 2; i++) await recordVoiceSample(ctx, orgId as Id<"organizations">, "email", `AI draft ${i} has enough length to compare`, `Owner version ${i} has enough length to compare.`);
+    });
+    await owner.client.mutation(api.brand.learnNow, { slug });
+    await owner.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], voiceLearningEnabled: false });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const brand = await owner.client.query(api.brand.get, { slug });
+    expect(brand.voiceLearningEnabled).toBe(false);
+    expect(brand.learnedRules).toEqual([]);
+    expect(brand.pending).toBe(0);
+    expect(await t.run((ctx) => ctx.db.query("voiceSamples").withIndex("by_org_used", (q) => q.eq("orgId", orgId as Id<"organizations">).eq("used", false)).collect())).toEqual([]);
   });
 });

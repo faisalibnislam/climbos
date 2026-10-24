@@ -40,6 +40,7 @@ export const get = query({
       colors: b?.colors ?? [],
       doNots: b?.doNots ?? [],
       approvedExamples: b?.approvedExamples ?? [],
+      voiceLearningEnabled: b?.voiceLearningEnabled === true,
       learnedRules: (b?.learnedRules ?? []).map((r) => r.text),
       pending,
       learnAfter: LEARN_AFTER,
@@ -48,10 +49,11 @@ export const get = query({
 });
 
 export const update = mutation({
-  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())) },
+  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())), voiceLearningEnabled: v.optional(v.boolean()) },
   handler: async (ctx, a) => {
     const { org, role } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     if (a.approvedExamples !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can approve brand examples.");
+    if (a.voiceLearningEnabled !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change voice learning consent.");
     const b = await brandFor(ctx, org._id);
     if (!b) throw appError("NOT_FOUND", "Finish setting up your business first.");
     await ctx.db.patch(b._id, {
@@ -62,8 +64,13 @@ export const update = mutation({
       ...(a.approvedExamples !== undefined ? {
         approvedExamples: [...new Set(a.approvedExamples.map((example) => example.trim().slice(0, 1000)).filter(Boolean))].slice(0, 3),
       } : {}),
+      ...(a.voiceLearningEnabled !== undefined ? { voiceLearningEnabled: a.voiceLearningEnabled } : {}),
       updatedAt: Date.now(),
     });
+    if (a.voiceLearningEnabled === false) {
+      await ctx.db.patch(b._id, { learnedRules: [], updatedAt: Date.now() });
+      await ctx.scheduler.runAfter(0, internal.brand.cleanupVoiceSamples, { orgId: org._id });
+    }
   },
 });
 
@@ -81,10 +88,26 @@ export const removeRule = mutation({
 export async function recordVoiceSample(ctx: MutationCtx, orgId: Id<"organizations">, channel: string, before: string, after: string) {
   const norm = (s: string) => s.replace(/\s+/g, " ").trim();
   if (norm(before) === norm(after) || after.length < 20) return;
+  const b = await brandFor(ctx, orgId);
+  if (b?.voiceLearningEnabled !== true) return;
   await ctx.db.insert("voiceSamples", { orgId, channel, before: before.slice(0, 1500), after: after.slice(0, 1500), used: false, createdAt: Date.now() });
   const pending = await ctx.db.query("voiceSamples").withIndex("by_org_used", (q) => q.eq("orgId", orgId).eq("used", false)).take(LEARN_AFTER);
   if (pending.length >= LEARN_AFTER) await startLearning(ctx, orgId);
 }
+
+/** Remove raw edit examples in bounded batches after consent is withdrawn. */
+export const cleanupVoiceSamples = internalMutation({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => {
+    let more = false;
+    for (const used of [false, true]) {
+      const batch = await ctx.db.query("voiceSamples").withIndex("by_org_used", (q) => q.eq("orgId", orgId).eq("used", used)).take(200);
+      for (const sample of batch) await ctx.db.delete(sample._id);
+      if (batch.length === 200) more = true;
+    }
+    if (more) await ctx.scheduler.runAfter(0, internal.brand.cleanupVoiceSamples, { orgId });
+  },
+});
 
 async function startLearning(ctx: MutationCtx, orgId: Id<"organizations">) {
   const org = await ctx.db.get(orgId);
@@ -117,7 +140,7 @@ export const learnContext = internalQuery({
     const samples = await ctx.db.query("voiceSamples").withIndex("by_org_used", (q) => q.eq("orgId", orgId).eq("used", false)).take(10);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     const b = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
-    return run ? { run, samples: samples.map((s) => ({ id: s._id, channel: s.channel, before: s.before, after: s.after })), rules: (b?.learnedRules ?? []).map((r) => r.text) } : null;
+    return run && b?.voiceLearningEnabled === true ? { run, samples: samples.map((s) => ({ id: s._id, channel: s.channel, before: s.before, after: s.after })), rules: (b.learnedRules ?? []).map((r) => r.text) } : null;
   },
 });
 
@@ -125,6 +148,7 @@ export const saveRules = internalMutation({
   args: { orgId: v.id("organizations"), rules: v.array(v.string()), sampleIds: v.array(v.id("voiceSamples")) },
   handler: async (ctx, { orgId, rules, sampleIds }) => {
     const b = await brandFor(ctx, orgId);
+    if (b?.voiceLearningEnabled !== true) return;
     const now = Date.now();
     if (b) await ctx.db.patch(b._id, { learnedRules: rules.map((t) => t.trim().slice(0, 160)).filter(Boolean).slice(0, MAX_RULES).map((text) => ({ text, at: now })), updatedAt: now });
     for (const id of sampleIds) if (await ctx.db.get(id)) await ctx.db.patch(id, { used: true });
