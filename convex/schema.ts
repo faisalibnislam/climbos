@@ -1778,6 +1778,13 @@ export default defineSchema({
     body: v.string(),
     /** Owner-facing copy strategy cue, separate from publishable content. */
     contentAngle: v.optional(v.string()),
+    copyBrief: v.optional(v.object({
+      reader: v.string(), situation: v.string(), awarenessStage: v.string(), relationshipStage: v.string(), objective: v.string(),
+      offerFactIds: v.array(v.id("businessFacts")), problemJob: v.string(), trigger: v.string(), centralIdea: v.string(), objection: v.string(),
+      proofFactIds: v.array(v.id("businessFacts")), prohibitedClaims: v.array(v.string()), channel: v.string(), format: v.string(), deliveryContext: v.string(),
+      brandVoice: v.string(), approvedExamples: v.array(v.string()), cta: v.string(), afterAction: v.string(), trackingMetric: v.string(), trackingMethod: v.string(),
+      supportingFactIds: v.array(v.id("businessFacts")), supportingSourceUrls: v.array(v.string()), unknowns: v.array(v.string()),
+    })),
     callToAction: v.optional(v.string()),
     destinationUrl: v.optional(v.string()),
     hashtags: v.array(v.string()),

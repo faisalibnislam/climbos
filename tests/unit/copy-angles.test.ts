@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lintDistinctAngles, lintRepeatedCopyPieces } from "../../shared/agents/specs";
+import { lintCopyBrief, lintDistinctAngles, lintRepeatedCopyPieces, type CopyBrief } from "../../shared/agents/specs";
 import { contentHash } from "../../shared/policy";
 
 describe("copy angle quality checks", () => {
@@ -49,5 +49,62 @@ describe("copy angle quality checks", () => {
       { path: "posts[0]", text: "Owners save bookkeeping time by automating payment reminders and intake forms." },
       { path: "posts[1]", text: "A clear service menu helps new customers understand which appointment to book." },
     ])).toEqual([]);
+  });
+});
+
+const copyBrief: CopyBrief = {
+  reader: "Local service owners",
+  situation: "They need more qualified bookings",
+  awarenessStage: "problem_aware",
+  relationshipStage: "unknown",
+  objective: "Request a consultation",
+  offerFactIndexes: [0],
+  problemJob: "Choose a trusted provider",
+  trigger: "A current need",
+  centralIdea: "Make the next step clear",
+  objection: "Unknown",
+  proofFactIndexes: [],
+  prohibitedClaims: ["Guaranteed growth"],
+  channel: "email",
+  format: "three-email sequence",
+  deliveryContext: "Consented subscribers",
+  brandVoice: "Clear and practical",
+  approvedExamples: [],
+  cta: "Book a consultation",
+  afterAction: "Review request",
+  trackingMetric: "Consultation requests",
+  trackingMethod: "Unknown",
+  supportingFactIndexes: [],
+  supportingSourceUrls: ["https://example.com/services"],
+  unknowns: ["Consultation availability"],
+};
+
+describe("structured copy brief provenance", () => {
+  it("accepts fact indexes and source URLs supplied to this run", () => {
+    expect(lintCopyBrief(copyBrief, {
+      task: "Draft email",
+      brief: "",
+      facts: ["Consultation is available"],
+      availableSourceUrls: ["https://example.com/services"],
+    })).toEqual([]);
+  });
+
+  it("rejects references to unavailable facts or pages", () => {
+    expect(lintCopyBrief({ ...copyBrief, proofFactIndexes: [2], supportingSourceUrls: ["https://unknown.example/proof"] }, {
+      task: "Draft email",
+      brief: "",
+      facts: ["Consultation is available"],
+      availableSourceUrls: ["https://example.com/services"],
+    })).toMatchObject([
+      { severity: "error", rule: "fact_reference", path: "copyBrief.proofFactIndexes[0]" },
+      { severity: "error", rule: "citation", path: "copyBrief.supportingSourceUrls[0]" },
+    ]);
+  });
+
+  it("binds campaign context to the artifact approval hash", async () => {
+    const draft = { body: "The same approved copy.", hashtags: [], channel: "email" };
+    const first = await contentHash({ ...draft, copyBrief: { ...copyBrief, centralIdea: "Make the next step clear" } });
+    const changed = await contentHash({ ...draft, copyBrief: { ...copyBrief, centralIdea: "Lead with customer proof" } });
+    expect(changed).not.toBe(first);
   });
 });

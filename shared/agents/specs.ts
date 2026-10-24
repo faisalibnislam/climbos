@@ -358,7 +358,36 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
 
 const postFormat = z.enum(["text", "single_image", "carousel", "document", "reel", "thread", "story"]);
 const copyAngleSchema = z.string().min(4).max(180);
+export const CopyBriefSchema = z.object({
+  reader: z.string(),
+  situation: z.string(),
+  awarenessStage: z.enum(["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware", "unknown"]),
+  relationshipStage: z.enum(["cold", "prospect", "consented_lead", "customer", "returning_customer", "unknown"]),
+  objective: z.string(),
+  offerFactIndexes: z.array(z.number()),
+  problemJob: z.string(),
+  trigger: z.string(),
+  centralIdea: z.string(),
+  objection: z.string(),
+  proofFactIndexes: z.array(z.number()),
+  prohibitedClaims: z.array(z.string()),
+  channel: z.string(),
+  format: z.string(),
+  deliveryContext: z.string(),
+  brandVoice: z.string(),
+  approvedExamples: z.array(z.string()).max(3),
+  cta: z.string(),
+  afterAction: z.string(),
+  trackingMetric: z.string(),
+  trackingMethod: z.string(),
+  supportingFactIndexes: z.array(z.number()),
+  supportingSourceUrls: z.array(z.string()),
+  unknowns: z.array(z.string()),
+});
+export type CopyBrief = z.infer<typeof CopyBriefSchema>;
+
 export const SocialPostsV2Schema = z.object({
+  copyBrief: CopyBriefSchema,
   posts: z.array(
     SocialPostsSchema.shape.posts.element.extend({
       /** Internal strategy cue shown to the owner; keep it to one specific idea. */
@@ -375,6 +404,7 @@ export const SocialPostsV2Schema = z.object({
 export type SocialPostsV2 = z.infer<typeof SocialPostsV2Schema>;
 
 export const AdDraftsV2Schema = AdDraftsSchema.extend({
+  copyBrief: CopyBriefSchema,
   searchAds: z.array(
     AdDraftsSchema.shape.searchAds.element.extend({ angle: copyAngleSchema, paths: z.array(z.string()), negativeKeywords: z.array(z.string()), landingPageMatch: z.string() }),
   ),
@@ -385,6 +415,7 @@ export const AdDraftsV2Schema = AdDraftsSchema.extend({
 export type AdDraftsV2 = z.infer<typeof AdDraftsV2Schema>;
 
 export const EmailSequenceV2Schema = EmailSequenceSchema.extend({
+  copyBrief: CopyBriefSchema,
   /** Campaign's organizing idea, distinct from each email's own angle. */
   angle: copyAngleSchema,
   emails: z.array(EmailSequenceSchema.shape.emails.element.extend({ angle: copyAngleSchema })),
@@ -1284,6 +1315,7 @@ export function lintRepeatedCopyPieces(items: { path: string; text: string }[]):
 
 function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = [];
+  issues.push(...lintCopyBrief(out.copyBrief, input));
   issues.push(...lintDistinctAngles(out.posts.map((p, i) => ({ path: `posts[${i}].angle`, angle: p.angle }))));
   issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
   issues.push(...lintEmbeddedUrls(out.posts.flatMap((p, i) => [
@@ -1337,7 +1369,7 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintRepeatedCopyPieces([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}]`, text: `${ad.headlines.join(" ")} ${ad.descriptions.join(" ")}` })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}]`, text: `${ad.headline} ${ad.primaryText} ${ad.description}` }))]), ...lintEmbeddedUrls([
+  const issues: LintIssue[] = [...lintCopyBrief(out.copyBrief, input), ...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintRepeatedCopyPieces([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}]`, text: `${ad.headlines.join(" ")} ${ad.descriptions.join(" ")}` })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}]`, text: `${ad.headline} ${ad.primaryText} ${ad.description}` }))]), ...lintEmbeddedUrls([
     ...out.searchAds.flatMap((ad, i) => ad.headlines.concat(ad.descriptions).map((text) => ({ path: `searchAds[${i}]`, text }))),
     ...out.metaAds.flatMap((ad, i) => [ad.primaryText, ad.headline, ad.description].map((text) => ({ path: `metaAds[${i}]`, text }))),
   ], input), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
@@ -1436,6 +1468,22 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
     const source = normalizeSourceUrl(url);
     return source && available.has(source) ? [] : [{ severity: "error" as const, rule: "citation", message: `This citation points to a page that was not present in this run's supplied sources. Use a page ClimbOS read, or leave the citation out.`, path }];
   });
+}
+
+/** Validate the shared campaign context against only the facts and pages available to this run. */
+export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): LintIssue[] {
+  // The Zod output schemas require this field in live generation; tolerate
+  // older hand-built test fixtures passed directly to individual lint helpers.
+  if (!brief) return [];
+  const refs = [
+    ...brief.offerFactIndexes.map((index, i) => ({ index, path: `copyBrief.offerFactIndexes[${i}]` })),
+    ...brief.proofFactIndexes.map((index, i) => ({ index, path: `copyBrief.proofFactIndexes[${i}]` })),
+    ...brief.supportingFactIndexes.map((index, i) => ({ index, path: `copyBrief.supportingFactIndexes[${i}]` })),
+  ];
+  return [
+    ...refs.flatMap(({ index, path }) => lintFactIndexes([index], input.facts.length, path)),
+    ...lintAvailableSourceUrls(brief.supportingSourceUrls.map((url, i) => ({ url, path: `copyBrief.supportingSourceUrls[${i}]` })), input),
+  ];
 }
 
 export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves">, input: AgentInput): LintIssue[] {
@@ -1900,7 +1948,7 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
+      lint: (out, input) => [...lintCopyBrief(out.copyBrief, input), ...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
         { path: `emails[${i}].subject`, text: email.subject },
         { path: `emails[${i}].previewText`, text: email.previewText },
         { path: `emails[${i}].body`, text: email.body },

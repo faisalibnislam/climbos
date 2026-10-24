@@ -27,7 +27,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
       return out;
     }
     case "array":
-      if (key === "factIndexes" || key === "evidenceRefs" || key === "dependencies") return [];
+      if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "evidenceRefs" || key === "dependencies") return [];
       return s.items ? [sample(s.items, marker, key)] : [];
     case "number":
     case "integer":

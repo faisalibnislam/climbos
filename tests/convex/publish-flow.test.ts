@@ -131,6 +131,33 @@ describe("publishing lifecycle", () => {
     expect(corrected.current?.unsupportedClaims).toEqual([]);
   });
 
+  it("preserves the structured copy brief and its approval hash through owner edits", async () => {
+    const t = setup();
+    const w = await workspace(t, "copy-brief@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const copyBrief = {
+      reader: "Local service owners", situation: "They need qualified bookings", awarenessStage: "problem_aware", relationshipStage: "unknown",
+      objective: "Request a consultation", offerFactIds: [], problemJob: "Choose a provider", trigger: "An active need", centralIdea: "Make the next step clear",
+      objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: "facebook", format: "single image", deliveryContext: "Organic post",
+      brandVoice: "Clear and practical", approvedExamples: [], cta: "Ask for details", afterAction: "Reply to the inquiry", trackingMetric: "Qualified inquiries",
+      trackingMethod: "Unknown", supportingFactIds: [], supportingSourceUrls: [], unknowns: ["Availability"],
+    };
+    await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      const nextHash = await contentHash({ body: version!.body, hashtags: version!.hashtags, channel: artifact!.channel, copyBrief });
+      await ctx.db.patch(version!._id, { copyBrief, contentHash: nextHash });
+    });
+
+    await w.owner.client.mutation(api.content.edit, { slug: w.slug, artifactId, body: "An edited draft with its strategy context.", hashtags: [] });
+    const updated = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(updated.current?.copyBrief).toEqual(copyBrief);
+    const versions = await t.run(async (ctx) => ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", artifactId)).collect());
+    expect(versions).toHaveLength(2);
+    expect(versions[1]?.copyBrief).toEqual(copyBrief);
+    expect(versions[0]?.contentHash).not.toBe(versions[1]?.contentHash);
+  });
+
   it("a repeat call on an already-attempted approval settles the post instead of leaving it sending", async () => {
     const t = setup();
     const w = await workspace(t);

@@ -28,7 +28,7 @@ import type {
   StrategyOutput,
 } from "../shared/ai/tasks";
 import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
-import { actionReadinessOf, analyzeDecisionOptions, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
+import { actionReadinessOf, analyzeDecisionOptions, type CopyBrief, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -603,6 +603,7 @@ export type ArtifactInput = {
   body: string;
   /** Owner-facing strategy cue; not included in the publishable copy body. */
   contentAngle?: string;
+  copyBrief?: CopyBrief;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -615,6 +616,24 @@ export type ArtifactInput = {
   scheduledFor?: number;
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
 };
+
+type PersistedCopyBrief = Omit<CopyBrief, "offerFactIndexes" | "proofFactIndexes" | "supportingFactIndexes"> & {
+  offerFactIds: Id<"businessFacts">[];
+  proofFactIds: Id<"businessFacts">[];
+  supportingFactIds: Id<"businessFacts">[];
+};
+
+function persistedCopyBrief(brief: CopyBrief | undefined, factIds: Id<"businessFacts">[]): PersistedCopyBrief | undefined {
+  if (!brief) return undefined;
+  const toIds = (indexes: number[]) => indexes.flatMap((index) => factIds[index] ? [factIds[index]!] : []);
+  const { offerFactIndexes, proofFactIndexes, supportingFactIndexes, ...rest } = brief;
+  return {
+    ...rest,
+    offerFactIds: toIds(offerFactIndexes),
+    proofFactIds: toIds(proofFactIndexes),
+    supportingFactIds: toIds(supportingFactIndexes),
+  };
+}
 
 async function linkTrackingOn(ctx: MutationCtx, orgId: Id<"organizations">): Promise<boolean> {
   return (await ctx.db.get(orgId))?.linkTracking !== false;
@@ -668,6 +687,7 @@ export async function insertArtifact(
     headline: item.headline,
     body: item.body,
     contentAngle: item.contentAngle,
+    copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags,
@@ -682,6 +702,7 @@ export async function insertArtifact(
     headline: item.headline,
     body: item.body,
     contentAngle: item.contentAngle,
+    copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags.slice(0, 12),
@@ -708,6 +729,13 @@ const artifactInputValidator = v.object({
   headline: v.optional(v.string()),
   body: v.string(),
   contentAngle: v.optional(v.string()),
+  copyBrief: v.optional(v.object({
+    reader: v.string(), situation: v.string(), awarenessStage: v.string(), relationshipStage: v.string(), objective: v.string(),
+    offerFactIndexes: v.array(v.number()), problemJob: v.string(), trigger: v.string(), centralIdea: v.string(), objection: v.string(),
+    proofFactIndexes: v.array(v.number()), prohibitedClaims: v.array(v.string()), channel: v.string(), format: v.string(), deliveryContext: v.string(),
+    brandVoice: v.string(), approvedExamples: v.array(v.string()), cta: v.string(), afterAction: v.string(), trackingMetric: v.string(), trackingMethod: v.string(),
+    supportingFactIndexes: v.array(v.number()), supportingSourceUrls: v.array(v.string()), unknowns: v.array(v.string()),
+  })),
   callToAction: v.optional(v.string()),
   destinationUrl: v.optional(v.string()),
   hashtags: v.array(v.string()),
@@ -751,13 +779,14 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { posts: (SocialPostsOutput["posts"][number] & { angle?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
     title: p.title,
     body: p.body,
     contentAngle: p.angle,
+    copyBrief: out.copyBrief,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,
     imagePrompt: p.imageIdea,
@@ -768,6 +797,7 @@ export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { post
 }
 
 export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"> & {
+  copyBrief?: CopyBrief;
   searchAds: (AdDraftsOutput["searchAds"][number] & { angle?: string })[];
   metaAds: (AdDraftsOutput["metaAds"][number] & { angle?: string })[];
 }, website?: string): Omit<ArtifactInput, "imageStorageId">[] {
@@ -780,6 +810,7 @@ export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"
       headline: a.headlines.map((h) => h.slice(0, 30)).join(" | "),
       body: a.descriptions.map((d) => d.slice(0, 90)).join("\n"),
       contentAngle: a.angle,
+      copyBrief: out.copyBrief,
       destinationUrl: a.finalUrl || website,
       hashtags: a.keywords.slice(0, 10),
       factIndexes: out.factIndexes,
@@ -794,6 +825,7 @@ export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"
       headline: m.headline,
       body: `${m.primaryText}\n\n${m.description}`,
       contentAngle: m.angle,
+      copyBrief: out.copyBrief,
       destinationUrl: website,
       hashtags: [],
       imagePrompt: m.imageIdea,
@@ -804,7 +836,7 @@ export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"
   return items;
 }
 
-export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { angle?: string; emails: (EmailSequenceOutput["emails"][number] & { angle?: string })[] }): Omit<ArtifactInput, "imageStorageId">[] {
+export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { angle?: string; copyBrief?: CopyBrief; emails: (EmailSequenceOutput["emails"][number] & { angle?: string })[] }): Omit<ArtifactInput, "imageStorageId">[] {
   return [
     {
       kind: "email_sequence",
@@ -815,6 +847,7 @@ export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { an
         .map((e, i) => `Email ${i + 1} — day ${e.sendAfterDays}\nSubject: ${e.subject}\nPreview: ${e.previewText}\n\n${e.body}\n\n[${e.callToAction}]`)
         .join("\n\n———\n\n"),
       contentAngle: [out.angle, ...out.emails.map((email, i) => (email.angle ? `Email ${i + 1}: ${email.angle}` : ""))].filter(Boolean).join("\n").slice(0, 500) || undefined,
+      copyBrief: out.copyBrief,
       hashtags: [],
       factIndexes: out.factIndexes,
       role: "customer_success_manager",

@@ -133,6 +133,7 @@ export interface MaterialContent {
   headline?: string;
   body: string;
   contentAngle?: string;
+  copyBrief?: Json;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -147,6 +148,7 @@ export function contentHash(content: MaterialContent): Promise<string> {
       headline: content.headline?.trim(),
       body: content.body.trim(),
       contentAngle: content.contentAngle?.trim(),
+      copyBrief: content.copyBrief,
       callToAction: content.callToAction?.trim(),
       destinationUrl: content.destinationUrl?.trim(),
       hashtags: [...content.hashtags].map((h) => h.trim().toLowerCase()).sort(),
