@@ -1248,7 +1248,7 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintFactIndexes(out.factIndexes, input.facts.length)];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1261,6 +1261,45 @@ function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
   out.metaAds.forEach((m, i) => {
     issues.push(...maxLength(m.headline, 40, `metaAds[${i}].headline`, "Headline"));
     issues.push(...hookBeforeFold(m.primaryText, 125, `metaAds[${i}].primaryText`));
+  });
+  return issues;
+}
+
+/** Ad destinations must be a safe web URL on the business site or explicitly supplied by the owner. */
+function lintAdDestinations(out: AdDraftsV2, input: AgentInput): LintIssue[] {
+  const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
+  const ownerUrls = new Set(
+    [...(input.task.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [])]
+      .map((url) => url.replace(/[.,;!?]+$/, ""))
+      .map(normalizeSourceUrl)
+      .filter((url): url is string => Boolean(url)),
+  );
+  const issues: LintIssue[] = [];
+  out.searchAds.forEach((ad, index) => {
+    const path = `searchAds[${index}].finalUrl`;
+    const raw = ad.finalUrl.trim();
+    if (!raw) {
+      if (!businessHost) issues.push({ severity: "error", rule: "ad_destination", message: "Provide the business website or an explicit destination URL before creating this ad.", path });
+      return;
+    }
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      issues.push({ severity: "error", rule: "ad_destination", message: "Ad destinations must be absolute HTTPS URLs.", path });
+      return;
+    }
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+      issues.push({ severity: "error", rule: "ad_destination", message: "Ad destinations must use HTTPS and cannot contain embedded credentials.", path });
+      return;
+    }
+    const normalized = normalizeSourceUrl(raw);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const belongsToBusiness = businessHost !== null && (host === businessHost || host.endsWith(`.${businessHost}`));
+    const explicitlyProvided = normalized !== null && ownerUrls.has(normalized);
+    if (!belongsToBusiness && !explicitlyProvided) {
+      issues.push({ severity: "error", rule: "ad_destination", message: "This destination is outside the business website and was not explicitly supplied in the task. Use the business site or provide the approved destination URL.", path });
+    }
   });
   return issues;
 }

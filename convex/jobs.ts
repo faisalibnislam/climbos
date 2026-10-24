@@ -519,7 +519,7 @@ function marketChangeContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), constraints: constraintsOf(job), ...extra };
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...extra };
 }
 
 /** The owner's cash and time limits, checked in code against every plan. */
