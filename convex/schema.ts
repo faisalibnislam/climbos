@@ -588,6 +588,8 @@ export default defineSchema({
     replacesFactId: v.optional(v.id("businessFacts")),
     sourceIds: v.array(v.id("factSources")),
     updatedBy: v.optional(v.id("users")),
+    /** Last time an owner confirmed or edited this statement; older rows fall back to updatedAt. */
+    verifiedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -29,6 +29,7 @@ describe("site watch (keeps researching the business)", () => {
     expect(pending.length).toBeGreaterThan(0);
     await owner.client.mutation(api.siteWatch.confirmUpdate, { slug, factId: pending[0].id });
     expect((await owner.client.query(api.siteWatch.facts, { slug }))!.facts.find((x) => x.id === pending[0].id)?.state).toBe("confirmed");
+    expect((await owner.client.query(api.siteWatch.facts, { slug }))!.facts.find((x) => x.id === pending[0].id)?.verifiedAt).toEqual(expect.any(Number));
     expect((await owner.client.query(api.team.myNotices, {})).items.some((n) => /website changed/.test(n.text))).toBe(true);
   });
 
@@ -100,8 +101,8 @@ describe("site watch (keeps researching the business)", () => {
     });
     await owner.client.mutation(api.orgs.reviewFact, { slug, factId: ids.second, action: "confirm" });
     expect(await t.run(async (ctx) => [await ctx.db.get(ids.first), await ctx.db.get(ids.second)])).toEqual([
-      expect.objectContaining({ reviewState: "confirmed" }),
-      expect.objectContaining({ reviewState: "confirmed" }),
+      expect.objectContaining({ reviewState: "confirmed", verifiedAt: expect.any(Number) }),
+      expect.objectContaining({ reviewState: "confirmed", verifiedAt: expect.any(Number) }),
     ]);
   });
 

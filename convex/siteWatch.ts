@@ -68,6 +68,7 @@ export const facts = query({
           provenance: primary.provenance,
           replaces: primary.replacesFactId ?? null,
           updatedAt: primary.updatedAt,
+          verifiedAt: primary.verifiedAt ?? primary.updatedAt,
           sources: mergedSourceIds.map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
         };
       }),
@@ -99,7 +100,7 @@ export const confirmUpdate = mutation({
     const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
       .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(f._id)));
     const targets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [f];
-    for (const target of targets) await ctx.db.patch(target._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: now });
+    for (const target of targets) await ctx.db.patch(target._id, { reviewState: "confirmed", updatedBy: user._id, verifiedAt: now, updatedAt: now });
     const replacedIds = [...new Set(targets.flatMap((target) => target.replacesFactId ? [String(target.replacesFactId)] : []))];
     for (const replacedId of replacedIds) {
       const old = await ctx.db.get(ctx.db.normalizeId("businessFacts", replacedId) as Id<"businessFacts">);

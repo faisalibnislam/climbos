@@ -12,7 +12,7 @@ const REVIEW_AFTER_DAYS: Record<Doc<"businessFacts">["category"], number> = {
 };
 
 /** Age is only a prompt to review; it is not proof that a business fact is wrong. */
-export function factFreshness(category: Doc<"businessFacts">["category"], updatedAt: number, now = Date.now()): { daysOld: number; reviewSuggested: boolean } {
-  const daysOld = Math.max(0, Math.floor((now - updatedAt) / 86_400_000));
+export function factFreshness(category: Doc<"businessFacts">["category"], updatedAt: number, now = Date.now(), verifiedAt = updatedAt): { daysOld: number; reviewSuggested: boolean } {
+  const daysOld = Math.max(0, Math.floor((now - verifiedAt) / 86_400_000));
   return { daysOld, reviewSuggested: daysOld >= REVIEW_AFTER_DAYS[category] };
 }

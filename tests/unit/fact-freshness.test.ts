@@ -12,4 +12,10 @@ describe("business fact freshness", () => {
   it("treats future timestamps as fresh without claiming validity", () => {
     expect(factFreshness("offer", now + 86_400_000, now)).toEqual({ daysOld: 0, reviewSuggested: false });
   });
+
+  it("uses the last owner verification instead of a later unrelated record update", () => {
+    expect(factFreshness("pricing", now, now, now - 61 * 86_400_000)).toEqual({ daysOld: 61, reviewSuggested: true });
+    // Legacy records have no verifiedAt and continue using updatedAt.
+    expect(factFreshness("pricing", now - 59 * 86_400_000, now)).toEqual({ daysOld: 59, reviewSuggested: false });
+  });
 });

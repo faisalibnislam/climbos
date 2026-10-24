@@ -374,12 +374,13 @@ export const reviewFact = mutation({
     const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
       .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(fact._id)));
     const reviewTargets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [fact];
+    const now = Date.now();
     if (args.action === "edit") {
       const statement = args.statement?.trim().slice(0, 400);
       if (!statement) throw appError("INVALID", "The fact can't be empty.");
-      for (const target of reviewTargets) await ctx.db.patch(target._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, verifiedAt: now, updatedAt: now });
     } else {
-      for (const target of reviewTargets) await ctx.db.patch(target._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, ...(args.action === "confirm" ? { verifiedAt: now } : {}), updatedAt: now });
     }
     if (["product", "audience", "pricing", "offer", "competitor"].includes(fact.category)) {
       const business = await ctx.db.get(fact.businessId);
@@ -397,7 +398,8 @@ export const confirmAllFacts = mutation({
       .query("businessFacts")
       .withIndex("by_org_state", (q) => q.eq("orgId", org._id).eq("reviewState", "needs_review"))
       .take(100);
-    for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: Date.now() });
+    const now = Date.now();
+    for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, verifiedAt: now, updatedAt: now });
     if (facts.some((fact) => ["product", "audience", "pricing", "offer", "competitor"].includes(fact.category))) {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
       if (business) {
@@ -445,6 +447,7 @@ export const addFact = mutation({
       provenance: "owner_supplied",
       sourceIds: [],
       updatedBy: user._id,
+      verifiedAt: now,
       createdAt: now,
       updatedAt: now,
     });

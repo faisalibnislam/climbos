@@ -67,8 +67,10 @@ export const jobContext = internalQuery({
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((f) => ({ ...f, id: String(f._id) })),
     ).map(({ primary }) => primary);
-    const currentFacts = usable.filter((f) => !factFreshness(f.category, f.updatedAt).reviewSuggested);
-    const staleFacts = usable.filter((f) => factFreshness(f.category, f.updatedAt).reviewSuggested);
+    const factNow = Date.now();
+    const freshnessOf = (fact: (typeof usable)[number]) => factFreshness(fact.category, fact.updatedAt, factNow, fact.verifiedAt ?? fact.updatedAt);
+    const currentFacts = usable.filter((f) => !freshnessOf(f).reviewSuggested);
+    const staleFacts = usable.filter((f) => freshnessOf(f).reviewSuggested);
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
@@ -179,8 +181,8 @@ export const jobContext = internalQuery({
       marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
-      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
-      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, updatedAt: f.updatedAt, freshness: factFreshness(f.category, f.updatedAt) })),
+      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
+      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,
