@@ -87,6 +87,8 @@ export interface AgentInput {
   precomputedResearch?: { notes: string; sources: { url: string; title?: string }[] };
   /** Exact pages read by the application for this run; internal input for source-reference validation. */
   availableSourceUrls?: string[];
+  /** Exact first-party page titles/headings observed by this run; lints only, not extra prompt evidence. */
+  observedSitePages?: { url: string; title?: string; headings?: string[] }[];
   /** First-party website on the current business record; used to validate outbound destinations. */
   businessWebsite?: string;
   /** Owner-selected niche from the versioned industry corpus; unset means no niche-specific playbook. */

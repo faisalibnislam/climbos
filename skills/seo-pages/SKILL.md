@@ -24,7 +24,7 @@ When something is missing:
 
 1. **Read the intent from the SERP.** Classify the query as informational, commercial investigation, transactional or local. Note which page types rank (service pages, lists, comparisons, tools, videos), whether an AI Overview appears and whom it cites, whether a map pack shows, and what every ranking page fails to answer.
 
-2. **Decide whether the page should exist.** It needs real demand, a fit with what the business sells, something unique to say, and no existing page already targeting the query (if one exists, improve it instead). Prefer high-intent pages over informational blog posts. AI summaries now absorb informational clicks: Pew found users clicked a traditional result on about 8% of visits with an AI summary versus 15% without. Cited pages still earn more clicks than uncited ones, and commercial and local pages hold up better.
+2. **Decide whether the page should exist.** It needs real demand, a fit with what the business sells, something unique to say, and no existing page already targeting the query (if one exists, improve it instead). ClimbOS flags an exact target-phrase match in an observed title or heading as a review warning; that lexical match is a clue, not proof of search cannibalization. Prefer high-intent pages over informational blog posts. AI summaries now absorb informational clicks: Pew found users clicked a traditional result on about 8% of visits with an AI summary versus 15% without. Cited pages still earn more clicks than uncited ones, and commercial and local pages hold up better.
 
 3. **Choose the page type and follow its rules.**
 

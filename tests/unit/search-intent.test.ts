@@ -76,6 +76,10 @@ describe("search intent stage", () => {
     const valid = SeoBriefV2Schema.parse({ ...out, citableClaims: [{ ...out.citableClaims[0], factIndexes: [0], sourceUrls: ["https://example.com/pricing"] }] });
     expect(lintSeoEvidence(valid, input)).toEqual([]);
     expect(lintSeoRecommendation(valid, input)).toEqual([]);
+    const overlap = SeoBriefV2Schema.parse({ ...valid, recommendedAction: "create_new_page", targetPageUrl: "" });
+    expect(lintSeoRecommendation(overlap, { ...input, observedSitePages: [{ url: "https://example.com/pricing", title: "Appointment scheduling pricing" }] })).toMatchObject([
+      { severity: "warn", rule: "seo_topic_overlap", path: "recommendedAction" },
+    ]);
     const unsafeLinks = SeoBriefV2Schema.parse({ ...valid, internalLinks: ["https://other.example/pricing", "https://example.com/unread"] });
     expect(lintSeoEvidence(unsafeLinks, input)).toEqual(expect.arrayContaining([
       expect.objectContaining({ rule: "citation", path: "internalLinks[1]" }),

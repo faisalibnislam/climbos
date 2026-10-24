@@ -1756,6 +1756,13 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
   const target = out.targetPageUrl.trim();
   const issues: LintIssue[] = [];
+  const keywordPhrase = out.primaryKeyword.toLocaleLowerCase("en-US").normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const exactTopicMatches = keywordPhrase ? (input.observedSitePages ?? []).filter((page) =>
+    [page.title ?? "", ...(page.headings ?? [])].some((text) => ` ${text.toLocaleLowerCase("en-US").normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `.includes(` ${keywordPhrase} `)),
+  ) : [];
+  if (out.recommendedAction === "create_new_page" && exactTopicMatches.length) {
+    issues.push({ severity: "warn", rule: "seo_topic_overlap", message: `An observed page title or heading already contains the exact primary keyword. Review ${exactTopicMatches[0].url} for overlap before creating another page; this phrase check is a warning, not proof of search cannibalization.`, path: "recommendedAction" });
+  }
   if (!out.recommendationReason.trim()) {
     issues.push({ severity: "error", rule: "seo_recommendation", message: "Explain why this should refresh an existing page or create a new one.", path: "recommendationReason" });
   }
