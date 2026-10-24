@@ -4,6 +4,7 @@ import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
+import { majorToMinor } from "../shared/economics/currency";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -200,6 +201,54 @@ export const markCsvConnected = internalMutation({
   },
 });
 
+/** Owner-imported daily ad reports make media efficiency measurable without pretending ClimbOS fetched the platform data. */
+export const importPlatformClaims = mutation({
+  args: {
+    slug: v.string(),
+    rows: v.array(v.object({
+      platform: v.union(v.literal("google_ads"), v.literal("meta_ads")),
+      date: v.string(),
+      conversions: v.number(),
+      conversionValue: v.number(),
+      spend: v.number(),
+      currency: v.string(),
+    })),
+  },
+  handler: async (ctx, { slug, rows }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (rows.length < 1 || rows.length > 400) throw appError("INVALID", "Import between 1 and 400 daily platform rows at a time.");
+    const keys = new Set<string>();
+    for (const row of rows) {
+      const dayMs = /^\d{4}-\d{2}-\d{2}$/.test(row.date) ? Date.parse(`${row.date}T00:00:00.000Z`) : Number.NaN;
+      if (!Number.isFinite(dayMs) || new Date(dayMs).toISOString().slice(0, 10) !== row.date) {
+        throw appError("INVALID", "Each report date must be a real calendar date in YYYY-MM-DD format.");
+      }
+      if (!/^[A-Z]{3}$/i.test(row.currency)) throw appError("INVALID", "Use a three-letter ISO currency code for every report row.");
+      if (!Number.isSafeInteger(row.conversions) || row.conversions < 0 || row.conversions > 100_000_000) throw appError("INVALID", "Conversions must be a nonnegative whole number.");
+      for (const [label, value] of [["conversion value", row.conversionValue], ["spend", row.spend]] as const) {
+        if (!Number.isFinite(value) || value < 0 || !Number.isSafeInteger(majorToMinor(value, row.currency)) || majorToMinor(value, row.currency) > 9_000_000_000_000) throw appError("INVALID", `${label} must be a nonnegative amount within the safe range for its currency.`);
+      }
+      const key = `${row.platform}\u0000${row.date}\u0000${row.currency.toUpperCase()}`;
+      if (keys.has(key)) throw appError("INVALID", "The import contains duplicate platform, date and currency rows.");
+      keys.add(key);
+    }
+
+    for (const row of rows) {
+      const currency = row.currency.toUpperCase();
+      const existing = await ctx.db
+        .query("platformClaims")
+        .withIndex("by_org_platform_date", (q) => q.eq("orgId", org._id).eq("platform", row.platform).eq("date", row.date))
+        .take(20);
+      const same = existing.find((claim) => !claim.isFixture && claim.currency === currency);
+      const values = { conversions: row.conversions, conversionValueMinor: majorToMinor(row.conversionValue, currency), spendMinor: majorToMinor(row.spend, currency), currency, spendOrigin: "owner_reported" as const };
+      if (same) await ctx.db.patch(same._id, values);
+      else await ctx.db.insert("platformClaims", { orgId: org._id, platform: row.platform, date: row.date, ...values, isFixture: false });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "analytics.platform_claims_imported", summary: `Imported ${rows.length} owner-reported daily ad platform row(s).` });
+    return rows.length;
+  },
+});
+
 async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, metricKey: string, from: string, to: string, kind: "observed" = "observed") {
   const rows = await ctx.db
     .query("metricDaily")
@@ -319,7 +368,13 @@ export const overview = query({
     const claims = claimsRows.length
       ? summarizePlatformClaims(claimsRows.map((c) => ({ platform: c.platform, date: c.date, conversions: c.conversions, conversionValueMinor: c.conversionValueMinor, currency: c.currency })))
       : null;
-    const adSpendMinor = claimsRows.reduce((s, c) => s + c.spendMinor, 0);
+    const adSpendByCurrency = claimsRows.reduce<Record<string, number>>((totals, claim) => {
+      if (claim.isFixture && org.kind !== "demo") return totals;
+      const currency = claim.currency.toUpperCase();
+      totals[currency] = (totals[currency] ?? 0) + claim.spendMinor;
+      return totals;
+    }, {});
+    const adSpendMinor = adSpendByCurrency[org.currency.toUpperCase()] ?? null;
 
     const forecasts = await ctx.db
       .query("forecastRuns")
@@ -352,7 +407,7 @@ export const overview = query({
         note: "Billing revenue is the source of truth. Channel credit uses tracked links (UTM) within 30 days; revenue with no tracked source stays in “Unattributed”. Attribution shows association, not cause.",
       },
       platformClaims: claims
-        ? { platforms: claims.platforms, warning: OVERLAP_WARNING, adSpendMinor }
+        ? { platforms: claims.platforms, warning: OVERLAP_WARNING, adSpendMinor, adSpendByCurrency }
         : null,
       forecasts: forecasts.map((f) => ({ id: f._id, metricKey: f.metricKey, status: f.status, horizonDays: f.horizonDays, createdAt: f.createdAt, isFixture: f.isFixture })),
       gaps,

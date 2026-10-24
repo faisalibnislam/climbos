@@ -116,6 +116,8 @@ export const jobContext = internalQuery({
     ).size;
     const concentrationToMs = Date.now();
     const concentrationFromMs = concentrationToMs - 365 * DAY;
+    const concentrationFromDay = new Date(concentrationFromMs).toISOString().slice(0, 10);
+    const concentrationToDay = new Date(concentrationToMs).toISOString().slice(0, 10);
     const revenueRows = await ctx.db
       .query("revenueEvents")
       .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", concentrationFromMs).lte("occurredAt", concentrationToMs))
@@ -133,8 +135,25 @@ export const jobContext = internalQuery({
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
+    const spendRows = [];
+    let spendPartial = false;
+    for (const platform of ["google_ads", "meta_ads"]) {
+      const rows = await ctx.db
+        .query("platformClaims")
+        .withIndex("by_org_platform_date", (q) => q.eq("orgId", org._id).eq("platform", platform).gte("date", concentrationFromDay).lte("date", concentrationToDay))
+        .take(401);
+      spendPartial ||= rows.length > 400;
+      spendRows.push(...rows);
+    }
     const platformSourceConcentration = concentrationCurrency
-      ? platformConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      ? platformConcentration(concentrationEvents, {
+          currency: concentrationCurrency,
+          fromMs: concentrationFromMs,
+          toMs: concentrationToMs,
+          partial: concentrationIsPartial,
+          spendPartial,
+          reportedSpend: spendRows.filter((row) => !row.isFixture).map((row) => ({ platform: row.platform, date: row.date, currency: row.currency, spendMinor: row.spendMinor, ...(row.spendOrigin ? { origin: row.spendOrigin } : {}) })),
+        })
       : null;
     const refundExposureSignal = concentrationCurrency
       ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })

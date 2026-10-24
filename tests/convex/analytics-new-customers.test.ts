@@ -6,6 +6,41 @@ import { asNewUser, setup } from "./helpers";
 const DAY = 86_400_000;
 
 describe("first recorded paying customers", () => {
+  it("imports owner-reported ad spend with currency precision and safely replaces the same day", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ad-spend-import@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Spend Co" });
+    const other = await asNewUser(t, "other-ad-spend-import@example.com");
+    await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Spend Co" });
+    await t.run(async (ctx) => ctx.db.insert("platformClaims", {
+      orgId,
+      platform: "google_ads",
+      date: "2026-10-23",
+      conversions: 1,
+      conversionValueMinor: 1000,
+      spendMinor: 1000,
+      currency: "USD",
+      spendOrigin: "platform_reported",
+      isFixture: false,
+    }));
+    const input = { slug, rows: [{ platform: "google_ads" as const, date: "2026-10-23", conversions: 3, conversionValue: 240.5, spend: 60.25, currency: "USD" }] };
+    await expect(owner.client.mutation(api.analytics.importPlatformClaims, { ...input, rows: [...input.rows, ...input.rows] })).rejects.toThrow(/duplicate platform/);
+    await expect(other.client.mutation(api.analytics.importPlatformClaims, input)).rejects.toThrow();
+    await expect(owner.client.mutation(api.analytics.importPlatformClaims, { ...input, rows: [{ ...input.rows[0], date: "2026-02-30" }] })).rejects.toThrow(/real calendar date/);
+    await owner.client.mutation(api.analytics.importPlatformClaims, input);
+    await owner.client.mutation(api.analytics.importPlatformClaims, { ...input, rows: [{ ...input.rows[0], spend: 75.3 }] });
+    await owner.client.mutation(api.analytics.importPlatformClaims, {
+      slug,
+      rows: [{ platform: "meta_ads", date: "2026-10-22", conversions: 1, conversionValue: 90, spend: 25.5, currency: "EUR" }],
+    });
+
+    const rows = await t.run(async (ctx) => ctx.db.query("platformClaims").withIndex("by_org_platform_date", (q) => q.eq("orgId", orgId).eq("platform", "google_ads").eq("date", "2026-10-23")).collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ conversions: 3, conversionValueMinor: 24_050, spendMinor: 7_530, currency: "USD", spendOrigin: "owner_reported", isFixture: false });
+    const overview = await owner.client.query(api.analytics.overview, { slug, days: 30 });
+    expect(overview?.platformClaims).toMatchObject({ adSpendMinor: 7_530, adSpendByCurrency: { USD: 7_530, EUR: 2_550 } });
+  });
+
   it("counts an identified customer once, not again for renewals or duplicate same-day payments", async () => {
     const t = setup();
     const owner = await asNewUser(t, "first-payer@example.com");

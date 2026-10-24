@@ -50,6 +50,10 @@ describe("Engine v2 wiring", () => {
     const t = setup();
     const w = await workspace(t, "v2-plan@example.com");
     const now = Date.now();
+    await w.client.mutation(api.analytics.importPlatformClaims, {
+      slug: w.slug,
+      rows: [{ platform: "google_ads", date: new Date(now - 30 * 86_400_000).toISOString().slice(0, 10), conversions: 2, conversionValue: 60, spend: 100, currency: "USD" }],
+    });
     await t.run(async (ctx) => {
       await ctx.db.insert("revenueEvents", {
         orgId: w.orgId,
@@ -139,7 +143,7 @@ describe("Engine v2 wiring", () => {
     expect(JSON.stringify(strategy?.expert?.snapshot?.refundExposure)).not.toContain("private-customer");
     expect(strategy?.expert?.snapshot?.channelOutcomes).toMatchObject({
       currency: "USD",
-      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_500, refundMinor: 1_500 }],
+      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_500, refundMinor: 1_500, mediaSpendStatus: "matched", mediaSpendOrigin: "owner_reported", adSpendMinor: 10_000, mediaRoas: 0.85 }],
       partial: false,
     });
     expect(JSON.stringify(strategy?.expert?.snapshot?.channelOutcomes)).not.toContain("private-customer");

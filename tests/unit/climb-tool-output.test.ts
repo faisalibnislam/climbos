@@ -67,6 +67,7 @@ describe("Climb tool output boundary", () => {
         platforms: [{ platform: "google_ads", label: "platform_reported", conversions: 2, conversionValueMinorByCurrency: { USD: 7000 }, firstDate: "2026-10-01", lastDate: "2026-10-02", days: 2 }],
         warning: "Claims may overlap; do not add them together.",
         adSpendMinor: 1000,
+        adSpendByCurrency: { USD: 1000 },
       },
       forecasts: [],
       gaps: [],

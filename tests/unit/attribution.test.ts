@@ -5,6 +5,7 @@ import {
   computeReturnMetrics,
   dedupeConversionEvents,
   dedupeRevenueEvents,
+  mediaBreakEvenRoas,
   platformConcentration,
   roas,
   roi,
@@ -37,6 +38,16 @@ const touches: Touch[] = [
   { customerRef: "c1", occurredAt: T0 + DAY, channel: "meta_ads" }, // after the event: ineligible
   { customerRef: "c2", occurredAt: T0 - 60 * DAY, channel: "organic" }, // outside lookback
 ];
+
+describe("media break-even", () => {
+  it("uses only a valid owner-provided margin and labels the media-only threshold", () => {
+    expect(mediaBreakEvenRoas(0.8)).toBe(1.25);
+    expect(mediaBreakEvenRoas(0.5)).toBe(2);
+    expect(mediaBreakEvenRoas(0)).toBeNull();
+    expect(mediaBreakEvenRoas(1.1)).toBeNull();
+    expect(mediaBreakEvenRoas(undefined)).toBeNull();
+  });
+});
 
 describe("dedupe", () => {
   it("dedupes revenue events by (source, sourceEventId)", () => {
@@ -155,7 +166,15 @@ describe("platform concentration", () => {
       ev({ id: "google-refund", orderRef: "g1", amountMinor: 2_000, kind: "refund", occurredAt: T0 + DAY }),
       ev({ id: "meta-order", source: "polar", customerRef: "c2", orderRef: "m1", amountMinor: 6_000, utmSource: "instagram", utmMedium: "paid_social" }),
       ev({ id: "unknown-order", source: "shopify", customerRef: "c3", orderRef: "u1", amountMinor: 5_000, utmSource: "made-up-channel", utmMedium: "cpc" }),
-    ], { currency: "USD", fromMs: T0, toMs: T0 + 2 * DAY })!;
+    ], {
+      currency: "USD",
+      fromMs: T0,
+      toMs: T0 + 2 * DAY,
+      reportedSpend: [
+        { platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 4_000 },
+        { platform: "meta_ads", date: "2025-01-10", currency: "USD", spendMinor: 10_000 },
+      ],
+    })!;
 
     expect(result.topSource).toBe("Google ads");
     expect(result.attributedPositiveNetMinor).toBe(14_000);
@@ -164,10 +183,28 @@ describe("platform concentration", () => {
     expect(result.totalConversions).toBe(3);
     expect(result.topThreeShare).toBe(1);
     expect(result.sources).toEqual([
-      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000 },
-      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0 },
+      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 4_000, mediaRoas: 2 },
+      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 10_000, mediaRoas: 0.6 },
     ]);
     expect(JSON.stringify(result.sources)).not.toContain("c1");
+  });
+
+  it("does not calculate media efficiency across currencies or a capped spend read", () => {
+    const event = ev({ id: "google-order", customerRef: "c1", utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 });
+    const mismatched = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "EUR", spendMinor: 2_000 }],
+    })!;
+    expect(mismatched.sources[0]).toMatchObject({ mediaSpendStatus: "currency_mismatch" });
+    expect(mismatched.sources[0]).not.toHaveProperty("mediaRoas");
+
+    const partial = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, spendPartial: true,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 2_000 }],
+    })!;
+    expect(partial.spendPartial).toBe(true);
+    expect(partial.sources[0]).toMatchObject({ mediaSpendStatus: "partial" });
+    expect(partial.sources[0]).not.toHaveProperty("mediaRoas");
   });
 
   it("returns a truthful empty attribution state when no recognized UTMs exist", () => {

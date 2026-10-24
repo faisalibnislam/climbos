@@ -91,6 +91,7 @@ import { estimateRun, MAX_RUN_COST_MULTIPLE } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
+import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
@@ -605,8 +606,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
     customerConcentrationLine(job.customerConcentration),
-    platformConcentrationLine(job.platformSourceConcentration),
-    channelOutcomesLine(job.platformSourceConcentration),
+    channelOutcomesLine(job.platformSourceConcentration, b?.unitEconomics?.grossMargin),
     refundExposureLine(job.refundExposure),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
@@ -632,27 +632,33 @@ function customerConcentrationLine(signal: JobCtx["customerConcentration"]): str
   ].join(" ");
 }
 
-/** Tracked platform revenue is a partial last-touch path signal, never proof of causation or dependence. */
-function platformConcentrationLine(signal: JobCtx["platformSourceConcentration"]): string {
-  if (!signal) return "TRACKED PLATFORM REVENUE: no matching, non-demo billing events are available for the last 365 days; do not infer platform dependence.";
-  if (!signal.topSource) return `TRACKED PLATFORM REVENUE (${signal.currency}, last 365 days): none of the recorded positive net billing revenue is attributed to a recognized UTM source. This does not mean the business has no platform dependence.`;
-  const pct = (value: number | null) => value === null ? "unavailable" : `${Math.round(value * 100)}%`;
-  return `TRACKED PLATFORM CONCENTRATION (billing events, trailing 365 days, ${signal.currency}; last-touch association, not cause or a complete dependency inventory): top recognized tagged source ${signal.topSource} accounts for ${pct(signal.topSourceShare)} of ${formatMoney(minorToMajor(signal.attributedPositiveNetMinor, signal.currency), signal.currency)} positive net revenue with recognized tags; top three ${pct(signal.topThreeShare)}. Tagged-source billing conversions ${signal.attributedConversions} of ${signal.totalConversions}. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}Before recommending diversification, validate whether the exposure is recurring, material, and replaceable; do not infer untracked channels or customer access.`;
-}
-
 /** Source-tagged billing outcomes inform channel choices, but do not establish incremental lift or profitability. */
-function channelOutcomesLine(signal: JobCtx["platformSourceConcentration"]): string {
+function channelOutcomesLine(signal: JobCtx["platformSourceConcentration"], ownerGrossMargin?: number): string {
   if (!signal) return "TRACKED CHANNEL OUTCOMES: no matching non-demo billing events are available in the last 365 days; no channel performance comparison is supported.";
   const amount = (minor: number) => formatMoney(minorToMajor(minor, signal.currency), signal.currency);
   if (!signal.sources.length) return `TRACKED CHANNEL OUTCOMES (${signal.currency}, trailing 365 days): no recognized source-tagged billing paths. This does not mean channels produced no customers.`;
-  const rows = signal.sources.slice(0, 6).map((row) =>
-    `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}`,
-  );
+  const rows = signal.sources.slice(0, 6).map((row) => {
+    const spendLabel = row.mediaSpendOrigin === "owner_reported" ? "owner-reported" : row.mediaSpendOrigin === "platform_reported" ? "platform-reported" : row.mediaSpendOrigin === "mixed" ? "mixed-source" : "source-unknown";
+    const spend = row.mediaSpendStatus === "matched"
+      ? `; ${spendLabel} media spend ${amount(row.adSpendMinor ?? 0)}, tracked media ROAS ${row.mediaRoas === null || row.mediaRoas === undefined ? "unavailable (zero spend)" : `${row.mediaRoas.toFixed(2)}x`}`
+      : row.mediaSpendStatus === "not_reported" ? "; platform spend not reported"
+        : row.mediaSpendStatus === "currency_mismatch" ? "; spend not compared because currencies do not match"
+          : row.mediaSpendStatus === "partial" ? "; spend history is partial, so no ratio is calculated" : "";
+    const breakEvenRoas = row.mediaSpendStatus === "matched" ? mediaBreakEvenRoas(ownerGrossMargin) : null;
+    const breakEven = breakEvenRoas !== null && ownerGrossMargin !== undefined
+      ? `; media-only break-even ROAS at the owner-reported ${(ownerGrossMargin * 100).toFixed(0)}% margin is ${breakEvenRoas.toFixed(2)}x before other costs`
+      : "";
+    return `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}${spend}${breakEven}`;
+  });
+  const concentration = signal.topSource
+    ? `Largest recognized source is ${signal.topSource} (${Math.round((signal.topSourceShare ?? 0) * 100)}% of positive tagged net revenue); the top three account for ${Math.round((signal.topThreeShare ?? 0) * 100)}%.`
+    : "There is no positive recognized tagged net revenue to rank by concentration.";
   return [
     `TRACKED CHANNEL OUTCOMES (billing events, ${signal.currency}, trailing 365 days; source-tagged last-touch association, not incremental lift, attribution certainty, or profitability):`,
-    `Recognized source-tagged paths cover ${signal.attributedConversions} of ${signal.totalConversions} billing payment events${signal.partial ? "; the 10,000-event read limit was reached, so this may be incomplete" : ""}. Payment events can include renewals and are not new-customer counts.`,
+    `Recognized source-tagged paths cover ${signal.attributedConversions} of ${signal.totalConversions} billing payment events${signal.partial ? "; the 10,000-event read limit was reached, so this may be incomplete" : ""}${signal.spendPartial ? "; platform spend reached its read limit and is partial" : ""}. Payment events can include renewals and are not new-customer counts.`,
+    concentration,
     ...rows,
-    "Use these as descriptive evidence only. Missing tags do not mean a channel had no effect; do not call a source profitable, calculate CAC, or raise its rank from revenue alone without comparable spend, customer quality, and cost evidence.",
+    "Any ROAS shown is tracked net billing revenue divided by platform-reported media spend at platform level; it is not incremental lift, full ROI, or profit. Missing tags do not mean a channel had no effect. Do not calculate CAC from payment events, call a source profitable, or raise its rank from revenue alone without comparable customer acquisition, margin, and delivery-cost evidence.",
   ].join(" ");
 }
 
@@ -1120,8 +1126,8 @@ export const buildStrategy = internalAction({
               `4. summary: two short bullets on what wins and why.`,
               `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
               `CURRENT BUSINESS DIAGNOSIS (computed from owner data; an observed weak link is not proof of cause):\n${diagnosisBrief(diagnosis)}\nUse this to avoid rewarding channels that only create more demand when the supported bottleneck is later in the customer journey. If the diagnosis is uncertain, do not force a channel change.`,
-              channelOutcomesLine(job.platformSourceConcentration),
-              "Channel history is descriptive last-touch association. It includes payment events that can be renewals, may omit untagged influence, and has no spend denominator; do not claim causality, new-customer acquisition, CAC, or profitability from revenue alone. Treat no observed history as unknown, not evidence against a channel.",
+              channelOutcomesLine(job.platformSourceConcentration, job.business?.unitEconomics?.grossMargin),
+              "Channel history is descriptive last-touch association. It includes payment events that can be renewals and may omit untagged influence. When matched same-currency spend and an owner-reported margin are available, compare tracked media ROAS with the media-only break-even ROAS only as a cautious screen for a bounded follow-up test; it is not incremental lift, full ROI, CAC, or proof of profitability. Treat no observed history as unknown, not evidence against a channel.",
               `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,

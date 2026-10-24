@@ -50,12 +50,25 @@ export interface PlatformConcentration {
     identifiedCustomers: number;
     netRevenueMinor: number;
     refundMinor: number;
+    mediaSpendStatus?: "matched" | "not_reported" | "currency_mismatch" | "partial";
+    mediaSpendOrigin?: "owner_reported" | "platform_reported" | "mixed" | "unknown";
+    adSpendMinor?: number;
+    mediaRoas?: number | null;
   }[];
   topSource: string | null;
   topSourceShare: number | null;
   topThreeShare: number | null;
   duplicatesRemoved: number;
   partial: boolean;
+  spendPartial: boolean;
+}
+
+export interface ReportedAdSpend {
+  platform: string;
+  date: string;
+  currency: string;
+  spendMinor: number;
+  origin?: "owner_reported" | "platform_reported";
 }
 
 /**
@@ -65,7 +78,7 @@ export interface PlatformConcentration {
  */
 export function platformConcentration(
   input: readonly RevenueEvent[],
-  options: { currency: string; fromMs: number; toMs: number; partial?: boolean },
+  options: { currency: string; fromMs: number; toMs: number; partial?: boolean; reportedSpend?: readonly ReportedAdSpend[]; spendPartial?: boolean },
 ): PlatformConcentration | null {
   const { events, duplicates } = dedupeRevenueEvents(input.filter(
     (event) => event.currency === options.currency && event.occurredAt >= options.fromMs && event.occurredAt <= options.toMs,
@@ -127,6 +140,19 @@ export function platformConcentration(
     .filter((row) => row.net > 0)
     .sort((a, b) => b.net - a.net || a.source.localeCompare(b.source));
   const attributedPositiveNetMinor = ranked.reduce((sum, row) => sum + row.net, 0);
+  const sourcePlatform: Record<string, string> = { "Google ads": "google_ads", "Meta ads": "meta_ads" };
+  const fromDay = new Date(options.fromMs).toISOString().slice(0, 10);
+  const toDay = new Date(options.toMs).toISOString().slice(0, 10);
+  const spendByPlatform = new Map<string, { currencies: Set<string>; spendByCurrency: Map<string, number>; origins: Set<string> }>();
+  for (const spend of options.reportedSpend ?? []) {
+    if (spend.date < fromDay || spend.date > toDay) continue;
+    if (!Number.isSafeInteger(spend.spendMinor) || spend.spendMinor < 0) throw new RangeError("Reported ad spend must use nonnegative safe integer minor units");
+    const aggregate = spendByPlatform.get(spend.platform) ?? { currencies: new Set<string>(), spendByCurrency: new Map<string, number>(), origins: new Set<string>() };
+    aggregate.currencies.add(spend.currency.toUpperCase());
+    aggregate.spendByCurrency.set(spend.currency.toUpperCase(), (aggregate.spendByCurrency.get(spend.currency.toUpperCase()) ?? 0) + spend.spendMinor);
+    aggregate.origins.add(spend.origin ?? "unknown");
+    spendByPlatform.set(spend.platform, aggregate);
+  }
   return {
     currency: options.currency,
     fromMs: options.fromMs,
@@ -136,13 +162,33 @@ export function platformConcentration(
     totalConversions,
     attributedPositiveNetMinor,
     sources: [...outcomesBySource.entries()]
-      .map(([source, outcome]) => ({
-        source,
-        paymentEvents: outcome.paymentEvents,
-        identifiedCustomers: outcome.customers.size,
-        netRevenueMinor: outcome.netRevenueMinor,
-        refundMinor: outcome.refundMinor,
-      }))
+      .map(([source, outcome]) => {
+        const platform = sourcePlatform[source];
+        if (!platform) return {
+          source,
+          paymentEvents: outcome.paymentEvents,
+          identifiedCustomers: outcome.customers.size,
+          netRevenueMinor: outcome.netRevenueMinor,
+          refundMinor: outcome.refundMinor,
+        };
+        const spend = spendByPlatform.get(platform);
+        if (options.spendPartial) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "partial" as const };
+        if (!spend) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "not_reported" as const };
+        const mediaSpend = spend.spendByCurrency.get(options.currency.toUpperCase());
+        if (spend.currencies.size !== 1 || mediaSpend === undefined) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "currency_mismatch" as const };
+        if (!Number.isSafeInteger(mediaSpend)) throw new RangeError("Reported ad spend total exceeds safe integer minor units");
+        return {
+          source,
+          paymentEvents: outcome.paymentEvents,
+          identifiedCustomers: outcome.customers.size,
+          netRevenueMinor: outcome.netRevenueMinor,
+          refundMinor: outcome.refundMinor,
+          mediaSpendStatus: "matched" as const,
+          mediaSpendOrigin: spend.origins.size === 1 ? [...spend.origins][0] as "owner_reported" | "platform_reported" | "unknown" : "mixed" as const,
+          adSpendMinor: mediaSpend,
+          mediaRoas: mediaSpend > 0 ? outcome.netRevenueMinor / mediaSpend : null,
+        };
+      })
       .sort((a, b) => b.netRevenueMinor - a.netRevenueMinor || a.source.localeCompare(b.source)),
     topSource: ranked[0]?.source ?? null,
     topSourceShare: attributedPositiveNetMinor ? (ranked[0]?.net ?? 0) / attributedPositiveNetMinor : null,
@@ -151,5 +197,6 @@ export function platformConcentration(
       : null,
     duplicatesRemoved: duplicates,
     partial: options.partial ?? false,
+    spendPartial: options.spendPartial ?? false,
   };
 }
