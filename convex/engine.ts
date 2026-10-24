@@ -346,6 +346,49 @@ export const getRun = internalQuery({
   },
 });
 
+/** Fetch reusable research only inside the same workspace and while still fresh. */
+export const getResearchCache = internalQuery({
+  args: { orgId: v.id("organizations"), cacheKey: v.string() },
+  handler: async (ctx, { orgId, cacheKey }) => {
+    if (!/^[a-f0-9]{64}$/.test(cacheKey) || !(await ctx.db.get(orgId))) return null;
+    const row = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", orgId).eq("cacheKey", cacheKey)).first();
+    if (!row || row.expiresAt <= Date.now()) return null;
+    return { notes: row.notes, sources: row.sources, expiresAt: row.expiresAt };
+  },
+});
+
+/** Store exact-request research without including the prompt or business data in the index key. */
+export const putResearchCache = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    cacheKey: v.string(),
+    agentId: v.string(),
+    modelKey: v.string(),
+    notes: v.string(),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (!/^[a-f0-9]{64}$/.test(args.cacheKey) || args.notes.length > 40_000 || args.sources.length > 50 || args.expiresAt <= Date.now() || !(await ctx.db.get(args.orgId))) return null;
+    const existing = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", args.orgId).eq("cacheKey", args.cacheKey)).first();
+    const data = { agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt: Date.now(), expiresAt: args.expiresAt };
+    if (existing) await ctx.db.patch(existing._id, data);
+    else await ctx.db.insert("researchCache", { orgId: args.orgId, cacheKey: args.cacheKey, ...data });
+    return true;
+  },
+});
+
+/** Delete expired cache entries in bounded pages; repeat until less than a page remains. */
+export const purgeExpiredResearchCache = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("researchCache").withIndex("by_expires", (q) => q.lte("expiresAt", Date.now())).take(100);
+    for (const row of rows) await ctx.db.delete(row._id);
+    if (rows.length === 100) await ctx.scheduler.runAfter(0, internal.engine.purgeExpiredResearchCache, {});
+    return rows.length;
+  },
+});
+
 /** Begin (or resume) a step. Returns a checkpoint if it already succeeded. */
 export const beginStep = internalMutation({
   args: {

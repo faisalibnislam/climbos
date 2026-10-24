@@ -357,6 +357,14 @@ async function runAgentTask<T>(
   const deps: AgentDeps = {
     deadline: startedAt + softLimitMs(),
     progressed: () => tracker.did,
+    ...(process.env.CLIMBOS_FAKE_LLM ? {} : {
+      researchCache: {
+        get: async (cacheKey: string) => ctx.runQuery(internal.engine.getResearchCache, { orgId: job.org._id, cacheKey }),
+        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string }[] }, expiresAt: number) => {
+          await ctx.runMutation(internal.engine.putResearchCache, { orgId: job.org._id, cacheKey, agentId: spec.id, modelKey: spec.models.research, ...value, expiresAt });
+        },
+      },
+    }),
     beforeRevision: async (round) => {
       // Idempotent per round: a compute step marks that this round's cost was reserved.
       const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `${spec.label}: reserve revision ${round}`, spec.role);
@@ -459,7 +467,7 @@ async function runAgentTask<T>(
       return attemptOn(req.modelKey);
     },
     phase: async (key, label, fn) => {
-      const step = await begin(ctx, job.run._id, baseIndex + key.index, "model", label, spec.role);
+      const step = await begin(ctx, job.run._id, baseIndex + key.index, key.stepKind ?? "model", label, spec.role);
       if (step.checkpoint !== undefined) return step.checkpoint as never;
       const stepId = step.stepId!;
       tracker.did = true;

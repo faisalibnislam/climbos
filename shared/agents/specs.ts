@@ -2640,12 +2640,14 @@ export function researchFor(task: TaskType | "business_insights" | "prospecting"
       return {
         maxSearches: 3,
         maxFetches: 3,
+        cacheTtlMs: 15 * 60_000,
         brief: `Find at most three recent social trends or meme-inspired formats that could fit ${ctx.businessName}${site} on these requested platforms: ${(ctx.platforms ?? []).join(", ") || "the platforms in the task"}.${market}${scope} Prefer sources with visible recent activity and a date. Use official platform trend resources where available, but label ad-library or paid-creative examples as paid evidence, not proof of organic popularity. For each useful signal, report the exact URL, what was observed, date/freshness if shown, platform/market, and a cautious fit idea. Do not call an undated signal current. Skip unrelated viral items, tragedy, sensitive news, political bait, copied creator assets, and trends incompatible with the business or platform. If no source supports a relevant current signal, say so and recommend evergreen ideas instead. Do not recommend a specific song, meme image, creator clip, or branded character for reuse; original and licensed assets only.`,
       };
     case "growth_strategy":
       return {
         maxSearches: 7,
         maxFetches: 4,
+        cacheTtlMs: 6 * 60 * 60_000,
         brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences.${market}${scope} First identify the business's served geography from its own pages or supplied owner facts. Use a local market only when a named location is supported; never infer a city or country from currency, timezone, domain suffix or search ranking. If the location is unknown, say so and keep findings geography-neutral. For local or regional businesses, prioritize sources and channels available in that served area:
 1. Communities, newsletters, podcasts, YouTube/TikTok creators, directories, marketplaces, review sites and app stores relevant to this business and its location (name, URL, rough size/audience if visible).
 2. Complementary businesses or platforms that could partner (who already serves the same customer before or after this business).
@@ -2657,6 +2659,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 8,
         maxFetches: 8,
+        cacheTtlMs: 6 * 60 * 60_000,
         brief: `For ${ctx.businessName}${site}.${market} First identify the served market and customer geography from pages read in this run or supplied owner facts. Match competitors, customer reviews, communities, directories and market developments to that geography and language when supported. Never infer a city or country from currency, timezone, domain suffix or search ranking; if the location is unknown, say so and leave geography-dependent findings unanswered.
 1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors. For each competitor, add up to 8 comparison observations across target customer, positioning, offer, pricing, proof, distribution, and customer experience when the supplied pages support them. Each observation must include the exact sourceUrl read, what that page shows, and a separate cautious implication for this business. Omit dimensions with no evidence; unknown is not a weakness, and do not claim superiority or that an observed difference causes customer choice.
 2. Voice of customer: find reviews and forum threads (G2/Capterra/Trustpilot/Google reviews/Reddit/app stores, whichever fit this business type) about this business and its top competitors. Collect 15-30 short verbatim phrases with URLs: why people switch, what almost stopped them, outcomes they describe, words they use for the problem.
@@ -2666,12 +2669,14 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 5,
         maxFetches: 4,
+        cacheTtlMs: 60 * 60_000,
         brief: `First inspect the business's directly observed pages in the supplied site inventory and find any existing URL that already serves the target customer task. Prefer improving that page when it fits; propose a new URL only when the inventory shows no suitable page. A sitemap or browser fetch is a discovery observation, not evidence of search-engine indexing. Then search the target query and close variants. Record what currently ranks (page types, angles, gaps), whether an AI Overview appears, and related questions people ask. Look for customer language in relevant discussions or reviews when available. Fetch the top 2-3 results to see what they cover and miss. Save exact source URLs and distinguish what you observed from what you infer.`,
       };
     case "ad_drafts":
       return {
         maxSearches: 3,
         maxFetches: 3,
+        cacheTtlMs: 60 * 60_000,
         brief: `Look for competitors' current ads and offers (Google results for the main keywords, competitor landing pages) and the exact phrases buyers use. Note claims competitors make so ours can differ.`,
       };
     case "prospecting":
@@ -2679,6 +2684,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 12,
         maxFetches: 25,
+        cacheTtlMs: 15 * 60_000,
         brief: `Find real companies that are a strong fit to buy from ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}, from public web sources only.
 1. Look for companies SHOWING THE NEED: e.g. their own site uses a weaker alternative or a manual workaround this business replaces, they are hiring for the job it does, they just launched or expanded, or they complain about the problem in public. Category + location searches, directories, marketplaces, association member lists, job boards and local news all work.
 2. Skip competitors, and partners/resellers/certified agencies of a direct competitor (they are invested in the rival).
@@ -2689,6 +2695,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 12,
         maxFetches: 25,
+        cacheTtlMs: 15 * 60_000,
         brief: `Find real creators and influencers whose audience matches the buyers of ${ctx.businessName}${site}${ctx.country ? ` (sells in ${ctx.country})` : ""}, from public pages only.
 1. Work out 3-5 audience niches from the positioning, then search the platforms that fit (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts), creator lists and directories.
 2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, creator location, separately stated audience location if available, recent activity, and one recent post that shows fit (URL + what it's about). Do not infer audience location from creator location.
@@ -2698,7 +2705,7 @@ Only report what you actually found, with URLs.`,
 6. Skip inactive accounts and off-niche creators. Do not label an audience as fake or bought without reliable evidence. Gather ~1.5x what's needed; record a URL for every observation.`,
       };
     case "conversion_audit":
-      return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };
+      return { maxSearches: 2, maxFetches: 4, cacheTtlMs: 60 * 60_000, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };
     default:
       return undefined;
   }

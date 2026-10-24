@@ -32,6 +32,14 @@ export interface ResearchSpec {
   brief: string;
   allowedDomains?: string[];
   userLocation?: { country?: string; region?: string; city?: string; timezone?: string };
+  /** How long an exact tenant-scoped research result may be reused; absent means no cross-run reuse. */
+  cacheTtlMs?: number;
+}
+
+export interface CachedResearch {
+  notes: string;
+  sources: { url: string; title?: string }[];
+  expiresAt: number;
 }
 
 export interface PhaseModels {

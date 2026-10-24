@@ -16,6 +16,7 @@ crons.interval("renew complimentary packages", { minutes: 60 }, internal.admin.r
 crons.interval("refresh staff dashboard", { minutes: 30 }, internal.admin.refreshDashboard, {});
 // Retention: raw scrape payloads 30 days; previews 30 days; demo workspaces 7 days.
 crons.daily("purge raw research", { hourUTC: 5, minuteUTC: 0 }, internal.maintenance.purgeExpiredSources, {});
+crons.daily("purge expired tenant research cache", { hourUTC: 5, minuteUTC: 5 }, internal.engine.purgeExpiredResearchCache, {});
 crons.daily("purge previews", { hourUTC: 5, minuteUTC: 15 }, internal.preview.purgeExpired, {});
 crons.daily("purge link click dedupe", { hourUTC: 5, minuteUTC: 20 }, internal.links.pruneClickIps, {});
 crons.daily("expire demos", { hourUTC: 5, minuteUTC: 30 }, internal.demo.expireDemos, {});

@@ -1,12 +1,13 @@
 import { fitText, reportDropped } from "./context";
 import { z } from "zod";
-import type { MessageParam, SystemBlock, TurnRequest, TurnResult } from "../ai/types";
+import { ZERO_USAGE, type MessageParam, type SystemBlock, type TurnRequest, type TurnResult } from "../ai/types";
 import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
 import { formatGrowthKnowledge, knowledgeReferenceSet, retrieveGrowthKnowledge } from "../knowledge/retrieve";
 import { KNOWLEDGE_LAYER_POLICY } from "../knowledge/layers";
-import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
+import { canonicalJson, sha256Hex } from "../policy";
+import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CachedResearch, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
 
 /**
  * Engine v2 agent loop (Anthropic's evaluator-optimizer pattern, run as a
@@ -37,6 +38,7 @@ export interface PhaseRecord {
   round: number;
   modelKey: ModelKey;
   result: TurnResult;
+  cacheHit?: boolean;
 }
 
 export interface AgentDeps {
@@ -57,6 +59,11 @@ export interface AgentDeps {
    * version instead of failing. Hosts reserve the round's cost here.
    */
   beforeRevision?: (round: number) => Promise<boolean>;
+  /** Optional tenant-scoped cache for exact research requests. */
+  researchCache?: {
+    get: (key: string) => Promise<CachedResearch | null>;
+    put: (key: string, value: Omit<CachedResearch, "expiresAt">, expiresAt: number) => Promise<void>;
+  };
 }
 
 export interface PhaseKey {
@@ -64,6 +71,8 @@ export interface PhaseKey {
   round: number;
   /** Stable small integer per phase+round, used for idempotent step keys. */
   index: number;
+  /** Cache reads are measured as compute work, not provider/model attempts. */
+  stepKind?: "model" | "compute";
 }
 
 export const OPERATING_RULES = `# Role
@@ -208,7 +217,35 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
   if (!input.research) return null;
   checkDeadline(deps);
   const r = input.research;
-  return deps.phase({ phase: "research", round: 0, index: 0 }, `${spec.label}: research`, async () => {
+  const cacheEnabled = Boolean(deps.researchCache && Number.isFinite(r.cacheTtlMs) && r.cacheTtlMs! > 0);
+  const cacheKey = cacheEnabled ? await researchCacheKey(spec, input) : null;
+  let cached: CachedResearch | null = null;
+  if (cacheKey && deps.researchCache) {
+    try {
+      cached = await deps.researchCache.get(cacheKey);
+      if (cached && cached.expiresAt <= Date.now()) cached = null;
+    } catch {
+      cached = null;
+    }
+  }
+  return deps.phase(
+    { phase: "research", round: 0, index: 0, ...(cached ? { stepKind: "compute" as const } : {}) },
+    `${spec.label}: research${cached ? " (cached)" : ""}`,
+    async () => {
+      if (cached) {
+        const result: TurnResult = {
+          ok: true,
+          output: cached.notes,
+          text: cached.notes,
+          appended: [],
+          usage: ZERO_USAGE,
+          costMicros: 0,
+          sources: cached.sources,
+          actualModelId: "tenant-research-cache",
+          stopReason: "cache_hit",
+        };
+        return { value: { notes: cached.notes, sources: cached.sources }, record: { phase: "research", round: 0, modelKey: spec.models.research, result, cacheHit: true } };
+      }
     const req: TurnRequest = {
       modelKey: spec.models.research,
       system: [
@@ -233,12 +270,38 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
     };
     const result = await deps.turn(req);
     if (!result.ok) failure(result);
+      const value = { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.slice(0, 50).map((s) => ({ url: s.url, title: s.title })) };
+      if (cacheKey && deps.researchCache && value.sources.length > 0) {
+        const ttl = Math.max(1_000, Math.min(r.cacheTtlMs ?? 0, 24 * 60 * 60_000));
+        try {
+          await deps.researchCache.put(cacheKey, value, Date.now() + ttl);
+        } catch {
+          // Cache failure must not discard successfully paid research.
+        }
+      }
     return {
-      value: { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.map((s) => ({ url: s.url, title: s.title })) },
+        value,
       record: { phase: "research", round: 0, modelKey: spec.models.research, result },
     };
-  });
+    },
+  );
 
+}
+
+/** Exact-request hash; tenant isolation is enforced separately by the storage index. */
+export async function researchCacheKey<T>(spec: AgentSpec<T>, input: AgentInput): Promise<string> {
+  const request = {
+    cacheVersion: 1,
+    agentId: spec.id,
+    researchModel: spec.models.research,
+    research: input.research,
+    task: input.task,
+    brief: input.brief,
+    facts: input.facts,
+    untrustedContext: input.untrustedContext ?? null,
+    industryBusinessTypeId: input.industryBusinessTypeId ?? null,
+  };
+  return sha256Hex(`climbos-research-cache:v1:${canonicalJson(request as unknown as Parameters<typeof canonicalJson>[0])}`);
 }
 
 export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: AgentDeps): Promise<AgentRunResult<T>> {

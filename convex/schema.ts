@@ -4148,6 +4148,20 @@ export default defineSchema({
     .index("by_run", ["runId", "index"])
     .index("by_idempotency", ["idempotencyKey"]),
 
+  /** Tenant-scoped reuse of exact-request research notes; cache keys contain no prompt text. */
+  researchCache: defineTable({
+    orgId: v.id("organizations"),
+    cacheKey: v.string(),
+    agentId: v.string(),
+    modelKey: v.string(),
+    notes: v.string(),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_org_key", ["orgId", "cacheKey"])
+    .index("by_expires", ["expiresAt"]),
+
   actionReceipts: defineTable({
     orgId: v.id("organizations"),
     runId: v.optional(v.id("workflowRuns")),
