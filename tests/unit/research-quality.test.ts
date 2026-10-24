@@ -134,6 +134,29 @@ describe("research source assessment", () => {
     expect(unsupportedQuote).toMatchObject([{ severity: "error", rule: "conversion_evidence_quote", path: "findings[0].evidenceQuote" }]);
   });
 
+  it("binds website visual observations to the exact captured page and viewport", () => {
+    const pageUrl = "https://example.com/pricing/";
+    const screenshot = { sourceArtifactId: pageUrl, platform: "website_mobile", imageUrl: "data:image/png;base64,AA==", note: "Synthetic mobile viewport" };
+    const input = {
+      task: "Audit the business website",
+      brief: "Example Co",
+      facts: [],
+      availableSourceUrls: [pageUrl],
+      visualInputs: [screenshot],
+      untrustedContext: `<untrusted_content source="${pageUrl}">Plans start at $29 per month.</untrusted_content>`,
+    };
+    const finding = { area: "mobile layout", observation: "The primary action is below the visible content.", recommendation: "Review the first-screen hierarchy.", impact: "medium" as const, evidenceKind: "inference" as const, evidenceQuote: "Plans start at $29 per month.", sourceUrl: pageUrl };
+    const base = { findings: [finding], quickWins: [], clarityVerdict: "Reviewed", messageMatch: "Not measured.", prioritizedFixes: [], socialReview: { summary: "No posts supplied", findings: [], contentMixSuggestions: [] } };
+    const valid = ConversionAuditV2Schema.parse({ ...base, findings: [{ ...finding, visualEvidence: { view: "mobile", sourceUrl: pageUrl, observation: "The primary button is below the visible heading and price." } }] });
+    expect(lintConversionAuditSources(valid, input)).toEqual([]);
+
+    const wrongViewport = ConversionAuditV2Schema.parse({ ...base, findings: [{ ...finding, visualEvidence: { view: "desktop", sourceUrl: pageUrl, observation: "The primary button is below the visible heading and price." } }] });
+    expect(lintConversionAuditSources(wrongViewport, input)).toMatchObject([{ severity: "error", rule: "conversion_visual_evidence", path: "findings[0].visualEvidence" }]);
+
+    const wrongPage = ConversionAuditV2Schema.parse({ ...base, findings: [{ ...finding, visualEvidence: { view: "mobile", sourceUrl: "https://example.com/other/", observation: "A button is visible." } }] });
+    expect(lintConversionAuditSources(wrongPage, input)).toMatchObject([{ severity: "error", rule: "conversion_visual_evidence", path: "findings[0].visualEvidence" }]);
+  });
+
   it("requires implementation-ready page fixes to cite a read page and avoid unsupported sample-copy claims", () => {
     const input = { task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"], untrustedContext: '<untrusted_content source="https://example.com/pricing/">TITLE: Pricing\nPAGE TEXT:\nPlans include the features you need.</untrusted_content>' };
     const audit = {

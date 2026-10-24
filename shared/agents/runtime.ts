@@ -324,7 +324,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     role: "user",
     content: input.visualInputs?.length
       ? [
-          { type: "text", text: `${baseUser}\n\nVISUAL REFERENCES (analyze only as one-frame creative samples; identify findings by sourceArtifactId and platform):\n${input.visualInputs.map((image) => `- ${image.sourceArtifactId} (${image.platform}): ${image.note}`).join("\n")}` },
+          { type: "text", text: `${baseUser}\n\nVISUAL REFERENCES (use only what is directly visible in each supplied frame; identify evidence by its exact sourceArtifactId and platform/view):\n${input.visualInputs.map((image) => `- ${image.sourceArtifactId} (${image.platform}): ${image.note}`).join("\n")}` },
           ...input.visualInputs.map((image) => ({ type: "image" as const, image_url: image.imageUrl, detail: "low" as const })),
         ]
       : baseUser,

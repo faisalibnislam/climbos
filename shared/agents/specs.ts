@@ -485,6 +485,7 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
   findings: z.array(ConversionAuditSchema.shape.findings.element.extend({
     evidenceKind: z.enum(["observed", "inference"]),
     evidenceQuote: z.string().min(1).max(240),
+    visualEvidence: z.object({ view: z.enum(["desktop", "mobile"]), sourceUrl: z.string(), observation: z.string().min(1).max(360) }).optional(),
   })),
   clarityVerdict: z.string(),
   messageMatch: z.string(),
@@ -499,6 +500,7 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
     sampleCopy: z.string(),
     uxChanges: z.array(z.string()).max(6),
     measurementPlan: z.string(),
+    visualEvidence: z.object({ view: z.enum(["desktop", "mobile"]), sourceUrl: z.string(), observation: z.string().min(1).max(360) }).optional(),
   })).max(4),
   socialReview: z.object({
     summary: z.string(),
@@ -1877,6 +1879,14 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   ];
   const copyClaims = out.prioritizedFixes.map((fix, i) => ({ path: `prioritizedFixes[${i}].sampleCopy`, text: fix.sampleCopy }));
   const normalizeQuote = (text: string) => text.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const visualIssues: LintIssue[] = [];
+  const checkVisual = (sourceUrl: string, visual: { view: "desktop" | "mobile"; sourceUrl: string; observation: string } | undefined, path: string) => {
+    if (!visual) return;
+    const expected = normalizeSourceUrl(sourceUrl);
+    const cited = normalizeSourceUrl(visual.sourceUrl);
+    const hasImage = (input.visualInputs ?? []).some((image) => normalizeSourceUrl(image.sourceArtifactId) === cited && image.platform === `website_${visual.view}`);
+    if (!expected || !cited || expected !== cited || !hasImage) visualIssues.push({ severity: "error", rule: "conversion_visual_evidence", message: "Visual evidence must cite the exact page URL and desktop/mobile screenshot supplied to this audit.", path });
+  };
   const pageBlocks = [...(input.untrustedContext ?? "").matchAll(/<untrusted_content source="([^"]+)">\s*([\s\S]*?)\s*<\/untrusted_content>/gi)];
   const quoteIssues: LintIssue[] = [];
   const checkQuote = (sourceUrl: string, evidenceQuote: string, path: string) => {
@@ -1889,6 +1899,8 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   };
   out.findings.forEach((finding, i) => checkQuote(finding.sourceUrl, finding.evidenceQuote, `findings[${i}].evidenceQuote`));
   out.prioritizedFixes.forEach((fix, i) => checkQuote(fix.pageUrl, fix.evidenceQuote, `prioritizedFixes[${i}].evidenceQuote`));
+  out.findings.forEach((finding, i) => checkVisual(finding.sourceUrl, finding.visualEvidence, `findings[${i}].visualEvidence`));
+  out.prioritizedFixes.forEach((fix, i) => checkVisual(fix.pageUrl, fix.visualEvidence, `prioritizedFixes[${i}].visualEvidence`));
   const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
   const suppliedPosts = new Map<string, string>();
   if (socialBlock?.[1]) {
@@ -1914,7 +1926,7 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   out.socialReview.contentMixSuggestions.forEach((suggestion, i) => suggestion.sourceArtifactIds.forEach((id, sourceIndex) => {
     if (!suppliedPosts.has(id)) socialSourceIssues.push({ severity: "error", rule: "social_post_source", message: "Content-mix evidence must use a post ID supplied to this audit.", path: `socialReview.contentMixSuggestions[${i}].sourceArtifactIds[${sourceIndex}]` });
   }));
-  return [...lintAvailableSourceUrls(refs, input), ...quoteIssues, ...socialSourceIssues, ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
+  return [...lintAvailableSourceUrls(refs, input), ...quoteIssues, ...visualIssues, ...socialSourceIssues, ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
 }
 
 /* ---------------- Rubrics ---------------- */

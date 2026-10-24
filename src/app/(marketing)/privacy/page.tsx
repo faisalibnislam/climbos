@@ -80,7 +80,10 @@ export default function PrivacyPage() {
         We use service providers for hosting and our database, email delivery, payments, product analytics and AI models. They may
         process your information only to provide their service to us. When you run a website audit, we send the public page URL being
         checked to Google PageSpeed Insights for synthetic mobile performance, accessibility, and basic SEO checks and, when configured,
-        the Chrome UX Report API for aggregated mobile performance measurements. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
+        the Chrome UX Report API for aggregated mobile performance measurements. If the authenticated render worker is available,
+        we also capture one already-read public page in desktop and mobile viewports and send those temporary screenshots to our AI
+        provider for visible-page review. They are not saved with the audit. This is a synthetic sample and does not measure customer
+        behavior. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
         identifiers, timestamps, content type, available post links and platform-returned engagement counts from ClimbOS and
         connected Facebook Pages or Instagram professional accounts to our AI provider for review. Engagement values are limited
         to the sampled posts and are not account-wide analytics. For connected Instagram accounts, we may also send up to three
