@@ -2458,8 +2458,11 @@ export default defineSchema({
     /** Owner-review routing for potentially sensitive public reviews; signals are not verified claims. */
     reviewSafety: v.optional(v.object({
       categories: v.array(v.union(v.literal("legal"), v.literal("health_safety"), v.literal("discrimination"), v.literal("payment"), v.literal("privacy"))),
+      reason: v.union(v.literal("sensitive_topic"), v.literal("low_rating_without_text")),
       detectedAt: v.number(),
     })),
+    /** Structured rating from a pasted public review; not inferred from star glyphs. */
+    reviewRating: v.optional(v.number()),
     suggestedReply: v.optional(v.string()),
     finalReply: v.optional(v.string()),
     status: v.union(v.literal("new"), v.literal("suggested"), v.literal("replied"), v.literal("dismissed"), v.literal("escalated")),

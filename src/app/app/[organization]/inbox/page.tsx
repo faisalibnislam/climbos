@@ -112,9 +112,12 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         </div>
         {m.subject ? <p className="text-sm font-medium text-ink">{m.subject}</p> : null}
         <p className="whitespace-pre-wrap text-sm text-ink-2">{m.text}</p>
-        {m.kind === "review" && m.reviewSafety?.categories.length ? (
+        {m.kind === "review" && m.reviewSafety?.reason ? (
           <Callout tone="danger" title="Owner review needed">
-            This review may involve a {m.reviewSafety.categories.map((category) => REVIEW_SAFETY_LABELS[category] ?? "sensitive concern").join(" or ")}. This is a routing signal, not a verified finding. ClimbOS has paused AI drafting; an owner should review the issue and reply directly on the review platform.
+            {m.reviewSafety.categories.length
+              ? <>This review may involve a {m.reviewSafety.categories.map((category) => REVIEW_SAFETY_LABELS[category] ?? "sensitive concern").join(" or ")}.</>
+              : <>This is a low rating without a written reason, so ClimbOS cannot safely guess what happened.</>}
+            {" "}This is a routing signal, not a verified finding. ClimbOS has paused AI drafting; an owner should review the issue and reply directly on the review platform.
           </Callout>
         ) : null}
         {m.finalReply && m.status === "replied" ? (
@@ -126,9 +129,9 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         {!done && m.kind !== "booking" ? (
           <div className="flex flex-col gap-2">
             {drafting && m.draftRunId ? <RunProgressCompact slug={slug} runId={m.draftRunId} /> : null}
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write a reply" : m.kind === "review" ? m.reviewSafety?.categories.length ? "Write a reply after owner review" : "Draft, then post under the review" : "Draft, then post on the platform"} />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} autosize aria-label="Your reply" placeholder={m.canReply ? "Write a reply" : m.kind === "review" ? m.reviewSafety?.reason ? "Write a reply after owner review" : "Draft, then post under the review" : "Draft, then post on the platform"} />
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" loading={busy === "draft"} disabled={drafting || Boolean(m.reviewSafety?.categories.length)} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
+              <Button variant="secondary" loading={busy === "draft"} disabled={drafting || Boolean(m.reviewSafety?.reason)} onClick={() => run("draft", () => draft({ slug, id: m.id }))}>
                 <Magic aria-hidden /> {m.suggestedReply ? "Redraft" : "Draft"}
               </Button>
               {m.canReply ? (

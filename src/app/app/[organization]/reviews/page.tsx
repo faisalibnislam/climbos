@@ -22,7 +22,7 @@ export default function ReviewsPage() {
   const [url, setUrlText] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [extra, setExtra] = useState("");
-  const [review, setReview] = useState({ author: "", text: "" });
+  const [review, setReview] = useState({ author: "", text: "", rating: "" });
   const [busy, setBusy] = useState<string | null>(null);
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
     setBusy(key);
@@ -145,8 +145,9 @@ export default function ReviewsPage() {
             </div>
           </div>
           <Input value={review.author} placeholder="Reviewer's name" aria-label="Reviewer's name" onChange={(e) => setReview({ ...review, author: e.target.value })} />
-          <Textarea value={review.text} onChange={(e) => setReview({ ...review, text: e.target.value })} rows={3} autosize aria-label="Review text" placeholder="Paste the review" />
-          <Button className="self-start" variant="secondary" loading={busy === "review"} disabled={!review.text.trim()} onClick={() => run("review", async () => { await addReview({ slug, author: review.author, text: review.text, source: "google" }); setReview({ author: "", text: "" }); }, "Added to your Inbox")}>
+          <Input type="number" min={1} max={5} step={1} value={review.rating} onChange={(e) => setReview({ ...review, rating: e.target.value })} aria-label="Review rating from 1 to 5" placeholder="Rating (1–5), if shown" />
+          <Textarea value={review.text} onChange={(e) => setReview({ ...review, text: e.target.value })} rows={3} autosize aria-label="Review text" placeholder="Paste the review text. A rating alone is okay when it is 4 or 5 stars." />
+          <Button className="self-start" variant="secondary" loading={busy === "review"} disabled={!review.text.trim() && !(Number.isInteger(Number(review.rating)) && Number(review.rating) >= 1 && Number(review.rating) <= 5)} onClick={() => run("review", async () => { await addReview({ slug, author: review.author, text: review.text, rating: review.rating ? Number(review.rating) : undefined, source: "google" }); setReview({ author: "", text: "", rating: "" }); }, "Added to your Inbox")}>
             <Star aria-hidden /> Add to Inbox
           </Button>
         </CardContent>

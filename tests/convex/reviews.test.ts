@@ -20,7 +20,31 @@ describe("reviews engine", () => {
     await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "I was injured by an unsafe product and will contact my lawyer.", source: "google" });
     const [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
     expect(review).toMatchObject({ status: "escalated", reviewSafety: { categories: ["legal", "health_safety"] } });
-    await expect(owner.client.mutation(api.inbox.draftReply, { slug, id: review.id })).rejects.toThrow(/sensitive issue.*owner should review/i);
+    await expect(owner.client.mutation(api.inbox.draftReply, { slug, id: review.id })).rejects.toThrow(/direct owner review/i);
+  });
+
+  it("uses an approved fixed reply for a positive rating-only review without a model run", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "rating-only-review@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await expect(owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "A review", rating: 4.5, source: "google" })).rejects.toThrow(/whole number from 1 to 5/);
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "", rating: 5, source: "google" });
+    let [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
+    expect(review).toMatchObject({ status: "new", reviewRating: 5, text: "★★★★★" });
+    await owner.client.mutation(api.inbox.draftReply, { slug, id: review.id });
+    [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
+    expect(review).toMatchObject({ status: "suggested", suggestedReply: "Thank you for taking the time to leave a 5-star rating. We appreciate your support." });
+    expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).collect())).toHaveLength(0);
+  });
+
+  it("routes a low rating without written context to the owner instead of guessing", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "low-rating-review@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "", rating: 2, source: "google" });
+    const [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
+    expect(review).toMatchObject({ status: "escalated", reviewRating: 2, reviewSafety: { categories: [], reason: "low_rating_without_text" } });
+    await expect(owner.client.mutation(api.inbox.draftReply, { slug, id: review.id })).rejects.toThrow(/direct owner review/);
   });
 
   it("asks won customers from the mailbox, tracks the click and routes private notes to the Inbox", async () => {

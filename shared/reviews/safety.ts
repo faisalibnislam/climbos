@@ -1,6 +1,11 @@
 export const REVIEW_SAFETY_CATEGORIES = ["legal", "health_safety", "discrimination", "payment", "privacy"] as const;
 export type ReviewSafetyCategory = (typeof REVIEW_SAFETY_CATEGORIES)[number];
 
+export function ratingOnlyReviewReply(rating: number): string | null {
+  if (!Number.isInteger(rating) || rating < 4 || rating > 5) return null;
+  return `Thank you for taking the time to leave a ${rating}-star rating. We appreciate your support.`;
+}
+
 const SIGNALS: Array<{ category: ReviewSafetyCategory; pattern: RegExp }> = [
   { category: "legal", pattern: /\b(lawyer|attorney|lawsuit|sue|sued|court|legal action|regulator|regulatory complaint)\b/i },
   { category: "health_safety", pattern: /\b(injur(?:y|ed)|unsafe|safety issue|hospital|poison(?:ed|ing)?|allerg(?:y|ic reaction)|contaminat(?:ed|ion)|fire|assault)\b/i },

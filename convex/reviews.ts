@@ -176,10 +176,13 @@ export const addReview = mutation({
   handler: async (ctx, a) => {
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const text = a.text.trim().slice(0, 4000);
-    if (!text) throw appError("INVALID", "Paste the review text.");
     const now = Date.now();
-    const rating = a.rating ? Math.max(1, Math.min(5, Math.round(a.rating))) : null;
+    if (a.rating !== undefined && (!Number.isInteger(a.rating) || a.rating < 1 || a.rating > 5)) throw appError("INVALID", "Rating must be a whole number from 1 to 5.");
+    const rating = a.rating ?? null;
+    if (!text && !rating) throw appError("INVALID", "Paste review text or enter its 1–5 star rating.");
     const safetyCategories = reviewSafetySignals(text);
-    return ctx.db.insert("communityMessages", { orgId: org._id, channel: a.source.slice(0, 30) || "google", kind: "review", externalId: `review:${now}`, authorName: a.author.trim().slice(0, 80) || "Reviewer", text: `${rating ? `${"★".repeat(rating)}${"☆".repeat(5 - rating)}\n\n` : ""}${text}`, receivedAt: now, status: safetyCategories.length ? "escalated" : "new", ...(safetyCategories.length ? { reviewSafety: { categories: safetyCategories, detectedAt: now } } : {}), createdAt: now, updatedAt: now });
+    const lowRatingWithoutText = Boolean(rating && rating <= 3 && !text);
+    const ownerReviewReason = safetyCategories.length ? "sensitive_topic" as const : lowRatingWithoutText ? "low_rating_without_text" as const : null;
+    return ctx.db.insert("communityMessages", { orgId: org._id, channel: a.source.slice(0, 30) || "google", kind: "review", externalId: `review:${now}`, authorName: a.author.trim().slice(0, 80) || "Reviewer", text, ...(rating ? { reviewRating: rating } : {}), receivedAt: now, status: ownerReviewReason ? "escalated" : "new", ...(ownerReviewReason ? { reviewSafety: { categories: safetyCategories, reason: ownerReviewReason, detectedAt: now } } : {}), createdAt: now, updatedAt: now });
   },
 });
