@@ -16,6 +16,7 @@ import {
   type ChatIntentOutput,
   type EmailSequenceOutput,
   factsBlock,
+  businessResearchContext,
   staleFactsBlock,
   stripFactMarkers,
   type SeoBriefOutput,
@@ -495,14 +496,12 @@ async function runAgentTask<T>(
 /** The approved positioning and customer language, so content carries the plan. */
 function planContext(job: JobCtx): string {
   const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
-  const pick = (k: string) => (insights?.[k] ? `${k}: ${reportDropped(`plan context ${k}`, fitJson(insights[k], 3000, k))}` : "");
-  const researchContext = [pick("positioningStatement") || pick("positioning"), pick("vocPhrases"), pick("objections"), pick("audiences")].filter(Boolean).join("\n");
   const pinnedSuperseded = job.strategyPinned && job.strategy?.status === "superseded";
   const approved = job.strategy && (job.strategy.status === "approved" || pinnedSuperseded)
     ? approvedPlanContext(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) })
     : "";
   const planContextText = approved ? `\n\nAPPROVED GROWTH PLAN (saved plan version and context snapshot):\n${untrusted("approved plan", approved, 6_000)}` : "";
-  const researchText = researchContext ? `\n\nPOSITIONING AND CUSTOMER LANGUAGE (from research):\n${researchContext}` : "";
+  const researchText = businessResearchContext(insights);
   return `${planContextText}${researchText}`;
 }
 

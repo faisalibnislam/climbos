@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CRITIC_RULES, OPERATING_RULES, RESEARCH_EVIDENCE_RULES } from "../../shared/agents/runtime";
 import { playsTask } from "../../shared/agents/planTasks";
 import { lintInsightSources } from "../../shared/agents/specs";
-import { factsBlock } from "../../shared/ai/tasks";
+import { businessResearchContext, factsBlock } from "../../shared/ai/tasks";
 
 describe("research source assessment", () => {
   it("keeps published claims and owner reports from becoming proof of viability or demand", () => {
@@ -62,5 +62,14 @@ describe("research source assessment", () => {
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
     expect(issues).toMatchObject([{ severity: "error", rule: "citation", path: "competitors[0].comparison[0].sourceUrl" }]);
+  });
+
+  it("carries competitor comparisons into downstream content as untrusted context with publishing limits", () => {
+    const context = businessResearchContext({ competitors: [{ name: "Rival", comparison: [{ dimension: "pricing", finding: "Published annual pricing.", sourceUrl: "https://rival.example/pricing", implication: "Test whether annual terms fit the buyer." }] }] });
+    expect(context).toContain("dimension");
+    expect(context).toContain("<untrusted_content source=\"business research\">");
+    expect(context).toContain("do not copy their wording");
+    expect(context).toContain("not independent proof of effectiveness");
+    expect(businessResearchContext()).toBe("");
   });
 });
