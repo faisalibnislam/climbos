@@ -391,6 +391,34 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
       hyp("conversion", `${f.newCustomers} of ${f.leads} leads paid; first-value count missing`, null, ["Lead → paid is below the reference."], ["Unmeasured: could equally be activation."]),
     ]);
   }
+  // When an industry reference is unavailable (common outside SaaS), same-period
+  // owner funnel counts can still identify a *relative* weak link. This is not
+  // a claim that either rate is poor for the market, or that the lower rate is
+  // the root cause. Require both a material gap and strong posterior evidence.
+  if (!saas && lead && overallReading && !overallReading.immature) {
+    const pLeadWeaker = probLess(posts.lead!, posts.purchase!);
+    const material = Math.abs(lead.rate! - overallReading.rate!) / Math.max(lead.rate!, overallReading.rate!, 1e-9) >= T.materialGap;
+    if (material && pLeadWeaker >= T.preferAt) {
+      return out("demand", "supported", [hyp(
+        "demand",
+        `${lead.observed} (${pct(lead.rate!)}) versus ${overallReading.observed} (${pct(overallReading.rate!)}); the visitor-to-lead step is the weaker measured link in this period.`,
+        r2(pLeadWeaker),
+        [`P(visitor-to-lead is weaker than lead-to-customer) = ${r2(pLeadWeaker)}.`],
+        [COMPETING.demand],
+      )]);
+    }
+    if (material && 1 - pLeadWeaker >= T.preferAt) {
+      return out("conversion", "supported", [hyp(
+        "conversion",
+        `${lead.observed} (${pct(lead.rate!)}) versus ${overallReading.observed} (${pct(overallReading.rate!)}); the lead-to-customer step is the weaker measured link in this period.`,
+        r2(1 - pLeadWeaker),
+        [`P(lead-to-customer is weaker than visitor-to-lead) = ${r2(1 - pLeadWeaker)}.`],
+        [COMPETING.conversion],
+      )]);
+    }
+    if (!material) missing.push("the visitor-to-lead and lead-to-customer rates differ by at least 10% before treating either as a relative bottleneck");
+    else missing.push("more same-period visitors, leads and new customers to distinguish the two relative funnel steps");
+  }
   // Downstream fine and few people arriving: demand.
   if (f.visitors !== undefined && f.leads !== undefined && f.newCustomers !== undefined && weakOverall === false && ctx.customerTargetPerMonth !== undefined && ctx.customerTargetPerMonth > 0) {
     const currentCustomersPerMonth = perMonth(f.newCustomers);

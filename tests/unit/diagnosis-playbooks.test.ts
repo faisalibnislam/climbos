@@ -122,15 +122,27 @@ describe("diagnosis", () => {
     expect(unknownModel.constraint).toBe("unknown");
     expect(unknownModel.missing.join(" ")).toMatch(/free plan, a trial without a card/);
   });
-  it("reports goal-relative funnel math for non-SaaS without claiming demand is the root cause", () => {
+  it("reports goal-relative funnel math for non-SaaS while keeping the relative weak link observational", () => {
     const d = diagnose({ funnel: { periodDays: 30, visitors: 3_000, leads: 400, newCustomers: 100 }, types: ["local_services"], customerTargetPerMonth: 150 });
-    expect(d).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", customerGoalPace: { currentCustomersPerMonth: 100, targetCustomersPerMonth: 150, gapPerMonth: 50, visitorToCustomerRate: { observed: 0.03 } } });
+    expect(d).toMatchObject({ constraint: "demand", status: "supported", customerGoalPace: { currentCustomersPerMonth: 100, targetCustomersPerMonth: 150, gapPerMonth: 50, visitorToCustomerRate: { observed: 0.03 } } });
+    expect(d.hypotheses?.[0].observation).toMatch(/weaker measured link in this period/);
+    expect(d.hypotheses?.[0].observation).not.toMatch(/proves|caused the gap/);
     expect(d.customerGoalPace?.probabilityCurrentReachBelowGoal).toBeGreaterThan(0.9);
     expect(d.customerGoalPace?.visitorVolumeScenario).toMatchObject({ currentPerMonth: 3_000, atObservedConversionPerMonth: 4_500 });
     expect(d.customerGoalPace?.visitorVolumeScenario?.atLikelyConversionRangePerMonth.low).toBeLessThan(4_500);
     expect(d.customerGoalPace?.visitorVolumeScenario?.atLikelyConversionRangePerMonth.high).toBeGreaterThan(4_500);
     expect(diagnosisBrief(d)).toMatch(/If today's conversion rate held, about 4500 visitors per month would match the goal pace/);
     expect(diagnosisBrief(d)).toMatch(/does not show why the gap exists or which channel will close it/);
+  });
+  it("identifies a relative non-SaaS funnel bottleneck only when owner counts separate the rates", () => {
+    const conversion = diagnose({ funnel: { periodDays: 30, visitors: 500, leads: 100, newCustomers: 5 }, types: ["local_services"] });
+    expect(conversion).toMatchObject({ constraint: "conversion", status: "supported", basis: "measured" });
+    expect(conversion.hypotheses?.[0].observation).toMatch(/lead-to-customer step is the weaker measured link/);
+    expect(conversion.hypotheses?.[0].observation).not.toMatch(/industry|market average|root cause/);
+
+    const demand = diagnose({ funnel: { periodDays: 30, visitors: 500, leads: 10, newCustomers: 8 }, types: ["local_services"] });
+    expect(demand).toMatchObject({ constraint: "demand", status: "supported", basis: "measured" });
+    expect(demand.hypotheses?.[0].observation).toMatch(/visitor-to-lead step is the weaker measured link/);
   });
   it("does not invent a point traffic target when the observed conversion rate is zero", () => {
     const d = diagnose({ funnel: { periodDays: 30, visitors: 300, leads: 8, newCustomers: 0 }, types: ["local_services"], customerTargetPerMonth: 12 });
