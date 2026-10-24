@@ -113,6 +113,7 @@ export const get = query({
       canExport: can(role, "export"),
       website: business?.website ?? null,
       businessType: business?.businessType ?? null,
+      currency: business?.currency ?? null,
       campaign: campaign
         ? {
             id: campaign._id,

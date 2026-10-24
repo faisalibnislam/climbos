@@ -43,11 +43,13 @@ import {
   Segmented,
 } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
+import { minorToDisplay } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { RetryRunIfPossible, RunProgress } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
 import { Highlight, Scannable, toBullets } from "@/components/ds/content";
+import { majorToMinor } from "../../../../../shared/economics/currency";
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.outbound.get>>>;
 type Prospect = Data["prospects"][number];
@@ -317,7 +319,7 @@ function Campaign({ slug, data }: { slug: string; data: Data }) {
             <TabsTrigger value="emails">Emails ({c.sequence.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="people">
-            <ProspectList slug={slug} prospects={data.prospects} counts={counts} canEdit={data.canEdit} canApprove={data.canApprove} excluded={c.excluded} />
+            <ProspectList slug={slug} prospects={data.prospects} counts={counts} canEdit={data.canEdit} canApprove={data.canApprove} excluded={c.excluded} campaignId={c.id} creatorMode={c.kind === "creators"} currency={data.currency} />
           </TabsContent>
           <TabsContent value="emails">
             <Sequence slug={slug} campaignId={c.id} sequence={c.sequence} notes={c.ownerNotes} sample={data.prospects.find((p) => p.stage === "approved") ?? data.prospects[0]} canEdit={data.canEdit} />
@@ -348,7 +350,7 @@ function canMoveTo(stage: ProspectStage, canEdit: boolean, canApprove: boolean):
   return stage === "approved" || stage === "skipped" ? canApprove : canEdit;
 }
 
-function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }: { slug: string; prospects: Prospect[]; counts: Record<string, number>; canEdit: boolean; canApprove: boolean; excluded: { company: string; reason: string }[] }) {
+function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded, campaignId, creatorMode, currency }: { slug: string; prospects: Prospect[]; counts: Record<string, number>; canEdit: boolean; canApprove: boolean; excluded: { company: string; reason: string }[]; campaignId: string; creatorMode: boolean; currency: string | null }) {
   const setStage = useMutation(api.outbound.setStage);
   const [view, setView] = useState<View>(counts.suggested ? "suggested" : "all");
   const [picked, setPicked] = useState<string[]>([]);
@@ -435,7 +437,7 @@ function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }
                     <button type="button" className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-brand-800 hover:underline" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>
                       <ChevronDown aria-hidden className={cn("size-3.5 transition-transform", open === p.id && "rotate-180")} /> {open === p.id ? "Less" : "Details"}
                     </button>
-                    {open === p.id ? <ProspectDetail slug={slug} p={p} canEdit={canEdit} /> : null}
+                    {open === p.id ? <ProspectDetail slug={slug} p={p} canEdit={canEdit} campaignId={campaignId} creatorMode={creatorMode} currency={currency} /> : null}
                   </div>
                   {canEdit || canApprove ? (
                     <DropdownMenu>
@@ -484,7 +486,7 @@ function ProspectList({ slug, prospects, counts, canEdit, canApprove, excluded }
   );
 }
 
-function ProspectDetail({ slug, p, canEdit }: { slug: string; p: Prospect; canEdit: boolean }) {
+function ProspectDetail({ slug, p, canEdit, campaignId, creatorMode, currency }: { slug: string; p: Prospect; canEdit: boolean; campaignId: string; creatorMode: boolean; currency: string | null }) {
   const save = useMutation(api.outbound.updateFirstLine);
   const [line, setLine] = useState(p.firstLine);
   return (
@@ -519,6 +521,7 @@ function ProspectDetail({ slug, p, canEdit }: { slug: string; p: Prospect; canEd
           </ul>
         </div>
       ) : null}
+      {creatorMode ? <CreatorCollaborationPanel slug={slug} prospectId={p.id} campaignId={campaignId} currency={currency} canEdit={canEdit} /> : null}
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
         <dt className="text-ink-3">Contact</dt>
         <dd className="text-ink-2">{p.contact}</dd>
@@ -562,6 +565,109 @@ function ProspectDetail({ slug, p, canEdit }: { slug: string; p: Prospect; canEd
         </div>
       ) : null}
     </div>
+  );
+}
+
+const CREATOR_STATUSES = [
+  ["discussion_started", "Discussion started"], ["interested", "Interested"], ["negotiating", "Negotiating"], ["agreed", "Agreed"],
+  ["content_published", "Content published"], ["completed", "Completed"], ["declined", "Declined"], ["cancelled", "Cancelled"],
+] as const;
+const CREATOR_FORMATS = [["paid", "Paid"], ["gifted", "Gifted"], ["affiliate", "Affiliate"], ["co_created", "Co-created"], ["event", "Event"], ["other", "Other"]] as const;
+
+function CreatorCollaborationPanel({ slug, prospectId, campaignId, currency, canEdit }: { slug: string; prospectId: string; campaignId: string; currency: string | null; canEdit: boolean }) {
+  const reports = useQuery(api.outbound.creatorCollaborationHistory, { slug, prospectId: prospectId as Id<"prospects"> });
+  const record = useMutation(api.outbound.recordCreatorCollaboration);
+  const [status, setStatus] = useState<(typeof CREATOR_STATUSES)[number][0]>("discussion_started");
+  const [format, setFormat] = useState("not_recorded");
+  const [agreed, setAgreed] = useState("");
+  const [actualCost, setActualCost] = useState("");
+  const [publishedUrl, setPublishedUrl] = useState("");
+  const [hasMetric, setHasMetric] = useState(false);
+  const [metricName, setMetricName] = useState("");
+  const [metricKind, setMetricKind] = useState<"count" | "rate" | "amount">("count");
+  const [metricValue, setMetricValue] = useState("");
+  const [metricUnit, setMetricUnit] = useState("");
+  const [denominator, setDenominator] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
+  const [metricSourceUrl, setMetricSourceUrl] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const boundary = (date: string, end: boolean) => {
+    const value = new Date(`${date}T${end ? "23:59:59.999" : "00:00:00"}`).getTime();
+    return end ? Math.min(value, Date.now()) : value;
+  };
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const metric = hasMetric ? {
+        name: metricName.trim(), kind: metricKind,
+        value: metricKind === "rate" ? Number(metricValue) / 100 : Number(metricValue),
+        unit: metricUnit.trim() || (metricKind === "amount" ? currency ?? "" : metricKind === "rate" ? "%" : "count"),
+        ...(denominator.trim() ? { denominator: Number(denominator) } : {}),
+        periodStartAt: boundary(periodStart, false), periodEndAt: boundary(periodEnd, true),
+        ...(metricSourceUrl.trim() ? { sourceUrl: metricSourceUrl.trim() } : {}),
+      } : undefined;
+      await record({
+        slug, prospectId: prospectId as Id<"prospects">, campaignId: campaignId as Id<"outboundCampaigns">, status,
+        ...(format !== "not_recorded" ? { format: format as (typeof CREATOR_FORMATS)[number][0] } : {}),
+        ...(agreed.trim() && currency ? { agreedValueMinor: majorToMinor(Number(agreed), currency) } : {}),
+        ...(actualCost.trim() && currency ? { actualCostMinor: majorToMinor(Number(actualCost), currency) } : {}),
+        ...(publishedUrl.trim() ? { publishedUrl: publishedUrl.trim() } : {}), ...(metric ? { metric } : {}), ...(note.trim() ? { note: note.trim() } : {}),
+      });
+      setNote("");
+      toast({ tone: "success", title: "Collaboration report added", description: "Saved as owner-reported history; it does not verify performance." });
+    } catch (e) {
+      toast({ tone: "danger", title: errorMessage(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const amount = (minor: number | null) => minor === null ? null : minorToDisplay(minor, currency ?? "USD");
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" aria-label="Creator collaboration reports">
+      <div className="flex items-center justify-between gap-2">
+        <div><h3 className="text-sm font-semibold text-ink">Collaboration history</h3><p className="text-xs text-ink-3">Owner-reported, not independently verified</p></div>
+        {canEdit ? <Button size="sm" variant="secondary" onClick={() => setOpen((v) => !v)} aria-expanded={open}>{open ? "Close report" : "Add report"}</Button> : null}
+      </div>
+      {open ? (
+        <div className="flex flex-col gap-3 rounded-md bg-surface-2 p-3">
+          <Field label="Status"><Select value={status} onValueChange={(v) => setStatus(v as typeof status)} options={CREATOR_STATUSES.map(([value, label]) => ({ value, label }))} /></Field>
+          <Field label="Collaboration format"><Select value={format} onValueChange={setFormat} options={[{ value: "not_recorded", label: "Not recorded" }, ...CREATOR_FORMATS.map(([value, label]) => ({ value, label }))]} /></Field>
+          {currency ? <div className="grid gap-3 sm:grid-cols-2"><Field label={`Agreed value (${currency})`}><Input inputMode="decimal" value={agreed} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Optional" /></Field><Field label={`Actual cost (${currency})`}><Input inputMode="decimal" value={actualCost} onChange={(e) => setActualCost(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Optional" /></Field></div> : <Callout tone="info">Set your business currency to record collaboration value or cost.</Callout>}
+          <Field label="Published content URL"><Input inputMode="url" value={publishedUrl} onChange={(e) => setPublishedUrl(e.target.value)} placeholder="https://…" /></Field>
+          <Checkbox checked={hasMetric} onCheckedChange={(v) => setHasMetric(v === true)} label="Add an outcome metric" description="Record what you observed, its period, and denominator when relevant." />
+          {hasMetric ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Metric name"><Input value={metricName} onChange={(e) => setMetricName(e.target.value)} placeholder="e.g. link clicks" maxLength={100} /></Field>
+              <Field label="Metric type"><Select value={metricKind} onValueChange={(v) => setMetricKind(v as typeof metricKind)} options={[{ value: "count", label: "Count" }, { value: "rate", label: "Rate (%)" }, { value: "amount", label: "Money", disabled: !currency }]} /></Field>
+              <Field label={metricKind === "rate" ? "Rate (%)" : "Observed value"} hint={metricKind === "rate" ? "Enter 0–100; include its denominator." : undefined}><Input inputMode="decimal" value={metricValue} onChange={(e) => setMetricValue(e.target.value.replace(/[^\d.]/g, ""))} /></Field>
+              <Field label="Unit"><Input value={metricUnit} onChange={(e) => setMetricUnit(e.target.value)} placeholder={metricKind === "amount" ? currency ?? "Set currency first" : metricKind === "rate" ? "%" : "e.g. clicks"} maxLength={40} /></Field>
+              <Field label="Denominator (required for rates)"><Input inputMode="numeric" value={denominator} onChange={(e) => setDenominator(e.target.value.replace(/\D/g, ""))} placeholder="e.g. impressions" /></Field>
+              <Field label="Period from"><Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></Field>
+              <Field label="Period through"><Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></Field>
+              <Field label="Metric source URL"><Input inputMode="url" value={metricSourceUrl} onChange={(e) => setMetricSourceUrl(e.target.value)} placeholder="Optional" /></Field>
+            </div>
+          ) : null}
+          <Field label="Note"><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} placeholder="Optional context" /></Field>
+          <div><Button size="sm" loading={busy} onClick={submit} disabled={hasMetric && (!metricName.trim() || !metricValue.trim() || !periodStart || !periodEnd || (metricKind === "rate" && !denominator.trim()) || (metricKind === "amount" && !currency))}>Add to history</Button></div>
+        </div>
+      ) : null}
+      {reports === undefined ? <p className="text-xs text-ink-3">Loading reports…</p> : reports.length === 0 ? <p className="text-xs text-ink-3">No collaboration reports yet.</p> : (
+        <ol className="flex flex-col divide-y divide-line">
+          {reports.map((report) => (
+            <li key={report.id} className="flex flex-col gap-1 py-2 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5"><Badge tone={report.status === "completed" || report.status === "content_published" ? "green" : "neutral"}>{report.status.replaceAll("_", " ")}</Badge>{report.format ? <Badge>{report.format.replaceAll("_", " ")}</Badge> : null}<span className="text-ink-3">{new Date(report.createdAt).toLocaleDateString()}</span></div>
+              {report.agreedValueMinor !== null || report.actualCostMinor !== null ? <p className="text-ink-2">Agreed {amount(report.agreedValueMinor) ?? "—"} · actual cost {amount(report.actualCostMinor) ?? "—"} · {report.currency ?? currency ?? "currency not set"}</p> : null}
+              {report.publishedUrl ? <a href={report.publishedUrl} target="_blank" rel="noopener noreferrer" className="break-all text-link">Published content</a> : null}
+              {report.metric ? <p className="text-ink-2">{report.metric.name}: {report.metric.kind === "rate" ? `${(report.metric.value * 100).toFixed(1)}% of ${report.metric.denominator}` : `${report.metric.value} ${report.metric.unit}`} · {new Date(report.metric.periodStartAt).toLocaleDateString()}–{new Date(report.metric.periodEndAt).toLocaleDateString()}</p> : null}
+              {report.note ? <p className="text-ink-3">{report.note}</p> : null}<p className="text-ink-3">{report.basisLabel}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
