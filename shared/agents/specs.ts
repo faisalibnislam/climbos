@@ -13,6 +13,7 @@ import type { PlanConstraints } from "./types";
 import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
 import { sampleSize } from "../analysis/decisions";
+import { citedCreatorFact } from "../growth/targets";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -2236,6 +2237,12 @@ export const ProspectsOutputSchema = z.object({
       contact: z.string(),
       /** A published contact email copied verbatim from the evidence, else "". */
       publicEmail: z.string(),
+      /** Exact audience figure shown by the source; keep it as text rather than estimating a normalized count. */
+      audienceSize: z.object({ value: z.string().min(1).max(100), sourceUrl: z.string().url() }).optional(),
+      /** Language stated or clearly labeled on a cited creator profile/content page. */
+      contentLanguage: z.object({ value: z.string().min(1).max(80), sourceUrl: z.string().url() }).optional(),
+      /** A proposed collaboration, not a claim that the creator has agreed or performed. */
+      collaborationConcept: z.string().max(240).optional(),
     }),
   ),
   excluded: z.array(z.object({ company: z.string(), reason: z.string() })),
@@ -2330,6 +2337,12 @@ function lintCreators(out: ProspectsOutput, input: AgentInput): LintIssue[] {
     if (seen.has(key)) issues.push({ severity: "error", rule: "duplicate", message: `${p.company} is listed twice.`, path });
     seen.add(key);
     if (!p.evidence.some((e) => /^https?:\/\//.test(e.url))) issues.push({ severity: "error", rule: "evidence", message: `${p.company}: cite the profile or a recent post.`, path: `${path}.evidence` });
+    for (const [field, detail] of [["audienceSize", p.audienceSize], ["contentLanguage", p.contentLanguage]] as const) {
+      if (!detail) continue;
+      if (!citedCreatorFact(detail, p.evidence)) {
+        issues.push({ severity: "error", rule: "creator_fact_source", message: `${p.company}: ${field} must match text recorded from its exact cited evidence URL; leave it unknown if the source doesn't show it.`, path: `${path}.${field}` });
+      }
+    }
     if (p.publicEmail && !p.evidence.some((e) => e.observation.toLowerCase().includes(p.publicEmail.toLowerCase()))) {
       issues.push({ severity: "error", rule: "invented_email", message: `${p.company}: only use an email copied verbatim from a cited page (quote it in evidence).`, path: `${path}.publicEmail` });
     }

@@ -1008,6 +1008,12 @@ export default defineSchema({
     /** Creators: canonical identity from the profile path (REQ-TARGET-03), e.g. instagram + "studio.ana". */
     platform: v.optional(v.string()),
     handle: v.optional(v.string()),
+    /** Creator audience figure copied as displayed, with its exact evidence URL; never a model estimate. */
+    audienceSize: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
+    /** Creator language copied from public profile/content evidence; absent means unknown. */
+    contentLanguage: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
+    /** Suggested collaboration concept; this does not imply creator agreement. */
+    collaborationConcept: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

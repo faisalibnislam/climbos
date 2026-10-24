@@ -7,6 +7,19 @@
 
 export type TargetKind = "customers" | "creators";
 
+export interface CitedCreatorFact { value: string; sourceUrl: string }
+export interface CreatorEvidence { url: string; observation: string }
+
+/** Accept a creator metric/language only when its exact value appears in evidence from the same cited URL. */
+export function citedCreatorFact(value: unknown, evidence: readonly CreatorEvidence[]): CitedCreatorFact | null {
+  if (!value || typeof value !== "object") return null;
+  const detail = value as { value?: unknown; sourceUrl?: unknown };
+  if (typeof detail.value !== "string" || !detail.value.trim() || typeof detail.sourceUrl !== "string" || !/^https?:\/\//i.test(detail.sourceUrl)) return null;
+  const text = evidence.find((item) => item.url === detail.sourceUrl)?.observation;
+  if (typeof text !== "string" || !text.toLowerCase().includes(detail.value.trim().toLowerCase())) return null;
+  return { value: detail.value.trim().slice(0, 100), sourceUrl: detail.sourceUrl.slice(0, 500) };
+}
+
 /** The play fields the classifier reads. */
 export interface PlayText {
   name: string;

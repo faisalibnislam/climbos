@@ -178,7 +178,14 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     const o = output as { prospects?: Record<string, unknown>[]; sequence?: Record<string, unknown>[]; firstLines?: unknown[] };
     if (o && typeof o === "object" && Array.isArray(o.prospects)) {
       const tmpl = o.prospects[0];
-      o.prospects = ["alpha", "beta", "gamma"].map((n, i) => ({ ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: `https://${n}.example.com/about`, observation: `${marker} observation` }], publicEmail: "", fit: 80 - i * 10, timing: 60 }));
+      o.prospects = ["alpha", "beta", "gamma"].map((n, i) => {
+        const evidenceUrl = `https://${n}.example.com/about`;
+        const prospect: Record<string, unknown> = { ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: evidenceUrl, observation: `${marker} observation; 12k followers; English-language tutorials.` }], publicEmail: "", fit: 80 - i * 10, timing: 60 };
+        if ("audienceSize" in tmpl) prospect.audienceSize = { value: "12k followers", sourceUrl: evidenceUrl };
+        if ("contentLanguage" in tmpl) prospect.contentLanguage = { value: "English", sourceUrl: evidenceUrl };
+        if ("collaborationConcept" in tmpl) prospect.collaborationConcept = "Proposed short tutorial; no agreement implied.";
+        return prospect;
+      });
     }
     if (o && typeof o === "object" && Array.isArray(o.sequence) && Array.isArray(o.firstLines)) {
       o.sequence = [0, 3].map((day, i) => ({ day, subject: `${marker} note`, body: i === 0 ? `{{firstLine}}\n${marker} body` : `${marker} follow-up`, purpose: "test" }));

@@ -32,7 +32,10 @@ async function workspace(t: T, email: string, flags: string[] = ["plan_targets"]
   return { ...owner, slug, orgId: id, strategyId: strategyId as Id<"strategies"> };
 }
 
-const creator = (handle: string, email = "") => ({ company: `Creator ${handle}`, website: `https://www.instagram.com/${handle}/`, location: "London", sizeBand: "", why: "Teaches beginner flows", evidence: [{ url: `https://www.instagram.com/${handle}/`, observation: "Recent class reel" }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined });
+const creator = (handle: string, email = "") => {
+  const url = `https://www.instagram.com/${handle}/`;
+  return { company: `Creator ${handle}`, website: url, location: "London", sizeBand: "12k followers", why: "Teaches beginner flows", evidence: [{ url, observation: "12k followers; English-language recent class reel" }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined, audienceSize: { value: "12k followers", sourceUrl: url }, contentLanguage: { value: "English", sourceUrl: url }, collaborationConcept: "Proposed beginner class tutorial; no agreement implied." };
+};
 const outreach = { sequence: [{ day: 0, subject: "Collab?", body: "{{firstLine}}", purpose: "open" }], firstLines: [], ownerNotes: [] };
 
 describe("plan targets (flagged)", () => {
@@ -77,7 +80,7 @@ describe("plan targets (flagged)", () => {
     const ana = rows.find((r) => r.domain === "instagram:studio.ana")!;
     expect(ana).toMatchObject({ stage: "contacted", playIds: ["pl_creators1"] }); // merged, stage kept
     const mia = rows.find((r) => r.domain === "instagram:mia.moves")!;
-    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"] });
+    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"], audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" } });
     expect(mia.publicEmail).toBeUndefined(); // no email invented; the profile stays
 
 
@@ -86,7 +89,7 @@ describe("plan targets (flagged)", () => {
     expect(view!.pl_creators1).toMatchObject({ state: "needs_connection", counts: { found: 4, eligible: 2, contactable: 1, excluded: 1, inRelationship: 1 } });
     const listed = view!.pl_creators1.targets;
     expect(listed.find((x) => x.name.includes("benflows"))).toMatchObject({ suppressed: true, contactRoute: "none" });
-    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/" });
+    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, collaborationConcept: expect.stringContaining("Proposed") });
 
     // A refreshed plan keeps the play ID, so it keeps the targets and doesn't start a duplicate search.
     const v2 = await t.run(async (ctx) => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
@@ -111,5 +111,35 @@ describe("outbound", () => {
     expect(view.prospects.length).toBeGreaterThan(0);
     const run = await t.run(async (ctx) => ctx.db.query("workflowSteps").collect());
     expect(run.some((s) => s.label.startsWith("Find creators"))).toBe(true);
+  });
+
+  it("stores creator audience and language only when the cited evidence contains the exact values", async () => {
+    const t = setup();
+    const w = await workspace(t, "creator-evidence@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "creators", count: 5 });
+    const campaign = await t.run((ctx) => ctx.db.query("outboundCampaigns").first());
+    const profile = "https://www.instagram.com/studio.ana/";
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign!._id,
+      prospects: {
+        icp: { summary: "A relevant cooking creator", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" },
+        prospects: [{
+          company: "Studio Ana", website: profile, location: "London", sizeBand: "12k followers",
+          why: "Publishes relevant cooking lessons", evidence: [{ url: profile, observation: "12k followers. English language cooking tutorials." }],
+          trigger: "Recent cooking tutorial", fit: 80, timing: 70, contact: "@studio.ana (Instagram)", publicEmail: "",
+          audienceSize: { value: "12k followers", sourceUrl: profile },
+          contentLanguage: { value: "English", sourceUrl: profile },
+          collaborationConcept: "Proposed short cooking tutorial featuring the product; owner and creator have not agreed.",
+        }],
+        excluded: [],
+      },
+      outreach: { sequence: [], firstLines: [], ownerNotes: [] },
+    });
+    const view = await w.client.query(api.outbound.get, { slug: w.slug });
+    expect(view.prospects[0]).toMatchObject({
+      audienceSize: { value: "12k followers", sourceUrl: profile },
+      contentLanguage: { value: "English", sourceUrl: profile },
+      collaborationConcept: expect.stringContaining("Proposed"),
+    });
   });
 });

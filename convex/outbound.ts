@@ -8,7 +8,7 @@ import { cancelQueued } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
-import { creatorIdentity } from "../shared/growth/targets";
+import { citedCreatorFact, creatorIdentity } from "../shared/growth/targets";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -143,6 +143,9 @@ export const get = query({
           timing: p.timing,
           contact: p.contact,
           publicEmail: p.publicEmail ?? null,
+          audienceSize: p.audienceSize ?? null,
+          contentLanguage: p.contentLanguage ?? null,
+          collaborationConcept: p.collaborationConcept ?? null,
           check: p.check ?? null,
           firstLine: p.firstLine,
           stage: p.stage,
@@ -505,12 +508,22 @@ export const saveResult = internalMutation({
       // Creators saved before platform + handle keys used the bare profile path.
       const existing = (await byKey(domain)) ?? (c.kind === "creators" && profileKey(p.website) !== domain ? await byKey(profileKey(p.website)) : null);
       if (existing) {
-        if (c.playId && !(existing.playIds ?? []).includes(c.playId)) {
-          await ctx.db.patch(existing._id, { playIds: [...(existing.playIds ?? []), c.playId], updatedAt: now });
+        const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
+        const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
+        const playIds = c.playId && !(existing.playIds ?? []).includes(c.playId) ? [...(existing.playIds ?? []), c.playId] : undefined;
+        const creatorUpdates = c.kind === "creators" ? {
+          ...(audienceSize ? { audienceSize } : {}),
+          ...(contentLanguage ? { contentLanguage } : {}),
+          ...(typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
+        } : {};
+        if (playIds || Object.keys(creatorUpdates).length) {
+          await ctx.db.patch(existing._id, { ...(playIds ? { playIds } : {}), ...creatorUpdates, updatedAt: now });
           merged++;
         }
         continue;
       }
+      const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
+      const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
       await ctx.db.insert("prospects", {
         orgId: c.orgId,
         campaignId: c._id,
@@ -532,6 +545,9 @@ export const saveResult = internalMutation({
         stageUpdatedAt: now,
         ...(c.playId ? { playIds: [c.playId] } : {}),
         ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
+        ...(audienceSize ? { audienceSize } : {}),
+        ...(contentLanguage ? { contentLanguage } : {}),
+        ...(c.kind === "creators" && typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         createdAt: now,
         updatedAt: now,
       });

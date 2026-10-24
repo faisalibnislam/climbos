@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
 describe("which plays need targets", () => {
@@ -46,6 +47,29 @@ describe("creator identity (REQ-TARGET-03)", () => {
   it("a creator's own site or newsletter keys by host", () => {
     expect(creatorIdentity("https://anaeats.substack.com/p/post")?.key).toBe("substack:anaeats");
     expect(creatorIdentity("https://anamoves.com/about")?.key).toBe("web:anamoves.com");
+  });
+});
+
+describe("source-bound creator facts (REQ-CREATOR-01)", () => {
+  const evidence = [{ url: "https://instagram.com/ana", observation: "12k followers. English language cooking tutorials." }];
+  it("keeps the exact displayed value and exact source URL", () => {
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "12k followers", sourceUrl: evidence[0].url });
+    expect(citedCreatorFact({ value: "English", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "English", sourceUrl: evidence[0].url });
+  });
+  it("rejects a value absent from the observation or a different source URL", () => {
+    expect(citedCreatorFact({ value: "120k followers", sourceUrl: evidence[0].url }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: "https://other.example/profile" }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: "javascript:alert(1)" }, evidence)).toBeNull();
+  });
+  it("hard-fails creator facts that don't match their cited page evidence", () => {
+    const profile = "https://instagram.com/ana";
+    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile } };
+    const output = { icp: { summary: "Cooking creators", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" }, prospects: [prospect, { ...prospect, company: "Bea", website: "https://instagram.com/bea" }, { ...prospect, company: "Cam", website: "https://instagram.com/cam" }], excluded: [] };
+    const spec = creatorScoutSpec();
+    const input = { task: "", brief: "", facts: [], untrustedContext: [] };
+    expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_fact_source")).toBe(false);
+    output.prospects[0].audienceSize = { value: "120k followers", sourceUrl: profile };
+    expect(spec.lint!(output as never, input as never).filter((issue) => issue.rule === "creator_fact_source" && issue.path === "prospects[0].audienceSize")).toHaveLength(1);
   });
 });
 
