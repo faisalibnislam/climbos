@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DECISION_FIELDS, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
-import { growthPlaysSpec, lintDecisionOptionChoice } from "../../shared/agents/specs";
+import { growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice } from "../../shared/agents/specs";
+import { diagnose } from "../../shared/agents/diagnosis";
 import { portfolioRange, type PlayLike } from "../../shared/agents/economics";
 
 /** S5 (REQ-STRAT-01/02/04) behind decision_contract: the decision is structured and checked in code. */
@@ -136,6 +137,18 @@ describe("deterministic comparison of decision options", () => {
     const issues = lintDecisionOptionChoice(decision({ options: rangedOptions }), [ranged, steady], economics, { newCustomersPerMonth: 30 });
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toContain("exceeds a confirmed budget, time or delivery limit");
+  });
+
+  it("fails when the structured decision contradicts a supported owner diagnosis", () => {
+    const diagnosis = diagnose({ funnel: { leads: 100, activated: 12, newCustomers: 3 }, types: ["b2b_saas"] });
+    expect(diagnosis).toMatchObject({ constraint: "activation", status: "supported" });
+    const issues = lintDecisionConstraintFit(decision({ constraint: "retention" }), [{ name: "Onboarding fix", mechanic: "Improve first value activation" }], diagnosis);
+    expect(issues).toMatchObject([{ severity: "error", rule: "diagnosis_fit", path: "decision.constraint" }]);
+  });
+
+  it("warns when a model-selected constraint has no play that visibly addresses it", () => {
+    const issues = lintDecisionConstraintFit(decision({ constraint: "retention" }), [{ name: "More traffic", mechanic: "Acquire new leads" }]);
+    expect(issues).toMatchObject([{ severity: "warn", rule: "diagnosis_fit", path: "plays" }]);
   });
 });
 

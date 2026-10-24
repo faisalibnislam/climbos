@@ -355,16 +355,22 @@ export function playStage(text: string): BindingConstraint {
   return "demand";
 }
 
+/** Demand is the fallback stage, so require explicit acquisition language before counting a play as demand work. */
+export function playWorksOnConstraint(text: string, constraint: BindingConstraint): boolean {
+  if (constraint === "economics") return /\b(unit economics|economics|gross margin|contribution margin|cac|cost per customer|acquisition cost|payback|profitability|price increase|raise (?:the |our )?prices?|increase (?:the |our )?prices?|reprice|repricing)\b/i.test(text);
+  if (playStage(text) !== constraint) return false;
+  if (constraint !== "demand") return true;
+  return /\b(ads?|paid acquisition|acquisition|reach|traffic|prospect\w*|outbound|campaign|lead generation|referral|affiliate|seo|search|distribution|new customers?)\b/i.test(text);
+}
+
 /**
- * The plays must work on the computed constraint: when it's activation,
- * conversion, retention or delivery, at least one play (the bankable one
- * first) must target it rather than only adding people at the top.
- * Only for a supported diagnosis: an ambiguous one mustn't force a single link.
+ * A supported, measured constraint must have a play that explicitly targets it.
+ * Ambiguous or incomplete diagnoses don't force a single link.
  */
 export function lintDiagnosisFit(plays: { name?: string; kind?: string; oneLiner?: string; mechanic?: string; firstActionToday?: string; test?: string }[], d: Diagnosis | undefined) {
-  if (!d || d.basis === "none" || (d.status && d.status !== "supported") || !["activation", "conversion", "retention", "delivery"].includes(d.constraint)) return [];
-  const hits = plays.some((p) => playStage(`${p.name ?? ""} ${p.oneLiner ?? ""} ${p.mechanic ?? ""} ${p.firstActionToday ?? ""} ${p.test ?? ""}`) === d.constraint);
-  return hits ? [] : [{ severity: "error" as const, rule: "diagnosis_fit", message: `The owner's numbers show ${d.constraint} is the weak link, but no play works on it. Make the bankable play fix ${d.constraint} first; adding people at the top would feed the leak.`, path: "plays" }];
+  if (!d || d.constraint === "unknown" || d.basis === "none" || (d.status && d.status !== "supported")) return [];
+  const hits = plays.some((p) => playWorksOnConstraint(`${p.name ?? ""} ${p.oneLiner ?? ""} ${p.mechanic ?? ""} ${p.firstActionToday ?? ""} ${p.test ?? ""}`, d.constraint as BindingConstraint));
+  return hits ? [] : [{ severity: "error" as const, rule: "diagnosis_fit", message: `The owner's numbers point to ${d.constraint} as the weak link, but no play works on it. Make the primary play address ${d.constraint}, or explain why another measured constraint takes priority.`, path: "plays" }];
 }
 
 /** The owner's measured rates by stage, for sizing tests on real baselines (plan experiment lint). */

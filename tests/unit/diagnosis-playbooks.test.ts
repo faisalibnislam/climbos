@@ -88,6 +88,12 @@ describe("diagnosis", () => {
     expect(lintDiagnosisFit([{ name: "Ads" }], diagnose({}))).toEqual([]);
     expect(playStage("win-back email for cancelled customers")).toBe("retention");
   });
+  it("does not mistake an unclassified play for demand generation", () => {
+    const d = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"] });
+    expect(d).toMatchObject({ constraint: "demand", status: "supported" });
+    expect(lintDiagnosisFit([{ name: "Improve the pricing page", oneLiner: "Clarify the plan comparison" }], d)).toMatchObject([{ rule: "diagnosis_fit" }]);
+    expect(lintDiagnosisFit([{ name: "Search ads", oneLiner: "Reach more qualified visitors" }], d)).toEqual([]);
+  });
 });
 
 describe("playbook contracts", () => {
