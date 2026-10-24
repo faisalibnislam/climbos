@@ -35,6 +35,17 @@ describe("growth maths in code", () => {
     expect(out.plays[0].p50).toBeCloseTo(9.8, 1);
   });
 
+  it("returns one-input-at-a-time sensitivity for explicit funnel, reach, and owner ranges", () => {
+    const ranged = play({ model: { ...play().model, weeklyReachLow: 150, weeklyReachHigh: 350, steps: [{ name: "reply", rate: 0.02, low: 0.01, high: 0.04 }, { name: "paid", rate: 0.3 }]} });
+    const economics = { ...econ, ranges: { revenue: { low: 10, high: 30 }, margin: { low: 0.6, high: 0.9 }, churn: { low: 0.05, high: 0.2 } } };
+    const m = playMaths(ranged, economics);
+    expect(m.sensitivity.map((x) => x.driver)).toEqual(expect.arrayContaining(["Weekly reach", "reply rate", "Revenue per customer/month", "Gross margin", "Monthly churn"]));
+    expect(m.sensitivity.every((x) => x.metric === "net_contribution_12m" && x.atLow !== x.atMode && x.atHigh !== x.atMode)).toBe(true);
+    expect(withForecasts({ economics, plays: [ranged] }).plays[0].sensitivity).toEqual(m.sensitivity);
+    expect(lockedNumbers({ economics, plays: [ranged] })).toContain("SENSITIVITY · Agency outreach");
+    expect(lockedNumbers({ economics, plays: [ranged] })).toContain("not a joint forecast");
+  });
+
   it("rejects money-losing plays and bad ranges", () => {
     const losing = play({ model: { weeklyReach: 100, steps: [{ name: "click", rate: 0.02 }, { name: "paid", rate: 0.01 }], monthlySpendUsd: 600, ownerHoursPerWeek: 0 } });
     const badRange = play({ model: { ...play().model, steps: [{ name: "reply", rate: 0.02, low: 0.03, high: 0.05 }] } });

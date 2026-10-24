@@ -474,3 +474,5 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - Every agent receives a trust-evidence posture. The prompt distinguishes proof-building from evidence-backed credibility, while leaving brand age/reputation unknown when not recorded.
 - SEO briefs classify search intent as awareness, evaluation, purchase, or unclear; a deterministic cross-check compares the label with query evidence and page type.
 - **Limit:** regex and phrase checks catch high-risk cases but do not semantically match every product feature or query. No paid real-model comparison has been run for this version.
+
+**Built (not yet evaluated): per-play sensitivity analysis, `ENGINE_VERSION` v3.3-sensitivity.** Each play now receives deterministic, one-input-at-a-time customer or net-contribution sensitivity for explicit reach, funnel-rate and owner economics ranges. The top three drivers are added to the plan agent's locked numbers. These are labeled scenarios, not calibrated probabilities or joint outcomes; the UI still needs to render the attached values.

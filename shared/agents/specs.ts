@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics } from "./economics";
+import { lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type PlaySensitivity } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -164,7 +164,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.2-trust-claims-intent";
+export const ENGINE_VERSION = "v3.3-sensitivity";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -188,7 +188,7 @@ export const PlaysDecisionOutputSchema = PlaysOutputSchema.extend({ decision: De
 /** `economics.currency` is set by code after the agent (the workspace currency every amount is in). */
 export type PlaysOutput = Omit<z.infer<typeof PlaysOutputSchema>, "economics"> & { economics: z.infer<typeof PlaysOutputSchema>["economics"] & { currency?: string }; decision?: Decision };
 /** Saved portfolio: the agent's plays plus the forecast ClimbOS computed. */
-export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: Play[] };
+export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: (Play & { sensitivity: PlaySensitivity[] })[] };
 
 const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)\b/i;
 const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;

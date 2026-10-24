@@ -148,6 +148,16 @@ export interface PlayMaths {
   breakevenCustomers: number | null;
   /** Share of the seeded draws where the play doesn't pay back (only when it has ranges and value is known); "if the ranges are right". */
   lossChance: number | null;
+  /** One-input-at-a-time outcome ranges. `atLow`/`atHigh` refer to the input, not best/worst outcome. */
+  sensitivity: PlaySensitivity[];
+}
+
+export interface PlaySensitivity {
+  driver: string;
+  metric: "customers" | "net_contribution_12m";
+  atLow: number;
+  atMode: number;
+  atHigh: number;
 }
 
 /** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
@@ -210,6 +220,43 @@ function baselineCustomers(m: PlayModel, weeks: number): number {
 function customersPoint(m: PlayModel, weeks: number): number {
   if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return 0;
   return Math.max(0, (funnelCustomers(Math.max(0, m.weeklyReach), m.steps.map((s) => s.rate)) ?? 0) * weeks - baselineCustomers(m, weeks));
+}
+
+/** Local, one-variable-at-a-time sensitivity; never presents a joint forecast. */
+function playSensitivity(p: PlayLike, e: Economics, weeks: number, cost: number): PlaySensitivity[] {
+  const valueKnown = customerValue(e) !== null;
+  const metric: PlaySensitivity["metric"] = valueKnown ? "net_contribution_12m" : "customers";
+  const outcome = (model: PlayModel, economics: Economics) => {
+    const customers = customersPoint(model, weeks);
+    if (metric === "customers") return customers;
+    return customers * (customerValue(economics) ?? 0) - cost;
+  };
+  const baseModel = p.model;
+  const baseOutcome = outcome(baseModel, e);
+  const results: PlaySensitivity[] = [];
+  const add = (driver: string, lowModel = baseModel, highModel = baseModel, lowEconomics = e, highEconomics = e) => {
+    const atLow = outcome(lowModel, lowEconomics);
+    const atHigh = outcome(highModel, highEconomics);
+    if (atLow !== baseOutcome || atHigh !== baseOutcome) results.push({ driver, metric, atLow, atMode: baseOutcome, atHigh });
+  };
+
+  if (baseModel.weeklyReachLow !== undefined || baseModel.weeklyReachHigh !== undefined) {
+    add("Weekly reach", { ...baseModel, weeklyReach: baseModel.weeklyReachLow ?? baseModel.weeklyReach }, { ...baseModel, weeklyReach: baseModel.weeklyReachHigh ?? baseModel.weeklyReach });
+  }
+  baseModel.steps.forEach((step, index) => {
+    if (step.low === undefined && step.high === undefined) return;
+    const withRate = (rate: number) => ({ ...baseModel, steps: baseModel.steps.map((s, i) => i === index ? { ...s, rate } : s) });
+    add(`${step.name} rate`, withRate(step.low ?? step.rate), withRate(step.high ?? step.rate));
+  });
+  if (valueKnown) {
+    const ranges = e.ranges;
+    if (ranges?.revenue) add("Revenue per customer/month", baseModel, baseModel, { ...e, revenuePerCustomerMonthUsd: ranges.revenue.low }, { ...e, revenuePerCustomerMonthUsd: ranges.revenue.high });
+    if (ranges?.margin) add("Gross margin", baseModel, baseModel, { ...e, grossMargin: ranges.margin.low }, { ...e, grossMargin: ranges.margin.high });
+    if (ranges?.churn && e.monthlyChurn !== undefined) add("Monthly churn", baseModel, baseModel, { ...e, monthlyChurn: ranges.churn.low }, { ...e, monthlyChurn: ranges.churn.high });
+  }
+  return results
+    .sort((a, b) => Math.max(Math.abs(b.atLow - b.atMode), Math.abs(b.atHigh - b.atMode)) - Math.max(Math.abs(a.atLow - a.atMode), Math.abs(a.atHigh - a.atMode)))
+    .slice(0, 6);
 }
 
 /** Seeded draws of a play's customers (sorted), or the point value when it has no ranges. Extra customers only when baselines are given. */
@@ -287,6 +334,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     robustness,
     breakevenCustomers: valueUsd !== null && valueUsd > 0 ? costUsd / valueUsd : null,
     lossChance: valueUsd === null || typeof draws === "number" ? null : Math.round((draws.filter((c) => c * valueUsd < costUsd).length / draws.length) * 1000) / 1000,
+    sensitivity: playSensitivity(p, e, weeks, costUsd),
   };
 }
 
@@ -296,14 +344,14 @@ export function roundCount(n: number): number {
 }
 
 /** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
-export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number })[] } {
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[] })[] } {
   return {
     ...out,
     plays: out.plays.map((p) => {
       // Older plays without a model keep the forecast they were saved with.
-      if (!p.model?.steps?.length) return p as O["plays"][number] & { p10: number; p50: number; p90: number };
+      if (!p.model?.steps?.length) return { ...p, sensitivity: [] } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[] };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90) };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity };
     }),
   };
 }
@@ -527,6 +575,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
     ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
+    ...rows.flatMap(({ m }) => m.sensitivity.slice(0, 3).map((s) => `- SENSITIVITY · ${m.name} · ${s.driver} (one input at a time, not a joint forecast): ${s.metric === "net_contribution_12m" ? "12-month net contribution" : "customers"} is ${s.metric === "net_contribution_12m" ? usd(s.atLow) : roundCount(s.atLow)} at low, ${s.metric === "net_contribution_12m" ? usd(s.atMode) : roundCount(s.atMode)} at most-likely, ${s.metric === "net_contribution_12m" ? usd(s.atHigh) : roundCount(s.atHigh)} at high.`)),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     ...portfolioLine(out, { ...(limits ?? {}), horizonDays: h }, usd),

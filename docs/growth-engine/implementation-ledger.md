@@ -127,7 +127,7 @@ Issue 08's engine-side capacity guard now blocks net-new acquisition channels wh
 | REQ-MATH-04 | partial | S3 | `playMaths`, `portfolioRange`, `planTasks.ts` | Fractional horizon (3 days = 3/7 week); spend by calendar month; totals at the goal horizon. **Gap:** ramp time, sales lag, seasonality and fulfilment capacity |
 | REQ-MATH-05 | partial | S3 | `lockedNumbers` | The text says forecasts aren't calibrated and are scenarios. **Gap:** the UI doesn't separate operational and statistical uncertainty |
 | REQ-MATH-06 | done-fixture | S3 | `economics.ts` `PlayMaths.headline`, `withForecasts`, `portfolioRange`, `lockedNumbers` | The headline and CAC share the most-likely basis. The simulation gives the range, widened to include the headline (`economics-fixtures.test.ts`). Prompted by the paid check, where the judge flagged the mismatch. **Gap:** no expected CAC under uncertainty |
-| REQ-MATH-07 | partial | S3 | `playMaths.profitable` (nullable), lint | Never "profitable" on unknown economics. Break-even shown. **Gap:** no sensitivity or decision state per play |
+| REQ-MATH-07 | partial | S3 | `economics.ts` `playMaths.sensitivity`, `lockedNumbers` | One-input-at-a-time sensitivity for explicit reach, funnel-rate and owner economics ranges is now computed, attached to each forecasted play, and supplied to the plan agent. Unknown economics fall back to customer-count sensitivity. **Gap:** sensitivity is scenario analysis, not calibrated probability, and the UI still needs to render it. |
 | REQ-MATH-08 | partial | S3 | `portfolioRange` | Periods aren't mixed. **Gap:** economics assume USD with no currency field; attributed vs incremental revenue isn't separated |
 
 ### Targets, competitors, creators
