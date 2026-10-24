@@ -76,6 +76,23 @@ describe("Climb tool output boundary", () => {
     expect(() => encodeToolOutput({ ...results, platformClaims: { ...results.platformClaims, platforms: [{ ...results.platformClaims.platforms[0], conversionValueMinorByCurrency: { USD: "7000" } }] } }, 7_800, output)).toThrow(/output contract/);
   });
 
+  it("validates nested image, competitor, and prospect tool data", () => {
+    const images = toolByName("list_images")?.output;
+    const imageResult = { website: null, returned: 1, truncated: false, coverage: "one result", images: [{ id: "asset_1", kind: "product_photo", view: null, label: "Desk lamp", product: { name: "Desk lamp", price: "$49", url: "https://shop.example/lamp" } }] };
+    expect(JSON.parse(encodeToolOutput(imageResult, 7_800, images))).toEqual(imageResult);
+    expect(() => encodeToolOutput({ ...imageResult, images: [{ ...imageResult.images[0], product: { name: "Desk lamp", url: "javascript:alert(1)" } }] }, 7_800, images)).toThrow(/unsafe URL|output contract/);
+
+    const competitors = toolByName("get_competitors")?.output;
+    const competitorResult = { watching: [], changes: [], suggested: [{ name: "Example", url: "https://example.com", sourceUrl: "https://research.example.com/alternatives", kind: "direct" }], coverage: { watched: 0, failed: 0, pending: 0, changesReturned: 0, changesTruncated: false, note: "Only recorded changes are shown." } };
+    expect(JSON.parse(encodeToolOutput(competitorResult, 7_800, competitors))).toEqual(competitorResult);
+    expect(() => encodeToolOutput({ ...competitorResult, suggested: [{ name: "Example", url: "https://example.com" }] }, 7_800, competitors)).toThrow(/output contract/);
+
+    const prospects = toolByName("get_prospects")?.output;
+    const prospectResult = { status: "review", research: { campaignStatus: "review", runStatus: null, runMessage: null, requestedCount: 10 }, icp: "Independent clinics", prospectCount: 0, prospectsTruncated: false, prospects: [], emails: [], bookingPage: null, upcomingCalls: [], pipeline: { suggested: 0, contacted: 0 } };
+    expect(JSON.parse(encodeToolOutput(prospectResult, 7_800, prospects))).toEqual(prospectResult);
+    expect(() => encodeToolOutput({ ...prospectResult, pipeline: { suggested: -1 } }, 7_800, prospects)).toThrow(/output contract/);
+  });
+
   it("rejects unsafe URL schemes in agent tool results", () => {
     const links = toolByName("get_links");
     expect(() => encodeToolOutput({ weekTotal: 0, links: [{ label: "bad", url: "javascript:alert(1)", clicks: 0, week: 0 }] }, 7_800, links?.output)).toThrow(/unsafe URL/);

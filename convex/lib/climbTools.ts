@@ -66,13 +66,13 @@ const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), chan
 const HttpUrlSchema = z.string().url().refine((value) => {
   return isHttpUrl(value);
 }, "Expected an HTTP(S) URL");
-const ImageListOutputSchema = z.object({ website: z.string().nullable(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.json().nullable() })) });
+const ImageListOutputSchema = z.object({ website: z.string().nullable(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.object({ name: z.string(), price: z.string().optional(), url: HttpUrlSchema.optional() }).nullable() })) });
 const InboxOutputSchema = z.object({ openReturned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
 const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), truncated: z.boolean(), coverage: z.string(), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
 const CompetitorsOutputSchema = z.object({
   watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
-  changes: z.array(z.json()),
-  suggested: z.array(z.json()),
+  changes: z.array(z.object({ id: z.string(), name: z.string(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().nullable(), sourceUrls: z.array(HttpUrlSchema), evidence: z.object({ removed: z.array(z.string()), added: z.array(z.string()) }).nullable(), at: z.number() })),
+  suggested: z.array(z.object({ name: z.string(), url: HttpUrlSchema, sourceUrl: HttpUrlSchema, kind: z.enum(["direct", "adjacent"]).optional() })),
   coverage: z.object({ watched: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(), changesReturned: z.number().int().nonnegative(), changesTruncated: z.boolean(), note: z.string() }),
 });
 const LinksOutputSchema = z.object({ weekTotal: z.number(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
@@ -179,11 +179,11 @@ const ProspectOutputSchema = z.object({
   icp: z.string().nullable(),
   prospectCount: z.number().int().nonnegative(),
   prospectsTruncated: z.boolean(),
-  prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })),
+  prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.enum(["suggested", "approved", "skipped", "contacted", "replied", "booked", "won", "lost"]), fit: z.number(), timing: z.number() })),
   emails: z.array(z.object({ day: z.number(), subject: z.string() })),
   bookingPage: z.string().nullable(),
   upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })),
-  pipeline: z.json(),
+  pipeline: z.record(z.string(), z.number().int().nonnegative()),
 });
 const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
 const RunIdOutputSchema = z.object({ runId: z.string() });
