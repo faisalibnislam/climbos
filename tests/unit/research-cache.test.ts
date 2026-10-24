@@ -129,6 +129,14 @@ describe("tenant research cache behavior", () => {
 
   it("uses a different key when business evidence or model changes", async () => {
     const originalKey = await researchCacheKey(spec, input);
+    const sameRoleDifferentAgent: AgentSpec<unknown> = {
+      ...spec,
+      id: "another-cmo-agent",
+    };
+    const differentRole: AgentSpec<unknown> = {
+      ...spec,
+      role: "seo_specialist",
+    };
     const changedInput = {
       ...input,
       facts: ["Owner reports 21 active customers."],
@@ -138,6 +146,8 @@ describe("tenant research cache behavior", () => {
       ...spec,
       models: { ...spec.models, research: "gpt-6.1-sol" as ModelKey },
     };
+    expect(await researchCacheKey(sameRoleDifferentAgent, input)).toBe(originalKey);
+    expect(await researchCacheKey(differentRole, input)).not.toBe(originalKey);
     expect(changedKey).not.toBe(originalKey);
     expect(await researchCacheKey(changedModel, input)).not.toBe(originalKey);
   });

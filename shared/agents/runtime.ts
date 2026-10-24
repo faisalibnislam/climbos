@@ -288,11 +288,11 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
 
 }
 
-/** Exact-request hash; tenant isolation is enforced separately by the storage index. */
+/** Exact-request hash; same-role agents can share it, while storage remains tenant-scoped. */
 export async function researchCacheKey<T>(spec: AgentSpec<T>, input: AgentInput): Promise<string> {
   const request = {
     cacheVersion: 1,
-    agentId: spec.id,
+    researchRole: spec.role,
     researchModel: spec.models.research,
     research: input.research,
     task: input.task,
