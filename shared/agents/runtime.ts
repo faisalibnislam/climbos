@@ -314,7 +314,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   // shipOn "gates": the review only blocks on hard gates and lint (lean mode for content);
   // "rubric": every criterion must also clear the ship rule (strategy, insights).
   // Numbers may trace to this job's research as well as the brief and facts.
-  const lintOf = (o: T) => (spec.lint ? spec.lint(o, { ...input, untrustedContext: [input.untrustedContext ?? "", research?.notes ?? "", ...(research?.sources ?? []).map((x) => x.url)].join("\n") }) : []);
+  const lintOf = (o: T) => (spec.lint ? spec.lint(o, {
+    ...input,
+    untrustedContext: [input.untrustedContext ?? "", research?.notes ?? "", ...(research?.sources ?? []).map((x) => x.url)].join("\n"),
+    availableSourceUrls: [...new Set([...(input.availableSourceUrls ?? []), ...(research?.sources ?? []).map((x) => x.url)])],
+  }) : []);
   // Best of two (cheap models): a second first draft from a bolder angle; the reviewer's scores pick the stronger one.
   // Both drafts (and then both reviews) run at the same time; each phase checkpoints on its own.
   const bestOfTwo = (spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0;

@@ -84,6 +84,8 @@ export interface AgentInput {
   research?: ResearchSpec;
   /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
   precomputedResearch?: { notes: string; sources: { url: string; title?: string }[] };
+  /** Exact pages read by the application for this run; internal input for source-reference validation. */
+  availableSourceUrls?: string[];
   /** Facts the critic must check claims against (statements). */
   facts: string[];
   /** Hard limits the output is checked against in code (spec §13). */

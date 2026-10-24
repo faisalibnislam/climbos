@@ -890,6 +890,7 @@ export const onboardingResearch = internalAction({
           `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
           {
             untrustedContext: pagesText,
+            availableSourceUrls: pages.filter((p) => p.status === "ok").map((p) => p.url),
             facts: profile.facts.map((f) => f.statement),
             research: researchFor("business_insights", { website: business.website, businessName: business.name }),
           },

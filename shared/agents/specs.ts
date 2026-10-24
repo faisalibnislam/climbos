@@ -1111,6 +1111,40 @@ function lintGeneric(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: evidenceOf(input), skip: (p) => /url|sourceUrl|keywords|key$/i.test(p) });
 }
 
+/** Source links in business intelligence must be among the pages supplied to this exact run. */
+export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps">, input: AgentInput): LintIssue[] {
+  const normalize = (raw: string): string | null => {
+    try {
+      const u = new URL(raw);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+      u.hash = "";
+      u.hostname = u.hostname.toLowerCase();
+      if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/$/, "");
+      return u.toString().replace(/\/$/, "");
+    } catch {
+      return null;
+    }
+  };
+  const sourceCandidates = [
+    ...(input.availableSourceUrls ?? []),
+    ...(input.precomputedResearch?.sources ?? []).map((s) => s.url),
+  ];
+  const available = new Set(sourceCandidates.map(normalize).filter((x): x is string => Boolean(x)));
+  const issues: LintIssue[] = [];
+  const groups: [string, { sourceUrl: string }[]][] = [
+    ["competitors", out.competitors],
+    ["alternatives", out.alternatives],
+    ["vocPhrases", out.vocPhrases],
+    ["objections", out.objections],
+    ["gaps", out.gaps],
+  ];
+  for (const [group, rows] of groups) rows.forEach((row, i) => {
+    const source = normalize(row.sourceUrl);
+    if (!source || !available.has(source)) issues.push({ severity: "error", rule: "citation", message: `This ${group === "vocPhrases" ? "customer quote" : group === "competitors" ? "competitor finding" : "finding"} cites a page that was not present in this run's supplied sources. Use a source ClimbOS provided, or leave the finding out.`, path: `${group}[${i}].sourceUrl` });
+  });
+  return issues;
+}
+
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
 function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: evidenceOf(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) });
@@ -1197,7 +1231,7 @@ export function insightsSpec(o: SpecOptions = {}): AgentSpec<InsightsV2> {
       schema: InsightsV2Schema,
       rubric: rubricOf("positioning"),
       criticSkills: ["competitor-teardown", "voc-research"],
-      lint: lintGeneric,
+      lint: (out, input) => [...lintGeneric(out, input), ...lintInsightSources(out, input)],
     },
     o,
     "expert",
