@@ -3,7 +3,7 @@ import { assessSearchReadiness } from "@shared/seo/readiness";
 import type { ExtractedPage } from "@shared/integrations/website";
 
 const page = (overrides: Partial<ExtractedPage> = {}): ExtractedPage => ({
-  og: {}, headings: [], links: [], jsonLdPrices: [], jsonLdTypes: [], text: "", truncated: false, viewportPresent: true, imageCount: 0, imagesWithAltAttribute: 0, ...overrides,
+  og: {}, headings: [], links: [], jsonLdPrices: [], jsonLdTypes: [], text: "", truncated: false, viewportPresent: true, imageCount: 0, imagesWithAltAttribute: 0, htmlLang: "en", ...overrides,
 });
 
 describe("homepage search readiness", () => {
@@ -98,5 +98,11 @@ describe("homepage search readiness", () => {
     expect(findings.map((finding) => finding.id)).toEqual(expect.arrayContaining(["missing-viewport", "missing-image-alt"]));
     expect(findings.find((finding) => finding.id === "missing-image-alt")?.evidence).toContain("1 of 2");
     expect(JSON.stringify(findings)).not.toMatch(/ranking factor|will rank/i);
+  });
+
+  it("flags an absent document language with a specific accessibility next step", () => {
+    const finding = assessSearchReadiness(page({ htmlLang: "  " })).find((item) => item.id === "missing-document-language");
+    expect(finding).toMatchObject({ level: "check", title: "Document language was not declared" });
+    expect(finding?.nextStep).toMatch(/primary language on the html element/i);
   });
 });
