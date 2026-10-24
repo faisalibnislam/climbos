@@ -522,6 +522,20 @@ function ProspectDetail({ slug, p, canEdit, campaignId, creatorMode, currency }:
           </ul>
         </div>
       ) : null}
+      {creatorMode && p.creatorMetricAnomalies?.length ? (
+        <section aria-label="Creator metric checks" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+          <h3 className="font-semibold text-amber-950">Verify displayed post counters</h3>
+          <ul className="mt-2 flex flex-col gap-3">
+            {p.creatorMetricAnomalies.map((anomaly, index) => (
+              <li key={`${anomaly.sampleUrl}-${index}`} className="text-amber-950">
+                <p>{anomaly.uncertainty}</p>
+                <p className="mt-1 text-xs">Observed {new Date(anomaly.observedAt).toISOString().slice(0, 10)}: {anomaly.interactions.map((item) => `${item.metric} ${item.value}`).join(", ")} vs. views {anomaly.views}.</p>
+                <a href={anomaly.sampleUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex text-xs font-medium underline">Check the cited post</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {creatorMode ? <CreatorCollaborationPanel slug={slug} prospectId={p.id} campaignId={campaignId} currency={currency} canEdit={canEdit} /> : null}
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
         <dt className="text-ink-3">Contact</dt>

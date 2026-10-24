@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
+import { creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
 import { prospectScore } from "../shared/outbound";
 import { sha256Hex } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -86,6 +86,7 @@ export const forStrategy = query({
             contentLanguage: p.contentLanguage ?? null,
             audienceLocation: p.audienceLocation ?? null,
             contentSamples: p.contentSamples ?? [],
+            creatorMetricAnomalies: p.creatorMetricAnomalies ?? creatorMetricAnomalies(p.contentSamples ?? [], p.updatedAt),
             competitorCollaborations: p.competitorCollaborations ?? [],
             collaborationConcept: p.collaborationConcept ?? null,
             contactRoute: p.publicEmail && !suppressed.has(p._id) ? ("email" as const) : ("none" as const),
@@ -107,7 +108,7 @@ export interface PlayTargets {
   counts: { found: number; eligible: number; contactable: number; excluded: number; inRelationship: number };
   campaignId: Id<"outboundCampaigns"> | null;
   canStart: boolean;
-  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
+  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; creatorMetricAnomalies: NonNullable<Doc<"prospects">["creatorMetricAnomalies"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
 }
 
 async function isSuppressed(ctx: QueryCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {

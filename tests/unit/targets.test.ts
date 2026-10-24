@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
 import { creatorOutreachSpec, creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
@@ -72,6 +72,19 @@ describe("source-bound creator facts (REQ-CREATOR-01)", () => {
     expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "32k views" }], source)).toEqual([{ url: postUrl, format: "short_video" }]);
     expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "2k views" }], [{ url: postUrl, observation: "12k views" }])).toEqual([{ url: postUrl, format: "short_video" }]);
     expect(citedCreatorContentSamples([{ url: "https://instagram.com/p/other", format: "short_video", likes: "210 likes" }], source)).toEqual([]);
+  });
+  it("records only displayed interaction/view counter inconsistencies, with explicit uncertainty and no fraud claim", () => {
+    const postUrl = "https://instagram.com/p/reel1";
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "1K views", likes: "1.2K likes", comments: "15 comments" }], 123)).toEqual([{
+      code: "interactions_exceed_views",
+      sampleUrl: postUrl,
+      views: "1K views",
+      interactions: [{ metric: "likes", value: "1.2K likes" }],
+      observedAt: 123,
+      uncertainty: expect.stringContaining("not evidence of fake engagement"),
+    }]);
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "1.2K", likes: "1,000", comments: "8" }], 123)).toEqual([]);
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "unavailable", likes: "2K" }], 123)).toEqual([]);
   });
   it("records prior competitor mentions with a source quote and observation date without implying current exclusivity", () => {
     const source = [{ url: "https://instagram.com/ana", observation: "Partnered with Rival in September 2025." }];

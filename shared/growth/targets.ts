@@ -1,5 +1,5 @@
 /**
- * S6 (REQ-TARGET-01..06, REQ-CREATOR-01/03): a plan's target-heavy plays get
+ * S6 (REQ-TARGET-01..06, REQ-CREATOR-01/03/04): a plan's target-heavy plays get
  * named targets from the existing Find customers / creator search, linked by
  * the play's stable ID. Pure and deterministic: which plays need targets,
  * what a creator's identity is, and how ready a play's targets honestly are.
@@ -15,6 +15,14 @@ export interface CreatorContentSample {
   views?: string;
   likes?: string;
   comments?: string;
+}
+export interface CreatorMetricAnomaly {
+  code: "interactions_exceed_views";
+  sampleUrl: string;
+  views: string;
+  interactions: { metric: "likes" | "comments"; value: string }[];
+  observedAt: number;
+  uncertainty: string;
 }
 export interface CreatorCompetitorCollaboration {
   name: string;
@@ -49,6 +57,45 @@ export function citedCreatorContentSamples(value: unknown, evidence: readonly Cr
     accepted.push(result);
   }
   return accepted;
+}
+
+/** Parse only a simple, explicitly displayed count. Unknown formats stay unknown. */
+function displayedCount(value: string | undefined, label: "views" | "likes" | "comments"): number | null {
+  if (!value) return null;
+  const escapedLabel = label === "views" ? "views?" : label;
+  const match = value.trim().match(new RegExp(`^(?:~|≈)?\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*([kmb])?(?:\\s+${escapedLabel})?$`, "i"));
+  if (!match) return null;
+  const amount = Number(match[1]!.replaceAll(",", ""));
+  const multiplier = ({ k: 1_000, m: 1_000_000, b: 1_000_000_000 } as const)[(match[2] ?? "").toLowerCase() as "k" | "m" | "b"] ?? 1;
+  const total = amount * multiplier;
+  return Number.isFinite(total) ? total : null;
+}
+
+/**
+ * Flag only a source-visible count inconsistency. This is explicitly not an
+ * authenticity or fraud score; counters may have different definitions.
+ */
+export function creatorMetricAnomalies(samples: readonly CreatorContentSample[], observedAt: number): CreatorMetricAnomaly[] {
+  const anomalies: CreatorMetricAnomaly[] = [];
+  for (const sample of samples) {
+    const views = displayedCount(sample.views, "views");
+    if (views === null) continue;
+    const interactions = (["likes", "comments"] as const).flatMap((metric) => {
+      const value = sample[metric];
+      const count = displayedCount(value, metric);
+      return value && count !== null && count > views ? [{ metric, value }] : [];
+    });
+    if (!interactions.length || !sample.views) continue;
+    anomalies.push({
+      code: "interactions_exceed_views",
+      sampleUrl: sample.url,
+      views: sample.views,
+      interactions,
+      observedAt,
+      uncertainty: "The displayed interaction count exceeds the displayed view count. This is a counter inconsistency, not evidence of fake engagement; metric definitions or refresh times may differ. Verify the source before using these counts to compare creators.",
+    });
+  }
+  return anomalies;
 }
 
 /** Preserve prior competitor collaborations as dated, source-bound signals without asserting current exclusivity. */

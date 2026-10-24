@@ -1675,6 +1675,15 @@ export default defineSchema({
         }),
       ),
     ),
+    /** Data-quality observations derived from cited public counters; never a fraud/authenticity score. */
+    creatorMetricAnomalies: v.optional(v.array(v.object({
+      code: v.literal("interactions_exceed_views"),
+      sampleUrl: v.string(),
+      views: v.string(),
+      interactions: v.array(v.object({ metric: v.union(v.literal("likes"), v.literal("comments")), value: v.string() })),
+      observedAt: v.number(),
+      uncertainty: v.string(),
+    }))),
     /** Source-bound past competitor references; observedAt is when ClimbOS inspected the source, not proof of current status. */
     competitorCollaborations: v.optional(
       v.array(
