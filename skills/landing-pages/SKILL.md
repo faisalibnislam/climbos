@@ -57,6 +57,8 @@ When something is missing:
 
    For B2B or higher-ticket offers, use the sales-narrative order: insight (what changed), the alternatives and their trade-offs, what a good solution needs, how this delivers it, proof, objections, ask.
 
+   On pricing and offer sections, make choice architecture fair: compare plans on customer-relevant jobs, quantities, support, or limits; show equivalent billing units and mandatory fees; state trial-to-paid terms before sign-up. A three-column layout is optional. Do not add a deliberately poor decoy tier or claim savings without a genuine comparison. Urgency and proof must be current and verifiable.
+
 5. **Place proof next to claims.** Use the hierarchy: verifiable number with source, named quote, demonstration or mechanism, guarantee, credentials. Superlatives are not proof. Every claim gets evidence within two sentences. A testimonial needs a name, a role or context, and a specific result or detail; "Great service!" is filler.
 
 6. **Map objections.** List the top 3–5 objections from the VOC bank (price, time, trust, switching effort, fit). For each, write the answer and choose where it sits: near the CTA if it blocks the click, in the FAQ otherwise. Habit and anxiety objections need concrete reducers: trial, import help, cancellation terms, a named person.
@@ -110,6 +112,7 @@ When asked for a brief (or before drafting a full page), include:
 
 - Never invent testimonials, names, star ratings, customer counts, logos, "as featured in", or "trusted by 10,000+".
 - Never use fake urgency (countdown timers with no real deadline, "only 2 spots left" without proof).
+- Never hide a suitable lower-priced option, mandatory fee, renewal, or cancellation term to steer a buyer toward a higher-priced choice.
 - Never write a clever or vague H1 ("Reimagine your workday") or open with "Welcome to…".
 - Never promise outcomes the business can't guarantee ("Double your bookings").
 - Never pre-tick consent boxes or bundle marketing consent into terms acceptance.

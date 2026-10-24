@@ -56,6 +56,32 @@ When something is missing:
 
 9. **Run the specificity tests, the banned-phrase list and the checklist.** Fix every hit, then re-read aloud.
 
+10. **Choose at most one primary persuasion mechanism per piece.** Start from an observed customer obstacle or job, not a list of tricks. State the customer benefit, the evidence that makes the message true, and the metric that would tell the business whether the idea helped. Treat every principle as a context-dependent hypothesis, never a guaranteed lift. Do not stack urgency, fear, social proof, and price pressure to overpower a customer who is still deciding whether the offer fits.
+
+### Persuasion mechanisms: use them to clarify value, not to defeat choice
+
+Behavioral effects vary by product, audience, price, timing, and trust. Research on advertising appeals reports mixed results; scarcity effects also depend on what is scarce and how the customer interprets it. ClimbOS should recommend a mechanism only when it addresses a diagnosed barrier and the business can substantiate its premise.
+
+| Mechanism | Use when it helps the customer | Evidence and choice guardrail |
+|---|---|---|
+| **Social proof** | A buyer needs help judging fit, reliability, or typical experience. | Use real, permissioned, representative reviews, customer counts, cases, or usage facts with source and date. Never invent, selectively gate, or imply typical results from an exceptional case. |
+| **Scarcity and FOMO** | Actual stock, appointment capacity, enrollment, or a dated offer is genuinely limited. | Say what is limited, why, and when it ends. Verify inventory or capacity and remove the claim when it expires. Never use a resetting countdown, fake waitlist, or fabricated demand. |
+| **Price anchoring** | Buyers need a fair reference to compare scope, units, or alternatives. | Compare equivalent billing periods and disclose mandatory charges, terms, and what each price includes. A crossed-out “usual” price needs a real, supportable basis. |
+| **Decoy / tier framing / rule of three** | A real set of offers is hard to compare. | Show the meaningful differences and marginal value for each tier. Three is a display choice, not a rule that makes a plan right; never invent an intentionally useless decoy or hide a suitable lower-cost option. |
+| **Free trial, sample, or demo** | The customer must experience the product or service to assess fit. | State duration, eligibility, payment details, renewal date, cancellation method, and limits before sign-up. Measure retained, qualified conversion and support/refund outcomes, not trial starts alone. |
+| **Loss aversion / problem framing** | The customer already faces a documented cost, risk, or missed opportunity. | Explain the factual consequence and its conditions, then offer a credible way to address it. Avoid fear, shame, exaggerated consequences, or urgency aimed at vulnerable people. |
+| **Reciprocity / free resource** | A useful tool, sample, checklist, or lesson lets the reader make progress. | Make the value real and the terms clear. Do not disguise a sales gate as a gift or bundle marketing consent into access. |
+| **Foot-in-the-door / commitment** | A small step is independently useful and helps the customer assess fit. | Make the step optional, explain what follows, and let the person stop without penalty. No bait-and-switch, hidden enrollment, or preselected paid add-on. |
+| **Curiosity gap** | A specific question or surprising result deserves attention. | The content must promptly and fully answer the promise. No withheld material terms, misleading headlines, or empty clickbait. |
+| **Bundling** | Items work better together or reduce a real buying/coordination burden. | Explain contents, total price, standalone availability where relevant, and who benefits. Do not label a bundle a saving unless the comparison is real. |
+| **Endowment / progress** | Setup, customization, or a working prototype helps the customer evaluate value. | Show what is saved, how to change it, and how to export, downgrade, or delete it. Never make exit costly to exploit sunk effort. |
+| **Referral** | A satisfied customer can naturally help someone with the same need. | Use customer-controlled sharing, disclose rewards, define terms, and prevent abuse. Do not message the customer's contacts or condition service on reviews. |
+| **Personalization** | A known preference or current task makes the next step more relevant. | Use data the business is entitled to use, minimize it, explain meaningful uses, and avoid sensitive-trait inference or surprising surveillance. Keep a useful non-personalized path. |
+
+Other useful levers include clear language, salience, credible demonstrations, honest risk reversal, relevant identity, narrative, familiarity, and reducing unnecessary choice. These are ways to improve understanding or fit. They do not override the same rules: evidence, transparency, user control, and a real customer benefit. If the customer would feel tricked after learning how the message was designed, choose another approach.
+
+**When proposing a test**, name the diagnosed obstacle, intervention, eligible audience, primary outcome, guardrails (refunds, cancellations, complaints, support load, margin, and customer quality as relevant), required sample or qualitative learning plan, and review date. Do not recommend a statistically underpowered A/B test just to manufacture certainty. A short interview, usability check, or owner-reviewed pilot can be the better first step.
+
 ### Frameworks: used well vs formulaically
 
 | Framework | Use when | Used well | Formulaic (fails) |
@@ -92,6 +118,7 @@ When something is missing:
 - **Say what happens next** when it isn't obvious ("We'll reply with a fixed quote the same day" only if confirmed).
 - **Never bait.** "Comment YES", "Tag someone who", "Like if you agree" are demoted by LinkedIn and Meta and read as cheap. A sincere question peers can answer from experience is fine.
 - Real deadlines only. If the brief has no deadline, there is no urgency.
+- Never present an anchor, decoy, tier order, bundle, trial, or default as inherently optimal. Explain the customer value and test business outcomes with trust and cancellation guardrails.
 - **Use the strongest confirmed offer.** If the site states it (free trial, no card, free quote, live demo), it is a confirmed fact: lead with it. Hiding a stated offer "until confirmed" loses the reader.
 
 ### Voice and channel-native craft (lessons from blind expert reviews)
@@ -164,4 +191,16 @@ Expert copy has every one of these traits; mediocre copy is missing at least two
 - [ ] No banned phrases, no framework seams, no disconnected one-liners.
 - [ ] Sentence lengths vary; it reads cleanly aloud at grade 5–8 (consumer).
 - [ ] Exactly one CTA: verb, object, outcome, true friction-removers only.
+- [ ] Persuasion mechanism, if used, addresses an evidenced customer barrier and has a truthful premise; terms, alternatives and exit remain clear.
 - [ ] Formatting, emoji, hashtags and length follow the channel playbook's limits.
+
+## Evidence notes
+
+These sources inform the guardrails, not universal lift claims. The advertising-appeals systematic review found mixed evidence and study-quality limitations. Scarcity research reports segment and scarcity-type interactions, not a tactic that works for everyone. A large SaaS freemium field experiment found trial-duration effects differed across adoption, immediate conversion, delayed conversion, and context. Personalization research identifies effectiveness alongside privacy/intrusiveness concerns. FTC staff's dark-pattern report documents design practices that can impair meaningful choice. Recheck applicable platform policies and jurisdiction-specific rules before execution.
+
+- [Advertising appeals effectiveness: a systematic literature review](https://pubmed.ncbi.nlm.nih.gov/34931233/)
+- [Need for uniqueness moderates the effectiveness of scarcity appeals](https://pubmed.ncbi.nlm.nih.gov/36507003/)
+- [The attraction effect in crowdfunding](https://pubsonline.informs.org/doi/10.1287/isre.2022.1152)
+- [Large-scale randomized field experiment on free-trial duration in freemium](https://pmc.ncbi.nlm.nih.gov/articles/PMC12217587/)
+- [Personalized advertising meta-analysis of experimental evidence](https://doi.org/10.1080/00218499.2025.2467763)
+- [FTC, Bringing Dark Patterns to Light](https://www.ftc.gov/system/files/ftc_gov/pdf/P214800%20Dark%20Patterns%20Report%209.14.2022%20-%20FINAL.pdf)

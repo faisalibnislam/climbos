@@ -46,6 +46,8 @@ When something is missing:
 
 6. **Filter by hard constraints.** Remove anything the budget, hours, skills or affordable CAC cannot support. Example floor: LinkedIn ads below roughly $1.5–3k/month rarely gather enough data (practitioner guidance; treat as a soft floor).
 
+   When an opportunity uses persuasion or choice design (trial, price framing, bundle, scarcity, referral, personalization, social proof), name the customer barrier it addresses and the evidence for that barrier. Check fulfillment capacity, total economics, consent, reversibility, and customer-quality risks. Do not select a tactic because it is popular or psychologically catchy; compare it with a simpler clarity, proof, product, or friction fix.
+
 7. **Score the survivors with modified ICE:** Impact (1–5: would it move the 90-day goal?), Confidence (1–5: evidence buyers are there and competitors win there), Ease (1–5: given these hours and skills). Multiply for a score out of 125. Apply two gates: **CAC fit** (yes/no) and **time-to-signal** (weeks to a leading indicator; break ties toward faster signal). Inside a chosen channel, rank experiments with RICE when reach can be estimated.
 
 8. **Run Bullseye.** Outer ring: all ideas. Middle ring: top 3–5 by score. Inner ring: **1 primary + 1 secondary channel**, plus at most 1 always-on hygiene item (Google Business Profile for local, review collection, basic email capture). Write the **not-doing list**: every rejected channel with a one-line reason. A business under ~$50k/month revenue never runs more than 3 active acquisition channels.
@@ -91,6 +93,7 @@ Pick the one number the business is paid for at its stage: activated accounts an
 - Invent statistics, benchmarks, costs per click or conversion rates. Every number is sourced, from the owner's data, or labelled "assumption, validate by [date]".
 - Propose A/B tests the traffic cannot support.
 - Recommend fake reviews, review gating, incentivised reviews, buying followers, scraping in breach of terms, misleading claims, or ignoring regulated-industry rules.
+- Recommend fabricated urgency, deliberately misleading price comparisons, hidden trial renewals, coercive defaults, or personalization that relies on sensitive or improperly used data.
 - Recommend scaling paid acquisition while contribution margin is negative or retention is broken.
 - Load week 1 with 30 tasks.
 - Default to a pre-2024 playbook: blog-first SEO, interest targeting, company-page LinkedIn posting.

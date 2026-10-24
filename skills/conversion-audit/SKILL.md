@@ -40,6 +40,8 @@ When something is missing:
 
 4. **Offer.** What exactly does the buyer get, at what price, with what risk reversal (guarantee, free quote, trial, cancellation terms) and with what reason to act now? Hidden prices on a page whose visitors are price-shopping are a leak; say so and recommend showing a price, a "from" price or a range only if the owner confirms it. Urgency must be real (a genuine deadline or capacity limit).
 
+   Review the persuasion mechanism behind the offer. Social proof must be verifiable and representative; scarcity must match current inventory, capacity, or an actual deadline; anchors must compare equivalent scopes and time periods; trial and renewal terms must be visible before commitment; bundles must explain their contents and true value. Three tiers can aid comparison only when all are real, useful choices. Treat FOMO, loss framing, decoys, free trials, defaults, personalization, referrals, and progress mechanics as hypotheses to assess against the customer's situation. Flag any design that hides costs, makes an unwanted option easier to accept, obstructs cancellation, or uses fear or personal data to push an unsuitable purchase.
+
 5. **Proof hierarchy.** Inventory every proof element and rank it: (1) verifiable number tied to a source; (2) named customer quote with permission; (3) demonstration or mechanism; (4) guarantee or risk reversal; (5) credentials or awards; (6) unspecific superlatives (not proof). Check that proof sits next to the claim it supports and that the strongest proof appears earliest.
 
 6. **Objection coverage.** Take the top 3–5 objections from the VoC bank (or, without VoC, from reviews and the business type) and find where each is answered. Map each objection to the section where it naturally arises (price near the CTA, area served near the booking form, setup effort near "how it works").
@@ -84,6 +86,7 @@ When something is missing:
 - Invent testimonials, review counts, guarantees, prices, client logos or results in rewrites.
 - Describe visuals, speed or mobile layout you did not observe or measure.
 - Recommend dark patterns: fake countdowns or scarcity, hidden fees revealed at checkout, pre-ticked consent boxes, confirmshaming, review gating, forced account creation without need.
+- Recommend an intentionally useless pricing decoy, misleading price anchor, undisclosed auto-renewal, inflated savings, or personalization based on sensitive inferred traits.
 - Recommend removing legally required information (prices including mandatory fees where required, cancellation rights, privacy notices).
 - Give generic best-practice lists unconnected to this page ("add social proof", "use a strong CTA").
 - Recommend A/B tests the page's traffic cannot complete.
