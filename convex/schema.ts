@@ -2080,6 +2080,21 @@ export default defineSchema({
     .index("by_agent_created", ["orgId", "customAgentId", "createdAt"])
     .index("by_agent_updated", ["orgId", "customAgentId", "updatedAt"]),
 
+  /** Workspace-member usefulness reports for built-in agent runs; not measured business outcomes. */
+  builtInAgentFeedback: defineTable({
+    orgId: v.id("organizations"),
+    agentArchetypeId: v.string(),
+    workflowRunId: v.id("workflowRuns"),
+    userId: v.id("users"),
+    rating: v.union(v.literal("helpful"), v.literal("needs_work")),
+    note: v.optional(v.string()),
+    evidenceKind: v.literal("member_reported"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_user", ["workflowRunId", "userId"])
+    .index("by_archetype_updated", ["orgId", "agentArchetypeId", "updatedAt"]),
+
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
   assets: defineTable({
@@ -2389,6 +2404,17 @@ export default defineSchema({
       role: agentRoleValidator,
       defaultActions: v.array(v.string()),
       successMeasures: v.object({ outputQuality: v.string(), businessOutcome: v.string(), guardrail: v.string() }),
+    })),
+    /** Immutable member-reported usefulness context for this built-in role, captured at run creation. */
+    agentArchetypeFeedbackSnapshot: v.optional(v.object({
+      source: v.literal("workspace_member_report"),
+      windowDays: v.number(),
+      capturedAt: v.number(),
+      sampleSize: v.number(),
+      helpful: v.number(),
+      needsWork: v.number(),
+      capped: v.boolean(),
+      notes: v.array(v.object({ rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.string(), updatedAt: v.number() })),
     })),
     /** Immutable profile context used by this run and any action runs it starts. */
     customAgentSnapshot: v.optional(v.object({

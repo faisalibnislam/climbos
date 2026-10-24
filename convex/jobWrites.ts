@@ -115,6 +115,13 @@ export const jobContext = internalQuery({
           ...feedbackSnapshot.notes.map((r) => `- ${new Date(r.updatedAt).toISOString().slice(0, 10)} · ${r.rating}: ${r.note.slice(0, 400)}`),
         ].join("\n")
       : "";
+    const archetypeFeedbackSnapshot = run.agentArchetypeFeedbackSnapshot;
+    const agentArchetypeFeedbackText = archetypeFeedbackSnapshot?.sampleSize
+      ? [
+          `WORKSPACE MEMBER-REPORTED FEEDBACK ABOUT THIS BUILT-IN SPECIALIST (last ${archetypeFeedbackSnapshot.windowDays} days; ${archetypeFeedbackSnapshot.capped ? `at least ${archetypeFeedbackSnapshot.sampleSize}` : archetypeFeedbackSnapshot.sampleSize} ratings: ${archetypeFeedbackSnapshot.helpful} helpful, ${archetypeFeedbackSnapshot.needsWork} needs work; captured ${new Date(archetypeFeedbackSnapshot.capturedAt).toISOString()}; this is usefulness feedback, not measured business performance):`,
+          ...archetypeFeedbackSnapshot.notes.map((entry) => `- ${new Date(entry.updatedAt).toISOString().slice(0, 10)} · ${entry.rating}: ${entry.note.slice(0, 400)}`),
+        ].join("\n")
+      : "";
     // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
     const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
     const consented = new Set(
@@ -176,6 +183,7 @@ export const jobContext = internalQuery({
       run,
       specialist: run.customAgentSnapshot ?? null,
       specialistFeedbackText,
+      agentArchetypeFeedbackText,
       agentArchetype: run.agentArchetypeSnapshot ?? (run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null),
       org,
       business,

@@ -160,6 +160,25 @@ export async function createRunWithReservation(
     defaultActions: [...archetype.defaultActions],
     successMeasures: { ...archetype.successMeasures },
   } : undefined;
+  let agentArchetypeFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["agentArchetypeFeedbackSnapshot"]> | undefined;
+  if (archetype) {
+    const feedbackSince = Date.now() - 90 * 86_400_000;
+    const feedback = await ctx.db.query("builtInAgentFeedback")
+      .withIndex("by_archetype_updated", (q) => q.eq("orgId", org._id).eq("agentArchetypeId", archetype.id).gte("updatedAt", feedbackSince))
+      .order("desc")
+      .take(101);
+    const sample = feedback.slice(0, 100);
+    agentArchetypeFeedbackSnapshot = {
+      source: "workspace_member_report",
+      windowDays: 90,
+      capturedAt: Date.now(),
+      sampleSize: sample.length,
+      helpful: sample.filter((entry) => entry.rating === "helpful").length,
+      needsWork: sample.filter((entry) => entry.rating === "needs_work").length,
+      capped: feedback.length > 100,
+      notes: sample.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, updatedAt: entry.updatedAt })),
+    };
+  }
   let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
   let customAgentFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["customAgentFeedbackSnapshot"]> | undefined;
   if (params.customAgentId) {
@@ -246,6 +265,7 @@ export async function createRunWithReservation(
     ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
     ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
     ...(agentArchetypeSnapshot ? { agentArchetypeSnapshot } : {}),
+    ...(agentArchetypeFeedbackSnapshot ? { agentArchetypeFeedbackSnapshot } : {}),
     ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
     ...(customAgentFeedbackSnapshot ? { customAgentFeedbackSnapshot } : {}),
     kind: params.kind,

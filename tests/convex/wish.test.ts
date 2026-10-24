@@ -78,9 +78,28 @@ describe("wishes", () => {
     });
     const context = await t.query(internal.jobWrites.jobContext, { runId: run._id });
     expect(context?.agentArchetype).toMatchObject({ id: "social_media_marketing", role: "social_media_manager", successMeasures: run.agentArchetypeSnapshot?.successMeasures });
+    expect(context?.agentArchetypeFeedbackText).toBe("");
     expect(JSON.parse(run.input).brief).toContain("Dec 20");
     expect(run.status).toBe("verified");
     // Every card that started is internal-only.
     expect(cards.filter((c) => c!.runId).every((c) => !c!.externalEffect)).toBe(true);
+
+    const outsider = await asNewUser(t, "wish-outsider@example.com", { anonymous: true });
+    const { slug: outsiderSlug } = await outsider.client.mutation(api.demo.createDemoWorkspace, {});
+    await expect(outsider.client.mutation(api.workspace.rateBuiltInAgentRun, { slug: outsiderSlug, runId: run._id, rating: "helpful" })).rejects.toThrow(/couldn't find/i);
+    await expect(outsider.client.query(api.workspace.builtInAgentRunFeedback, { slug: outsiderSlug, runId: run._id })).rejects.toThrow(/couldn't find/i);
+
+    await u.client.mutation(api.workspace.rateBuiltInAgentRun, { slug, runId: run._id, rating: "needs_work", note: "It focused on impressions, not purchases. Contact me at owner@example.com" });
+    expect(await u.client.query(api.workspace.builtInAgentRunFeedback, { slug, runId: run._id })).toMatchObject({ rating: "needs_work", note: "It focused on impressions, not purchases. Contact me at [email]" });
+    expect((await t.query(internal.jobWrites.jobContext, { runId: run._id }))?.agentArchetypeFeedbackText).toBe(""); // Current runs keep their creation-time snapshot.
+
+    await u.client.mutation(api.workspace.sendChat, { slug, text: "Write another Instagram post about our pre-order deadline." });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const nextRun = await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      return (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").collect()).find((entry) => entry.agentArchetypeId === "social_media_marketing")!;
+    });
+    expect(nextRun.agentArchetypeFeedbackSnapshot).toMatchObject({ sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
+    expect((await t.query(internal.jobWrites.jobContext, { runId: nextRun._id }))?.agentArchetypeFeedbackText).toContain("It focused on impressions, not purchases.");
   });
 });

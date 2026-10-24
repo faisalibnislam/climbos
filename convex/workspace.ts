@@ -259,6 +259,38 @@ export const rateCustomAgentRun = mutation({
   },
 });
 
+/** Record a workspace member's usefulness report for a finished built-in agent run. */
+export const rateBuiltInAgentRun = mutation({
+  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()) },
+  handler: async (ctx, { slug, runId, rating, note }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    const archetypeId = run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId;
+    if (run.customAgentId || !archetypeId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) {
+      throw appError("INVALID", "Rate a finished built-in specialist run.");
+    }
+    if (!AGENT_ARCHETYPE_BY_ID.has(archetypeId)) throw appError("INVALID", "This built-in specialist role is no longer available.");
+    const prior = await ctx.db.query("builtInAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    const cleanNote = redactFeedback(note?.trim().slice(0, 800) ?? "", [org.name], { keepNumbers: true }) || undefined;
+    const now = Date.now();
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, updatedAt: now });
+    else await ctx.db.insert("builtInAgentFeedback", { orgId: org._id, agentArchetypeId: archetypeId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, evidenceKind: "member_reported", createdAt: now, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "built_in_agent.usefulness_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a built-in specialist run.` });
+  },
+});
+
+/** Let the current member restore their own rating in a future UI. */
+export const builtInAgentRunFeedback = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (!run.agentArchetypeSnapshot && !run.agentArchetypeId) return null;
+    const feedback = await ctx.db.query("builtInAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    return feedback ? { rating: feedback.rating, note: feedback.note ?? null, updatedAt: feedback.updatedAt } : null;
+  },
+});
+
 /**
  * "Make it happen" on a play (REQ-UX-03): the request is built here from the
  * stored play, found by plan and play ID, never from text the page assembled.
