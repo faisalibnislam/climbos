@@ -64,6 +64,7 @@ export const view = query({
       budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach },
       types: profile.types.map((k) => ({ key: k, label: TYPE_BY_KEY[k]?.label ?? k, regulated: TYPE_BY_KEY[k]?.regulated ?? null })),
       typesSource: profile.typesSource ?? "inferred",
+      availableTypes: BUSINESS_TYPES.map(({ key, label, category, customer, regulated }) => ({ key, label, category, customer, regulated: regulated ?? null })),
       dimensions: (Object.keys(DIMENSIONS) as DimensionKey[]).map((k) => ({
         key: k,
         label: DIMENSIONS[k].label,

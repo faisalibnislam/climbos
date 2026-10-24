@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Ban, Bot, ChevronDown, CircleCheck, Clock, Hand, Hourglass, ShieldAlert, Sparkles, Store, UserRound, Wallet, type LucideIcon } from "@/components/icons"
 import { useState } from "react";
-import { Badge, Callout, ChoiceChips, EmptyState, IconTile, Select, Skeleton, toast } from "@/components/ui";
+import { Badge, Button, Callout, ChoiceChips, EmptyState, IconTile, Select, Skeleton, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,12 @@ const GROUPS = [
   { key: "later", label: "Later", bar: "bg-chart-3" },
   { key: "notNow", label: "Not now", bar: "bg-chart-5" },
   { key: "ineligible", label: "Not a fit", bar: "bg-chart-6" },
+] as const;
+
+const TYPE_GROUPS = [
+  { key: "software", label: "Software & digital" },
+  { key: "commerce", label: "Products & commerce" },
+  { key: "services", label: "Services & organizations" },
 ] as const;
 
 /** How the channel library splits for this business: one stacked bar with counts. */
@@ -87,7 +93,11 @@ export function ChannelScorecard({ slug }: { slug: string }) {
 
 function Profile({ slug, data }: { slug: string; data: View }) {
   const set = useMutation(api.acquisition.setDimension);
+  const setTypes = useMutation(api.acquisition.setTypes);
   const [open, setOpen] = useState(false);
+  const [editTypes, setEditTypes] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(data.types.map((t) => t.key));
+  const [savingTypes, setSavingTypes] = useState(false);
   const save = async (key: string, value: string) => {
     try {
       await set({ slug, key, value });
@@ -112,6 +122,9 @@ function Profile({ slug, data }: { slug: string; data: View }) {
                 </Badge>
               ))}
             </div>
+            <p className="mt-1 text-xs text-ink-3">
+              {data.typesSource === "owner" ? "Confirmed by your team" : "Suggested classification · confirm to affect channel eligibility"}
+            </p>
           </div>
         </div>
         <div className="flex flex-col items-start gap-1 rounded-[var(--radius-card)] bg-cream-soft px-3 py-2 sm:items-end">
@@ -137,6 +150,73 @@ function Profile({ slug, data }: { slug: string; data: View }) {
           <ShieldAlert aria-hidden className="mt-px size-3.5 shrink-0" />
           {data.types.find((t) => t.regulated)?.regulated}
         </p>
+      ) : null}
+      {data.canEdit ? (
+        <div className="mt-4">
+          {!editTypes ? (
+            <Button size="sm" variant="secondary" onClick={() => { setSelectedTypes(data.types.map((t) => t.key)); setEditTypes(true); }}>
+              {data.typesSource === "owner" ? "Edit business types" : "Confirm business types"}
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+              <div>
+                <p className="text-ui font-medium text-ink">Which kinds of business describe you?</p>
+                <p className="mt-1 text-xs text-ink-3">Choose 1–3. These choices can affect which channels ClimbOS marks eligible; inferred suggestions do not unlock restricted channels until confirmed.</p>
+              </div>
+              {TYPE_GROUPS.map((group) => (
+                <fieldset key={group.key}>
+                  <legend className="mb-1 text-xs font-semibold text-ink-2">{group.label}</legend>
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {data.availableTypes.filter((type) => type.category === group.key).map((type) => {
+                      const checked = selectedTypes.includes(type.key);
+                      return (
+                        <label key={type.key} className="flex min-h-9 items-center gap-2 rounded-[var(--radius-control)] px-2 text-sm text-ink hover:bg-surface">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!checked && selectedTypes.length >= 3}
+                            onChange={() => setSelectedTypes((current) => checked ? current.filter((key) => key !== type.key) : [...current, type.key])}
+                            className="size-4 accent-brand-700"
+                          />
+                          <span>{type.label}</span>
+                          {type.regulated ? <span className="text-xs text-amber-800">· regulated</span> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  loading={savingTypes}
+                  disabled={selectedTypes.length < 1 || selectedTypes.length > 3}
+                  onClick={async () => {
+                    setSavingTypes(true);
+                    try {
+                      await setTypes({ slug, types: selectedTypes });
+                      setEditTypes(false);
+                      toast({ tone: "success", title: "Business types confirmed.", description: "Channel eligibility has been recalculated using your choices." });
+                    } catch (e) {
+                      toast({ tone: "danger", title: errorMessage(e) });
+                    } finally {
+                      setSavingTypes(false);
+                    }
+                  }}
+                >
+                  Save confirmation
+                </Button>
+                <Button size="sm" variant="ghost" disabled={savingTypes} onClick={() => { setSelectedTypes(data.types.map((t) => t.key)); setEditTypes(false); }}>
+                  Cancel
+                </Button>
+                <span className="text-xs text-ink-3">{selectedTypes.length}/3 selected</span>
+              </div>
+              {selectedTypes.some((key) => data.availableTypes.find((type) => type.key === key)?.regulated) ? (
+                <Callout tone="warning" title="Additional review may apply">Some advertising, claims, referral, or privacy rules depend on your industry and jurisdiction. A category selection is not a compliance review.</Callout>
+              ) : null}
+            </div>
+          )}
+        </div>
       ) : null}
       {data.canEdit && ask.length ? (
         <div className="mt-4 flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-2 p-3">

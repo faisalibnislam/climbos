@@ -12,6 +12,8 @@ describe("owner-confirmed acquisition types", () => {
     await expect(owner.client.mutation(api.acquisition.setTypes, { slug, types: ["not_a_type"] })).rejects.toThrow(/Choose 1–3 distinct business types/);
     const inferred = await owner.client.query(api.acquisition.view, { slug });
     expect(inferred?.typesSource).toBe("inferred");
+    expect(inferred?.availableTypes).toContainEqual(expect.objectContaining({ key: "b2b_saas", category: "software" }));
+    expect(inferred?.availableTypes.some((type) => type.regulated)).toBe(true);
     expect(inferred?.channels.find((channel) => channel.id === "S18")?.status).toBe("ineligible");
 
     await owner.client.mutation(api.acquisition.setTypes, { slug, types: ["mobile_app"] });
