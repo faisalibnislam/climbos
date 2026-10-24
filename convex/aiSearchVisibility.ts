@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { summarizeAiSearchVisibility, type AiSearchObservation } from "../shared/aiSearch/visibility";
+import { summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation } from "../shared/aiSearch/visibility";
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -110,11 +110,13 @@ export const report = query({
     const observations = fetched.slice(0, MAX_OBSERVATIONS);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const summary = summarizeAiSearchVisibility(observations as AiSearchObservation[], business?.website);
+    const panelSummary = summarizeAiSearchPanel(observations as AiSearchObservation[], business?.website);
     return {
       windowDays,
       observationCount: observations.length,
       truncated,
       summary,
+      panelSummary,
       observations: observations.map(({ _id, provider, query, location, checkedAt, answerStatus, brandMention, sentiment, citedUrls, competitorMentions, answerExcerpt, enteredAt }) => ({
         id: _id,
         provider,

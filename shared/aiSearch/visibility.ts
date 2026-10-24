@@ -46,6 +46,23 @@ export interface AiSearchVisibilityRow {
   evidenceBasis: "owner_observed";
 }
 
+export interface AiSearchPanelSummary {
+  observations: number;
+  answered: number;
+  noAnswer: number;
+  failed: number;
+  queryCount: number;
+  businessMentionAnswers: number;
+  competitorMentionEvents: number;
+  mentionShareDenominatorEvents: number;
+  observedMentionEventShare: ObservedRate;
+  firstPartyCitationAnswers: number | null;
+  observedFirstPartyCitationRate: ObservedRate | null;
+  competitorMentionAnswers: { name: string; answers: number }[];
+  evidenceBasis: "owner_observed";
+  limitations: string[];
+}
+
 const Z95 = 1.959963984540054;
 
 /** Wilson score interval: finite for small samples and deterministic. */
@@ -143,4 +160,61 @@ export function summarizeAiSearchVisibility(
       evidenceBasis: "owner_observed" as const,
     };
   }).sort((a, b) => a.provider.localeCompare(b.provider) || cleanKey(a.query).localeCompare(cleanKey(b.query)) || cleanKey(a.location ?? "").localeCompare(cleanKey(b.location ?? "")));
+}
+
+/**
+ * Descriptive summary of the supplied observations. Every answered check has
+ * equal weight regardless of query demand. Competitor coverage is limited to
+ * labels the observer entered, and repeated checks are not independent market
+ * samples; this is not market share or causal business impact.
+ */
+export function summarizeAiSearchPanel(
+  observations: readonly AiSearchObservation[],
+  businessWebsite?: string,
+): AiSearchPanelSummary {
+  const answered = observations.filter((row) => row.answerStatus === "answered");
+  const knownMentions = answered.filter((row) => row.brandMention !== "unknown");
+  const businessMentionAnswers = knownMentions.filter((row) => row.brandMention === "yes").length;
+  const competitorAnswerCounts = new Map<string, { name: string; answers: number }>();
+  let competitorMentionEvents = 0;
+  let knownCompetitorMentionEvents = 0;
+
+  for (const row of answered) {
+    const uniqueNames = new Set(row.competitorMentions.map(cleanKey).filter(Boolean));
+    competitorMentionEvents += uniqueNames.size;
+    if (row.brandMention !== "unknown") knownCompetitorMentionEvents += uniqueNames.size;
+    for (const normalizedName of uniqueNames) {
+      const name = row.competitorMentions.find((item) => cleanKey(item) === normalizedName)!.trim();
+      const current = competitorAnswerCounts.get(normalizedName) ?? { name, answers: 0 };
+      current.answers += 1;
+      competitorAnswerCounts.set(normalizedName, current);
+    }
+  }
+
+  const citationAnswers = businessWebsite
+    ? answered.filter((row) => row.citedUrls.some((url) => sameBusinessDomain(url, businessWebsite))).length
+    : null;
+  const mentionTrials = businessMentionAnswers + knownCompetitorMentionEvents;
+
+  return {
+    observations: observations.length,
+    answered: answered.length,
+    noAnswer: observations.filter((row) => row.answerStatus === "no_answer").length,
+    failed: observations.filter((row) => row.answerStatus === "failed").length,
+    queryCount: new Set(observations.map((row) => `${row.provider}\u0000${cleanKey(row.query)}\u0000${cleanKey(row.location ?? "")}`)).size,
+    businessMentionAnswers,
+    competitorMentionEvents,
+    mentionShareDenominatorEvents: mentionTrials,
+    observedMentionEventShare: observedRate(businessMentionAnswers, mentionTrials),
+    firstPartyCitationAnswers: citationAnswers,
+    observedFirstPartyCitationRate: citationAnswers === null ? null : observedRate(citationAnswers, answered.length),
+    competitorMentionAnswers: [...competitorAnswerCounts.values()].sort((a, b) => b.answers - a.answers || a.name.localeCompare(b.name)),
+    evidenceBasis: "owner_observed",
+    limitations: [
+      "Each recorded answer has equal weight; this does not weight queries by customer demand or commercial importance.",
+      "Competitor mentions include only names entered by the observer and may omit alternatives.",
+      "Repeated checks are not independent samples of all answers; the result is not market share or a causal effect.",
+      "A citation or mention is not evidence of visits, leads, customers, or revenue impact.",
+    ],
+  };
 }

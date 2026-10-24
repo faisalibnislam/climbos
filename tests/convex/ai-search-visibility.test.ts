@@ -51,6 +51,15 @@ describe("AI search visibility observations", () => {
     const report = await owner.client.query(api.aiSearchVisibility.report, { slug, days: 90 });
     expect(report.observationCount).toBe(3);
     expect(report.summary).toHaveLength(2);
+    expect(report.panelSummary).toMatchObject({
+      observations: 3,
+      answered: 2,
+      noAnswer: 1,
+      queryCount: 2,
+      businessMentionAnswers: 1,
+      competitorMentionEvents: 2,
+      observedMentionEventShare: { successes: 1, trials: 3, rate: 1 / 3 },
+    });
     expect(report.summary[0]).toMatchObject({
       provider: "chatgpt",
       samples: { answered: 2, noAnswer: 0, failed: 0 },

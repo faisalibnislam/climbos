@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { observedRate, summarizeAiSearchVisibility, wilsonInterval, type AiSearchObservation } from "../../shared/aiSearch/visibility";
+import { observedRate, summarizeAiSearchPanel, summarizeAiSearchVisibility, wilsonInterval, type AiSearchObservation } from "../../shared/aiSearch/visibility";
 
 const row = (overrides: Partial<AiSearchObservation> = {}): AiSearchObservation => ({
   provider: "chatgpt",
@@ -61,5 +61,40 @@ describe("AI search visibility observations", () => {
 
   it("does not claim citation visibility when the business domain is unknown", () => {
     expect(summarizeAiSearchVisibility([row()])[0].firstPartyCitations).toBeNull();
+  });
+
+  it("reports panel-level observed mention share with explicit coverage limits", () => {
+    const observations = [
+      row(),
+      row({ brandMention: "no", sentiment: "unknown", competitorMentions: ["Rival Co", "Other"] }),
+      row({ provider: "gemini", answerStatus: "no_answer", brandMention: "unknown", sentiment: "unknown", citedUrls: [], competitorMentions: [] }),
+      row({ location: "Dhaka" }),
+      row({ answerStatus: "failed", brandMention: "unknown", sentiment: "unknown", citedUrls: [], competitorMentions: [] }),
+    ];
+    const panel = summarizeAiSearchPanel(observations, "https://example.com");
+
+    expect(panel).toMatchObject({
+      observations: 5,
+      answered: 3,
+      noAnswer: 1,
+      failed: 1,
+      queryCount: 3,
+      businessMentionAnswers: 2,
+      competitorMentionEvents: 4,
+      mentionShareDenominatorEvents: 6,
+      observedMentionEventShare: { successes: 2, trials: 6, rate: 2 / 6 },
+      firstPartyCitationAnswers: 3,
+      observedFirstPartyCitationRate: { successes: 3, trials: 3, rate: 1 },
+      evidenceBasis: "owner_observed",
+    });
+    expect(panel.competitorMentionAnswers).toEqual([{ name: "Rival Co", answers: 3 }, { name: "Other", answers: 1 }]);
+    expect(panel.limitations.join(" ")).toMatch(/not market share/);
+  });
+
+  it("does not calculate mention share when brand mention labeling is unknown", () => {
+    const panel = summarizeAiSearchPanel([row({ brandMention: "unknown", sentiment: "unknown" })]);
+    expect(panel.competitorMentionEvents).toBe(1);
+    expect(panel.mentionShareDenominatorEvents).toBe(0);
+    expect(panel.observedMentionEventShare.rate).toBeNull();
   });
 });
