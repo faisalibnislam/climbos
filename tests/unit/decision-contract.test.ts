@@ -54,12 +54,15 @@ describe("decision contract flag", () => {
     expect(portfolio(lintPlays([play({ kind: "bankable" })], undefined, { decisionContract: true }))[0]).toBeTruthy(); // predictability 3
   });
 
-  it("the spec and task follow the flag; the default task is unchanged", () => {
+  it("the structured fields follow the flag while every default task uses constraint-first strategy", () => {
     const on = growthPlaysSpec({ decisionContract: true });
     expect(portfolio(on.lint!({ portfolioNote: "", economics: { ...econ, sources: { revenue: tag, margin: tag, churn: tag } }, plays: [play()] } as never, { task: "", brief: "", facts: [] } as never))).toEqual([]);
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_CONTRACT);
-    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/one bankable play, one or two creative-but-proven plays/);
-    expect(playsTask({ scorecard: "", insights: "" })).not.toContain("DECISION CONTRACT");
+    const defaultTask = playsTask({ scorecard: "", insights: "" });
+    expect(defaultTask).toContain(DECISION_CONTRACT);
+    expect(defaultTask).toMatch(/best-supported binding constraint/);
+    expect(defaultTask).not.toMatch(/one bankable play, one or two creative-but-proven plays/);
+    expect(defaultTask).not.toContain("Fill decision");
   });
 });
 

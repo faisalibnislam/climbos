@@ -202,7 +202,12 @@ describe("flag wiring", () => {
 
   it("on: the task asks for the decision fields; off: it doesn't", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_FIELDS);
-    expect(playsTask({ scorecard: "", insights: "" })).not.toContain("Fill decision");
+    const defaultTask = playsTask({ scorecard: "", insights: "" });
+    expect(defaultTask).not.toContain("Fill decision");
+    expect(defaultTask).toContain("best-supported binding constraint");
+    expect(defaultTask).toContain("Fixing the offer, conversion, retention or capacity can outrank new acquisition");
+    expect(defaultTask).not.toContain("one bankable play, one or two creative-but-proven plays");
+    expect(defaultTask).not.toContain("capped moonshot");
   });
 
   it("on: the plays lint includes the decision checks", () => {
