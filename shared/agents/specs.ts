@@ -465,11 +465,16 @@ export const SeoBriefV2Schema = SeoBriefSchema.extend({
 });
 
 export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
+  findings: z.array(ConversionAuditSchema.shape.findings.element.extend({
+    evidenceKind: z.enum(["observed", "inference"]),
+    evidenceQuote: z.string().min(1).max(240),
+  })),
   clarityVerdict: z.string(),
   messageMatch: z.string(),
   prioritizedFixes: z.array(z.object({
     fix: z.string(),
     pageUrl: z.string(),
+    evidenceQuote: z.string().min(1).max(240),
     why: z.string(),
     effort: z.enum(["small", "medium", "large"]),
     expectedEffect: z.string(),
@@ -1808,7 +1813,20 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
     ...out.prioritizedFixes.map((fix, i) => ({ url: fix.pageUrl, path: `prioritizedFixes[${i}].pageUrl` })),
   ];
   const copyClaims = out.prioritizedFixes.map((fix, i) => ({ path: `prioritizedFixes[${i}].sampleCopy`, text: fix.sampleCopy }));
-  return [...lintAvailableSourceUrls(refs, input), ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
+  const normalizeQuote = (text: string) => text.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const pageBlocks = [...(input.untrustedContext ?? "").matchAll(/<untrusted_content source="([^"]+)">\s*([\s\S]*?)\s*<\/untrusted_content>/gi)];
+  const quoteIssues: LintIssue[] = [];
+  const checkQuote = (sourceUrl: string, evidenceQuote: string, path: string) => {
+    const source = normalizeSourceUrl(sourceUrl);
+    const quote = normalizeQuote(evidenceQuote);
+    const supported = source && quote && pageBlocks.some(([, pageUrl, pageText]) =>
+      normalizeSourceUrl(pageUrl ?? "") === source && normalizeQuote(pageText ?? "").includes(quote),
+    );
+    if (!supported) quoteIssues.push({ severity: "error", rule: "conversion_evidence_quote", message: "Use a short, verbatim excerpt from the exact website page read in this run. Label the conclusion as observed or inferred; do not use the owner's description as page evidence.", path });
+  };
+  out.findings.forEach((finding, i) => checkQuote(finding.sourceUrl, finding.evidenceQuote, `findings[${i}].evidenceQuote`));
+  out.prioritizedFixes.forEach((fix, i) => checkQuote(fix.pageUrl, fix.evidenceQuote, `prioritizedFixes[${i}].evidenceQuote`));
+  return [...lintAvailableSourceUrls(refs, input), ...quoteIssues, ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
 }
 
 /* ---------------- Rubrics ---------------- */

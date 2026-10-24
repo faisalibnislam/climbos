@@ -91,23 +91,28 @@ describe("research source assessment", () => {
       brief: "Example Co",
       facts: [],
       availableSourceUrls: ["https://example.com/pricing/"],
+      untrustedContext: '<untrusted_content source="https://example.com/pricing/">TITLE: Pricing\nPAGE TEXT:\nPlans start at $29 per month.</untrusted_content>',
     };
-    const finding = { area: "pricing", observation: "The price is hard to find.", recommendation: "Make the plan price easier to locate.", impact: "medium" as const };
+    const finding = { area: "pricing", observation: "The page states the starting price.", recommendation: "Keep the price beside the plan choices.", impact: "medium" as const, evidenceKind: "observed" as const, evidenceQuote: "Plans start at $29 per month." };
     const audit = { clarityVerdict: "Clear offer", messageMatch: "Matches the page title", prioritizedFixes: [], quickWins: [], socialReview: { summary: "No published posts supplied", findings: [], contentMixSuggestions: [] } };
     expect(lintConversionAuditSources({ ...audit, findings: [{ ...finding, sourceUrl: "https://example.com/pricing" }] }, input)).toEqual([]);
     const issues = lintConversionAuditSources({ ...audit, findings: [{ ...finding, sourceUrl: "https://invented.example/pricing" }, { ...finding, sourceUrl: "" }] }, input);
-    expect(issues).toMatchObject([
-      { severity: "error", rule: "citation", path: "findings[0].sourceUrl" },
-      { severity: "error", rule: "citation", path: "findings[1].sourceUrl" },
-    ]);
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ severity: "error", rule: "citation", path: "findings[0].sourceUrl" }),
+      expect.objectContaining({ severity: "error", rule: "citation", path: "findings[1].sourceUrl" }),
+      expect.objectContaining({ severity: "error", rule: "conversion_evidence_quote", path: "findings[0].evidenceQuote" }),
+      expect.objectContaining({ severity: "error", rule: "conversion_evidence_quote", path: "findings[1].evidenceQuote" }),
+    ]));
+    const unsupportedQuote = lintConversionAuditSources({ ...audit, findings: [{ ...finding, sourceUrl: "https://example.com/pricing/", evidenceQuote: "Customers love this product." }] }, input);
+    expect(unsupportedQuote).toMatchObject([{ severity: "error", rule: "conversion_evidence_quote", path: "findings[0].evidenceQuote" }]);
   });
 
   it("requires implementation-ready page fixes to cite a read page and avoid unsupported sample-copy claims", () => {
-    const input = { task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"] };
+    const input = { task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"], untrustedContext: '<untrusted_content source="https://example.com/pricing/">TITLE: Pricing\nPAGE TEXT:\nPlans include the features you need.</untrusted_content>' };
     const audit = {
       findings: [], quickWins: [], clarityVerdict: "Clear offer", messageMatch: "Not measured.",
       prioritizedFixes: [{
-        fix: "Clarify the plan choice", pageUrl: "https://example.com/pricing/", why: "The page lists plans without explaining who each fits.",
+        fix: "Clarify the plan choice", pageUrl: "https://example.com/pricing/", evidenceQuote: "Plans include the features you need.", why: "The page lists plans without explaining who each fits.",
         effort: "small" as const, expectedEffect: "Visitors may compare plans more easily.",
         contentStructure: ["Who this plan suits", "Included features", "Compare plans"], sampleCopy: "Choose the plan that fits your team.",
         uxChanges: ["Place the plan comparison next to the plan choices."], measurementPlan: "Record qualified plan inquiries before the change, then compare the same count after it.",
@@ -122,6 +127,7 @@ describe("research source assessment", () => {
     });
     expect(lintConversionAuditSources(bad, input)).toMatchObject([
       { severity: "error", rule: "citation", path: "prioritizedFixes[0].pageUrl" },
+      { severity: "error", rule: "conversion_evidence_quote", path: "prioritizedFixes[0].evidenceQuote" },
       { severity: "error", rule: "unsupported_claim", path: "prioritizedFixes[0].sampleCopy" },
     ]);
   });
