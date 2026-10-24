@@ -380,7 +380,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
-| REQ-UX-01 | partial | S15 | `ExpertPlan.tsx`, `PlanSections.tsx` | The North Star card now shows goal / plays support / gap |
+| REQ-UX-01 | partial | S15 | `ExpertPlan.tsx`, `PlanSections.tsx`, `today/page.tsx` | Growth Home now leads with the first recommendation from the saved plan, shows at most two additional opportunities, then lists operational next actions. Existing plan status and evidence remain visible. The broader quick-snapshot and incremental-analysis experience is still incomplete. |
 | REQ-UX-02 | done-fixture (flagged) | S6 | `ExpertPlan.tsx` `PlayTargetsBlock`, outbound page `?campaign=` | Each play card shows up to 5 targets: name, profile link, fit reason, contact route or "contact route not found", and stage. It also shows a state badge and a link to the full list. Not checked in a browser |
 | REQ-UX-03 | done-fixture | S6 | `workspace.ts` `startPlay`, `targets.startForPlay` | "Make it happen" sends the plan and play IDs, and the server builds the request from the stored play. Older plays without an ID use the old text path. "Find targets" also uses IDs |
 | REQ-UX-04 | partial | S15 | actionCards status | |

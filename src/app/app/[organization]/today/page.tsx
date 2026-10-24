@@ -161,6 +161,7 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.45fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
+          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {/* Next actions */}
           <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
             <div className="px-5 pt-5">
@@ -194,7 +195,6 @@ export default function TodayPage() {
               </ol>
             )}
           </section>
-          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
@@ -275,6 +275,7 @@ function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug
   const [detail, setDetail] = useState<"simple" | "detailed" | "expert">("simple");
   const planStatus = status === "needs_approval" ? "Plan needs your OK" : status === "approved" ? "From your approved plan" : status === "draft" ? "Draft plan" : "Plan update";
   const tone = status === "needs_approval" ? "amber" : status === "approved" ? "green" : "neutral";
+  const visibleOpportunities = opportunities.slice(0, 3);
   async function ask(opportunity: GrowthOpportunity) {
     if (!opportunity.id) return;
     setAsking(opportunity.id);
@@ -291,15 +292,18 @@ function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug
   return (
     <section aria-labelledby="opportunities-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="opportunities-heading" className="heading-section">Top growth opportunities</h2>
+        <div>
+          <h2 id="opportunities-heading" className="heading-section">Here’s where I’d start</h2>
+          <p className="mt-1 text-sm text-ink-3">A short list from your growth plan, in the order it recommends.</p>
+        </div>
         <span className="flex flex-wrap items-center gap-2"><Badge tone={tone}>{planStatus}</Badge><Segmented label="Opportunity explanation level" value={detail} onChange={setDetail} options={[{ value: "simple", label: "Simple" }, { value: "detailed", label: "Detailed" }, { value: "expert", label: "Expert" }]} /></span>
       </div>
       <ol className="grid gap-3">
-        {opportunities.map((opportunity, index) => (
+        {visibleOpportunities.map((opportunity, index) => (
           <li key={opportunity.id ?? `${opportunity.title}-${index}`}>
-            <article className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+            <article className={`flex flex-col gap-3 rounded-xl border bg-surface p-4 ${index === 0 ? "border-brand/40 shadow-[var(--card-shadow)]" : "border-line"}`}>
               <div>
-                <p className="text-overline">Opportunity {index + 1}</p>
+                <p className="text-overline">{index === 0 ? "First recommendation" : `Also worth exploring · ${index + 1}`}</p>
                 <h3 className="heading-card mt-0.5">{opportunity.title}</h3>
                 {opportunity.why ? <p className="mt-1 text-sm text-ink-2">{opportunity.why}</p> : null}
               </div>
