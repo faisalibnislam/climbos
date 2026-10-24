@@ -161,6 +161,7 @@ export async function createRunWithReservation(
     successMeasures: { ...archetype.successMeasures },
   } : undefined;
   let agentArchetypeFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["agentArchetypeFeedbackSnapshot"]> | undefined;
+  let agentArchetypeOutcomeSnapshot: NonNullable<Doc<"workflowRuns">["agentArchetypeOutcomeSnapshot"]> | undefined;
   if (archetype) {
     const feedbackSince = Date.now() - 90 * 86_400_000;
     const feedback = await ctx.db.query("builtInAgentFeedback")
@@ -177,6 +178,31 @@ export async function createRunWithReservation(
       needsWork: sample.filter((entry) => entry.rating === "needs_work").length,
       capped: feedback.length > 100,
       notes: sample.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, updatedAt: entry.updatedAt })),
+    };
+    const outcomeSince = Date.now() - 180 * 86_400_000;
+    const outcomes = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_archetype_period", (q) => q.eq("orgId", org._id).eq("agentArchetypeId", archetype.id).gte("periodEnd", outcomeSince))
+      .order("desc")
+      .take(11);
+    agentArchetypeOutcomeSnapshot = {
+      source: "workspace_member_report",
+      windowDays: 180,
+      capturedAt: Date.now(),
+      reports: outcomes.slice(0, 10).map(({ metric, measureType, unit, value, denominator, comparisonValue, comparisonDenominator, comparisonLabel, cohort, periodStart, periodEnd, updatedAt }) => ({
+        metric,
+        measureType,
+        unit,
+        value,
+        ...(denominator !== undefined ? { denominator } : {}),
+        ...(comparisonValue !== undefined ? { comparisonValue } : {}),
+        ...(comparisonDenominator !== undefined ? { comparisonDenominator } : {}),
+        ...(comparisonLabel ? { comparisonLabel } : {}),
+        cohort,
+        periodStart,
+        periodEnd,
+        updatedAt,
+      })),
+      capped: outcomes.length > 10,
     };
   }
   let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
@@ -266,6 +292,7 @@ export async function createRunWithReservation(
     ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
     ...(agentArchetypeSnapshot ? { agentArchetypeSnapshot } : {}),
     ...(agentArchetypeFeedbackSnapshot ? { agentArchetypeFeedbackSnapshot } : {}),
+    ...(agentArchetypeOutcomeSnapshot ? { agentArchetypeOutcomeSnapshot } : {}),
     ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
     ...(customAgentFeedbackSnapshot ? { customAgentFeedbackSnapshot } : {}),
     kind: params.kind,

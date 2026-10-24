@@ -576,6 +576,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "strategies", index: "by_org" },
   { table: "goals", index: "by_org_status" },
   { table: "businesses", index: "by_org" },
+  { table: "builtInAgentOutcomeReports", index: "by_archetype_updated" },
   { table: "workflowRuns", index: "by_org_created" },
   // Integrations and keys first, so nothing keeps acting for a deleted workspace.
   { table: "airlyLinks", index: "by_org" },

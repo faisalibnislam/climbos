@@ -2109,6 +2109,32 @@ export default defineSchema({
     .index("by_run_user", ["workflowRunId", "userId"])
     .index("by_archetype_updated", ["orgId", "agentArchetypeId", "updatedAt"]),
 
+  /** Workspace-member reported measurements after a specialist run; these are observations, never causal proof. */
+  builtInAgentOutcomeReports: defineTable({
+    orgId: v.id("organizations"),
+    agentArchetypeId: v.string(),
+    workflowRunId: v.id("workflowRuns"),
+    userId: v.id("users"),
+    metricKey: v.string(),
+    metric: v.string(),
+    measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")),
+    unit: v.string(),
+    value: v.number(),
+    denominator: v.optional(v.number()),
+    comparisonValue: v.optional(v.number()),
+    comparisonDenominator: v.optional(v.number()),
+    comparisonLabel: v.optional(v.string()),
+    cohort: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+    evidenceKind: v.literal("member_reported"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_user_metric", ["workflowRunId", "userId", "metricKey"])
+    .index("by_archetype_updated", ["orgId", "agentArchetypeId", "updatedAt"])
+    .index("by_archetype_period", ["orgId", "agentArchetypeId", "periodEnd"]),
+
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
   assets: defineTable({
@@ -2429,6 +2455,27 @@ export default defineSchema({
       needsWork: v.number(),
       capped: v.boolean(),
       notes: v.array(v.object({ rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.string(), updatedAt: v.number() })),
+    })),
+    /** Immutable, member-reported outcome observations from this workspace and specialist role. */
+    agentArchetypeOutcomeSnapshot: v.optional(v.object({
+      source: v.literal("workspace_member_report"),
+      windowDays: v.number(),
+      capturedAt: v.number(),
+      reports: v.array(v.object({
+        metric: v.string(),
+        measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")),
+        unit: v.string(),
+        value: v.number(),
+        denominator: v.optional(v.number()),
+        comparisonValue: v.optional(v.number()),
+        comparisonDenominator: v.optional(v.number()),
+        comparisonLabel: v.optional(v.string()),
+        cohort: v.string(),
+        periodStart: v.number(),
+        periodEnd: v.number(),
+        updatedAt: v.number(),
+      })),
+      capped: v.boolean(),
     })),
     /** Immutable profile context used by this run and any action runs it starts. */
     customAgentSnapshot: v.optional(v.object({

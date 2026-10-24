@@ -291,6 +291,100 @@ export const builtInAgentRunFeedback = query({
   },
 });
 
+/** Record one member-reported outcome measure for a finished built-in specialist run. */
+export const reportBuiltInAgentOutcome = mutation({
+  args: {
+    slug: v.string(),
+    runId: v.id("workflowRuns"),
+    metric: v.string(),
+    measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")),
+    unit: v.string(),
+    value: v.number(),
+    denominator: v.optional(v.number()),
+    comparisonValue: v.optional(v.number()),
+    comparisonDenominator: v.optional(v.number()),
+    comparisonLabel: v.optional(v.string()),
+    cohort: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(args.runId), org._id, "specialist run");
+    const archetypeId = run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId;
+    if (run.customAgentId || !archetypeId || !["verified", "uncertain"].includes(run.status)) {
+      throw appError("INVALID", "Report outcomes for a finished built-in specialist run.");
+    }
+    if (!AGENT_ARCHETYPE_BY_ID.has(archetypeId)) throw appError("INVALID", "This built-in specialist role is no longer available.");
+
+    const now = Date.now();
+    const metric = redactFeedback(args.metric.trim().slice(0, 100), [org.name], { keepNumbers: true });
+    const unit = redactFeedback(args.unit.trim().slice(0, 30), [org.name], { keepNumbers: true });
+    const cohort = redactFeedback(args.cohort.trim().slice(0, 120), [org.name], { keepNumbers: true });
+    const comparisonLabel = args.comparisonLabel ? redactFeedback(args.comparisonLabel.trim().slice(0, 80), [org.name], { keepNumbers: true }) : undefined;
+    const metricKey = metric.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const finite = (value: number) => Number.isFinite(value);
+    const validNumber = (value: number) => finite(value) && (args.measureType === "currency" || value >= 0);
+    const validRateDenominator = (value: number | undefined) => Number.isSafeInteger(value) && (value ?? 0) > 0;
+    if (!metricKey || metric.length < 2 || !unit || !cohort || !validNumber(args.value)) throw appError("INVALID", "Enter a metric, unit, cohort, and a valid observed value.");
+    if (args.measureType === "count" && !Number.isSafeInteger(args.value)) throw appError("INVALID", "Count outcomes must be whole numbers.");
+    if (args.measureType === "rate" && (args.value < 0 || args.value > 1 || !validRateDenominator(args.denominator))) throw appError("INVALID", "Rate outcomes must be between 0 and 1 and include a positive whole-number denominator.");
+    if (args.measureType !== "rate" && args.denominator !== undefined) throw appError("INVALID", "Only rate outcomes use a denominator.");
+    if (args.measureType !== "rate" && args.comparisonDenominator !== undefined) throw appError("INVALID", "Only rate comparisons use a denominator.");
+    if (args.comparisonValue !== undefined) {
+      if (!validNumber(args.comparisonValue) || !comparisonLabel) throw appError("INVALID", "A comparison needs a valid value and a label for the comparison period or group.");
+      if (args.measureType === "count" && !Number.isSafeInteger(args.comparisonValue)) throw appError("INVALID", "Count comparisons must be whole numbers.");
+      if (args.measureType === "rate" && (args.comparisonValue < 0 || args.comparisonValue > 1 || !validRateDenominator(args.comparisonDenominator))) throw appError("INVALID", "Rate comparisons must be between 0 and 1 and include a positive whole-number denominator.");
+    } else if (args.comparisonDenominator !== undefined || comparisonLabel) {
+      throw appError("INVALID", "Provide a comparison value before adding comparison details.");
+    }
+    if (!Number.isSafeInteger(args.periodStart) || !Number.isSafeInteger(args.periodEnd) || args.periodStart >= args.periodEnd || args.periodEnd > now || args.periodEnd - args.periodStart > 366 * 86_400_000) {
+      throw appError("INVALID", "Use a completed measurement period no longer than one year.");
+    }
+
+    const prior = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_run_user_metric", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id).eq("metricKey", metricKey))
+      .unique();
+    const record = {
+      orgId: org._id,
+      agentArchetypeId: archetypeId,
+      workflowRunId: run._id,
+      userId: user._id,
+      metricKey,
+      metric,
+      measureType: args.measureType,
+      unit,
+      value: args.value,
+      ...(args.denominator !== undefined ? { denominator: args.denominator } : {}),
+      ...(args.comparisonValue !== undefined ? { comparisonValue: args.comparisonValue } : {}),
+      ...(args.comparisonDenominator !== undefined ? { comparisonDenominator: args.comparisonDenominator } : {}),
+      ...(comparisonLabel ? { comparisonLabel } : {}),
+      cohort,
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      evidenceKind: "member_reported" as const,
+      updatedAt: now,
+    };
+    if (prior) await ctx.db.patch(prior._id, record);
+    else await ctx.db.insert("builtInAgentOutcomeReports", { ...record, createdAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "built_in_agent.outcome_reported", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded a member-reported ${metric.slice(0, 80)} outcome for a built-in specialist run.` });
+  },
+});
+
+/** Return only the current member's outcome reports for one built-in specialist run. */
+export const builtInAgentRunOutcomes = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (run.customAgentId || !(run.agentArchetypeSnapshot ?? run.agentArchetypeId)) return [];
+    const reports = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_run_user_metric", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id))
+      .take(20);
+    return reports.map(({ metricKey: _metricKey, orgId: _orgId, userId: _userId, ...report }) => ({ ...report, source: "workspace_member_report" as const }));
+  },
+});
+
 /**
  * "Make it happen" on a play (REQ-UX-03): the request is built here from the
  * stored play, found by plan and play ID, never from text the page assembled.

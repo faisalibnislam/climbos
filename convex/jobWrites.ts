@@ -122,6 +122,22 @@ export const jobContext = internalQuery({
           ...archetypeFeedbackSnapshot.notes.map((entry) => `- ${new Date(entry.updatedAt).toISOString().slice(0, 10)} · ${entry.rating}: ${entry.note.slice(0, 400)}`),
         ].join("\n")
       : "";
+    const archetypeOutcomeSnapshot = run.agentArchetypeOutcomeSnapshot;
+    const formatOutcomeValue = (entry: NonNullable<typeof archetypeOutcomeSnapshot>["reports"][number], value: number, denominator?: number) => {
+      if (entry.measureType === "rate") return `${(value * 100).toFixed(2)}%${denominator !== undefined ? ` (${denominator} eligible)` : ""}`;
+      return `${value} ${entry.unit}`.trim();
+    };
+    const agentArchetypeOutcomeText = archetypeOutcomeSnapshot?.reports.length
+      ? [
+          `WORKSPACE MEMBER-REPORTED OUTCOME OBSERVATIONS (same specialist role; up to ${archetypeOutcomeSnapshot.windowDays} days old; captured ${new Date(archetypeOutcomeSnapshot.capturedAt).toISOString()}; not independently verified or causal evidence):`,
+          ...archetypeOutcomeSnapshot.reports.map((entry) => {
+            const period = `${new Date(entry.periodStart).toISOString().slice(0, 10)} to ${new Date(entry.periodEnd).toISOString().slice(0, 10)}`;
+            const comparison = entry.comparisonValue === undefined ? "" : `; reported comparison ${formatOutcomeValue(entry, entry.comparisonValue, entry.comparisonDenominator)}${entry.comparisonLabel ? ` (${entry.comparisonLabel})` : ""}`;
+            return `- ${entry.metric}: ${formatOutcomeValue(entry, entry.value, entry.denominator)}; cohort: ${entry.cohort}; period: ${period}${comparison}.`;
+          }),
+          "Treat each entry as a descriptive workspace report. Match metric, cohort, offer, channel and period before applying it; do not pool unlike businesses or claim the specialist caused a change. Member reports are separate from usefulness ratings and do not authorize any action.",
+        ].join("\n")
+      : "";
     // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
     const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
     const consented = new Set(
@@ -184,6 +200,7 @@ export const jobContext = internalQuery({
       specialist: run.customAgentSnapshot ?? null,
       specialistFeedbackText,
       agentArchetypeFeedbackText,
+      agentArchetypeOutcomeText,
       agentArchetype: run.agentArchetypeSnapshot ?? (run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null),
       org,
       business,

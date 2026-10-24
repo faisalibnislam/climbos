@@ -88,10 +88,29 @@ describe("wishes", () => {
     const { slug: outsiderSlug } = await outsider.client.mutation(api.demo.createDemoWorkspace, {});
     await expect(outsider.client.mutation(api.workspace.rateBuiltInAgentRun, { slug: outsiderSlug, runId: run._id, rating: "helpful" })).rejects.toThrow(/couldn't find/i);
     await expect(outsider.client.query(api.workspace.builtInAgentRunFeedback, { slug: outsiderSlug, runId: run._id })).rejects.toThrow(/couldn't find/i);
+    await expect(outsider.client.mutation(api.workspace.reportBuiltInAgentOutcome, {
+      slug: outsiderSlug, runId: run._id, metric: "qualified leads", measureType: "count", unit: "leads", value: 2,
+      cohort: "Instagram campaign", periodStart: Date.now() - 14 * 86_400_000, periodEnd: Date.now() - 86_400_000,
+    })).rejects.toThrow(/couldn't find/i);
 
     await u.client.mutation(api.workspace.rateBuiltInAgentRun, { slug, runId: run._id, rating: "needs_work", note: "It focused on impressions, not purchases. Contact me at owner@example.com" });
     expect(await u.client.query(api.workspace.builtInAgentRunFeedback, { slug, runId: run._id })).toMatchObject({ rating: "needs_work", note: "It focused on impressions, not purchases. Contact me at [email]" });
     expect((await t.query(internal.jobWrites.jobContext, { runId: run._id }))?.agentArchetypeFeedbackText).toBe(""); // Current runs keep their creation-time snapshot.
+
+    const periodEnd = Date.now() - 86_400_000;
+    const periodStart = periodEnd - 14 * 86_400_000;
+    await expect(u.client.mutation(api.workspace.reportBuiltInAgentOutcome, {
+      slug, runId: run._id, metric: "Qualified lead rate", measureType: "rate", unit: "fraction", value: 0.08,
+      cohort: "New leads from the Instagram campaign", periodStart, periodEnd,
+    })).rejects.toThrow(/denominator/i);
+    await u.client.mutation(api.workspace.reportBuiltInAgentOutcome, {
+      slug, runId: run._id, metric: "Qualified lead rate", measureType: "rate", unit: "fraction", value: 0.08, denominator: 50,
+      comparisonValue: 0.04, comparisonDenominator: 50, comparisonLabel: "prior 14-day campaign", cohort: "New leads from the Instagram campaign", periodStart, periodEnd,
+    });
+    expect(await u.client.query(api.workspace.builtInAgentRunOutcomes, { slug, runId: run._id })).toMatchObject([
+      { metric: "Qualified lead rate", measureType: "rate", value: 0.08, denominator: 50, comparisonValue: 0.04, comparisonDenominator: 50, comparisonLabel: "prior 14-day campaign", cohort: "New leads from the Instagram campaign", periodStart, periodEnd },
+    ]);
+    await expect(outsider.client.query(api.workspace.builtInAgentRunOutcomes, { slug: outsiderSlug, runId: run._id })).rejects.toThrow(/couldn't find/i);
 
     await u.client.mutation(api.workspace.sendChat, { slug, text: "Write another Instagram post about our pre-order deadline." });
     await t.finishAllScheduledFunctions(() => undefined);
@@ -100,6 +119,9 @@ describe("wishes", () => {
       return (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").collect()).find((entry) => entry.agentArchetypeId === "social_media_marketing")!;
     });
     expect(nextRun.agentArchetypeFeedbackSnapshot).toMatchObject({ sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
+    expect(nextRun.agentArchetypeOutcomeSnapshot).toMatchObject({ source: "workspace_member_report", windowDays: 180, reports: [{ metric: "Qualified lead rate", value: 0.08, denominator: 50, comparisonValue: 0.04, comparisonDenominator: 50, comparisonLabel: "prior 14-day campaign" }] });
     expect((await t.query(internal.jobWrites.jobContext, { runId: nextRun._id }))?.agentArchetypeFeedbackText).toContain("It focused on impressions, not purchases.");
+    expect((await t.query(internal.jobWrites.jobContext, { runId: nextRun._id }))?.agentArchetypeOutcomeText).toContain("8.00% (50 eligible)");
+    expect((await t.query(internal.jobWrites.jobContext, { runId: nextRun._id }))?.agentArchetypeOutcomeText).toContain("not independently verified or causal evidence");
   });
 });
