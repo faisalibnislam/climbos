@@ -1855,9 +1855,21 @@ type SiteSeoReadiness = {
   state: "measured" | "partial" | "unavailable";
   pagesSampled: number;
   pagesWithStaticHtml: number;
-  pages: { url: string; metadataState: "observed" | "unavailable"; titleLength: number | null; descriptionLength: number | null; headingCounts: { h1: number; h2: number; h3: number } | null; canonicalUrl: string | null; robotsDirectives: string | null; structuredDataTypes: string[] | null }[];
+  pages: { url: string; metadataState: "observed" | "unavailable"; titleLength: number | null; descriptionLength: number | null; headingCounts: { h1: number; h2: number; h3: number } | null; canonicalUrl: string | null; robotsDirectives: string | null; structuredDataTypes: string[] | null; internalLinks: string[] | null }[];
   findings: (ReadinessFinding & { pageUrl: string })[];
 };
+
+function samePublicSiteLink(sourceUrl: string, targetUrl: string): boolean {
+  try {
+    const source = new URL(sourceUrl);
+    const target = new URL(targetUrl);
+    if (!["http:", "https:"].includes(target.protocol) || source.username || source.password || target.username || target.password) return false;
+    const bare = (hostname: string) => hostname.toLowerCase().replace(/^www\./, "");
+    return bare(source.hostname) === bare(target.hostname);
+  } catch {
+    return false;
+  }
+}
 
 function siteSeoReadiness(pages: Awaited<ReturnType<typeof researchWebsite>>["pages"]): SiteSeoReadiness {
   const sampled = pages.filter((page) => page.status === "ok");
@@ -1875,6 +1887,7 @@ function siteSeoReadiness(pages: Awaited<ReturnType<typeof researchWebsite>>["pa
       canonicalUrl: page.htmlMetadataRead ? page.canonicalUrl ?? null : null,
       robotsDirectives: page.htmlMetadataRead ? page.robotsDirectives ?? null : null,
       structuredDataTypes: page.htmlMetadataRead ? (page.structuredDataTypes ?? []).slice(0, 20) : null,
+      internalLinks: page.htmlMetadataRead ? (page.internalLinks ?? []).filter((url) => samePublicSiteLink(page.url, url)).slice(0, 30) : null,
     })),
     findings: observed.flatMap((page) => (page.searchReadiness ?? []).map((finding) => ({ ...finding, pageUrl: page.url }))).slice(0, 40),
   };

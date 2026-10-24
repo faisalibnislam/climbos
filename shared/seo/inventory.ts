@@ -9,6 +9,8 @@ export type SiteInventoryPage = {
   canonicalUrl: string | null;
   robotsDirectives: string | null;
   structuredDataTypes: string[] | null;
+  /** Same-site links extracted from this page's fetched HTML; null means unavailable. */
+  internalLinks: string[] | null;
   findings: SiteInventoryFinding[];
 };
 export type SiteInventorySnapshot = {
@@ -105,8 +107,28 @@ export function extractSiteInventory(input: { output: string; runId: string; che
       canonicalUrl: text(observed?.canonicalUrl),
       robotsDirectives: text(observed?.robotsDirectives, 500),
       structuredDataTypes: Array.isArray(observed?.structuredDataTypes) ? observed.structuredDataTypes.slice(0, 20).filter((item): item is string => typeof item === "string" && item.length <= 200) : null,
+      internalLinks: Array.isArray(observed?.internalLinks)
+        ? [...new Set(observed.internalLinks.slice(0, 30).filter((item): item is string => typeof item === "string" && sameSite(item, input.website)))].slice(0, 30)
+        : null,
       findings: findingsByUrl.get(key)?.slice(0, 20) ?? [],
     });
+  }
+  // This is explicitly a sample graph. It can surface a review opportunity,
+  // but cannot prove that a destination is orphaned on the full site.
+  const linkSources = pages.filter((page) => page.status === "read" && page.internalLinks !== null);
+  if (linkSources.length >= 2) {
+    const incoming = new Set(linkSources.flatMap((page) => page.internalLinks ?? []).map(urlKey));
+    for (const page of pages) {
+      if (page.status !== "read" || incoming.has(urlKey(page.url))) continue;
+      page.findings.push({
+        id: "no-incoming-link-observed-in-sample",
+        level: "check",
+        title: "No incoming internal link observed in this sample",
+        evidence: "None of the " + linkSources.length + " sampled pages with readable link data linked to this URL. This partial sample cannot establish that the page is orphaned across the full site.",
+        nextStep: "Review the site's navigation and related pages. If this page is important, consider adding a useful contextual link from a relevant page.",
+        state: "open",
+      });
+    }
   }
   const state = readiness?.state === "measured" || readiness?.state === "partial" ? readiness.state : "unavailable";
   return {

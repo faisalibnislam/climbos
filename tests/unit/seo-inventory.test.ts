@@ -36,4 +36,41 @@ describe("saved website page inventory", () => {
     expect(extractSiteInventory({ output: "{", runId: "run-1", checkedAt: 123, website: "https://example.com" })).toBeNull();
     expect(extractSiteInventory({ output: JSON.stringify({ auditCoverage: { website: { requestedUrl: "https://old.example/" } } }), runId: "run-1", checkedAt: 123, website: "https://example.com" })).toBeNull();
   });
+
+  it("flags only sampled pages with no observed incoming links and excludes external links", () => {
+    const output = JSON.stringify({ auditCoverage: {
+      website: {
+        requestedUrl: "https://example.com/",
+        discoveredCandidates: 3,
+        pagesSampled: 3,
+        pagesRead: 3,
+        pages: [
+          { url: "https://example.com/", status: "read" },
+          { url: "https://example.com/pricing", status: "read" },
+          { url: "https://example.com/guide", status: "read" },
+        ],
+      },
+      seoReadiness: {
+        state: "measured",
+        pagesWithStaticHtml: 3,
+        pages: [
+          { url: "https://example.com/", metadataState: "observed", internalLinks: ["https://example.com/pricing", "https://outside.example/", "https://user:secret@example.com/private"] },
+          { url: "https://example.com/pricing", metadataState: "observed", internalLinks: ["https://example.com/"] },
+          { url: "https://example.com/guide", metadataState: "observed", internalLinks: [] },
+        ],
+        findings: [],
+      },
+    } });
+
+    const inventory = extractSiteInventory({ output, runId: "run-2", checkedAt: 456, website: "https://example.com/" });
+    const guide = inventory?.pages.find((page) => page.url.endsWith("/guide"));
+    const home = inventory?.pages.find((page) => page.url === "https://example.com/");
+    expect(guide?.findings).toContainEqual(expect.objectContaining({
+      id: "no-incoming-link-observed-in-sample",
+      level: "check",
+      evidence: expect.stringContaining("3 sampled pages"),
+    }));
+    expect(home?.findings).toHaveLength(0);
+    expect(inventory?.pages[0]?.internalLinks).toEqual(["https://example.com/pricing"]);
+  });
 });
