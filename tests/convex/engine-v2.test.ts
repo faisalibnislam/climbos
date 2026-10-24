@@ -58,6 +58,20 @@ describe("Engine v2 wiring", () => {
       await ctx.db.insert("revenueEvents", {
         orgId: w.orgId,
         source: "stripe",
+        sourceEventId: "earlier-payment-before-window",
+        occurredAt: now - 400 * 86_400_000,
+        customerRef: "private-customer",
+        orderRef: "earlier-order",
+        currency: "USD",
+        amountMinor: 10_000,
+        refundedMinor: 0,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
         sourceEventId: "refund-exposure-payment",
         occurredAt: now - 30 * 86_400_000,
         customerRef: "private-customer",
@@ -130,7 +144,7 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(3);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(4);
     expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
     expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
       paymentCount: 2,
@@ -143,7 +157,7 @@ describe("Engine v2 wiring", () => {
     expect(JSON.stringify(strategy?.expert?.snapshot?.refundExposure)).not.toContain("private-customer");
     expect(strategy?.expert?.snapshot?.channelOutcomes).toMatchObject({
       currency: "USD",
-      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_500, refundMinor: 1_500, mediaSpendStatus: "matched", mediaSpendOrigin: "owner_reported", adSpendMinor: 10_000, mediaRoas: 0.85 }],
+      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 0, netRevenueMinor: 8_500, refundMinor: 1_500, mediaSpendStatus: "matched", mediaSpendOrigin: "owner_reported", adSpendMinor: 10_000, mediaRoas: 0.85 }],
       partial: false,
     });
     expect(JSON.stringify(strategy?.expert?.snapshot?.channelOutcomes)).not.toContain("private-customer");

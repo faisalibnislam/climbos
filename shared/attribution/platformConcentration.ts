@@ -48,6 +48,8 @@ export interface PlatformConcentration {
     source: string;
     paymentEvents: number;
     identifiedCustomers: number;
+    /** Customers whose first positive payment in the loaded billing history fell in this window, assigned to the tracked path. */
+    firstRecordedCustomers: number;
     netRevenueMinor: number;
     refundMinor: number;
     mediaSpendStatus?: "matched" | "not_reported" | "currency_mismatch" | "partial";
@@ -85,11 +87,17 @@ export function platformConcentration(
   ));
   if (!events.length) return null;
 
-  const ordered = [...events].sort((a, b) => a.occurredAt - b.occurredAt || a.id.localeCompare(b.id));
+  // Use earlier imported billing history to keep renewals from looking like new customers.
+  // This is still "first recorded" in ClimbOS data, not a verified lifetime acquisition record.
+  const history = dedupeRevenueEvents(input.filter((event) => event.currency === options.currency && event.occurredAt <= options.toMs)).events;
+  const ordered = [...history].sort((a, b) => a.occurredAt - b.occurredAt || a.id.localeCompare(b.id));
   const lastTouch = new Map<string, { occurredAt: number; label: string }>();
   const channelByOrder = new Map<string, string>();
   const revenueBySource = new Map<string, number>();
-  const outcomesBySource = new Map<string, { paymentEvents: number; customers: Set<string>; netRevenueMinor: number; refundMinor: number }>();
+  const outcomesBySource = new Map<string, { paymentEvents: number; customers: Set<string>; firstRecordedCustomers: number; netRevenueMinor: number; refundMinor: number }>();
+  const firstPaidCustomerKeys = new Set<string>();
+  const uncertainFirstPaidCustomerKeys = new Set<string>();
+  let historyIncomplete = false;
   let attributedConversions = 0;
   let totalConversions = 0;
   const touchKey = (event: RevenueEvent) => event.customerRef ? `${event.source}\u0000${event.customerRef}` : null;
@@ -108,12 +116,22 @@ export function platformConcentration(
     const source = event.kind === "refund"
       ? (order ? channelByOrder.get(order) : undefined) ?? eligibleTouch
       : directLabel ?? eligibleTouch;
+    const inWindow = event.occurredAt >= options.fromMs && event.occurredAt <= options.toMs;
+    const validMinorAmounts = Number.isSafeInteger(event.amountMinor) && Number.isSafeInteger(event.refundedMinor);
+    const invalidPayment = event.kind !== "refund" && (event.amountMinor < 0 || event.refundedMinor < 0 || event.refundedMinor > event.amountMinor);
+    const invalidRefund = event.kind === "refund" && event.refundedMinor !== 0;
+    if (!validMinorAmounts || invalidPayment || invalidRefund) {
+      if (inWindow) throw new RangeError(`Event ${event.id}: billing amounts are invalid`);
+      historyIncomplete = true;
+      if (event.customerRef) uncertainFirstPaidCustomerKeys.add(`${event.source}\u0000${event.customerRef}`);
+      continue;
+    }
     const net = netMinor(event);
 
     if (event.kind === "refund") {
-      if (source) {
+      if (inWindow && source) {
         revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
-        const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), netRevenueMinor: 0, refundMinor: 0 };
+        const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), firstRecordedCustomers: 0, netRevenueMinor: 0, refundMinor: 0 };
         outcome.netRevenueMinor += net;
         outcome.refundMinor += Math.abs(event.amountMinor);
         outcomesBySource.set(source, outcome);
@@ -121,14 +139,19 @@ export function platformConcentration(
       continue;
     }
 
-    totalConversions++;
     if (order && source && !channelByOrder.has(order)) channelByOrder.set(order, source);
+    const customer = event.customerRef ? `${event.source}\u0000${event.customerRef}` : null;
+    const firstRecordedPayment = event.amountMinor > 0 && customer !== null && !firstPaidCustomerKeys.has(customer) && !uncertainFirstPaidCustomerKeys.has(customer);
+    if (event.amountMinor > 0 && customer) firstPaidCustomerKeys.add(customer);
+    if (!inWindow) continue;
+    totalConversions++;
     if (source) {
       attributedConversions++;
       revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
-      const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), netRevenueMinor: 0, refundMinor: 0 };
+      const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), firstRecordedCustomers: 0, netRevenueMinor: 0, refundMinor: 0 };
       outcome.paymentEvents++;
-      if (event.customerRef) outcome.customers.add(`${event.source}\u0000${event.customerRef}`);
+      if (customer) outcome.customers.add(customer);
+      if (firstRecordedPayment) outcome.firstRecordedCustomers++;
       outcome.netRevenueMinor += net;
       outcome.refundMinor += event.refundedMinor;
       outcomesBySource.set(source, outcome);
@@ -168,19 +191,21 @@ export function platformConcentration(
           source,
           paymentEvents: outcome.paymentEvents,
           identifiedCustomers: outcome.customers.size,
+          firstRecordedCustomers: outcome.firstRecordedCustomers,
           netRevenueMinor: outcome.netRevenueMinor,
           refundMinor: outcome.refundMinor,
         };
         const spend = spendByPlatform.get(platform);
-        if (options.spendPartial) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "partial" as const };
-        if (!spend) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "not_reported" as const };
+        if (options.spendPartial) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, firstRecordedCustomers: outcome.firstRecordedCustomers, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "partial" as const };
+        if (!spend) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, firstRecordedCustomers: outcome.firstRecordedCustomers, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "not_reported" as const };
         const mediaSpend = spend.spendByCurrency.get(options.currency.toUpperCase());
-        if (spend.currencies.size !== 1 || mediaSpend === undefined) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "currency_mismatch" as const };
+        if (spend.currencies.size !== 1 || mediaSpend === undefined) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, firstRecordedCustomers: outcome.firstRecordedCustomers, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "currency_mismatch" as const };
         if (!Number.isSafeInteger(mediaSpend)) throw new RangeError("Reported ad spend total exceeds safe integer minor units");
         return {
           source,
           paymentEvents: outcome.paymentEvents,
           identifiedCustomers: outcome.customers.size,
+          firstRecordedCustomers: outcome.firstRecordedCustomers,
           netRevenueMinor: outcome.netRevenueMinor,
           refundMinor: outcome.refundMinor,
           mediaSpendStatus: "matched" as const,
@@ -196,7 +221,7 @@ export function platformConcentration(
       ? ranked.slice(0, 3).reduce((sum, row) => sum + row.net, 0) / attributedPositiveNetMinor
       : null,
     duplicatesRemoved: duplicates,
-    partial: options.partial ?? false,
+    partial: Boolean(options.partial || historyIncomplete),
     spendPartial: options.spendPartial ?? false,
   };
 }

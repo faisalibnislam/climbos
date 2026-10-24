@@ -1298,7 +1298,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1342,6 +1342,7 @@ export default defineSchema({
                 source: v.string(),
                 paymentEvents: v.number(),
                 identifiedCustomers: v.number(),
+                firstRecordedCustomers: v.number(),
                 netRevenueMinor: v.number(),
                 refundMinor: v.number(),
                 mediaSpendStatus: v.optional(v.union(v.literal("matched"), v.literal("not_reported"), v.literal("currency_mismatch"), v.literal("partial"))),

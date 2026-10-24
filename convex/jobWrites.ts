@@ -120,7 +120,7 @@ export const jobContext = internalQuery({
     const concentrationToDay = new Date(concentrationToMs).toISOString().slice(0, 10);
     const revenueRows = await ctx.db
       .query("revenueEvents")
-      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", concentrationFromMs).lte("occurredAt", concentrationToMs))
+      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).lte("occurredAt", concentrationToMs))
       .order("desc")
       .take(10_001);
     const usableRevenueRows = revenueRows.filter((event) => !event.isFixture);

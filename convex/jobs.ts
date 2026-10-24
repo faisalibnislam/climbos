@@ -648,14 +648,17 @@ function channelOutcomesLine(signal: JobCtx["platformSourceConcentration"], owne
     const breakEven = breakEvenRoas !== null && ownerGrossMargin !== undefined
       ? `; media-only break-even ROAS at the owner-reported ${(ownerGrossMargin * 100).toFixed(0)}% margin is ${breakEvenRoas.toFixed(2)}x before other costs`
       : "";
-    return `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}${spend}${breakEven}`;
+    const mediaCostPerFirstRecorded = row.mediaSpendStatus === "matched" && row.firstRecordedCustomers > 0
+      ? `; media spend per source-tagged first recorded payer ${amount((row.adSpendMinor ?? 0) / row.firstRecordedCustomers)}`
+      : "";
+    return `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), ${row.firstRecordedCustomers} identified customers whose first positive payment in loaded ClimbOS history fell in this window, net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}${spend}${mediaCostPerFirstRecorded}${breakEven}`;
   });
   const concentration = signal.topSource
     ? `Largest recognized source is ${signal.topSource} (${Math.round((signal.topSourceShare ?? 0) * 100)}% of positive tagged net revenue); the top three account for ${Math.round((signal.topThreeShare ?? 0) * 100)}%.`
     : "There is no positive recognized tagged net revenue to rank by concentration.";
   return [
     `TRACKED CHANNEL OUTCOMES (billing events, ${signal.currency}, trailing 365 days; source-tagged last-touch association, not incremental lift, attribution certainty, or profitability):`,
-    `Recognized source-tagged paths cover ${signal.attributedConversions} of ${signal.totalConversions} billing payment events${signal.partial ? "; the 10,000-event read limit was reached, so this may be incomplete" : ""}${signal.spendPartial ? "; platform spend reached its read limit and is partial" : ""}. Payment events can include renewals and are not new-customer counts.`,
+    `Recognized source-tagged paths cover ${signal.attributedConversions} of ${signal.totalConversions} billing payment events${signal.partial ? "; the 10,000-event read limit was reached or earlier billing rows were invalid; source and first-recorded-payer counts may be incomplete" : ""}${signal.spendPartial ? "; platform spend reached its read limit and is partial" : ""}. Payment events can include renewals; the separate first-recorded-payer count uses the billing history currently loaded in ClimbOS and is source-system scoped. It may misstate new-customer counts when earlier history was never imported.`,
     concentration,
     ...rows,
     "Any ROAS shown is tracked net billing revenue divided by platform-reported media spend at platform level; it is not incremental lift, full ROI, or profit. Missing tags do not mean a channel had no effect. Do not calculate CAC from payment events, call a source profitable, or raise its rank from revenue alone without comparable customer acquisition, margin, and delivery-cost evidence.",
@@ -686,7 +689,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 3,
+    snapshotVersion: 4,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -703,7 +706,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 3,
+    snapshotVersion: 4,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -1127,7 +1130,7 @@ export const buildStrategy = internalAction({
               `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
               `CURRENT BUSINESS DIAGNOSIS (computed from owner data; an observed weak link is not proof of cause):\n${diagnosisBrief(diagnosis)}\nUse this to avoid rewarding channels that only create more demand when the supported bottleneck is later in the customer journey. If the diagnosis is uncertain, do not force a channel change.`,
               channelOutcomesLine(job.platformSourceConcentration, job.business?.unitEconomics?.grossMargin),
-              "Channel history is descriptive last-touch association. It includes payment events that can be renewals and may omit untagged influence. When matched same-currency spend and an owner-reported margin are available, compare tracked media ROAS with the media-only break-even ROAS only as a cautious screen for a bounded follow-up test; it is not incremental lift, full ROI, CAC, or proof of profitability. Treat no observed history as unknown, not evidence against a channel.",
+              "Channel history is descriptive last-touch association. It may omit untagged influence. Use source-tagged first-recorded-payer counts to distinguish acquisition from renewal payment events, and matched media spend per first recorded payer as a proxy only; neither is CAC or proof of channel causation. When matched same-currency spend and an owner-reported margin are available, compare tracked media ROAS with the media-only break-even ROAS only as a cautious screen for a bounded follow-up test; it is not incremental lift, full ROI, or proof of profitability. Treat no observed history as unknown, not evidence against a channel.",
               `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,

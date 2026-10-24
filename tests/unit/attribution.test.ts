@@ -183,8 +183,8 @@ describe("platform concentration", () => {
     expect(result.totalConversions).toBe(3);
     expect(result.topThreeShare).toBe(1);
     expect(result.sources).toEqual([
-      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 4_000, mediaRoas: 2 },
-      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 10_000, mediaRoas: 0.6 },
+      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 4_000, mediaRoas: 2 },
+      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 10_000, mediaRoas: 0.6 },
     ]);
     expect(JSON.stringify(result.sources)).not.toContain("c1");
   });
@@ -205,6 +205,28 @@ describe("platform concentration", () => {
     expect(partial.spendPartial).toBe(true);
     expect(partial.sources[0]).toMatchObject({ mediaSpendStatus: "partial" });
     expect(partial.sources[0]).not.toHaveProperty("mediaRoas");
+  });
+
+  it("does not count a repeat payment as a first recorded payer for its tagged source", () => {
+    const previous = ev({ id: "first", occurredAt: T0 - 10 * DAY, customerRef: "repeat-customer", utmSource: "google", utmMedium: "cpc" });
+    const renewal = ev({ id: "renewal", occurredAt: T0, customerRef: "repeat-customer", kind: "subscription_payment", utmSource: undefined, utmMedium: undefined });
+    const result = platformConcentration([previous, renewal], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.sources).toMatchObject([{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 0 }]);
+  });
+
+  it("withholds first-payer claims when an earlier customer payment is malformed", () => {
+    const invalidEarlier = ev({ id: "invalid-earlier", occurredAt: T0 - 10 * DAY, customerRef: "uncertain-customer", amountMinor: 100.5, utmSource: "google", utmMedium: "cpc" });
+    const later = ev({ id: "later-valid", occurredAt: T0, customerRef: "uncertain-customer", utmSource: "google", utmMedium: "cpc" });
+    const result = platformConcentration([invalidEarlier, later], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.partial).toBe(true);
+    expect(result.sources).toMatchObject([{ source: "Google ads", firstRecordedCustomers: 0 }]);
+  });
+
+  it("counts a fully refunded first charge as a recorded payer, not a later retry", () => {
+    const firstCharge = ev({ id: "first-charge", occurredAt: T0 - 10 * DAY, customerRef: "refunded-customer", amountMinor: 5_000, refundedMinor: 5_000, utmSource: "google", utmMedium: "cpc" });
+    const laterCharge = ev({ id: "later-charge", occurredAt: T0, customerRef: "refunded-customer", amountMinor: 5_000, utmSource: "google", utmMedium: "cpc" });
+    const result = platformConcentration([firstCharge, laterCharge], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.sources).toMatchObject([{ source: "Google ads", paymentEvents: 1, firstRecordedCustomers: 0 }]);
   });
 
   it("returns a truthful empty attribution state when no recognized UTMs exist", () => {
