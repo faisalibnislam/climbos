@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lintDistinctAngles } from "../../shared/agents/specs";
+import { lintDistinctAngles, lintRepeatedCopyPieces } from "../../shared/agents/specs";
 import { contentHash } from "../../shared/policy";
 
 describe("copy angle quality checks", () => {
@@ -28,5 +28,26 @@ describe("copy angle quality checks", () => {
     const first = await contentHash({ ...draft, contentAngle: "Show the setup mechanism" });
     const changed = await contentHash({ ...draft, contentAngle: "Answer the setup objection" });
     expect(changed).not.toBe(first);
+  });
+
+  it("flags a rephrased proposition across a content set", () => {
+    expect(lintRepeatedCopyPieces([
+      { path: "posts[0]", text: "Owners save bookkeeping time by automating payment reminders and intake forms." },
+      { path: "posts[1]", text: "Automate intake forms and payment reminders to save time on bookkeeping for owners." },
+    ])).toMatchObject([{ severity: "warn", rule: "repeated_copy", path: "posts[1]" }]);
+  });
+
+  it("flags a repeated opening even when the rest of the copy differs", () => {
+    expect(lintRepeatedCopyPieces([
+      { path: "emails[0]", text: "Stop losing Fridays to invoices. This email explains the first step." },
+      { path: "emails[1]", text: "Stop losing Fridays to invoices. Here is another way to handle the process." },
+    ])).toMatchObject([{ severity: "warn", rule: "repeated_copy", path: "emails[1]" }]);
+  });
+
+  it("does not flag pieces with different propositions and openings", () => {
+    expect(lintRepeatedCopyPieces([
+      { path: "posts[0]", text: "Owners save bookkeeping time by automating payment reminders and intake forms." },
+      { path: "posts[1]", text: "A clear service menu helps new customers understand which appointment to book." },
+    ])).toEqual([]);
   });
 });

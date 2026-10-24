@@ -1243,9 +1243,49 @@ export function lintDistinctAngles(items: { path: string; angle: string }[]): Li
   return issues;
 }
 
+const COPY_STOP_WORDS = new Set([...ANGLE_STOP_WORDS, "about", "after", "all", "also", "are", "as", "be", "been", "before", "being", "but", "can", "do", "does", "each", "get", "gets", "has", "have", "here", "if", "it", "its", "just", "more", "most", "not", "our", "out", "so", "than", "that", "this", "was", "we", "were", "will", "you"]);
+
+function copyTokens(text: string): string[] {
+  return (text.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}]+/gu) ?? [])
+    .map(normalizeAngleWord)
+    .filter((word) => !COPY_STOP_WORDS.has(word));
+}
+
+function tokenOverlap(left: string[], right: string[]): number {
+  const a = new Set(left);
+  const b = new Set(right);
+  const union = new Set([...a, ...b]);
+  return union.size ? [...a].filter((word) => b.has(word)).length / union.size : 0;
+}
+
+/** Warns on likely repeated propositions or openings within a generated campaign set. */
+export function lintRepeatedCopyPieces(items: { path: string; text: string }[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const normalized = items.map((item) => {
+    const tokens = copyTokens(item.text);
+    const opening = copyTokens(item.text.split(/(?<=[.!?])\s+|\n+/)[0] ?? "").slice(0, 12);
+    return { ...item, tokens, opening };
+  });
+  for (let i = 0; i < normalized.length; i += 1) {
+    const left = normalized[i]!;
+    for (let j = i + 1; j < normalized.length; j += 1) {
+      const right = normalized[j]!;
+      const propositionSimilarity = left.tokens.length >= 8 && right.tokens.length >= 8 ? tokenOverlap(left.tokens, right.tokens) : 0;
+      const openingSimilarity = left.opening.length >= 5 && right.opening.length >= 5 ? tokenOverlap(left.opening, right.opening) : 0;
+      const exactOpening = left.opening.length >= 4 && left.opening.join(" ") === right.opening.join(" ");
+      if (propositionSimilarity >= 0.55 || openingSimilarity >= 0.7 || exactOpening) {
+        const reason = propositionSimilarity >= 0.55 ? "Their main wording overlaps" : "Their openings overlap";
+        issues.push({ severity: "warn", rule: "repeated_copy", message: `${reason} with ${left.path}. Rework one piece around a different reader moment, objection, use case, customer phrase, or proof point.`, path: right.path });
+      }
+    }
+  }
+  return issues;
+}
+
 function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = [];
   issues.push(...lintDistinctAngles(out.posts.map((p, i) => ({ path: `posts[${i}].angle`, angle: p.angle }))));
+  issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
   out.posts.forEach((p, i) => {
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
@@ -1291,7 +1331,7 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintRepeatedCopyPieces([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}]`, text: `${ad.headlines.join(" ")} ${ad.descriptions.join(" ")}` })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}]`, text: `${ad.headline} ${ad.primaryText} ${ad.description}` }))]), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1839,7 +1879,7 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
     },
     o,
     "lean",
