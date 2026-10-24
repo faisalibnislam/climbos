@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 
 const profile = {
@@ -59,6 +59,10 @@ describe("custom specialist profiles", () => {
     const message = await t.run((ctx) => ctx.db.get(messageId));
     expect(message).toMatchObject({ customAgentId: id, status: "thinking", text: "Write an Instagram post and refresh the growth plan." });
     if (!message) throw new Error("Expected custom specialist request message");
+    if (!message.runId) throw new Error("Expected custom specialist workflow run");
+    const runContext = await t.query(internal.jobWrites.jobContext, { runId: message.runId });
+    expect(runContext?.specialist).toMatchObject({ archetypeId: profile.archetypeId, objective: profile.objective, instructions: profile.instructions, allowedActions: profile.allowedActions });
+    await alice.client.mutation(api.customAgents.update, { slug: aliceWorkspace.slug, agentId: id, ...profile, name: "Changed while running", permission: "draft", allowedActions: ["generate_content", "refresh_plan"] });
     await t.finishAllScheduledFunctions(() => undefined);
     const result = await t.run(async (ctx) => {
       const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", aliceWorkspace.slug)).unique())!;
@@ -66,6 +70,7 @@ describe("custom specialist profiles", () => {
       return messages.find((row) => row.author === "climbos" && row.replyTo === messageId)!;
     });
     expect(result.actionCardIds).toEqual([]);
+    expect(result.text).toContain(profile.name);
     expect(result.text).toContain("outside the configured capabilities");
     expect(message.runId).toBeTruthy();
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId!, rating: "needs_work", note: "That request was outside the profile's research scope." });

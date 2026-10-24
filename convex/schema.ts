@@ -1947,6 +1947,21 @@ export default defineSchema({
     /** Profile and originating request let budgets and outcome reporting follow child work. */
     customAgentId: v.optional(v.id("customAgents")),
     customAgentParentRunId: v.optional(v.id("workflowRuns")),
+    /** Immutable profile context used by this run and any action runs it starts. */
+    customAgentSnapshot: v.optional(v.object({
+      archetypeId: v.string(),
+      name: v.string(),
+      objective: v.string(),
+      instructions: v.string(),
+      allowedActions: v.array(v.string()),
+      knowledge: v.array(v.string()),
+      permission: v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval")),
+      maxRunCredits: v.number(),
+      maxActionsPerRun: v.number(),
+      successMetric: v.string(),
+      role: agentRoleValidator,
+      profileUpdatedAt: v.number(),
+    })),
     kind: v.string(),
     /** "v2" = agent loop with skills (Engine v2); absent = single-call v1. Fixed at creation. */
     engine: v.optional(v.literal("v2")),

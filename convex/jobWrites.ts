@@ -84,6 +84,7 @@ export const jobContext = internalQuery({
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
+      specialist: run.customAgentSnapshot ?? null,
       org,
       business,
       /** Plans start from what earlier plays actually did. */
@@ -663,8 +664,9 @@ export const saveChatResult = internalMutation({
     const run = await ensureRunOrg(ctx, runId);
     const org = await ctx.db.get(run.orgId);
     const out = JSON.parse(result) as ChatIntentOutput;
-    const specialist = customAgentId ? await ctx.db.get(customAgentId) : null;
-    if (customAgentId && (!specialist || specialist.orgId !== run.orgId || specialist.status !== "active")) throw appError("NOT_FOUND", "We couldn't find that specialist.");
+    const profile = customAgentId ? await ctx.db.get(customAgentId) : null;
+    if (customAgentId && (!profile || profile.orgId !== run.orgId || profile.status !== "active")) throw appError("NOT_FOUND", "We couldn't find that specialist.");
+    const specialist = run.customAgentSnapshot ?? profile;
     const allowedActions = specialist ? new Set(specialist.allowedActions) : null;
     const now = Date.now();
     const cardIds: Id<"actionCards">[] = [];

@@ -13,6 +13,7 @@ import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits";
 import { appError, assertSameOrg } from "./lib/tenancy";
+import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 
 /**
  * Durable job engine. A run is created with an atomic worst-case cost
@@ -138,17 +139,37 @@ export async function createRunWithReservation(
   if (params.customAgentParentRunId && !params.customAgentId) {
     throw appError("INVALID", "Specialist action runs must identify their specialist profile.");
   }
+  let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
   if (params.customAgentId) {
     const profile = assertSameOrg(await ctx.db.get(params.customAgentId), org._id, "specialist");
     if (profile.status !== "active") throw appError("INVALID", "This specialist is archived and cannot start work.");
-    const runCapMicros = creditsToMicros(profile.maxRunCredits);
+    const archetype = AGENT_ARCHETYPE_BY_ID.get(profile.archetypeId);
+    if (!archetype) throw appError("INVALID", "This specialist role is no longer available.");
+    const snapshot = {
+      archetypeId: profile.archetypeId,
+      name: profile.name,
+      objective: profile.objective,
+      instructions: profile.instructions,
+      allowedActions: profile.allowedActions,
+      knowledge: profile.knowledge,
+      permission: profile.permission,
+      maxRunCredits: profile.maxRunCredits,
+      maxActionsPerRun: profile.maxActionsPerRun,
+      successMetric: profile.successMetric,
+      role: archetype.role,
+      profileUpdatedAt: profile.updatedAt,
+    };
+    customAgentSnapshot = snapshot;
+    let runCapCredits = profile.maxRunCredits;
     if (params.customAgentParentRunId) {
       const parent = assertSameOrg(await ctx.db.get(params.customAgentParentRunId), org._id, "specialist request");
       if (parent.customAgentId !== profile._id || parent.customAgentParentRunId) throw appError("INVALID", "This action is not linked to the active specialist request.");
+      customAgentSnapshot = parent.customAgentSnapshot ?? snapshot;
+      runCapCredits = customAgentSnapshot.maxRunCredits;
       const siblings = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).eq("customAgentParentRunId", parent._id)).take(100);
       const committedForRequest = parent.estimateMicros + siblings.reduce((sum, run) => sum + run.estimateMicros, 0);
-      if (committedForRequest + estimate.costMicros > runCapMicros) throw appError("LIMIT_REACHED", `This exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
-    } else if (estimate.costMicros > runCapMicros) {
+      if (committedForRequest + estimate.costMicros > creditsToMicros(runCapCredits)) throw appError("LIMIT_REACHED", `This exceeds ${profile.name}'s configured ${runCapCredits}-credit per-run budget.`);
+    } else if (estimate.costMicros > creditsToMicros(runCapCredits)) {
       throw appError("LIMIT_REACHED", `This request exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
     }
     const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
@@ -177,6 +198,7 @@ export async function createRunWithReservation(
     orgId: org._id,
     ...(params.customAgentId ? { customAgentId: params.customAgentId } : {}),
     ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
+    ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
     ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
