@@ -253,10 +253,10 @@ const DEFS: Record<BenchTask, TaskDef> = {
         `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\n${brief(p, false)}\n\n${p.pagesText}`,
     },
     spec: (o) => insightsSpec(o) as unknown as AgentSpec<unknown>,
-    task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.",
+    task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. Include a siteAssessment of the business's published website communication only when each observation can cite a verbatim quote and exact page URL read in this run; separate the observed page text from its cautious implication, and do not infer demand, conversion performance, product quality, willingness to pay, or viability from website copy.",
     research: (p) => researchFor("business_insights", { website: p.c.website, businessName: p.c.name }),
     pages: true,
-    judgeFocus: "business intelligence (competitors, customers, positioning, opportunities) an owner could act on",
+    judgeFocus: "business intelligence (competitors, customers, positioning, opportunities) an owner could act on, including whether website communication observations are specific, page-cited, and kept separate from proof of demand or viability",
   },
   strategy: {
     v1: {
