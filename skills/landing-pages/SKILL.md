@@ -57,7 +57,7 @@ When something is missing:
 
    For B2B or higher-ticket offers, use the sales-narrative order: insight (what changed), the alternatives and their trade-offs, what a good solution needs, how this delivers it, proof, objections, ask.
 
-   On pricing and offer sections, make choice architecture fair: compare plans on customer-relevant jobs, quantities, support, or limits; show equivalent billing units and mandatory fees; state trial-to-paid terms before sign-up. A three-column layout is optional. Do not add a deliberately poor decoy tier or claim savings without a genuine comparison. Urgency and proof must be current and verifiable.
+   On pricing and offer sections, choice architecture may intentionally steer when the owner requests it. State the intended effect and possible poor-fit, regret, refund, and trust costs; do not claim the design is neutral. Check price, savings, billing, trial, renewal, and fee statements against current requirements in the target market; flag unresolved legal status for qualified local review. Urgency and proof claims must be current and factually supportable.
 
 5. **Place proof next to claims.** Use the hierarchy: verifiable number with source, named quote, demonstration or mechanism, guarantee, credentials. Superlatives are not proof. Every claim gets evidence within two sentences. A testimonial needs a name, a role or context, and a specific result or detail; "Great service!" is filler.
 

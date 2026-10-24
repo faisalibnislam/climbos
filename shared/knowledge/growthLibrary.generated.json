@@ -2,7 +2,7 @@
   "edition": "October 2026",
   "researchCutoff": "2026-10-19",
   "scenarioSourceSha256": "b7471ce8e791517ab693682fe1615671bdd0a84ecb9cfde5d1730a83649f5fac",
-  "persuasionSourceSha256": "64b46d7334f0a3666a16dd76e4fcecb98244bb6cb6177669bbe6e8de9c2137dd",
+  "persuasionSourceSha256": "638d0ea35934e5ebb954072db011cc6ae25b288eae5e71798c7595dac79e2acb",
   "records": [
     {
       "id": "01:0:25fcdd530963",
@@ -13804,8 +13804,8 @@
       "evidenceClass": "proposed_practice",
       "heading": "Decoy effect",
       "path": "docs/growth-expansion/collections/MARKETING_PSYCHOLOGY.md",
-      "content": "**Mechanism to consider:** an inferior option can shift preference toward a nearby alternative. This is a choice bias, not proof of better fit.\n\n**Safe application:** ClimbOS does not propose a deliberately useless or dominated “decoy” plan. Build a small number of useful packages around real needs, disclose trade-offs, and make it easy to choose the lower-cost plan when it fits.\n\n**Measure:** task or need fit, activation, retention, refunds, and contribution by segment. If an option has no customer who benefits from it, remove or redesign it rather than using it to steer.\n\n**Evidence note:** decoy effects have been observed in retail transactions, but an observed choice shift does not show improved customer welfare: https://pubmed.ncbi.nlm.nih.gov/40841543/",
-      "sha256": "a1fde482811e24fe9d869d2fa77aeec4321e31d4c73a83849c1335307f8432db"
+      "content": "**Mechanism to consider:** an inferior option can shift preference toward a nearby alternative. This is a choice bias, not proof of better fit.\n\n**Application:** A deliberately dominated option can steer choice, but can also raise confusion, regret, refund, and trust costs. If the owner requests this framing, model it as a testable tactic, disclose the intended comparison in the internal recommendation, and verify all price and savings claims against current rules in the target market before use.\n\n**Measure:** selection share, paid conversion, contribution, refunds, cancellations, and complaints by segment. If the decoy shifts buyers toward a higher-priced option, quantify the shift and the downstream costs; treat poor fit as a business risk for the owner to weigh, not an automatic veto.\n\n**Evidence note:** decoy effects have been observed in retail transactions, but an observed choice shift does not show improved customer welfare: https://pubmed.ncbi.nlm.nih.gov/40841543/",
+      "sha256": "85b57fd541613a2d54412ef75ece318d98f0404d8fa39bc93afb7a4e54f8607f"
     },
     {
       "id": "principle:marketing:05",

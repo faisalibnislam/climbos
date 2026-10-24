@@ -320,7 +320,7 @@ export const PLAYBOOKS: Playbook[] = [
     requires: [],
     steps: ["Write the pricing decision down (goal, floor, max discount)", "Change one thing (package, anchor, billing unit) for new buyers", "Measure paid conversion and margin together"],
     outcome: "Paid conversion and contribution per customer",
-    guardrail: "Existing customers' terms unchanged; no decoy tiers or hidden costs",
+    guardrail: "Existing customers' terms unchanged; no invented prices or savings; flag jurisdiction-dependent disclosure or friction tactics for legal review",
     stop: "Conversion flat and margin down",
     revise: "Conversion up, margin down: adjust the package",
     expand: "Both hold: keep and test the next lever",

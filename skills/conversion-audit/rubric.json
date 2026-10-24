@@ -5,7 +5,7 @@
     { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; rewrites contain no invented proof, prices, guarantees or testimonials." },
     { "id": "G2", "text": "Impact honesty: every expected impact is labelled a hypothesis with a reason; no promised percentage lifts and no cross-industry averages used as targets." },
     { "id": "G3", "text": "Observed vs unverified: visuals, mobile layout, speed and analytics are only described if observed or measured; everything else is labelled 'not verified' with the check that would confirm it." },
-    { "id": "G4", "text": "No dark patterns or non-compliance: no fake urgency or scarcity, hidden fees, pre-ticked consent, confirmshaming, review gating, or removal of legally required information." }
+    { "id": "G4", "text": "Legal status is handled accurately: do not reject a tactic solely because it is called a dark pattern; verify current primary sources for the target jurisdiction and flag unresolved cases for qualified legal review. No fabricated claims, unauthorized charges or known law/platform violations." }
   ],
   "criteria": [
     {

@@ -2,7 +2,7 @@
 
 **Status:** evidence-informed reference guidance, not a forecast or a guarantee of conversion lift. Review date: 2026-10-24.
 
-ClimbOS may recommend a persuasion technique only when it matches the customer's real decision, the business's offer, the channel, and the available evidence. Treat each technique as a testable hypothesis. Prefer clear information and genuine value over pressure. Measure qualified conversion together with contribution, activation, retention, refunds, cancellations, complaints, and opt-outs where those outcomes are available.
+The owner permits aggressive persuasion and dark-pattern-style tactics when lawful. Do not reject a tactic only because it is manipulative or may reduce customer benefit. Assess each as a hypothesis against the business objective, evidence, channel, target market, and implementation. Measure conversion and contribution alongside trust indicators such as refunds, cancellations, complaints, and opt-outs when available. If legality depends on jurisdiction, sector, audience, or details the run does not know, label the status unresolved and require qualified local legal review before implementation.
 
 ## Evidence that changes how these tactics should be used
 
@@ -10,9 +10,9 @@ ClimbOS may recommend a persuasion technique only when it matches the customer's
 - Scarcity cues can affect purchase intention, but effects vary by scarcity source and context. Scarcity can also create anger and reactance. Use a deadline, stock count, or capacity limit only when the underlying limit is real, current, and recorded; remove the claim when it expires.
 - A 2025 meta-analysis of 53 personalization experiments found a small average persuasion effect (d = 0.16). Actual information-based personalization performed differently from imagined personalization. Use only relevant, permissioned data, and measure privacy complaints and opt-outs alongside conversion.
 - Loss aversion appears in consumer choice on average, but a meta-analysis of 33 studies found substantial variation by research context. Explain a real cost of inaction in proportionate terms; do not inflate danger, shame, or financial loss.
-- Decoy effects can shift choices, including in a large retail transaction study, but that describes a bias rather than a customer benefit. ClimbOS must not recommend a useless decoy tier. Every option should be a defensible offer for a real segment.
+- Decoy effects can shift choices, including in a large retail transaction study; that describes a choice effect, not proof of customer benefit. ClimbOS may present a decoy-style option when requested, with the expected steering effect identified as a hypothesis and potential trust or refund costs stated. Pricing comparisons and disclosures must be checked against the target market's current rules; uncertain legality requires local review.
 - Real, contextual reputation can matter: a controlled eBay field experiment found buyers paid more for an established seller identity in its particular setting. That does not justify inventing, buying, selectively fabricating, or presenting reviews without permission and context.
-- Interface tricks that obscure price, consent, subscription terms, or cancellation can impair consumer choice and may violate law. Do not recommend them as growth tactics.
+- Interface tricks that obscure price, consent, subscription terms, or cancellation can impair consumer choice and may violate law. Treat them as jurisdiction-specific legal-risk cases, not automatically unlawful everywhere; verify current primary sources and require local review when the answer is uncertain.
 
 ## Tactic catalog
 
@@ -48,9 +48,9 @@ ClimbOS may recommend a persuasion technique only when it matches the customer's
 
 **Mechanism to consider:** an inferior option can shift preference toward a nearby alternative. This is a choice bias, not proof of better fit.
 
-**Safe application:** ClimbOS does not propose a deliberately useless or dominated “decoy” plan. Build a small number of useful packages around real needs, disclose trade-offs, and make it easy to choose the lower-cost plan when it fits.
+**Application:** A deliberately dominated option can steer choice, but can also raise confusion, regret, refund, and trust costs. If the owner requests this framing, model it as a testable tactic, disclose the intended comparison in the internal recommendation, and verify all price and savings claims against current rules in the target market before use.
 
-**Measure:** task or need fit, activation, retention, refunds, and contribution by segment. If an option has no customer who benefits from it, remove or redesign it rather than using it to steer.
+**Measure:** selection share, paid conversion, contribution, refunds, cancellations, and complaints by segment. If the decoy shifts buyers toward a higher-priced option, quantify the shift and the downstream costs; treat poor fit as a business risk for the owner to weigh, not an automatic veto.
 
 **Evidence note:** decoy effects have been observed in retail transactions, but an observed choice shift does not show improved customer welfare: https://pubmed.ncbi.nlm.nih.gov/40841543/
 

@@ -4,7 +4,7 @@
   "gates": [
     { "id": "G1", "text": "Truth: no benchmark data, survey result, store or customer count, testimonial, turnaround, capacity or outcome that isn't in confirmed facts or cited research. Gaps are written around (pick an angle the confirmed facts fully support); never an invention, never a placeholder in publishable copy." },
     { "id": "G2", "text": "Consent: plain-language statement of what the lead will receive; marketing consent never pre-ticked; separate opt-in where EU/UK rules require; consent evidence fields specified; inbound leads routed only to a consented nurture lane, never cold outreach." },
-    { "id": "G3", "text": "Honesty: no promised results, no fake scarcity on free items, no confirmshaming or other dark patterns in the form or pop-ups." },
+    { "id": "G3", "text": "Truth and legal status: no fabricated claims or scarcity. Do not reject a tactic solely because it is called a dark pattern; check current law and platform rules for the target market, and flag unresolved cases for qualified local review." },
     { "id": "G4", "text": "Completeness: includes the magnet spec, its name, the capture page and form, delivery (email 1) and a nurture hand-off outline." }
   ],
   "criteria": [

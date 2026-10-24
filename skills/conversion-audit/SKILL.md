@@ -40,7 +40,7 @@ When something is missing:
 
 4. **Offer.** What exactly does the buyer get, at what price, with what risk reversal (guarantee, free quote, trial, cancellation terms) and with what reason to act now? Hidden prices on a page whose visitors are price-shopping are a leak; say so and recommend showing a price, a "from" price or a range only if the owner confirms it. Urgency must be real (a genuine deadline or capacity limit).
 
-   Review the persuasion mechanism behind the offer. Social proof must be verifiable and representative; scarcity must match current inventory, capacity, or an actual deadline; anchors must compare equivalent scopes and time periods; trial and renewal terms must be visible before commitment; bundles must explain their contents and true value. Three tiers can aid comparison only when all are real, useful choices. Treat FOMO, loss framing, decoys, free trials, defaults, personalization, referrals, and progress mechanics as hypotheses to assess against the customer's situation. Flag any design that hides costs, makes an unwanted option easier to accept, obstructs cancellation, or uses fear or personal data to push an unsuitable purchase.
+   Review the persuasion mechanism behind the offer. Social proof, prices, scarcity, deadlines, savings, and product claims must be factually supportable. Treat FOMO, loss framing, decoys, free trials, defaults, personalization, referrals, friction, and progress mechanics as hypotheses to assess against the customer's situation. The owner permits aggressive and dark-pattern-style tactics when lawful, so do not reject a design solely because it is manipulative or may reduce customer benefit. Explain likely conversion effects as hypotheses and surface trust, refund, cancellation, complaint, and opt-out risks. For tactics involving prices, disclosures, consent, subscriptions, cancellation, personal data, vulnerable audiences, or regulated sectors, identify the target jurisdiction and check current primary sources; where legality is unresolved, label it and require qualified local review before implementation.
 
 5. **Proof hierarchy.** Inventory every proof element and rank it: (1) verifiable number tied to a source; (2) named customer quote with permission; (3) demonstration or mechanism; (4) guarantee or risk reversal; (5) credentials or awards; (6) unspecific superlatives (not proof). Check that proof sits next to the claim it supports and that the strongest proof appears earliest.
 
@@ -85,9 +85,9 @@ When something is missing:
 - Promise or invent lifts ("this will increase conversions by 30%") or quote cross-industry averages as targets for this page.
 - Invent testimonials, review counts, guarantees, prices, client logos or results in rewrites.
 - Describe visuals, speed or mobile layout you did not observe or measure.
-- Recommend dark patterns: fake countdowns or scarcity, hidden fees revealed at checkout, pre-ticked consent boxes, confirmshaming, review gating, forced account creation without need.
-- Recommend an intentionally useless pricing decoy, misleading price anchor, undisclosed auto-renewal, inflated savings, or personalization based on sensitive inferred traits.
-- Recommend removing legally required information (prices including mandatory fees where required, cancellation rights, privacy notices).
+- Never invent or knowingly misstate claims, prices, fees, discounts, deadlines, scarcity, reviews, consent, or product terms.
+- Do not present a jurisdiction-dependent tactic as legally cleared without current primary-source verification. Mark uncertain tactics for qualified local legal review before implementation; do not state that a tactic is unlawful solely because it is called a dark pattern.
+- Respect applicable laws, platform policies, and explicit owner constraints for subscriptions, fees, cancellation, consent, personal data, regulated products, and vulnerable audiences.
 - Give generic best-practice lists unconnected to this page ("add social proof", "use a strong CTA").
 - Recommend A/B tests the page's traffic cannot complete.
 - Bury the biggest leak under twenty cosmetic notes.
@@ -102,4 +102,4 @@ When something is missing:
 - [ ] Findings classed blocker / major / minor; split into fix now / test / later; 12 or fewer; top 3 first.
 - [ ] Each fix has exact replacement copy or change, effort, a hypothesis-labelled impact and a verification method.
 - [ ] Hero rewrite uses only confirmed facts or `[NEEDS FACT]`.
-- [ ] No promised lifts, invented proof or dark patterns.
+- [ ] No promised lifts or invented proof; aggressive tactics are labeled with evidence, jurisdiction, legal status, and trust risks where relevant.

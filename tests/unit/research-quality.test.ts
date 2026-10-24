@@ -18,9 +18,10 @@ describe("research source assessment", () => {
     expect(OPERATING_RULES).toContain("BUSINESS PERFORMANCE");
     expect(OPERATING_RULES).toContain("GENERAL GUIDANCE");
     expect(OPERATING_RULES).toContain("One tenant's result must not become a universal rule");
-    expect(OPERATING_RULES).toContain("do not create decoy plans, hidden costs");
+    expect(OPERATING_RULES).toContain("The owner permits aggressive persuasion and dark-pattern-style tactics when lawful");
+    expect(OPERATING_RULES).toContain("if status is unclear, label it unresolved and require qualified local review");
     expect(OPERATING_RULES).toContain("testable hypotheses, not guaranteed lifts");
-    expect(OPERATING_RULES).toContain("customer-benefit guardrail");
+    expect(OPERATING_RULES).toContain("surface legal uncertainty plus relevant trust, refund, cancellation, complaint, and opt-out risks");
     expect(CRITIC_RULES).toContain("a weak page alone is not proof that the underlying business is unviable");
     expect(CRITIC_RULES).not.toContain("Details stated in the brief (name, website, offers) are known facts");
   });
