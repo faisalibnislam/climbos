@@ -37,12 +37,16 @@ export function findConflicts(facts: { id: string; statement: string; category?:
   for (const f of facts) {
     if (f.category && !["pricing", "offer", "product"].includes(f.category)) continue;
     const tier = TIER_RE.exec(f.statement)?.[1]?.toLowerCase().replace(/^teams$/, "team");
-    if (tier) {
-      for (const m of f.statement.matchAll(PRICE_RE)) {
-        const yearly = /^(year|yr|annum)$/i.test(m[4]);
-        const unit = (m[5] ?? m[3])?.toLowerCase().replace(/s$/, "");
-        const n = Number(m[2].replace(/,/g, ""));
-        if (n > 0) add(`${tier[0].toUpperCase()}${tier.slice(1)} price${unit ? ` per ${unit}` : ""} per ${yearly ? "year" : "month"} (${sym(m[1])})`, n, `${sym(m[1])}${m[2]}${unit ? `/${unit}` : ""}`, f.id);
+    // Many small businesses publish a single offer without naming a tier ("Our
+    // service is $120/month"). Treat that as one default offer so contradictory
+    // current prices still block a plan. Keep named tiers separate as before.
+    for (const m of f.statement.matchAll(PRICE_RE)) {
+      const yearly = /^(year|yr|annum)$/i.test(m[4]);
+      const unit = (m[5] ?? m[3])?.toLowerCase().replace(/s$/, "");
+      const n = Number(m[2].replace(/,/g, ""));
+      if (n > 0) {
+        const subject = `${tier ? `${tier[0].toUpperCase()}${tier.slice(1)} ` : ""}price${unit ? ` per ${unit}` : ""} per ${yearly ? "year" : "month"} (${sym(m[1])})`;
+        add(subject, n, `${sym(m[1])}${m[2]}${unit ? `/${unit}` : ""}`, f.id);
       }
     }
     const t = TRIAL_RE.exec(f.statement);

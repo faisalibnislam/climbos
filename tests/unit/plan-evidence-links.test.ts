@@ -89,6 +89,16 @@ describe("conflicting facts", () => {
       { id: "b", category: "pricing", statement: "Pro costs $19.01 per month." },
     ])).toEqual([expect.objectContaining({ values: ["$19.00", "$19.01"] })]);
   });
+  it("catches conflicting prices for offers that do not have named tiers", () => {
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Our service costs $120/month." },
+      { id: "b", category: "offer", statement: "Our monthly plan is $150 per month." },
+    ])).toEqual([expect.objectContaining({
+      subject: "price per month",
+      values: ["$120", "$150"],
+      factIds: ["a", "b"],
+    })]);
+  });
   it("material conflicts need owner input and cannot drive work until resolved", () => {
     const q = planQuality([agentQuality("growth_plays", { critique: { gates: [], scores: [], strengths: [], fixes: [] }, lint: [], average: 4.5, minimum: 4, gatesPassed: true, ship: true }, 1, 3)], [], { conflicts: ["Pro price per month: $19 vs $24"] });
     expect(q.state).toBe("needs_input");
