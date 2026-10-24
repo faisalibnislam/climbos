@@ -324,6 +324,7 @@ export function OpsConsole() {
             change={`${formatNumber(d.costs.overEstimateRuns)} runs over estimate`}
           />
           <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToUsd(d.costs.previewSpend24hMicros)}`} />
+          <Stat label="Research cache hits, 24h" value={formatNumber(d.costs.researchCache24h.hits)} sublabel={d.costs.researchCache24h.coverageCapped ? "At least this many; view is capped" : "Reused tenant-scoped research results; not a dollar-savings estimate"} />
           <Stat label="Preview daily budget" value={microsToUsd(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
         </StatGroup>
         <DataTable

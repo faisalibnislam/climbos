@@ -64,6 +64,21 @@ describe("operator accepted-plan costs", () => {
           createdAt: now,
         });
       }
+      const run = (await ctx.db.query("workflowRuns").first())!;
+      await ctx.db.insert("workflowSteps", {
+        orgId: orgId as Id<"organizations">,
+        runId: run._id,
+        index: 0,
+        kind: "compute",
+        label: "Strategy research (cached)",
+        status: "succeeded",
+        idempotencyKey: `cache-hit-${run._id}`,
+        attempt: 1,
+        costMicros: 0,
+        cacheHit: true,
+        startedAt: now - 100,
+        finishedAt: now,
+      });
     });
 
     const dashboard = await ops.client.query(api.ops.dashboard, {});
@@ -73,6 +88,7 @@ describe("operator accepted-plan costs", () => {
       costPerApprovedPlan30dMicros: 3_000_000,
       spend24hMicros: 170_000,
       usage24h: { eventsRead: 3, coverageCapped: false },
+      researchCache24h: { hits: 1, coverageCapped: false },
       modelCostAnomalies8d: { available: false, reason: "insufficient_baseline", thresholdMultiple: 3, alerts: [] },
       byTaskPhase24h: {
         events: 3,

@@ -4138,6 +4138,8 @@ export default defineSchema({
     /** Worst-case spend held for the current provider turn; reconciled with actual usage. */
     providerCallMicros: v.optional(v.number()),
     providerCallAttempt: v.optional(v.number()),
+    /** True only when an agent research result was reused from the tenant-scoped cache. */
+    cacheHit: v.optional(v.boolean()),
     costMicros: v.number(),
     /** Checkpointed step output (JSON) so a resumed run skips completed steps. */
     output: v.optional(v.string()),
@@ -4146,7 +4148,8 @@ export default defineSchema({
     finishedAt: v.optional(v.number()),
   })
     .index("by_run", ["runId", "index"])
-    .index("by_idempotency", ["idempotencyKey"]),
+    .index("by_idempotency", ["idempotencyKey"])
+    .index("by_cache_hit_finished", ["cacheHit", "finishedAt"]),
 
   /** Tenant-scoped reuse of exact-request research notes; cache keys contain no prompt text. */
   researchCache: defineTable({

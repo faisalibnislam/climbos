@@ -95,6 +95,10 @@ export const dashboard = query({
       .withIndex("by_created", (q) => q.gt("createdAt", now - 8 * DAY))
       .order("desc")
       .take(25_001);
+    const researchCacheHits = await ctx.db
+      .query("workflowSteps")
+      .withIndex("by_cache_hit_finished", (q) => q.eq("cacheHit", true).gt("finishedAt", now - DAY))
+      .take(1_001);
     const historyCapped = usageRows.length > 25_000;
     const lastDayRows = usageRows.filter((event) => event.createdAt > now - DAY);
     const usageCoverageCapped = lastDayRows.length > 5_000;
@@ -168,6 +172,7 @@ export const dashboard = query({
       costs: {
         spend24hMicros: spend24h,
         usage24h: { eventsRead: recentUsage.length, coverageCapped: usageCoverageCapped },
+        researchCache24h: { hits: Math.min(researchCacheHits.length, 1_000), coverageCapped: researchCacheHits.length > 1_000 },
         byProvider: [...byProvider.entries()].map(([provider, x]) => ({ provider, ...x })),
         byModel24h: summarizeModelUsage(recentUsage.map((event) => ({
           provider: event.provider,

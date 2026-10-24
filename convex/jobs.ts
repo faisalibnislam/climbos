@@ -473,8 +473,8 @@ async function runAgentTask<T>(
       tracker.did = true;
       return stepScope.run(stepId, async () => {
         try {
-          const { value } = await fn();
-          await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(value) });
+          const { value, record } = await fn();
+          await ctx.runMutation(internal.engine.completeStep, { stepId, output: JSON.stringify(value), ...(record.cacheHit ? { cacheHit: true } : {}) });
           return value;
         } catch (e) {
           // Yielding mid-turn keeps the step running; the next action resumes it.

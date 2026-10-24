@@ -564,11 +564,12 @@ export const releaseProviderCall = internalMutation({
 });
 
 export const completeStep = internalMutation({
-  args: { stepId: v.id("workflowSteps"), output: v.optional(v.string()) },
-  handler: async (ctx, { stepId, output }) => {
+  args: { stepId: v.id("workflowSteps"), output: v.optional(v.string()), cacheHit: v.optional(v.boolean()) },
+  handler: async (ctx, { stepId, output, cacheHit }) => {
     await ctx.db.patch(stepId, {
       status: "succeeded",
       output: output && output.length < 400_000 ? output : undefined,
+      cacheHit: cacheHit === true ? true : undefined,
       finishedAt: Date.now(),
       leaseUntil: undefined,
     });
