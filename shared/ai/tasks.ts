@@ -194,6 +194,10 @@ export const SeoBriefSchema = z.object({
   /** Standalone business statements that can be quoted accurately, traceable to facts or read sources. */
   citableClaims: z.array(z.object({ statement: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
   factIndexes: z.array(z.number()),
+  /** Explicitly distinguishes refreshing an observed page from proposing a new one. */
+  recommendedAction: z.enum(["refresh_existing_page", "create_new_page"]).optional(),
+  targetPageUrl: z.string().optional(),
+  recommendationReason: z.string().optional(),
 });
 export type SeoBriefOutput = z.infer<typeof SeoBriefSchema>;
 

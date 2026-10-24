@@ -430,6 +430,9 @@ export const SeoBriefV2Schema = SeoBriefSchema.extend({
   intentStage: z.enum(["awareness", "evaluation", "purchase", "unclear"]),
   intentEvidence: z.string(),
   eeatSignals: z.array(z.string()),
+  recommendedAction: z.enum(["refresh_existing_page", "create_new_page"]),
+  targetPageUrl: z.string(),
+  recommendationReason: z.string(),
 });
 
 export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
@@ -1641,6 +1644,22 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
   return [...factIndexes, ...citationIssues, ...claimIssues];
 }
 
+export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
+  const target = out.targetPageUrl.trim();
+  const issues: LintIssue[] = [];
+  if (!out.recommendationReason.trim()) {
+    issues.push({ severity: "error", rule: "seo_recommendation", message: "Explain why this should refresh an existing page or create a new one.", path: "recommendationReason" });
+  }
+  if (out.recommendedAction === "refresh_existing_page" && !target) {
+    issues.push({ severity: "error", rule: "seo_recommendation", message: "A refresh recommendation must name an existing page observed in this run.", path: "targetPageUrl" });
+  }
+  if (out.recommendedAction === "create_new_page" && target) {
+    issues.push({ severity: "error", rule: "seo_recommendation", message: "A new-page recommendation must leave targetPageUrl empty.", path: "targetPageUrl" });
+  }
+  if (target) issues.push(...lintAvailableSourceUrls([{ url: target, path: "targetPageUrl" }], input));
+  return issues;
+}
+
 /** Conversion findings must point to a page supplied to this run, not a plausible-looking URL. */
 export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2Schema>, input: AgentInput): LintIssue[] {
   return lintAvailableSourceUrls(
@@ -1975,7 +1994,7 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
       skills: ["seo-pages", "copy-fundamentals"],
       schema: SeoBriefV2Schema,
       rubric: rubricOf("seo-pages"),
-      lint: (out, input) => [...lintPublishable(out, input), ...lintSearchIntent(out), ...lintSeoEvidence(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintSearchIntent(out), ...lintSeoEvidence(out, input), ...lintSeoRecommendation(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
     },
     o,
@@ -2332,7 +2351,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 5,
         maxFetches: 4,
-        brief: `Search the target query and close variants. Record what currently ranks (page types, angles, gaps), whether an AI Overview appears, and related questions people ask. Look for customer language in relevant discussions or reviews when available. Fetch the top 2-3 results to see what they cover and miss. Save exact source URLs and distinguish what you observed from what you infer.`,
+        brief: `First inspect the business's directly observed pages in the supplied site inventory and find any existing URL that already serves the target customer task. Prefer improving that page when it fits; propose a new URL only when the inventory shows no suitable page. A sitemap or browser fetch is a discovery observation, not evidence of search-engine indexing. Then search the target query and close variants. Record what currently ranks (page types, angles, gaps), whether an AI Overview appears, and related questions people ask. Look for customer language in relevant discussions or reviews when available. Fetch the top 2-3 results to see what they cover and miss. Save exact source URLs and distinguish what you observed from what you infer.`,
       };
     case "ad_drafts":
       return {

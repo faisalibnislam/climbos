@@ -17,12 +17,18 @@ describe("SEO answer-first artifact export", () => {
       faqs: [{ question: "What should it ask?", answer: "Ask for details needed to deliver the service.", factIndexes: [0], sourceUrls: ["https://example.com/intake-guide"] }],
       citableClaims: [{ statement: "The service uses a monthly plan.", factIndexes: [1], sourceUrls: [] }],
       factIndexes: [0],
+      recommendedAction: "refresh_existing_page",
+      targetPageUrl: "https://example.com/intake-guide",
+      recommendationReason: "The observed page already serves this customer task.",
     };
     const [artifact] = seoToArtifacts(output);
     expect(artifact.body.indexOf("## Quick answer")).toBeLessThan(artifact.body.indexOf("## Start with the next step"));
     expect(artifact.body).toContain("## Frequently asked questions");
     expect(artifact.body).toContain("[Source](https://example.com/intake-guide)");
     expect(artifact.body).toContain("## Verified facts");
+    expect(artifact.body).toContain("## Recommended action: refresh existing page");
+    expect(artifact.body).toContain("https://example.com/intake-guide");
+    expect(artifact.destinationUrl).toBe("https://example.com/intake-guide");
     expect(artifact.factIndexes).toEqual([0, 1]);
   });
 });

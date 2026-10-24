@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inferSearchIntentStage } from "../../shared/agents/searchIntent";
-import { lintSearchIntent, lintSeoEvidence, SeoBriefV2Schema } from "../../shared/agents/specs";
+import { lintSearchIntent, lintSeoEvidence, lintSeoRecommendation, SeoBriefV2Schema } from "../../shared/agents/specs";
 
 describe("search intent stage", () => {
   it("distinguishes research, evaluation, and ready-to-buy queries", () => {
@@ -32,6 +32,9 @@ describe("search intent stage", () => {
       answerFirst: "Compare the plans before you start a trial.",
       faqs: [],
       citableClaims: [],
+      recommendedAction: "create_new_page",
+      targetPageUrl: "",
+      recommendationReason: "No matching page was observed.",
     };
     expect(lintSearchIntent(SeoBriefV2Schema.parse(base))).toMatchObject([{ rule: "search_intent", path: "intentStage" }]);
     expect(lintSearchIntent(SeoBriefV2Schema.parse({ ...base, intentStage: "purchase" }))).toEqual([]);
@@ -55,6 +58,9 @@ describe("search intent stage", () => {
       answerFirst: "Plans vary by team size.",
       faqs: [{ question: "How much does it cost?", answer: "See the current pricing page.", factIndexes: [], sourceUrls: ["https://example.com/pricing"] }],
       citableClaims: [{ statement: "The plan includes appointment reminders.", factIndexes: [2], sourceUrls: ["https://example.com/unread"] }],
+      recommendedAction: "refresh_existing_page",
+      targetPageUrl: "https://example.com/pricing",
+      recommendationReason: "The existing pricing page serves the same purchase intent.",
     });
     const input = { task: "SEO", brief: "", facts: ["Owner confirmed plans are monthly."], availableSourceUrls: ["https://example.com/pricing"] };
     expect(lintSeoEvidence(out, input)).toMatchObject([
@@ -63,5 +69,10 @@ describe("search intent stage", () => {
     ]);
     const valid = SeoBriefV2Schema.parse({ ...out, citableClaims: [{ ...out.citableClaims[0], factIndexes: [0], sourceUrls: ["https://example.com/pricing"] }] });
     expect(lintSeoEvidence(valid, input)).toEqual([]);
+    expect(lintSeoRecommendation(valid, input)).toEqual([]);
+    const inventedTarget = SeoBriefV2Schema.parse({ ...valid, targetPageUrl: "https://example.com/unknown" });
+    expect(lintSeoRecommendation(inventedTarget, input)).toMatchObject([{ rule: "citation", path: "targetPageUrl" }]);
+    const missingTarget = SeoBriefV2Schema.parse({ ...valid, targetPageUrl: "" });
+    expect(lintSeoRecommendation(missingTarget, input)).toMatchObject([{ rule: "seo_recommendation", path: "targetPageUrl" }]);
   });
 });

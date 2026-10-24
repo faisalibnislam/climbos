@@ -10,6 +10,7 @@ import {
   safeFetchPage,
   validateResearchUrl,
 } from "../../shared/integrations/website";
+import { parseSitemapLocations } from "../../shared/seo/sitemap";
 
 /**
  * Bounded public-website research. Untrusted content: the caller wraps every
@@ -25,6 +26,10 @@ export interface ResearchedPage {
   url: string;
   title?: string;
   description?: string;
+  canonicalUrl?: string;
+  robotsDirectives?: string;
+  headings?: string[];
+  internalLinks?: string[];
   text: string;
   status: "ok" | "blocked_by_robots" | "failed";
   error?: string;
@@ -72,6 +77,10 @@ async function fetchOne(url: string): Promise<ResearchedPage> {
     url: res.finalUrl,
     title: page.title,
     description: page.metaDescription,
+    ...(page.canonicalUrl ? { canonicalUrl: page.canonicalUrl } : {}),
+    ...(page.robotsDirectives ? { robotsDirectives: page.robotsDirectives } : {}),
+    headings: page.headings.slice(0, 12).map((heading) => heading.text),
+    internalLinks: page.links.slice(0, 30).map((link) => link.url),
     text: [page.title, page.metaDescription, ...page.headings.map((h) => h.text), page.text].filter(Boolean).join("\n"),
     status: "ok",
     prices: page.jsonLdPrices.map((p) => `${p.name ?? "Offer"}: ${p.price} ${p.currency ?? ""}`.trim()),
@@ -91,6 +100,59 @@ function pageRank(path: string): number {
   return i < 0 ? PAGE_PRIORITY.length : i;
 }
 
+/** Read a bounded number of declared/default sitemaps and retain same-site page URLs only. */
+async function sitemapPages(origin: string, robots: string | null): Promise<string[]> {
+  const rootHost = new URL(origin).hostname;
+  const declared = (robots ?? "").split(/\r?\n/)
+    .map((line) => /^\s*sitemap\s*:\s*(\S+)/i.exec(line)?.[1])
+    .filter((url): url is string => Boolean(url))
+    .filter((url) => {
+      try {
+        const parsed = new URL(url, origin);
+        return (parsed.protocol === "http:" || parsed.protocol === "https:") && sameSite(parsed.hostname, rootHost);
+      } catch {
+        return false;
+      }
+    });
+  const queue = [...new Set([...declared, new URL("/sitemap.xml", origin).toString()])].slice(0, 4);
+  const visited = new Set<string>();
+  const pages: string[] = [];
+  const pageSet = new Set<string>();
+  while (queue.length && visited.size < 4 && pages.length < 500) {
+    const sitemapUrl = queue.shift()!;
+    if (visited.has(sitemapUrl)) continue;
+    try {
+      const parsed = new URL(sitemapUrl);
+      if (!sameSite(parsed.hostname, rootHost) || (robots && !isPathAllowed(robots, RESEARCH_USER_AGENT, parsed.pathname || "/"))) continue;
+    } catch {
+      continue;
+    }
+    visited.add(sitemapUrl);
+    const result = await safeFetchPage({
+      url: sitemapUrl,
+      resolveHost,
+      maxBytes: 1_000_000,
+      timeoutMs: 10_000,
+      allowRedirect: (_from, to) => {
+        try { return sameSite(new URL(to).hostname, rootHost); } catch { return false; }
+      },
+    }).catch(() => null);
+    if (!result?.ok || !sameSite(new URL(result.finalUrl).hostname, rootHost) || !/xml|text\/plain/i.test(result.contentType)) continue;
+    for (const location of parseSitemapLocations(result.body, result.finalUrl, 500)) {
+      const parsed = new URL(location);
+      if (!sameSite(parsed.hostname, rootHost)) continue;
+      if (/\.xml$/i.test(parsed.pathname) && /sitemap/i.test(parsed.pathname)) {
+        if (!visited.has(location) && queue.length + visited.size < 4) queue.push(location);
+      } else if (!pageSet.has(location)) {
+        pageSet.add(location);
+        pages.push(location);
+        if (pages.length >= 500) break;
+      }
+    }
+  }
+  return pages;
+}
+
 export async function researchWebsite(website: string, extraPages: number): Promise<{ pages: ResearchedPage[]; pagesFetched: number }> {
   const url = normalizeWebsite(website);
   if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0 };
@@ -108,13 +170,17 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   pages.push(home);
   if (home.status !== "ok" || extraPages <= 0) return { pages, pagesFetched: fetched };
 
-  // Find candidate pages from the homepage's same-origin links.
-  const htmlRes = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 10_000 }).catch(() => null);
+  // Combine robots-declared sitemap URLs with same-origin homepage links. Both are
+  // discovery hints only; neither proves that a search engine indexed a page.
+  const [htmlRes, sitemapUrls] = await Promise.all([
+    safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 10_000 }).catch(() => null),
+    sitemapPages(origin, robots),
+  ]);
   const links = htmlRes?.ok ? extractPageContent(htmlRes.body, htmlRes.finalUrl, { maxLinks: 300 }).links : [];
   const seen = new Set([url.replace(/\/$/, ""), (htmlRes?.ok ? htmlRes.finalUrl : url).replace(/\/$/, "")]);
   // The site may redirect (involets.com → www.involets.com): links count as the same site either way.
   const siteHost = new URL(htmlRes?.ok ? htmlRes.finalUrl : url).hostname;
-  const unique = [...new Set(links.map((l) => l.url.split("#")[0].replace(/\/$/, "")))];
+  const unique = [...new Set([...sitemapUrls, ...links.map((l) => l.url)].map((link) => link.split("#")[0].replace(/\/$/, "")))];
   const ranked = unique
     .map((u) => {
       try {
@@ -124,7 +190,7 @@ export async function researchWebsite(website: string, extraPages: number): Prom
         return null;
       }
     })
-    .filter((c): c is { u: string; rank: number } => c !== null && c.rank < PAGE_PRIORITY.length)
+    .filter((c): c is { u: string; rank: number } => c !== null)
     // Most useful kind first; within a kind, the shortest (top-level) path.
     .sort((a, b) => a.rank - b.rank || a.u.length - b.u.length);
   // One page of each kind before a second page of any kind.

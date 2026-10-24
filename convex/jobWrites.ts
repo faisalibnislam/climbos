@@ -861,13 +861,19 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
   const faqs = out.faqs.length ? `## Frequently asked questions\n\n${out.faqs.map((faq) => `### ${faq.question}\n\n${linked(faq.answer, faq.sourceUrls)}`).join("\n\n")}` : "";
   const citableClaims = out.citableClaims.length ? `## Verified facts\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
   const factIndexes = [...new Set([...out.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
+  const recommendation = out.recommendedAction === "refresh_existing_page"
+    ? `## Recommended action: refresh existing page\n\nTarget page: ${out.targetPageUrl ?? ""}\n\nWhy: ${out.recommendationReason ?? ""}`
+    : out.recommendedAction === "create_new_page"
+      ? `## Recommended action: create a new page\n\nWhy: ${out.recommendationReason ?? ""}`
+      : "";
   return [
     {
       kind: "blog_post",
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: [`## Quick answer\n\n${out.answerFirst}`, outline, "---", out.draft, faqs, citableClaims].filter(Boolean).join("\n\n"),
+      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, outline, "---", out.draft, faqs, citableClaims].filter(Boolean).join("\n\n"),
+      destinationUrl: out.recommendedAction === "refresh_existing_page" && out.targetPageUrl ? out.targetPageUrl : undefined,
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
       factIndexes,
       role: "seo_specialist",

@@ -472,6 +472,8 @@ export interface JsonLdPrice {
 export interface ExtractedPage {
   title?: string;
   metaDescription?: string;
+  canonicalUrl?: string;
+  robotsDirectives?: string;
   og: Record<string, string>;
   headings: Array<{ level: 1 | 2 | 3; text: string }>;
   links: Array<{ url: string; text: string }>;
@@ -546,14 +548,30 @@ export function extractPageContent(
   const title = titleMatch ? stripTags(titleMatch[1] ?? "").slice(0, 500) : undefined;
 
   let metaDescription: string | undefined;
+  let robotsDirectives: string | undefined;
   const og: Record<string, string> = {};
   for (const tag of src.match(/<meta\b[^>]*>/gi) ?? []) {
     const a = parseAttributes(tag);
     const content = (a.content ?? "").trim().slice(0, 1000);
     if (!content) continue;
     if (a.name?.toLowerCase() === "description" && metaDescription === undefined) metaDescription = content;
+    if (["robots", "googlebot"].includes(a.name?.toLowerCase() ?? "") && robotsDirectives === undefined) robotsDirectives = content.toLowerCase();
     const prop = (a.property ?? a.name ?? "").toLowerCase();
     if (prop.startsWith("og:") && !(prop in og) && Object.keys(og).length < 30) og[prop] = content;
+  }
+
+  let canonicalUrl: string | undefined;
+  for (const tag of src.match(/<link\b[^>]*>/gi) ?? []) {
+    const attrs = parseAttributes(tag);
+    if ((attrs.rel ?? "").toLowerCase().split(/\s+/).includes("canonical") && attrs.href) {
+      try {
+        const parsed = new URL(attrs.href, pageUrl);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") canonicalUrl = parsed.toString();
+      } catch {
+        // An invalid canonical is not an observed canonical URL.
+      }
+      if (canonicalUrl) break;
+    }
   }
 
   const headings: ExtractedPage["headings"] = [];
@@ -609,6 +627,8 @@ export function extractPageContent(
   const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated };
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
+  if (canonicalUrl) page.canonicalUrl = canonicalUrl;
+  if (robotsDirectives) page.robotsDirectives = robotsDirectives;
   return page;
 }
 

@@ -1411,16 +1411,35 @@ export const createContent = internalAction({
           );
           items = emailToArtifacts(out);
         } else {
+          const siteInventory = job.business?.website && !process.env.CLIMBOS_FAKE_LLM
+            ? await researchWebsite(job.business.website, 4).catch(() => null)
+            : null;
+          const inventoryContext = siteInventory
+            ? `DIRECT SITE PAGE OBSERVATIONS FROM THIS RUN (${siteInventory.pagesFetched} pages fetched; discovery may include a sitemap, but this does not prove indexing):\n${siteInventory.pages.map((page) => [
+              `URL: ${page.url} · status: ${page.status}${page.error ? ` · ${page.error}` : ""}`,
+              page.title ? `Title: ${page.title}` : "Title: not observed",
+              page.description ? `Description: ${page.description}` : "Description: not observed",
+              page.canonicalUrl ? `Declared canonical: ${page.canonicalUrl}` : "Declared canonical: not observed",
+              page.robotsDirectives ? `Robots meta: ${page.robotsDirectives}` : "Robots meta: not observed",
+              ...(page.headings?.length ? [`Headings: ${page.headings.join(" · ")}`] : []),
+              ...(page.internalLinks?.length ? [`Observed internal links: ${page.internalLinks.join(" ")}`] : []),
+            ].join("\n")).join("\n\n")}`
+            : job.business?.website
+              ? "DIRECT SITE PAGE OBSERVATIONS: not fetched in this fixture run. Do not imply that an existing page was inspected."
+              : "DIRECT SITE PAGE OBSERVATIONS: no business website is recorded.";
+          const observedSiteUrls = siteInventory?.pages.filter((page) => page.status === "ok").map((page) => page.url) ?? [];
           const out = await runAgentTask<SeoBriefOutput>(
             ctx,
             job,
             0,
             seoSpec(),
-            agentInput(job, `Plan and draft one genuinely helpful page targeting a real search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft. Also provide: (1) answerFirst, a concise direct answer before supporting detail; (2) 3-5 FAQs based on questions found in this run's research or confirmed customer language; and (3) up to 5 standalone citableClaims about this business, each supported by confirmed fact indexes or exact source URLs read in this run. Put all used business fact indexes in factIndexes. For general FAQs, leave references empty rather than inventing sources. Do not present SEO or AI-answer formatting as a ranking guarantee.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+            agentInput(job, `First assess whether this request fits an existing page or needs a new page. Return recommendedAction as refresh_existing_page or create_new_page, targetPageUrl as the exact observed URL when refreshing (otherwise an empty string), and a concise recommendationReason. Use the direct site observations below to map the primary intent to an observed URL when one serves the same customer task; improve that page instead of creating a competing URL when appropriate. If no observed page fits, propose a new page. Treat sitemap presence as discovery only, never proof of indexing. If observations are absent or blocked, state that uncertainty and do not claim a page was checked. Then plan and draft a genuinely helpful page targeting a real search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft. Also provide: (1) answerFirst, a concise direct answer before supporting detail; (2) 3-5 FAQs based on questions found in this run's research or confirmed customer language; and (3) up to 5 standalone citableClaims about this business, each supported by confirmed fact indexes or exact source URLs read in this run. Put all used business fact indexes in factIndexes. For general FAQs, leave references empty rather than inventing sources. Do not present SEO or AI-answer formatting as a ranking guarantee.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
               research: researchFor("seo_brief", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
+              untrustedContext: inventoryContext,
+              availableSourceUrls: observedSiteUrls,
             }),
             startedAt,
-            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft. Also provide an answer-first direct response, 3-5 FAQs grounded in queries or confirmed customer language, and up to 5 standalone citable business claims with confirmed fact indexes or exact URLs from this run. Leave references empty for general FAQs; never invent citations. Classify the searcher's stage as awareness, evaluation, purchase, or unclear; base it on query evidence, and make the content and next step fit. Answer structure is for readers; it does not guarantee search or AI citations.\n\n${businessBrief(job)}${brief}` },
+            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Decide whether to refresh an observed existing page or create a new one. Return recommendedAction, exact targetPageUrl for an observed refresh (otherwise empty), and recommendationReason. Then plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft. Also provide an answer-first direct response, 3-5 FAQs grounded in queries or confirmed customer language, and up to 5 standalone citable business claims with confirmed fact indexes or exact URLs from this run. Leave references empty for general FAQs; never invent citations. Classify the searcher's stage as awareness, evaluation, purchase, or unclear; base it on query evidence, and make the content and next step fit. Answer structure is for readers; it does not guarantee search or AI citations.\n\n${businessBrief(job)}${brief}` },
           );
           items = seoToArtifacts(out);
         }

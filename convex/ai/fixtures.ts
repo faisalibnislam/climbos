@@ -216,6 +216,9 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
         citableClaims: ctx.facts.length ? [{ statement: ctx.facts[0].statement, factIndexes: [0], sourceUrls: [] }] : [],
         factIndexes: ctx.facts.length ? [0] : [],
+        recommendedAction: "create_new_page",
+        targetPageUrl: "",
+        recommendationReason: "The fixture has no inspected site inventory for this scenario.",
       };
       return out;
     }
