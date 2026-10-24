@@ -85,6 +85,40 @@ describe("custom specialist profiles", () => {
     expect(result).toEqual({ started: false, reason: "workspace_unavailable" });
   });
 
+  it("removes exact duplicate confirmed facts from agent context but keeps their source records", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "deduplicated-facts@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { businessId, orgId } = await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first())!;
+      const now = Date.now();
+      const sourceBase = { orgId: org._id, businessId: business._id, kind: "owner_text" as const, status: "ok" as const, fetchedAt: now, expiresAt: now + 30 * 86_400_000 };
+      const olderSource = await ctx.db.insert("factSources", { ...sourceBase, title: "Owner report, original", excerpt: "Our product has 10 paid customers." });
+      const newerSource = await ctx.db.insert("factSources", { ...sourceBase, title: "Owner report, corrected wording", excerpt: " OUR PRODUCT HAS 10 PAID CUSTOMERS! " });
+      const base = { orgId: org._id, businessId: business._id, category: "product" as const, confidence: "high" as const, reviewState: "confirmed" as const, provenance: "owner_supplied" as const, createdAt: now - 10_000 };
+      await ctx.db.insert("businessFacts", { ...base, sourceIds: [olderSource], statement: "Our product has 10 paid customers.", updatedAt: now - 5_000 });
+      await ctx.db.insert("businessFacts", { ...base, sourceIds: [newerSource], statement: " OUR PRODUCT HAS 10 PAID CUSTOMERS! ", updatedAt: now });
+      await ctx.db.insert("businessFacts", { ...base, category: "pricing", sourceIds: [], statement: "Our Pro plan is $20 per month.", updatedAt: Date.now() - 61 * 86_400_000 });
+      return { businessId: business._id, orgId: org._id };
+    });
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    const { messageId } = await owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Review the business facts." });
+    const runId = await t.run(async (ctx) => (await ctx.db.get(messageId))?.runId ?? null);
+    if (!runId) throw new Error("Expected workflow run");
+
+    const context = await t.query(internal.jobWrites.jobContext, { runId });
+    const matching = context?.facts.filter((fact) => fact.category === "product" && /10 paid customers/i.test(fact.statement)) ?? [];
+    expect(matching).toHaveLength(1);
+    expect(matching[0]?.statement).toBe(" OUR PRODUCT HAS 10 PAID CUSTOMERS! ");
+    expect(context?.facts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))?.freshness).toMatchObject({ reviewSuggested: true, daysOld: 61 });
+    const stored = await t.run(async (ctx) => (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).collect()).filter((fact) => /10 paid customers/i.test(fact.statement)));
+    expect(stored).toHaveLength(2);
+    expect(stored.every((fact) => fact.orgId === orgId)).toBe(true);
+    expect(stored.flatMap((fact) => fact.sourceIds)).toHaveLength(2);
+    expect(await t.run(async (ctx) => (await ctx.db.query("factSources").withIndex("by_business", (q) => q.eq("businessId", businessId)).collect()).filter((source) => /Owner report/.test(source.title ?? "")))).toHaveLength(2);
+  });
+
   it("binds runs to their tenant and records manual specialist identity", async () => {
     const t = setup();
     const alice = await asNewUser(t, "specialist-alice@example.com", { anonymous: true });

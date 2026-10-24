@@ -298,9 +298,9 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 }
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
-export function factsBlock(facts: { statement: string; category: string; kind?: string }[]): string {
+export function factsBlock(facts: { statement: string; category: string; kind?: string; freshness?: { reviewSuggested: boolean; daysOld: number } }[]): string {
   if (facts.length === 0) return "CONFIRMED FACTS: (none yet — keep claims general)";
-  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}) ${f.statement}`).join("\n")}`;
+  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last update` : ""}) ${f.statement}`).join("\n")}`;
 }
 
 /**

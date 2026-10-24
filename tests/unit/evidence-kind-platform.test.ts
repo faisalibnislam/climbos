@@ -17,6 +17,10 @@ describe("evidence kind", () => {
   it("labels the kind in the facts the writer sees", () => {
     expect(factsBlock([{ statement: "Everyone loves it", category: "proof", kind: "stated opinion" }])).toMatch(/\[0\] \(proof; stated opinion\) Everyone loves it/);
   });
+  it("marks old facts for review without treating age as proof they are wrong", () => {
+    expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 61, reviewSuggested: true } }])).toContain("review suggested, 61 days since last update");
+    expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 10, reviewSuggested: false } }])).toMatch(/\[0\] \(pricing\) Pro costs/);
+  });
   it("blocks proof-of-demand language when only opinions and site claims exist", () => {
     const f = [{ path: "summary", text: "Demand is proven: customers love the idea." }];
     expect(lintEvidenceStrength(f, ["stated", "published"])).toMatchObject([{ rule: "evidence_strength", path: "summary" }]);

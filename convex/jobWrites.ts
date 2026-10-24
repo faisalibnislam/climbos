@@ -1,5 +1,7 @@
 import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { factFreshness } from "../shared/agents/factFreshness";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor } from "../shared/economics/currency";
@@ -52,7 +54,14 @@ export const jobContext = internalQuery({
           .withIndex("by_business", (q) => q.eq("businessId", business._id))
           .take(200)
       : [];
-    const usable = facts.filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
+    // Keep the canonical, newest version of an exactly repeated fact in model context.
+    // The underlying rows and their source history remain untouched for audit/display.
+    const usable = groupExactDuplicateFacts(
+      facts
+        .filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited")
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map((f) => ({ ...f, id: String(f._id) })),
+    ).map(({ primary }) => primary);
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
@@ -90,7 +99,7 @@ export const jobContext = internalQuery({
       business,
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
-      facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance) })),
+      facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,
