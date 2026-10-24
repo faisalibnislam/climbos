@@ -40,6 +40,8 @@ The attached improvement brief's Issue 57 now has a tenant-scoped, trailing-365-
 
 The same source-scoped identity rule now applies to Issue 26/29's first-recorded-paying-customer metric. Its history lookup uses a new `(org, source, customer, occurredAt)` index so an equal ID from a different billing provider cannot make a paying customer disappear from the count. Cross-provider identity resolution remains unavailable and is disclosed in the metric definition.
 
+Billing attribution also scopes customer touches and refund/order matching by source. New revenue imports and demo touches store their source; a legacy touch without source is used only if the customer reference appears in one source in the current revenue set. When that legacy identity is ambiguous, the event remains unattributed rather than receiving another provider's channel credit.
+
 Issue 25 now retains all missing funnel inputs in the computed diagnosis while selecting one next measurement for the agent brief: first the customer outcome, then the specific count or clarification that separates the remaining explanations. Supported diagnoses do not generate follow-up questions. This reduces owner burden without pretending the other unknowns are resolved; the saved diagnosis still carries the full missing list.
 
 Issue 44's artifact edit path now reruns ClimbOS's deterministic risky-claim screen on edited headline, body, call to action, and alt text. A user correction can clear a flag by removing the risky wording; making an edit by itself no longer clears it. The screen is lexical and bounded to known risk patterns, not a semantic substantiation or legal review.

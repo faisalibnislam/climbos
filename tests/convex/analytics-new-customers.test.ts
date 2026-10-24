@@ -67,4 +67,26 @@ describe("first recorded paying customers", () => {
     expect(metric.definition).toMatch(/source-scoped customer IDs/);
     expect(metric.definition).toMatch(/same person across billing systems may count more than once/);
   });
+
+  it("does not cross-attribute UTMs when two billing providers reuse the same customer and order IDs", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "provider-attribution@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Provider Attribution Co" });
+    const now = Date.now();
+
+    await t.mutation(internal.analytics.ingestRevenue, {
+      orgId: orgId as Id<"organizations">,
+      events: [
+        { source: "stripe", sourceEventId: "stripe-event", occurredAt: now - DAY, customerRef: "customer-7", orderRef: "order-1", currency: "USD", amountMinor: 1_000, refundedMinor: 0, kind: "order", utmSource: "google", utmMedium: "cpc" },
+        { source: "polar", sourceEventId: "polar-event", occurredAt: now - DAY, customerRef: "customer-7", orderRef: "order-1", currency: "USD", amountMinor: 2_000, refundedMinor: 0, kind: "order", utmSource: "meta", utmMedium: "cpc" },
+      ],
+    });
+
+    const view = await owner.client.query(api.analytics.overview, { slug, days: 30 });
+    const channels = view!.attribution.lastTouch!.byCurrency[0].channels;
+    expect(channels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ channel: "google ads", netRevenueMinor: 1_000 }),
+      expect.objectContaining({ channel: "meta ads", netRevenueMinor: 2_000 }),
+    ]));
+  });
 });

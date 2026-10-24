@@ -32,6 +32,8 @@ export interface RevenueEvent {
 
 export interface Touch {
   customerRef: string;
+  /** Billing/source system that owns the customer reference; omitted only on legacy touches. */
+  source?: string;
   /** Epoch milliseconds. */
   occurredAt: number;
   channel: string;

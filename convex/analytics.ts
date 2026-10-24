@@ -100,6 +100,7 @@ export const ingestRevenue = internalMutation({
         await ctx.db.insert("touches", {
           orgId,
           customerRef: e.customerRef,
+          source: e.source,
           occurredAt: e.occurredAt - 1,
           channel: e.utmMedium === "cpc" ? `${e.utmSource ?? "paid"} ads` : (e.utmSource ?? e.utmMedium ?? "tagged"),
           utmSource: e.utmSource,
@@ -295,7 +296,7 @@ export const overview = query({
         .query("touches")
         .withIndex("by_org_customer", (q) => q.eq("orgId", org._id).eq("customerRef", c))
         .take(20);
-      for (const t of ts) touches.push({ customerRef: t.customerRef, occurredAt: t.occurredAt, channel: t.channel, utmSource: t.utmSource, utmMedium: t.utmMedium, utmCampaign: t.utmCampaign });
+      for (const t of ts) touches.push({ customerRef: t.customerRef, source: t.source, occurredAt: t.occurredAt, channel: t.channel, utmSource: t.utmSource, utmMedium: t.utmMedium, utmCampaign: t.utmCampaign });
     }
     const lastTouch = events.length ? attribute(events, touches, { model: "last_touch", lookbackDays: 30 }) : null;
     const firstTouch = events.length ? attribute(events, touches, { model: "first_touch", lookbackDays: 30 }) : null;

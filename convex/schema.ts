@@ -2388,6 +2388,7 @@ export default defineSchema({
   touches: defineTable({
     orgId: v.id("organizations"),
     customerRef: v.string(),
+    source: v.optional(v.string()),
     occurredAt: v.number(),
     channel: v.string(),
     utmSource: v.optional(v.string()),

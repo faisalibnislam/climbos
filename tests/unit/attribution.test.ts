@@ -92,6 +92,33 @@ describe("attribute", () => {
     expect(r.reconciled).toBe(true);
   });
 
+  it("keeps customer and order attribution scoped to their billing source", () => {
+    const events = [
+      ev({ id: "stripe-order", source: "stripe", customerRef: "same-id", orderRef: "same-order", amountMinor: 10_000 }),
+      ev({ id: "polar-order", source: "polar", customerRef: "same-id", orderRef: "same-order", amountMinor: 20_000 }),
+      ev({ id: "stripe-refund", source: "stripe", orderRef: "same-order", amountMinor: 1_000, kind: "refund", occurredAt: T0 + DAY }),
+    ];
+    const sourceTouches: Touch[] = [
+      { customerRef: "same-id", source: "stripe", occurredAt: T0 - DAY, channel: "stripe_ads" },
+      { customerRef: "same-id", source: "polar", occurredAt: T0 - DAY, channel: "polar_ads" },
+    ];
+
+    const result = attribute(events, sourceTouches, { model: "last_touch", lookbackDays: 30 });
+    expect(result.byCurrency.USD.channels.stripe_ads.netRevenueMinor).toBe(9_000);
+    expect(result.byCurrency.USD.channels.polar_ads.netRevenueMinor).toBe(20_000);
+    expect(result.byCurrency.USD.reconciled).toBe(true);
+  });
+
+  it("does not apply a legacy unscoped touch when a customer ID appears in multiple sources", () => {
+    const events = [
+      ev({ id: "stripe-order", source: "stripe", customerRef: "same-id" }),
+      ev({ id: "polar-order", source: "polar", customerRef: "same-id" }),
+    ];
+    const result = attribute(events, [{ customerRef: "same-id", occurredAt: T0 - DAY, channel: "unknown_source" }], { model: "last_touch", lookbackDays: 30 });
+    expect(result.byCurrency.USD.unattributed.eventIds).toEqual(["stripe-order", "polar-order"]);
+    expect(result.byCurrency.USD.channels.unknown_source).toBeUndefined();
+  });
+
   it("keeps currencies separate without FX and reports unconverted currencies with FX", () => {
     const mixed = [
       ev({ id: "u1", customerRef: "c1", amountMinor: 10_000 }),

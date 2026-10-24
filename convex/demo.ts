@@ -321,7 +321,7 @@ export const seedMetrics = internalMutation({
         }
         if (rng.uniform() < 0.72) {
           const ch = channels[Math.floor(rng.uniform() * channels.length)];
-          touches.push({ orgId, customerRef: ref, occurredAt: dayStart - Math.floor(rng.uniform() * 5) * DAY - 3_600_000, channel: ch, utmSource: ch.split(" ")[0], utmMedium: ch === "google ads" ? "cpc" : ch === "email" ? "email" : "organic", isFixture: true });
+          touches.push({ orgId, customerRef: ref, source: "stripe", occurredAt: dayStart - Math.floor(rng.uniform() * 5) * DAY - 3_600_000, channel: ch, utmSource: ch.split(" ")[0], utmMedium: ch === "google ads" ? "cpc" : ch === "email" ? "email" : "organic", isFixture: true });
         }
       }
       rows.push({ metricKey: "visits", date: p.date, value: p.value }, { metricKey: "signups", date: p.date, value: signups }, { metricKey: "paid_conversions", date: p.date, value: paid }, { metricKey: "revenue", date: p.date, value: revenue });
