@@ -5,6 +5,15 @@ import { ENGINE_VERSION } from "../../shared/agents/specs";
 import { LAB_CASE_VERSION } from "../../shared/lab/formkitCase";
 import { asNewUser, setup } from "./helpers";
 
+const qualifyingReview = {
+  reviewerId: "qualified-reviewer-1", packetId: "blind-packet-1", fullSetSha256: "a".repeat(64), holdoutSetSha256: "b".repeat(64),
+  reviewedCases: 16, incompleteCases: 0, heldoutReviewedCases: 8,
+  baselinePreferred: 3, candidatePreferred: 8, ties: 5,
+  baselineHardFailures: 1, candidateHardFailures: 0, heldoutCandidateHardFailures: 0,
+  baselineMeanScore: 1.2, candidateMeanScore: 1.6,
+  coverage: ["saas", "mac_app", "agency", "ecommerce"].map((businessType) => ({ businessType, reviewedCases: 4 })),
+};
+
 async function stampCurrentEvaluation(t: ReturnType<typeof setup>, id: Id<"engineProposals">, engineVersion = ENGINE_VERSION, caseSetVersion = LAB_CASE_VERSION) {
   await t.run(async (ctx) => {
     const proposal = (await ctx.db.get(id as never)) as Doc<"engineProposals"> | null;
@@ -71,15 +80,30 @@ describe("engine lab", () => {
     expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toBe("");
   });
 
-  it("promotes a higher-scoring rule only after the current versioned comparison", async () => {
+  it("requires human, multi-business, held-out evidence before promoting a rule", async () => {
     const t = setup();
     const ops = await asNewUser(t, "ops@example.com");
     const id = await t.mutation(internal.engineLab.saveProposal, { agentId: "growth_plays", rules: "- Name the activation milestone for freemium products.", rationale: "Reviewers flagged missing upgrade paths." });
     await t.mutation(internal.engineLab.recordArm, { id, arm: "baseline", score: 3, costMicros: 0 });
     await t.mutation(internal.engineLab.recordArm, { id, arm: "variant", score: 4, costMicros: 0 });
     await stampCurrentEvaluation(t, id);
+    await expect(ops.client.mutation(api.engineLab.decide, { id, decision: "approved" })).rejects.toThrow(/human-reviewed evaluation is required/);
+    expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toBe("");
+    await ops.client.mutation(api.engineLab.recordHumanReview, { id, review: qualifyingReview });
     await ops.client.mutation(api.engineLab.decide, { id, decision: "approved" });
     expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toContain("activation milestone");
+  });
+
+  it("rejects incomplete human evidence and stale comparisons", async () => {
+    const t = setup();
+    const ops = await asNewUser(t, "ops@example.com");
+    const id = await t.mutation(internal.engineLab.saveProposal, { agentId: "growth_plays", rules: "- Candidate rule", rationale: "Needs broad review." });
+    await t.mutation(internal.engineLab.recordArm, { id, arm: "baseline", score: 3, costMicros: 0 });
+    await t.mutation(internal.engineLab.recordArm, { id, arm: "variant", score: 4, costMicros: 0 });
+    await stampCurrentEvaluation(t, id);
+    await expect(ops.client.mutation(api.engineLab.recordHumanReview, { id, review: { ...qualifyingReview, heldoutReviewedCases: 0 } })).rejects.toThrow(/held-out cases/);
+    await stampCurrentEvaluation(t, id, "old-engine-version", LAB_CASE_VERSION);
+    await expect(ops.client.mutation(api.engineLab.recordHumanReview, { id, review: qualifyingReview })).rejects.toThrow(/current engine and case set/);
   });
 
   it("does not promote proposals whose comparison has an error", async () => {

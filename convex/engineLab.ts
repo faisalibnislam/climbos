@@ -7,13 +7,15 @@ import { appError } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { LAB_CASE_VERSION } from "../shared/lab/formkitCase";
 import { ENGINE_VERSION } from "../shared/agents/specs";
+import { promotionReviewIssues, type PromotionReview } from "../shared/lab/promotionGate";
 
 /**
  * Self-improvement loop 3 — the engine lab. Weekly, Luna reads what reviewers
  * flagged on real growth plans and proposes a few playbook rules. Staff can
  * A/B test a proposal on the fixed Formkit case (≈$0.30, capped at $5/month)
- * and approve it; approved rules join that agent's playbook. Quality is
- * tracked from real review scores before and after.
+ * and approve it only after a version-matched, multi-business blind human
+ * evaluation also clears the promotion gate. The one-case self-review remains
+ * a screening signal, not proof of strategic improvement.
  */
 
 export const LAB_AGENTS = ["growth_plays", "growth_strategy"] as const;
@@ -186,11 +188,43 @@ export const decide = mutation({
       if (result.engineVersion !== ENGINE_VERSION || result.caseSetVersion !== LAB_CASE_VERSION) {
         throw appError("INVALID", "This comparison used an older engine or evaluation case set. Run it again before approving the rule.");
       }
-      if (result.variant <= result.baseline) {
-        throw appError("INVALID", "The proposed rule did not improve the current screening score. Keep it out of the live playbook.");
+      if (result.variant <= result.baseline) throw appError("INVALID", "The proposed rule did not improve the current screening score. Keep it out of the live playbook.");
+      const review = result.humanReview;
+      const issues = promotionReviewIssues(review);
+      if (issues.length) throw appError("INVALID", `Human evaluation does not clear the promotion gate: ${issues.join(" ")}`);
+      if (review?.recordedAt !== result.at || review.fullSetSha256.length !== 64 || review.holdoutSetSha256.length !== 64) {
+        throw appError("INVALID", "The human evaluation must be recorded against this exact comparison.");
       }
     }
     await ctx.db.patch(id, { status: decision, decidedBy: user._id, decidedAt: Date.now() });
+  },
+});
+
+/** Attach a staff-attested blind-review summary to the exact current lab comparison. */
+export const recordHumanReview = mutation({
+  args: {
+    id: v.id("engineProposals"),
+    review: v.object({
+      reviewerId: v.string(), packetId: v.string(), fullSetSha256: v.string(), holdoutSetSha256: v.string(),
+      reviewedCases: v.number(), incompleteCases: v.number(), heldoutReviewedCases: v.number(),
+      baselinePreferred: v.number(), candidatePreferred: v.number(), ties: v.number(),
+      baselineHardFailures: v.number(), candidateHardFailures: v.number(), heldoutCandidateHardFailures: v.number(),
+      baselineMeanScore: v.number(), candidateMeanScore: v.number(),
+      coverage: v.array(v.object({ businessType: v.string(), reviewedCases: v.number() })),
+    }),
+  },
+  handler: async (ctx, { id, review }) => {
+    const { user } = await requireStaff(ctx, "features");
+    const proposal = await ctx.db.get(id);
+    if (!proposal || proposal.status !== "proposed" || !proposal.test || proposal.test.error || proposal.test.baseline === undefined || proposal.test.variant === undefined) {
+      throw appError("INVALID", "Complete the current Engine Lab comparison before recording human review.");
+    }
+    if (proposal.test.engineVersion !== ENGINE_VERSION || proposal.test.caseSetVersion !== LAB_CASE_VERSION) {
+      throw appError("INVALID", "Rerun the comparison against the current engine and case set before recording human review.");
+    }
+    const issues = promotionReviewIssues(review as PromotionReview);
+    if (issues.length) throw appError("INVALID", `Human evaluation does not clear the promotion gate: ${issues.join(" ")}`);
+    await ctx.db.patch(id, { test: { ...proposal.test, humanReview: { ...review, recordedBy: user._id, recordedAt: proposal.test.at } } });
   },
 });
 

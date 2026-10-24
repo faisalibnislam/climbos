@@ -909,6 +909,16 @@ export default defineSchema({
       baseline: v.optional(v.number()), variant: v.optional(v.number()), costMicros: v.number(), at: v.number(), error: v.optional(v.string()),
       /** Snapshots of the engine and frozen case set actually compared. Legacy records may not have them. */
       engineVersion: v.optional(v.string()), caseSetVersion: v.optional(v.string()),
+      /** A staff-recorded blind human evaluation; self-review scores alone cannot promote a rule. */
+      humanReview: v.optional(v.object({
+        reviewerId: v.string(), packetId: v.string(), fullSetSha256: v.string(), holdoutSetSha256: v.string(),
+        reviewedCases: v.number(), incompleteCases: v.number(), heldoutReviewedCases: v.number(),
+        baselinePreferred: v.number(), candidatePreferred: v.number(), ties: v.number(),
+        baselineHardFailures: v.number(), candidateHardFailures: v.number(), heldoutCandidateHardFailures: v.number(),
+        baselineMeanScore: v.number(), candidateMeanScore: v.number(),
+        coverage: v.array(v.object({ businessType: v.string(), reviewedCases: v.number() })),
+        recordedBy: v.id("users"), recordedAt: v.number(),
+      })),
     })),
     decidedBy: v.optional(v.id("users")),
     decidedAt: v.optional(v.number()),
