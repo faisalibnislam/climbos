@@ -1968,6 +1968,16 @@ export default defineSchema({
       role: agentRoleValidator,
       profileUpdatedAt: v.number(),
     })),
+    /** Immutable, provenance-labeled feedback context used by this request and its child actions. */
+    customAgentFeedbackSnapshot: v.optional(v.object({
+      source: v.literal("workspace_member_report"),
+      windowDays: v.number(),
+      capturedAt: v.number(),
+      sampleSize: v.number(),
+      helpful: v.number(),
+      needsWork: v.number(),
+      notes: v.array(v.object({ rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.string(), createdAt: v.number() })),
+    })),
     kind: v.string(),
     /** "v2" = agent loop with skills (Engine v2); absent = single-call v1. Fixed at creation. */
     engine: v.optional(v.literal("v2")),

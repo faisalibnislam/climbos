@@ -135,6 +135,7 @@ describe("custom specialist profiles", () => {
     if (!message.runId) throw new Error("Expected custom specialist workflow run");
     const runContext = await t.query(internal.jobWrites.jobContext, { runId: message.runId });
     expect(runContext?.specialist).toMatchObject({ archetypeId: profile.archetypeId, objective: profile.objective, instructions: profile.instructions, allowedActions: profile.allowedActions });
+    expect(runContext?.specialistFeedbackText).toBe("");
     await alice.client.mutation(api.customAgents.update, { slug: aliceWorkspace.slug, agentId: id, ...profile, name: "Changed while running", permission: "draft", allowedActions: ["generate_content", "refresh_plan"] });
     await t.finishAllScheduledFunctions(() => undefined);
     const result = await t.run(async (ctx) => {
@@ -147,6 +148,8 @@ describe("custom specialist profiles", () => {
     expect(result.text).toContain("outside the configured capabilities");
     expect(message.runId).toBeTruthy();
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId!, rating: "needs_work", note: "That request was outside the profile's research scope." });
+    const originalRunContext = await t.query(internal.jobWrites.jobContext, { runId: message.runId! });
+    expect(originalRunContext?.specialistFeedbackText).toBe(""); // Later ratings don't rewrite the inputs to a completed run.
     const profileView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
     expect(profileView.agents[0]?.recentRuns[0]).toMatchObject({ id: message.runId, rating: "needs_work", feedbackNote: "That request was outside the profile's research scope." });
     expect(profileView.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", windowDays: 90, sampleSize: 1, helpful: 0, needsWork: 1, capped: false });

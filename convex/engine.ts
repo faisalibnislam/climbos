@@ -147,6 +147,7 @@ export async function createRunWithReservation(
     throw appError("INVALID", "This specialist role is no longer available.");
   }
   let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
+  let customAgentFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["customAgentFeedbackSnapshot"]> | undefined;
   if (params.customAgentId) {
     const profile = assertSameOrg(await ctx.db.get(params.customAgentId), org._id, "specialist");
     if (profile.status !== "active") throw appError("INVALID", "This specialist is archived and cannot start work.");
@@ -167,17 +168,35 @@ export async function createRunWithReservation(
       profileUpdatedAt: profile.updatedAt,
     };
     customAgentSnapshot = snapshot;
+    const feedbackSince = Date.now() - 90 * 86_400_000;
     let runCapCredits = profile.maxRunCredits;
     if (params.customAgentParentRunId) {
       const parent = assertSameOrg(await ctx.db.get(params.customAgentParentRunId), org._id, "specialist request");
       if (parent.customAgentId !== profile._id || parent.customAgentParentRunId) throw appError("INVALID", "This action is not linked to the active specialist request.");
       customAgentSnapshot = parent.customAgentSnapshot ?? snapshot;
+      customAgentFeedbackSnapshot = parent.customAgentFeedbackSnapshot;
       runCapCredits = customAgentSnapshot.maxRunCredits;
       const siblings = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).eq("customAgentParentRunId", parent._id)).take(100);
       const committedForRequest = parent.estimateMicros + siblings.reduce((sum, run) => sum + run.estimateMicros, 0);
       if (committedForRequest + estimate.costMicros > creditsToMicros(runCapCredits)) throw appError("LIMIT_REACHED", `This exceeds ${profile.name}'s configured ${runCapCredits}-credit per-run budget.`);
     } else if (estimate.costMicros > creditsToMicros(runCapCredits)) {
       throw appError("LIMIT_REACHED", `This request exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
+    }
+    if (!params.customAgentParentRunId) {
+      const feedback = await ctx.db
+        .query("customAgentFeedback")
+        .withIndex("by_agent_created", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", feedbackSince))
+        .order("desc")
+        .take(100);
+      customAgentFeedbackSnapshot = {
+        source: "workspace_member_report",
+        windowDays: 90,
+        capturedAt: Date.now(),
+        sampleSize: feedback.length,
+        helpful: feedback.filter((entry) => entry.rating === "helpful").length,
+        needsWork: feedback.filter((entry) => entry.rating === "needs_work").length,
+        notes: feedback.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, createdAt: entry.createdAt })),
+      };
     }
     if (profile.monthlyBudgetCredits !== undefined) {
       const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
@@ -209,6 +228,7 @@ export async function createRunWithReservation(
     ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
     ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
     ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
+    ...(customAgentFeedbackSnapshot ? { customAgentFeedbackSnapshot } : {}),
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
     ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
