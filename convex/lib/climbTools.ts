@@ -71,6 +71,12 @@ const InboxOutputSchema = z.object({ open: z.number().int().nonnegative(), items
 const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
 const CompetitorsOutputSchema = z.object({ watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema })), changes: z.array(z.json()) });
 const LinksOutputSchema = z.object({ weekTotal: z.number(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
+const OverviewOutputSchema = z.object({ business: z.json(), goal: z.json(), plan: z.json(), waitingForApproval: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string() })), approvalsCount: z.number(), next: z.array(z.json()), recentJobs: z.array(z.object({ id: z.string(), title: z.string(), status: z.string() })), paused: z.boolean() });
+const PlanOutputSchema = z.object({ goal: z.json(), plan: z.json().optional(), status: z.string().optional(), summary: z.string().optional(), diagnosis: z.string().optional(), northStar: z.json().optional(), plays: z.array(z.json()).optional(), weekOne: z.array(z.string()).optional(), channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(), experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional() });
+const AutopilotOutputSchema = z.object({ settings: z.json(), trust: z.array(z.json()), connected: z.array(z.string()), weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })) });
+const JobOutputSchema = z.object({ id: z.string(), title: z.string(), kind: z.string(), status: z.string(), roles: z.array(z.string()), brief: z.string().nullable(), createdAt: z.number(), updatedAt: z.number(), estimateMicros: z.number(), actualMicros: z.number(), userMessage: z.string().nullable(), isFixture: z.boolean(), engine: z.string().nullable(), output: z.string().nullable(), steps: z.array(z.object({ label: z.string(), status: z.string(), role: z.string().nullable(), kind: z.string() })), artifacts: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), kind: z.string() })) });
+const ProspectOutputSchema = z.object({ status: z.string(), icp: z.string().nullable(), prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })), emails: z.array(z.object({ day: z.number(), subject: z.string() })), bookingPage: z.string().nullable(), upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })), pipeline: z.json() });
+const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
 
 /** Validate and bound tool results before they re-enter the model context as untrusted data. */
 export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema?: z.ZodType): string {
@@ -128,6 +134,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking today's overview",
     input: z.object({}),
+    output: OverviewOutputSchema,
     run: async (c, slug) => {
       const t = await c.query(api.workspace.today, { slug });
       return {
@@ -176,6 +183,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Reading your growth plan",
     input: z.object({}),
+    output: PlanOutputSchema,
     run: async (c, slug) => {
       const p = await c.query(api.workspace.plan, { slug });
       const s = p.strategy;
@@ -210,6 +218,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking autopilot",
     input: z.object({}),
+    output: AutopilotOutputSchema,
     run: async (c, slug) => {
       const a = await c.query(api.autopilot.get, { slug });
       return {
@@ -240,6 +249,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking that job",
     input: z.object({ runId: z.string() }),
+    output: JobOutputSchema,
     run: async (c, slug, i) => {
       const r = await c.query(api.workspace.runDetail, { slug, runId: i.runId as Id<"workflowRuns"> });
       return { ...r, output: r.output ? short(JSON.stringify(r.output), 3000) : null };
@@ -253,6 +263,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your prospects",
     input: z.object({}),
+    output: ProspectOutputSchema,
     run: async (c, slug) => {
       const o = await c.query(api.outbound.get, { slug });
       return {
@@ -302,6 +313,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Reading the weekly report",
     input: z.object({ weeksAgo: z.number().optional() }),
+    output: WeeklyReportOutputSchema,
     run: async (c, slug, i) => c.query(api.reports.weekly, { slug, weeksAgo: i.weeksAgo }),
   }),
 
