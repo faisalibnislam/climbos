@@ -21,7 +21,7 @@ import type { TurnRequest, TurnResult } from "../../shared/ai/types";
 import { currentRateVersion } from "../../shared/economics";
 import { fakeTurn } from "../../shared/agents/fake";
 import type { ModelKey } from "../../shared/economics/rates";
-import { GLOBAL_HARD_FAILURES, loadCases, RUBRIC, type ExpansionCase, type RubricKey } from "./cases";
+import { fixtureIdentity, GLOBAL_HARD_FAILURES, loadCases, RUBRIC, type ExpansionCase, type RubricKey } from "./cases";
 import { checkNumbers, type NumberResult } from "./numeric";
 import type { ExpansionRow } from "./run";
 
@@ -99,18 +99,46 @@ export interface GradedRow {
   total: number | null;
 }
 
-export function summarize(rows: GradedRow[]) {
-  const scored = rows.filter((r) => r.total !== null);
-  const dims = Object.fromEntries(RUBRIC.map((d) => [d.key, scored.length ? Math.round((scored.reduce((s, r) => s + ((r.judgement as Judgement).scores[d.key] ?? 0), 0) / scored.length) * 100) / 100 : null]));
-  const numbers = rows.flatMap((r) => r.numbers);
-  return {
-    runs: rows.length,
-    failed_runs: rows.filter((r) => !r.ok).length,
-    hard_fails: rows.filter((r) => r.hard_fail).length,
-    numbers_found: `${numbers.filter((n) => n.found).length}/${numbers.length}`,
-    mean_total: scored.length ? Math.round((scored.reduce((s, r) => s + (r.total ?? 0), 0) / scored.length) * 100) / 100 : null,
-    dims,
+export function summarize(rows: GradedRow[], cases: ReadonlyMap<string, ExpansionCase> = new Map(loadCases().map((c) => [c.id, c]))) {
+  const summarizeGroup = (group: GradedRow[]) => {
+    const groupScored = group.filter((r) => r.total !== null);
+    const groupNumbers = group.flatMap((r) => r.numbers);
+    const dims = Object.fromEntries(RUBRIC.map((d) => [d.key, groupScored.length ? Math.round((groupScored.reduce((s, r) => s + ((r.judgement as Judgement).scores[d.key] ?? 0), 0) / groupScored.length) * 100) / 100 : null]));
+    return {
+      runs: group.length,
+      failed_runs: group.filter((r) => !r.ok).length,
+      hard_fails: group.filter((r) => r.hard_fail).length,
+      numbers_found: `${groupNumbers.filter((n) => n.found).length}/${groupNumbers.length}`,
+      mean_total: groupScored.length ? Math.round((groupScored.reduce((s, r) => s + (r.total ?? 0), 0) / groupScored.length) * 100) / 100 : null,
+      dims,
+    };
   };
+  const byBusinessType = Object.fromEntries([...new Set(rows.map((r) => cases.get(r.case_id)?.business_type ?? "unknown"))].sort().map((type) => [type, summarizeGroup(rows.filter((r) => (cases.get(r.case_id)?.business_type ?? "unknown") === type))]));
+  return {
+    ...summarizeGroup(rows),
+    by_business_type: byBusinessType,
+  };
+}
+
+export function assertFixtureIdentity(meta: Record<string, unknown>) {
+  const current = fixtureIdentity();
+  if (meta.fixture_version !== current.version || meta.fixture_sha256 !== current.sha256) {
+    throw new Error("Evaluation fixture identity is missing or stale. Re-run the benchmark with the current case and prompt files before grading.");
+  }
+}
+
+export function assertComparableRuns(candidate: Run, baseline: Run) {
+  const candidateMeta = candidate.meta;
+  const baselineMeta = baseline.meta;
+  if (candidateMeta.fixture_version !== baselineMeta.fixture_version || candidateMeta.fixture_sha256 !== baselineMeta.fixture_sha256 || typeof candidateMeta.fixture_sha256 !== "string") {
+    throw new Error("Cannot compare runs made with different or unversioned evaluation fixtures.");
+  }
+  const keys = (run: Run) => run.rows.map((r) => `${r.case_id}|${r.surface}`).sort();
+  const left = keys(candidate);
+  const right = keys(baseline);
+  if (!left.length || new Set(left).size !== left.length || new Set(right).size !== right.length || left.length !== right.length || left.some((key, i) => key !== right[i])) {
+    throw new Error("Cannot compare runs with different, empty, or duplicate case/surface coverage.");
+  }
 }
 
 async function main() {
@@ -120,10 +148,12 @@ async function main() {
     process.exit(1);
   }
   const run = JSON.parse(readFileSync(resultsFile, "utf8")) as Run;
+  assertFixtureIdentity(run.meta);
   const cases = new Map(loadCases().map((c) => [c.id, c]));
   const graded: GradedRow[] = [];
   for (const row of run.rows) {
-    const c = cases.get(row.case_id)!;
+    const c = cases.get(row.case_id);
+    if (!c) throw new Error(`Run contains unknown evaluation case ${row.case_id}.`);
     const numbers = checkNumbers(row.response, c.numeric_checks);
     const j = await judge(c, row);
     const ok = !("error" in j);
@@ -134,6 +164,8 @@ async function main() {
   const pairs: { case_id: string; surface: string; winner: string }[] = [];
   if (againstFile) {
     const other = JSON.parse(readFileSync(againstFile, "utf8")) as Run;
+    assertFixtureIdentity(other.meta);
+    assertComparableRuns(run, other);
     const byKey = new Map(other.rows.map((r) => [`${r.case_id}|${r.surface}`, r]));
     for (const row of run.rows) {
       const o = byKey.get(`${row.case_id}|${row.surface}`);
@@ -156,6 +188,10 @@ async function main() {
     `| Dimension | Mean /2 |`,
     `|---|---|`,
     ...RUBRIC.map((d) => `| ${d.label} | ${summary.dims[d.key] ?? "—"} |`),
+    "",
+    "| Business type | Runs | Failed | Hard fails | Numbers found | Mean /14 |",
+    "|---|---:|---:|---:|---:|---:|",
+    ...Object.entries(summary.by_business_type).map(([type, group]) => `| ${type} | ${group.runs} | ${group.failed_runs} | ${group.hard_fails} | ${group.numbers_found} | ${group.mean_total ?? "—"} |`),
     "",
     ...(pairs.length ? [`**Pairwise vs ${againstFile}:** this ${pairs.filter((p) => p.winner === "this").length}, against ${pairs.filter((p) => p.winner === "against").length}, tie ${pairs.filter((p) => p.winner === "tie").length}, error ${pairs.filter((p) => p.winner === "error").length}`, ""] : []),
     `| Case | Surface | /14 | Hard fail | Numbers |`,

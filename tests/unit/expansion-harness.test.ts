@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { checkNumbers, statesNumber } from "../../bench/expansion/numeric";
-import { loadCases, loadPrompts, PLAN_CASES, LIBRARY_TYPE, RUBRIC } from "../../bench/expansion/cases";
-import { judgePrompt, summarize, type GradedRow } from "../../bench/expansion/grade";
+import { fixtureIdentity, loadCases, loadPrompts, PLAN_CASES, LIBRARY_TYPE, RUBRIC } from "../../bench/expansion/cases";
+import { assertComparableRuns, judgePrompt, summarize, type GradedRow } from "../../bench/expansion/grade";
 import { createHumanReviewPacket, summarizeHumanReview, type ExpansionRun } from "../../bench/expansion/human-review";
 
 /** The 32-case expansion harness: fair inputs, deterministic number checks, honest summaries. */
@@ -11,6 +11,12 @@ describe("expansion cases", () => {
   it("has all 32 cases and a prompt for each", () => {
     expect(cases).toHaveLength(32);
     expect(new Set(prompts.map((p) => p.case_id))).toEqual(new Set(cases.map((c) => c.id)));
+  });
+  it("has a reproducible content identity for the cases and exact owner prompts", () => {
+    const first = fixtureIdentity();
+    expect(first).toEqual(fixtureIdentity());
+    expect(first.version).toBe(1);
+    expect(first.sha256).toMatch(/^[a-f0-9]{64}$/);
   });
   it("never shows the engine an expected answer or hard failure", () => {
     for (const c of cases) {
@@ -65,6 +71,18 @@ describe("summary", () => {
     const s = summarize(rows);
     expect(s).toMatchObject({ runs: 3, failed_runs: 1, hard_fails: 2, numbers_found: "0/1", mean_total: 12 });
     expect(s.dims.business_fit).toBe(1);
+    expect(s.by_business_type.saas).toMatchObject({ runs: 2, hard_fails: 1, mean_total: 12 });
+    expect(s.by_business_type.mac_app).toMatchObject({ runs: 1, failed_runs: 1, mean_total: null });
+  });
+
+  it("refuses pairwise comparisons with changed fixtures or incomplete case coverage", () => {
+    const meta = { fixture_version: 1, fixture_sha256: "a".repeat(64) };
+    const row = { case_id: "EV01", surface: "advisor" as const, ok: true, response: "A", tool_calls: [], cost_micros: 0, elapsed_seconds: 1 };
+    const run = (fixture_sha256: string, rows = [row]) => ({ meta: { ...meta, fixture_sha256 }, rows });
+    expect(() => assertComparableRuns(run("a".repeat(64)), run("b".repeat(64)))).toThrow(/different or unversioned/);
+    expect(() => assertComparableRuns(run("a".repeat(64)), run("a".repeat(64), []))).toThrow(/different, empty, or duplicate/);
+    expect(() => assertComparableRuns(run("a".repeat(64)), run("a".repeat(64), [row, row]))).toThrow(/different, empty, or duplicate/);
+    expect(() => assertComparableRuns(run("a".repeat(64)), run("a".repeat(64)))).not.toThrow();
   });
 });
 
