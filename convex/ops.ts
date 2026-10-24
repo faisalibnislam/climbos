@@ -103,6 +103,26 @@ export const dashboard = query({
       .query("workflowRuns")
       .withIndex("by_status_updated", (q) => q.eq("status", "verified").gt("updatedAt", now - 7 * DAY))
       .take(500);
+    const verifiedRuns30d = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_status_updated", (q) => q.eq("status", "verified").gt("updatedAt", now - 30 * DAY))
+      .take(1000);
+    const decisions30d = await ctx.db
+      .query("engineQuality")
+      .withIndex("by_created", (q) => q.gte("createdAt", now - 30 * DAY))
+      .order("desc")
+      .take(1000);
+    const approvedRunIds = new Set<string>();
+    for (const row of decisions30d) {
+      if (row.agentId !== "owner_decision") continue;
+      try {
+        const data = JSON.parse(row.data) as { decision?: string };
+        if (data.decision === "approve") approvedRunIds.add(String(row.runId));
+      } catch {
+        // A malformed historical quality row is not an approval record.
+      }
+    }
+    const approvedPlans30d = verifiedRuns30d.filter((run) => run.kind === "strategy" && approvedRunIds.has(String(run._id)));
     const drift = recentRuns.filter((r) => r.actualMicros > r.estimateMicros);
     const estimate = recentRuns.reduce((s, r) => s + r.estimateMicros, 0);
     const actual = recentRuns.reduce((s, r) => s + r.actualMicros, 0);
@@ -143,6 +163,11 @@ export const dashboard = query({
         estimate7dMicros: estimate,
         actual7dMicros: actual,
         overEstimateRuns: drift.length,
+        approvedPlans30d: approvedPlans30d.length,
+        approvedPlanCost30dMicros: approvedPlans30d.reduce((sum, run) => sum + run.actualMicros, 0),
+        costPerApprovedPlan30dMicros: approvedPlans30d.length
+          ? Math.round(approvedPlans30d.reduce((sum, run) => sum + run.actualMicros, 0) / approvedPlans30d.length)
+          : null,
         previews24h: previews.length,
         previewSpend24hMicros: previews.reduce((s, p) => s + p.costMicros, 0),
       },

@@ -195,7 +195,7 @@ Since the original S4 note, owner economics now recalculate forecasts, portfolio
 | REQ-LEARN-06 | partial | S4 | `learning.ts:13` (K_ANON=5) | Not audited |
 | REQ-LEARN-07 | partial | S4 | `workspace.ts` owner-economics snapshot, live forecast/portfolio recalculation, approval/start gates | Confirmed economics now recalculate forecasts, portfolio choice and goal gap on plan reads. Approval/play launch is blocked when owner economics differ from the plan snapshot. The plan narrative still needs regeneration to reflect the changed numbers. |
 | REQ-COST-01 | partial | all | this ledger | Decision records are written per slice in commit messages. No formal record per workflow yet |
-| REQ-COST-02 | missing | S14 | run `actualMicros` | No $ per accepted output |
+| REQ-COST-02 | partial | S14 | `ops.ts` owner decision records + verified strategy runs | The operator dashboard reports actual cost per owner-approved plan over 30 days. **Gap:** accepted outputs from non-plan workflows aren't linked to owner acceptance yet. |
 | REQ-COST-03 | partial | S12/S14 | reservation, `jobs.ts:95`, `engine.ts:192` | No per-automation ceiling |
 | REQ-COST-04 | partial | S14 | bench arms, `bench/run.ts --import-arm` | Two paid Basic runs on 2026-10-19 ($4.62 of a $5 cap): B1 lost 2–3, then 1–1–3, to B0. Causes: timid inputs from the softened wording, and a headline/CAC basis mismatch. Both fixed (ambition restored, headline on the most-likely basis). Another run needs new funding (cap $2.50) |
 | REQ-COST-05 | missing | S14 | `routes.ts` | Mode-based only. Explicit Expert choice preserved |
