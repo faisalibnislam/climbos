@@ -163,6 +163,11 @@ describe("platform concentration", () => {
     expect(result.attributedConversions).toBe(2);
     expect(result.totalConversions).toBe(3);
     expect(result.topThreeShare).toBe(1);
+    expect(result.sources).toEqual([
+      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000 },
+      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0 },
+    ]);
+    expect(JSON.stringify(result.sources)).not.toContain("c1");
   });
 
   it("returns a truthful empty attribution state when no recognized UTMs exist", () => {

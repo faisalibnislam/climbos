@@ -37,10 +37,20 @@ function platformLabel(source: string | undefined, medium: string | undefined): 
 
 export interface PlatformConcentration {
   currency: string;
+  fromMs: number;
+  toMs: number;
   eventCount: number;
   attributedConversions: number;
   totalConversions: number;
   attributedPositiveNetMinor: number;
+  /** Tracked billing outcomes by recognized UTM source; descriptive, not causal or profitable by itself. */
+  sources: {
+    source: string;
+    paymentEvents: number;
+    identifiedCustomers: number;
+    netRevenueMinor: number;
+    refundMinor: number;
+  }[];
   topSource: string | null;
   topSourceShare: number | null;
   topThreeShare: number | null;
@@ -66,6 +76,7 @@ export function platformConcentration(
   const lastTouch = new Map<string, { occurredAt: number; label: string }>();
   const channelByOrder = new Map<string, string>();
   const revenueBySource = new Map<string, number>();
+  const outcomesBySource = new Map<string, { paymentEvents: number; customers: Set<string>; netRevenueMinor: number; refundMinor: number }>();
   let attributedConversions = 0;
   let totalConversions = 0;
   const touchKey = (event: RevenueEvent) => event.customerRef ? `${event.source}\u0000${event.customerRef}` : null;
@@ -87,7 +98,13 @@ export function platformConcentration(
     const net = netMinor(event);
 
     if (event.kind === "refund") {
-      if (source) revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
+      if (source) {
+        revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
+        const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), netRevenueMinor: 0, refundMinor: 0 };
+        outcome.netRevenueMinor += net;
+        outcome.refundMinor += Math.abs(event.amountMinor);
+        outcomesBySource.set(source, outcome);
+      }
       continue;
     }
 
@@ -96,6 +113,12 @@ export function platformConcentration(
     if (source) {
       attributedConversions++;
       revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + net);
+      const outcome = outcomesBySource.get(source) ?? { paymentEvents: 0, customers: new Set<string>(), netRevenueMinor: 0, refundMinor: 0 };
+      outcome.paymentEvents++;
+      if (event.customerRef) outcome.customers.add(`${event.source}\u0000${event.customerRef}`);
+      outcome.netRevenueMinor += net;
+      outcome.refundMinor += event.refundedMinor;
+      outcomesBySource.set(source, outcome);
     }
   }
 
@@ -106,10 +129,21 @@ export function platformConcentration(
   const attributedPositiveNetMinor = ranked.reduce((sum, row) => sum + row.net, 0);
   return {
     currency: options.currency,
+    fromMs: options.fromMs,
+    toMs: options.toMs,
     eventCount: events.length,
     attributedConversions,
     totalConversions,
     attributedPositiveNetMinor,
+    sources: [...outcomesBySource.entries()]
+      .map(([source, outcome]) => ({
+        source,
+        paymentEvents: outcome.paymentEvents,
+        identifiedCustomers: outcome.customers.size,
+        netRevenueMinor: outcome.netRevenueMinor,
+        refundMinor: outcome.refundMinor,
+      }))
+      .sort((a, b) => b.netRevenueMinor - a.netRevenueMinor || a.source.localeCompare(b.source)),
     topSource: ranked[0]?.source ?? null,
     topSourceShare: attributedPositiveNetMinor ? (ranked[0]?.net ?? 0) / attributedPositiveNetMinor : null,
     topThreeShare: attributedPositiveNetMinor

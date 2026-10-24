@@ -58,6 +58,8 @@ describe("Engine v2 wiring", () => {
         occurredAt: now - 30 * 86_400_000,
         customerRef: "private-customer",
         orderRef: "refund-exposure-order",
+        utmSource: "google",
+        utmMedium: "cpc",
         currency: "USD",
         amountMinor: 10_000,
         refundedMinor: 1_500,
@@ -124,7 +126,7 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(2);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(3);
     expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
     expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
       paymentCount: 2,
@@ -135,6 +137,12 @@ describe("Engine v2 wiring", () => {
       partial: false,
     });
     expect(JSON.stringify(strategy?.expert?.snapshot?.refundExposure)).not.toContain("private-customer");
+    expect(strategy?.expert?.snapshot?.channelOutcomes).toMatchObject({
+      currency: "USD",
+      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, netRevenueMinor: 8_500, refundMinor: 1_500 }],
+      partial: false,
+    });
+    expect(JSON.stringify(strategy?.expert?.snapshot?.channelOutcomes)).not.toContain("private-customer");
     expect(strategy?.expert?.snapshot?.factVersions).toEqual([]);
     expect(strategy?.expert?.snapshot?.staleFactIds).toEqual([]);
     expect(strategy?.expert?.snapshot?.contradictions).toEqual([]);
