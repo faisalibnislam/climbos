@@ -4,6 +4,22 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup } from "./helpers";
 
 describe("learning from results", () => {
+  it("paginates customer workspaces instead of truncating after a fixed tenant limit", async () => {
+    const t = setup();
+    const first = await asNewUser(t, "learn-page-one@example.com");
+    const second = await asNewUser(t, "learn-page-two@example.com");
+    await first.client.mutation(api.orgs.createWorkspace, { businessName: "Page One" });
+    await second.client.mutation(api.orgs.createWorkspace, { businessName: "Page Two" });
+
+    const page1 = await t.query(internal.learning.orgIds, { paginationOpts: { numItems: 1, cursor: null } });
+    expect(page1.page).toHaveLength(1);
+    expect(page1.isDone).toBe(false);
+    const page2 = await t.query(internal.learning.orgIds, { paginationOpts: { numItems: 1, cursor: page1.continueCursor } });
+    expect(page2.page).toHaveLength(1);
+    expect(page2.isDone).toBe(true);
+    expect(page2.page[0]).not.toBe(page1.page[0]);
+  });
+
   it("uses actual first-send time and excludes CRM stages recorded before contact", async () => {
     const t = setup();
     const u = await asNewUser(t, "learn-cohort@example.com");

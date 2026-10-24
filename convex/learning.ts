@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
@@ -14,6 +15,8 @@ import { boundedPoolContribution, comparableLearningSegment, LEARN_WINDOW_DAYS, 
 const K_ANON = 10;
 const DAY = 86_400_000;
 const WINDOW = LEARN_WINDOW_DAYS * DAY;
+const ORG_PAGE_SIZE = 100;
+const ORG_READ_CONCURRENCY = 8;
 
 /** Kept for callers: label and minimum sample per metric (definitions live in shared/growth/learnedMetrics). */
 export const METRICS: Record<string, { label: string; minTrials: number }> = Object.fromEntries(Object.entries(METRIC_DEFS).map(([k, d]) => [k, { label: d.label, minTrials: d.minTrials }]));
@@ -82,8 +85,11 @@ async function orgCounts(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
 }
 
 export const orgIds = internalQuery({
-  args: {},
-  handler: async (ctx) => (await ctx.db.query("organizations").withIndex("by_kind_created", (q) => q.eq("kind", "customer")).take(5000)).filter((o) => !o.deletedAt).map((o) => o._id),
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const page = await ctx.db.query("organizations").withIndex("by_kind_created", (q) => q.eq("kind", "customer")).paginate(paginationOpts);
+    return { ...page, page: page.page.filter((org) => !org.deletedAt).map((org) => org._id) };
+  },
 });
 
 export const countsForOrg = internalQuery({
@@ -122,23 +128,36 @@ export const recompute = internalAction({
   handler: async (ctx): Promise<number> => {
     const pooled = new Map<string, { workspaces: number; trials: number; successes: number }>();
     const rows: { scope: string; metric: string; workspaces: number; trials: number; successes: number }[] = [];
-    for (const orgId of await ctx.runQuery(internal.learning.orgIds, {})) {
-      const { type, stage, segment, counts } = await ctx.runQuery(internal.learning.countsForOrg, { orgId });
-      for (const [metric, x] of Object.entries(counts)) {
-        // Keep sparse first-party evidence visible with its wide uncertainty range;
-        // only mature samples are eligible to contribute to cross-workspace pools.
-        rows.push({ scope: `org:${orgId}`, metric, workspaces: 1, ...x });
-        if (x.trials < METRICS[metric].minTrials) continue;
-        const contribution = boundedPoolContribution(x.trials, x.successes);
-        // Stage-specific cohorts are kept alongside the broader type pool;
-        // each is independently k-anonymous and bounded per workspace.
-        const scopes = [`type:${type}`, ...(stage ? [`stage:${type}:${stage}`] : []), ...(segment ? [segment.scope] : [])];
-        for (const scope of scopes) {
-          const k = `${scope}|${metric}`;
-          const p = pooled.get(k) ?? { workspaces: 0, trials: 0, successes: 0 };
-          pooled.set(k, { workspaces: p.workspaces + 1, trials: p.trials + contribution.trials, successes: p.successes + contribution.successes });
+    let cursor: string | null = null;
+    let done = false;
+    while (!done) {
+      const page: { page: Id<"organizations">[]; isDone: boolean; continueCursor: string } = await ctx.runQuery(internal.learning.orgIds, { paginationOpts: { numItems: ORG_PAGE_SIZE, cursor } });
+      // Keep per-tenant reads bounded while avoiding a serial action/query round trip for every workspace.
+      for (let offset = 0; offset < page.page.length; offset += ORG_READ_CONCURRENCY) {
+        const orgIds = page.page.slice(offset, offset + ORG_READ_CONCURRENCY);
+        const results = await Promise.all(orgIds.map((orgId) => ctx.runQuery(internal.learning.countsForOrg, { orgId })));
+        for (let index = 0; index < results.length; index++) {
+          const orgId = orgIds[index];
+          const { type, stage, segment, counts } = results[index];
+          for (const [metric, x] of Object.entries(counts)) {
+            // Keep sparse first-party evidence visible with its wide uncertainty range;
+            // only mature samples are eligible to contribute to cross-workspace pools.
+            rows.push({ scope: `org:${orgId}`, metric, workspaces: 1, ...x });
+            if (x.trials < METRICS[metric].minTrials) continue;
+            const contribution = boundedPoolContribution(x.trials, x.successes);
+            // Stage-specific cohorts are kept alongside the broader type pool;
+            // each is independently k-anonymous and bounded per workspace.
+            const scopes = [`type:${type}`, ...(stage ? [`stage:${type}:${stage}`] : []), ...(segment ? [segment.scope] : [])];
+            for (const scope of scopes) {
+              const k = `${scope}|${metric}`;
+              const p = pooled.get(k) ?? { workspaces: 0, trials: 0, successes: 0 };
+              pooled.set(k, { workspaces: p.workspaces + 1, trials: p.trials + contribution.trials, successes: p.successes + contribution.successes });
+            }
+          }
         }
       }
+      done = page.isDone;
+      cursor = done ? null : page.continueCursor;
     }
     for (const [k, p] of pooled) if (p.workspaces >= K_ANON) rows.push({ scope: k.split("|")[0], metric: k.split("|")[1], ...p });
     // Write in chunks; the first chunk also clears rates that no longer qualify.
