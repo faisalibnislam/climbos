@@ -29,6 +29,8 @@ describe("tenant isolation", () => {
     await expect(bob.client.query(api.analytics.overview, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
     await expect(bob.client.query(api.analytics.cohorts, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
     await expect(bob.client.query(api.billing.overview, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
+    await expect(bob.client.query(api.content.calendarTimezone, { slug: aliceSlug })).rejects.toThrow(/couldn't find/);
+    await expect(bob.client.query(api.content.calendar, { slug: aliceSlug, from: Date.now(), to: Date.now() + 86_400_000 })).rejects.toThrow(/couldn't find/);
 
     // Mutations and exports are refused.
     await expect(bob.client.mutation(api.content.edit, { slug: aliceSlug, artifactId, body: "hijacked", hashtags: [] })).rejects.toThrow(/couldn't find/);

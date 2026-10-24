@@ -86,6 +86,30 @@ describe("social autopilot", () => {
     expect(settings?.trust.find((x) => x.channel === "facebook")?.streak).toBe(1);
   });
 
+  it("shows review slots on the content calendar and follows a rescheduled artifact", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-calendar@example.com");
+    await w.client.mutation(api.autopilot.save, { slug: w.slug, enabled: true, mode: "auto", channels: [{ channel: "facebook", postsPerWeek: 1 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+    await run(t);
+
+    const [slot] = await slots(t, w.orgId);
+    expect(slot.status).toBe("needs_approval");
+    const initial = await w.client.query(api.content.calendar, { slug: w.slug, from: slot.slotAt - 1, to: slot.slotAt + 1 });
+    expect(initial).toEqual(expect.arrayContaining([
+      expect.objectContaining({ artifactId: slot.artifactId, status: "in_review", autopilot: true, autopilotStatus: "needs_approval" }),
+    ]));
+
+    await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
+    const movedTo = slot.slotAt + 3 * 86_400_000;
+    await w.client.mutation(api.content.schedule, { slug: w.slug, artifactId: slot.artifactId!, when: movedTo });
+    const moved = await slots(t, w.orgId);
+    expect(moved[0].slotAt).toBe(movedTo);
+    const calendar = await w.client.query(api.content.calendar, { slug: w.slug, from: movedTo - 1, to: movedTo + 1 });
+    expect(calendar).toEqual(expect.arrayContaining([
+      expect.objectContaining({ artifactId: slot.artifactId, status: "scheduled", scheduledFor: movedTo, autopilot: true }),
+    ]));
+  });
+
   it("fully auto posts a clean draft on its own under an autopilot approval", async () => {
     const t = setup();
     const w = await workspace(t, "ap-auto@example.com");

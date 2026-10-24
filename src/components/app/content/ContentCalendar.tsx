@@ -8,100 +8,148 @@ import { useState } from "react";
 import { Badge, Button, Callout, IconButton, Skeleton, SocialIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { Segmented } from "@/components/ui/segmented";
-import { ArtifactStatus, SectionBoundary, browserTimeZone, channelLabel, useNow } from "./shared";
+import { ArtifactStatus, SectionBoundary, channelLabel, useNow } from "./shared";
+import { localDate, zonedTime } from "../../../../shared/autopilot";
 
-type View = "week" | "month";
+type View = "day" | "week" | "month";
 
 const DAY_MS = 86_400_000;
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const AUTOPILOT_STATUS: Record<string, { label: string; tone: "neutral" | "green" | "amber" | "red" | "blue" | "violet" }> = {
+  planned: { label: "Planned", tone: "neutral" },
+  drafting: { label: "Drafting", tone: "blue" },
+  needs_approval: { label: "Needs review", tone: "amber" },
+  scheduled: { label: "Scheduled", tone: "blue" },
+  ready_to_post: { label: "Ready to post", tone: "violet" },
+  published: { label: "Published", tone: "green" },
+  failed: { label: "Didn't finish", tone: "red" },
+};
 
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+/** Dates in this component are encoded at UTC noon so calendar arithmetic stays DST-safe. */
+function dateKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
 }
 
-/** Monday-based start of week. */
+function dateKeyAt(utcMs: number, timeZone: string): string {
+  const d = localDate(utcMs, timeZone);
+  return `${d.year}-${d.month0}-${d.day}`;
+}
+
+function calendarDate(utcMs: number, timeZone: string): Date {
+  const d = localDate(utcMs, timeZone);
+  return new Date(Date.UTC(d.year, d.month0, d.day, 12));
+}
+
 function startOfWeek(d: Date): Date {
-  const s = startOfDay(d);
-  const dow = (s.getDay() + 6) % 7;
-  return new Date(s.getFullYear(), s.getMonth(), s.getDate() - dow);
+  const dow = (d.getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow, 12));
 }
 
 function addDays(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + n, 12));
 }
 
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+function midnight(d: Date, timeZone: string): number {
+  return zonedTime(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, timeZone);
 }
 
-/** Visible days for a view: one week, or the full weeks covering a month (≤ 42 days). */
-function visibleRange(anchor: Date, view: View): { days: Date[]; from: number; to: number; title: string } {
+function formatDate(d: Date, options: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleDateString("en-US", { ...options, timeZone: "UTC" });
+}
+
+function visibleRange(anchor: Date, view: View, timeZone: string): { days: Date[]; from: number; to: number; title: string } {
+  if (view === "day") {
+    const next = addDays(anchor, 1);
+    return {
+      days: [anchor],
+      from: midnight(anchor, timeZone),
+      to: midnight(next, timeZone),
+      title: formatDate(anchor, { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+    };
+  }
   if (view === "week") {
     const start = startOfWeek(anchor);
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
     const end = days[6];
-    const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return { days, from: start.getTime(), to: addDays(start, 7).getTime(), title: `${fmt(start)} – ${fmt(end)}, ${end.getFullYear()}` };
+    const fmt = (d: Date) => formatDate(d, { month: "short", day: "numeric" });
+    return {
+      days,
+      from: midnight(start, timeZone),
+      to: midnight(addDays(start, 7), timeZone),
+      title: `${fmt(start)} – ${fmt(end)}, ${end.getUTCFullYear()}`,
+    };
   }
-  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-  const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  const first = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1, 12));
+  const last = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0, 12));
   const start = startOfWeek(first);
   const endExclusive = addDays(startOfWeek(last), 7);
   const count = Math.round((endExclusive.getTime() - start.getTime()) / DAY_MS);
   const days = Array.from({ length: count }, (_, i) => addDays(start, i));
   return {
     days,
-    from: start.getTime(),
-    to: endExclusive.getTime(),
-    title: first.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    from: midnight(start, timeZone),
+    to: midnight(endExclusive, timeZone),
+    title: formatDate(first, { month: "long", year: "numeric" }),
   };
 }
 
 export function ContentCalendar({ slug }: { slug: string }) {
   const now = useNow();
-  if (now === null) {
-    return <Skeleton className="h-80 w-full" />;
-  }
-  return <CalendarInner slug={slug} now={now} />;
+  const timeZone = useQuery(api.content.calendarTimezone, { slug });
+  if (now === null || timeZone === undefined) return <Skeleton className="h-80 w-full" />;
+  return <CalendarInner slug={slug} now={now} timeZone={timeZone} />;
 }
 
-function CalendarInner({ slug, now }: { slug: string; now: number }) {
+function CalendarInner({ slug, now, timeZone }: { slug: string; now: number; timeZone: string }) {
   const [view, setView] = useState<View>("week");
-  const [anchor, setAnchor] = useState(() => startOfDay(new Date(now)));
-  const range = visibleRange(anchor, view);
-  const todayKey = dayKey(new Date(now));
+  const [anchor, setAnchor] = useState(() => calendarDate(now, timeZone));
+  const range = visibleRange(anchor, view, timeZone);
+  const todayKey = dateKey(calendarDate(now, timeZone));
 
   const shift = (dir: -1 | 1) => {
-    setAnchor((a) => (view === "week" ? addDays(a, 7 * dir) : new Date(a.getFullYear(), a.getMonth() + dir, 1)));
+    setAnchor((a) => view === "day"
+      ? addDays(a, dir)
+      : view === "week"
+        ? addDays(a, 7 * dir)
+        : new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + dir, 1, 12)));
   };
 
   return (
     <section aria-labelledby="calendar-heading" className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <IconButton variant="secondary" aria-label={view === "week" ? "Previous week" : "Previous month"} icon={<ChevronLeft />} onClick={() => shift(-1)} />
+          <IconButton variant="secondary" aria-label={`Previous ${view}`} icon={<ChevronLeft />} onClick={() => shift(-1)} />
           <h2 id="calendar-heading" className="heading-section min-w-0 flex-1 text-center sm:min-w-56" aria-live="polite">
             {range.title}
           </h2>
-          <IconButton variant="secondary" aria-label={view === "week" ? "Next week" : "Next month"} icon={<ChevronRight />} onClick={() => shift(1)} />
-          <Button variant="ghost" onClick={() => setAnchor(startOfDay(new Date(now)))}>
-            Today
-          </Button>
+          <IconButton variant="secondary" aria-label={`Next ${view}`} icon={<ChevronRight />} onClick={() => shift(1)} />
+          <Button variant="ghost" onClick={() => setAnchor(calendarDate(now, timeZone))}>Today</Button>
         </div>
         <Segmented<View>
           label="Calendar view"
           value={view}
           onChange={setView}
           options={[
+            { value: "day", label: "Day" },
             { value: "week", label: "Week" },
             { value: "month", label: "Month" },
           ]}
           className="self-start sm:self-auto"
         />
       </div>
-      <p className="text-xs text-ink-3">{browserTimeZone()}</p>
+      <p className="text-xs text-ink-3">Times shown in {timeZone}</p>
       <SectionBoundary label="the calendar" key={`${range.from}-${range.to}`}>
-        <CalendarGrid slug={slug} days={range.days} from={range.from} to={range.to} todayKey={todayKey} view={view} anchorMonth={anchor.getMonth()} />
+        <CalendarGrid
+          slug={slug}
+          days={range.days}
+          from={range.from}
+          to={range.to}
+          todayKey={todayKey}
+          view={view}
+          anchorMonth={anchor.getUTCMonth()}
+          timeZone={timeZone}
+          onSelectDay={(day) => { setAnchor(day); setView("day"); }}
+        />
       </SectionBoundary>
     </section>
   );
@@ -115,6 +163,8 @@ function CalendarGrid({
   todayKey,
   view,
   anchorMonth,
+  timeZone,
+  onSelectDay,
 }: {
   slug: string;
   days: Date[];
@@ -123,11 +173,13 @@ function CalendarGrid({
   todayKey: string;
   view: View;
   anchorMonth: number;
+  timeZone: string;
+  onSelectDay: (day: Date) => void;
 }) {
   const items = useQuery(api.content.calendar, { slug, from, to });
   const byDay = new Map<string, NonNullable<typeof items>>();
   for (const it of items ?? []) {
-    const k = dayKey(new Date(it.scheduledFor));
+    const k = dateKeyAt(it.scheduledFor, timeZone);
     const list = byDay.get(k) ?? [];
     list.push(it);
     byDay.set(k, list);
@@ -141,30 +193,29 @@ function CalendarGrid({
         {items === undefined ? "Loading calendar…" : `${total} item${total === 1 ? "" : "s"} in this ${view}.`}
       </p>
       {items !== undefined && total === 0 ? (
-        <Callout tone="info" className="mb-4">
-          Nothing scheduled this {view}.
-        </Callout>
+        <Callout tone="info" className="mb-4">Nothing scheduled this {view}.</Callout>
       ) : null}
-      <div aria-hidden="true" className="hidden grid-cols-7 gap-px md:grid">
-        {WEEKDAYS.map((d) => (
-          <div key={d} className="px-3 pb-2 text-xs font-medium text-ink-3">
-            {d}
-          </div>
-        ))}
-      </div>
-      <ol className="flex flex-col gap-2 md:grid md:grid-cols-7 md:gap-px md:overflow-hidden md:rounded-xl md:border md:border-line md:bg-line">
+      {view !== "day" ? (
+        <div aria-hidden="true" className="hidden grid-cols-7 gap-px md:grid">
+          {WEEKDAYS.map((d) => <div key={d} className="px-3 pb-2 text-xs font-medium text-ink-3">{d}</div>)}
+        </div>
+      ) : null}
+      <ol className={cn(
+        "flex flex-col gap-2 md:rounded-xl md:border md:border-line md:bg-line",
+        view === "day" ? "md:gap-0" : "md:grid md:grid-cols-7 md:gap-px md:overflow-hidden",
+      )}>
         {days.map((d) => {
-          const k = dayKey(d);
+          const k = dateKey(d);
           const list = byDay.get(k) ?? [];
           const isToday = k === todayKey;
-          const outside = view === "month" && d.getMonth() !== anchorMonth;
-          const fullDate = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+          const outside = view === "month" && d.getUTCMonth() !== anchorMonth;
+          const fullDate = formatDate(d, { weekday: "long", month: "long", day: "numeric" });
           return (
             <li
               key={k}
               className={cn(
                 "flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-surface p-3 md:rounded-none md:border-0",
-                view === "month" ? "md:min-h-28" : "md:min-h-56",
+                view === "month" ? "md:min-h-28" : view === "day" ? "md:min-h-96" : "md:min-h-56",
                 list.length === 0 && !isToday && "hidden md:flex",
                 outside && "md:bg-surface-2",
                 isToday && "border-brand-700 ring-2 ring-inset ring-brand-700 md:border-0",
@@ -172,11 +223,17 @@ function CalendarGrid({
               aria-current={isToday ? "date" : undefined}
             >
               <h3 className="heading-card flex flex-wrap items-center gap-2">
-                <span className="md:hidden">{fullDate}</span>
-                <span className={cn("hidden md:inline", outside ? "text-ink-3" : "text-ink")}>
-                  <span className="sr-only">{fullDate}</span>
-                  <span aria-hidden="true">{d.getDate()}</span>
-                </span>
+                {view === "day" ? <span>{fullDate}</span> : <span className="md:hidden">{fullDate}</span>}
+                {view !== "day" ? (
+                  <button
+                    type="button"
+                    className={cn("hidden rounded-sm md:inline hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700", outside ? "text-ink-3" : "text-ink")}
+                    aria-label={`View ${fullDate}`}
+                    onClick={() => onSelectDay(d)}
+                  >
+                    <span aria-hidden="true">{d.getUTCDate()}</span>
+                  </button>
+                ) : null}
                 {isToday ? <Badge tone="green">Today</Badge> : null}
               </h3>
               {items === undefined ? (
@@ -186,20 +243,21 @@ function CalendarGrid({
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {list.map((it) => {
+                    const href = it.artifactId ? `/app/${slug}/content/${it.artifactId}` : `/app/${slug}/autopilot`;
                     return (
-                      <li key={it.id}>
+                      <li key={`${it.id}`}>
                         <Link
-                          href={`/app/${slug}/content/${it.id}`}
+                          href={href}
+                          aria-label={`${it.title}, ${channelLabel(it.channel)}, ${new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })}, ${it.status}${it.autopilot ? ", Autopilot" : ""}`}
                           className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 p-2 text-ui transition-colors hover:border-brand-700"
                         >
                           <span className="flex items-center gap-1.5 text-xs text-ink-3">
                             <SocialIcon network={it.channel} size="xs" />
-                            <span>
-                              {new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {channelLabel(it.channel)}
-                            </span>
+                            <span>{new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })} · {channelLabel(it.channel)}</span>
+                            {it.autopilot ? <span className="ml-auto">Auto</span> : null}
                           </span>
                           <span className="line-clamp-2 font-medium text-ink">{it.title}</span>
-                          <ArtifactStatus status={it.status} />
+                          {it.artifactId ? <ArtifactStatus status={it.status} /> : <AutopilotStatus status={it.status} />}
                         </Link>
                       </li>
                     );
@@ -212,4 +270,9 @@ function CalendarGrid({
       </ol>
     </div>
   );
+}
+
+function AutopilotStatus({ status }: { status: string }) {
+  const meta = AUTOPILOT_STATUS[status] ?? { label: status, tone: "neutral" as const };
+  return <Badge tone={meta.tone}>{meta.label}</Badge>;
 }

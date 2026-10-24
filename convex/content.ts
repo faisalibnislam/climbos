@@ -17,6 +17,7 @@ import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
 import { contentHash } from "../shared/policy";
 import { findRiskyClaims } from "../shared/ai/tasks";
+import { localDate, thisWeekOf } from "../shared/autopilot";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
@@ -145,7 +146,69 @@ export const calendar = query({
       .query("artifacts")
       .withIndex("by_org_scheduled", (q) => q.eq("orgId", org._id).gte("scheduledFor", from).lt("scheduledFor", to))
       .take(300);
-    return rows.map((a) => ({ id: a._id, title: a.title, channel: a.channel, status: a.status, scheduledFor: a.scheduledFor! }));
+    type CalendarItem = {
+      id: string;
+      artifactId: Id<"artifacts"> | null;
+      slotId: Id<"calendarSlots"> | null;
+      title: string;
+      channel: string;
+      status: string;
+      scheduledFor: number;
+      autopilot: boolean;
+      autopilotStatus: string | null;
+    };
+    const events = new Map<string, CalendarItem>(rows.map((a) => [String(a._id), {
+      id: String(a._id),
+      artifactId: a._id,
+      slotId: null as Id<"calendarSlots"> | null,
+      title: a.title,
+      channel: a.channel,
+      status: a.status,
+      scheduledFor: a.scheduledFor!,
+      autopilot: false,
+      autopilotStatus: null as string | null,
+    }]));
+    const slots = await ctx.db
+      .query("calendarSlots")
+      .withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", from).lt("slotAt", to))
+      .take(300);
+    for (const slot of slots) {
+      if (slot.status === "skipped") continue;
+      const linked = slot.artifactId ? await ctx.db.get(slot.artifactId) : null;
+      const artifact = linked?.orgId === org._id ? linked : null;
+
+      if (artifact && artifact.scheduledFor !== undefined && (artifact.scheduledFor < from || artifact.scheduledFor >= to)) {
+        // A post may have been rescheduled since this slot was planned. Its actual schedule wins.
+        continue;
+      }
+      const existing = artifact ? events.get(String(artifact._id)) : undefined;
+      if (existing) {
+        events.set(existing.id, { ...existing, slotId: slot._id, autopilot: true, autopilotStatus: slot.status });
+        continue;
+      }
+
+      events.set(String(slot._id), {
+        id: String(slot._id),
+        artifactId: artifact?._id ?? null,
+        slotId: slot._id,
+        title: artifact?.title ?? slot.idea,
+        channel: slot.channel,
+        status: artifact?.status ?? slot.status,
+        scheduledFor: artifact?.scheduledFor ?? slot.slotAt,
+        autopilot: true,
+        autopilotStatus: slot.status,
+      });
+    }
+    return [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor);
+  },
+});
+
+/** Small calendar bootstrap query so calendar boundaries use the workspace's posting timezone. */
+export const calendarTimezone = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    return org.timezone;
   },
 });
 
@@ -435,6 +498,11 @@ export const schedule = mutation({
     // Approvals expire after a few days: a post scheduled further out keeps its approval until it goes.
     if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS))) throw appError("INVALID", "The approval expired. Approve it again first.");
     await ctx.db.patch(a._id, { status: "scheduled", scheduledFor: when, lastPublishError: undefined, updatedAt: Date.now() });
+    const slot = await ctx.db.query("calendarSlots").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).first();
+    if (slot && slot.orgId === org._id) {
+      const local = localDate(when, org.timezone);
+      await ctx.db.patch(slot._id, { slotAt: when, weekOf: thisWeekOf(when, org.timezone), day: local.weekday, updatedAt: Date.now() });
+    }
     await ctx.scheduler.runAt(when, internal.publish.scheduledPublish, { artifactId, expectedScheduledFor: when });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.scheduled", subjectType: "artifact", subjectId: a._id, summary: `Scheduled "${a.title}" in ClimbOS for ${new Date(when).toISOString()}.` });
   },
