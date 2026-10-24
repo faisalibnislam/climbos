@@ -8,6 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { PlayResults } from "./PlayResults";
 import {
+  ArrowRight,
   Ban,
   CalendarClock,
   CalendarDays,
@@ -122,6 +123,8 @@ const CAPABILITY_LABEL: Record<NonNullable<PlayView["actionContract"]>["executio
 
 export interface ExpertView {
   diagnosis: string;
+  /** Deterministic owner-data diagnosis retained separately from the model's explanation. */
+  constraintDiagnosis?: Diagnosis | null;
   affordableCac: string;
   notDoing: { channel: string; why: string }[];
   northStar: { metric: string; baseline: string; target: string };
@@ -375,11 +378,13 @@ function DecisionSummary({ d }: { d: Decision }) {
 
 const GAP_TONE: Record<GoalGap["state"], CalloutTone> = { met: "success", short: "warning", out_of_reach: "warning", unknown: "info", not_comparable: "info" };
 
-export function NorthStar({ expert }: { expert: ExpertView }) {
+export function NorthStar({ expert, slug }: { expert: ExpertView; slug: string }) {
   const [all, setAll] = useState(false);
   const ns = expert.northStar;
   const gap = expert.goalGap ?? null;
   const goal = gap && expert.snapshot?.goal ? expert.snapshot.goal : null;
+  const nextMeasurement = expert.constraintDiagnosis?.nextMeasurement;
+  const conflicts = expert.constraintDiagnosis?.conflicts ?? [];
   const targetLabel = gap ? "Plays support" : "Target";
   const allShort = isShort(ns.baseline) && isShort(ns.target) && (goal === null || isShort(goal));
   return (
@@ -390,6 +395,12 @@ export function NorthStar({ expert }: { expert: ExpertView }) {
             <p className="text-overline">Diagnosis</p>
             {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
             <ProseBullets text={expert.diagnosis} max={3} />
+            {conflicts.length ? <Callout tone="warning" title="Check these business numbers first" action={<Link href={`/app/${encodeURIComponent(slug)}/settings/business`}>Update business numbers <ArrowRight aria-hidden className="inline size-3.5" /></Link>}>
+              <ul className="list-disc pl-5">{conflicts.slice(0, 4).map((conflict, i) => <li key={`${conflict}-${i}`}>{conflict}</li>)}</ul>
+            </Callout> : nextMeasurement ? <Callout tone={nextMeasurement.priority === "decision_critical" ? "warning" : "info"} title={nextMeasurement.priority === "decision_critical" ? "Needed before a firm diagnosis" : "Most useful next step"} action={<Link href={`/app/${encodeURIComponent(slug)}/settings/business`}>Add or update business numbers <ArrowRight aria-hidden className="inline size-3.5" /></Link>}>
+              <p className="font-medium text-ink">{nextMeasurement.action}</p>
+              <p className="mt-1">{nextMeasurement.reason}</p>
+            </Callout> : null}
             {expert.affordableCac ? (
               <div className="mt-auto flex flex-col gap-1 rounded-[var(--radius-card)] bg-cream-soft p-3">
                 <FieldLabel icon={Wallet}>Affordable cost per customer</FieldLabel>
