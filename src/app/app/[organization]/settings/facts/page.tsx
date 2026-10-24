@@ -58,7 +58,7 @@ export default function FactsPage() {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-ink-2">{f.statement}</span>
         <span className="text-xs text-ink-3">
-          {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · Last confirmed {relativeTime(f.updatedAt)}{factFreshness(f.category, f.updatedAt).reviewSuggested ? " · Worth reviewing" : ""}
+          {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · Last confirmed {relativeTime(f.verifiedAt)}{factFreshness(f.category, f.updatedAt, undefined, f.verifiedAt).reviewSuggested ? " · Worth reviewing" : ""}
         </span>
         {f.sources.length || f.duplicateRecords.length ? (
           <details className="mt-1 text-xs text-ink-3">
