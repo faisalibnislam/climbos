@@ -508,7 +508,7 @@ export const applyInbox = internalMutation({
         const test = firstSend?.abTestId ? await ctx.db.get(firstSend.abTestId) : null;
         if (test) {
           const assignment = await subjectAssignment(ctx, test, p._id);
-          if (assignment?.exposedAt && !assignment.outcomeAt) await recordOutcome(ctx, assignment, test);
+          if (assignment?.exposedAt && !assignment.outcomeAt) await recordOutcome(ctx, assignment, test, r.at ?? now);
         }
       }
       if (already || p.stage === "lost") continue;

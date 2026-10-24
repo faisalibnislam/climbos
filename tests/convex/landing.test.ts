@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup } from "./helpers";
 
 describe("landing pages", () => {
@@ -80,6 +81,7 @@ describe("landing A/B test", () => {
     await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
     const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
     await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: page.content!.headline })).rejects.toThrow(/different/);
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Another message", outcomeWindowDays: 31 })).rejects.toThrow(/0 to 30/);
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Double your leads in 30 days" });
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test?.b.headline).toBe("Double your leads in 30 days");
     const visitors = await assignVisitors(t, page.slug, { A: 500, B: 500 });
@@ -93,18 +95,33 @@ describe("landing A/B test", () => {
     await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
     await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
     await exposeVisitors(t, page.slug, visitors.B.slice(0, 18));
-    for (let i = 0; i < 18; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, visitorKey: visitors.B[i].key, testId: visitors.B[i].testId });
+    for (let i = 0; i < 17; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, visitorKey: visitors.B[i].key, testId: visitors.B[i].testId });
     await exposeVisitors(t, page.slug, visitors.A.slice(1));
     await exposeVisitors(t, page.slug, visitors.B.slice(18));
+    const [maturing] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
+    expect(maturing).toMatchObject({ status: "maturing", outcomeWindowDays: 1, winner: null, confidence: 0 });
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "A second test" })).rejects.toThrow(/already active/);
+    await t.mutation(internal.abtests.finalize, { testId: maturing.id });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].status).toBe("maturing");
+    // One delayed lead inside the declared window still contributes before the decision is read.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "B17", email: "b17@x.example", visitorKey: visitors.B[17].key, testId: visitors.B[17].testId });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats[1]).toMatchObject({ wins: 18 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
     const [test] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
     expect(test).toMatchObject({ status: "done", winner: "B" });
     expect(test.stats).toMatchObject([
       { key: "A", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 1 },
       { key: "B", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 18 },
     ]);
+    // A conversion after the window is retained on its assignment but doesn't change the frozen decision.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "B18", email: "b18@x.example", visitorKey: visitors.B[18].key, testId: visitors.B[18].testId });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats[1]).toMatchObject({ wins: 18 });
+    const lateHash = await sha256Hex(`abTestAssignment:v1|${test.id}|${visitors.B[18].key}`);
+    const late = await t.run(async (ctx) => ctx.db.query("abTestAssignments").withIndex("by_test_subject", (q) => q.eq("testId", test.id).eq("subjectHash", lateHash)).first());
+    expect(late?.outcomeAt).toBeTypeOf("number");
     expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
-  });
+  }, 15_000);
 
   it("persists a sample-ratio mismatch as invalid with no winner or challenger rollout", async () => {
     const t = setup();
