@@ -566,6 +566,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
+    customerConcentrationLine(job.customerConcentration),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
@@ -576,6 +577,18 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** Descriptive billing concentration for planning; identifiers never enter model context. */
+function customerConcentrationLine(signal: JobCtx["customerConcentration"]): string {
+  if (!signal) return "CUSTOMER CONCENTRATION: no matching, non-demo billing events are available for the last 365 days; do not infer customer concentration.";
+  const pct = (value: number | null) => value === null ? "unavailable" : `${Math.round(value * 100)}%`;
+  return [
+    `OBSERVED CUSTOMER CONCENTRATION (billing records, trailing 365 days, ${signal.currency}; descriptive association only, not a forecast or causal claim):`,
+    `${signal.customerCount} identified customer(s), ${signal.eventCount} unique event(s); top customer share ${pct(signal.topCustomerShare)}, top three share ${pct(signal.topThreeCustomerShare)} of identified positive net revenue.`,
+    `Identified positive net revenue coverage ${pct(signal.identifiedCoverage)} (${formatMoney(minorToMajor(signal.identifiedPositiveMinor, signal.currency), signal.currency)} identified of ${formatMoney(minorToMajor(signal.totalPositiveMinor, signal.currency), signal.currency)} positive billing-event revenue).`,
+    `${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Customer IDs are not included in this context.`,
+  ].join(" ");
 }
 
 function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {

@@ -11,6 +11,7 @@ import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
+import { customerConcentration } from "../shared/attribution/concentration";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import type {
@@ -100,7 +101,25 @@ export const jobContext = internalQuery({
         .filter((r) => r.purpose === "marketing_email" && !r.withdrawnAt)
         .map((r) => r.contactId),
     ).size;
+    const concentrationToMs = Date.now();
+    const concentrationFromMs = concentrationToMs - 365 * DAY;
+    const revenueRows = await ctx.db
+      .query("revenueEvents")
+      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", concentrationFromMs).lte("occurredAt", concentrationToMs))
+      .order("desc")
+      .take(10_001);
+    const usableRevenueRows = revenueRows.filter((event) => !event.isFixture);
+    const concentrationIsPartial = revenueRows.length > 10_000;
+    const concentrationCurrency = business?.currency ?? org.currency;
+    const concentration = concentrationCurrency
+      ? customerConcentration(usableRevenueRows.map((event) => ({
+          id: String(event._id), sourceEventId: event.sourceEventId, source: event.source, occurredAt: event.occurredAt,
+          customerRef: event.customerRef, orderRef: event.orderRef, currency: event.currency,
+          amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
+        })), { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      : null;
     return {
+      customerConcentration: concentration,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
