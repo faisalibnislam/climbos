@@ -47,6 +47,22 @@ describe("first recorded paying customers", () => {
     expect(metric.sourceName).toBeNull();
   });
 
+  it("does not report paying-customer data for a refund-only window", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "refund-only@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Refund Only Co" });
+    await t.mutation(internal.analytics.ingestRevenue, {
+      orgId: orgId as Id<"organizations">,
+      events: [{ source: "stripe", sourceEventId: "refund-only", occurredAt: Date.now() - DAY, customerRef: "customer-1", currency: "USD", amountMinor: 1_000, refundedMinor: 0, kind: "refund" }],
+    });
+
+    const view = await owner.client.query(api.analytics.overview, { slug, days: 30 });
+    const metric = view!.metrics.find((m) => m.key === "paid_conversions")!;
+    expect(metric.hasData).toBe(false);
+    expect(metric.total).toBe(0);
+    expect(metric.sourceName).toBeNull();
+  });
+
   it("keeps identical provider customer IDs separate instead of merging unrelated billing customers", async () => {
     const t = setup();
     const owner = await asNewUser(t, "provider-ids@example.com");

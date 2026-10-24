@@ -155,7 +155,11 @@ async function firstRecordedPayerDays(
     const date = dayKey(r.occurredAt, timezone);
     return date >= from && date <= to;
   });
-  const customerKeys = [...new Set(inRange.flatMap((event) => event.customerRef ? [`${event.source}\u0000${event.customerRef}`] : []))];
+  const customerKeys = [...new Set(inRange.flatMap((event) =>
+    event.customerRef && event.kind !== "refund" && event.amountMinor - event.refundedMinor > 0
+      ? [`${event.source}\u0000${event.customerRef}`]
+      : [],
+  ))];
   const counts = new Map<string, number>();
   let historyPartial = false;
   for (const key of customerKeys.slice(0, 2_000)) {
