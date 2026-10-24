@@ -90,6 +90,7 @@ import { agentRevisionSteps } from "./lib/jobPlans";
 import { estimateRun } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
+import { sha256Hex } from "../shared/policy";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -600,17 +601,50 @@ function platformConcentrationLine(signal: JobCtx["platformSourceConcentration"]
   return `TRACKED PLATFORM CONCENTRATION (billing events, trailing 365 days, ${signal.currency}; last-touch association, not cause or a complete dependency inventory): top recognized tagged source ${signal.topSource} accounts for ${pct(signal.topSourceShare)} of ${formatMoney(minorToMajor(signal.attributedPositiveNetMinor, signal.currency), signal.currency)} positive net revenue with recognized tags; top three ${pct(signal.topThreeShare)}. Tagged-source billing conversions ${signal.attributedConversions} of ${signal.totalConversions}. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}Before recommending diversification, validate whether the exposure is recurring, material, and replaceable; do not infer untracked channels or customer access.`;
 }
 
-function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
+async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[]): Promise<PlanSnapshot> {
+  const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
+  const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
+  const goal = job.goal ? { id: String(job.goal._id), statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target } : null;
+  const ownerEconomics = job.business?.unitEconomics ?? null;
+  const capabilities = [...job.capabilities.connected].sort();
+  const flags = [...(job.org.engineFlags ?? [])].sort();
+  const contradictions = findConflicts([...facts, ...staleFacts]);
+  const readUrls = [...new Set(sourceUrls)].sort();
+  const insightsHash = await sha256Hex(insights);
+  const material = {
+    snapshotVersion: 1,
+    orgId: String(job.org._id),
+    businessId: job.business ? String(job.business._id) : null,
+    business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
+    brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, doNots: job.brand.doNots, updatedAt: job.brand.updatedAt } : null,
+    goal,
+    facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
+    ownerEconomics,
+    capabilities,
+    flags,
+    insightsHash,
+    sourceUrls: readUrls,
+  };
+  const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
+    snapshotVersion: 1,
+    snapshotId,
+    capturedAt: Date.now(),
     engine: ENGINE_VERSION,
     aiMode: job.run.aiMode ?? "basic",
     goal: (job.goal?.statement ?? "").slice(0, 300),
     horizonDays: job.goal?.horizonDays ?? 90,
     monthlyAdBudget: minorToMajor(job.goal?.monthlyAdBudgetMinor ?? 0, workspaceCurrency(job)),
     currency: workspaceCurrency(job),
-    facts: job.facts.length,
-    insightsChars,
-    ...(job.business?.unitEconomics ? { ownerEconomics: job.business.unitEconomics } : {}),
+    facts: facts.length,
+    factVersions: facts.map(({ id, updatedAt }) => ({ id, updatedAt })),
+    staleFactIds: staleFacts.map(({ id }) => id),
+    contradictions,
+    insightsChars: insights.length,
+    insightsHash,
+    sourceUrls: readUrls,
+    capabilities,
+    ...(ownerEconomics ? { ownerEconomics } : {}),
     ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
     ...(job.org.engineFlags?.length ? { flags: job.org.engineFlags } : {}),
   };
@@ -1089,7 +1123,7 @@ export const buildStrategy = internalAction({
       await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null } } : {}) }),
         evidence: JSON.stringify(

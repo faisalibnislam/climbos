@@ -1296,6 +1296,9 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
+            snapshotVersion: v.literal(1),
+            snapshotId: v.string(),
+            capturedAt: v.number(),
             engine: v.string(),
             aiMode: v.string(),
             goal: v.string(),
@@ -1303,7 +1306,13 @@ export default defineSchema({
             monthlyAdBudget: v.number(),
             currency: v.optional(v.string()),
             facts: v.number(),
+            factVersions: v.array(v.object({ id: v.string(), updatedAt: v.number() })),
+            staleFactIds: v.array(v.string()),
+            contradictions: v.array(v.object({ subject: v.string(), values: v.array(v.string()), factIds: v.array(v.string()) })),
             insightsChars: v.number(),
+            insightsHash: v.string(),
+            sourceUrls: v.array(v.string()),
+            capabilities: v.array(v.string()),
             ownerEconomics: v.optional(v.any()),
             goalTarget: v.optional(v.any()),
             flags: v.optional(v.array(v.string())),
