@@ -8,7 +8,13 @@ export type ReadinessFinding = {
   nextStep: string;
 };
 
-export type CrawlerCheck = { crawler: "Googlebot" | "Bingbot" | "OAI-SearchBot"; allowed: boolean };
+export type CrawlerCheck = {
+  crawler: "Googlebot" | "Bingbot" | "OAI-SearchBot" | "PerplexityBot" | "Claude-SearchBot" | "GPTBot" | "ClaudeBot" | "Google-Extended";
+  allowed: boolean;
+};
+export const AI_DATA_USE_TOKENS: ReadonlySet<CrawlerCheck["crawler"]> = new Set(["GPTBot", "ClaudeBot", "Google-Extended"]);
+export const SEARCH_CRAWLERS = ["Googlebot", "Bingbot", "OAI-SearchBot", "PerplexityBot", "Claude-SearchBot"] as const;
+export const AI_DATA_USE_CONTROLS = ["GPTBot", "ClaudeBot", "Google-Extended"] as const;
 export type TechnicalEvidence = {
   httpStatus: number;
   canonicalUrl?: string;
@@ -32,7 +38,18 @@ export function assessSearchReadiness(page: ExtractedPage, technical?: Technical
       } catch { /* malformed values are not actionable evidence */ }
     }
     if (technical.robotsFileStatus === "available") for (const crawler of technical.crawlerChecks) {
-      if (!crawler.allowed) findings.push({ id: `robots-${crawler.crawler.toLowerCase()}`, level: "attention", title: `${crawler.crawler} is disallowed by robots.txt`, evidence: `The fetched robots.txt rules disallow ${crawler.crawler} from the checked page path.`, nextStep: `If you want ${crawler.crawler} to discover or cite this public page, review the matching robots.txt rule.` });
+      if (!crawler.allowed) {
+        const dataUseControl = AI_DATA_USE_TOKENS.has(crawler.crawler);
+        findings.push({
+          id: `robots-${crawler.crawler.toLowerCase()}`,
+          level: "attention",
+          title: `${crawler.crawler} is disallowed by robots.txt`,
+          evidence: `The fetched robots.txt rules disallow ${crawler.crawler} from the checked page path.`,
+          nextStep: dataUseControl
+            ? `This token controls provider data use (training or grounding), not ordinary search visibility. Review it against your content-use preference.`
+            : `If you want ${crawler.crawler} to discover or cite this public page, review the matching robots.txt rule. This is an access prerequisite, not a guarantee of indexing or citation.`,
+        });
+      }
     }
     if (technical.robotsFileStatus === "unavailable") findings.push({ id: "robots-unavailable", level: "check", title: "Crawler rules could not be verified", evidence: "ClimbOS could not retrieve a successful robots.txt response for this site.", nextStep: "Check that robots.txt is reachable. This check cannot verify CDN, firewall, or crawler IP rules." });
   }

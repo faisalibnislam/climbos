@@ -11,7 +11,7 @@ import {
   validateResearchUrl,
 } from "../../shared/integrations/website";
 import { parseSitemapLocations } from "../../shared/seo/sitemap";
-import { assessSearchReadiness, type CrawlerCheck, type ReadinessFinding } from "../../shared/seo/readiness";
+import { assessSearchReadiness, SEARCH_CRAWLERS, AI_DATA_USE_CONTROLS, type CrawlerCheck, type ReadinessFinding } from "../../shared/seo/readiness";
 
 /**
  * Bounded public-website research. Untrusted content: the caller wraps every
@@ -70,7 +70,7 @@ async function robotsFor(origin: string): Promise<RobotsRead> {
 }
 
 function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: string, httpStatus: number, xRobotsTag: string | undefined, robots: string | null | undefined, robotsFileStatus: RobotsRead["status"]): ReadinessFinding[] {
-  const crawlerChecks: CrawlerCheck[] = (["Googlebot", "Bingbot", "OAI-SearchBot"] as const).map((crawler) => ({
+  const crawlerChecks: CrawlerCheck[] = ([...SEARCH_CRAWLERS, ...AI_DATA_USE_CONTROLS] as const).map((crawler) => ({
     crawler,
     allowed: robots == null || isPathAllowed(robots, crawler, new URL(url).pathname || "/"),
   }));

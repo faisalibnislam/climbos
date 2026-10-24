@@ -11,7 +11,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { readSite, readSitePage } from "./competitorActions";
-import { assessSearchReadiness, type CrawlerCheck } from "../shared/seo/readiness";
+import { assessSearchReadiness, SEARCH_CRAWLERS, AI_DATA_USE_CONTROLS, type CrawlerCheck } from "../shared/seo/readiness";
 import { isPathAllowed, safeFetchPage } from "../shared/integrations/website";
 import { lookup } from "node:dns/promises";
 import { claudeUsageRecords } from "./lib/usage";
@@ -45,7 +45,7 @@ export const scanReadiness = internalAction({
       if (robots.status === 404) robotsFileStatus = "not_found";
       else if (robots.ok && robots.status >= 200 && robots.status < 300) { robotsFileStatus = "available"; robotsText = robots.body; }
     } catch { /* retain unavailable; network failures are not treated as allow */ }
-    const crawlerChecks: CrawlerCheck[] = (["Googlebot", "Bingbot", "OAI-SearchBot"] as const).map((crawler) => ({ crawler, allowed: robotsFileStatus === "not_found" || (robotsFileStatus === "available" && isPathAllowed(robotsText, crawler, new URL(site.finalUrl).pathname || "/")) }));
+    const crawlerChecks: CrawlerCheck[] = ([...SEARCH_CRAWLERS, ...AI_DATA_USE_CONTROLS] as const).map((crawler) => ({ crawler, allowed: robotsFileStatus === "not_found" || (robotsFileStatus === "available" && isPathAllowed(robotsText, crawler, new URL(site.finalUrl).pathname || "/")) }));
     const technical = { httpStatus: site.status, canonicalUrl: p.canonicalUrl, pageUrl: site.finalUrl, robotsDirectives: p.robotsDirectives, xRobotsTag: site.xRobotsTag, robotsFileStatus, crawlerChecks };
     await ctx.runMutation(internal.siteWatch.saveSearchReadiness, {
       businessId,

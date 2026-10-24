@@ -52,6 +52,26 @@ describe("homepage search readiness", () => {
     expect(JSON.stringify(findings)).not.toMatch(/will rank|will be cited|citation rate/i);
   });
 
+  it("separates AI search access findings from provider data-use controls", () => {
+    const findings = assessSearchReadiness(page(), {
+      httpStatus: 200,
+      pageUrl: "https://site.example/",
+      robotsFileStatus: "available",
+      crawlerChecks: [
+        { crawler: "PerplexityBot", allowed: false },
+        { crawler: "Claude-SearchBot", allowed: false },
+        { crawler: "GPTBot", allowed: false },
+        { crawler: "ClaudeBot", allowed: false },
+        { crawler: "Google-Extended", allowed: false },
+      ],
+    });
+    expect(findings.find((finding) => finding.id === "robots-perplexitybot")?.nextStep).toMatch(/discover or cite.*not a guarantee/i);
+    expect(findings.find((finding) => finding.id === "robots-claude-searchbot")?.nextStep).toMatch(/discover or cite.*not a guarantee/i);
+    for (const crawler of ["gptbot", "claudebot", "google-extended"]) {
+      expect(findings.find((finding) => finding.id === `robots-${crawler}`)?.nextStep).toMatch(/data use.*not ordinary search visibility/i);
+    }
+  });
+
   it("does not treat a failed robots.txt check as crawler permission", () => {
     const findings = assessSearchReadiness(page(), {
       httpStatus: 200, pageUrl: "https://site.example/", robotsFileStatus: "unavailable",
