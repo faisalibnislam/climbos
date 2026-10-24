@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CRITIC_RULES, OPERATING_RULES, RESEARCH_EVIDENCE_RULES } from "../../shared/agents/runtime";
 import { playsTask } from "../../shared/agents/planTasks";
-import { lintInsightSources } from "../../shared/agents/specs";
+import { lintInsightSources, researchFor } from "../../shared/agents/specs";
 import { businessResearchContext, factsBlock } from "../../shared/ai/tasks";
 
 describe("research source assessment", () => {
@@ -25,6 +25,18 @@ describe("research source assessment", () => {
     expect(RESEARCH_EVIDENCE_RULES).toContain("Independence");
     expect(RESEARCH_EVIDENCE_RULES).toContain("Method and limitations");
     expect(RESEARCH_EVIDENCE_RULES).toContain("Never invent a numeric source score");
+  });
+
+  it("keeps market research local only when the business has evidence for a real location", () => {
+    const business = researchFor("business_insights", { businessName: "Example Co", website: "https://example.co" })!;
+    expect(business.brief).toContain("served market and customer geography");
+    expect(business.brief).toMatch(/never infer a city or country from currency, timezone, domain suffix or search ranking/i);
+    expect(business.brief).toContain("if the location is unknown, say so");
+
+    const growth = researchFor("growth_strategy", { businessName: "Example Co", marketScope: "local" })!;
+    expect(growth.brief).toContain("Business reach is classified as local");
+    expect(growth.brief).toContain("not a named city or country");
+    expect(growth.brief).toContain("prioritize sources and channels available in that served area");
   });
 
   it("requires the growth-planning agent to carry source quality limits into its recommendation", () => {

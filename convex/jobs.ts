@@ -1097,7 +1097,7 @@ export const buildStrategy = internalAction({
         agentInput(
           job,
           playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract") }),
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
+          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, ...(profile.dims.geography?.value ? { marketScope: profile.dims.geography.value } : {}) }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
       const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);

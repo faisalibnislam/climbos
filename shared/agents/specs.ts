@@ -2024,14 +2024,16 @@ export function outreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
 }
 
 /** Research briefs per job (what the research phase should find). */
-export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string }): ResearchSpec | undefined {
+export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string; marketScope?: string }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
+  const market = ctx.country ? ` Owner-stated market: ${ctx.country}.` : "";
+  const scope = ctx.marketScope ? ` Business reach is classified as ${ctx.marketScope}; this is scope only, not a named city or country.` : "";
   switch (task) {
     case "growth_strategy":
       return {
         maxSearches: 7,
         maxFetches: 4,
-        brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences:
+        brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences.${market}${scope} First identify the business's served geography from its own pages or supplied owner facts. Use a local market only when a named location is supported; never infer a city or country from currency, timezone, domain suffix or search ranking. If the location is unknown, say so and keep findings geography-neutral. For local or regional businesses, prioritize sources and channels available in that served area:
 1. Communities, newsletters, podcasts, YouTube/TikTok creators, directories, marketplaces, review sites and app stores relevant to this business and its location (name, URL, rough size/audience if visible).
 2. Complementary businesses or platforms that could partner (who already serves the same customer before or after this business).
 3. Where competitors are present or absent (review sites, marketplaces, launches, local listings, comparison pages).
@@ -2042,7 +2044,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 8,
         maxFetches: 8,
-        brief: `For ${ctx.businessName}${site}:
+        brief: `For ${ctx.businessName}${site}.${market} First identify the served market and customer geography from pages read in this run or supplied owner facts. Match competitors, customer reviews, communities, directories and market developments to that geography and language when supported. Never infer a city or country from currency, timezone, domain suffix or search ranking; if the location is unknown, say so and leave geography-dependent findings unanswered.
 1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors. For each competitor, add up to 8 comparison observations across target customer, positioning, offer, pricing, proof, distribution, and customer experience when the supplied pages support them. Each observation must include the exact sourceUrl read, what that page shows, and a separate cautious implication for this business. Omit dimensions with no evidence; unknown is not a weakness, and do not claim superiority or that an observed difference causes customer choice.
 2. Voice of customer: find reviews and forum threads (G2/Capterra/Trustpilot/Google reviews/Reddit/app stores, whichever fit this business type) about this business and its top competitors. Collect 15-30 short verbatim phrases with URLs: why people switch, what almost stopped them, outcomes they describe, words they use for the problem.
 3. Gaps: values customers mention that no competitor leads with; offers nobody makes (guarantee, fixed price, fast start); channels competitors are absent from. Note evidence for each.`,
