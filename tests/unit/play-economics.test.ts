@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lintEconomics, lockedNumbers, playMaths, simulateCustomers, withForecasts } from "../../shared/agents/economics";
 
 const econ = { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthlyChurn: 0.1, basis: "Business plan price; margin and churn assumed", assumed: ["margin", "churn"] };
-type Model = { weeklyReach: number; weeklyReachLow?: number; weeklyReachHigh?: number; rampWeeks?: number; salesLagDays?: number; steps: { name: string; rate: number; low?: number; high?: number; baselineRate?: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number };
+type Model = { weeklyReach: number; weeklyReachLow?: number; weeklyReachHigh?: number; rampWeeks?: number; salesLagDays?: number; steps: { name: string; rate: number; low?: number; high?: number; baselineRate?: number }[]; monthlySpendUsd: number; otherMonthlyUsd?: number; ownerHoursPerWeek: number };
 const play = (over: Partial<{ kind: string; model: Model }> = {}) => ({ name: "Agency outreach", kind: "bankable", unit: "paying customers", horizonDays: 91, model: { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 } as Model, ...over });
 
 describe("growth maths in code", () => {
@@ -89,6 +89,14 @@ describe("growth maths in code", () => {
     expect(withForecasts({ economics, plays: [ranged] }).plays[0].sensitivity).toEqual(m.sensitivity);
     expect(lockedNumbers({ economics, plays: [ranged] })).toContain("SENSITIVITY · Agency outreach");
     expect(lockedNumbers({ economics, plays: [ranged] })).toContain("not a joint forecast");
+  });
+
+  it("separates horizon cash costs from owner-time value and fully loaded cost", () => {
+    const ranged = play({ model: { ...play().model, monthlySpendUsd: 20, otherMonthlyUsd: 30, ownerHoursPerWeek: 2 } });
+    const economics = { ...econ, ownerHourUsd: 40 };
+    const m = playMaths(ranged, economics);
+    expect(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd + m.costBreakdown.ownerTimeUsd).toBeCloseTo(m.costBreakdown.fullyLoadedUsd);
+    expect(m.costBreakdown.fullyLoadedUsd).toBeCloseTo(m.costUsd);
   });
 
   it("flags conditional money-losing scenarios and bad ranges", () => {

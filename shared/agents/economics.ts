@@ -131,6 +131,8 @@ export interface PlayMaths {
    */
   headline: { p10: number; p50: number; p90: number };
   costUsd: number;
+  /** Horizon-aligned view of cash spend and owner time that compose the fully loaded total. */
+  costBreakdown: { cashMediaUsd: number; cashOtherUsd: number; ownerTimeUsd: number; fullyLoadedUsd: number };
   cacUsd: number | null;
   /** P10–P90 cost per customer from the same input-range draws as `range`; null when that draw has no customers. */
   cacRange: { p10: number | null; p50: number | null; p90: number | null };
@@ -396,7 +398,8 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   const hourUsd = ownerHourOf(e);
   // Fully loaded: media, owner time and other costs over the same period (Skok; blog research BRP-17).
   const other = Math.max(0, p.model.otherMonthlyUsd ?? 0) * (days / DAYS_PER_MONTH);
-  const costUsd = spend + hours * hourUsd + other;
+  const ownerTimeUsd = hours * hourUsd;
+  const costUsd = spend + ownerTimeUsd + other;
   const cacUsd = cacFull(spend, hours, hourUsd, other, customers);
   const cacAt = (count: number) => (count > 0 ? costUsd / count : null);
   const cacRange = {
@@ -420,6 +423,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     range,
     headline,
     costUsd,
+    costBreakdown: { cashMediaUsd: spend, cashOtherUsd: other, ownerTimeUsd, fullyLoadedUsd: costUsd },
     cacUsd,
     cacRange,
     valueUsd,

@@ -48,7 +48,7 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
-import { churnOf, ownerHourOf, playMaths, type Economics, type PlayModel } from "../../../../shared/agents/economics";
+import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity } from "../../../../shared/agents/economics";
 import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
@@ -79,6 +79,8 @@ export interface PlayView {
   horizonDays: number;
   confidence: "high" | "medium" | "low";
   biggestUnknown: string;
+  forecastUncertainty?: ForecastUncertainty | null;
+  sensitivity?: PlaySensitivity[];
   test: string;
   killIf: string;
   scaleIf: string;
@@ -519,6 +521,14 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
           ) : null}
         </div>
       ) : null}
+      {f.forecastUncertainty ? (
+        <p className="text-xs text-ink-3">
+          {f.forecastUncertainty.rangeMethod === "input_scenario"
+            ? `Low-to-high range varies ${f.forecastUncertainty.variedDrivers.join(", ") || "the stated inputs"}.`
+            : "No input range was supplied, so low, likely, and high use one scenario."}
+          {" "}This is not a statistical confidence interval or a calibrated probability. It does not include {f.forecastUncertainty.omittedFactors.join(", ")}.
+        </p>
+      ) : <p className="text-xs text-ink-3">This saved plan does not record how its range was built.</p>}
     </div>
   );
 }
@@ -540,7 +550,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
             label: "Cost / customer",
             value: usd(m.cacUsd, economics.currency),
             tone: m.profitable === true ? "good" : m.profitable === false ? "bad" : "default",
-            hint: m.profitable === true ? "Below worth" : m.profitable === false ? "Above worth" : undefined,
+            hint: m.profitable === true ? "Below modeled 12-month contribution" : m.profitable === false ? "Above modeled 12-month contribution" : undefined,
           },
           m.valueUsd === null ? { label: "Worth / year", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Worth / year", value: usd(m.valueUsd, economics.currency) },
           {
@@ -552,6 +562,17 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
           },
         ]}
       />
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={m.robustness === "robust" ? "green" : m.robustness === "fragile" ? "amber" : m.robustness === "loses" ? "red" : "neutral"}>
+          {m.robustness === "robust" ? "Holds at low scenario" : m.robustness === "fragile" ? "Middle case only" : m.robustness === "loses" ? "Does not break even in middle case" : "Break-even unknown"}
+        </Badge>
+        <span className="text-xs text-ink-3">Conditional on the listed inputs; not a guaranteed result.</span>
+      </div>
+      <dl className="grid gap-2 rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm sm:grid-cols-3">
+        <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}</dd></div>
+        <div><dt className="text-xs text-ink-3">Owner time value</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.ownerTimeUsd)}</dd><dd className="text-xs text-ink-3">Hours × your hourly value</dd></div>
+        <div><dt className="text-xs text-ink-3">Fully loaded total</dt><dd className="font-semibold tabular-nums text-ink">{money(m.costBreakdown.fullyLoadedUsd)}</dd><dd className="text-xs text-ink-3">Cash + owner time; used for cost per customer</dd></div>
+      </dl>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge tone={cost.kind === "assumption_scenario" ? "amber" : "neutral"}>{`Cost basis: ${COST_BASIS_LABEL[cost.kind]}`}</Badge>
         <span className="text-xs text-ink-3">At most-likely rates, not the simulated range</span>
@@ -561,6 +582,26 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
           Pays back only if {top.label} is {top.direction === "ge" ? "at least" : "at most"} <span className="font-medium tabular-nums text-ink">{fmtSwitch(top, top.switchValue, money)}</span> (now {fmtSwitch(top, top.assumed, money)})
           {m.lossChance !== null && m.costUsd > 0 ? ` · ${m.lossChance > 0 && m.lossChance < 0.01 ? "under 1%" : `${Math.round(m.lossChance * 100)}%`} chance it doesn't, if its ranges are right` : ""}.
         </p>
+      ) : null}
+      {m.sensitivity.length ? (
+        <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-ink">What moves this scenario?</summary>
+          <p className="mt-2 text-xs text-ink-3">One input changes at a time; this is a sensitivity check, not a combined forecast. Low and high refer to the input range.</p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-sm">
+              <thead className="text-left text-xs text-ink-3">
+                <tr><th className="py-1 pr-3">Input</th><th className="px-2 py-1 text-right">Low</th><th className="px-2 py-1 text-right">Middle</th><th className="py-1 pl-2 text-right">High</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {m.sensitivity.map((row) => {
+                  const value = (n: number) => row.metric === "customers" ? fmtN(n) : money(n);
+                  return <tr key={row.driver}><th scope="row" className="py-1 pr-3 text-left font-medium text-ink">{row.driver}</th><td className="px-2 py-1 text-right tabular-nums">{value(row.atLow)}</td><td className="px-2 py-1 text-right tabular-nums">{value(row.atMode)}</td><td className="py-1 pl-2 text-right tabular-nums">{value(row.atHigh)}</td></tr>;
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-ink-3">Outcome shown: {m.sensitivity[0]?.metric === "customers" ? "customers" : "modeled 12-month net contribution"}. Calculated from this play&apos;s saved inputs.</p>
+        </details>
       ) : null}
     </div>
   );
