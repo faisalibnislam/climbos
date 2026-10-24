@@ -282,7 +282,7 @@ export interface ChannelLimits {
   ownerHoursPerWeek?: number;
   /** Providers with status "connected" (null when unknown). */
   connected?: readonly string[] | null;
-  /** Owner-confirmed maximum number of additional customers the business can serve monthly. */
+  /** Owner-confirmed number of additional customers the business can serve monthly with current operations. */
   newCustomersPerMonth?: number;
 }
 

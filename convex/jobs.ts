@@ -499,7 +499,7 @@ function planUnknowns(job: JobCtx): string[] {
   return [
     job.business?.unitEconomics?.ownerHoursPerWeek === undefined ? "Hours you can give growth work each week" : "",
     job.audience && job.audience.consented === 0 ? "Who you can email (no consented contacts in ClimbOS)" : "",
-    isServiceBusiness((job.business as { acquisition?: { types?: string[] } } | null)?.acquisition?.types, job.business?.businessType) && job.business?.unitEconomics?.newCustomersPerMonth === undefined ? "How many new customers you can serve each month" : "",
+    isServiceBusiness((job.business as { acquisition?: { types?: string[] } } | null)?.acquisition?.types, job.business?.businessType) && job.business?.unitEconomics?.newCustomersPerMonth === undefined ? "How many additional new customers you can serve each month after your current workload" : "",
   ].filter(Boolean);
 }
 
@@ -666,7 +666,7 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
     u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
     u.ownerHourUsd ? `owner's time ${formatMoney(u.ownerHourUsd, currency)}/hour` : "",
     u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
-    u.newCustomersPerMonth !== undefined ? `the business can take on at most ${u.newCustomersPerMonth} new customers a month (don't plan more demand than that; fill it first)` : "",
+    u.newCustomersPerMonth !== undefined ? `the owner has room for at most ${u.newCustomersPerMonth} additional new customers a month with current staffing, workload, inventory and support (keep forecast incremental demand within this remaining capacity)` : "",
   ].filter(Boolean);
   return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
 }

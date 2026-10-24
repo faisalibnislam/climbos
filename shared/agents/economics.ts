@@ -85,7 +85,7 @@ export interface OwnerEconomics {
   ownerHourUsd?: number;
   /** Hours a week the owner can give growth work (a constraint, not a price). */
   ownerHoursPerWeek?: number;
-  /** Most new customers (clients, bookings, projects) the business can take on a month: a delivery limit. */
+  /** Additional new customers (clients, bookings, projects) the owner can accept each month with current capacity. */
   newCustomersPerMonth?: number;
   /** When the owner last confirmed these numbers. */
   updatedAt?: number;
@@ -674,7 +674,7 @@ const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> 
   monthlyChurn: { q: "What share of customers leave each month?", unit: "share_month" },
   ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
   ownerHoursPerWeek: { q: "How many hours a week can you give growth work?", unit: "hours_week" },
-  newCustomersPerMonth: { q: "How many new customers can you take on each month?", unit: "count_month" },
+  newCustomersPerMonth: { q: "With your current staffing, workload, inventory and support, how many additional new customers could you accept each month?", unit: "count_month" },
 };
 
 /**
@@ -723,7 +723,7 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const months = (opts.horizonDays || 90) / DAYS_PER_MONTH;
   const perMonth = portfolioP50(out, opts.horizonDays || 90) / months;
   const delivery: OwnerQuestion[] =
-    opts.serviceBusiness && owner?.newCustomersPerMonth === undefined && perMonth >= 1 ? [{ key: "newCustomersPerMonth", question: QUESTION.newCustomersPerMonth.q, assumed: Math.round(perMonth), unit: "count_month", why: `The plays forecast about ${Math.round(perMonth)} new customers a month; more than you can serve wastes the work.` }] : [];
+    opts.serviceBusiness && owner?.newCustomersPerMonth === undefined && perMonth >= 1 ? [{ key: "newCustomersPerMonth", question: QUESTION.newCustomersPerMonth.q, assumed: Math.round(perMonth), unit: "count_month", why: `The plays forecast about ${Math.round(perMonth)} additional customers a month; compare that with what you can accept after current workload.` }] : [];
   return [
     ...delivery,
     ...capacity,

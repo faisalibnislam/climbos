@@ -369,7 +369,7 @@ export default defineSchema({
         monthlyChurn: v.optional(v.number()),
         ownerHourUsd: v.optional(v.number()),
         ownerHoursPerWeek: v.optional(v.number()),
-        /** The most new customers (clients, bookings, projects) the business can take on each month. */
+        /** Additional new customers (clients, bookings, projects) the owner can accept each month with current operations. */
         newCustomersPerMonth: v.optional(v.number()),
         /** Owner-stated ranges (their judgement, low–high); the value above is the midpoint (shared/agents/voi.ts). */
         ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),

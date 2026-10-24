@@ -109,7 +109,7 @@ export interface PlanConstraints {
   goalNumbers?: number[];
   /** Contacts with marketing-email consent in ClimbOS (capped at 1,000); 0 = no list to send to. */
   emailAudience?: number;
-  /** Most new customers the business can take on a month (owner-reported delivery limit). */
+  /** Additional new customers the owner can accept each month with current operations. */
   newCustomersPerMonth?: number;
   /** Where customers can be served (acquisition geography): local or regional limits paid reach. */
   serviceArea?: string;

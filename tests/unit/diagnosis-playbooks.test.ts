@@ -10,25 +10,17 @@ describe("diagnosis", () => {
     expect(diagnosisBrief(d)).toMatch(/point to activation as the weakest link\. This is an observation/);
     expect(d.competing).toMatch(/wrong fit/);
   });
-  it("treats 80% capacity as a watch signal, not proof of a binding constraint", () => {
-    const d = diagnose({ funnel: { newCustomers: 8 }, newCustomersPerMonth: 10 });
+  it("does not compare current sales with a limit that means additional capacity", () => {
+    const d = diagnose({ funnel: { periodDays: 30, newCustomers: 20 }, newCustomersPerMonth: 10 });
     expect(d.constraint).toBe("unknown");
-    expect(d.readings.find((reading) => reading.stage === "capacity")).toMatchObject({ rate: 0.8, verdict: "watch" });
-    expect(diagnosisBrief(d)).toContain("near owner-stated capacity; leave room for normal variation");
-  });
-  it("keeps a near-capacity signal distinct from observed capacity being reached", () => {
-    const near = diagnose({ funnel: { newCustomers: 9.6 }, newCustomersPerMonth: 10 });
-    expect(near.constraint).toBe("unknown");
-    expect(near.readings.find((reading) => reading.stage === "capacity")?.observed).toContain("9.6 new customers");
-    const reached = diagnose({ funnel: { newCustomers: 10 }, newCustomersPerMonth: 10 });
-    expect(reached).toMatchObject({ constraint: "delivery", status: "supported" });
-    expect(reached.hypotheses?.[0]?.support).toContain("Recent customer volume reached or exceeded the owner's stated monthly limit.");
+    expect(d.readings.find((reading) => reading.stage === "capacity")).toMatchObject({ rate: null, verdict: "unknown", observed: "room for up to 10 additional new customers a month (owner reported)" });
+    expect(diagnosisBrief(d)).not.toContain("near owner-stated capacity");
   });
   it("treats a confirmed zero-customer capacity as a delivery constraint without creating infinite rates", () => {
     const d = diagnose({ newCustomersPerMonth: 0 });
     expect(d).toMatchObject({ constraint: "delivery", status: "supported" });
     expect(d.readings.find((reading) => reading.stage === "capacity")).toMatchObject({ rate: null, verdict: "weak" });
-    expect(d.hypotheses?.[0]?.support).toContain("The owner reported no capacity for additional customers.");
+    expect(d.hypotheses?.[0]?.support).toContain("The owner reported no remaining capacity for additional customers.");
     expect(JSON.parse(JSON.stringify(d))).toMatchObject({ constraint: "delivery" });
   });
   it("resolves invalid capacity inputs instead of treating them as measurements", () => {
