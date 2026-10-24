@@ -22,6 +22,20 @@ const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
 const DAILY_LIMIT = 50;
 const ASK_AGAIN_AFTER = 90 * 86_400_000;
 
+function publicReviewUrl(raw?: string): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) throw new Error("unsafe URL");
+    const normalized = url.toString();
+    if (normalized.length > 2000) throw new Error("URL too long");
+    return normalized;
+  } catch {
+    throw appError("INVALID", "Use a public https:// link to the review.");
+  }
+}
+
 function token(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -172,7 +186,7 @@ export const privateFeedback = mutation({
 
 /** Paste a public review (Google, Facebook…) into the Inbox so Climb AI can draft a reply. */
 export const addReview = mutation({
-  args: { slug: v.string(), author: v.string(), text: v.string(), rating: v.optional(v.number()), source: v.string() },
+  args: { slug: v.string(), author: v.string(), text: v.string(), rating: v.optional(v.number()), source: v.string(), sourceUrl: v.optional(v.string()) },
   handler: async (ctx, a) => {
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const text = a.text.trim().slice(0, 4000);
@@ -180,9 +194,17 @@ export const addReview = mutation({
     if (a.rating !== undefined && (!Number.isInteger(a.rating) || a.rating < 1 || a.rating > 5)) throw appError("INVALID", "Rating must be a whole number from 1 to 5.");
     const rating = a.rating ?? null;
     if (!text && !rating) throw appError("INVALID", "Paste review text or enter its 1–5 star rating.");
+    const reviewSourceUrl = publicReviewUrl(a.sourceUrl);
+    const channel = a.source.slice(0, 30) || "google";
+    const externalId = reviewSourceUrl ? `review-url:${await sha256Hex(`${channel.toLowerCase()}\n${reviewSourceUrl}`)}` : `review:${token()}`;
+    if (reviewSourceUrl) {
+      const existing = await ctx.db.query("communityMessages").withIndex("by_org_external", (q) => q.eq("orgId", org._id).eq("externalId", externalId)).first();
+      if (existing) return { id: existing._id, duplicate: true };
+    }
     const safetyCategories = reviewSafetySignals(text);
     const lowRatingWithoutText = Boolean(rating && rating <= 3 && !text);
     const ownerReviewReason = safetyCategories.length ? "sensitive_topic" as const : lowRatingWithoutText ? "low_rating_without_text" as const : null;
-    return ctx.db.insert("communityMessages", { orgId: org._id, channel: a.source.slice(0, 30) || "google", kind: "review", externalId: `review:${now}`, authorName: a.author.trim().slice(0, 80) || "Reviewer", text, ...(rating ? { reviewRating: rating } : {}), receivedAt: now, status: ownerReviewReason ? "escalated" : "new", ...(ownerReviewReason ? { reviewSafety: { categories: safetyCategories, reason: ownerReviewReason, detectedAt: now } } : {}), createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("communityMessages", { orgId: org._id, channel, kind: "review", externalId, authorName: a.author.trim().slice(0, 80) || "Reviewer", text, ...(rating ? { reviewRating: rating } : {}), ...(reviewSourceUrl ? { reviewSourceUrl } : {}), receivedAt: now, status: ownerReviewReason ? "escalated" : "new", ...(ownerReviewReason ? { reviewSafety: { categories: safetyCategories, reason: ownerReviewReason, detectedAt: now } } : {}), createdAt: now, updatedAt: now });
+    return { id, duplicate: false };
   },
 });

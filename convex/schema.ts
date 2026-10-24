@@ -2463,6 +2463,8 @@ export default defineSchema({
     })),
     /** Structured rating from a pasted public review; not inferred from star glyphs. */
     reviewRating: v.optional(v.number()),
+    /** Owner-supplied public review URL for manual platform follow-up; never used for posting. */
+    reviewSourceUrl: v.optional(v.string()),
     suggestedReply: v.optional(v.string()),
     finalReply: v.optional(v.string()),
     status: v.union(v.literal("new"), v.literal("suggested"), v.literal("replied"), v.literal("dismissed"), v.literal("escalated")),

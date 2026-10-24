@@ -43,6 +43,7 @@ function view(m: Doc<"communityMessages">, drafting = false) {
       ? `${"★".repeat(m.reviewRating)}${"☆".repeat(5 - m.reviewRating)}${m.text ? `\n\n${m.text}` : ""}`
       : m.text,
     reviewRating: m.reviewRating ?? null,
+    reviewSourceUrl: m.reviewSourceUrl ?? null,
     receivedAt: m.receivedAt,
     status: m.status,
     read: Boolean(m.readAt),

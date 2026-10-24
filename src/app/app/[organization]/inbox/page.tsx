@@ -112,6 +112,7 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
         </div>
         {m.subject ? <p className="text-sm font-medium text-ink">{m.subject}</p> : null}
         <p className="whitespace-pre-wrap text-sm text-ink-2">{m.text}</p>
+        {m.kind === "review" && m.reviewSourceUrl ? <a className="self-start text-sm font-medium text-link underline" href={m.reviewSourceUrl} target="_blank" rel="noopener noreferrer">Open original review</a> : null}
         {m.kind === "review" && m.reviewSafety?.reason ? (
           <Callout tone="danger" title="Owner review needed">
             {m.reviewSafety.categories.length
@@ -148,8 +149,8 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
                   <Send aria-hidden /> Send
                 </Button>
               ) : null}
-              <Button variant="ghost" loading={busy === "done"} onClick={() => run("done", () => setStatus({ slug, id: m.id, status: m.canReply ? "dismissed" : "replied" }))}>
-                <Check aria-hidden /> Mark done
+              <Button variant="ghost" loading={busy === "done"} onClick={() => run("done", () => setStatus({ slug, id: m.id, status: "dismissed" }))}>
+                <Check aria-hidden /> Mark handled
               </Button>
             </div>
             <p className="text-xs text-ink-3">AI draft ≈ 1 credit</p>

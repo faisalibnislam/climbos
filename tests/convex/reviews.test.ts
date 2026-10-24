@@ -28,13 +28,33 @@ describe("reviews engine", () => {
     const owner = await asNewUser(t, "rating-only-review@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
     await expect(owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "A review", rating: 4.5, source: "google" })).rejects.toThrow(/whole number from 1 to 5/);
-    await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "", rating: 5, source: "google" });
+    await expect(owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "A review", source: "google", sourceUrl: "javascript:alert(1)" })).rejects.toThrow(/public https/);
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "", rating: 5, source: "google", sourceUrl: "https://maps.google.com/review/123" });
     let [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
-    expect(review).toMatchObject({ status: "new", reviewRating: 5, text: "★★★★★" });
+    expect(review).toMatchObject({ status: "new", reviewRating: 5, text: "★★★★★", reviewSourceUrl: "https://maps.google.com/review/123" });
     await owner.client.mutation(api.inbox.draftReply, { slug, id: review.id });
     [review] = await owner.client.query(api.inbox.list, { slug, box: "open" });
     expect(review).toMatchObject({ status: "suggested", suggestedReply: "Thank you for taking the time to leave a 5-star rating. We appreciate your support." });
     expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).collect())).toHaveLength(0);
+    await owner.client.mutation(api.inbox.setStatus, { slug, id: review.id, status: "dismissed" });
+    expect(await owner.client.query(api.inbox.list, { slug, box: "done" })).toMatchObject([{ status: "dismissed", finalReply: null }]);
+  });
+
+  it("deduplicates pasted reviews by channel and public URL without overwriting owner work", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "duplicate-review@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    const sourceUrl = "https://maps.google.com/review/123";
+    await expect(owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "Review", source: "google", sourceUrl: `https://example.com/${"a".repeat(2000)}` })).rejects.toThrow(/public https/);
+    const first = await owner.client.mutation(api.reviews.addReview, { slug, author: "A customer", text: "Original review", rating: 3, source: "Google", sourceUrl });
+    expect(first.duplicate).toBe(false);
+    await t.run(async (ctx) => ctx.db.patch(first.id, { status: "dismissed", finalReply: "Owner follow-up recorded", updatedAt: Date.now() }));
+
+    const repeated = await owner.client.mutation(api.reviews.addReview, { slug, author: "Changed name", text: "Edited review", rating: 5, source: "google", sourceUrl });
+    expect(repeated).toEqual({ id: first.id, duplicate: true });
+    const reviews = await t.run(async (ctx) => (await ctx.db.query("communityMessages").withIndex("by_org_external", (q) => q.eq("orgId", orgId)).collect()).filter((message) => message.kind === "review"));
+    expect(reviews).toHaveLength(1);
+    expect(reviews[0]).toMatchObject({ authorName: "A customer", text: "Original review", reviewRating: 3, status: "dismissed", finalReply: "Owner follow-up recorded" });
   });
 
   it("routes a low rating without written context to the owner instead of guessing", async () => {
