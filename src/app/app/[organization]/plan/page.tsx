@@ -116,6 +116,18 @@ function PlanScreen({ slug }: { slug: string }) {
   const viewingV = s ? (versions?.find((v) => v.id === s.id) ?? null) : null;
   // An older version that isn't the one guiding the team: read-only, with compare and restore.
   const olderView = Boolean(viewingV && latestV && !viewingV.isLatest && !viewingV.inUse);
+  const staleInputLabels = [
+    ["ownerEconomics", "confirmed business numbers"],
+    ["lifecycleStage", "business stage"],
+    ["funnel", "funnel measurements"],
+    ["goal", "goal or budget"],
+    ["businessProfile", "business profile"],
+    ["businessFacts", "confirmed business facts"],
+    ["brandGuidance", "brand guidance"],
+    ["capabilities", "connected tools"],
+    ["businessResearch", "business and audience research"],
+    ["marketChanges", "monitored competitor pages"],
+  ].filter(([key]) => Boolean(plan.staleInputs[key as keyof typeof plan.staleInputs])).map(([, label]) => label);
   const openCompare = () => {
     if (!versions || versions.length < 2 || !latestV) return;
     const left = viewingV && !viewingV.isLatest ? viewingV.id : versions[1].id;
@@ -156,6 +168,16 @@ function PlanScreen({ slug }: { slug: string }) {
       />
 
       <GoalCard goal={plan.goal} slug={slug} />
+
+      {s && plan.staleInputs.requiresRefresh && !olderView ? (
+        <Callout
+          tone="warning"
+          title="This plan uses older business inputs"
+          action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} /> : null}
+        >
+          Changed since this plan was prepared: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
+        </Callout>
+      ) : null}
 
       <SectionBoundary label="plan progress">
         <StrategyRunWatcher
@@ -256,7 +278,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="Sent back">
               {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
