@@ -33,6 +33,36 @@ describe("learning from results", () => {
     expect(page2.page[0]).not.toBe(page1.page[0]);
   });
 
+  it("resumes collection across the 100-workspace boundary and publishes once", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "learn-multipage@example.com");
+    await t.run(async (ctx) => {
+      const createdAt = Date.now();
+      for (let index = 0; index < 101; index++) {
+        await ctx.db.insert("organizations", {
+          name: `Workspace ${index}`,
+          slug: `learning-page-${index}`,
+          kind: "customer",
+          createdBy: owner.userId,
+          timezone: "UTC",
+          currency: "USD",
+          onboardingStep: "done",
+          createdAt,
+        });
+      }
+    });
+
+    await runRecompute(t);
+
+    const state = await t.run(async (ctx) =>
+      ctx.db.query("learningRateState").withIndex("by_key", (q) => q.eq("key", "global")).unique(),
+    );
+    expect(state?.activeSnapshotId).toBeTruthy();
+    expect(state?.buildingRunId).toBeUndefined();
+    expect(await t.run(async (ctx) => ctx.db.query("learningBuilds").collect())).toHaveLength(0);
+    expect(await t.run(async (ctx) => ctx.db.query("learningBuildRates").collect())).toHaveLength(0);
+  });
+
   it("keeps the last complete learning snapshot active until its replacement is complete", async () => {
     const t = setup();
     const owner = await asNewUser(t, "learn-snapshot@example.com");
