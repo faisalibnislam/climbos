@@ -129,7 +129,7 @@ describe("Plan version history", () => {
 
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, requiresRefresh: true });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business stage changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business stage changed/);
   });
@@ -147,7 +147,7 @@ describe("Plan version history", () => {
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
     await w.client.mutation(api.workspace.setFunnel, funnel);
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, requiresRefresh: false });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, requiresRefresh: false });
   });
 
   it("requires refresh when funnel measurements used by diagnosis change", async () => {
@@ -162,7 +162,7 @@ describe("Plan version history", () => {
 
     await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 1_000, leads: 20, activated: 10, newCustomers: 5 });
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: true, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, requiresRefresh: true });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: true, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/funnel measurements changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/funnel measurements changed/);
   });
@@ -179,7 +179,7 @@ describe("Plan version history", () => {
 
     await w.client.mutation(api.orgs.setGoal, { slug: w.slug, kind: "more_sales", statement: "Increase monthly sales", target: { metric: "revenue_month", baseline: 1_000, desired: 2_000, mode: "incremental" }, horizonDays: 120, monthlyAdBudget: 125 });
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: true, businessProfile: false, businessFacts: false, brandGuidance: false, requiresRefresh: true });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: true, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/active growth goal or budget changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/active growth goal or budget changed/);
   });
@@ -302,5 +302,32 @@ describe("Plan version history", () => {
     expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("requires refresh when connected capabilities change after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-capabilities@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await t.run((ctx) => ctx.db.insert("connections", {
+      orgId: w.orgId,
+      provider: "ga4",
+      status: "connected",
+      scopes: [],
+      isFixture: false,
+      createdBy: w.userId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ capabilities: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/connected tools changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/connected tools changed/);
   });
 });
