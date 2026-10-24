@@ -20,7 +20,7 @@ import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
-import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
+import { applyOwnerEconomics, decisionQuestions, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 
@@ -497,6 +497,21 @@ export const plan = query({
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
     }
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
+    const currentEconomics = strategy?.expert?.economics
+      ? { ...applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics), currency: goal?.currency ?? business?.currency }
+      : null;
+    const currentPlays = strategy?.expert?.plays?.length && currentEconomics
+      ? withForecasts({ economics: currentEconomics as Economics, plays: strategy.expert.plays as PlayLike[] })
+      : null;
+    // Owner edits immediately refresh every deterministic derived number in the returned plan view.
+    const currentPortfolio = currentPlays
+      ? selectPortfolio(currentPlays, {
+          ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
+          ...(business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: business.unitEconomics.ownerHoursPerWeek } : {}),
+          ...(business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: business.unitEconomics.newCustomersPerMonth } : {}),
+          horizonDays: goal?.horizonDays,
+        })
+      : null;
     return {
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
@@ -516,7 +531,13 @@ export const plan = query({
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
             // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
-            expert: strategy.expert ? { ...strategy.expert, economics: strategy.expert.economics ? { currency: goal?.currency ?? business?.currency, ...applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics) } : undefined } : null,
+            expert: strategy.expert ? {
+              ...strategy.expert,
+              ...(currentEconomics ? { economics: currentEconomics } : {}),
+              ...(currentPlays ? { plays: currentPlays.plays } : {}),
+              ...(currentPortfolio ? { portfolio: currentPortfolio } : {}),
+              ...(currentPlays ? { goalGap: playsGoalGap(currentPlays, goal ? { target: goal.target, horizonDays: goal.horizonDays } : null) } : {}),
+            } : null,
           }
         : null,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
@@ -692,9 +713,12 @@ function hasNewerOwnerEconomics(
   owner: Doc<"businesses">["unitEconomics"],
 ): boolean {
   if (!owner) return false;
-  const snapshot = strategy.expert?.snapshot as { ownerEconomics?: { updatedAt?: number } } | undefined;
-  const analyzedAt = snapshot?.ownerEconomics?.updatedAt ?? strategy.createdAt;
-  return owner.updatedAt > analyzedAt;
+  const snapshot = strategy.expert?.snapshot as { ownerEconomics?: OwnerEconomics } | undefined;
+  if (snapshot?.ownerEconomics) {
+    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "ranges"] as const;
+    return keys.some((key) => JSON.stringify(snapshot.ownerEconomics?.[key]) !== JSON.stringify(owner[key]));
+  }
+  return owner.updatedAt > strategy.createdAt;
 }
 
 /** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */

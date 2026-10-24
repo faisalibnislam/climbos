@@ -105,6 +105,9 @@ describe("Plan version history", () => {
     })).rejects.toThrow(/numbers changed after this plan was created/);
 
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
+    expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();
     const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     await expect(w.client.mutation(api.workspace.startPlay, {
