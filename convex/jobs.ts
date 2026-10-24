@@ -97,6 +97,7 @@ import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 import { customerNeedPerMonth } from "../shared/agents/goal";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
+import { searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -1131,7 +1132,8 @@ export const buildStrategy = internalAction({
     await guarded(ctx, runId, async () => {
       const insights = job.business?.insights;
       const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
-      const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}${marketChangeContext(job)}`;
+      const searchConsole = await ctx.runQuery(internal.searchConsole.latestForOrg, { orgId: job.org._id });
+      const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}${marketChangeContext(job)}\n\n${searchConsoleStrategyContext(searchConsole, job.business?.website)}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
       // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
       let profile = profileFrom({
@@ -1206,6 +1208,7 @@ export const buildStrategy = internalAction({
               `1. types: 1-3 of these library keys, most specific first: ${BUSINESS_TYPES.map((t) => `${t.key} (${t.label})`).join("; ")}.`,
               `2. dimensions: infer each you can from the website and research, with confidence and evidence. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed business types and dimensions (below) are fixed.`,
               `3. channels: review every candidate below. Each has rule-based factor priors (audience, intent, budget, time, feasibility, competition, scalability, measurement). Give deltas (−30…+30, 0 = keep) only where evidence for THIS business says the prior is wrong: e.g. competitors already dominate it (competition down) or are absent (up); the audience provably gathers there (audience up); the owner can't execute it (feasibility down). Name the platform, the tactic and the audience for each.`,
+              "Use matching Search Console rows as historical evidence that this website has received search impressions and clicks for the shown queries. This can inform SEO channel fit, but it does not measure total market demand, predict future traffic or show that SEO caused growth; do not assign a positive channel delta from impressions alone.",
               `4. summary: two short bullets on what wins and why.`,
               `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
               `CURRENT BUSINESS DIAGNOSIS (computed from owner data; an observed weak link is not proof of cause):\n${diagnosisBrief(diagnosis)}\nUse this to avoid rewarding channels that only create more demand when the supported bottleneck is later in the customer journey. If the diagnosis is uncertain, do not force a channel change.`,

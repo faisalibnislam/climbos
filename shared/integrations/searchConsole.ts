@@ -26,6 +26,36 @@ export interface SearchAnalyticsRow {
   position: number;
 }
 
+/** Check whether a Search Console property can describe the recorded business website. */
+export function searchConsolePropertyMatchesWebsite(property: string, website: string): boolean {
+  const websiteUrl = parseHttpUrl(website);
+  if (!websiteUrl) return false;
+  const businessHost = normalizeHost(websiteUrl.hostname, true);
+  if (property.startsWith("sc-domain:")) {
+    const domain = normalizeHost(property.slice("sc-domain:".length), true);
+    return Boolean(domain && (businessHost === domain || businessHost.endsWith(`.${domain}`)));
+  }
+  const propertyUrl = parseHttpUrl(property);
+  if (!propertyUrl || normalizeHost(propertyUrl.hostname, false) !== normalizeHost(websiteUrl.hostname, false)) return false;
+  const prefixPath = propertyUrl.pathname;
+  const businessPath = websiteUrl.pathname;
+  return prefixPath === "/" || businessPath === prefixPath || businessPath.startsWith(prefixPath.endsWith("/") ? prefixPath : `${prefixPath}/`);
+}
+
+function parseHttpUrl(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeHost(host: string, stripWww: boolean): string {
+  const normalized = host.toLocaleLowerCase("en-US").replace(/\.$/, "");
+  return stripWww ? normalized.replace(/^www\./, "") : normalized;
+}
+
 function auth(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
