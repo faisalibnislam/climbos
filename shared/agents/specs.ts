@@ -36,6 +36,7 @@ import { lintFactIndexes } from "./factIndexes";
 import { lintDiagnosisFit, playWorksOnConstraint } from "./diagnosis";
 import { lintEligibilityIds } from "../playbooks/contracts";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
+import { validateResearchUrl } from "../integrations/website";
 import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 
@@ -1572,6 +1573,10 @@ function lintOneOutboundUrl(rawUrl: string, path: string, input: AgentInput, rul
   }
   if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
     return [{ severity: "error", rule, message: "Links in ready-to-use copy must use HTTPS and cannot contain embedded credentials.", path }];
+  }
+  const safeDestination = validateResearchUrl(raw);
+  if (!safeDestination.ok) {
+    return [{ severity: "error", rule, message: "Links in ready-to-use copy must point to a public HTTPS destination on a standard web port.", path }];
   }
   const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
   const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
