@@ -43,6 +43,15 @@ describe("plan quality", () => {
     expect(canDriveWork(q)).toBe(false);
   });
 
+  it("unsupported scarcity and deadline claims fail the plan and cannot drive work", () => {
+    for (const rule of ["unsupported_scarcity", "unsupported_deadline"]) {
+      const q = planQuality([agentQuality("growth_plays", assessment({ lint: [err(rule)] }), 2, 6)]);
+      expect(q.state).toBe("failed");
+      expect(q.hard).toEqual([`growth_plays: ${rule} ×1`]);
+      expect(canDriveWork(q)).toBe(false);
+    }
+  });
+
   it("a hard finding on the final plan (after the consistency pass) also fails it", () => {
     const q = planQuality([agentQuality("growth_strategy", assessment(), 1, null)], [err("consistency")]);
     expect(q.state).toBe("failed");
