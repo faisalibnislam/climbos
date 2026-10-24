@@ -32,6 +32,8 @@ export interface ClimbTool<I extends z.ZodType = z.ZodType> {
   description: string;
   risk: Risk;
   input: I;
+  /** Validates the semantic result before it is passed back to the model. */
+  output?: z.ZodType;
   /** Plain-English summary of what will happen (shown on confirmation cards), in the workspace's timezone. */
   summarize?: (input: z.infer<I>, ctx?: { timeZone?: string }) => string;
   /** Narration while it runs, e.g. "Looking at your drafts". */
@@ -50,8 +52,20 @@ function short(s: unknown, n = 280): string {
 
 const tool = <I extends z.ZodType>(t: ClimbTool<I>) => t as unknown as ClimbTool;
 
+const CalcOutputSchema = z.union([
+  z.object({ error: z.string() }),
+  z.object({ price: z.number(), totalCost: z.number(), contribution: z.number(), contributionMargin: z.number().nullable(), markupOnCost: z.number().nullable(), costBoundary: z.string(), meetsTarget: z.boolean().nullable(), notes: z.array(z.string()) }),
+  z.object({ floor: z.number(), marginAtStated: z.number().nullable(), gap: z.number().nullable(), notes: z.array(z.string()) }),
+  z.object({ controlRate: z.number(), treatmentRate: z.number(), absoluteChange: z.number(), relativeChange: z.number().nullable(), pValue: z.number(), method: z.enum(["fisher_exact", "two_proportion_z"]), verdict: z.enum(["no_reliable_difference", "difference_detected", "too_early"]), differenceInterval: z.tuple([z.number(), z.number()]), practical: z.enum(["worth_acting", "harmful", "flat", "small_but_real", "inconclusive"]).optional(), notes: z.array(z.string()) }),
+  z.object({ expected: z.array(z.number()), chiSquare: z.number(), pValue: z.number(), mismatch: z.boolean(), warning: z.boolean(), overArm: z.number().nullable(), checklist: z.array(z.string()), notes: z.array(z.string()) }),
+  z.object({ perArm: z.number(), total: z.number(), weeks: z.number().nullable(), notes: z.array(z.string()) }),
+  z.object({ change: z.number(), relativeChange: z.number().nullable(), label: z.literal("observed"), notes: z.array(z.string()) }),
+]);
+const DraftListOutputSchema = z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), kind: z.string(), status: z.string(), scheduledFor: z.string().nullable() }));
+const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), scheduledFor: z.string().nullable(), version: z.number().optional(), headline: z.string().nullable().optional(), body: z.string().optional(), callToAction: z.string().nullable().optional(), hashtags: z.array(z.string()).optional(), image: z.string().nullable().optional(), unsupportedClaims: z.array(z.string()).optional() });
+
 /** Validate and bound tool results before they re-enter the model context as untrusted data. */
-export function encodeToolOutput(output: unknown, maxChars = 7_800): string {
+export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema?: z.ZodType): string {
   let normalized: unknown;
   try {
     const encoded = JSON.stringify(output ?? { ok: true }, (_key, value: unknown) => {
@@ -66,8 +80,10 @@ export function encodeToolOutput(output: unknown, maxChars = 7_800): string {
   }
   const checked = z.json().safeParse(normalized);
   if (!checked.success) throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  const semantic = outputSchema?.safeParse(checked.data);
+  if (semantic && !semantic.success) throw new Error("The tool returned data that did not match its output contract.");
   // Escape '<' so untrusted tool text cannot close the surrounding trust boundary.
-  const safe = JSON.stringify(checked.data).replace(/</g, "\\u003c");
+  const safe = JSON.stringify(semantic?.success ? semantic.data : checked.data).replace(/</g, "\\u003c");
   if (safe.length <= maxChars) return safe;
   const previewChars = Math.max(0, maxChars - 100);
   return JSON.stringify({ truncated: true, preview: safe.slice(0, previewChars), note: "Tool result exceeded the context limit; preview only." });
@@ -93,6 +109,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Working out the numbers",
     input: CalcToolInput,
+    output: CalcOutputSchema,
     local: calculate,
     run: async (_c, _slug, input) => calculate(input),
   }),
@@ -124,6 +141,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Looking at your content",
     input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().optional() }),
+    output: DraftListOutputSchema,
     run: async (c, slug, i) => {
       const page = await c.query(api.content.list, { slug, status: i.status, paginationOpts: { numItems: Math.min(i.limit ?? 12, 25), cursor: null } });
       return (page.page as { id: string; title: string; channel: string; status: string; scheduledFor?: number | null; kind: string }[]).map((a) => ({ id: a.id, title: a.title, channel: a.channel, kind: a.kind, status: a.status, scheduledFor: a.scheduledFor ? new Date(a.scheduledFor).toISOString() : null }));
@@ -136,6 +154,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Reading the draft",
     input: z.object({ artifactId }),
+    output: DraftReadOutputSchema,
     run: async (c, slug, i) => {
       const d = await c.query(api.content.get, { slug, artifactId: i.artifactId as Id<"artifacts"> });
       const v = d.current as { body: string; headline: string | null; callToAction: string | null; hashtags: string[]; imageLabel: string | null; unsupportedClaims: string[]; version: number } | null;

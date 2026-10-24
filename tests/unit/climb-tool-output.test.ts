@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeToolOutput } from "../../convex/lib/climbTools";
+import { encodeToolOutput, toolByName } from "../../convex/lib/climbTools";
 
 describe("Climb tool output boundary", () => {
   it("validates JSON and escapes data that could close the untrusted wrapper", () => {
@@ -22,5 +22,14 @@ describe("Climb tool output boundary", () => {
     expect(parsed.truncated).toBe(true);
     expect(parsed.note).toContain("preview only");
     expect(encoded.length).toBeLessThanOrEqual(1_000);
+  });
+
+  it("enforces semantic schemas for tools that declare an output contract", () => {
+    const listDrafts = toolByName("list_drafts");
+    expect(listDrafts?.output).toBeDefined();
+    expect(JSON.parse(encodeToolOutput([{ id: "a", title: "Post", channel: "instagram", kind: "post", status: "draft", scheduledFor: null }], 7_800, listDrafts?.output))).toEqual([
+      { id: "a", title: "Post", channel: "instagram", kind: "post", status: "draft", scheduledFor: null },
+    ]);
+    expect(() => encodeToolOutput([{ id: "a", status: "draft" }], 7_800, listDrafts?.output)).toThrow(/output contract/);
   });
 });

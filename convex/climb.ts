@@ -322,7 +322,7 @@ export const respond = action({
         const stepMsg = await ctx.runMutation(internal.climb.write, { orgId: m.orgId, userId: m.userId, role: "step", text: tool.doing, status: "working", runId });
         try {
           const out = await tool.run!(caller, slug, input as never);
-          const encodedOut = encodeToolOutput(out);
+          const encodedOut = encodeToolOutput(out, 7_800, tool.output);
           links.push(...linksFrom(slug, out));
           await ctx.runMutation(internal.climb.patch, { messageId: stepMsg, status: "done", detail: summarizeToolResult(out) });
           results.push({ type: "tool_result", tool_use_id: tu.id, content: `<untrusted_content source="${tool.name}">\n${encodedOut}\n</untrusted_content>` });
