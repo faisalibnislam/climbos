@@ -54,9 +54,14 @@ const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }
 /** Named integrations create concrete buyer expectations and are easy to overstate. */
 const NAMED_INTEGRATION = /\b(?:[Ii]ntegrat\w*\s+with|[Cc]onnects?\s+(?:directly\s+)?to|[Cc]onnects?\s+with|[Ss]yncs?\s+with)\s+([A-Z][\w.+-]*(?:\s+[A-Z][\w.+-]*){0,2}|CRM|API)\b/g;
 const INTEGRATION_EVIDENCE = /\b(?:integrat\w*|connect\w*|sync\w*)\b/i;
+const NON_AFFIRMATIVE_EVIDENCE = /\b(?:not|isn't|aren't|doesn't|does not|never|no longer|without|lack(?:s|ing)?|unavailable|not yet|request(?:ed|ing)?|ask(?:ed|ing)? for|want(?:s|ed)?|would|could|might|may|plan(?:s|ned)? to|hope to)\b/i;
+
+function supportedByAffirmativeEvidence(pattern: RegExp, evidence: string): boolean {
+  return evidence.split(/[\n.!?;]+/).some((sentence) => pattern.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+}
 
 function hasIntegrationEvidence(service: string, evidence: string): boolean {
-  return evidence.split(/[\n.!?]+/).some((line) => line.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(line));
+  return evidence.split(/[\n.!?;]+/).some((sentence) => sentence.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
 }
 
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
@@ -71,7 +76,7 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
     }
     for (const c of CLAIMS) {
       const m = text.match(c.re);
-      if (m && !c.key(m).test(evidence)) {
+      if (m && !supportedByAffirmativeEvidence(c.key(m), evidence)) {
         issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
         break;
       }
