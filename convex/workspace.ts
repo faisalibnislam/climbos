@@ -282,6 +282,7 @@ export const startPlay = mutation({
     if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -523,7 +524,7 @@ export const plan = query({
     const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
-    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false };
+    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
       ? selectPortfolio(currentPlays, {
@@ -568,7 +569,7 @@ export const plan = query({
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
-      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities },
+      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
@@ -688,6 +689,7 @@ export const decidePlan = mutation({
       if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -764,13 +766,13 @@ function hasNewerOwnerEconomics(
 
 function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
-  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency"> | null,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency" | "insights"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
   businessFactVersions: { id: string; updatedAt: number }[] = [],
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null,
   connectedCapabilities: string[] = [],
-): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; capabilities?: string[] } | undefined;
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; capabilities?: string[] } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -782,6 +784,7 @@ function planStaleInputs(
   const hasOwnerAcquisitionTypeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 11;
   const hasOwnerAcquisitionDimensionSnapshot = (snapshot?.snapshotVersion ?? 0) >= 12;
   const hasOwnerChannelPreferenceSnapshot = (snapshot?.snapshotVersion ?? 0) >= 13;
+  const hasBusinessResearchSnapshot = (snapshot?.snapshotVersion ?? 0) >= 14;
   const ownerAcquisitionDimensions = Object.fromEntries(
     Object.entries(business?.acquisition?.dims as Record<string, { value: string; source: string }> | undefined ?? {})
       .filter(([, value]) => value?.source === "owner")
@@ -803,6 +806,7 @@ function planStaleInputs(
     businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
     brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
     capabilities: Array.isArray(snapshot?.capabilities) && canonicalJson([...snapshot.capabilities].sort() as never) !== canonicalJson([...connectedCapabilities].sort() as never),
+    businessResearch: hasBusinessResearchSnapshot && (snapshot?.businessResearchAt ?? null) !== (business?.insights?.generatedAt ?? null),
   };
 }
 

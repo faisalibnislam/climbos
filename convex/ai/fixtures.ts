@@ -1,6 +1,5 @@
 import type {
   AdDraftsOutput,
-  BusinessInsights,
   BusinessProfile,
   ChatIntentOutput,
   EmailSequenceOutput,
@@ -72,11 +71,11 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
       };
     case "business_insights": {
-      const out: BusinessInsights = {
+      const out = {
         audiences: [
-          { name: "Solo founders and freelancers", description: "Need lead capture and payments without a developer.", confidence: "medium" },
-          { name: "Small marketing teams", description: "Run campaigns and need fast forms with logic.", confidence: "medium" },
-          { name: "Coaches and course creators", description: "Collect applications and payments.", confidence: "low" },
+          { name: "Solo founders and freelancers", description: "Need lead capture and payments without a developer.", confidence: "medium", needs: [{ statement: "Collect leads and payments without developer help.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "Setting up a form may take too much technical work.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Get a working form online quickly.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Use-case search", rationale: "Specific form needs may be expressed in search.", basis: "inference", evidenceRefs: [] }] },
+          { name: "Small marketing teams", description: "Run campaigns and need fast forms with logic.", confidence: "medium", needs: [{ statement: "Launch campaign forms with conditional questions.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "A generic form may not support campaign-specific logic.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Publish campaign assets without waiting on engineering.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Product demos", rationale: "A short demo can show the setup workflow.", basis: "inference", evidenceRefs: [] }] },
+          { name: "Coaches and course creators", description: "Collect applications and payments.", confidence: "low", needs: [{ statement: "Collect applications and payment details in one flow.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "The form may not match the enrollment process.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Reduce manual work when accepting clients or students.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Creator partnerships", rationale: "Relevant creators may reach course sellers.", basis: "inference", evidenceRefs: [] }] },
         ],
         competitors: [
           { name: "General form builders", url: "", note: "Broad tools; ClimbOS should verify which ones the owner competes with most.", sourceUrl: "" },

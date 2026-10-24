@@ -48,7 +48,7 @@ describe("research source assessment", () => {
 
   it("accepts insight citations only when their URLs were supplied to the run", () => {
     const input = { task: "Assess alternatives", brief: "Business facts", facts: [], precomputedResearch: { notes: "Review page", sources: [{ url: "https://example.com/reviews/" }] } };
-    const base = { competitors: [], alternatives: [], objections: [], gaps: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
+    const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
     expect(lintInsightSources({ ...base, vocPhrases: [{ phrase: "Useful", theme: "value", sourceUrl: "https://example.com/reviews" }] }, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, vocPhrases: [{ phrase: "Made up", theme: "value", sourceUrl: "https://invented.example/reviews" }] }, input);
     expect(issues).toHaveLength(1);
@@ -75,6 +75,7 @@ describe("research source assessment", () => {
   it("requires each structured competitor comparison to cite a page read in this run", () => {
     const input = { task: "Compare competitors", brief: "Business facts", facts: [], precomputedResearch: { notes: "Pricing and offer pages", sources: [{ url: "https://rival.example/pricing" }] } };
     const base = {
+      audiences: [],
       competitors: [{
         name: "Rival",
         url: "https://rival.example",
@@ -104,7 +105,7 @@ describe("research source assessment", () => {
       precomputedResearch: { notes: "Market and competitor page", sources: [{ url: "https://market.example/report" }] },
     };
     const base = {
-      competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
+      audiences: [], competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
       swot: { strengths: ["Serves 40 active customers"], weaknesses: [], opportunities: ["Local searches have grown"] , threats: [] },
       swotEvidence: [
         { dimension: "strength" as const, finding: "Serves 40 active customers", basis: "owner_report" as const, evidenceRefs: ["fact:0"], strategicImplication: "Use this customer base for opt-in referrals before buying reach.", confidence: "medium" as const },
@@ -119,6 +120,27 @@ describe("research source assessment", () => {
       expect.objectContaining({ rule: "swot_evidence", path: "swotEvidence[1].finding" }),
       expect.objectContaining({ rule: "swot_evidence", path: "swot.opportunities" }),
       expect.objectContaining({ rule: "swot_move", path: "swotMoves[0].firstIndex" }),
+    ]));
+  });
+
+  it("keeps audience needs, objections, buying motivations and channel preferences traceable", () => {
+    const input = { task: "Profile the audiences", brief: "Business facts", facts: ["Owner-confirmed: most buyers are independent accountants."], precomputedResearch: { notes: "Industry discussion", sources: [{ url: "https://community.example/accountants" }] } };
+    const base: Parameters<typeof lintInsightSources>[0] = {
+      audiences: [{
+        name: "Independent accountants", description: "Small practices handling monthly bookkeeping.", confidence: "medium",
+        needs: [{ statement: "Reconcile several client accounts each month.", basis: "owner_report", evidenceRefs: ["fact:0"] }],
+        objections: [{ statement: "Changing workflow tools may disrupt month-end close.", basis: "research", evidenceRefs: ["https://community.example/accountants"] }],
+        purchasingMotivations: [{ statement: "Reduce repetitive reconciliation work.", basis: "inference", evidenceRefs: [] }],
+        channelPreferences: [{ channel: "Accounting communities", rationale: "Members discuss workflow problems there.", basis: "research", evidenceRefs: ["https://community.example/accountants"] }],
+      }],
+      competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
+      swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [],
+    };
+    expect(lintInsightSources(base, input)).toEqual([]);
+    const invalid: Parameters<typeof lintInsightSources>[0] = { ...base, audiences: [{ ...base.audiences[0], needs: [{ statement: "A made-up need.", basis: "research", evidenceRefs: ["https://unread.example/claims"] }], objections: [{ statement: "A likely objection.", basis: "owner_report", evidenceRefs: [] }] }] };
+    expect(lintInsightSources(invalid, input)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rule: "citation", path: "audiences[0].needs[0].evidenceRefs" }),
+      expect.objectContaining({ rule: "audience_evidence", path: "audiences[0].objections[0].evidenceRefs" }),
     ]));
   });
 

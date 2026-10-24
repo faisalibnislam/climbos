@@ -692,7 +692,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 13,
+    snapshotVersion: 14,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -706,12 +706,13 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     capabilities,
     flags,
     insightsHash,
+    businessResearchAt: job.business?.insights?.generatedAt ?? null,
     sourceUrls: readUrls,
     knowledgeReferences,
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 13,
+    snapshotVersion: 14,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -740,6 +741,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     ownerChannelPreferences: [...(job.business?.acquisition?.channelPreferences ?? [])]
       .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
       .sort((a, b) => a.channelId.localeCompare(b.channelId)),
+    businessResearchAt: job.business?.insights?.generatedAt ?? null,
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
     brandProfile: job.brand ? {
       voice: job.brand.voice,
@@ -1081,7 +1083,7 @@ export const onboardingResearch = internalAction({
         insightsSpec(),
         agentInput(
           job,
-          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. For every SWOT statement, identify its dimension (strength/weakness are internal; opportunity/threat are external), match the statement exactly in swotEvidence, state its evidence basis (owner report, source claim, measured result, research, or inference), cite only fact:N from the supplied confirmed facts or a page URL read in this run, and explain the strategic implication. Use inference with no citation when direct evidence is missing; never turn website marketing claims into verified strengths or treat a hypothesis as a market fact. Add up to 8 TOWS moves only when useful: combine existing SWOT entries as strength+opportunity, weakness+opportunity, strength+threat, or weakness+threat; use their exact zero-based indexes, give one concrete move, its smallest first test, and a measurable signal. If no evidence-backed pairing helps choose what to do, return an empty swotMoves array.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
+          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. Maintain up to five distinct audience profiles. For each, list needs, objections, purchasing motivations and channel preferences separately; label each item as owner_report, measured, research or inference, and cite only fact:N from supplied facts or an exact page URL read in this run. Use empty arrays when evidence is missing. A source or owner statement supports only what it actually says; do not treat one comment as a market-wide pattern or an inferred segment as validated. For every SWOT statement, identify its dimension (strength/weakness are internal; opportunity/threat are external), match the statement exactly in swotEvidence, state its evidence basis (owner report, source claim, measured result, research, or inference), cite only fact:N from the supplied confirmed facts or a page URL read in this run, and explain the strategic implication. Use inference with no citation when direct evidence is missing; never turn website marketing claims into verified strengths or treat a hypothesis as a market fact. Add up to 8 TOWS moves only when useful: combine existing SWOT entries as strength+opportunity, weakness+opportunity, strength+threat, or weakness+threat; use their exact zero-based indexes, give one concrete move, its smallest first test, and a measurable signal. If no evidence-backed pairing helps choose what to do, return an empty swotMoves array.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
           {
             untrustedContext: pagesText,
             availableSourceUrls: pages.filter((p) => p.status === "ok").map((p) => p.url),

@@ -53,6 +53,12 @@ import { routeModels } from "./routes";
 const force = z.enum(["push", "pull", "anxiety", "habit"]);
 
 export const InsightsV2Schema = BusinessInsightsSchema.extend({
+  audiences: z.array(BusinessInsightsSchema.shape.audiences.element.extend({
+    needs: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
+    objections: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
+    purchasingMotivations: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
+    channelPreferences: z.array(z.object({ channel: z.string().max(100), rationale: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
+  })).max(5),
   swot: z.object({
     strengths: z.array(z.string()).max(4),
     weaknesses: z.array(z.string()).max(4),
@@ -239,9 +245,9 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number; leads?: number; qualifiedLeads?: number; qualificationDefinition?: string; activated?: number; newCustomers?: number; activationKind?: "value" | "habit" | "setup" | "unknown"; signupKind?: "free_plan" | "trial_no_card" | "trial_card" | "unknown"; updatedAt: number }
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
-export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
+export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.40-owner-channel-experience";
+export const ENGINE_VERSION = "v3.41-audience-evidence-profiles";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1289,7 +1295,7 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
   });
 }
 
-export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves">, input: AgentInput): LintIssue[] {
+export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -1304,6 +1310,37 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
   refs.push(...groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))));
   const factCount = input.facts.length;
   const swotIssues: LintIssue[] = [];
+  const audienceEvidence = (items: { statement: string; basis: string; evidenceRefs: string[] }[], path: string) => items.forEach((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (item.basis !== "inference" && item.evidenceRefs.length === 0) {
+      swotIssues.push({ severity: "error", rule: "audience_evidence", message: "Label an unsupported audience hypothesis as inference, or cite a supplied fact or page read in this run.", path: `${itemPath}.evidenceRefs` });
+    }
+    const hasFact = item.evidenceRefs.some((ref) => /^fact:\d+$/i.test(ref.trim()));
+    const hasPage = item.evidenceRefs.some((ref) => /^https?:\/\//i.test(ref.trim()));
+    if ((item.basis === "owner_report" || item.basis === "measured") && !hasFact) {
+      swotIssues.push({ severity: "error", rule: "audience_evidence", message: "Owner-reported and measured audience findings must point to a supplied fact record.", path: `${itemPath}.evidenceRefs` });
+    }
+    if (item.basis === "research" && !hasPage) {
+      swotIssues.push({ severity: "error", rule: "audience_evidence", message: "A research audience finding must cite a page read in this run.", path: `${itemPath}.evidenceRefs` });
+    }
+    for (const ref of item.evidenceRefs) {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      if (fact) {
+        if (Number(fact[1]) >= factCount) swotIssues.push({ severity: "error", rule: "citation", message: `Evidence reference "${ref}" is outside this run's confirmed fact list.`, path: `${itemPath}.evidenceRefs` });
+      } else if (/^https?:\/\//i.test(ref.trim())) {
+        refs.push({ url: ref, path: `${itemPath}.evidenceRefs` });
+      } else {
+        swotIssues.push({ severity: "error", rule: "citation", message: "Use fact:N or a page URL read in this run.", path: `${itemPath}.evidenceRefs` });
+      }
+    }
+  });
+  out.audiences.forEach((audience, index) => {
+    const path = `audiences[${index}]`;
+    audienceEvidence(audience.needs, `${path}.needs`);
+    audienceEvidence(audience.objections, `${path}.objections`);
+    audienceEvidence(audience.purchasingMotivations, `${path}.purchasingMotivations`);
+    audienceEvidence(audience.channelPreferences.map(({ channel, rationale, basis, evidenceRefs }) => ({ statement: `${channel}: ${rationale}`, basis, evidenceRefs })), `${path}.channelPreferences`);
+  });
   const dimensions = {
     strength: { statements: out.swot.strengths, path: "strengths" },
     weakness: { statements: out.swot.weaknesses, path: "weaknesses" },

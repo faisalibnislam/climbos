@@ -285,13 +285,26 @@ export const saveInsights = internalMutation({
     const business = await ctx.db.get(businessId);
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
     const i = JSON.parse(insights) as BusinessInsights;
-    const v2Competitors = (i as unknown as Partial<InsightsV2>).competitors;
+    const v2 = i as unknown as Partial<InsightsV2>;
+    const v2Competitors = v2.competitors;
     const insightsAt = Date.now();
     const org = await ctx.db.get(run.orgId);
     const refreshDays = org?.competitorResearchRefreshDays ?? 90;
     await ctx.db.patch(businessId, {
       insights: {
-        audiences: i.audiences.slice(0, 5),
+        audiences: i.audiences.slice(0, 5).map((audience, index) => {
+          const profile = v2.audiences?.[index];
+          const evidenceItems = (rows: { statement: string; basis: "owner_report" | "measured" | "research" | "inference"; evidenceRefs: string[] }[] | undefined) => rows?.slice(0, 4).map((row) => ({ ...row, statement: row.statement.slice(0, 240), evidenceRefs: row.evidenceRefs.slice(0, 4) }));
+          return {
+            ...audience,
+            ...(profile ? {
+              needs: evidenceItems(profile.needs),
+              objections: evidenceItems(profile.objections),
+              purchasingMotivations: evidenceItems(profile.purchasingMotivations),
+              channelPreferences: profile.channelPreferences.slice(0, 4).map((row) => ({ ...row, channel: row.channel.slice(0, 100), rationale: row.rationale.slice(0, 240), evidenceRefs: row.evidenceRefs.slice(0, 4) })),
+            } : {}),
+          };
+        }),
         competitors: i.competitors.slice(0, 6).map((c, index) => ({
           name: c.name,
           url: c.url || undefined,
@@ -325,7 +338,7 @@ export const saveInsights = internalMutation({
         ...("vocPhrases" in i
           ? {
               expert: (() => {
-                const x = i as unknown as InsightsV2;
+                const x = v2 as InsightsV2;
                 const url = (u: string) => u || undefined;
                 return {
                   alternatives: x.alternatives.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
