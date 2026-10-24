@@ -35,6 +35,7 @@ import type * as circuits from "../circuits.js";
 import type * as clientReports from "../clientReports.js";
 import type * as climb from "../climb.js";
 import type * as competitorActions from "../competitorActions.js";
+import type * as competitorDiscovery from "../competitorDiscovery.js";
 import type * as competitors from "../competitors.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
@@ -148,6 +149,7 @@ declare const fullApi: ApiFromModules<{
   clientReports: typeof clientReports;
   climb: typeof climb;
   competitorActions: typeof competitorActions;
+  competitorDiscovery: typeof competitorDiscovery;
   competitors: typeof competitors;
   connectionActions: typeof connectionActions;
   connections: typeof connections;

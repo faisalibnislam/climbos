@@ -1071,6 +1071,11 @@ export default defineSchema({
     name: v.string(),
     url: v.string(),
     active: v.boolean(),
+    /** The owner removed this watch; keep its host as a tombstone so discovery does not re-add it. */
+    excludedAt: v.optional(v.number()),
+    /** Discovery provenance for auto-seeded watches; legacy/manual watches omit these fields. */
+    autoSeededAt: v.optional(v.number()),
+    discoverySourceUrl: v.optional(v.string()),
     lastCheckedAt: v.optional(v.number()),
     lastHash: v.optional(v.string()),
     /** Normalised text of the last check (homepage + pricing), for the next diff. */

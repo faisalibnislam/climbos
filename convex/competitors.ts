@@ -6,7 +6,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx } fr
 import { createRunWithReservation } from "./engine";
 import { isPaid } from "./lib/access";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
-import { selectWatchCandidates } from "../shared/competitors/candidates";
+import { selectWatchCandidates, sameCompetitorSite } from "../shared/competitors/candidates";
 
 /**
  * Competitor watch: each week we read competitors' homepage and pricing page
@@ -21,18 +21,19 @@ export const overview = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const watches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
+    const allWatches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000);
+    const watches = allWatches.filter((w) => w.active);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const suggested = selectWatchCandidates(
       (business?.insights?.competitors ?? []).flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
       business?.website,
-      watches.map((w) => w.url),
+      allWatches.map((w) => w.url),
       6,
     );
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
-      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
+      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
       changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
@@ -57,10 +58,16 @@ export const add = mutation({
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const url = normaliseUrl(a.url);
     if (!url) throw appError("INVALID", "That website address doesn't look right.");
-    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
-    if (existing.some((w) => w.url === url)) throw appError("INVALID", "You're already watching that site.");
+    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000);
+    const same = existing.find((w) => sameCompetitorSite(w.url, url));
+    if (same?.active) throw appError("INVALID", "You're already watching that site.");
     const limit = (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free;
     if (existing.filter((w) => w.active).length >= limit) throw appError(limit === LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIMIT.free ? "Free accounts watch 1 competitor. Packages watch 5." : `You can watch up to ${limit} competitors.`);
+    if (same) {
+      await ctx.db.patch(same._id, { name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, excludedAt: undefined, lastError: undefined, lastCheckedAt: undefined, lastHash: undefined, lastText: undefined, lastSourceUrls: undefined, discoverySourceUrl: undefined, autoSeededAt: undefined });
+      await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [same._id] });
+      return same._id;
+    }
     const id = await ctx.db.insert("competitorWatches", { orgId: org._id, name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, createdAt: Date.now() });
     // First read sets the baseline (no credits).
     await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [id] });
@@ -73,7 +80,62 @@ export const remove = mutation({
   handler: async (ctx, { slug, id }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     assertSameOrg(await ctx.db.get(id), org._id, "competitor");
-    await ctx.db.delete(id);
+    await ctx.db.patch(id, { active: false, excludedAt: Date.now() });
+  },
+});
+
+/** Candidate snapshot stays tied to the exact insight run that requested auto-seeding. */
+export const discoveryContext = internalQuery({
+  args: { orgId: v.id("organizations"), businessId: v.id("businesses"), insightsAt: v.number() },
+  handler: async (ctx, { orgId, businessId, insightsAt }) => {
+    const [org, business, watches] = await Promise.all([
+      ctx.db.get(orgId),
+      ctx.db.get(businessId),
+      ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000),
+    ]);
+    if (!org || !business || business.orgId !== orgId || business.insights?.generatedAt !== insightsAt) return null;
+    return {
+      website: business.website ?? undefined,
+      candidates: business.insights.competitors.flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
+      watches: watches.map((w) => ({ url: w.url, active: w.active })),
+      limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
+    };
+  },
+});
+
+/** Auto-watch only identity-checked direct competitors, within the existing package limit. */
+export const seedWatches = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    businessId: v.id("businesses"),
+    insightsAt: v.number(),
+    candidates: v.array(v.object({ name: v.string(), url: v.string(), sourceUrl: v.string(), kind: v.literal("direct") })),
+  },
+  handler: async (ctx, { orgId, businessId, insightsAt, candidates }) => {
+    const org = await ctx.db.get(orgId);
+    const business = await ctx.db.get(businessId);
+    if (!org || !business || business.orgId !== orgId || business.insights?.generatedAt !== insightsAt) return [];
+    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
+    const limit = (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free;
+    const activeCount = existing.filter((w) => w.active).length;
+    const available = Math.max(0, limit - activeCount);
+    if (!available) return [];
+    const selected = selectWatchCandidates(candidates, business.website, existing.map((w) => w.url), available);
+    const ids = [];
+    for (const candidate of selected) {
+      const id = await ctx.db.insert("competitorWatches", {
+        orgId,
+        name: candidate.name,
+        url: candidate.url,
+        active: true,
+        autoSeededAt: Date.now(),
+        discoverySourceUrl: candidate.sourceUrl,
+        createdAt: Date.now(),
+      });
+      ids.push(id);
+    }
+    if (ids.length) await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId, watchIds: ids });
+    return ids;
   },
 });
 

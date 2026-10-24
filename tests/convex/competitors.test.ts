@@ -92,6 +92,58 @@ describe("competitor watch", () => {
     expect(overview.suggested).toEqual([{ name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/pricing" }]);
   });
 
+  it("auto-seeds only identity-checked direct candidates within the free allowance and honors exclusions", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-auto-seed@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Owner Co" });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    const insightsAt = Date.now();
+    await t.run((ctx) => ctx.db.patch(business._id, {
+      website: "https://owner.example",
+      insights: {
+        audiences: [],
+        competitors: [
+          { name: "Rival", url: "https://unrelated.example", sourceUrl: "https://research.example/rival", note: "Direct competitor", kind: "direct" },
+          { name: "Adjacent", url: "https://adjacent.example", sourceUrl: "https://research.example/adjacent", note: "Related tool", kind: "adjacent" },
+          { name: "Other", url: "https://elsewhere.example", sourceUrl: "https://research.example/other", note: "Another competitor", kind: "direct" },
+        ],
+        positioning: "",
+        pricingNotes: "",
+        swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+        journey: [],
+        opportunities: [],
+        generatedAt: insightsAt,
+      },
+    }));
+
+    process.env.CLIMBOS_FAKE_SITE_TEXT = "A different company provides accounting tools.";
+    expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(0);
+    delete process.env.CLIMBOS_FAKE_SITE_TEXT;
+    expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(1);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    let overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.watches).toHaveLength(1);
+    expect(overview.watches[0]).toMatchObject({ name: "Rival", autoSeeded: true, discoverySourceUrl: "https://research.example/rival" });
+    expect(overview.suggested.map((candidate) => candidate.name)).toEqual(["Other"]);
+
+    const watchId = overview.watches[0].id;
+    await owner.client.mutation(api.competitors.remove, { slug, id: watchId });
+    expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(1);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.watches.map((watch) => watch.name)).toEqual(["Other"]);
+    expect(overview.suggested).toEqual([]);
+
+    await owner.client.mutation(api.competitors.remove, { slug, id: overview.watches[0].id });
+
+    const restoredId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "https://www.unrelated.example/pricing" });
+    expect(restoredId).toBe(watchId);
+    overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.watches).toHaveLength(1);
+    expect(overview.watches[0]).toMatchObject({ autoSeeded: false, discoverySourceUrl: null });
+  });
+
   it("does not load or write a competitor watch under another workspace", async () => {
     const t = setup();
     const owner = await asNewUser(t, "watch-tenancy@example.com");

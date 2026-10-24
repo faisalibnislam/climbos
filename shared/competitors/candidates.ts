@@ -18,6 +18,7 @@ const DIRECTORY_HOSTS = [
   "apps.apple.com",
   "play.google.com",
 ];
+const GENERIC_NAME_WORDS = new Set(["the", "inc", "llc", "ltd", "limited", "company", "co", "corporation", "corp", "group", "holding", "holdings", "software", "solutions", "solution", "platform", "app"]);
 
 /** Canonical host identity: scheme, path, query and a leading www do not create new vendors. */
 export function canonicalCompetitorHost(input: string): string | null {
@@ -37,6 +38,16 @@ export function sameCompetitorSite(a: string, b: string): boolean {
   const hostB = canonicalCompetitorHost(b);
   if (!hostA || !hostB) return false;
   return hostA === hostB || hostA.endsWith(`.${hostB}`) || hostB.endsWith(`.${hostA}`);
+}
+
+/** Require the vendor name (or its distinctive hostname) to appear in the fetched site identity. */
+export function candidateNameMatchesSite(candidateName: string, canonicalUrl: string, visibleText: string): boolean {
+  const tokens = candidateName.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 3 && !GENERIC_NAME_WORDS.has(token));
+  if (!tokens.length) return false;
+  const host = canonicalCompetitorHost(canonicalUrl) ?? "";
+  const haystack = `${host.replace(/\./g, " ")} ${visibleText.toLowerCase()}`;
+  const matches = tokens.filter((token) => new RegExp(`\\b${token}\\b`, "i").test(haystack)).length;
+  return matches >= Math.ceil(tokens.length * 0.75);
 }
 
 function sameSite(a: string, b: string): boolean {

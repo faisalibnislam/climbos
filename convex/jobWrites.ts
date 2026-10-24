@@ -248,6 +248,7 @@ export const saveInsights = internalMutation({
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
     const i = JSON.parse(insights) as BusinessInsights;
     const v2Competitors = (i as unknown as Partial<InsightsV2>).competitors;
+    const insightsAt = Date.now();
     await ctx.db.patch(businessId, {
       insights: {
         audiences: i.audiences.slice(0, 5),
@@ -278,12 +279,13 @@ export const saveInsights = internalMutation({
               })(),
             }
           : {}),
-        generatedAt: Date.now(),
+        generatedAt: insightsAt,
         runId,
       },
       updatedAt: Date.now(),
     });
     const org = await ctx.db.get(run.orgId);
+    await ctx.scheduler.runAfter(0, internal.competitorDiscovery.seedFromInsights, { orgId: run.orgId, businessId, insightsAt });
     if (org) await notifyOwners(ctx, org._id, `Research on ${business.name} is done. Check what we learned.`, org.onboardingStep !== "done" ? `/onboarding?workspace=${org.slug}` : "settings/business");
   },
 });

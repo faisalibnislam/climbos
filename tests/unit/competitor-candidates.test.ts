@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalCompetitorHost, sameCompetitorSite, selectWatchCandidates } from "../../shared/competitors/candidates";
+import { candidateNameMatchesSite, canonicalCompetitorHost, sameCompetitorSite, selectWatchCandidates } from "../../shared/competitors/candidates";
 
 describe("competitor watch candidates", () => {
   it("normalizes a URL to its vendor host", () => {
@@ -9,6 +9,11 @@ describe("competitor watch candidates", () => {
   it("accepts scheme, www, and subdomain changes but rejects a different canonical site", () => {
     expect(sameCompetitorSite("http://www.rival.example", "https://pricing.rival.example/plans")).toBe(true);
     expect(sameCompetitorSite("https://rival.example", "https://unrelated.example")).toBe(false);
+  });
+
+  it("requires the fetched site identity to match the candidate name", () => {
+    expect(candidateNameMatchesSite("Rival Software", "https://rival.example", "Rival is a customer support platform.")).toBe(true);
+    expect(candidateNameMatchesSite("Rival Software", "https://unrelated.example", "A different company provides accounting tools.")).toBe(false);
   });
 
   it("drops own-site pages, directories, duplicate domains, and unsourced suggestions", () => {

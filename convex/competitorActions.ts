@@ -25,6 +25,20 @@ export async function readSitePage(url: string): Promise<{ page: ExtractedPage; 
   return { page: extractPageContent(response.body, response.finalUrl, { maxTextChars: 40_000, maxLinks: 80 }), finalUrl: response.finalUrl, status: response.status };
 }
 
+/** Internal, SSRF-safe homepage identity check used before an insight auto-seeds a watch. */
+export const verifyCandidateSite = internalAction({
+  args: { url: v.string() },
+  handler: async (_ctx, { url }) => {
+    const result = await readSitePage(url);
+    if ("error" in result) return { error: result.error };
+    const { page } = result;
+    return {
+      finalUrl: result.finalUrl,
+      visibleText: [page.title, page.metaDescription, ...page.headings.map((heading) => heading.text), page.text].filter(Boolean).join("\n").slice(0, 40_000),
+    };
+  },
+});
+
 /** Homepage plus the pricing page if the homepage links to one (own fetcher, no credits). */
 export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[]; canonicalUrl: string } | { error: string }> {
   const home = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
