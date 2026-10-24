@@ -15,6 +15,8 @@ import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits"
 import { appError, assertSameOrg } from "./lib/tenancy";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 
+export const MAX_RUN_COST_MULTIPLE = 1.5;
+
 /**
  * Durable job engine. A run is created with an atomic worst-case cost
  * reservation, executes as checkpointed steps (each recorded before and after
@@ -239,6 +241,8 @@ export async function createRunWithReservation(
     roles: params.roles,
     estimateMicros: estimate.costMicros,
     actualMicros: 0,
+    costCapMicros: Math.ceil(estimate.costMicros * MAX_RUN_COST_MULTIPLE),
+    inFlightMicros: 0,
     rateVersionId: rateVersion.id,
     entitlementVersionId: period.entitlementVersionId,
     routingVersionId: CURRENT_ROUTING.id,
@@ -330,7 +334,18 @@ export const beginStep = internalMutation({
         await ctx.db.patch(existing._id, { status: "uncertain", error: "Outcome unknown after interruption" });
         return { proceed: false as const, reason: "uncertain" };
       }
-      await ctx.db.patch(existing._id, { status: "running", attempt: existing.attempt + 1, leaseUntil: now + 5 * 60_000, startedAt: now });
+      const nextAttempt = existing.attempt + 1;
+      const resumeHeldCall = Boolean(existing.providerRef && existing.providerCallMicros && existing.providerCallAttempt === existing.attempt);
+      const staleCallMicros = !resumeHeldCall && existing.providerCallAttempt === existing.attempt ? (existing.providerCallMicros ?? 0) : 0;
+      await ctx.db.patch(existing._id, {
+        status: "running",
+        attempt: nextAttempt,
+        leaseUntil: now + 5 * 60_000,
+        startedAt: now,
+        providerCallMicros: resumeHeldCall ? existing.providerCallMicros : undefined,
+        providerCallAttempt: resumeHeldCall ? nextAttempt : undefined,
+      });
+      if (staleCallMicros > 0) await ctx.db.patch(run._id, { inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - staleCallMicros), updatedAt: now });
       return { proceed: true as const, stepId: existing._id, idempotencyKey: key };
     }
     const stepId = await ctx.db.insert("workflowSteps", {
@@ -374,8 +389,8 @@ const usageRecordValidator = v.object({
 
 /** Record usage for a step (also used for failed calls that still cost money). */
 export const recordUsage = internalMutation({
-  args: { stepId: v.id("workflowSteps"), records: v.array(usageRecordValidator) },
-  handler: async (ctx, { stepId, records }) => {
+  args: { stepId: v.id("workflowSteps"), records: v.array(usageRecordValidator), settleProviderCall: v.optional(v.boolean()) },
+  handler: async (ctx, { stepId, records, settleProviderCall }) => {
     const step = await ctx.db.get(stepId);
     if (!step) return;
     const run = await ctx.db.get(step.runId);
@@ -394,8 +409,46 @@ export const recordUsage = internalMutation({
         createdAt: Date.now(),
       });
     }
-    await ctx.db.patch(stepId, { costMicros: step.costMicros + total, provider: records[0]?.provider, model: records[0]?.model });
-    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, updatedAt: Date.now() });
+    const heldCall = settleProviderCall && step.providerCallAttempt === step.attempt ? (step.providerCallMicros ?? 0) : 0;
+    await ctx.db.patch(stepId, {
+      costMicros: step.costMicros + total,
+      provider: records[0]?.provider,
+      model: records[0]?.model,
+      ...(heldCall > 0 ? { providerCallMicros: undefined, providerCallAttempt: undefined } : {}),
+    });
+    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - heldCall), updatedAt: Date.now() });
+  },
+});
+
+/** Atomically hold the worst-case cost of a provider turn before it starts. */
+export const claimProviderCall = internalMutation({
+  args: { runId: v.id("workflowRuns"), stepId: v.id("workflowSteps"), costMicros: v.number() },
+  handler: async (ctx, { runId, stepId, costMicros }) => {
+    const [run, step] = await Promise.all([ctx.db.get(runId), ctx.db.get(stepId)]);
+    if (!run || !step || step.runId !== runId || step.orgId !== run.orgId) return { ok: false as const, message: "Provider call is not linked to this run." };
+    if (!Number.isSafeInteger(costMicros) || costMicros <= 0) return { ok: false as const, message: "Provider call budget must be a positive whole number of microcredits." };
+    if (step.providerCallMicros && step.providerCallAttempt === step.attempt) return { ok: true as const, heldMicros: step.providerCallMicros };
+    const cap = run.costCapMicros ?? Math.ceil(run.estimateMicros * MAX_RUN_COST_MULTIPLE);
+    const inFlight = run.inFlightMicros ?? 0;
+    if (!Number.isSafeInteger(cap) || run.actualMicros + inFlight + costMicros > cap) {
+      return { ok: false as const, message: "This job reached its reserved AI spending limit. Progress is saved; retry to continue." };
+    }
+    await ctx.db.patch(stepId, { providerCallMicros: costMicros, providerCallAttempt: step.attempt });
+    await ctx.db.patch(runId, { inFlightMicros: inFlight + costMicros, updatedAt: Date.now() });
+    return { ok: true as const, heldMicros: costMicros };
+  },
+});
+
+/** Release a call claim when the provider returned no billable usage. */
+export const releaseProviderCall = internalMutation({
+  args: { runId: v.id("workflowRuns"), stepId: v.id("workflowSteps") },
+  handler: async (ctx, { runId, stepId }) => {
+    const [run, step] = await Promise.all([ctx.db.get(runId), ctx.db.get(stepId)]);
+    if (!run || !step || step.runId !== runId || step.orgId !== run.orgId) return false;
+    if (step.providerCallAttempt !== step.attempt || !step.providerCallMicros) return true;
+    await ctx.db.patch(stepId, { providerCallMicros: undefined, providerCallAttempt: undefined });
+    await ctx.db.patch(runId, { inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - step.providerCallMicros), updatedAt: Date.now() });
+    return true;
   },
 });
 
@@ -488,7 +541,8 @@ export const reserveAdditional = internalMutation({
       walletMicros: reservation.walletMicros + decision.walletMicros,
       topupMicros: reservation.topupMicros + decision.topupMicros,
     });
-    await ctx.db.patch(run._id, { estimateMicros: run.estimateMicros + costMicros, updatedAt: Date.now() });
+    const estimateMicros = run.estimateMicros + costMicros;
+    await ctx.db.patch(run._id, { estimateMicros, costCapMicros: Math.ceil(estimateMicros * MAX_RUN_COST_MULTIPLE), updatedAt: Date.now() });
     return { ok: true as const };
   },
 });

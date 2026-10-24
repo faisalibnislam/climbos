@@ -8,7 +8,7 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
-import { estimateTokens, MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../shared/ai/models";
+import { estimateTokens, MODEL_SPECS, runtimeModel, VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import {
   type AdDraftsOutput,
   type BusinessInsights,
@@ -87,7 +87,7 @@ import { adjustmentsFrom, candidatesFor, CYCLE_DAYS, DIMENSIONS, entryPriceUsdMo
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
-import { estimateRun } from "./engine";
+import { estimateRun, MAX_RUN_COST_MULTIPLE } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
@@ -103,7 +103,6 @@ function fitMetrics(json: string): string {
 }
 
 /** A run may spend at most this multiple of its reservation (spec §24). */
-const RUN_COST_CAP = 1.5;
 const COST_CAP_MESSAGE = "This job needed more AI work than planned, so we stopped it to protect your credits. Progress is saved; retry to continue.";
 
 class JobStop extends Error {
@@ -366,11 +365,24 @@ async function runAgentTask<T>(
         const stepId = stepScope.getStore() ?? null;
         const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);
         const ref = background && stepId ? await ctx.runQuery(internal.engine.stepProviderRef, { stepId }) : null;
-        // Hard cost cap (spec §24): a new call never starts once the run has spent 1.5× what was reserved.
-        // Resuming an answer already paid for is always allowed.
-        if (!ref) {
+        let providerCallHeld = false;
+        if (stepId) {
+          const inputText = JSON.stringify({ system: req.system, messages: req.messages, tools: req.customTools ?? [] });
+          const inputBudget = Math.min(MODEL_SPECS[modelKey].contextWindow, Math.max(40_000, estimateTokens(inputText) + 2_000));
+          const outputBudget = Math.min(req.maxTokens, MODEL_SPECS[modelKey].maxOutputTokens);
+          const modelMicros = worstCaseStepMicros(modelKey, inputBudget, outputBudget, rates);
+          const searchMicros = Math.ceil((req.webSearch?.maxUses ?? 0) * rates.services.searchCall * 1_000_000);
+          const claim = await ctx.runMutation(internal.engine.claimProviderCall, {
+            runId: job.run._id,
+            stepId,
+            costMicros: modelMicros + searchMicros,
+          });
+          if (!claim.ok) throw new JobStop("cost_cap", claim.message || COST_CAP_MESSAGE);
+          providerCallHeld = true;
+        } else {
+          // V1 jobs don't have phase checkpoints, so retain their run-level hard stop.
           const live = await ctx.runQuery(internal.engine.getRun, { runId: job.run._id });
-          if (live && live.run.estimateMicros > 0 && live.run.actualMicros >= live.run.estimateMicros * RUN_COST_CAP) throw new JobStop("cost_cap", COST_CAP_MESSAGE);
+          if (live && live.run.estimateMicros > 0 && live.run.actualMicros >= live.run.estimateMicros * MAX_RUN_COST_MULTIPLE) throw new JobStop("cost_cap", COST_CAP_MESSAGE);
         }
         const q = {
           ...req,
@@ -389,26 +401,44 @@ async function runAgentTask<T>(
               }
             : {}),
         };
-        let r = await call(q, rates);
-        if (!r.ok && r.kind === "pending") {
-          // A page-reading turn may have finished calls before yielding: meter them now (the resume bills only what follows).
-          if (stepId && r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates) });
-          throw new AgentYield();
+        let keepClaimForResume = false;
+        try {
+          let r = await call(q, rates);
+          if (!r.ok && r.kind === "pending") {
+            // A page-reading turn may have finished calls before yielding: record partial usage, but keep the claim for the same background response.
+            if (stepId && r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates) });
+            keepClaimForResume = Boolean(ref || background);
+            throw new AgentYield();
+          }
+          // A failed background answer can't be resumed: the next attempt starts fresh.
+          if (!r.ok && ref && stepId) await ctx.runMutation(internal.engine.setStepProviderRef, { stepId, ref: undefined });
+          if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
+            if (stepId) {
+              await ctx.runMutation(internal.engine.releaseProviderCall, { runId: job.run._id, stepId });
+              const inputText = JSON.stringify({ system: req.system, messages: req.messages, tools: req.customTools ?? [] });
+              const inputBudget = Math.min(MODEL_SPECS[modelKey].contextWindow, Math.max(40_000, estimateTokens(inputText) + 2_000));
+              const outputBudget = Math.min(req.maxTokens, MODEL_SPECS[modelKey].maxOutputTokens);
+              const retryCost = 2 * (worstCaseStepMicros(modelKey, inputBudget, outputBudget, rates) + Math.ceil((req.webSearch?.maxUses ?? 0) * rates.services.searchCall * 1_000_000));
+              const retryClaim = await ctx.runMutation(internal.engine.claimProviderCall, { runId: job.run._id, stepId, costMicros: retryCost });
+              if (!retryClaim.ok) throw new JobStop("cost_cap", retryClaim.message || COST_CAP_MESSAGE);
+            }
+            await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
+            r = await call(q, rates);
+          }
+          if (stepId && (r.usage.calls > 0 || r.costMicros > 0)) {
+            await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates), settleProviderCall: true });
+            providerCallHeld = false;
+          }
+          const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
+          if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
+            await ctx.runMutation(internal.circuits.recordProviderResult, { provider, ok: healthy, billing: !r.ok && r.kind === "spend_limit", reason: r.ok ? undefined : r.message.slice(0, 120) });
+          }
+          return r;
+        } finally {
+          if (providerCallHeld && !keepClaimForResume && stepId) {
+            await ctx.runMutation(internal.engine.releaseProviderCall, { runId: job.run._id, stepId });
+          }
         }
-        // A failed background answer can't be resumed: the next attempt starts fresh.
-        if (!r.ok && ref && stepId) await ctx.runMutation(internal.engine.setStepProviderRef, { stepId, ref: undefined });
-        if (!r.ok && r.kind === "rate_limited" && (r.retryAfterMs ?? 0) <= 15_000) {
-          await sleep((r.retryAfterMs ?? 3000) + Math.floor(Math.random() * 1000));
-          r = await call(q, rates);
-        }
-        if (stepId && (r.usage.calls > 0 || r.costMicros > 0)) {
-          await ctx.runMutation(internal.engine.recordUsage, { stepId, records: claudeUsageRecords(modelKey, r, rates) });
-        }
-        const healthy = r.ok || ["invalid_output", "refused"].includes(r.kind);
-        if (healthy || ["provider_error", "timeout", "spend_limit"].includes(r.ok ? "" : r.kind)) {
-          await ctx.runMutation(internal.circuits.recordProviderResult, { provider, ok: healthy, billing: !r.ok && r.kind === "spend_limit", reason: r.ok ? undefined : r.message.slice(0, 120) });
-        }
-        return r;
       };
       // No fallback model: an outage stops the job with its progress saved (Retry continues it).
       return attemptOn(req.modelKey);

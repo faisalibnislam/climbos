@@ -2046,6 +2046,9 @@ export default defineSchema({
     roles: v.array(agentRoleValidator),
     estimateMicros: v.number(),
     actualMicros: v.number(),
+    /** Hard 1.5x ceiling and provider-call reservations; optional on legacy runs. */
+    costCapMicros: v.optional(v.number()),
+    inFlightMicros: v.optional(v.number()),
     reservationId: v.optional(v.id("usageReservations")),
     rateVersionId: v.string(),
     entitlementVersionId: v.string(),
@@ -2109,6 +2112,9 @@ export default defineSchema({
     model: v.optional(v.string()),
     /** Provider background response id for a long turn (resumed by the next action instead of rerun). */
     providerRef: v.optional(v.string()),
+    /** Worst-case spend held for the current provider turn; reconciled with actual usage. */
+    providerCallMicros: v.optional(v.number()),
+    providerCallAttempt: v.optional(v.number()),
     costMicros: v.number(),
     /** Checkpointed step output (JSON) so a resumed run skips completed steps. */
     output: v.optional(v.string()),
