@@ -1375,6 +1375,14 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
   return [...factIndexes, ...citationIssues, ...claimIssues];
 }
 
+/** Conversion findings must point to a page supplied to this run, not a plausible-looking URL. */
+export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2Schema>, input: AgentInput): LintIssue[] {
+  return lintAvailableSourceUrls(
+    out.findings.map((finding, i) => ({ url: finding.sourceUrl, path: `findings[${i}].sourceUrl` })),
+    input,
+  );
+}
+
 /* ---------------- Rubrics ---------------- */
 
 /** A primary skill's rubric, with other skills' checklists available to the critic via criticSkills. */
@@ -1706,7 +1714,7 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
 
 export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof ConversionAuditV2Schema>> {
   return base(
-    { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["owner-brevity", "conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: lintGeneric },
+    { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["owner-brevity", "conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: (out, input) => [...lintGeneric(out, input), ...lintConversionAuditSources(out, input)] },
     o,
     "lean",
   );

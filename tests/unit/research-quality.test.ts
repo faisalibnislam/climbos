@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CRITIC_RULES, OPERATING_RULES, RESEARCH_EVIDENCE_RULES } from "../../shared/agents/runtime";
 import { playsTask } from "../../shared/agents/planTasks";
-import { lintInsightSources, researchFor } from "../../shared/agents/specs";
+import { lintConversionAuditSources, lintInsightSources, researchFor } from "../../shared/agents/specs";
 import { businessResearchContext, factsBlock } from "../../shared/ai/tasks";
 
 describe("research source assessment", () => {
@@ -53,6 +53,23 @@ describe("research source assessment", () => {
     const issues = lintInsightSources({ ...base, vocPhrases: [{ phrase: "Made up", theme: "value", sourceUrl: "https://invented.example/reviews" }] }, input);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ severity: "error", rule: "citation", path: "vocPhrases[0].sourceUrl" });
+  });
+
+  it("accepts website audit findings only when their cited page was actually read", () => {
+    const input = {
+      task: "Audit the business website",
+      brief: "Example Co",
+      facts: [],
+      availableSourceUrls: ["https://example.com/pricing/"],
+    };
+    const finding = { area: "pricing", observation: "The price is hard to find.", recommendation: "Make the plan price easier to locate.", impact: "medium" as const };
+    const audit = { clarityVerdict: "Clear offer", messageMatch: "Matches the page title", prioritizedFixes: [], quickWins: [] };
+    expect(lintConversionAuditSources({ ...audit, findings: [{ ...finding, sourceUrl: "https://example.com/pricing" }] }, input)).toEqual([]);
+    const issues = lintConversionAuditSources({ ...audit, findings: [{ ...finding, sourceUrl: "https://invented.example/pricing" }, { ...finding, sourceUrl: "" }] }, input);
+    expect(issues).toMatchObject([
+      { severity: "error", rule: "citation", path: "findings[0].sourceUrl" },
+      { severity: "error", rule: "citation", path: "findings[1].sourceUrl" },
+    ]);
   });
 
   it("requires each structured competitor comparison to cite a page read in this run", () => {
