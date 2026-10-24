@@ -154,6 +154,10 @@ describe("custom specialist profiles", () => {
     expect(profileView.agents[0]?.recentRuns[0]).toMatchObject({ id: message.runId, rating: "needs_work", feedbackNote: "That request was outside the profile's research scope." });
     expect(profileView.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", windowDays: 90, sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId, rating: "helpful", note: "The research checklist was useful." });
+    await t.run(async (ctx) => {
+      const rating = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", message.runId!).eq("userId", alice.userId)).unique();
+      if (rating) await ctx.db.patch(rating._id, { createdAt: Date.now() - 100 * 86_400_000, updatedAt: Date.now() });
+    });
     const revisedView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
     expect(revisedView.agents[0]?.workspaceReportedFeedback).toMatchObject({ sampleSize: 1, helpful: 1, needsWork: 0 });
     const { messageId: nextMessageId } = await alice.client.mutation(api.workspace.runCustomAgent, { slug: aliceWorkspace.slug, agentId: id, request: "Review this week's customer research." });

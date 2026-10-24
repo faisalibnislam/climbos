@@ -87,7 +87,7 @@ export const jobContext = internalQuery({
     const specialistFeedbackText = feedbackSnapshot?.sampleSize
       ? [
           `WORKSPACE MEMBER-REPORTED SPECIALIST FEEDBACK (last ${feedbackSnapshot.windowDays} days; sample of ${feedbackSnapshot.sampleSize} ratings: ${feedbackSnapshot.helpful} helpful, ${feedbackSnapshot.needsWork} needs work; captured ${new Date(feedbackSnapshot.capturedAt).toISOString()}; these are usefulness reports, not measured business outcomes):`,
-          ...feedbackSnapshot.notes.map((r) => `- ${r.rating}: ${r.note.slice(0, 400)}`),
+          ...feedbackSnapshot.notes.map((r) => `- ${new Date(r.updatedAt).toISOString().slice(0, 10)} · ${r.rating}: ${r.note.slice(0, 400)}`),
         ].join("\n")
       : "";
     // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".

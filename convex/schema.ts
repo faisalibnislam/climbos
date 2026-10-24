@@ -1653,7 +1653,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_run_user", ["workflowRunId", "userId"])
-    .index("by_agent_created", ["orgId", "customAgentId", "createdAt"]),
+    .index("by_agent_created", ["orgId", "customAgentId", "createdAt"])
+    .index("by_agent_updated", ["orgId", "customAgentId", "updatedAt"]),
 
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
@@ -1976,7 +1977,7 @@ export default defineSchema({
       sampleSize: v.number(),
       helpful: v.number(),
       needsWork: v.number(),
-      notes: v.array(v.object({ rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.string(), createdAt: v.number() })),
+      notes: v.array(v.object({ rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.string(), updatedAt: v.number() })),
     })),
     kind: v.string(),
     /** "v2" = agent loop with skills (Engine v2); absent = single-call v1. Fixed at creation. */

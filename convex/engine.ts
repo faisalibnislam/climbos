@@ -185,7 +185,7 @@ export async function createRunWithReservation(
     if (!params.customAgentParentRunId) {
       const feedback = await ctx.db
         .query("customAgentFeedback")
-        .withIndex("by_agent_created", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", feedbackSince))
+        .withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("updatedAt", feedbackSince))
         .order("desc")
         .take(100);
       customAgentFeedbackSnapshot = {
@@ -195,7 +195,7 @@ export async function createRunWithReservation(
         sampleSize: feedback.length,
         helpful: feedback.filter((entry) => entry.rating === "helpful").length,
         needsWork: feedback.filter((entry) => entry.rating === "needs_work").length,
-        notes: feedback.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, createdAt: entry.createdAt })),
+        notes: feedback.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, updatedAt: entry.updatedAt })),
       };
     }
     if (profile.monthlyBudgetCredits !== undefined) {
