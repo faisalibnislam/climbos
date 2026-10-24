@@ -111,7 +111,18 @@ const ResultsOutputSchema = z.object({
   gaps: z.array(z.object({ metric: z.string(), message: z.string(), fix: z.string() })),
 });
 const JobOutputSchema = z.object({ id: z.string(), title: z.string(), kind: z.string(), status: z.string(), roles: z.array(z.string()), brief: z.string().nullable(), createdAt: z.number(), updatedAt: z.number(), estimateMicros: z.number(), actualMicros: z.number(), userMessage: z.string().nullable(), isFixture: z.boolean(), engine: z.string().nullable(), output: z.string().nullable(), steps: z.array(z.object({ label: z.string(), status: z.string(), role: z.string().nullable(), kind: z.string() })), artifacts: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), kind: z.string() })) });
-const ProspectOutputSchema = z.object({ status: z.string(), icp: z.string().nullable(), prospectCount: z.number().int().nonnegative(), prospectsTruncated: z.boolean(), prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })), emails: z.array(z.object({ day: z.number(), subject: z.string() })), bookingPage: z.string().nullable(), upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })), pipeline: z.json() });
+const ProspectOutputSchema = z.object({
+  status: z.string(),
+  research: z.object({ campaignStatus: z.string(), runStatus: z.string().nullable(), runMessage: z.string().nullable(), requestedCount: z.number().nullable() }),
+  icp: z.string().nullable(),
+  prospectCount: z.number().int().nonnegative(),
+  prospectsTruncated: z.boolean(),
+  prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })),
+  emails: z.array(z.object({ day: z.number(), subject: z.string() })),
+  bookingPage: z.string().nullable(),
+  upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })),
+  pipeline: z.json(),
+});
 const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
 const RunIdOutputSchema = z.object({ runId: z.string() });
 const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
@@ -362,6 +373,12 @@ export const CLIMB_TOOLS: ClimbTool[] = [
       const o = await c.query(api.outbound.get, { slug });
       return {
         status: o.campaign?.status ?? "none",
+        research: {
+          campaignStatus: o.campaign?.status ?? "none",
+          runStatus: o.campaign?.run?.status ?? null,
+          runMessage: o.campaign?.run?.message ? short(o.campaign.run.message, 240) : null,
+          requestedCount: o.campaign?.brief.count ?? null,
+        },
         icp: o.campaign?.icp?.summary ?? null,
         prospectCount: o.prospects.length,
         prospectsTruncated: o.prospects.length > 40,

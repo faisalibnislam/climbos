@@ -79,7 +79,7 @@ describe("Climb AI times and costs", () => {
     expect(input("get_results").safeParse({ days: 365 }).success).toBe(true);
     expect(input("get_weekly_report").safeParse({ weeksAgo: 13 }).success).toBe(false);
     expect(input("find_customers").safeParse({ count: 31 }).success).toBe(false);
-    expect(input("review_prospects").safeParse({ prospectIds: [] , stage: "approved" }).success).toBe(false);
+    expect(input("review_prospects").safeParse({ prospectIds: [], stage: "approved" }).success).toBe(false);
   });
 
   it("constrains autopilot schedules and exports valid model tool schemas", () => {
