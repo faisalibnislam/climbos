@@ -8,6 +8,8 @@
  */
 
 export interface CohortPayment {
+  /** Provider namespace for customerRef; optional only for legacy callers. */
+  source?: string;
   customerRef?: string;
   occurredAt: number;
   amountMinor: number;
@@ -43,12 +45,14 @@ export function computeCohorts(
   const maxMonths = options.maxMonths ?? 12;
   const nowIndex = monthIndex(monthKey(options.nowMs));
   const firstMonth = new Map<string, number>();
+  const customerKey = (payment: CohortPayment) => `${payment.source ?? ""}\u0000${payment.customerRef}`;
   const valid = payments
     .filter((p) => p.customerRef && p.kind !== "refund" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0)
     .sort((a, b) => a.occurredAt - b.occurredAt);
   for (const p of valid) {
     const idx = monthIndex(monthKey(p.occurredAt));
-    if (!firstMonth.has(p.customerRef!)) firstMonth.set(p.customerRef!, idx);
+    const customer = customerKey(p);
+    if (!firstMonth.has(customer)) firstMonth.set(customer, idx);
   }
   const cohorts = new Map<number, { members: Set<string>; active: Map<number, Set<string>>; revenue: Map<number, number> }>();
   for (const [customer, idx] of firstMonth) {
@@ -57,12 +61,13 @@ export function computeCohorts(
     cohorts.set(idx, c);
   }
   for (const p of valid) {
-    const start = firstMonth.get(p.customerRef!)!;
+    const customer = customerKey(p);
+    const start = firstMonth.get(customer)!;
     const k = monthIndex(monthKey(p.occurredAt)) - start;
     if (k < 0 || k >= maxMonths) continue;
     const c = cohorts.get(start)!;
     const set = c.active.get(k) ?? new Set<string>();
-    set.add(p.customerRef!);
+    set.add(customer);
     c.active.set(k, set);
     c.revenue.set(k, (c.revenue.get(k) ?? 0) + p.amountMinor - p.refundedMinor);
   }

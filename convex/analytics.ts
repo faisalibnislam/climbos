@@ -375,7 +375,15 @@ export const cohorts = query({
       .query("revenueEvents")
       .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", start.getTime()))
       .take(10_000);
-    const result = computeCohorts(rows, { currency: org.currency, nowMs: now, maxMonths: 6 });
+    const result = computeCohorts(rows.map((row) => ({
+      source: row.source,
+      customerRef: row.customerRef,
+      occurredAt: row.occurredAt,
+      amountMinor: row.amountMinor,
+      refundedMinor: row.refundedMinor,
+      kind: row.kind,
+      currency: row.currency,
+    })), { currency: org.currency, nowMs: now, maxMonths: 6 });
     return {
       currency: org.currency,
       truncated: rows.length >= 10_000,

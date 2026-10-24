@@ -40,6 +40,8 @@ The attached improvement brief's Issue 57 now has a tenant-scoped, trailing-365-
 
 The same source-scoped identity rule now applies to Issue 26/29's first-recorded-paying-customer metric. Its history lookup uses a new `(org, source, customer, occurredAt)` index so an equal ID from a different billing provider cannot make a paying customer disappear from the count. Cross-provider identity resolution remains unavailable and is disclosed in the metric definition.
 
+Monthly cohort size, repeat activity, and cohort revenue now use the same source-scoped customer identity. Equal provider IDs no longer merge unrelated people into one retention history; cross-provider person resolution remains unverified.
+
 Billing attribution also scopes customer touches and refund/order matching by source. New revenue imports and demo touches store their source; a legacy touch without source is used only if the customer reference appears in one source in the current revenue set. When that legacy identity is ambiguous, the event remains unattributed rather than receiving another provider's channel credit.
 
 Issue 58 now receives a bounded 365-day tagged-source concentration summary in agent context when non-demo billing events include recognized UTM platforms. It reports top-one/top-three share among positive net revenue assigned to recognized tags and the number of tagged conversions, with explicit association and completeness limits. This cannot detect untagged or offline dependency, policy exposure, or the full platform mix; it must not be treated as proof of causation or as a standalone diversification recommendation.

@@ -33,4 +33,15 @@ describe("monthly cohorts", () => {
     expect(rows[1].size).toBe(1);
     expect(rows[1].activeCustomers).toEqual([1, null, null, null]);
   });
+
+  it("keeps matching customer IDs from different billing sources in separate cohort members", () => {
+    const result = computeCohorts([
+      pay("same-id", "2026-07-05", 1_000, { source: "stripe" }),
+      pay("same-id", "2026-07-06", 2_000, { source: "polar" }),
+      pay("same-id", "2026-08-05", 1_000, { source: "stripe" }),
+    ], { currency: "USD", nowMs: d("2026-09-02"), maxMonths: 3 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ size: 2, activeCustomers: [2, 1, null], retention: [1, 0.5, null], revenueMinor: [3_000, 1_000, null] });
+  });
 });
