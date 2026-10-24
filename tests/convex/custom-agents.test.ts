@@ -112,16 +112,16 @@ describe("custom specialist profiles", () => {
     await t.run(async (ctx) => {
       const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
       const now = Date.now();
-      await ctx.db.insert("workflowRuns", {
+      const prior = {
         orgId: org._id,
         customAgentId: id,
         kind: "climb_chat",
         title: "Prior specialist request",
-        status: "verified",
+        status: "verified" as const,
         input: "{}",
         roles: [],
-        estimateMicros: 10_000_000,
-        actualMicros: 10_000_000,
+        estimateMicros: 5_000_000,
+        actualMicros: 5_000_000,
         rateVersionId: "verified-2026-10-17",
         entitlementVersionId: "ent-credits-2026-10-18",
         routingVersionId: "r1",
@@ -130,8 +130,9 @@ describe("custom specialist profiles", () => {
         isFixture: true,
         createdAt: now,
         updatedAt: now,
-        finishedAt: now,
-      });
+      };
+      await ctx.db.insert("workflowRuns", prior);
+      await ctx.db.insert("workflowRuns", { ...prior, status: "paused", estimateMicros: 5_000_000, actualMicros: 0, createdAt: now + 1, updatedAt: now + 1 });
     });
 
     await expect(owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Draft one new campaign idea." })).rejects.toThrow(/monthly budget/);

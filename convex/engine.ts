@@ -179,15 +179,17 @@ export async function createRunWithReservation(
     } else if (estimate.costMicros > creditsToMicros(runCapCredits)) {
       throw appError("LIMIT_REACHED", `This request exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
     }
-    const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
-    const monthlyRuns = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", monthStart)).take(501);
-    if (monthlyRuns.length > 500) throw appError("LIMIT_REACHED", "This specialist reached the monthly run limit for safe budget accounting.");
-    const usedMicros = monthlyRuns.reduce((sum, run) => {
-      const activeRun = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status);
-      return sum + (activeRun ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros);
-    }, 0);
-    if (profile.monthlyBudgetCredits !== undefined && usedMicros + estimate.costMicros > creditsToMicros(profile.monthlyBudgetCredits)) {
-      throw appError("LIMIT_REACHED", `This would exceed ${profile.name}'s ${profile.monthlyBudgetCredits}-credit monthly budget.`, { reason: "custom_agent_budget" });
+    if (profile.monthlyBudgetCredits !== undefined) {
+      const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+      const monthlyRuns = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", monthStart)).take(501);
+      if (monthlyRuns.length > 500) throw appError("LIMIT_REACHED", "This specialist reached the monthly run limit for safe budget accounting.");
+      const usedMicros = monthlyRuns.reduce((sum, run) => {
+        const reservedRun = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(run.status);
+        return sum + (reservedRun ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros);
+      }, 0);
+      if (usedMicros + estimate.costMicros > creditsToMicros(profile.monthlyBudgetCredits)) {
+        throw appError("LIMIT_REACHED", `This would exceed ${profile.name}'s ${profile.monthlyBudgetCredits}-credit monthly budget.`, { reason: "custom_agent_budget" });
+      }
     }
   }
   const period = access.period;
