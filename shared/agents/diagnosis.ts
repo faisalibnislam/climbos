@@ -62,7 +62,7 @@ export interface StageReading {
   rate: number | null;
   /** Reference range and its grade, when one exists; null means no reliable benchmark. */
   reference: string | null;
-  verdict: "weak" | "ok" | "unknown";
+  verdict: "weak" | "watch" | "ok" | "unknown";
   /** 90% credible range of the true rate (uniform prior), when counts were given. */
   likely?: { low: number; high: number };
   /** P(true rate < the reference's low end), when a reference applies. */
@@ -123,6 +123,8 @@ const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 const r2 = (x: number) => Math.round(x * 100) / 100;
 const SAAS = new Set(["b2b_saas", "b2c_saas", "ai_product", "developer_tools", "enterprise_software"]);
 const T = DECISION_THRESHOLDS;
+/** Screening threshold only; reaching it is not evidence that capacity is binding. */
+const CAPACITY_WATCH_RATIO = 0.8;
 
 const COMPETING: Record<BindingConstraint | "unknown", string> = {
   demand: "The few who arrive may be the wrong people (positioning or targeting), not too few people.",
@@ -174,7 +176,13 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     } else if (f.newCustomers !== undefined && Number.isFinite(f.newCustomers) && f.newCustomers >= 0) {
       const monthly = perMonth(f.newCustomers);
       const use = monthly / cap;
-      readings.push({ stage: "capacity", observed: `${Math.round(monthly)} new customers a month against room for ${cap}`, rate: use, reference: null, verdict: use >= 0.8 ? "weak" : "ok" });
+      readings.push({
+        stage: "capacity",
+        observed: `${Math.round(monthly * 10) / 10} new customers a month against room for ${cap}`,
+        rate: use,
+        reference: null,
+        verdict: use >= 1 ? "weak" : use >= CAPACITY_WATCH_RATIO ? "watch" : "ok",
+      });
     }
   }
   // Retention: only against a reference that exists (SaaS).
@@ -271,7 +279,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     missing.unshift(...conflicts.map((c) => `Resolve: ${c}`));
     return out("unknown", "conflicting_inputs", []);
   }
-  if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, [capR.rate === null ? "The owner reported no capacity for additional customers." : "Capacity is at least 80% used."], [COMPETING.delivery])]);
+  if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, [capR.rate === null ? "The owner reported no capacity for additional customers." : "Recent customer volume reached or exceeded the owner's stated monthly limit."], [COMPETING.delivery])]);
   if (retR?.verdict === "weak") return out("retention", "supported", [hyp("retention", retR.observed, null, [`Above the ${REFERENCES.saasChurn.text}.`], [COMPETING.retention])]);
 
   // Is lead → paid weak at all? Only with a reference for this signup model, and only on posterior evidence.
@@ -309,7 +317,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 /** The diagnosis as the plays and plan agents read it. */
 export function diagnosisBrief(d: Diagnosis): string {
   const reading = (r: StageReading) =>
-    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
+    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : r.verdict === "watch" ? " → near owner-stated capacity; leave room for normal variation" : ""}`;
   const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
   if (d.status === "conflicting_inputs")
     return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");
