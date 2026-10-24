@@ -103,4 +103,85 @@ describe("AI search visibility observations", () => {
       answerExcerpt: undefined,
     })).rejects.toThrow(/failed or empty response/);
   });
+
+  it("saves immutable comparable query panels and reports unobserved panel questions", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ai-search-panel@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Example Co" });
+    const panelId = await owner.client.mutation(api.aiSearchVisibility.createPanel, {
+      slug,
+      name: "Core buyer questions",
+      queries: [
+        { provider: "chatgpt", query: "best invoice tool for contractors", location: "United States" },
+        { provider: "perplexity", query: "best invoice tool for contractors", location: "United States" },
+      ],
+    });
+    expect(await owner.client.query(api.aiSearchVisibility.listPanels, { slug })).toMatchObject([
+      { id: panelId, name: "Core buyer questions", status: "active", queryCount: 2 },
+    ]);
+
+    const checkedAt = Date.now() - 30_000;
+    await owner.client.mutation(api.aiSearchVisibility.recordObservation, {
+      slug,
+      panelId,
+      panelQueryKey: "q1",
+      provider: "chatgpt",
+      query: "best invoice tool for contractors",
+      location: "United States",
+      checkedAt,
+      answerStatus: "answered",
+      brandMention: "yes",
+      sentiment: "neutral",
+      citedUrls: [],
+      competitorMentions: ["Other Co"],
+      answerExcerpt: "Example Co and Other Co are possible options.",
+    });
+
+    const report = await owner.client.query(api.aiSearchVisibility.report, { slug, panelId });
+    expect(report.panel).toMatchObject({
+      id: panelId,
+      name: "Core buyer questions",
+      status: "active",
+      queryCount: 2,
+      queries: [
+        { key: "q1", observationCount: 1, answered: 1, noAnswer: 0, failed: 0, summary: { samples: { answered: 1 } } },
+        { key: "q2", observationCount: 0, answered: 0, noAnswer: 0, failed: 0, summary: null },
+      ],
+    });
+    expect(report.observations[0]).toMatchObject({ panelId, panelQueryKey: "q1" });
+
+    await expect(owner.client.mutation(api.aiSearchVisibility.recordObservation, {
+      slug,
+      panelId,
+      panelQueryKey: "q1",
+      provider: "gemini",
+      query: "best invoice tool for contractors",
+      location: "United States",
+      checkedAt,
+      answerStatus: "answered",
+      brandMention: "no",
+      sentiment: "unknown",
+      citedUrls: [],
+      competitorMentions: [],
+      answerExcerpt: "The saved panel specifies ChatGPT.",
+    })).rejects.toThrow(/must match the saved panel query/);
+
+    const stranger = await asNewUser(t, "ai-search-panel-stranger@example.com");
+    await stranger.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(stranger.client.query(api.aiSearchVisibility.report, { slug, panelId })).rejects.toThrow();
+  });
+
+  it("rejects duplicate provider-query-location entries in a panel", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ai-search-panel-duplicate@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Example Co" });
+    await expect(owner.client.mutation(api.aiSearchVisibility.createPanel, {
+      slug,
+      name: "Duplicates",
+      queries: [
+        { provider: "chatgpt", query: "best tool", location: "US" },
+        { provider: "chatgpt", query: " Best   Tool ", location: "us" },
+      ],
+    })).rejects.toThrow(/same provider, question and location twice/);
+  });
 });

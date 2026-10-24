@@ -1560,8 +1560,26 @@ export default defineSchema({
     .index("by_strategy", ["strategyId"]),
 
   /** Sampled AI-search answers, entered from observations; separate from content-readiness heuristics and business outcomes. */
+  aiSearchPanels: defineTable({
+    orgId: v.id("organizations"),
+    name: v.string(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    /** Query sets are immutable; create a new panel to change prompts or locations. */
+    queries: v.array(v.object({
+      key: v.string(),
+      provider: v.union(v.literal("chatgpt"), v.literal("gemini"), v.literal("perplexity"), v.literal("google_ai_overview"), v.literal("other")),
+      query: v.string(),
+      location: v.optional(v.string()),
+    })),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"]),
+
   aiSearchObservations: defineTable({
     orgId: v.id("organizations"),
+    panelId: v.optional(v.id("aiSearchPanels")),
+    panelQueryKey: v.optional(v.string()),
     provider: v.union(v.literal("chatgpt"), v.literal("gemini"), v.literal("perplexity"), v.literal("google_ai_overview"), v.literal("other")),
     query: v.string(),
     location: v.optional(v.string()),
@@ -1577,6 +1595,7 @@ export default defineSchema({
     enteredAt: v.number(),
   })
     .index("by_org_checked", ["orgId", "checkedAt"])
+    .index("by_org_panel_checked", ["orgId", "panelId", "checkedAt"])
     .index("by_org_query_checked", ["orgId", "query", "checkedAt"]),
 
   campaigns: defineTable({
