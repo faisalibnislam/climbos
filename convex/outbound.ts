@@ -152,6 +152,7 @@ export const get = query({
           collaborationConcept: p.collaborationConcept ?? null,
           check: p.check ?? null,
           firstLine: p.firstLine,
+          firstLineEvidenceUrl: p.firstLineEvidenceUrl ?? null,
           stage: p.stage,
         })),
       funnel,
@@ -633,16 +634,21 @@ export const saveResult = internalMutation({
     const found = a.prospects as ProspectsOutput;
     const outreach = a.outreach as OutreachOutput;
     const now = Date.now();
-    const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f.line]));
+    const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f]));
     const seen = new Set<string>();
     let added = 0;
     let merged = 0;
+    let omittedCreatorOpeners = 0;
     for (const p of found.prospects) {
+      const opener = lines.get(p.company.trim().toLowerCase());
+      const openerSource = c.kind === "creators" && opener?.evidenceUrl && (p.contentSamples ?? []).some((sample) => sample.url === opener.evidenceUrl) ? opener.evidenceUrl : undefined;
+      const firstLine = c.kind === "creators" ? (openerSource ? opener?.line ?? "" : "") : opener?.line ?? "";
       // Creators share platform domains (instagram.com/…): key them by platform + handle instead.
       const ident = c.kind === "creators" ? creatorKey(p.website) : { key: domainOf(p.website) };
       const domain = ident.key;
       if (!domain || seen.has(domain)) continue;
       seen.add(domain);
+      if (c.kind === "creators" && !openerSource) omittedCreatorOpeners++;
       // Anyone already in the pipeline (any campaign) stays one record with its stage; a play search links it (REQ-TARGET-06).
       const byKey = (key: string) => ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", key)).first();
       // Creators saved before platform + handle keys used the bare profile path.
@@ -660,6 +666,7 @@ export const saveResult = internalMutation({
           ...(audienceLocation ? { audienceLocation } : {}),
           ...(contentSamples.length ? { contentSamples } : {}),
           ...(competitorCollaborations.length ? { competitorCollaborations } : {}),
+          ...(openerSource ? { firstLine: firstLine.slice(0, 400), firstLineEvidenceUrl: openerSource } : {}),
           ...(typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         } : {};
         if (playIds || Object.keys(creatorUpdates).length) {
@@ -689,7 +696,8 @@ export const saveResult = internalMutation({
         contact: p.contact.slice(0, 120),
         publicEmail: p.publicEmail?.trim().toLowerCase() || undefined,
         ...((p as { check?: Doc<"prospects">["check"] }).check ? { check: (p as { check?: Doc<"prospects">["check"] }).check } : {}),
-        firstLine: (lines.get(p.company.trim().toLowerCase()) ?? "").slice(0, 400),
+        firstLine: firstLine.slice(0, 400),
+        ...(openerSource ? { firstLineEvidenceUrl: openerSource } : {}),
         stage: "suggested",
         stageUpdatedAt: now,
         ...(c.playId ? { playIds: [c.playId] } : {}),
@@ -709,7 +717,7 @@ export const saveResult = internalMutation({
       status: "review",
       icp: found.icp,
       sequence: outreach.sequence.slice(0, 5),
-      ownerNotes: outreach.ownerNotes.slice(0, 3),
+      ownerNotes: [...outreach.ownerNotes.slice(0, omittedCreatorOpeners ? 2 : 3), ...(omittedCreatorOpeners ? [`${omittedCreatorOpeners} creator opener${omittedCreatorOpeners === 1 ? " was" : "s were"} omitted because no exact content sample was cited. Add a sourced opener before sending.`] : [])],
       excluded: found.excluded.slice(0, 30),
       updatedAt: now,
     });

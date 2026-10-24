@@ -109,6 +109,8 @@ describe("outbound", () => {
     const view = await w.client.query(api.outbound.get, { slug: w.slug });
     expect(view.campaign).toMatchObject({ kind: "creators", status: "review", title: "Find creators" });
     expect(view.prospects.length).toBeGreaterThan(0);
+    expect(view.prospects[0].firstLineEvidenceUrl).toBe(view.prospects[0].contentSamples[0].url);
+    expect(view.prospects[0].firstLine).toContain("grounded in the recent public content");
     const run = await t.run(async (ctx) => ctx.db.query("workflowSteps").collect());
     expect(run.some((s) => s.label.startsWith("Find creators"))).toBe(true);
   });
@@ -133,14 +135,17 @@ describe("outbound", () => {
         }],
         excluded: [],
       },
-      outreach: { sequence: [], firstLines: [], ownerNotes: [] },
+      outreach: { sequence: [], firstLines: [{ company: "Studio Ana", line: "I loved your recent post.", evidenceUrl: profile }], ownerNotes: [] },
     });
     const view = await w.client.query(api.outbound.get, { slug: w.slug });
     expect(view.prospects[0]).toMatchObject({
       audienceSize: { value: "12k followers", sourceUrl: profile },
       contentLanguage: { value: "English", sourceUrl: profile },
       collaborationConcept: expect.stringContaining("Proposed"),
+      firstLine: "",
+      firstLineEvidenceUrl: null,
     });
+    expect(view.campaign?.ownerNotes).toContain("1 creator opener was omitted because no exact content sample was cited. Add a sourced opener before sending.");
   });
 
   it("records an append-only creator collaboration lifecycle and returns it as owner-reported context", async () => {

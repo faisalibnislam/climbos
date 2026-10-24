@@ -448,10 +448,89 @@ export const SKILLS: Record<string, { name: string; description: string; playboo
   },
   "hash": "10b950bd191f"
  },
+ "creator-collaboration-pitch": {
+  "name": "creator-collaboration-pitch",
+  "description": "Prepare a short, owner-reviewable creator partnership pitch grounded in a specific public content example, a supported audience need, and an offer the business can actually confirm. Never imply the sender watched or used content, promise creator results, or state unsupported commercial terms.",
+  "playbook": "## Purpose\n\nWrite a respectful collaboration invitation that gives the creator a concrete reason to consider the idea. A creator is a potential partner, not a media slot with a guaranteed audience. The pitch must make sense for both the business and the creator, use a public content example as a relevant reference, and leave payment, product access, timing, and deliverables open for owner confirmation.\n\n## Inputs\n\n- The business's confirmed offer, audience, and any owner-approved collaboration budget or terms.\n- The creator's supported audience fit and relevant need.\n- Public content examples with exact URLs and observations. These are research notes, not proof the sender watched or used the content.\n- Any prior competitor-collaboration evidence, with its quote, publication date when shown, and observation timestamp. A past collaboration is not proof of current exclusivity.\n\nIf essential offer terms or audience need are unknown, keep the pitch exploratory and ask the owner to confirm the missing detail. Never invent a rate, audience demographic, result, product experience, exclusivity, or deadline.\n\n## Procedure\n\n1. Select one exact content sample from this creator. Use its source URL as `evidenceUrl`; never borrow another creator's example.\n2. State the relevant public topic plainly and connect it to the creator's supported audience or content theme. Do not flatter or imply personal familiarity.\n3. Offer one collaboration format as a proposal. Mark paid, gifted, affiliate, or co-created terms for owner confirmation unless the owner supplied current terms.\n4. Explain the likely value for the creator and audience without promising reach, engagement, revenue, or conversions.\n5. Ask one low-pressure question. Keep the first message concise and make it easy to decline.\n6. Include only approved follow-ups that add useful information. Stop after a reply, decline, or opt-out.\n7. Leave the draft for owner review. The draft is not permission to send or publish.\n\n## Output rules\n\n- Every personalized opener must include the exact `evidenceUrl` for a content sample belonging to that creator. Code rejects an unmatched URL.\n- Do not say “I watched,” “I loved,” “we use,” or similar unless the owner supplied that fact.\n- Do not treat visible views, likes, comments, or followers as likely campaign reach or proof of results.\n- Do not describe an older competitor collaboration as current or exclusive without dated evidence that establishes that state.\n- Do not state unconfirmed fees, deliverables, product access, or schedule as agreed.\n- The creator and business must both be able to review and approve the final terms before any send.",
+  "rubric": {
+   "id": "creator-collaboration-pitch",
+   "title": "Creator collaboration invitation",
+   "gates": [
+    {
+     "id": "G1",
+     "text": "Source binding: every personalized opener includes an evidenceUrl belonging to that exact creator's observed content samples; no content example is borrowed across targets."
+    },
+    {
+     "id": "G2",
+     "text": "Truth: no invented product use, creator familiarity, audience demographics, fees, results, deadlines, or agreed terms. Unknowns remain questions or owner-confirmation notes."
+    },
+    {
+     "id": "G3",
+     "text": "Mutual value and agency: the proposed format gives a plausible audience benefit and leaves the creator free to decline; past competitor work is not treated as proof of current exclusivity."
+    },
+    {
+     "id": "G4",
+     "text": "Approval: present drafts for owner review; do not imply anything was sent, published, or approved."
+    }
+   ],
+   "criteria": [
+    {
+     "id": "C1",
+     "name": "Content-specific relevance",
+     "anchors": {
+      "1": "Generic influencer pitch; no real cited example.",
+      "3": "Mentions a relevant post but does not connect it to the creator's supported audience need.",
+      "5": "Names one exact, source-linked example and connects its topic to a supported audience need without claiming the sender watched it."
+     }
+    },
+    {
+     "id": "C2",
+     "name": "Mutual value",
+     "anchors": {
+      "1": "Treats the creator as a distribution channel and states no audience value.",
+      "3": "Names a format but the value to the creator or audience is vague.",
+      "5": "Makes a clear, plausible case for the creator, audience, and business while avoiding guaranteed results."
+     }
+    },
+    {
+     "id": "C3",
+     "name": "Offer clarity",
+     "anchors": {
+      "1": "Invents a fee or states unconfirmed terms as agreed.",
+      "3": "Names a collaboration type but leaves the owner unsure what to confirm.",
+      "5": "Proposes one concrete format and clearly labels any missing fee, product access, deliverable, or timing for owner confirmation."
+     }
+    },
+    {
+     "id": "C4",
+     "name": "Respectful ask",
+     "anchors": {
+      "1": "Pressure, fake urgency, or a demand for a meeting.",
+      "3": "Polite but broad or high-effort.",
+      "5": "One low-pressure question that invites discussion and makes declining easy."
+     }
+    },
+    {
+     "id": "C5",
+     "name": "Concise human voice",
+     "anchors": {
+      "1": "Long, flattering, or packed with marketing jargon.",
+      "3": "Understandable but templated or padded.",
+      "5": "Brief, natural, specific, and easy to scan."
+     }
+    }
+   ],
+   "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+   }
+  },
+  "hash": "44418068bbd5"
+ },
  "creator-scouting": {
   "name": "creator-scouting",
   "description": "Find real creators and influencers whose public content appears relevant to a small business's ideal customer, verify each one from public pages, record visible post counts with exact sources, and explain audience fit without guessing affordability or results. Use when a growth plan includes influencer or creator partnerships, UGC, affiliates or podcast/newsletter sponsorships.",
-  "playbook": "## Purpose\n\nYou build creator shortlists a partnerships manager can review: real people with a public profile, content that may match the business's buyers, recent activity, and a realistic route to contact them. Creator size and visible post counts do not prove audience quality, affordability, response, or sales performance. Use audience fit, relevant content, comparable observations when available, and owner-confirmed budget to compare candidates. Keep unknown audience size, reach, language, rates, and results unknown; never invent a creator, follower count, rate, or email.\n\n## Procedure\n\n1. **Translate the ideal customer into audiences.** Who does the business sell to, where, and what do they read, watch or listen to? Name 3-5 niches (e.g. \"UK freelance designers on Instagram\", \"SaaS founders' podcasts\", \"Austin food TikTok\").\n2. **Search each niche on the platforms that fit** (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts). Use public search results, creator directories, \"top creators in X\" lists, podcast directories and newsletter platforms. Prefer creators who already post about the problem the business solves, its category, or adjacent tools.\n3. **Verify each candidate from public pages.** Open the profile or the creator's own site. Record: display name and handle, platform, profile URL, audience figure exactly as shown with the page URL (if not visible, \"unknown\"), content language only when the profile or cited content supports it, creator location and separately stated audience location when available, and up to five recent content examples with exact URLs and visible views/likes/comments exactly as shown. Do not infer audience location from where the creator lives. Distinguish an observed figure from an estimate; do not calculate or normalize counts. Record prior competitor collaborations with a source quote, URL, and publication date if visible. A past collaboration is a fit/conflict signal, not proof of an active exclusive deal, and is not an automatic exclusion. Do not infer fake or bought audiences from sparse public metrics.\n4. **Find the contact route.** Business email published in their bio, link-in-bio page, website or media kit (copy verbatim); otherwise \"DM on Instagram\" or \"contact form on site\". Never guess an email.\n5. **Score and rank.** fit (0-100): how closely their supported audience and recent content match the buyers. timing (0-100): dated recent posts on the topic, a relevant series, a season or launch. Explain the evidence behind both scores and keep them as comparative research judgments, not conversion probabilities. Do not calculate engagement rates from incomplete/incomparable public counts, infer audience quality, or assign affordability from audience size alone.\n6. **Exclude with reasons.** List notable creators you skipped and why (competitor deal, off-niche audience, inactive, unverifiable).\n\n## Output rules\n\n- Use the prospect fields this way: company = creator's name; website = profile URL (or their site); location = where the creator is based or \"unknown\"; audienceLocation = stated audience geography plus its exact cited URL only when the source says it; sizeBand = the audience wording as shown, or \"unknown\"; audienceSize = the exact visible audience phrase plus the exact source URL only when the observation quotes that phrase; contentLanguage = a language plus its exact cited URL only when supported; contentSamples = up to five content URLs, format, and exact visible view/like/comment phrases copied from each same page; competitorCollaborations = up to five named prior competitor references, each with type, exact quote, source URL, and publication date if shown; collaborationConcept = a clearly proposed, unconfirmed format that fits the creator's public content; why = the audience fit in one line; evidence = profile and recent post URLs with observations; trigger = a recent relevant post or \"\"; contact = the handle and platform, e.g. \"@janedesigns (Instagram)\"; publicEmail = a business email copied verbatim from a cited page, else \"\".\n- Do not describe an older competitor mention as current or exclusive unless the dated source establishes that state.\n- Public counts are descriptive source observations, not comparable engagement rates, proof of real/fake followers, reach guarantees, or sales forecasts. Omit unavailable metrics.\n- At least 5 creators unless the niche is genuinely thin (then say why in excluded).\n- Disclosure: any paid or gifted collaboration must be disclosed by the creator (FTC/ASA rules). Mention it in ownerNotes if relevant.",
+  "playbook": "## Purpose\n\nYou build creator shortlists a partnerships manager can review: real people with a public profile, content that may match the business's buyers, recent activity, and a realistic route to contact them. Creator size and visible post counts do not prove audience quality, affordability, response, or sales performance. Use audience fit, relevant content, comparable observations when available, and owner-confirmed budget to compare candidates. Keep unknown audience size, reach, language, rates, and results unknown; never invent a creator, follower count, rate, or email.\n\n## Procedure\n\n1. **Translate the ideal customer into audiences.** Who does the business sell to, where, and what do they read, watch or listen to? Name 3-5 niches (e.g. \"UK freelance designers on Instagram\", \"SaaS founders' podcasts\", \"Austin food TikTok\").\n2. **Search each niche on the platforms that fit** (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts). Use public search results, creator directories, \"top creators in X\" lists, podcast directories and newsletter platforms. Prefer creators who already post about the problem the business solves, its category, or adjacent tools.\n3. **Verify each candidate from public pages.** Open the profile or the creator's own site. Record: display name and handle, platform, profile URL, audience figure exactly as shown with the page URL (if not visible, \"unknown\"), content language only when the profile or cited content supports it, creator location and separately stated audience location when available, and up to five recent content examples with exact URLs and visible views/likes/comments exactly as shown. Do not infer audience location from where the creator lives. Distinguish an observed figure from an estimate; do not calculate or normalize counts. Record prior competitor collaborations with a source quote, URL, and publication date if visible. A past collaboration is a fit/conflict signal, not proof of an active exclusive deal, and is not an automatic exclusion. Do not infer fake or bought audiences from sparse public metrics.\n4. **Find the contact route.** Business email published in their bio, link-in-bio page, website or media kit (copy verbatim); otherwise \"DM on Instagram\" or \"contact form on site\". Never guess an email.\n5. **Score and rank.** fit (0-100): how closely their supported audience and recent content match the buyers. timing (0-100): dated recent posts on the topic, a relevant series, a season or launch. Explain the evidence behind both scores and keep them as comparative research judgments, not conversion probabilities. Do not calculate engagement rates from incomplete/incomparable public counts, infer audience quality, or assign affordability from audience size alone.\n6. **Exclude with reasons.** List notable creators you skipped and why (competitor deal, off-niche audience, inactive, unverifiable).\n\n## Output rules\n\n- Use the prospect fields this way: company = creator's name; website = profile URL (or their site); location = where the creator is based or \"unknown\"; audienceLocation = stated audience geography plus its exact cited URL only when the source says it; sizeBand = the audience wording as shown, or \"unknown\"; audienceSize = the exact visible audience phrase plus the exact source URL only when the observation quotes that phrase; contentLanguage = a language plus its exact cited URL only when supported; contentSamples = up to five content URLs, format, and exact visible view/like/comment phrases copied from each same page; competitorCollaborations = up to five named prior competitor references, each with type, exact quote, source URL, and publication date if shown; collaborationConcept = a clearly proposed, unconfirmed format that fits the creator's public content; why = the audience fit in one line; evidence = profile and recent post URLs with observations; trigger = a recent relevant post or \"\"; contact = the handle and platform, e.g. \"@janedesigns (Instagram)\"; publicEmail = a business email copied verbatim from a cited page, else \"\".\n- Do not describe an older competitor mention as current or exclusive unless the dated source establishes that state.\n- Public counts are descriptive source observations, not comparable engagement rates, proof of real/fake followers, reach guarantees, or sales forecasts. Omit unavailable metrics.\n- Each personalized creator opener must carry the exact URL of that creator's cited content sample. Do not save or send an opener whose source URL does not belong to that creator.\n- At least 5 creators unless the niche is genuinely thin (then say why in excluded).\n- Disclosure: any paid or gifted collaboration must be disclosed by the creator (FTC/ASA rules). Mention it in ownerNotes if relevant.",
   "rubric": {
    "id": "creator-scouting",
    "title": "Creator shortlist",
@@ -552,7 +631,7 @@ export const SKILLS: Record<string, { name: string; description: string; playboo
     "minAverage": 4
    }
   },
-  "hash": "d4289ab4c8f8"
+  "hash": "b6757bd93411"
  },
  "experiment-design": {
   "name": "experiment-design",

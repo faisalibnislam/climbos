@@ -194,7 +194,17 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     }
     if (o && typeof o === "object" && Array.isArray(o.sequence) && Array.isArray(o.firstLines)) {
       o.sequence = [0, 3].map((day, i) => ({ day, subject: `${marker} note`, body: i === 0 ? `{{firstLine}}\n${marker} body` : `${marker} follow-up`, purpose: "test" }));
-      o.firstLines = ["alpha", "beta", "gamma"].map((n) => ({ company: `${marker.replace("fake-v2", "fake-v1")} ${n}`, line: `${marker} opener for ${n}` }));
+      const creatorSourcesText = lastUser.match(/CREATOR CONTENT SOURCE MAP:\n([^\n]+)/)?.[1];
+      let creatorSources: Record<string, string[]> = {};
+      try {
+        const parsed: unknown = creatorSourcesText ? JSON.parse(creatorSourcesText) : {};
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) creatorSources = parsed as Record<string, string[]>;
+      } catch {
+        creatorSources = {};
+      }
+      o.firstLines = lastUser.includes("CREATOR CONTENT SOURCE MAP:\n")
+        ? Object.entries(creatorSources).map(([company, urls]) => ({ company, line: `${marker} opener grounded in the recent public content`, ...(urls[0] ? { evidenceUrl: urls[0] } : {}) }))
+        : ["alpha", "beta", "gamma"].map((n) => ({ company: `${marker.replace("fake-v2", "fake-v1")} ${n}`, line: `${marker} opener for ${n}` }));
     }
   }
   const text = typeof output === "string" ? output : JSON.stringify(output);

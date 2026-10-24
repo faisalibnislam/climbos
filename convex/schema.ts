@@ -1003,6 +1003,8 @@ export default defineSchema({
     /** Owner-reported reply quality; absent means unknown, never inferred from a generic reply. */
     replyDisposition: v.optional(v.union(v.literal("qualified"), v.literal("not_qualified"), v.literal("unclear"))),
     replyDispositionUpdatedAt: v.optional(v.number()),
+    /** Exact creator content example used for a personalized opener; absent means the opener was not source-bound. */
+    firstLineEvidenceUrl: v.optional(v.string()),
     /** plan_targets (S6): plays (stable IDs) this target was found for; one record per entity across plans (REQ-TARGET-06). */
     playIds: v.optional(v.array(v.string())),
     /** Creators: canonical identity from the profile path (REQ-TARGET-03), e.g. instagram + "studio.ana". */

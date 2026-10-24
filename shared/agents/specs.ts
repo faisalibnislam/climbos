@@ -2278,7 +2278,7 @@ export const OutreachOutputSchema = z.object({
       purpose: z.string(),
     }),
   ),
-  firstLines: z.array(z.object({ company: z.string(), line: z.string() })),
+  firstLines: z.array(z.object({ company: z.string(), line: z.string(), evidenceUrl: z.string().url().optional() })),
   /** At most 3 bullets for the owner: what to check before sending. */
   ownerNotes: z.array(z.string()),
 });
@@ -2314,6 +2314,36 @@ function lintOutreach(out: OutreachOutput, input: AgentInput): LintIssue[] {
     if (/[!$]|\bfree\b/i.test(s.subject)) issues.push({ severity: "error", rule: "subject", message: "No '!', '$' or 'free' in subject lines.", path: `sequence[${i}].subject` });
   });
   if (out.sequence[0] && !out.sequence[0].body.includes("{{firstLine}}")) issues.push({ severity: "error", rule: "personalisation", message: "Step 1 needs {{firstLine}} where the personal opener goes.", path: "sequence[0].body" });
+  out.firstLines.forEach((line, index) => {
+    if (line.evidenceUrl && !evidenceOf(input).includes(line.evidenceUrl)) issues.push({ severity: "error", rule: "opener_source", message: `${line.company}: opener source URL must be present in the supplied evidence.`, path: `firstLines[${index}].evidenceUrl` });
+  });
+  return issues;
+}
+
+function lintCreatorOutreach(out: OutreachOutput, input: AgentInput): LintIssue[] {
+  const issues = lintOutreach(out, input);
+  let sourceMap: Record<string, string[]> = {};
+  const encoded = input.task.match(/CREATOR CONTENT SOURCE MAP:\n([^\n]+)/)?.[1];
+  try {
+    const parsed: unknown = encoded ? JSON.parse(encoded) : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) sourceMap = parsed as Record<string, string[]>;
+  } catch {
+    issues.push({ severity: "error", rule: "opener_source_map", message: "Creator content sources could not be parsed; preserve the source list in the task.", path: "firstLines" });
+  }
+  const targets = Object.keys(sourceMap);
+  if (!encoded) issues.push({ severity: "error", rule: "opener_source_map", message: "Creator openers need an explicit per-creator content source map.", path: "firstLines" });
+  const linesByCompany = new Map(out.firstLines.map((line) => [line.company.trim().toLowerCase(), line]));
+  const sourcesByCompany = new Map(targets.map((company) => [company.trim().toLowerCase(), sourceMap[company] ?? []]));
+  for (const [normalizedCompany, urls] of sourcesByCompany) {
+    const company = targets.find((target) => target.trim().toLowerCase() === normalizedCompany)!;
+    const line = linesByCompany.get(company.trim().toLowerCase());
+    if (!line?.evidenceUrl || !urls.includes(line.evidenceUrl)) {
+      issues.push({ severity: "error", rule: "creator_opener_source", message: `${company}: cite one of this creator's exact observed content samples for the personalized opener.`, path: `firstLines.${company}.evidenceUrl` });
+    }
+  }
+  for (const line of out.firstLines) {
+    if (!sourcesByCompany.has(line.company.trim().toLowerCase())) issues.push({ severity: "error", rule: "creator_opener_target", message: `${line.company}: opener must match a creator in the supplied source map.`, path: "firstLines" });
+  }
   return issues;
 }
 
@@ -2417,6 +2447,25 @@ export function outreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
       rubric: rubricOf("cold-outreach"),
       criticSkills: ["copy-fundamentals"],
       lint: lintOutreach,
+      maxTokens: { research: 8_000, draft: 24_000, critic: 12_000 },
+    },
+    o,
+    "lean",
+  );
+}
+
+/** Creator openers must point to a content example belonging to that exact creator. */
+export function creatorOutreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutput> {
+  return base(
+    {
+      id: "creator_outreach",
+      role: "cmo",
+      label: "Write creator pitches",
+      skills: ["owner-brevity", "creator-collaboration-pitch"],
+      schema: OutreachOutputSchema,
+      rubric: rubricOf("creator-collaboration-pitch"),
+      criticSkills: ["creator-collaboration-pitch"],
+      lint: lintCreatorOutreach,
       maxTokens: { research: 8_000, draft: 24_000, critic: 12_000 },
     },
     o,

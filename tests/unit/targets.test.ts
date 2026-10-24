@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
-import { creatorScoutSpec } from "../../shared/agents/specs";
+import { creatorOutreachSpec, creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
 describe("which plays need targets", () => {
@@ -94,6 +94,38 @@ describe("source-bound creator facts (REQ-CREATOR-01)", () => {
     output.prospects[0].audienceSize = { value: "12k followers", sourceUrl: profile };
     output.prospects[0].contentSamples[0].views = "32k views";
     expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_content_metric_source" && issue.path === "prospects[0].contentSamples[0].views")).toBe(true);
+  });
+});
+
+describe("creator opener source binding (REQ-CREATOR-05)", () => {
+  const sourceMap = { Ana: ["https://instagram.com/p/ana"], Bea: ["https://instagram.com/p/bea"], Cam: ["https://instagram.com/p/cam"] };
+  const output = {
+    sequence: [{ day: 0, subject: "A collaboration idea", body: "{{firstLine}}\nA short tutorial could be useful.", purpose: "Ask" }, { day: 4, subject: "Following up", body: "Would a short co-created example interest you?", purpose: "Follow up" }],
+    firstLines: Object.entries(sourceMap).map(([company, urls]) => ({ company, line: "Your recent cooking reel may fit this idea.", evidenceUrl: urls[0] })),
+    ownerNotes: [],
+  };
+  const input = { task: `CREATOR CONTENT SOURCE MAP:\n${JSON.stringify(sourceMap)}`, brief: "", facts: [] };
+
+  it("accepts an opener linked to the exact creator's observed content sample", () => {
+    const spec = creatorOutreachSpec();
+    expect(spec.lint!(output as never, input as never).filter((issue) => issue.rule.startsWith("creator_opener"))).toEqual([]);
+  });
+
+  it("rejects a source URL belonging to another creator or absent from the source map", () => {
+    const spec = creatorOutreachSpec();
+    const wrongTarget = structuredClone(output);
+    wrongTarget.firstLines[0].evidenceUrl = sourceMap.Bea[0];
+    expect(spec.lint!(wrongTarget as never, input as never).some((issue) => issue.rule === "creator_opener_source" && issue.path?.includes("Ana"))).toBe(true);
+    const unknownTarget = structuredClone(output);
+    unknownTarget.firstLines[0].evidenceUrl = "https://instagram.com/p/other";
+    expect(spec.lint!(unknownTarget as never, input as never).some((issue) => issue.rule === "creator_opener_source")).toBe(true);
+  });
+
+  it("keeps the shortlist usable when no creator has an accessible content sample", () => {
+    const spec = creatorOutreachSpec();
+    const noSamples = { ...output, firstLines: [] };
+    const noSourceMap = { ...input, task: "CREATOR CONTENT SOURCE MAP:\n{}" };
+    expect(spec.lint!(noSamples as never, noSourceMap as never).filter((issue) => issue.rule.startsWith("creator_opener"))).toEqual([]);
   });
 });
 

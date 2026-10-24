@@ -1,0 +1,18 @@
+{
+  "id": "creator-collaboration-pitch",
+  "title": "Creator collaboration invitation",
+  "gates": [
+    { "id": "G1", "text": "Source binding: every personalized opener includes an evidenceUrl belonging to that exact creator's observed content samples; no content example is borrowed across targets." },
+    { "id": "G2", "text": "Truth: no invented product use, creator familiarity, audience demographics, fees, results, deadlines, or agreed terms. Unknowns remain questions or owner-confirmation notes." },
+    { "id": "G3", "text": "Mutual value and agency: the proposed format gives a plausible audience benefit and leaves the creator free to decline; past competitor work is not treated as proof of current exclusivity." },
+    { "id": "G4", "text": "Approval: present drafts for owner review; do not imply anything was sent, published, or approved." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Content-specific relevance", "anchors": { "1": "Generic influencer pitch; no real cited example.", "3": "Mentions a relevant post but does not connect it to the creator's supported audience need.", "5": "Names one exact, source-linked example and connects its topic to a supported audience need without claiming the sender watched it." } },
+    { "id": "C2", "name": "Mutual value", "anchors": { "1": "Treats the creator as a distribution channel and states no audience value.", "3": "Names a format but the value to the creator or audience is vague.", "5": "Makes a clear, plausible case for the creator, audience, and business while avoiding guaranteed results." } },
+    { "id": "C3", "name": "Offer clarity", "anchors": { "1": "Invents a fee or states unconfirmed terms as agreed.", "3": "Names a collaboration type but leaves the owner unsure what to confirm.", "5": "Proposes one concrete format and clearly labels any missing fee, product access, deliverable, or timing for owner confirmation." } },
+    { "id": "C4", "name": "Respectful ask", "anchors": { "1": "Pressure, fake urgency, or a demand for a meeting.", "3": "Polite but broad or high-effort.", "5": "One low-pressure question that invites discussion and makes declining easy." } },
+    { "id": "C5", "name": "Concise human voice", "anchors": { "1": "Long, flattering, or packed with marketing jargon.", "3": "Understandable but templated or padded.", "5": "Brief, natural, specific, and easy to scan." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}
