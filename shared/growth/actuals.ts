@@ -24,6 +24,53 @@ export interface ResultEntry {
   steps: number[];
   spendUsd: number;
   ownerHours: number;
+  /** Existing customers who repeated or renewed during this week; a customer may appear in multiple weeks. */
+  repeatCustomers?: number;
+  /** Owner-reported net repeat-customer receipts for the week, in the workspace currency's minor unit. */
+  retainedRevenueMinor?: number;
+  /** Owner-reported retained contribution after variable delivery costs, in the workspace currency's minor unit. */
+  retainedContributionMinor?: number;
+  retentionCurrency?: string;
+}
+
+export interface RetentionActuals {
+  /** Weeks with at least one retention field reported. */
+  weeksReported: number;
+  /** Customer-weeks, not unique retained customers over the whole period. */
+  repeatCustomerWeeks: number;
+  revenueByCurrency: { currency: string; netRevenueMinor: number; weeksReported: number }[];
+  contributionByCurrency: { currency: string; contributionMinor: number; weeksReported: number }[];
+  limitations: string[];
+}
+
+/** Summarize owner-reported repeat-customer activity without mixing currencies or inferring causality. */
+export function retentionActuals(entries: Pick<ResultEntry, "repeatCustomers" | "retainedRevenueMinor" | "retainedContributionMinor" | "retentionCurrency">[]): RetentionActuals {
+  const weeks = entries.filter((entry) => entry.repeatCustomers !== undefined || entry.retainedRevenueMinor !== undefined || entry.retainedContributionMinor !== undefined);
+  const revenue = new Map<string, { amount: number; weeks: number }>();
+  const contribution = new Map<string, { amount: number; weeks: number }>();
+  for (const entry of weeks) {
+    const currency = entry.retentionCurrency?.toUpperCase();
+    if (!currency) continue;
+    if (entry.retainedRevenueMinor !== undefined) {
+      const current = revenue.get(currency) ?? { amount: 0, weeks: 0 };
+      current.amount += entry.retainedRevenueMinor;
+      current.weeks++;
+      revenue.set(currency, current);
+    }
+    if (entry.retainedContributionMinor !== undefined) {
+      const current = contribution.get(currency) ?? { amount: 0, weeks: 0 };
+      current.amount += entry.retainedContributionMinor;
+      current.weeks++;
+      contribution.set(currency, current);
+    }
+  }
+  return {
+    weeksReported: weeks.length,
+    repeatCustomerWeeks: weeks.reduce((sum, entry) => sum + (entry.repeatCustomers ?? 0), 0),
+    revenueByCurrency: [...revenue].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, netRevenueMinor: row.amount, weeksReported: row.weeks })),
+    contributionByCurrency: [...contribution].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, contributionMinor: row.amount, weeksReported: row.weeks })),
+    limitations: ["Owner-reported play association is not proof of attribution or incremental impact.", "Repeat customer totals are customer-weeks; a person can be counted again in a later week.", "Only weeks with reported amounts are included; missing weeks are unknown."],
+  };
 }
 
 export interface StepActual {

@@ -873,6 +873,11 @@ export default defineSchema({
     steps: v.array(v.number()),
     spendUsd: v.number(),
     ownerHours: v.number(),
+    /** Optional weekly, owner-reported repeat-customer outcomes; money uses the business currency's minor unit. */
+    repeatCustomers: v.optional(v.number()),
+    retainedRevenueMinor: v.optional(v.number()),
+    retainedContributionMinor: v.optional(v.number()),
+    retentionCurrency: v.optional(v.string()),
     enteredBy: v.id("users"),
     updatedAt: v.number(),
   })
