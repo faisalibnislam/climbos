@@ -90,7 +90,9 @@ export default function PrivacyPage() {
         temporary image URLs returned by Meta for still-image posts to the AI provider for low-detail visual review; URLs are
         used only for that audit and are not saved. We do not analyze video or full carousel content.
         LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
-        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. If you
+        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. Before
+        a supported social post is published, ClimbOS also checks up to five HTTPS links in the approved post for safe reachability;
+        this check does not retrieve or retain the linked page content. If you
         confirm creating a WordPress draft, we send the exact approved article title and body to the WordPress site you connected,
         using your encrypted Application Password. ClimbOS reads back the new post&apos;s ID, title and draft status to confirm it was
         saved; it does not publish the post. We retain the site, approved version hash, request status and WordPress draft link with

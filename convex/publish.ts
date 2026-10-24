@@ -274,6 +274,22 @@ export const publishArtifact = internalAction({
       return;
     }
 
+    const outboundLinks = [...new Set([
+      ...(version.destinationUrl ? [version.destinationUrl] : []),
+      ...[...`${version.body}\n${version.hashtags.join(" ")}`.matchAll(/https?:\/\/[^\s<>"')\]]+/gi)].map((match) => match[0].replace(/[.,;!?]+$/, "")),
+    ])];
+    if (outboundLinks.length) {
+      const linkChecks = await ctx.runAction(internal.publishLinks.check, { urls: outboundLinks });
+      const unavailable = linkChecks.filter((link) => link.status !== "reachable");
+      if (unavailable.length) {
+        const detail = unavailable.length === 1
+          ? `The link ${unavailable[0]?.url} could not be safely confirmed (HTTP ${unavailable[0]?.httpStatus ?? "status unavailable"}).`
+          : `${unavailable.length} links could not be safely confirmed before posting.`;
+        await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `${detail} Check or remove the link, then approve the post again.`, backTo: "approved" });
+        return;
+      }
+    }
+
     const action = ACTION_FOR[c.provider];
     const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
     if (begin.existingStatus) {

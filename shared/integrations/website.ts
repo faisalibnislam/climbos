@@ -216,6 +216,37 @@ export interface SafeFetchResult {
   error?: string;
 }
 
+export type PublicLinkCheck =
+  | { url: string; status: "reachable"; httpStatus: number; finalUrl: string }
+  | { url: string; status: "unavailable"; httpStatus?: number };
+
+/**
+ * Recheck a small set of approved outbound links immediately before an
+ * external write. No page content is retained; failures are intentionally
+ * summarized without exposing resolver or network details to the owner.
+ */
+export async function checkPublicLinks(
+  urls: string[],
+  options: { resolveHost: (hostname: string) => Promise<string[]>; fetchImpl?: FetchLike; timeoutMs?: number },
+): Promise<PublicLinkCheck[]> {
+  const unique = [...new Set(urls.map((url) => url.trim()).filter(Boolean))];
+  if (unique.length > 5) return unique.map((url) => ({ url, status: "unavailable" }));
+
+  return Promise.all(unique.map(async (url): Promise<PublicLinkCheck> => {
+    const validated = validateResearchUrl(url);
+    if (!validated.ok || !validated.url.startsWith("https:")) return { url, status: "unavailable" };
+    const result = await safeFetchPage({
+      url: validated.url,
+      resolveHost: options.resolveHost,
+      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+      maxBytes: 1_024,
+      timeoutMs: options.timeoutMs ?? 5_000,
+    });
+    if (!result.ok || result.status < 200 || result.status >= 300) return { url, status: "unavailable", ...(result.status > 0 ? { httpStatus: result.status } : {}) };
+    return { url, status: "reachable", httpStatus: result.status, finalUrl: result.finalUrl };
+  }));
+}
+
 async function readBoundedBody(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
   if (!response.body) return { text: "", truncated: false };
   const reader = response.body.getReader();

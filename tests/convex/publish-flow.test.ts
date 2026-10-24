@@ -103,6 +103,24 @@ describe("publishing lifecycle", () => {
     expect(stub.posts()).toBe(2);
   });
 
+  it("blocks an approved post when its link is unsafe and never calls the social provider", async () => {
+    const t = setup();
+    const w = await workspace(t, "unsafe-link@flow.example");
+    await connectLinkedIn(t, w);
+    const artifactId = await draft(t, w.orgId, "linkedin", "Book here: https://127.0.0.1/private");
+    const stub = linkedInStub(0);
+
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+    await w.owner.client.mutation(api.content.publishNow, { slug: w.slug, artifactId });
+    await run(t);
+
+    const view = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(view.status).toBe("approved");
+    expect(view.lastPublishError?.message).toMatch(/could not be safely confirmed/i);
+    expect(view.receipts).toHaveLength(0);
+    expect(stub.posts()).toBe(0);
+  });
+
   it("rechecks risky claims after an owner edits a draft instead of clearing the flags", async () => {
     const t = setup();
     const w = await workspace(t, "claim-review@flow.example");

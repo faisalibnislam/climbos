@@ -102,6 +102,7 @@ import type * as preview from "../preview.js";
 import type * as previewRunner from "../previewRunner.js";
 import type * as publicConfig from "../publicConfig.js";
 import type * as publish from "../publish.js";
+import type * as publishLinks from "../publishLinks.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as reels from "../reels.js";
@@ -225,6 +226,7 @@ declare const fullApi: ApiFromModules<{
   previewRunner: typeof previewRunner;
   publicConfig: typeof publicConfig;
   publish: typeof publish;
+  publishLinks: typeof publishLinks;
   push: typeof push;
   pushActions: typeof pushActions;
   reels: typeof reels;
