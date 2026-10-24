@@ -70,6 +70,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       scores: criteria.map((id) => ({ id, score: pass ? 5 : 2, note: "", fix: pass ? "none" : "Make it specific" })),
       strengths: ["clear"],
       fixes: pass ? [] : ["Make it specific"],
+      escalation: { reason: "none", evidence: "" },
     };
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";

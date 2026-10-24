@@ -4083,7 +4083,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     finishedAt: v.optional(v.number()),
-    /** Climb AI Basic (Luna) or Expert (Sol drafts; paid only). Absent = basic. */
+    /** Climb AI Basic or paid Expert (eligible, measured Sol escalation); absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
     preview: v.optional(v.string()),

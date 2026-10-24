@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup, type T } from "./helpers";
 
-/** Climb AI Basic (Luna) for everyone; Expert (Sol drafts) only on paid plans, and the default there. */
+/** Climb AI Basic is available to all; Expert (paid) allows measured Sol escalation on eligible work. */
 
 async function workspace(t: T, email: string) {
   const owner = await asNewUser(t, email);
@@ -48,7 +48,7 @@ describe("Climb AI Basic / Expert", () => {
     expect(steps.filter((s) => s.model).every((s) => s.model === "gpt-6-luna")).toBe(true);
   });
 
-  it("paid workspaces default to Expert: Sol drafts, Luna researches and reviews; Basic stays available", async () => {
+  it("paid workspaces default to Expert with Luna baseline and keep Basic available", async () => {
     const t = setup();
     const w = await workspace(t, "mode-paid@example.com");
     await makePaid(t, w.orgId);
@@ -59,7 +59,7 @@ describe("Climb AI Basic / Expert", () => {
     expect(run.aiMode).toBe("expert");
     const steps = await t.run(async (ctx) => ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).collect());
     const modelOf = (label: string) => steps.find((s) => s.label === label)?.model;
-    expect(modelOf("Growth plan: draft")).toBe("gpt-6.1-sol");
+    expect(modelOf("Growth plan: draft")).toBe("gpt-6-luna");
     expect(modelOf("Growth plan: review 1")).toBe("gpt-6-luna");
     expect(modelOf("Growth plays: research")).toBe("gpt-6-luna");
     // The owner can save Basic as the default.

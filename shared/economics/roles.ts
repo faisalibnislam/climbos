@@ -211,7 +211,7 @@ export const ROUTING_OPENAI_2026_10_18: RoutingVersion = Object.freeze<RoutingVe
     customer_success_manager: { primary: "gpt-6-luna", fallback: "gpt-6-luna" },
   },
   notes: [
-    "Anthropic is not used. Basic: Luna for every phase. Expert (paid): Sol drafts the growth plan, insights, ads and weekly autopilot plan; Luna researches and reviews.",
+    "Anthropic is not used. Basic uses Luna for every phase. Paid Expert runs start on Luna; eligible strategy revisions can escalate to Sol after a measured complex tradeoff, evidence conflict, or unresolved quality failure.",
     "No fallback model: when OpenAI is unavailable, jobs pause and resume from checkpoints.",
   ],
 });

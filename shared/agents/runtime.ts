@@ -58,7 +58,9 @@ export interface AgentDeps {
    * the budget can't cover another round: the agent then keeps its best
    * version instead of failing. Hosts reserve the round's cost here.
    */
-  beforeRevision?: (round: number) => Promise<boolean>;
+  beforeRevision?: (round: number, modelKey: ModelKey) => Promise<boolean>;
+  /** Set only for an explicitly entitled Expert run and an eligible agent. */
+  escalationModel?: ModelKey;
   /** Optional tenant-scoped cache for exact research requests. */
   researchCache?: {
     get: (key: string) => Promise<CachedResearch | null>;
@@ -110,6 +112,10 @@ export const CritiqueSchema = z.object({
   scores: z.array(z.object({ id: z.string(), score: z.number(), note: z.string(), fix: z.string() })),
   strengths: z.array(z.string()),
   fixes: z.array(z.string()),
+  escalation: z.object({
+    reason: z.enum(["none", "complex_tradeoff", "conflicting_evidence", "unresolved_quality_failure"]),
+    evidence: z.string(),
+  }),
 });
 
 export const CRITIC_RULES = `You are a demanding senior reviewer (the kind agencies hire to say no). You judge marketing work for a small business against a rubric. You did not write it and you don't soften scores.
@@ -123,6 +129,7 @@ How to review:
 - Consistency: numbers, targets, budgets, channels and rules must agree across every field. Any contradiction is a craft failure; name both places in the fix.
 - Hedging is a weakness: a plan that only "validates" or postpones decisions until data exists, with no committed volume or target, scores low on strategy and usefulness.
 - Fix instructions must make the work better by adding specificity, insight, proof or craft. Never ask to delete substance just to be safe; if a claim is unsupported, say how to rephrase it truthfully.
+- Set escalation.reason to none unless a stronger revision model is likely to materially improve a specific complex tradeoff, conflicting evidence, or quality failure that remains unresolved. Cite concrete evidence from this review in escalation.evidence; do not escalate for routine improvements, formatting, deterministic arithmetic or permission checks.
 - For each criterion give a one-line note and a concrete fix instruction (what exactly to change). If it's already excellent, the fix is "none".
 - "fixes" = the 3-6 changes that would most improve the work, most important first, written as instructions.
 - "strengths" = what must be kept in a revision.
@@ -315,7 +322,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
   const baseMessages: MessageParam[] = [{ role: "user", content: baseUser }];
 
-  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[] } | null): Promise<T> => {
+  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[] } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     return deps.phase(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
@@ -331,7 +338,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
             },
           ]
         : baseMessages;
-      const modelKey = round > 0 && spec.models.revise ? spec.models.revise : spec.models.draft;
+      const modelKey = modelOverride ?? (round > 0 && spec.models.revise ? spec.models.revise : spec.models.draft);
       const result = await deps.turn({
         modelKey,
         system,
@@ -434,9 +441,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     // Stop early if the last revision didn't improve on the best.
     if (round > 0 && best.round !== round) break;
     checkDeadline(deps);
-    if (deps.beforeRevision && !(await deps.beforeRevision(round + 1))) break;
+    const escalation = c.escalation && c.escalation.reason !== "none" && c.escalation.evidence.trim().length > 0 ? deps.escalationModel : undefined;
+    const revisionModel = escalation ?? spec.models.revise ?? spec.models.draft;
+    if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
-    current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint });
+    current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint }, escalation);
     // fast_review: the last revision is kept without another review if it's no worse on lint and keeps every number.
     if (spec.skipFinalReview && round + 1 === reviews - 1) {
       const errs = (l: LintIssue[]) => l.filter((x) => x.severity === "error").length;

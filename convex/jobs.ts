@@ -43,7 +43,7 @@ import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch } from 
 import { type TurnResult } from "../shared/ai/types";
 import { archetypeInstruction } from "../shared/agents/registry";
 import { modelTurn, providerOf } from "../shared/ai/turn";
-import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
+import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
@@ -342,7 +342,7 @@ async function runAgentTask<T>(
   if (job.run.isFixture || job.run.engine !== "v2") {
     return runModelTask<T>(ctx, job, baseIndex, fixture.task, fixture.text, fixture.context, fixture.ctx);
   }
-  // Climb AI Expert (paid): Sol drafts this agent's work when it's one of the expert agents.
+  // Climb AI Expert (paid): eligible agents may escalate revisions to Sol after a measured review failure.
   // Engine lab: rules approved in /ops join this agent's playbook.
   const addendum: string = await ctx.runQuery(internal.engineLab.addendumFor, { agentId: spec.id });
   if (addendum) spec = { ...spec, addendum };
@@ -367,11 +367,12 @@ async function runAgentTask<T>(
         },
       },
     }),
-    beforeRevision: async (round) => {
+    escalationModel: expertEscalationModel(spec.id, job.run.aiMode ?? "basic"),
+    beforeRevision: async (round, modelKey) => {
       // Idempotent per round: a compute step marks that this round's cost was reserved.
       const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `${spec.label}: reserve revision ${round}`, spec.role);
       if (mark.checkpoint !== undefined) return Boolean(mark.checkpoint);
-      const cost = estimateRun(agentRevisionSteps(spec), job.run.rateVersionId, { repair: false }).costMicros;
+      const cost = estimateRun(agentRevisionSteps(spec, modelKey), job.run.rateVersionId, { repair: false }).costMicros;
       const reserved = await ctx.runMutation(internal.engine.reserveAdditional, { runId: job.run._id, costMicros: cost });
       await ctx.runMutation(internal.engine.completeStep, { stepId: mark.stepId!, output: JSON.stringify(reserved.ok) });
       return reserved.ok;
@@ -385,7 +386,7 @@ async function runAgentTask<T>(
         if (circuit === "open") {
           return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as TurnResult;
         }
-        // Long OpenAI turns (Sol drafts, big outputs) run in background mode: if this action's time runs out,
+        // Long OpenAI turns (Sol revisions, big outputs) run in background mode: if this action's time runs out,
         // the job yields and the next action keeps polling the same answer (no rerun, no double charge).
         const stepId = stepScope.getStore() ?? null;
         const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);

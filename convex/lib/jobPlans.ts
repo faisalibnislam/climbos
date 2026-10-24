@@ -50,9 +50,9 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
 }
 
 /** The two steps (revised draft + review) one extra revision round needs. */
-export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
+export function agentRevisionSteps(spec: AgentSpec<unknown>, revisionModel?: AgentSpec<unknown>["models"]["draft"]): PlannedStep[] {
   return [
-    { kind: "model", role: spec.role, modelKey: spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
+    { kind: "model", role: spec.role, modelKey: revisionModel ?? spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
     { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic },
   ];
 }
@@ -63,7 +63,7 @@ const CONSISTENCY: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_RO
 const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
 
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
-  // Priced with the models this mode runs (Expert: Sol drafts the expert agents).
+  // Priced at Luna baseline; an eligible Expert revision reserves its selected model before running.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
   const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode });

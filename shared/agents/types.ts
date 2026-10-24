@@ -149,6 +149,8 @@ export interface CritiqueResult {
   scores: { id: string; score: number; note: string; fix: string }[];
   strengths: string[];
   fixes: string[];
+  /** A measured reason to spend more on an Expert-mode revision; none is the default. */
+  escalation?: { reason: "none" | "complex_tradeoff" | "conflicting_evidence" | "unresolved_quality_failure"; evidence: string };
 }
 
 export interface Assessment {

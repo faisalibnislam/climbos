@@ -4,7 +4,7 @@ import { currentRateVersion } from "../../shared/economics";
 import { dropNulls, openaiTurn, strictSchema, toInput, usageOf } from "../../shared/ai/openai";
 import { jsonSchemaFor } from "../../shared/ai/types";
 import { modelTurn } from "../../shared/ai/turn";
-import { routeModels } from "../../shared/agents/routes";
+import { expertEscalationModel, routeModels } from "../../shared/agents/routes";
 
 const rates = currentRateVersion();
 
@@ -149,12 +149,14 @@ describe("OpenAI adapter", () => {
     delete process.env.OPENAI_API_KEY;
   });
 
-  it("routes: Basic is all Luna; Expert has Sol draft only the expert agents", () => {
+  it("uses Luna by default and permits Sol escalation only for eligible Expert agents", () => {
     const luna = { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna", revise: "gpt-6-luna" };
     for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id)).toEqual(luna);
-    for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"]) {
-      expect(routeModels(id, "expert")).toEqual({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "gpt-6-luna", revise: "gpt-6.1-sol" });
-    }
+    for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"])
+      expect(routeModels(id, "expert")).toEqual(luna);
     for (const id of ["social_posts", "email_sequence", "seo_brief", "prospecting", "cold_outreach", "conversion_audit"]) expect(routeModels(id, "expert")).toEqual(luna);
+    expect(expertEscalationModel("growth_strategy", "expert")).toBe("gpt-6.1-sol");
+    expect(expertEscalationModel("growth_strategy", "basic")).toBeUndefined();
+    expect(expertEscalationModel("social_posts", "expert")).toBeUndefined();
   });
 });
