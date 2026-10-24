@@ -5,7 +5,7 @@ import { factFreshness } from "../shared/agents/factFreshness";
 import { EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
-import { majorToMinor } from "../shared/economics/currency";
+import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { creditsToMicros } from "../shared/economics/credits";
 import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry";
 import { sha256Hex } from "../shared/policy";
@@ -26,7 +26,7 @@ import type {
   StrategyOutput,
 } from "../shared/ai/tasks";
 import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
-import { actionReadinessOf, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
+import { actionReadinessOf, analyzeDecisionOptions, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -394,6 +394,17 @@ export const saveStrategy = internalMutation({
         ? {
             expert: (() => {
               const x = s as unknown as StrategyV2;
+              const savedPlays = (x.plays ?? []).slice(0, 4);
+              const ownerEconomics = x.snapshot?.ownerEconomics as { newCustomersPerMonth?: unknown } | undefined;
+              const monthlyBudget = typeof x.snapshot?.monthlyAdBudget === "number" ? x.snapshot.monthlyAdBudget : minorToMajor(goal.monthlyAdBudgetMinor, goal.currency);
+              const decisionAnalysis = x.decision && x.economics && savedPlays.length
+                ? analyzeDecisionOptions(x.decision, savedPlays, x.economics, {
+                    ...(typeof x.snapshot?.horizonDays === "number" ? { horizonDays: x.snapshot.horizonDays } : {}),
+                    monthlyAdBudgetUsd: monthlyBudget,
+                    ...(typeof acq?.limits?.ownerHoursPerWeek === "number" ? { ownerHoursPerWeek: acq.limits.ownerHoursPerWeek } : {}),
+                    ...(typeof ownerEconomics?.newCustomersPerMonth === "number" ? { newCustomersPerMonth: ownerEconomics.newCustomersPerMonth } : {}),
+                  })
+                : undefined;
               return {
                 version: EXPERT_PLAN_SCHEMA_VERSION,
                 diagnosis: x.diagnosis,
@@ -404,9 +415,10 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: withPlayIds((x.plays ?? []).slice(0, 4).map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior),
+                plays: withPlayIds(savedPlays.map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior),
                 economics: x.economics,
                 ...(x.decision ? { decision: x.decision } : {}),
+                ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
                 ...(x.quality ? { quality: x.quality } : {}),
                 ...(x.goalGap ? { goalGap: x.goalGap } : {}),

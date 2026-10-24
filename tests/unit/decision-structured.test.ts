@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DECISION_FIELDS, DecisionSchema, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
-import { growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice } from "../../shared/agents/specs";
+import { analyzeDecisionOptions, growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice } from "../../shared/agents/specs";
 import { diagnose } from "../../shared/agents/diagnosis";
 import { portfolioRange, type PlayLike } from "../../shared/agents/economics";
 
@@ -123,6 +123,23 @@ describe("deterministic comparison of decision options", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0].rule).toBe("decision_choice");
     expect(issues[0].message).toContain("lower modeled net contribution");
+  });
+
+  it("returns an auditable, explicitly uncalibrated calculation trace for mapped options", () => {
+    const trace = analyzeDecisionOptions(decision({ options }), optionPlays, economics, { monthlyAdBudgetUsd: 1_000, horizonDays: 90 });
+    expect(trace).toMatchObject({
+      method: "seeded_joint_scenario_mean_v1",
+      horizonDays: 90,
+      currency: "USD",
+      probabilityCalibrated: false,
+      constraints: { monthlyAdBudgetUsd: 1_000 },
+      options: [
+        { name: "Buy volume", chosen: true, calculated: true, playNames: ["Volume"], customerRange: { p10: expect.any(Number), p50: expect.any(Number), p90: expect.any(Number) }, netContribution: expect.any(Number) },
+        { name: "Use the efficient channel", chosen: false, calculated: true, playNames: ["Efficient"] },
+      ],
+    });
+    const unavailable = analyzeDecisionOptions(decision({ options: options.map((option) => ({ ...option, plays: [] })) }), optionPlays, economics);
+    expect(unavailable?.options[0]).toMatchObject({ calculated: false, unavailableReason: "No mapped plays", netContribution: null });
   });
 
   it("flags a chosen option that breaches a confirmed monthly budget when another fits", () => {

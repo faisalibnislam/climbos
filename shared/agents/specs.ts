@@ -23,7 +23,6 @@ import {
   StrategySchema,
   type TaskType,
 } from "../ai/tasks";
-import type { ModelKey } from "../economics/rates";
 import { skillRubric } from "../skills";
 import { lintEvidenceStrength } from "./evidenceKind";
 import { inferSearchIntentStage } from "./searchIntent";
@@ -295,7 +294,7 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
   // A plan with no plays can't drive work, whatever else it says (hard).
   if (!plays.length) issues.push({ severity: "error", rule: "no_plays", message: "No plays. Give at least one play with a weekly volume the owner can run now.", path: "plays" });
   // Two plays that are the same move count once.
-  plays.forEach((p, i) => plays.slice(0, i).forEach((q, j) => {
+  plays.forEach((p, i) => plays.slice(0, i).forEach((q) => {
     if (overlap(words(`${p.name} ${p.mechanic}`), words(`${q.name} ${q.mechanic}`)) >= 0.6) err(`"${p.name}" repeats "${q.name}". Merge them or replace one with a different move.`, `plays[${i}]`);
   }));
   // The forecast counts paying outcomes: the unit must be one, and so must the last step.
@@ -1379,52 +1378,110 @@ export function lintDecisionOptionChoice(
   constraints?: PlanConstraints,
 ): LintIssue[] {
   if (!decision || decision.options.length < 2) return [];
-  const chosenIndex = decision.options.findIndex((option) => option.chosen);
-  if (chosenIndex < 0) return [];
-  const names = new Map(plays.map((play) => [play.name.trim().toLowerCase(), play]));
-  const horizonDays = constraints?.horizonDays ?? Math.max(1, ...plays.map((play) => play.horizonDays || 90));
-  const valuePerCustomer = customerValue(economics);
-  const candidates = decision.options.map((option, index) => {
-    if (!option.plays.length) return null;
-    const selected = option.plays.map((name) => names.get(name.trim().toLowerCase()));
-    if (selected.some((play) => !play) || new Set(selected).size !== selected.length) return null;
-    const optionPlays = selected as PlayLike[];
-    if (optionPlays.some((play) => !play.model?.steps?.length)) return null;
-    const spend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd), 0);
-    const ownerHours = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.ownerHoursPerWeek), 0);
-    const range = portfolioRange({ economics, plays: optionPlays }, horizonDays);
-    const customers = range.p50;
-    const expectedCustomers = portfolioExpectedCustomers({ economics, plays: optionPlays }, horizonDays);
-    const cost = optionPlays.reduce((sum, play) => sum + playMaths({ ...play, horizonDays }, economics).costUsd, 0);
-    const feasible =
-      (constraints?.monthlyAdBudgetUsd === undefined || spend <= constraints.monthlyAdBudgetUsd) &&
-      (constraints?.ownerHoursPerWeek === undefined || ownerHours <= constraints.ownerHoursPerWeek) &&
-      (constraints?.newCustomersPerMonth === undefined || range.p90 <= constraints.newCustomersPerMonth * (horizonDays / 30));
-    return { index, feasible, customers, expectedCustomers, netContribution: valuePerCustomer === null ? null : expectedCustomers * valuePerCustomer - cost };
-  });
-  const chosen = candidates[chosenIndex];
-  if (!chosen) return [];
-  const alternatives = candidates.filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate) && candidate!.index !== chosenIndex);
+  const analysis = analyzeDecisionOptions(decision, plays, economics, constraints);
+  if (!analysis) return [];
+  const chosenIndex = analysis.options.findIndex((option) => option.chosen);
+  const chosen = analysis.options[chosenIndex];
+  if (!chosen?.calculated) return [];
+  const alternatives = analysis.options.filter((candidate, index) => candidate.calculated && index !== chosenIndex);
   const chosenScore = chosen.netContribution;
   const comparable = alternatives.filter((candidate) => (candidate.netContribution !== null) === (chosenScore !== null));
   const better = comparable.find((candidate) => {
-    if (!chosen.feasible && candidate.feasible) return true;
-    if (chosen.feasible && !candidate.feasible) return false;
-    const alternativeScore = candidate.netContribution ?? candidate.customers;
-    const selectedScore = chosen.netContribution ?? chosen.customers;
+    if (chosen.feasible === false && candidate.feasible === true) return true;
+    if (chosen.feasible === true && candidate.feasible === false) return false;
+    const alternativeScore = candidate.netContribution ?? candidate.expectedCustomers!;
+    const selectedScore = chosen.netContribution ?? chosen.expectedCustomers!;
     return alternativeScore > selectedScore + Math.max(0.01, Math.abs(selectedScore) * 0.01);
   });
   if (!better) return [];
-  const selectedName = decision.options[chosenIndex].name;
-  const alternativeName = decision.options[better.index].name;
-  const reason = !chosen.feasible && better.feasible
+  const selectedName = chosen.name;
+  const alternativeName = better.name;
+  const reason = chosen.feasible === false && better.feasible === true
     ? `The chosen option "${selectedName}" exceeds a confirmed budget, time or delivery limit, while "${alternativeName}" fits.`
-    : valuePerCustomer === null
+    : chosen.netContribution === null
       ? `The chosen option "${selectedName}" supports fewer modeled customers than "${alternativeName}" under the same confirmed limits.`
       : `The chosen option "${selectedName}" has lower modeled net contribution than "${alternativeName}" under the same confirmed limits.`;
   // This is a reviewer signal rather than a hard gate: a documented nonfinancial
   // reason can legitimately outweigh a simplified modeled comparison.
   return [{ severity: "warn", rule: "decision_choice", message: `${reason} Recheck this trade-off and state an evidence-based reason if another factor outweighs the modeled result.`, path: `decision.options[${chosenIndex}]` }];
+}
+
+/** Reproducible calculation trace for a structured choice; scenario ranges are not calibrated probabilities. */
+export function analyzeDecisionOptions(
+  decision: Decision,
+  plays: PlayLike[],
+  economics: Economics,
+  constraints?: PlanConstraints,
+) {
+  const horizonDays = constraints?.horizonDays ?? Math.max(1, ...plays.map((play) => play.horizonDays || 90));
+  const valuePerCustomer = customerValue(economics);
+  const names = new Map(plays.map((play) => [play.name.trim().toLowerCase(), play]));
+  const feasibilityEvaluated = constraints?.monthlyAdBudgetUsd !== undefined || constraints?.ownerHoursPerWeek !== undefined || constraints?.newCustomersPerMonth !== undefined;
+  const options = decision.options.map((option) => {
+    const selected = option.plays.map((name) => names.get(name.trim().toLowerCase()));
+    const optionPlays = selected as PlayLike[];
+    const unavailableReason = !option.plays.length
+      ? "No mapped plays"
+      : selected.some((play) => !play) || new Set(selected).size !== selected.length
+        ? "One or more named plays could not be mapped uniquely"
+        : optionPlays.some((play) => !play.model?.steps?.length)
+          ? "A mapped play has no modeled funnel"
+          : null;
+    if (unavailableReason) return {
+      name: option.name,
+      chosen: option.chosen,
+      playNames: option.plays,
+      calculated: false as const,
+      unavailableReason,
+      feasible: null,
+      customerRange: null,
+      expectedCustomers: null,
+      cost: null,
+      monthlySpend: null,
+      ownerHoursPerWeek: null,
+      netContribution: null,
+    };
+    const spend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd), 0);
+    const ownerHours = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.ownerHoursPerWeek), 0);
+    const portfolio = { economics, plays: optionPlays };
+    const range = portfolioRange(portfolio, horizonDays);
+    const expectedCustomers = portfolioExpectedCustomers(portfolio, horizonDays);
+    const cost = optionPlays.reduce((sum, play) => sum + playMaths({ ...play, horizonDays }, economics).costUsd, 0);
+    const feasible = feasibilityEvaluated
+      ? (constraints?.monthlyAdBudgetUsd === undefined || spend <= constraints.monthlyAdBudgetUsd)
+        && (constraints?.ownerHoursPerWeek === undefined || ownerHours <= constraints.ownerHoursPerWeek)
+        && (constraints?.newCustomersPerMonth === undefined || range.p90 <= constraints.newCustomersPerMonth * (horizonDays / 30))
+      : null;
+    return {
+      name: option.name,
+      chosen: option.chosen,
+      playNames: option.plays,
+      calculated: true as const,
+      unavailableReason: null,
+      feasible,
+      customerRange: { p10: range.p10, p50: range.p50, p90: range.p90 },
+      expectedCustomers,
+      cost,
+      monthlySpend: spend,
+      ownerHoursPerWeek: ownerHours,
+      netContribution: valuePerCustomer === null ? null : expectedCustomers * valuePerCustomer - cost,
+    };
+  });
+  return {
+    method: "seeded_joint_scenario_mean_v1" as const,
+    horizonDays,
+    currency: economics.currency ?? "USD",
+    valuePerCustomer,
+    scoreBasis: valuePerCustomer === null ? "expected_customers" as const : "net_contribution" as const,
+    constraints: {
+      monthlyAdBudgetUsd: constraints?.monthlyAdBudgetUsd ?? null,
+      ownerHoursPerWeek: constraints?.ownerHoursPerWeek ?? null,
+      newCustomersPerMonth: constraints?.newCustomersPerMonth ?? null,
+    },
+    probabilityCalibrated: false as const,
+    limitations: ["Scenario ranges are not calibrated probabilities.", "Unmapped options are not compared.", "Calculations are conditional on the supplied play and economics inputs."],
+    options,
+  };
 }
 
 /** Keep a structured diagnosis and its selected action connected to the actual play. */

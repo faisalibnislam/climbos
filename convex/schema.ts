@@ -1329,7 +1329,7 @@ export default defineSchema({
         /** decision_contract plans: the structured decision the plays rest on (shared/agents/decision.ts, REQ-STRAT-01/02). */
         decision: v.optional(
           v.object({
-            observations: v.array(v.object({ observation: v.string(), source: v.string() })),
+            observations: v.array(v.object({ observation: v.string(), source: v.string(), evidenceRefs: v.optional(v.array(v.string())) })),
             constraint: v.string(),
             explanations: v.array(v.object({ explanation: v.string(), evidenceFor: v.string(), evidenceAgainst: v.string() })),
             limits: v.string(),
@@ -1340,6 +1340,32 @@ export default defineSchema({
             falsifier: v.string(),
           }),
         ),
+        /** Deterministic decision-option calculation trace, bound to the immutable plan snapshot. */
+        decisionAnalysis: v.optional(v.object({
+          snapshotId: v.union(v.string(), v.null()),
+          method: v.literal("seeded_joint_scenario_mean_v1"),
+          horizonDays: v.number(),
+          currency: v.string(),
+          valuePerCustomer: v.union(v.number(), v.null()),
+          scoreBasis: v.union(v.literal("expected_customers"), v.literal("net_contribution")),
+          constraints: v.object({ monthlyAdBudgetUsd: v.union(v.number(), v.null()), ownerHoursPerWeek: v.union(v.number(), v.null()), newCustomersPerMonth: v.union(v.number(), v.null()) }),
+          probabilityCalibrated: v.literal(false),
+          limitations: v.array(v.string()),
+          options: v.array(v.object({
+            name: v.string(),
+            chosen: v.boolean(),
+            playNames: v.array(v.string()),
+            calculated: v.boolean(),
+            unavailableReason: v.union(v.string(), v.null()),
+            feasible: v.union(v.boolean(), v.null()),
+            customerRange: v.union(v.object({ p10: v.number(), p50: v.number(), p90: v.number() }), v.null()),
+            expectedCustomers: v.union(v.number(), v.null()),
+            cost: v.union(v.number(), v.null()),
+            monthlySpend: v.union(v.number(), v.null()),
+            ownerHoursPerWeek: v.union(v.number(), v.null()),
+            netContribution: v.union(v.number(), v.null()),
+          })),
+        })),
         /** Web pages the research phases actually read (spec §07): what the plan's citations can point to. */
         webSources: v.optional(v.array(v.object({ url: v.string(), title: v.optional(v.string()) }))),
       }),
