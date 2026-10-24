@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { canonicalCompetitorHost, selectWatchCandidates } from "../../shared/competitors/candidates";
+import { canonicalCompetitorHost, sameCompetitorSite, selectWatchCandidates } from "../../shared/competitors/candidates";
 
 describe("competitor watch candidates", () => {
   it("normalizes a URL to its vendor host", () => {
     expect(canonicalCompetitorHost("https://www.rival.example/pricing?utm_source=search#plans")).toBe("rival.example");
+  });
+
+  it("accepts scheme, www, and subdomain changes but rejects a different canonical site", () => {
+    expect(sameCompetitorSite("http://www.rival.example", "https://pricing.rival.example/plans")).toBe(true);
+    expect(sameCompetitorSite("https://rival.example", "https://unrelated.example")).toBe(false);
   });
 
   it("drops own-site pages, directories, duplicate domains, and unsourced suggestions", () => {

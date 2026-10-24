@@ -32,8 +32,15 @@ export function canonicalCompetitorHost(input: string): string | null {
   }
 }
 
+export function sameCompetitorSite(a: string, b: string): boolean {
+  const hostA = canonicalCompetitorHost(a);
+  const hostB = canonicalCompetitorHost(b);
+  if (!hostA || !hostB) return false;
+  return hostA === hostB || hostA.endsWith(`.${hostB}`) || hostB.endsWith(`.${hostA}`);
+}
+
 function sameSite(a: string, b: string): boolean {
-  return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+  return sameCompetitorSite(a, b);
 }
 
 function isDirectory(host: string): boolean {

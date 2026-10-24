@@ -7,6 +7,7 @@ import { fakeTurn } from "../shared/agents/fake";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { modelTurn } from "../shared/ai/turn";
 import { diffLines, meaningful, normaliseForDiff, textHash } from "../shared/competitors";
+import { canonicalCompetitorHost, sameCompetitorSite } from "../shared/competitors/candidates";
 import { getRateVersion } from "../shared/economics";
 import { extractPageContent, safeFetchPage, type ExtractedPage } from "../shared/integrations/website";
 import { internal } from "./_generated/api";
@@ -25,7 +26,7 @@ export async function readSitePage(url: string): Promise<{ page: ExtractedPage; 
 }
 
 /** Homepage plus the pricing page if the homepage links to one (own fetcher, no credits). */
-export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[] } | { error: string }> {
+export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[]; canonicalUrl: string } | { error: string }> {
   const home = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
   if (!home?.ok) return { error: home?.error ?? "Couldn't reach the site" };
   const page = extractPageContent(home.body, home.finalUrl, { maxTextChars: 20_000, maxLinks: 80 });
@@ -46,7 +47,7 @@ export async function readSite(url: string): Promise<{ text: string; sourceUrls:
       parts.push("PRICING PAGE", ...pp.headings.map((h) => h.text), pp.text, ...pp.jsonLdPrices.map((x) => `${x.name ?? "Offer"}: ${x.price} ${x.currency ?? ""}`));
     }
   }
-  return { text: parts.filter(Boolean).join("\n"), sourceUrls: [...new Set(sourceUrls)] };
+  return { text: parts.filter(Boolean).join("\n"), sourceUrls: [...new Set(sourceUrls)], canonicalUrl: home.finalUrl };
 }
 
 const Summary = z.object({ changed: z.boolean(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().optional() });
@@ -65,6 +66,11 @@ export const check = internalAction({
       const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${w.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}`, sourceUrls: [w.url] } : await readSite(w.url);
       if ("error" in site) {
         await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, error: site.error });
+        continue;
+      }
+      if ("canonicalUrl" in site && !sameCompetitorSite(w.url, site.canonicalUrl)) {
+        const host = canonicalCompetitorHost(site.canonicalUrl);
+        await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, error: `This site redirected to ${host ?? "another domain"}. Confirm its canonical website before continuing to watch it.` });
         continue;
       }
       const lines = normaliseForDiff(site.text);
