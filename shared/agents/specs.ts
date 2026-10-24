@@ -1359,11 +1359,32 @@ export function lintRepeatedCopyPieces(items: { path: string; text: string }[]):
   return issues;
 }
 
-function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
+function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: string[]): LintIssue[] {
   const issues: LintIssue[] = [];
   issues.push(...lintCopyBrief(out.copyBrief, input));
   issues.push(...lintDistinctAngles(out.posts.map((p, i) => ({ path: `posts[${i}].angle`, angle: p.angle }))));
   issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
+  const requested = new Set(requestedChannels);
+  const normalizedPosts = out.posts.map((post, index) => ({ post, index, tokens: copyTokens(`${post.title}\n${post.hook}\n${post.body}`) }));
+  normalizedPosts.forEach(({ post, index }) => {
+    if (requested.size && !requested.has(post.channel)) {
+      issues.push({ severity: requestedChannels.length === 1 ? "warn" : "error", rule: "unexpected_channel", message: `This draft targets ${post.channel}, which was not selected for this task. Draft only for the requested platforms.`, path: `posts[${index}].channel` });
+    }
+    if (/\b(?:trend(?:ing)?|meme|viral)\b/i.test(`${post.title} ${post.hook} ${post.body} ${post.angle}`) && !out.copyBrief.supportingSourceUrls.length) {
+      issues.push({ severity: "error", rule: "trend_source", message: "A trend or meme-inspired post needs an exact source URL from this run; otherwise use an evergreen idea.", path: `posts[${index}].body` });
+    }
+  });
+  for (let i = 0; i < normalizedPosts.length; i += 1) {
+    const left = normalizedPosts[i]!;
+    if (left.tokens.length < 8) continue;
+    for (let j = i + 1; j < normalizedPosts.length; j += 1) {
+      const right = normalizedPosts[j]!;
+      if (left.post.channel === right.post.channel || right.tokens.length < 8) continue;
+      if (tokenOverlap(left.tokens, right.tokens) >= 0.9) {
+        issues.push({ severity: "warn", rule: "platform_adaptation", message: `This closely reuses ${left.post.channel} copy. Rewrite the idea for ${right.post.channel}'s audience and native format.`, path: `posts[${right.index}].body` });
+      }
+    }
+  }
   issues.push(...lintEmbeddedUrls(out.posts.flatMap((p, i) => [
     { path: `posts[${i}].title`, text: p.title },
     { path: `posts[${i}].hook`, text: p.hook },
@@ -2005,7 +2026,7 @@ export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<S
       schema: SocialPostsV2Schema,
       rubric: rubricOf(primary),
       criticSkills: ["copy-fundamentals", "social-intelligence", ...channelSkills.slice(1)],
-      lint: lintSocial,
+      lint: (out, input) => lintSocial(out, input, channels),
     },
     o,
     "lean",

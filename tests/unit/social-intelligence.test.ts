@@ -64,4 +64,45 @@ describe("social intelligence routing", () => {
     const issues = spec.lint?.(output, input) ?? [];
     expect(issues.some((issue) => issue.rule === "citation" && issue.path?.includes("ownerNote"))).toBe(true);
   });
+
+  it("requires current-trend evidence and warns when cross-platform copy is reused", () => {
+    const spec = socialSpec(["linkedin", "instagram"]);
+    const input: AgentInput = { task: "Write social posts", brief: "A business", facts: [], availableSourceUrls: [] };
+    const copyBrief = {
+      reader: "operators", situation: "planning", awarenessStage: "unknown", relationshipStage: "unknown", objective: "teach",
+      offerFactIndexes: [], problemJob: "understand a decision", trigger: "planning", centralIdea: "A useful decision guide",
+      objection: "none known", proofFactIndexes: [], prohibitedClaims: [], channel: "social", format: "text", deliveryContext: "organic",
+      brandVoice: "clear", approvedExamples: [], cta: "Think about this", afterAction: "none", trackingMetric: "unknown",
+      trackingMethod: "unknown", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [],
+    };
+    const sharedDraft = "A useful checklist helps teams compare options before committing to a new approach.";
+    const output = {
+      copyBrief,
+      posts: ["linkedin", "instagram"].map((channel) => ({
+        channel, title: "A current trend for teams", body: sharedDraft, hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1,
+        angle: "Compare options before commitment", format: "text", hook: "A useful checklist for the decision", slides: [], videoScript: "", visualBrief: "", firstComment: "",
+      })),
+    };
+    const issues = spec.lint?.(output as never, input) ?? [];
+    expect(issues.some((issue) => issue.rule === "trend_source" && issue.path === "posts[0].body")).toBe(true);
+    expect(issues.some((issue) => issue.rule === "platform_adaptation" && issue.path === "posts[1].body")).toBe(true);
+  });
+
+  it("warns on a mismatched channel when single-channel publishing binds the final artifact to the selected channel", () => {
+    const spec = socialSpec(["facebook"]);
+    const input: AgentInput = { task: "Write one Facebook post", brief: "A business", facts: [] };
+    const copyBrief = {
+      reader: "operators", situation: "planning", awarenessStage: "unknown", relationshipStage: "unknown", objective: "teach",
+      offerFactIndexes: [], problemJob: "understand a decision", trigger: "planning", centralIdea: "A useful decision guide",
+      objection: "none known", proofFactIndexes: [], prohibitedClaims: [], channel: "social", format: "text", deliveryContext: "organic",
+      brandVoice: "clear", approvedExamples: [], cta: "Think about this", afterAction: "none", trackingMetric: "unknown",
+      trackingMethod: "unknown", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [],
+    };
+    const output = {
+      copyBrief,
+      posts: [{ channel: "instagram", title: "A useful idea", body: "A short useful idea for the audience.", hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Make the next step clearer", format: "text", hook: "A useful idea", slides: [], videoScript: "", visualBrief: "", firstComment: "" }],
+    };
+    const issue = (spec.lint?.(output as never, input) ?? []).find((entry) => entry.rule === "unexpected_channel");
+    expect(issue?.severity).toBe("warn");
+  });
 });
