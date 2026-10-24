@@ -53,6 +53,19 @@ describe("channel scoring", () => {
     expect(after.factors.competition).toBe(80); // 50 + capped 30
     expect(after.why).toMatch(/No rival/);
   });
+  it("uses owner-reported channel experience as a soft, explained preference without bypassing hard limits", () => {
+    const channelId = "M10";
+    const before = scoreChannels(formkit).find((r) => r.id === channelId)!;
+    const preferred = scoreChannels({ ...formkit, channelPreferences: [{ channelId, preference: "prefer", rationale: "We got qualified demos from this channel." }] }).find((r) => r.id === channelId)!;
+    const avoided = scoreChannels({ ...formkit, channelPreferences: [{ channelId, preference: "avoid", rationale: "Prior tests brought poor-fit leads." }] }).find((r) => r.id === channelId)!;
+    expect(preferred.score).toBe(before.score + 12);
+    expect(avoided.score).toBe(before.score - 12);
+    expect(preferred.ownerPreference).toMatchObject({ preference: "prefer", rationale: "We got qualified demos from this channel." });
+    expect(scoreChannels({ ...formkit, channelPreferences: [{ channelId: "S04", preference: "prefer", rationale: "We want local visibility." }] }).find((r) => r.id === "S04")?.status).toBe("ineligible");
+    const overBudget = scoreChannels({ ...formkit, channelPreferences: [{ channelId: "P09", preference: "prefer", rationale: "This channel brought strong leads before." }] }).find((r) => r.id === "P09")!;
+    expect(overBudget.status).not.toBe("primary");
+    expect(overBudget.status).not.toBe("in_plan");
+  });
   it("eligibility follows traits: Ad Grants only for nonprofits, ASO only for apps", () => {
     const np = scoreChannels({ ...plumber, types: ["nonprofit"] });
     expect(np.find((r) => r.id === "X09")?.status).not.toBe("ineligible");

@@ -83,12 +83,20 @@ export interface DimensionValue {
   evidence?: string;
 }
 
+export interface OwnerChannelPreference {
+  channelId: string;
+  preference: "prefer" | "avoid";
+  rationale: string;
+}
+
 export interface AcquisitionProfile {
   /** Business type keys from the library (multi-label). */
   types: string[];
   /** Type labels can steer soft scores when inferred, but only owner-confirmed labels establish hard eligibility. */
   typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
+  /** Owner-reported prior experience. Soft ranking input only; never bypasses eligibility or hard limits. */
+  channelPreferences?: OwnerChannelPreference[];
   /** Monthly marketing budget in USD terms (the owner's budget scaled by a reference rate), to compare with the library's USD thresholds. */
   budgetUsd: number;
   /** Goal horizon in days. */
@@ -384,6 +392,7 @@ export interface ScoredChannel {
   limits?: LimitCheck[];
   /** True when this channel directly serves the supported, owner-data diagnosis. */
   diagnosisFit?: boolean;
+  ownerPreference?: OwnerChannelPreference;
 }
 
 const PAID_FAMILIES = new Set(["paid_search", "paid_social", "traditional"]);
@@ -402,14 +411,17 @@ const DIAGNOSIS_STAGES: Partial<Record<BindingConstraint, readonly Stage[]>> = {
 
 export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint): ScoredChannel[] {
   const adj = new Map(adjustments.map((a) => [a.channelId, a]));
+  const ownerPreferences = new Map((p.channelPreferences ?? []).map((preference) => [preference.channelId, preference]));
   const regulated = p.types.map((k) => TYPE_BY_KEY[k]?.regulated).find(Boolean) ?? (dim(p, "regulation") === "high" ? "Regulated industry: check advertising rules before running this." : undefined);
   const rows = CHANNELS.map((c): ScoredChannel => {
     const el = eligibility(c, p);
     const base = priors(c, p);
     const a = adj.get(c.id);
+    const ownerPreference = ownerPreferences.get(c.id);
     const priceFit = el.ok ? priceFitReason(c, p) : undefined;
     const factors = Object.fromEntries(FACTORS.map((f) => [f, clamp(base[f] + Math.max(-30, Math.min(30, a?.deltas[f] ?? 0)))])) as Record<Factor, number>;
-    const score = clamp(FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0));
+    const baseScore = FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0);
+    const score = clamp(baseScore + (ownerPreference ? (ownerPreference.preference === "prefer" ? 12 : -12) : 0));
     return {
       id: c.id,
       name: c.name,
@@ -428,6 +440,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       audienceName: a?.audienceName,
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
       priceFit,
+      ...(ownerPreference ? { ownerPreference } : {}),
       ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
       ...(focus && DIAGNOSIS_STAGES[focus] ? { diagnosisFit: c.stages.some((stage) => DIAGNOSIS_STAGES[focus]!.includes(stage)) } : {}),
     };
@@ -492,6 +505,7 @@ export interface SavedAcquisition {
   types: string[];
   typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
+  channelPreferences?: OwnerChannelPreference[];
 }
 
 /** Profile from what's saved, the onboarding type guess and the goal. */
@@ -502,6 +516,7 @@ export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: s
     types: p.saved?.types.length ? p.saved.types : p.legacyTypes(p.legacyType),
     typesSource: p.saved?.types.length ? p.saved.typesSource ?? "inferred" : "inferred",
     dims: { ...(p.saved?.dims ?? {}) },
+    ...(p.saved?.channelPreferences ? { channelPreferences: [...p.saved.channelPreferences] } : {}),
     budgetUsd: Math.max(0, Math.round(toUsd(minorToMajor(p.budgetMinor, cur), cur))),
     horizonDays: p.horizonDays,
     ...(p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? { priceUsdMonth: Math.round(toUsd(p.priceUsdMonth, cur) * 100) / 100 } : {}),
@@ -555,7 +570,7 @@ export function scorecardText(rows: ScoredChannel[], n = 14, currency?: string):
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.ownerPreference ? ` · owner-reported ${r.ownerPreference.preference}: ${r.ownerPreference.rationale}` : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n")
     .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

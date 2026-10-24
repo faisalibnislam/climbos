@@ -330,4 +330,17 @@ describe("Plan version history", () => {
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/connected tools changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/connected tools changed/);
   });
+
+  it("requires refresh when owner channel experience changes after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-channel-experience@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.acquisition.setChannelPreference, { slug: w.slug, channelId: "M10", preference: "prefer", rationale: "Past tests brought qualified demos." });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  });
 });

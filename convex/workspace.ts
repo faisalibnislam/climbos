@@ -770,7 +770,7 @@ function planStaleInputs(
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null,
   connectedCapabilities: string[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; capabilities?: string[] } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; capabilities?: string[] } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -781,12 +781,16 @@ function planStaleInputs(
   const hasBrandSnapshot = (snapshot?.snapshotVersion ?? 0) >= 10;
   const hasOwnerAcquisitionTypeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 11;
   const hasOwnerAcquisitionDimensionSnapshot = (snapshot?.snapshotVersion ?? 0) >= 12;
+  const hasOwnerChannelPreferenceSnapshot = (snapshot?.snapshotVersion ?? 0) >= 13;
   const ownerAcquisitionDimensions = Object.fromEntries(
     Object.entries(business?.acquisition?.dims as Record<string, { value: string; source: string }> | undefined ?? {})
       .filter(([, value]) => value?.source === "owner")
       .map(([key, value]) => [key, value.value])
       .sort(([a], [b]) => a.localeCompare(b)),
   );
+  const ownerChannelPreferences = [...(business?.acquisition?.channelPreferences ?? [])]
+    .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
+    .sort((a, b) => a.channelId.localeCompare(b.channelId));
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.
@@ -795,7 +799,7 @@ function planStaleInputs(
     funnel: hasFunnelSnapshot ? JSON.stringify(savedFunnel) !== JSON.stringify(currentFunnel) : Boolean(business?.funnel && business.funnel.updatedAt > strategy.createdAt),
     // Goals are replaced when edited; legacy plans fall back to their bound goal ID.
     goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
-    businessProfile: (hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never)) || (hasOwnerAcquisitionTypeSnapshot && canonicalJson(snapshot?.ownerAcquisitionTypes as never) !== canonicalJson((business?.acquisition?.typesSource === "owner" ? [...business.acquisition.types].sort() : null) as never)) || (hasOwnerAcquisitionDimensionSnapshot && canonicalJson(snapshot?.ownerAcquisitionDimensions as never) !== canonicalJson(ownerAcquisitionDimensions as never)),
+    businessProfile: (hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never)) || (hasOwnerAcquisitionTypeSnapshot && canonicalJson(snapshot?.ownerAcquisitionTypes as never) !== canonicalJson((business?.acquisition?.typesSource === "owner" ? [...business.acquisition.types].sort() : null) as never)) || (hasOwnerAcquisitionDimensionSnapshot && canonicalJson(snapshot?.ownerAcquisitionDimensions as never) !== canonicalJson(ownerAcquisitionDimensions as never)) || (hasOwnerChannelPreferenceSnapshot && canonicalJson(snapshot?.ownerChannelPreferences as never) !== canonicalJson(ownerChannelPreferences as never)),
     businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
     brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
     capabilities: Array.isArray(snapshot?.capabilities) && canonicalJson([...snapshot.capabilities].sort() as never) !== canonicalJson([...connectedCapabilities].sort() as never),

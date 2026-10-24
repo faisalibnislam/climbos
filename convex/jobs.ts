@@ -692,7 +692,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 12,
+    snapshotVersion: 13,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -711,7 +711,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 12,
+    snapshotVersion: 13,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -737,6 +737,9 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
         .map(([key, value]) => [key, value.value])
         .sort(([a], [b]) => a.localeCompare(b)),
     ),
+    ownerChannelPreferences: [...(job.business?.acquisition?.channelPreferences ?? [])]
+      .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
+      .sort((a, b) => a.channelId.localeCompare(b.channelId)),
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
     brandProfile: job.brand ? {
       voice: job.brand.voice,
@@ -1175,6 +1178,7 @@ export const buildStrategy = internalAction({
               "Channel history is descriptive last-touch association. It may omit untagged influence. Use source-tagged first-recorded-payer counts to distinguish acquisition from renewal payment events, and matched media spend per first recorded payer as a proxy only; neither is CAC or proof of channel causation. When matched same-currency spend and an owner-reported margin are available, compare tracked media ROAS with the media-only break-even ROAS only as a cautious screen for a bounded follow-up test; it is not incremental lift, full ROI, or proof of profitability. Treat no observed history as unknown, not evidence against a channel.",
               `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
               `OWNER-CONFIRMED BUSINESS TYPES: ${profile.typesSource === "owner" ? profile.types.join(", ") : "none; inferred types are soft scoring clues only and cannot establish hard eligibility"}.`,
+              `OWNER-REPORTED CHANNEL EXPERIENCE (soft preference only; it is not a measured result and never overrides eligibility, budget, time, or capability limits): ${profile.channelPreferences?.map((item) => `${item.channelId} ${item.preference}: ${item.rationale}`).join("; ") || "none"}.`,
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,
             ].join("\n\n"),
