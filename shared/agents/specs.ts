@@ -17,6 +17,7 @@ import {
   AdDraftsSchema,
   BusinessInsightsSchema,
   SwotEvidenceSchema,
+  SwotMoveSchema,
   ConversionAuditSchema,
   EmailSequenceSchema,
   RetentionPlanSchema,
@@ -51,7 +52,14 @@ import { routeModels } from "./routes";
 const force = z.enum(["push", "pull", "anxiety", "habit"]);
 
 export const InsightsV2Schema = BusinessInsightsSchema.extend({
+  swot: z.object({
+    strengths: z.array(z.string()).max(4),
+    weaknesses: z.array(z.string()).max(4),
+    opportunities: z.array(z.string()).max(4),
+    threats: z.array(z.string()).max(4),
+  }),
   swotEvidence: z.array(SwotEvidenceSchema).max(16),
+  swotMoves: z.array(SwotMoveSchema).max(8),
   competitors: z.array(
     BusinessInsightsSchema.shape.competitors.element.extend({
       kind: z.enum(["direct", "adjacent"]),
@@ -1249,7 +1257,7 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
   });
 }
 
-export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence">, input: AgentInput): LintIssue[] {
+export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -1306,6 +1314,31 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
   for (const [dimension, section] of Object.entries(dimensions)) section.statements.forEach((finding) => {
     if (!represented.has(`${dimension}\u0000${finding}`)) {
       swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Give this SWOT statement a source or label it as an inference, and explain its strategic implication.", path: `swot.${section.path}` });
+    }
+  });
+  const moveDimensions = {
+    strength_opportunity: ["strength", "opportunity"],
+    weakness_opportunity: ["weakness", "opportunity"],
+    strength_threat: ["strength", "threat"],
+    weakness_threat: ["weakness", "threat"],
+  } as const;
+  const seenMoves = new Set<string>();
+  out.swotMoves.forEach((move, index) => {
+    const path = `swotMoves[${index}]`;
+    const [first, second] = moveDimensions[move.kind];
+    const firstRows = dimensions[first].statements;
+    const secondRows = dimensions[second].statements;
+    if (!Number.isInteger(move.firstIndex) || move.firstIndex < 0 || move.firstIndex >= firstRows.length) {
+      swotIssues.push({ severity: "error", rule: "swot_move", message: `Select an existing ${first} statement for this strategic combination.`, path: `${path}.firstIndex` });
+    }
+    if (!Number.isInteger(move.secondIndex) || move.secondIndex < 0 || move.secondIndex >= secondRows.length) {
+      swotIssues.push({ severity: "error", rule: "swot_move", message: `Select an existing ${second} statement for this strategic combination.`, path: `${path}.secondIndex` });
+    }
+    const key = `${move.kind}:${move.firstIndex}:${move.secondIndex}`;
+    if (seenMoves.has(key)) swotIssues.push({ severity: "error", rule: "swot_move", message: "Keep only one move for each pair of SWOT findings.", path });
+    seenMoves.add(key);
+    if (!move.move.trim() || !move.firstTest.trim() || !move.measure.trim()) {
+      swotIssues.push({ severity: "error", rule: "swot_move", message: "Each strategy needs a concrete move, a first test, and a measure.", path });
     }
   });
   return [...lintAvailableSourceUrls(refs, input), ...swotIssues];

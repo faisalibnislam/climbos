@@ -36,7 +36,7 @@ describe("research source assessment", () => {
 
   it("accepts insight citations only when their URLs were supplied to the run", () => {
     const input = { task: "Assess alternatives", brief: "Business facts", facts: [], precomputedResearch: { notes: "Review page", sources: [{ url: "https://example.com/reviews/" }] } };
-    const base = { competitors: [], alternatives: [], objections: [], gaps: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [] };
+    const base = { competitors: [], alternatives: [], objections: [], gaps: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
     expect(lintInsightSources({ ...base, vocPhrases: [{ phrase: "Useful", theme: "value", sourceUrl: "https://example.com/reviews" }] }, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, vocPhrases: [{ phrase: "Made up", theme: "value", sourceUrl: "https://invented.example/reviews" }] }, input);
     expect(issues).toHaveLength(1);
@@ -60,6 +60,7 @@ describe("research source assessment", () => {
       gaps: [],
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
       swotEvidence: [],
+      swotMoves: [],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
@@ -80,13 +81,15 @@ describe("research source assessment", () => {
         { dimension: "strength" as const, finding: "Serves 40 active customers", basis: "owner_report" as const, evidenceRefs: ["fact:0"], strategicImplication: "Use this customer base for opt-in referrals before buying reach.", confidence: "medium" as const },
         { dimension: "opportunity" as const, finding: "Local searches have grown", basis: "research" as const, evidenceRefs: ["https://market.example/report"], strategicImplication: "Check local-intent visits before investing in new service areas.", confidence: "low" as const },
       ],
+      swotMoves: [{ kind: "strength_opportunity" as const, firstIndex: 0, secondIndex: 0, move: "Offer opt-in referrals to existing customers in the researched local service area.", firstTest: "Invite the last five consenting customers to refer one neighbor.", measure: "Qualified referred inquiries in 14 days" }],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
-    const issues = lintInsightSources({ ...base, swotEvidence: [{ ...base.swotEvidence[0], evidenceRefs: ["fact:8"] }, { ...base.swotEvidence[1], dimension: "strength" as const }] }, input);
+    const issues = lintInsightSources({ ...base, swotEvidence: [{ ...base.swotEvidence[0], evidenceRefs: ["fact:8"] }, { ...base.swotEvidence[1], dimension: "strength" as const }], swotMoves: [{ ...base.swotMoves[0], kind: "weakness_opportunity" as const }] }, input);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({ rule: "citation", path: "swotEvidence[0].evidenceRefs" }),
       expect.objectContaining({ rule: "swot_evidence", path: "swotEvidence[1].finding" }),
       expect.objectContaining({ rule: "swot_evidence", path: "swot.opportunities" }),
+      expect.objectContaining({ rule: "swot_move", path: "swotMoves[0].firstIndex" }),
     ]));
   });
 

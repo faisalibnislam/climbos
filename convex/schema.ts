@@ -460,6 +460,14 @@ export default defineSchema({
           strategicImplication: v.string(),
           confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
         }))),
+        swotMoves: v.optional(v.array(v.object({
+          kind: v.union(v.literal("strength_opportunity"), v.literal("weakness_opportunity"), v.literal("strength_threat"), v.literal("weakness_threat")),
+          firstIndex: v.number(),
+          secondIndex: v.number(),
+          move: v.string(),
+          firstTest: v.string(),
+          measure: v.string(),
+        }))),
         journey: v.array(v.object({ stage: v.string(), observation: v.string(), opportunity: v.string() })),
         opportunities: v.array(v.object({ title: v.string(), why: v.string(), effort: v.string() })),
         /** Engine v2 expert research: alternatives, customer language, objections, gaps. */

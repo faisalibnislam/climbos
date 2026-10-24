@@ -20,6 +20,15 @@ export const SwotEvidenceSchema = z.object({
   strategicImplication: z.string().max(400),
   confidence,
 });
+export const SwotMoveSchema = z.object({
+  kind: z.enum(["strength_opportunity", "weakness_opportunity", "strength_threat", "weakness_threat"]),
+  firstIndex: z.number().int().nonnegative(),
+  secondIndex: z.number().int().nonnegative(),
+  /** A concrete strategic choice formed by connecting the two cited SWOT findings. */
+  move: z.string().max(400),
+  firstTest: z.string().max(300),
+  measure: z.string().max(200),
+});
 
 export const BusinessProfileSchema = z.object({
   name: z.string(),
@@ -65,6 +74,8 @@ export const BusinessInsightsSchema = z.object({
   }),
   /** Additive structured support; absent on legacy insight records. */
   swotEvidence: z.array(SwotEvidenceSchema).max(16).optional(),
+  /** TOWS-style combinations; indices point to exact entries in the relevant SWOT sections. */
+  swotMoves: z.array(SwotMoveSchema).max(8).optional(),
   journey: z.array(z.object({ stage: z.string(), observation: z.string(), opportunity: z.string() })),
   opportunities: z.array(z.object({ title: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]) })),
 });

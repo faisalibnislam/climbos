@@ -313,6 +313,12 @@ export const saveInsights = internalMutation({
           evidenceRefs: finding.evidenceRefs.slice(0, 8),
           strategicImplication: finding.strategicImplication.slice(0, 400),
         })),
+        swotMoves: i.swotMoves?.slice(0, 8).map((move) => ({
+          ...move,
+          move: move.move.slice(0, 400),
+          firstTest: move.firstTest.slice(0, 300),
+          measure: move.measure.slice(0, 200),
+        })),
         journey: i.journey.slice(0, 6),
         opportunities: i.opportunities.slice(0, 6),
         ...("vocPhrases" in i

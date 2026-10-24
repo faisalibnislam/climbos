@@ -76,10 +76,11 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
     // The fake has no source bundle to support SWOT claims. Return an honest
     // empty SWOT instead of fabricating evidence just to exercise the schema.
-    const insights = output as { swot?: { strengths?: unknown[]; weaknesses?: unknown[]; opportunities?: unknown[]; threats?: unknown[] }; swotEvidence?: unknown[] };
-    if (insights && typeof insights === "object" && insights.swot && Array.isArray(insights.swotEvidence)) {
+    const insights = output as { swot?: { strengths?: unknown[]; weaknesses?: unknown[]; opportunities?: unknown[]; threats?: unknown[] }; swotEvidence?: unknown[]; swotMoves?: unknown[] };
+    if (insights && typeof insights === "object" && insights.swot && Array.isArray(insights.swotEvidence) && Array.isArray(insights.swotMoves)) {
       insights.swot = { strengths: [], weaknesses: [], opportunities: [], threats: [] };
       insights.swotEvidence = [];
+      insights.swotMoves = [];
     }
     // Growth plans: a portfolio that satisfies the deterministic play rules.
     if (output && typeof output === "object" && Array.isArray((output as { plays?: unknown }).plays)) {
