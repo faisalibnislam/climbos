@@ -28,6 +28,7 @@ import {
   rateVersionForDate,
   RESEARCH_2026_10_17,
   roleTextCosts,
+  summarizeModelUsage,
   ROUTING_CLIMBOS_2026_10_17,
   topupEconomics,
   USAGE_PROFILES,
@@ -53,6 +54,21 @@ describe("rate registry", () => {
     expect(rateVersionForDate("2027-01-01").id).toBe(GEMINI_FLASH_REPRICE_2027_01_01.id);
     expect(() => rateVersionForDate("2025-01-01")).toThrow();
     expect(() => rateVersionForDate("17/10/2026")).toThrow(RangeError);
+  });
+});
+
+describe("model usage analysis", () => {
+  it("aggregates calls, tokens, cost and estimate status by provider/model", () => {
+    const summary = summarizeModelUsage([
+      { provider: "openai", model: "gpt-6.1-sol", inputTokens: 100, outputTokens: 20, reasoningTokens: 5, cacheReadTokens: 40, cacheWriteTokens: 0, costMicros: 90, estimated: false },
+      { provider: "openai", model: "gpt-6.1-sol", inputTokens: 50, outputTokens: 10, reasoningTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 10, costMicros: 60, estimated: true },
+      { provider: "openai", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100, estimated: false },
+    ]);
+
+    expect(summary).toEqual([
+      { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, inputTokens: 150, outputTokens: 30, reasoningTokens: 7, cacheReadTokens: 40, cacheWriteTokens: 10, costMicros: 150 },
+      { provider: "openai", model: null, calls: 1, estimatedCalls: 0, recordedCalls: 1, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100 },
+    ]);
   });
 });
 

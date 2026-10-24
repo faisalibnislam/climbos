@@ -42,6 +42,23 @@ describe("operator accepted-plan costs", () => {
           createdAt: now,
         });
       }
+      for (const [model, costMicros, estimated] of [["gpt-6.1-sol", 90_000, false], ["gpt-6.1-sol", 60_000, true], ["gpt-6-luna", 20_000, false]] as const) {
+        await ctx.db.insert("usageEvents", {
+          orgId: orgId as Id<"organizations">,
+          type: "model_call",
+          provider: "openai",
+          model,
+          inputTokens: 100,
+          outputTokens: 20,
+          reasoningTokens: 5,
+          cacheReadTokens: 40,
+          cacheWriteTokens: 0,
+          quantity: 1,
+          costMicros,
+          estimated,
+          createdAt: now,
+        });
+      }
     });
 
     const dashboard = await ops.client.query(api.ops.dashboard, {});
@@ -49,6 +66,12 @@ describe("operator accepted-plan costs", () => {
       approvedPlans30d: 2,
       approvedPlanCost30dMicros: 6_000_000,
       costPerApprovedPlan30dMicros: 3_000_000,
+      spend24hMicros: 170_000,
+      usage24h: { eventsRead: 3, coverageCapped: false },
+      byModel24h: [
+        { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, costMicros: 150_000 },
+        { provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 20_000 },
+      ],
     });
   });
 });

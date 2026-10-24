@@ -8,6 +8,7 @@ import {
   marginGuard,
   microsToUsd,
   RATE_VERSIONS,
+  summarizeModelUsage,
 } from "../shared/economics";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
@@ -87,10 +88,12 @@ export const dashboard = query({
       .query("privacyRequests")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .take(50);
-    const recentUsage = await ctx.db
+    const usageRows = await ctx.db
       .query("usageEvents")
       .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
-      .take(5000);
+      .take(5001);
+    const usageCoverageCapped = usageRows.length > 5000;
+    const recentUsage = usageRows.slice(0, 5000);
     const spend24h = recentUsage.reduce((s, e) => s + e.costMicros, 0);
     const byProvider = new Map<string, { calls: number; costMicros: number }>();
     for (const e of recentUsage) {
@@ -159,7 +162,19 @@ export const dashboard = query({
       privacy: privacy.map((p) => ({ id: p._id, orgId: p.orgId, kind: p.kind, createdAt: p.createdAt })),
       costs: {
         spend24hMicros: spend24h,
+        usage24h: { eventsRead: recentUsage.length, coverageCapped: usageCoverageCapped },
         byProvider: [...byProvider.entries()].map(([provider, x]) => ({ provider, ...x })),
+        byModel24h: summarizeModelUsage(recentUsage.map((event) => ({
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+        }))),
         estimate7dMicros: estimate,
         actual7dMicros: actual,
         overEstimateRuns: drift.length,

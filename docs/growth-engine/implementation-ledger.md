@@ -256,7 +256,7 @@ The shared agent and critic contracts now preserve the distinction between publi
 | REQ-COST-08 | missing | S14 | — | |
 | REQ-COST-09 | partial | S14 | `wordCaps.ts` | Not tuned from measurements |
 | REQ-COST-10 | exists | — | `jobs.ts:349-381` | |
-| REQ-COST-11 | partial | S14 | `ops.ts:42` | No per-model report or anomaly alert |
+| REQ-COST-11 | partial | S14 | `ops.ts` `dashboard`, `shared/economics/usageAnalysis.ts` | Operator costs now group 24-hour events by provider and model, sum token/cache/cost fields, distinguish estimated from recorded events, sort deterministically, and expose sampled-row count plus a 5,000-event truncation flag. **Gap:** no statistically reviewed anomaly alert or per-model longer-term trend yet. |
 | REQ-COST-12 | partial | S0 | `docs/Capabilities.md`, `docs/EngineV2.md`, `capacity.ts`, `rates.ts` | Stale routing and capability claims fixed 2026-10-19. Frozen rates exist. Provider setup docs not yet checked |
 | REQ-EVAL-01 | partial | S0/S14 | `evaluation-and-cost.md` | Four kinds of evidence defined. Bench output doesn't report them separately |
 | REQ-EVAL-02 | partial | S14 | `shared/abtest` | Engine Lab uses its own A/B |
