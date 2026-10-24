@@ -78,9 +78,10 @@ export default function PrivacyPage() {
       <h2>Who we share it with</h2>
       <p>
         We use service providers for hosting and our database, email delivery, payments, product analytics and AI models. They may
-        process your information only to provide their service to us. We share information with the platforms you connect (such as
-        Meta or Google) only when you ask us to publish, send or launch something there. We may disclose information if the law
-        requires it.
+        process your information only to provide their service to us. When you run a website audit, we send the public page URL being
+        checked to Google PageSpeed Insights and, when configured, the Chrome UX Report API to retrieve mobile performance
+        measurements. We share information with the platforms you connect (such as Meta or Google) only when you ask us to publish,
+        send or launch something there. We may disclose information if the law requires it.
       </p>
 
       <h2>How long we keep it</h2>
