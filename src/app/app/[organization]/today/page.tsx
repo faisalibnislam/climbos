@@ -15,6 +15,7 @@ import {
   Sparkles,
   Target,
   Zap,
+  ExternalLink,
   type LucideIcon,
 } from "@/components/icons"
 import Link from "next/link";
@@ -58,6 +59,7 @@ function StatCard({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: 
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type CardView = Today["cards"][number];
+type GrowthOpportunity = NonNullable<Today["strategy"]>["opportunities"][number];
 
 const RUN_STATUS: Record<string, { label: string; tone: "neutral" | "green" | "amber" | "red" | "blue" }> = {
   cost_reserved: { label: "Starting", tone: "blue" },
@@ -191,6 +193,7 @@ export default function TodayPage() {
               </ol>
             )}
           </section>
+          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
@@ -262,6 +265,64 @@ export default function TodayPage() {
         <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
       </div>
     </div>
+  );
+}
+
+function GrowthOpportunities({ slug, status, opportunities }: { slug: string; status: NonNullable<Today["strategy"]>["status"]; opportunities: GrowthOpportunity[] }) {
+  const planStatus = status === "needs_approval" ? "Plan needs your OK" : status === "approved" ? "From your approved plan" : status === "draft" ? "Draft plan" : "Plan update";
+  const tone = status === "needs_approval" ? "amber" : status === "approved" ? "green" : "neutral";
+
+  return (
+    <section aria-labelledby="opportunities-heading" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="opportunities-heading" className="heading-section">Top growth opportunities</h2>
+        <Badge tone={tone}>{planStatus}</Badge>
+      </div>
+      <ol className="grid gap-3">
+        {opportunities.map((opportunity, index) => (
+          <li key={opportunity.id ?? `${opportunity.title}-${index}`}>
+            <article className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+              <div>
+                <p className="text-overline">Opportunity {index + 1}</p>
+                <h3 className="heading-card mt-0.5">{opportunity.title}</h3>
+                {opportunity.why ? <p className="mt-1 text-sm text-ink-2">{opportunity.why}</p> : null}
+              </div>
+              {opportunity.nextStep ? (
+                <div className="rounded-lg bg-surface-2 px-3 py-2">
+                  <p className="text-xs font-medium text-ink-3">First step</p>
+                  <p className="mt-0.5 text-sm text-ink">{opportunity.nextStep}</p>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {opportunity.ownerHoursPerWeek !== null ? (
+                  <span className="text-xs text-ink-3">Planned owner time: {opportunity.ownerHoursPerWeek} {opportunity.ownerHoursPerWeek === 1 ? "hour" : "hours"}/week</span>
+                ) : <span className="text-xs text-ink-3">Owner time not estimated</span>}
+                <Link href={`/app/${slug}/plan#plays`} className={buttonClasses({ variant: "link" })}>
+                  Open plan <ArrowRight aria-hidden />
+                </Link>
+              </div>
+              {opportunity.sources.length ? (
+                <details className="border-t border-line pt-2">
+                  <summary className="cursor-pointer text-xs font-medium text-ink-2">Evidence basis</summary>
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {opportunity.sources.map((source, sourceIndex) => (
+                      <li key={`${source.label}-${source.url ?? source.detail ?? sourceIndex}`} className="text-xs text-ink-2">
+                        {source.url ? (
+                          <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium underline decoration-line underline-offset-2">
+                            {source.label} <ExternalLink aria-hidden className="size-3" />
+                          </a>
+                        ) : <span className="font-medium">{source.label}{source.detail ? ` · ${source.detail}` : ""}</span>}
+                        {source.quote ? <p className="mt-1 text-ink-3">“{source.quote}”</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : <p className="border-t border-line pt-2 text-xs text-ink-3">No linked source was saved for this play.</p>}
+            </article>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

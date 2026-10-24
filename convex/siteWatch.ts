@@ -7,6 +7,7 @@ import { createRunWithReservation } from "./engine";
 import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { findConflicts } from "../shared/agents/conflicts";
 
 /**
  * Self-improvement loop 1 — keep researching each business. Weekly, ClimbOS
@@ -27,12 +28,34 @@ export const facts = query({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) return null;
     const rows = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(300)).filter((f) => f.reviewState !== "rejected");
+    const confirmed = rows.filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
+    const conflicts = findConflicts(confirmed.map((f) => ({ id: String(f._id), statement: f.statement, category: f.category })));
+    const conflictFactIds = [...new Set(conflicts.flatMap((conflict) => conflict.factIds))];
+    const conflictFacts = new Map(confirmed.filter((fact) => conflictFactIds.includes(String(fact._id))).map((fact) => [String(fact._id), fact]));
+    const conflictSourceIds = [...new Set([...conflictFacts.values()].flatMap((fact) => fact.sourceIds.map(String)))];
+    const conflictSources = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number }>();
+    for (const id of conflictSourceIds) {
+      const source = await ctx.db.get(ctx.db.normalizeId("factSources", id) as Id<"factSources">);
+      if (source && source.orgId === org._id) conflictSources.set(id, { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt });
+    }
     const order = { needs_review: 0, edited: 1, confirmed: 1, rejected: 2 } as const;
     rows.sort((a, b) => order[a.reviewState] - order[b.reviewState] || b.updatedAt - a.updatedAt);
     return {
       website: business.website ?? null,
       siteCheckedAt: business.siteCheckedAt ?? null,
-      facts: rows.map((f) => ({ id: f._id, category: f.category, statement: f.statement, state: f.reviewState, provenance: f.provenance, replaces: f.replacesFactId ?? null })),
+      facts: rows.map((f) => ({ id: f._id, category: f.category, statement: f.statement, state: f.reviewState, provenance: f.provenance, replaces: f.replacesFactId ?? null, updatedAt: f.updatedAt })),
+      conflicts: conflicts.map((conflict) => ({
+        ...conflict,
+        facts: conflict.factIds.map((id) => {
+          const fact = conflictFacts.get(id);
+          return fact ? {
+            id: fact._id,
+            statement: fact.statement,
+            provenance: fact.provenance,
+            sources: fact.sourceIds.map(String).map((sourceId) => conflictSources.get(sourceId)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+          } : null;
+        }).filter((fact): fact is NonNullable<typeof fact> => fact !== null),
+      })),
     };
   },
 });
@@ -61,6 +84,42 @@ export const checkNow = mutation({
     if (!b?.website) throw appError("INVALID", "Add your website first.");
     if (b.siteCheckedAt && Date.now() - b.siteCheckedAt < 6 * 3_600_000) throw appError("RATE_LIMITED", "Checked in the last 6 hours.");
     await ctx.scheduler.runAfter(0, internal.siteWatchActions.check, { orgId: org._id });
+  },
+});
+
+export const searchReadiness = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    return business ? { website: business.website ?? null, scan: business.siteReadiness ?? null } : null;
+  },
+});
+
+export const scanSearchReadiness = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business?.website) throw appError("INVALID", "Add your website first.");
+    if (business.siteReadiness?.status === "queued" && Date.now() - business.siteReadiness.startedAt < 10 * 60_000) throw appError("RATE_LIMITED", "A site check is already running.");
+    if (business.siteReadiness?.checkedAt && Date.now() - business.siteReadiness.checkedAt < 60 * 60_000) throw appError("RATE_LIMITED", "This page was checked in the last hour.");
+    const startedAt = Date.now();
+    await ctx.db.patch(business._id, { siteReadiness: { status: "queued", startedAt } });
+    await ctx.scheduler.runAfter(0, internal.siteWatchActions.scanReadiness, { businessId: business._id, website: business.website, startedAt });
+  },
+});
+
+export const saveSearchReadiness = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    startedAt: v.number(),
+    result: v.object({ status: v.union(v.literal("complete"), v.literal("failed")), checkedAt: v.number(), pageUrl: v.optional(v.string()), pageTitle: v.optional(v.string()), description: v.optional(v.string()), headingCount: v.optional(v.number()), structuredDataTypes: v.optional(v.array(v.string())), findings: v.optional(v.array(v.object({ id: v.string(), level: v.union(v.literal("check"), v.literal("attention")), title: v.string(), evidence: v.string(), nextStep: v.string() }))), error: v.optional(v.string()) }),
+  },
+  handler: async (ctx, { businessId, startedAt, result }) => {
+    const business = await ctx.db.get(businessId);
+    if (!business || business.siteReadiness?.startedAt !== startedAt) return;
+    await ctx.db.patch(businessId, { siteReadiness: { ...result, startedAt } });
   },
 });
 

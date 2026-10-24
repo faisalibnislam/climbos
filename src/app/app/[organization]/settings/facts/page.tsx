@@ -13,6 +13,8 @@ import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
 import { PERMISSION_WHO, useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
+import { groupExactDuplicateFacts } from "@shared/agents/factDuplicates";
+import { factFreshness } from "@shared/agents/factFreshness";
 
 const CATEGORIES = ["product", "pricing", "offer", "audience", "proof", "brand", "competitor", "other"] as const;
 const CATEGORY_LABEL: Record<(typeof CATEGORIES)[number], string> = {
@@ -43,7 +45,33 @@ export default function FactsPage() {
   if (data === null) return <p className="text-sm text-ink-3">Finish onboarding first.</p>;
   const pending = data.facts.filter((f) => f.state === "needs_review");
   const known = data.facts.filter((f) => f.state !== "needs_review");
+  const knownGroups = groupExactDuplicateFacts(known);
   const statementOf = (id: string | null) => (id ? data.facts.find((f) => f.id === id)?.statement : undefined);
+  const renderKnownFact = (f: (typeof known)[number]) => editing?.id === f.id ? (
+    <div key={f.id} className="flex gap-2">
+      <Input value={editing.text} aria-label="Fact" onChange={(e) => setEditing({ ...editing, text: e.target.value })} />
+      <Button size="sm" onClick={() => run(async () => { await review({ slug, factId: f.id, action: "edit", statement: editing.text }); setEditing(null); }, "Saved")}>
+        Save
+      </Button>
+    </div>
+  ) : (
+    <div key={f.id} id={`business-fact-${f.id}`} className="flex items-start justify-between gap-2 text-sm scroll-mt-6">
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-ink-2">{f.statement}</span>
+        <span className="text-xs text-ink-3">
+          {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · Last confirmed {relativeTime(f.updatedAt)}{factFreshness(f.category, f.updatedAt).reviewSuggested ? " · Worth reviewing" : ""}
+        </span>
+      </span>
+      {canEdit ? <span className="flex shrink-0 gap-1">
+        <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
+          <Pencil aria-hidden />
+        </Button>
+        <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
+          <X aria-hidden />
+        </Button>
+      </span> : null}
+    </div>
+  );
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader
@@ -57,6 +85,34 @@ export default function FactsPage() {
         }
       />
       {data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
+      {data.conflicts.length ? (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="flex flex-col gap-2">
+            <h2 className="heading-card text-amber-950">Some confirmed facts disagree</h2>
+            <p className="text-sm text-amber-950">Please check which information is current before using it to make a growth decision.</p>
+            <ul className="flex flex-col gap-3">
+              {data.conflicts.map((conflict) => (
+                <li key={`${conflict.subject}-${conflict.factIds.join("-")}`} className="border-t border-amber-300 pt-2 first:border-0 first:pt-0">
+                  <p className="text-sm font-medium text-amber-950">{conflict.subject}: {conflict.values.join(" vs ")}</p>
+                  <ul className="mt-1 flex flex-col gap-1 text-xs text-amber-950">
+                    {conflict.facts.map((fact) => (
+                      <li key={fact.id}>
+                        <a href={`#business-fact-${fact.id}`} className="underline underline-offset-2">{fact.statement}</a>
+                        <span className="ml-1">({fact.provenance === "owner_supplied" ? "owner-provided" : "website research"})</span>
+                        {fact.sources.map((source, sourceIndex) => source.url ? (
+                          <a key={`${source.url}-${sourceIndex}`} href={source.url} target="_blank" rel="noopener noreferrer" className="ml-2 underline underline-offset-2">
+                            {source.title || source.url}
+                          </a>
+                        ) : null)}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       {pending.length ? (
         <Card>
           <CardContent className="flex flex-col gap-2">
@@ -95,36 +151,26 @@ export default function FactsPage() {
       ) : null}
       <Card>
         <CardContent className="flex flex-col gap-2">
-          <h2 className="heading-card">Known facts ({known.length})</h2>
-          {CATEGORIES.map((cat) => [cat, known.filter((f) => ((CATEGORIES as readonly string[]).includes(f.category) ? f.category : "other") === cat)] as const)
+          <h2 className="heading-card">Known facts ({knownGroups.length}{known.length > knownGroups.length ? ` · ${known.length - knownGroups.length} repeated` : ""})</h2>
+          <p className="text-xs text-ink-3">Older pricing, offers, and other details are marked for review. Age alone does not mean a fact is incorrect.</p>
+          {CATEGORIES.map((cat) => [cat, knownGroups.filter(({ primary }) => ((CATEGORIES as readonly string[]).includes(primary.category) ? primary.category : "other") === cat)] as const)
             .filter(([, list]) => list.length)
             .map(([cat, list]) => (
               <section key={cat} aria-label={`${CATEGORY_LABEL[cat]} facts`} className="flex flex-col gap-1.5 border-t border-line pt-2 first-of-type:border-0 first-of-type:pt-0">
                 <h3 className="text-xs font-medium text-ink-3">
                   {CATEGORY_LABEL[cat]} <span className="tabular-nums">{list.length}</span>
                 </h3>
-                {list.map((f) =>
-                  editing?.id === f.id ? (
-                    <div key={f.id} className="flex gap-2">
-                      <Input value={editing.text} aria-label="Fact" onChange={(e) => setEditing({ ...editing, text: e.target.value })} />
-                      <Button size="sm" onClick={() => run(async () => { await review({ slug, factId: f.id, action: "edit", statement: editing.text }); setEditing(null); }, "Saved")}>
-                        Save
-                      </Button>
-                    </div>
-                  ) : (
-                    <div key={f.id} className="flex items-start justify-between gap-2 text-sm">
-                      <span className="min-w-0 text-ink-2">{f.statement}</span>
-                      {canEdit ? <span className="flex shrink-0 gap-1">
-                        <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
-                          <Pencil aria-hidden />
-                        </Button>
-                        <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => run(() => review({ slug, factId: f.id, action: "reject" }))}>
-                          <X aria-hidden />
-                        </Button>
-                      </span> : null}
-                    </div>
-                  ),
-                )}
+                {list.map(({ primary, duplicates }) => (
+                  <div key={primary.id} className="flex flex-col gap-1.5">
+                    {renderKnownFact(primary)}
+                    {duplicates.length ? (
+                      <details className="ml-3 border-l border-line pl-3">
+                        <summary className="cursor-pointer text-xs text-ink-3">Show {duplicates.length} repeated {duplicates.length === 1 ? "record" : "records"}</summary>
+                        <div className="mt-2 flex flex-col gap-2">{duplicates.map(renderKnownFact)}</div>
+                      </details>
+                    ) : null}
+                  </div>
+                ))}
               </section>
             ))}
           {canEdit ? <div className="mt-2 grid gap-2 border-t border-line pt-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">

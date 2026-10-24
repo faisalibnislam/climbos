@@ -176,6 +176,7 @@ describe("extractPageContent", () => {
     ]);
     expect(page.links).toEqual([{ url: "https://example.com/about", text: "About" }]);
     expect(page.jsonLdPrices).toEqual([{ name: "Rock Shoe", price: "129.99", currency: "USD", availability: "https://schema.org/InStock", type: "Offer" }]);
+    expect(page.jsonLdTypes).toEqual(["Product", "Offer"]);
     expect(page.text).toContain("Hello world —");
     expect(page.text).not.toContain("secret");
     expect(page.text).not.toContain("color:red");

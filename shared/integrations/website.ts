@@ -418,6 +418,7 @@ export interface ExtractedPage {
   headings: Array<{ level: 1 | 2 | 3; text: string }>;
   links: Array<{ url: string; text: string }>;
   jsonLdPrices: JsonLdPrice[];
+  jsonLdTypes: string[];
   text: string;
   truncated: boolean;
 }
@@ -465,11 +466,14 @@ export function extractPageContent(
 
   // JSON-LD first (before scripts are removed).
   const jsonLdPrices: JsonLdPrice[] = [];
+  const jsonLdTypes = new Set<string>();
   const ldRe = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi;
   let ld: RegExpExecArray | null;
   while ((ld = ldRe.exec(src)) !== null) {
     try {
-      collectJsonLdPrices(JSON.parse((ld[1] ?? "").trim()) as unknown, jsonLdPrices, undefined, 0);
+      const data = JSON.parse((ld[1] ?? "").trim()) as unknown;
+      collectJsonLdPrices(data, jsonLdPrices, undefined, 0);
+      collectJsonLdTypes(data, jsonLdTypes, 0);
     } catch {
       /* ignore malformed JSON-LD */
     }
@@ -544,10 +548,24 @@ export function extractPageContent(
     truncated = true;
   }
 
-  const page: ExtractedPage = { og, headings, links, jsonLdPrices, text, truncated };
+  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated };
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
   return page;
+}
+
+function collectJsonLdTypes(node: unknown, out: Set<string>, depth: number): void {
+  if (depth > 10 || out.size >= 50) return;
+  if (Array.isArray(node)) {
+    for (const child of node) collectJsonLdTypes(child, out, depth + 1);
+    return;
+  }
+  if (typeof node !== "object" || node === null) return;
+  const record = node as Record<string, unknown>;
+  for (const type of asTypeList(record["@type"])) if (type.trim()) out.add(type.trim().split("/").pop()!.split("#").pop()!);
+  for (const [key, value] of Object.entries(record)) {
+    if (key !== "@context" && typeof value === "object" && value !== null) collectJsonLdTypes(value, out, depth + 1);
+  }
 }
 
 // ---------------------------------------------------------------------------

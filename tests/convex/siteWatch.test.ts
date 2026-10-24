@@ -31,4 +31,37 @@ describe("site watch (keeps researching the business)", () => {
     expect((await owner.client.query(api.siteWatch.facts, { slug }))!.facts.find((x) => x.id === pending[0].id)?.state).toBe("confirmed");
     expect((await owner.client.query(api.team.myNotices, {})).items.some((n) => /website changed/.test(n.text))).toBe(true);
   });
+
+  it("surfaces conflicting confirmed prices with links to the facts that disagree", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "conflict@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    const firstId = await owner.client.mutation(api.orgs.addFact, { slug, category: "pricing", statement: "The Pro plan costs $19 per month." });
+    const secondId = await owner.client.mutation(api.orgs.addFact, { slug, category: "pricing", statement: "The Pro plan costs $24 per month." });
+
+    const facts = await owner.client.query(api.siteWatch.facts, { slug });
+    expect(facts?.conflicts).toEqual([expect.objectContaining({
+      subject: "Pro price per month",
+      values: ["$19", "$24"],
+      factIds: expect.arrayContaining([firstId, secondId]),
+      facts: expect.arrayContaining([
+        expect.objectContaining({ id: firstId, statement: "The Pro plan costs $19 per month." }),
+        expect.objectContaining({ id: secondId, statement: "The Pro plan costs $24 per month." }),
+      ]),
+    })]);
+  });
+
+  it("queues a permission-checked, bounded homepage readiness scan", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "readiness@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    expect(await owner.client.query(api.siteWatch.searchReadiness, { slug })).toEqual({ website: "https://site.example", scan: null });
+    await owner.client.mutation(api.siteWatch.scanSearchReadiness, { slug });
+    const result = await owner.client.query(api.siteWatch.searchReadiness, { slug });
+    expect(result?.scan).toEqual(expect.objectContaining({ status: "queued", startedAt: expect.any(Number) }));
+    const viewer = await asNewUser(t, "readiness-viewer@example.com");
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    await expect(viewer.client.query(api.siteWatch.searchReadiness, { slug })).resolves.toMatchObject({ website: "https://site.example" });
+    await expect(viewer.client.mutation(api.siteWatch.scanSearchReadiness, { slug })).rejects.toThrow(/role \(viewer\) can't/);
+  });
 });

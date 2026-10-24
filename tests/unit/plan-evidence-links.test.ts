@@ -52,6 +52,19 @@ describe("conflicting facts", () => {
       ]),
     ).toEqual([]);
   });
+  it("flags directly opposed feature statements, while ignoring different features", () => {
+    const conflicts = findConflicts([
+      { id: "a", category: "product", statement: "Pro includes API access." },
+      { id: "b", category: "product", statement: "Pro does not include API access." },
+      { id: "c", category: "product", statement: "Pro supports SSO." },
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({
+      subject: "Feature availability · pro / api access",
+      values: ["Includes API access", "Does not include API access"],
+      factIds: ["a", "b"],
+    });
+  });
   it("conflicts are listed on the plan without changing its state", () => {
     const q = planQuality([agentQuality("growth_plays", { critique: { gates: [], scores: [], strengths: [], fixes: [] }, lint: [], average: 4.5, minimum: 4, gatesPassed: true, ship: true }, 1, 3)], [], { conflicts: ["Pro price per month: $19 vs $24"] });
     expect(q.state).toBe("passed");

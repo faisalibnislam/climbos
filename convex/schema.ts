@@ -394,6 +394,18 @@ export default defineSchema({
     siteHash: v.optional(v.string()),
     siteText: v.optional(v.string()),
     siteCheckedAt: v.optional(v.number()),
+    siteReadiness: v.optional(v.object({
+      status: v.union(v.literal("queued"), v.literal("complete"), v.literal("failed")),
+      startedAt: v.number(),
+      checkedAt: v.optional(v.number()),
+      pageUrl: v.optional(v.string()),
+      pageTitle: v.optional(v.string()),
+      description: v.optional(v.string()),
+      headingCount: v.optional(v.number()),
+      structuredDataTypes: v.optional(v.array(v.string())),
+      findings: v.optional(v.array(v.object({ id: v.string(), level: v.union(v.literal("check"), v.literal("attention")), title: v.string(), evidence: v.string(), nextStep: v.string() }))),
+      error: v.optional(v.string()),
+    })),
     currency: v.string(),
     timezone: v.string(),
     researchStatus: v.union(

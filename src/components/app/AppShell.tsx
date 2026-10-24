@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Magic, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "@/components/icons";
+import { BarChart3, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Magic, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, Plane, PlayCircle, Plug, Search, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -47,6 +47,7 @@ const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?:
   { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
   { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
   { key: "outbound", label: "Find customers", icon: Target, group: "Grow" },
+  { key: "visibility", label: "Search readiness", icon: Search, group: "Grow" },
   { key: "pipeline", label: "Pipeline", icon: Users, group: "Grow" },
   { key: "reviews", label: "Reviews", icon: Star, group: "Grow" },
   { key: "pages", label: "Landing pages", icon: PanelsTopLeft, group: "Grow" },

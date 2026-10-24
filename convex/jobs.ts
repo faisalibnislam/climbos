@@ -88,6 +88,7 @@ import { estimateRun } from "./engine";
 import { usdToMicrosCeil } from "../shared/economics/money";
 import type { RateVersion } from "../shared/economics/rates";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
+import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -689,7 +690,15 @@ async function guarded(
 /* Quick first take (speed): a fast Luna answer while the full job works  */
 /* ------------------------------------------------------------------ */
 
-const QuickTakeSchema = z.object({ headline: z.string(), points: z.array(z.string()) });
+const QuickTakeSchema = z.object({
+  headline: z.string(),
+  opportunities: z.array(z.object({
+    title: z.string(),
+    why: z.string(),
+    nextStep: z.string(),
+    factIndexes: z.array(z.number().int().nonnegative()),
+  })).max(3),
+});
 
 /**
  * One fast, cheap model call (Luna, low effort, no research) that gives the
@@ -773,8 +782,8 @@ async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: stri
     const r = await modelTurn(
       {
         modelKey: CALL_ROUTES.chat_intent,
-        system: [{ text: "You are a senior growth advisor writing a fast first take for a small-business owner. Be specific to this business, plain and brief. No invented numbers; say 'assumption' where you estimate." }],
-        messages: [{ role: "user", content: `${businessBrief(job)}\n\n${task}\n\nReturn JSON: headline (one sentence) and 3-5 points (each one short sentence).` }],
+        system: [{ text: "You are a senior growth advisor writing a fast first take for a small-business owner. Be specific to this business, plain and brief. Do not invent facts, numbers, effort estimates or evidence. If a cause or opportunity is not supported by a confirmed fact, say it is a hypothesis in why and leave factIndexes empty." }],
+        messages: [{ role: "user", content: `${businessBrief(job)}\n\n${task}\n\nReturn JSON: headline (one sentence) and up to 3 opportunities. Each opportunity has title, why, nextStep, and factIndexes. Use only the numbered CONFIRMED FACTS above for factIndexes; do not cite the website profile or inferred claims as confirmed facts. Use [] when the finding is only a hypothesis.` }],
         schema: QuickTakeSchema,
         maxTokens: 3_000,
         effort: "low",
@@ -786,7 +795,8 @@ async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: stri
     if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
     if (r.ok) {
       const out = r.output as z.infer<typeof QuickTakeSchema>;
-      await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify({ headline: out.headline, points: out.points.slice(0, 5) }) });
+      const preview = linkQuickTakeEvidence(out, job.facts.map((fact) => ({ id: String(fact.id), statement: fact.statement, kind: fact.kind })));
+      await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify(preview) });
       await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(out) });
     } else {
       await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId!, error: r.message.slice(0, 200) });

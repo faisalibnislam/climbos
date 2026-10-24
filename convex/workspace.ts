@@ -21,6 +21,7 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
 import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
+import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -135,7 +136,15 @@ export const today = query({
       next: next.slice(0, 3),
       approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
       approvalsCount: pendingApprovals.length,
-      strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version, summary: strategy.summary } : null,
+      strategy: strategy
+        ? {
+            id: strategy._id,
+            status: strategy.status,
+            version: strategy.version,
+            summary: strategy.summary,
+            opportunities: projectGrowthOpportunities((strategy.expert?.plays ?? []) as OpportunityPlayInput[]),
+          }
+        : null,
       cards: [...cards, ...running]
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)

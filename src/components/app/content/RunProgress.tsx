@@ -344,7 +344,7 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
 
 
 /** What the job already knows, shown while it keeps working: channels that fit, the first take, the chosen plays. */
-function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
+function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; opportunities?: { title: string; why: string; nextStep: string; evidence: { factId: string; statement: string; kind?: string }[]; basis: "confirmed_facts" | "hypothesis" }[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
   const KIND: Record<string, string> = { bankable: "Bankable", creative: "Creative", moonshot: "Moonshot" };
   return (
     <section aria-label="Early preview" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-3">
@@ -368,7 +368,25 @@ function EarlyPreview({ preview }: { preview: { headline?: string; points?: stri
       {preview.headline ? (
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-ink">{preview.headline}</p>
-          {preview.points?.length ? (
+          {preview.opportunities?.length ? (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {preview.opportunities.map((opportunity, index) => (
+                <li key={`${opportunity.title}-${index}`} className="flex flex-col gap-1 rounded-[var(--radius-control)] bg-surface px-2.5 py-2">
+                  <p className="text-ui font-medium text-ink">{opportunity.title}</p>
+                  {opportunity.why ? <p className="text-xs text-ink-2">{opportunity.why}</p> : null}
+                  {opportunity.nextStep ? <p className="text-xs text-ink"><span className="font-medium">First step:</span> {opportunity.nextStep}</p> : null}
+                  {opportunity.evidence.length ? (
+                    <div className="mt-1 border-t border-line pt-1.5">
+                      <p className="text-2xs font-medium uppercase tracking-wide text-ink-3">Based on confirmed inputs</p>
+                      <ul className="mt-1 flex flex-col gap-1 text-2xs text-ink-2">
+                        {opportunity.evidence.map((fact) => <li key={fact.factId}>{fact.statement}</li>)}
+                      </ul>
+                    </div>
+                  ) : <p className="mt-1 text-2xs text-ink-3">Hypothesis · no confirmed fact linked yet</p>}
+                </li>
+              ))}
+            </ul>
+          ) : preview.points?.length ? (
             <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
               {preview.points.map((p) => (
                 <li key={p}>

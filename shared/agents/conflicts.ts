@@ -19,11 +19,14 @@ const TIERS = ["free", "starter", "basic", "personal", "hobby", "solo", "plus", 
 const TIER_RE = new RegExp(`\\b(${TIERS.join("|")})\\b`, "i");
 const PRICE_RE = /([$£€₹৳¥]|\b(?:USD|EUR|GBP|INR|BDT|CAD|AUD)\s?)(\d[\d,]*(?:\.\d+)?)\s*(?:\/|per|a|an)\s*(month|mo|year|yr|annum)\b/gi;
 const TRIAL_RE = /\b(\d{1,3})[-\s]?day\s+(?:free\s+)?trial\b/i;
+const CAPABILITY_YES = /^(.{2,100}?)\s+(includes?|supports?|offers?|provides?)\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_NO = /^(.{2,100}?)\s+(?:does not|doesn't)\s+(include|support|offer|provide)\s+(.{2,100}?)[.!?]*$/i;
 
 const sym = (s: string) => s.trim().toUpperCase().replace("USD", "$").replace("EUR", "€").replace("GBP", "£");
 
 export function findConflicts(facts: { id: string; statement: string; category?: string }[]): FactConflict[] {
   const seen = new Map<string, { value: number; shown: string; factId: string }[]>();
+  const capabilities = new Map<string, { value: boolean; shown: string; factId: string }[]>();
   const add = (key: string, value: number, shown: string, factId: string) => {
     const list = seen.get(key) ?? [];
     list.push({ value, shown, factId });
@@ -41,6 +44,18 @@ export function findConflicts(facts: { id: string; statement: string; category?:
     }
     const t = TRIAL_RE.exec(f.statement);
     if (t) add("Free trial length (days)", Number(t[1]), `${t[1]} days`, f.id);
+    const negative = CAPABILITY_NO.exec(f.statement);
+    const positive = negative ? null : CAPABILITY_YES.exec(f.statement);
+    const capability = positive ?? negative;
+    if (capability) {
+      const subject = capability[1].trim().toLocaleLowerCase("en-US").replace(/\s+/gu, " ");
+      const verb = capability[2].toLocaleLowerCase("en-US").replace(/s$/u, "");
+      const feature = capability[3].trim().toLocaleLowerCase("en-US").replace(/[.!?]+$/u, "").replace(/\s+/gu, " ");
+      const key = `${subject}\u0000${verb}\u0000${feature}`;
+      const list = capabilities.get(key) ?? [];
+      list.push({ value: Boolean(positive), shown: `${positive ? "Includes" : "Does not include"} ${capability[3].trim().replace(/[.!?]+$/u, "")}`, factId: f.id });
+      capabilities.set(key, list);
+    }
   }
   const out: FactConflict[] = [];
   for (const [subject, list] of seen) {
@@ -50,6 +65,12 @@ export function findConflicts(facts: { id: string; statement: string; category?:
     // Different facts, values more than 1% apart.
     if (values.length > 1 && max > min * 1.01 && new Set(list.map((x) => x.factId)).size > 1)
       out.push({ subject: subject.replace(/ \(\$\)$/, ""), values: [...new Set(list.map((x) => x.shown))], factIds: [...new Set(list.map((x) => x.factId))] });
+  }
+  for (const [key, list] of capabilities) {
+    if (new Set(list.map((x) => x.value)).size > 1 && new Set(list.map((x) => x.factId)).size > 1) {
+      const [subject, , feature] = key.split("\u0000");
+      out.push({ subject: `Feature availability · ${subject} / ${feature}`, values: [...new Set(list.map((x) => x.shown))], factIds: [...new Set(list.map((x) => x.factId))] });
+    }
   }
   return out.slice(0, 6);
 }
