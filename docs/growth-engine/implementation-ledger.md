@@ -217,7 +217,7 @@ The shared agent and critic contracts now preserve the distinction between publi
 | ID | Status | Slice | Paths | Evidence / gap |
 |---|---|---|---|---|
 | REQ-API-01 | exists | — | `shared/ai/openai.ts`, `climb.ts` | |
-| REQ-API-02 | missing | S5/S14 | `openai.ts:190` (`store:false`) | Reasoning items aren't carried across tool calls. Check against the official guide |
+| REQ-API-02 | done-fixture | S5/S14 | `shared/ai/openai.ts` `blocksOf`, `toInput`, `openaiTurn` | Stateless function-tool calls request encrypted reasoning and preserve the opaque reasoning item in provider-neutral agent history; the next Responses call sends it back in order with the function call/output. Background turns continue by response ID. Covered by `openai.test.ts`; live provider behavior remains unverified |
 | REQ-API-03 | partial | S5 | `climb.ts:26`, `jobs.ts:95` | Search uses is a context size, not a hard count. `webFetch` is ignored by the OpenAI adapter |
 | REQ-API-04 | partial | S5 | `strictSchema`, `climb.ts`, `climbTools.ts` `encodeToolOutput` | Tool inputs are Zod-validated before dispatch; tool results now require JSON-safe data, have boundary markers escaped and are bounded in size before returning to the model. **Gap:** per-tool semantic output schemas and URL validation for every tool result remain incomplete. |
 | REQ-API-05 | partial | S5 | TurnResult, `uncertain` | No coverage limits |

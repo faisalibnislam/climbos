@@ -137,8 +137,8 @@ export const jobContext = internalQuery({
       business,
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
-      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
-      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, freshness: factFreshness(f.category, f.updatedAt) })),
+      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
+      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, updatedAt: f.updatedAt, freshness: factFreshness(f.category, f.updatedAt) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,

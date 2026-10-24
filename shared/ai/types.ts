@@ -33,7 +33,13 @@ export interface ToolResultBlock {
   content: string | TextBlock[];
   is_error?: boolean;
 }
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+/** Opaque provider continuation item; kept private to agent history, never rendered as user-facing text. */
+export interface ProviderItemBlock {
+  type: "provider_item";
+  provider: "openai";
+  item: Record<string, unknown>;
+}
+export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ProviderItemBlock;
 
 export interface MessageParam {
   role: "user" | "assistant";

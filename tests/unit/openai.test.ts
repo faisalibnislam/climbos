@@ -38,6 +38,37 @@ describe("OpenAI adapter", () => {
     ]);
   });
 
+  it("round-trips encrypted reasoning through caller-managed stateless tool turns", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    const reasoning = { type: "reasoning", id: "rs_tool_1", encrypted_content: "opaque-encrypted-payload" };
+    const posts: { body: Record<string, unknown> }[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      posts.push({ body });
+      const output = posts.length === 1
+        ? [reasoning, { type: "function_call", call_id: "call_1", name: "get_plan", arguments: "{}" }]
+        : [{ type: "message", content: [{ type: "output_text", text: "done" }] }];
+      return new Response(JSON.stringify({ status: "completed", output, usage: { input_tokens: 10, output_tokens: 5 } }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const request = { modelKey: "gpt-6-luna" as const, system: [], maxTokens: 100, customTools: [{ name: "get_plan", input_schema: { type: "object" as const, properties: {} } }] };
+    const first = await openaiTurn({ ...request, messages: [{ role: "user", content: "inspect plan" }] }, rates);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(posts[0].body.include).toContain("reasoning.encrypted_content");
+    const second = await openaiTurn({
+      ...request,
+      messages: [
+        { role: "user", content: "inspect plan" },
+        ...first.appended,
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "call_1", content: "plan output" }] },
+      ],
+    }, rates);
+    expect(second.ok).toBe(true);
+    expect(posts[1].body.input).toEqual(expect.arrayContaining([reasoning, { type: "function_call", call_id: "call_1", name: "get_plan", arguments: "{}" }, { type: "function_call_output", call_id: "call_1", output: "plan output" }]));
+    expect(posts[1].body.input).not.toContainEqual(expect.objectContaining({ type: "reasoning_text" }));
+  });
+
   it("meters cached input separately, reasoning inside output, and search calls", () => {
     const u = usageOf({ usage: { input_tokens: 10_000, output_tokens: 2_000, input_tokens_details: { cached_tokens: 3_000, cache_write_tokens: 1_000 }, output_tokens_details: { reasoning_tokens: 1_500 } }, output: [{ type: "web_search_call", action: { type: "search" } }, { type: "web_search_call", action: { type: "open_page" } }] });
     expect(u).toMatchObject({ inputTokens: 6_000, cacheReadTokens: 3_000, cacheWriteTokens: 1_000, outputTokens: 2_000, thinkingTokens: 1_500, webSearches: 1 });
