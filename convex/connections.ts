@@ -412,6 +412,17 @@ export const rotateSecret = internalMutation({
   },
 });
 
+/** Persist only a property returned by the connected account's sites.list response. */
+export const selectSearchConsoleSite = internalMutation({
+  args: { orgId: v.id("organizations"), connectionId: v.id("connections"), siteUrl: v.string(), accountLabel: v.string() },
+  handler: async (ctx, { orgId, connectionId, siteUrl, accountLabel }) => {
+    const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "search_console")).first();
+    if (!connection || connection._id !== connectionId || connection.status !== "connected" || connection.isFixture) return false;
+    await ctx.db.patch(connection._id, { externalAccountId: siteUrl, accountLabel: accountLabel.slice(0, 200), accountType: "search_console_property", lastSyncError: undefined, updatedAt: Date.now() });
+    return true;
+  },
+});
+
 /** Internal only: decrypt a connection's secret for an action. Verifies tenant binding via AAD. */
 export const getSecret = internalQuery({
   /** forRevocation: disconnect marks the row revoked before the revoke action runs. */

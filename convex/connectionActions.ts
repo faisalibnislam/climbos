@@ -17,9 +17,10 @@ import {
 import { parseRevenueCsv } from "../shared/integrations/csvRevenue";
 import { classifyStripeKey, importStripeRevenue } from "../shared/integrations/stripeRevenue";
 import { listSegments } from "../shared/integrations/resendMarketing";
+import { listSites as listSearchConsoleSites, querySearchAnalytics } from "../shared/integrations/searchConsole";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { providerValidator } from "./schema";
 import { appError } from "./lib/tenancy";
 
@@ -52,6 +53,8 @@ const CLIENT_ENV = {
 /** Providers whose access tokens we refresh with a stored refresh token before use (Google's last about an hour). */
 export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "google_ads"]);
 const REFRESH_MARGIN_MS = 5 * 60_000;
+const SEARCH_CONSOLE_ROW_LIMIT = 1_000;
+const SEARCH_CONSOLE_MAX_PAGES = 3;
 
 /** Scopes we ask for, used when the token response doesn't echo them back. */
 const REQUESTED_SCOPES: Record<string, string[]> = {
@@ -62,6 +65,21 @@ const REQUESTED_SCOPES: Record<string, string[]> = {
 function clientCreds(group: keyof typeof OAUTH_PROVIDERS): { clientId?: string; clientSecret?: string } {
   const [idEnv, secretEnv] = CLIENT_ENV[group];
   return { clientId: process.env[idEnv], clientSecret: process.env[secretEnv] };
+}
+
+async function googleAccessToken(ctx: ActionCtx, connectionId: Id<"connections">, expiresAt?: number): Promise<string | null> {
+  if (expiresAt && expiresAt < Date.now() + REFRESH_MARGIN_MS) {
+    const refreshed = await ctx.runAction(internal.connectionActions.refreshAccessToken, { connectionId });
+    if (!refreshed.ok) return null;
+  }
+  const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId });
+  if (!secret) return null;
+  try {
+    const value = JSON.parse(secret.value) as { accessToken?: unknown };
+    return typeof value.accessToken === "string" ? value.accessToken : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -132,6 +150,19 @@ export const completeOAuth = action({
       if (props.ok && props.data.items[0]) {
         accountLabel = props.data.items[0].displayName;
         externalAccountId = props.data.items[0].property;
+      }
+    } else if (st.provider === "search_console") {
+      const properties = await listSearchConsoleSites({ accessToken: token.accessToken });
+      if (properties.ok && properties.data.length === 1) {
+        accountLabel = properties.data[0]!.siteUrl;
+        externalAccountId = properties.data[0]!.siteUrl;
+        accountType = "search_console_property";
+      } else if (properties.ok && properties.data.length > 1) {
+        accountLabel = `${properties.data.length} Search Console properties`;
+        accountType = "search_console_property_selection_required";
+      } else if (properties.ok) {
+        accountLabel = "No Search Console properties available";
+        accountType = "search_console_no_properties";
       }
     }
 
@@ -295,6 +326,98 @@ export const syncGa4 = internalAction({
   },
 });
 
+/** Read available Search Console properties for an owner/admin to select explicitly. */
+export const availableSearchConsoleSites = action({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return { ok: false as const, sites: [], message: "Connect Search Console first." };
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) return { ok: false as const, sites: [], message: "Search Console access expired. Reconnect the account." };
+    const result = await listSearchConsoleSites({ accessToken });
+    return result.ok
+      ? { ok: true as const, sites: result.data, message: "Choose the Search Console property for this business." }
+      : { ok: false as const, sites: [], message: "Couldn't load Search Console properties. Try again or reconnect the account." };
+  },
+});
+
+/** Verify the selected property against the user's live sites.list result before storing it. */
+export const selectSearchConsoleSite = action({
+  args: { slug: v.string(), siteUrl: v.string() },
+  handler: async (ctx, { slug, siteUrl }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) throw appError("INVALID", "Connect Search Console first.");
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("INVALID", "Search Console access expired. Reconnect the account.");
+    const result = await listSearchConsoleSites({ accessToken });
+    const site = result.ok ? result.data.find((item) => item.siteUrl === siteUrl) : undefined;
+    if (!site) throw appError("INVALID", "Choose a property returned by the connected Search Console account.");
+    const selected = await ctx.runMutation(internal.connections.selectSearchConsoleSite, { orgId: access.orgId, connectionId: connection._id, siteUrl: site.siteUrl, accountLabel: site.siteUrl });
+    if (!selected) throw appError("INVALID", "Reconnect Search Console and choose the property again.");
+    await ctx.scheduler.runAfter(0, internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
+    return { ok: true, siteUrl: site.siteUrl };
+  },
+});
+
+export const syncSearchConsole = internalAction({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => {
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return;
+    if (!connection.externalAccountId) {
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Choose a Search Console property before syncing." });
+      return;
+    }
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) {
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Search Console access expired. Reconnect the account.", expired: true });
+      return;
+    }
+    const endDate = isoDay(Date.now() - 3 * 86_400_000);
+    const startDate = isoDay(Date.now() - 93 * 86_400_000);
+    const snapshotId = await ctx.runMutation(internal.searchConsole.startSnapshot, {
+      orgId, connectionId: connection._id, property: connection.externalAccountId, startDate, endDate,
+    });
+    const report = await querySearchAnalytics({
+      accessToken,
+      siteUrl: connection.externalAccountId,
+      startDate,
+      endDate,
+      dimensions: ["query", "page"],
+      rowLimit: SEARCH_CONSOLE_ROW_LIMIT,
+      maxPages: SEARCH_CONSOLE_MAX_PAGES,
+      dataState: "final",
+    });
+    if (!report.ok) {
+      await ctx.runMutation(internal.searchConsole.finishSnapshot, { snapshotId, status: "failed", rowCount: 0, truncated: false, error: report.providerMessage });
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Search Console couldn't return performance data. Check property access and try again." });
+      return;
+    }
+    const uniqueRows = new Map<string, { query: string; page: string; clicks: number; impressions: number; ctr: number; position: number }>();
+    for (const row of report.data.items) {
+      const [query, page] = row.keys;
+      if (!query || !page || query.length > 2_000 || page.length > 2_000) continue;
+      uniqueRows.set(`${query}\u0000${page}`, { query, page, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position });
+    }
+    const rows = [...uniqueRows.values()];
+    for (let i = 0; i < rows.length; i += 250) {
+      await ctx.runMutation(internal.searchConsole.writeSnapshotRows, { snapshotId, rows: rows.slice(i, i + 250) });
+    }
+    await ctx.runMutation(internal.searchConsole.finishSnapshot, {
+      snapshotId,
+      status: "complete",
+      rowCount: rows.length,
+      truncated: report.data.truncated || report.data.items.length >= SEARCH_CONSOLE_ROW_LIMIT * SEARCH_CONSOLE_MAX_PAGES,
+    });
+    await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: true });
+  },
+});
+
 export const syncStripe = internalAction({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }) => {
@@ -369,6 +492,7 @@ export const syncNow = action({
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
     if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
     if (provider === "ga4") await ctx.runAction(internal.connectionActions.syncGa4, { orgId: access.orgId });
+    if (provider === "search_console") await ctx.runAction(internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
     if (provider === "stripe_revenue") await ctx.runAction(internal.connectionActions.syncStripe, { orgId: access.orgId });
     return { ok: true };
   },

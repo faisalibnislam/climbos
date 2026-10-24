@@ -2676,6 +2676,37 @@ export default defineSchema({
     .index("by_org_metric_date", ["orgId", "metricKey", "date"])
     .index("by_org_date", ["orgId", "date"]),
 
+  /** Search Console's property-specific query/page aggregates; not universal search volume. */
+  searchConsoleSnapshots: defineTable({
+    orgId: v.id("organizations"),
+    connectionId: v.id("connections"),
+    property: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    dataState: v.literal("final"),
+    status: v.union(v.literal("syncing"), v.literal("complete"), v.literal("failed")),
+    rowCount: v.number(),
+    truncated: v.boolean(),
+    fetchedAt: v.number(),
+    error: v.optional(v.string()),
+  })
+    .index("by_org_fetched", ["orgId", "fetchedAt"])
+    .index("by_fetched", ["fetchedAt"]),
+
+  searchConsoleRows: defineTable({
+    orgId: v.id("organizations"),
+    snapshotId: v.id("searchConsoleSnapshots"),
+    query: v.string(),
+    page: v.string(),
+    clicks: v.number(),
+    impressions: v.number(),
+    ctr: v.number(),
+    position: v.number(),
+  })
+    .index("by_snapshot", ["snapshotId"])
+    .index("by_org_page", ["orgId", "page"])
+    .index("by_org_query", ["orgId", "query"]),
+
   revenueEvents: defineTable({
     orgId: v.id("organizations"),
     source: v.string(),

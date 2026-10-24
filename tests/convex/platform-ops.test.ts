@@ -238,6 +238,77 @@ describe("connections", () => {
     expect((await t.run(async (ctx) => ctx.db.get(connectionId)))?.status).toBe("expired");
   });
 
+  it("Search Console sync stores dated query and page observations for the selected property", async () => {
+    const t = setup();
+    const o = await owned(t);
+    const property = "https://example.com/";
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+      externalAccountId: property,
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [{ keys: ["best climbing shoes", "https://example.com/shoes"], clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 }] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await t.action(internal.connectionActions.syncSearchConsole, { orgId: o.orgId });
+
+    const observations = await o.client.query(api.searchConsole.observations, { slug: o.slug });
+    expect(observations).toMatchObject({
+      property,
+      dataState: "final",
+      truncated: false,
+      rows: [{ query: "best climbing shoes", page: "https://example.com/shoes", clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 }],
+    });
+    expect(observations!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(observations!.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(observations!.note).toContain("not universal search volume");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain(encodeURIComponent(property));
+    expect(JSON.parse(String(request.body))).toMatchObject({ dimensions: ["query", "page"], dataState: "final" });
+    expect((await t.query(internal.connections.connectionFor, { orgId: o.orgId, provider: "search_console" }))!.lastSyncAt).toBeGreaterThan(0);
+    expect(await t.query(internal.connections.getSecret, { connectionId })).not.toBeNull();
+  });
+
+  it("Search Console observations and property selection stay scoped to the owning workspace", async () => {
+    const t = setup();
+    const owner = await owned(t, "search-owner@example.com", "Owner Business");
+    const other = await owned(t, "search-other@example.com", "Other Business");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: owner.orgId,
+      userId: owner.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: [],
+    });
+    const snapshotId = await t.mutation(internal.searchConsole.startSnapshot, {
+      orgId: owner.orgId,
+      connectionId,
+      property: "https://example.com/",
+      startDate: "2026-07-01",
+      endDate: "2026-09-29",
+    });
+    await t.mutation(internal.searchConsole.writeSnapshotRows, {
+      snapshotId,
+      rows: [{ query: "climbing shoes", page: "https://example.com/shoes", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }],
+    });
+    await t.mutation(internal.searchConsole.finishSnapshot, { snapshotId, status: "complete", rowCount: 1, truncated: false });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ siteEntry: [{ siteUrl: "https://example.com/", permissionLevel: "siteOwner" }] }), { status: 200 })));
+
+    expect(await other.client.query(api.searchConsole.observations, { slug: other.slug })).toBeNull();
+    expect((await owner.client.query(api.searchConsole.observations, { slug: owner.slug }))?.rows).toMatchObject([{ query: "climbing shoes" }]);
+    await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://not-authorized.example/" })).rejects.toThrow("Choose a property returned by the connected Search Console account.");
+    await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://example.com/" })).resolves.toMatchObject({ ok: true, siteUrl: "https://example.com/" });
+    expect((await t.query(internal.connections.connectionFor, { orgId: owner.orgId, provider: "search_console" }))!.externalAccountId).toBe("https://example.com/");
+    expect((await t.query(internal.connections.connectionFor, { orgId: other.orgId, provider: "search_console" }))).toBeNull();
+    expect(await t.query(internal.connections.getSecret, { connectionId })).not.toBeNull();
+  });
+
   it("a quick reconnect after disconnecting keeps the new token", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
