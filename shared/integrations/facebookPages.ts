@@ -70,6 +70,16 @@ export async function getPost(call: GraphCall & { postId: string }): Promise<Rea
   return { ok: true, data: parsePost(isRecord(out.data) ? out.data : {}) };
 }
 
+/** Read a small, recent Page-feed sample for an owner-requested audit. */
+export async function getRecentPosts(call: GraphCall & { pageId: string; limit?: number }): Promise<ReadResult<PaginationResult<PagePostState>>> {
+  if (!/^\d+$/.test(call.pageId)) return { ok: false, providerMessage: "Invalid Page id", retryable: false };
+  const limit = Math.max(1, Math.min(Math.floor(call.limit ?? 10), 10));
+  const url = new URL(`${GRAPH_BASE}/${call.pageId}/feed`);
+  url.searchParams.set("fields", "id,message,created_time,permalink_url");
+  url.searchParams.set("limit", String(limit));
+  return graphCollect(call, url, parsePost, 1);
+}
+
 export interface PagePostInput {
   pageId: string;
   message: string;

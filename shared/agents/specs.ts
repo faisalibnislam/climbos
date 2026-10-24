@@ -483,11 +483,18 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
     findings: z.array(z.object({
       sourceArtifactId: z.string(),
       platform: z.string(),
+      sourceType: z.enum(["climbos", "facebook", "instagram"]).optional(),
+      sourceUrl: z.string().optional(),
       observation: z.string(),
       recommendation: z.string(),
       priority: z.enum(["high", "medium", "low"]),
     })).max(12),
     contentMixSuggestions: z.array(z.string()).max(8),
+    coverage: z.array(z.object({
+      source: z.enum(["climbos", "facebook", "instagram", "linkedin"]),
+      state: z.enum(["reviewed", "not_connected", "not_authorized", "unavailable", "no_posts"]),
+      postsReviewed: z.number().int().nonnegative(),
+    })).optional(),
   }),
 });
 

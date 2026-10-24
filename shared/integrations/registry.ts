@@ -181,6 +181,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
     verifiedAt: VERIFIED_AT,
     capabilities: [
       { id: "facebook_pages.list_pages", kind: "read", label: "See your Pages", description: "Lists the Facebook Pages you manage." },
+      { id: "facebook_pages.read_posts", kind: "read", label: "Review recent Page posts", description: "Reads a small sample of recent Page post text for a content audit." },
       { id: "facebook_pages.publish_post", kind: "write", label: "Publish Page posts", description: "Publishes a text, link or photo post to your Page after your approval." },
       { id: "facebook_pages.read_insights", kind: "read", label: "Read Page results", description: "Reads Page-level metrics where Meta still provides them." },
     ],
@@ -195,13 +196,14 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   instagram: {
     id: "instagram",
     displayName: "Instagram (Business or Creator)",
-    description: "Publishes photos to an Instagram professional account and checks Instagram's daily posting allowance.",
+    description: "Reviews a small sample of recent captions, publishes photos to an Instagram professional account, and checks Instagram's daily posting allowance.",
     connection: "oauth_instagram",
     apiVersion: GRAPH_API_VERSION,
     verified: true,
     verifiedAt: VERIFIED_AT,
     capabilities: [
       { id: "instagram.read_profile", kind: "read", label: "Check your Instagram account", description: "Confirms the account is a Business or Creator account." },
+      { id: "instagram.read_posts", kind: "read", label: "Review recent Instagram posts", description: "Reads a small sample of recent post captions for a content audit." },
       { id: "instagram.publish_media", kind: "write", label: "Publish Instagram posts", description: "Publishes approved photo posts and verifies they are live." },
     ],
     requiredEnv: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],

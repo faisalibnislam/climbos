@@ -8,7 +8,8 @@ import { formatDateTime } from "./money";
 
 type Finding = { area?: string; observation?: string; recommendation?: string; impact?: string; sourceUrl?: string };
 type Fix = { fix?: string; pageUrl?: string; why?: string; effort?: string; expectedEffect?: string; contentStructure?: string[]; sampleCopy?: string; uxChanges?: string[]; measurementPlan?: string };
-type SocialFinding = { sourceArtifactId?: string; platform?: string; observation?: string; recommendation?: string; priority?: string };
+type SocialFinding = { sourceArtifactId?: string; platform?: string; sourceType?: string; sourceUrl?: string; observation?: string; recommendation?: string; priority?: string };
+type SocialSourceCoverage = { source?: string; state?: string; postsReviewed?: number };
 type Coverage = { requestedUrl?: string | null; pagesAttempted?: number; pagesRead?: number; pages?: { url?: string; status?: string }[] };
 
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -31,6 +32,7 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
   const fixes = list<Fix>(data.prioritizedFixes);
   const socialReview = obj(data.socialReview);
   const socialFindings = list<SocialFinding>(socialReview.findings);
+  const socialSources = list<SocialSourceCoverage>(socialReview.coverage);
   const pages = list<unknown>(website.pages);
   const limitations = list<string>(coverage.limitations);
 
@@ -38,7 +40,7 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
     <div className="flex flex-col gap-5">
       <section className="rounded-xl border border-line bg-surface-2/60 p-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink"><Globe aria-hidden className="size-4 text-brand-800" />What this review covered</div>
-        <p className="mt-2 text-sm text-ink-2">Website: {Number(website.pagesRead ?? 0)} of {Number(website.pagesAttempted ?? 0)} pages read. Social: {Number(social.publishedPostsReviewed ?? 0)} ClimbOS-published posts reviewed. Platform post analytics were not available in this audit.</p>
+        <p className="mt-2 text-sm text-ink-2">Website: {Number(website.pagesRead ?? 0)} of {Number(website.pagesAttempted ?? 0)} pages read. Social: {Number(social.postsReviewed ?? social.publishedPostsReviewed ?? 0)} posts sampled. Post-level performance analytics were not available in this audit.</p>
         {search.state === "matched_to_read_pages" ? <p className="mt-2 text-xs text-ink-3">Search Console: {Number(search.observedRows ?? 0)} observations for pages read, {label(search.startDate)} to {label(search.endDate)}. These are search activity, not conversions.</p> : search.state === "not_used_property_mismatch" ? <p className="mt-2 text-xs text-ink-3">Search Console data was left out because its property did not match this business website.</p> : search.state === "property_matched_no_rows_for_read_pages" ? <p className="mt-2 text-xs text-ink-3">Search Console property matched, but no stored observations matched the pages read in this audit.</p> : null}
         {website.requestedUrl ? <a href={String(website.requestedUrl)} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex items-center gap-1 break-all text-xs text-link">{String(website.requestedUrl)} <ExternalLink aria-hidden className="size-3" /></a> : <p className="mt-2 text-xs text-ink-3">No website address was saved for this business.</p>}
         {pages.length > 0 ? <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-2">{pages.map((raw, i) => { const page = obj(raw); return <li key={`${String(page.url)}-${i}`} className="flex flex-wrap items-center gap-2"><Badge tone={page.status === "read" ? "green" : "amber"}>{label(page.status, "not read").replaceAll("_", " ")}</Badge><span className="break-all">{label(page.url)}</span></li>; })}</ul> : null}
@@ -80,7 +82,12 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
       <section className="rounded-xl border border-line p-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink"><Megaphone aria-hidden className="size-4 text-brand-800" />Social content review</div>
         {label(socialReview.summary) ? <p className="mt-2 text-sm text-ink-2">{label(socialReview.summary)}</p> : null}
-        {socialFindings.length ? <ul className="mt-3 grid gap-2">{socialFindings.map((finding, i) => <li key={`${finding.sourceArtifactId}-${i}`} className="rounded-lg bg-surface-2/70 p-3"><div className="flex flex-wrap items-center gap-2"><Badge tone={finding.priority === "high" ? "amber" : "neutral"}>{label(finding.priority, "review")} priority</Badge><span className="text-sm font-medium text-ink">{label(finding.platform, "Social")} post</span></div>{finding.observation ? <p className="mt-2 text-sm text-ink-2">{finding.observation}</p> : null}{finding.recommendation ? <p className="mt-2 text-sm text-ink">{finding.recommendation}</p> : null}{finding.sourceArtifactId ? <Link className="mt-2 inline-flex items-center gap-1 text-xs text-link" href={`/app/${slug}/content/${finding.sourceArtifactId}`}>Open reviewed post <ArrowRight aria-hidden className="size-3" /></Link> : null}</li>)}</ul> : null}
+        {socialSources.length ? <ul className="mt-3 flex flex-wrap gap-2" aria-label="Social account source coverage">{socialSources.map((source) => {
+          const state = source.state ?? "unavailable";
+          const stateLabel = state === "reviewed" ? `${Number(source.postsReviewed ?? 0)} posts sampled` : state === "no_posts" ? "No captioned posts found" : state === "not_connected" ? "Not connected" : state === "not_authorized" ? "Read permission unavailable" : "Could not read posts";
+          return <li key={source.source} className="rounded-md border border-line px-2.5 py-1 text-xs text-ink-2"><span className="font-medium capitalize">{source.source ?? "Source"}:</span> {stateLabel}</li>;
+        })}</ul> : null}
+        {socialFindings.length ? <ul className="mt-3 grid gap-2">{socialFindings.map((finding, i) => <li key={`${finding.sourceArtifactId}-${i}`} className="rounded-lg bg-surface-2/70 p-3"><div className="flex flex-wrap items-center gap-2"><Badge tone={finding.priority === "high" ? "amber" : "neutral"}>{label(finding.priority, "review")} priority</Badge><span className="text-sm font-medium text-ink">{label(finding.platform, "Social")} post</span></div>{finding.observation ? <p className="mt-2 text-sm text-ink-2">{finding.observation}</p> : null}{finding.recommendation ? <p className="mt-2 text-sm text-ink">{finding.recommendation}</p> : null}{finding.sourceUrl ? <a href={finding.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex items-center gap-1 text-xs text-link">Open reviewed post <ExternalLink aria-hidden className="size-3" /></a> : finding.sourceType === "climbos" && finding.sourceArtifactId ? <Link className="mt-2 inline-flex items-center gap-1 text-xs text-link" href={`/app/${slug}/content/${finding.sourceArtifactId}`}>Open reviewed post <ArrowRight aria-hidden className="size-3" /></Link> : null}</li>)}</ul> : null}
         {list<string>(socialReview.contentMixSuggestions).length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Formats to test</p><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-2">{list<string>(socialReview.contentMixSuggestions).map((suggestion, i) => <li key={i}>{suggestion}</li>)}</ul></div> : null}
       </section>
 

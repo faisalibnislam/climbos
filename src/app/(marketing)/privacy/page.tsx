@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="18 October 2026"
+      updated="25 October 2026"
       draft
       intro="This explains, in plain English, what information ClimbOS collects, why, and the choices you have."
     >
@@ -80,8 +80,12 @@ export default function PrivacyPage() {
         We use service providers for hosting and our database, email delivery, payments, product analytics and AI models. They may
         process your information only to provide their service to us. When you run a website audit, we send the public page URL being
         checked to Google PageSpeed Insights and, when configured, the Chrome UX Report API to retrieve mobile performance
-        measurements. We share information with the platforms you connect (such as Meta or Google) only when you ask us to publish,
-        send or launch something there. We may disclose information if the law requires it.
+        measurements. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
+        identifiers, timestamps, content type and available post links from ClimbOS and connected Facebook Pages or Instagram
+        professional accounts to our AI provider for review. We do not download or analyze the post images or videos in this audit.
+        LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
+        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. We may
+        disclose information if the law requires it.
       </p>
 
       <h2>How long we keep it</h2>

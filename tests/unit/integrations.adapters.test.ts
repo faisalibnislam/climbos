@@ -278,6 +278,20 @@ describe("facebookPages", () => {
     expect(res.ok && res.data.items.map((p) => [p.id, p.canPublish])).toEqual([["123", true], ["124", false]]);
   });
 
+  it("reads a bounded recent Page post sample", async () => {
+    const { fetchImpl, calls } = scripted([{ match: "/123/feed?", respond: json(200, { data: [{ id: "123_9", message: "A recent update", created_time: "2026-10-24T10:00:00+0000", permalink_url: "https://www.facebook.com/page/posts/9" }] }) }]);
+    const result = await facebookPages.getRecentPosts({ accessToken: "pat", pageId: "123", limit: 100, fetchImpl });
+    expect(result).toMatchObject({ ok: true, data: { items: [{ id: "123_9", message: "A recent update" }] } });
+    expect(new URL(calls[0]!.url).searchParams.get("limit")).toBe("10");
+    expect(new URL(calls[0]!.url).searchParams.get("fields")).toContain("permalink_url");
+  });
+
+  it("rejects malformed Page ids before making a request", async () => {
+    const { fetchImpl, calls } = scripted([]);
+    expect(await facebookPages.getRecentPosts({ accessToken: "pat", pageId: "123?fields=id", fetchImpl })).toMatchObject({ ok: false, retryable: false });
+    expect(calls).toHaveLength(0);
+  });
+
   it("publishes, then verifies by reading the post back", async () => {
     const value = await facebookPages.pagePostApprovalValue(post);
     const { fetchImpl } = scripted([
@@ -310,6 +324,21 @@ describe("facebookPages", () => {
 
 describe("instagram", () => {
   const post: instagram.ImagePostInput = { igUserId: "1789", imageUrl: "https://cdn.example.com/shoe.jpg", caption: "New shoe #climbing", altText: "A red climbing shoe" };
+
+  it("reads a bounded recent media sample without requesting media assets", async () => {
+    const { fetchImpl, calls } = scripted([{ match: "/1789/media?", respond: json(200, { data: [{ id: "m1", caption: "A product update", media_type: "IMAGE", permalink: "https://www.instagram.com/p/abc/", timestamp: "2026-10-24T10:00:00+0000" }], paging: { next: "https://graph.instagram.com/next" } }) }]);
+    const result = await instagram.getRecentMedia({ accessToken: "t", igUserId: "1789", limit: 100, fetchImpl });
+    expect(result).toMatchObject({ ok: true, data: { truncated: true, items: [{ id: "m1", caption: "A product update", permalink: "https://www.instagram.com/p/abc/" }] } });
+    const url = new URL(calls[0]!.url);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("fields")).toBe("id,permalink,timestamp,media_type,caption");
+  });
+
+  it("rejects malformed Instagram ids before making a request", async () => {
+    const { fetchImpl, calls } = scripted([]);
+    expect(await instagram.getRecentMedia({ accessToken: "t", igUserId: "1789/x", fetchImpl })).toMatchObject({ ok: false, retryable: false });
+    expect(calls).toHaveLength(0);
+  });
 
   it("container polling is bounded", async () => {
     const routes: Route[] = Array.from({ length: 20 }, () => ({ match: "/c1?", respond: () => json(200, { status_code: "IN_PROGRESS" }) }));

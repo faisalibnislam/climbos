@@ -212,6 +212,21 @@ export async function getMedia(call: GraphCall & { mediaId: string }): Promise<R
   return { ok: true, data: parseMedia(isRecord(out.data) ? out.data : {}) };
 }
 
+/** Read a small, recent media sample for an owner-requested account audit. */
+export async function getRecentMedia(call: GraphCall & { igUserId: string; limit?: number }): Promise<ReadResult<{ items: InstagramMedia[]; truncated: boolean }>> {
+  if (!/^\d+$/.test(call.igUserId)) return { ok: false, providerMessage: "Invalid Instagram user id", retryable: false };
+  const limit = Math.max(1, Math.min(Math.floor(call.limit ?? 10), 10));
+  const url = new URL(`${INSTAGRAM_GRAPH_BASE}/${call.igUserId}/media`);
+  url.searchParams.set("fields", "id,permalink,timestamp,media_type,caption");
+  url.searchParams.set("limit", String(limit));
+  const out = await graphGet(call, url);
+  if (out.kind !== "ok") return metaReadFailure(out);
+  const data = isRecord(out.data) ? out.data : {};
+  const items = asArray(data.data).filter(isRecord).map(parseMedia).filter((media) => Boolean(media.id)).slice(0, limit);
+  const paging = isRecord(data.paging) ? data.paging : {};
+  return { ok: true, data: { items, truncated: typeof paging.next === "string" } };
+}
+
 /** media_publish + verification read of the returned media id. */
 export async function publishContainer(call: GraphCall & { igUserId: string; containerId: string }): Promise<WriteResult<InstagramMedia>> {
   const out = await graphPost(call, new URL(`${INSTAGRAM_GRAPH_BASE}/${call.igUserId}/media_publish`), { creation_id: call.containerId });

@@ -4,6 +4,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { checkProspects } from "./ai/prospectCheck";
 import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
 import { measureSitePerformance } from "./ai/sitePerformance";
+import { getRecentPosts as getRecentFacebookPosts } from "../shared/integrations/facebookPages";
+import { getRecentMedia as getRecentInstagramMedia } from "../shared/integrations/instagram";
 import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
@@ -1834,6 +1836,17 @@ export const explainResults = internalAction({
   },
 });
 
+function isSafeSocialPermalink(value: string, source: "climbos" | "facebook" | "instagram"): boolean {
+  if (source === "climbos") return false;
+  try {
+    const url = new URL(value);
+    const allowed = source === "facebook" ? ["facebook.com", "www.facebook.com"] : ["instagram.com", "www.instagram.com"];
+    return url.protocol === "https:" && allowed.includes(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 export const conversionAudit = internalAction({
   args: { runId: v.id("workflowRuns"), cardId: v.optional(v.id("actionCards")) },
   handler: async (ctx, { runId, cardId }) => {
@@ -1870,10 +1883,66 @@ export const conversionAudit = internalAction({
         }
         await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched }) });
       }
-      const socialPosts = job.run.isFixture ? [] : await ctx.runQuery(internal.content.auditPublishedSocial, { orgId: job.org._id, limit: 20 });
+      const workspaceSocialPosts = job.run.isFixture ? [] : await ctx.runQuery(internal.content.auditPublishedSocial, { orgId: job.org._id, limit: 10 });
+      const socialCoverage: { source: "climbos" | "facebook" | "instagram" | "linkedin"; state: "reviewed" | "not_connected" | "not_authorized" | "unavailable" | "no_posts"; postsReviewed: number }[] = [
+        { source: "climbos", state: workspaceSocialPosts.length ? "reviewed" : "no_posts", postsReviewed: workspaceSocialPosts.length },
+      ];
+      const socialPosts: { artifactId: string; platform: string; title: string; publishedAt: number | string; headline: string; body: string; angle: string; callToAction: string; sourceUrl?: string }[] = workspaceSocialPosts.map((post) => ({ ...post, artifactId: String(post.artifactId) }));
+      if (!job.run.isFixture) {
+        for (const source of ["facebook", "instagram"] as const) {
+          const provider = source === "facebook" ? "facebook_pages" : "instagram";
+          const requiredScope = source === "facebook" ? "pages_read_engagement" : "instagram_business_basic";
+          const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: job.org._id, provider });
+          if (!connection || connection.status !== "connected" || connection.isFixture) {
+            socialCoverage.push({ source, state: connection?.status === "expired" ? "unavailable" : "not_connected", postsReviewed: 0 });
+            continue;
+          }
+          if (!connection.scopes.includes(requiredScope) || !connection.externalAccountId) {
+            socialCoverage.push({ source, state: "not_authorized", postsReviewed: 0 });
+            continue;
+          }
+          try {
+            const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: connection._id });
+            const accessToken = secret ? (JSON.parse(secret.value) as { accessToken?: unknown }).accessToken : undefined;
+            if (typeof accessToken !== "string" || !accessToken) {
+              socialCoverage.push({ source, state: "unavailable", postsReviewed: 0 });
+              continue;
+            }
+            if (source === "facebook") {
+              const result = await getRecentFacebookPosts({ accessToken, pageId: connection.externalAccountId, limit: 10, timeoutMs: 12_000 });
+              if (!result.ok) {
+                socialCoverage.push({ source, state: "unavailable", postsReviewed: 0 });
+                continue;
+              }
+              const items = result.data.items.filter((post) => post.message?.trim());
+              socialPosts.push(...items.map((post) => ({ artifactId: post.id, platform: "facebook", title: "", publishedAt: post.createdTime ?? "", headline: "", body: (post.message ?? "").slice(0, 1_600), angle: "", callToAction: "", ...(post.permalinkUrl ? { sourceUrl: post.permalinkUrl } : {}) })));
+              socialCoverage.push({ source, state: items.length ? "reviewed" : "no_posts", postsReviewed: items.length });
+            } else {
+              const result = await getRecentInstagramMedia({ accessToken, igUserId: connection.externalAccountId, limit: 10, timeoutMs: 12_000 });
+              if (!result.ok) {
+                socialCoverage.push({ source, state: "unavailable", postsReviewed: 0 });
+                continue;
+              }
+              const items = result.data.items.filter((media) => media.caption?.trim());
+              socialPosts.push(...items.map((media) => ({ artifactId: media.id, platform: "instagram", title: "", publishedAt: media.timestamp ?? "", headline: "", body: (media.caption ?? "").slice(0, 1_600), angle: media.mediaType ?? "", callToAction: "", ...(media.permalink ? { sourceUrl: media.permalink } : {}) })));
+              socialCoverage.push({ source, state: items.length ? "reviewed" : "no_posts", postsReviewed: items.length });
+            }
+          } catch {
+            socialCoverage.push({ source, state: "unavailable", postsReviewed: 0 });
+          }
+        }
+      } else {
+        socialCoverage.push({ source: "facebook", state: "not_connected", postsReviewed: 0 }, { source: "instagram", state: "not_connected", postsReviewed: 0 });
+      }
+      const linkedInConnection = job.run.isFixture ? null : await ctx.runQuery(internal.connections.connectionFor, { orgId: job.org._id, provider: "linkedin" });
+      socialCoverage.push(linkedInConnection?.status === "connected"
+        ? { source: "linkedin", state: "not_authorized", postsReviewed: 0 }
+        : linkedInConnection?.status === "expired"
+          ? { source: "linkedin", state: "unavailable", postsReviewed: 0 }
+          : { source: "linkedin", state: "not_connected", postsReviewed: 0 });
       const socialText = socialPosts.length
-        ? untrusted("ClimbOS-published social posts (not complete external account history; no platform performance metrics were supplied)", JSON.stringify(socialPosts), 7_000)
-        : "No confirmed published social posts are available in this ClimbOS workspace. Do not claim to have reviewed external social accounts or infer platform performance. Offer channel/content-mix recommendations only as hypotheses, and label them as such.";
+        ? untrusted("Recent ClimbOS and connected-account social post sample (at most 10 posts per source; captions and timestamps only; account analytics and complete history are not supplied)", JSON.stringify(socialPosts), 7_000)
+        : "No post captions were available from ClimbOS or connected social accounts. Do not claim to have reviewed posts or infer platform performance. Offer channel/content-mix recommendations only as hypotheses, and label them as such.";
       const searchConsole = job.run.isFixture ? null : await ctx.runQuery(internal.searchConsole.latestForOrg, { orgId: job.org._id });
       const propertyMatches = Boolean(searchConsole && website && searchConsolePropertyMatchesWebsite(searchConsole.property, website));
       const inspectedPageKeys = new Set(pages.filter((page) => page.status === "read").map((page) => urlKey(page.url)));
@@ -1900,31 +1969,37 @@ export const conversionAudit = internalAction({
         job,
         2,
         conversionAuditSpec(),
-        agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite only exact supplied page URLs. Give at most four prioritized fixes. Every fix must target an exact page URL read in this run and include: why the evidence supports it; effort; a proposed content-section order; brief sample copy; text/flow-level UX changes that follow from observed content; and a measurement plan that starts by recording the current baseline and names a relevant metric without inventing a target or expected numerical lift. Sample copy is a draft, not publish-ready; do not add capabilities, proof, offers, prices or guarantees absent from owner-confirmed facts. Do not infer visual layout, mobile behavior, forms, accessibility, speed, conversion rate or causal effects from text extraction. Leave fixes empty when no page supports a concrete recommendation. When supplied, report CrUX metrics as real-user field data with the provided 28-day collection window and phone form factor; report Lighthouse values as a separate synthetic mobile lab test. Never substitute one for the other, infer conversions from them, or claim either proves a change caused a conversion result. If no performance data was supplied, say it was unavailable rather than guessing. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Review supplied ClimbOS-published social posts for audience fit, variety of purpose/format, platform adaptation, clarity, proof, CTA and reuse. For each social finding, copy the exact sourceArtifactId and platform from a supplied post. Recommend platform- and business-appropriate content formats as testable ideas, not guaranteed growth. Do not claim to have inspected complete external social accounts or performance metrics. If no published posts were supplied, say so in socialReview.summary and leave its findings empty. Prioritize concrete fixes and never invent numerical lift.", {
+        agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite only exact supplied page URLs. Give at most four prioritized fixes. Every fix must target an exact page URL read in this run and include: why the evidence supports it; effort; a proposed content-section order; brief sample copy; text/flow-level UX changes that follow from observed content; and a measurement plan that starts by recording the current baseline and names a relevant metric without inventing a target or expected numerical lift. Sample copy is a draft, not publish-ready; do not add capabilities, proof, offers, prices or guarantees absent from owner-confirmed facts. Do not infer visual layout, mobile behavior, forms, accessibility, speed, conversion rate or causal effects from text extraction. Leave fixes empty when no page supports a concrete recommendation. When supplied, report CrUX metrics as real-user field data with the provided 28-day collection window and phone form factor; report Lighthouse values as a separate synthetic mobile lab test. Never substitute one for the other, infer conversions from them, or claim either proves a change caused a conversion result. If no performance data was supplied, say it was unavailable rather than guessing. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Review the supplied ClimbOS and connected-account post sample for audience fit, purpose/format variety, platform adaptation, clarity, proof, CTA and reuse. For each social finding, cite the exact supplied sourceArtifactId and platform. Recommend platform- and business-appropriate content formats as testable ideas, not guaranteed growth. Never imply this is a complete account history or that performance metrics were reviewed. If no posts were supplied, explain that and leave social findings empty. Prioritize concrete fixes and never invent numerical lift.", {
           untrustedContext: [text, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"),
           research: researchFor("conversion_audit", { website, businessName: job.business?.name ?? job.org.name }),
         }),
         startedAt,
-        { task: "conversion_audit", context: [text, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"), ctx: fixtureCtx(job), text: `TASK: Audit supplied website pages for conversion and supplied published social posts for business fit, platform adaptation, content variety, clarity, proof, CTA and reuse. Give at most four implementation-ready page fixes, each tied to an exact page read in this run, with content order, fact-grounded sample copy, evidence-based text/flow UX changes, effort and a baseline-first measurement plan. Report CrUX only as real-user field data with its 28-day window, and Lighthouse only as a synthetic mobile lab test. Do not invent claims, numerical lift or a measurement target. Use matching Search Console observations only for page(s) actually read, and treat them as historical acquisition context, not conversions or causal proof. Cite exact website URLs and exact social artifact IDs. Do not infer speed if no measurement was returned or claim causal effects. Recommend channel-native formats as hypotheses, never guaranteed outcomes.\n\n${businessBrief(job)}` },
+        { task: "conversion_audit", context: [text, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"), ctx: fixtureCtx(job), text: `TASK: Audit supplied website pages for conversion and supplied ClimbOS or connected-account social posts for business fit, platform adaptation, content variety, clarity, proof, CTA and reuse. Give at most four implementation-ready page fixes, each tied to an exact page read in this run, with content order, fact-grounded sample copy, evidence-based text/flow UX changes, effort and a baseline-first measurement plan. Report CrUX only as real-user field data with its 28-day window, and Lighthouse only as a synthetic mobile lab test. Do not invent claims, numerical lift or a measurement target. Use matching Search Console observations only for page(s) actually read, and treat them as historical acquisition context, not conversions or causal proof. Cite exact website URLs and exact social source IDs/platforms supplied in context. Do not infer speed if no measurement was returned or claim causal effects. Recommendations for channels and formats must stay testable ideas and never guarantee growth. LinkedIn post history and post performance analytics are not available in this audit.\n\n${businessBrief(job)}` },
       );
-      const postSources = new Map(socialPosts.map((post) => [String(post.artifactId), post.platform]));
+      const postSources = new Map<string, { platform: string; sourceUrl?: string; sourceType: "climbos" | "facebook" | "instagram" }>(socialPosts.map((post) => [String(post.artifactId), { platform: post.platform, sourceUrl: post.sourceUrl, sourceType: post.platform === "facebook" || post.platform === "instagram" ? post.platform : "climbos" }]));
       const safeOutput = out && typeof out === "object" ? { ...(out as Record<string, unknown>) } : {};
       const socialReview = safeOutput.socialReview && typeof safeOutput.socialReview === "object" ? safeOutput.socialReview as Record<string, unknown> : {};
       socialReview.findings = Array.isArray(socialReview.findings)
         ? socialReview.findings.filter((finding) => {
             if (!finding || typeof finding !== "object") return false;
-            const candidate = finding as { sourceArtifactId?: unknown; platform?: unknown };
-            return postSources.get(String(candidate.sourceArtifactId ?? "")) === candidate.platform;
+            const candidate = finding as { sourceArtifactId?: unknown; platform?: unknown; sourceUrl?: unknown; sourceType?: unknown };
+            const source = postSources.get(String(candidate.sourceArtifactId ?? ""));
+            if (!source || source.platform !== candidate.platform) return false;
+            candidate.sourceType = source.sourceType;
+            if (source.sourceUrl && isSafeSocialPermalink(source.sourceUrl, source.sourceType)) candidate.sourceUrl = source.sourceUrl;
+            else delete candidate.sourceUrl;
+            return true;
           })
         : [];
-      if (socialPosts.length === 0) socialReview.summary = "No confirmed ClimbOS-published social posts were available, so no current-post review was possible. Any content-mix ideas are hypotheses to test.";
+      socialReview.coverage = socialCoverage;
+      if (socialPosts.length === 0) socialReview.summary = "No post captions were available to review. See source coverage for whether accounts were connected, authorized, or unavailable. Any content-mix ideas are hypotheses to test.";
       safeOutput.socialReview = socialReview;
       safeOutput.auditCoverage = {
         website: { requested: Boolean(website), requestedUrl: website ?? null, pagesAttempted: pages.length, pagesRead: pages.filter((page) => page.status === "read").length, pages },
         performance,
         searchConsole: propertyMatches && searchConsole ? { state: inspectedSearchRows.length ? "matched_to_read_pages" : "property_matched_no_rows_for_read_pages", property: searchConsole.property, startDate: searchConsole.startDate, endDate: searchConsole.endDate, observedRows: inspectedSearchRows.length, truncated: searchConsole.truncated } : { state: searchConsole ? "not_used_property_mismatch" : "no_snapshot" },
-        social: { publishedPostsReviewed: socialPosts.length, platformsReviewed: [...new Set(socialPosts.map((post) => post.platform))], accountAnalytics: "not_available_in_this_audit" },
-        limitations: ["Website assessment uses text and metadata from the listed pages; visual rendering, mobile behavior and page speed were not measured.", "This review does not include conversion analytics or prove that any suggested change will increase conversions.", "Social review covers only posts confirmed as published through this ClimbOS workspace; other posts and platform performance metrics were not inspected."],
+        social: { postsReviewed: socialPosts.length, platformsReviewed: [...new Set(socialPosts.map((post) => post.platform))], sourceCoverage: socialCoverage, accountAnalytics: "not_available_in_this_audit" },
+        limitations: ["Website assessment uses text and metadata from the listed pages; it does not directly inspect rendered layout, forms, accessibility or mobile behavior. Any performance measurements are shown separately.", "This review does not include conversion analytics or prove that any suggested change will increase conversions.", "Social review uses at most ten recent caption-bearing posts per available source; it does not include complete account history, visual media analysis or account performance metrics."],
       };
       await finish(ctx, runId, "verified", { output: safeOutput, meters: { scrapeCredits: pagesFetched } });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
