@@ -69,6 +69,20 @@ describe("Plan version history", () => {
     await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: r.strategyId, decision: "approve" });
     list = await w.client.query(api.planHistory.versions, { slug: w.slug });
     expect(list.find((v) => v.inUse)?.version).toBe(3);
+
+    // Restoring plays from an older schema keeps that part's own payload version.
+    await t.run(async (ctx) => {
+      const legacy = (await ctx.db.get(v1.id))!;
+      const expert = { ...legacy.expert!, version: 7 } as Record<string, unknown>;
+      delete expert.growthPlanV8;
+      delete expert.growthPlanV9;
+      await ctx.db.patch(legacy._id, { expert: expert as never });
+    });
+    const legacyRestore = await w.client.mutation(api.planHistory.restore, { slug: w.slug, fromId: v1.id, parts: ["plays"] });
+    const restoredExpert = await t.run(async (ctx) => (await ctx.db.get(legacyRestore.strategyId))?.expert);
+    expect(restoredExpert?.version).toBe(7);
+    expect(restoredExpert?.growthPlanV9).toBeUndefined();
+    expect(restoredExpert?.plays?.length).toBeGreaterThan(0);
   });
 
   it("only editors restore, and the latest version can't be restored onto itself", async () => {

@@ -3,7 +3,7 @@ import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
 import { EXPERT_PLAN_SCHEMA_VERSION, LEGACY_EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
-import { serializeCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
+import { buildCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
@@ -470,7 +470,7 @@ export const saveStrategy = internalMutation({
               const x = s as unknown as StrategyV2;
               const savedPlays = (x.plays ?? []).slice(0, 4);
               const expertPlays = withPlayIds(savedPlays.map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior);
-              const growthPlanV8 = serializeCurrentExpertGrowthPayload(expertPlays, x.economics);
+              const growthPlanV9 = buildCurrentExpertGrowthPayload(expertPlays, x.economics);
               const ownerEconomics = x.snapshot?.ownerEconomics as { newCustomersPerMonth?: unknown } | undefined;
               const monthlyBudget = typeof x.snapshot?.monthlyAdBudget === "number" ? x.snapshot.monthlyAdBudget : minorToMajor(goal.monthlyAdBudgetMinor, goal.currency);
               const decisionAnalysis = x.decision && x.economics && savedPlays.length
@@ -482,7 +482,7 @@ export const saveStrategy = internalMutation({
                   })
                 : undefined;
               return {
-                version: growthPlanV8 ? EXPERT_PLAN_SCHEMA_VERSION : LEGACY_EXPERT_PLAN_SCHEMA_VERSION,
+                version: growthPlanV9 ? EXPERT_PLAN_SCHEMA_VERSION : LEGACY_EXPERT_PLAN_SCHEMA_VERSION,
                 diagnosis: x.diagnosis,
                 affordableCac: x.affordableCac,
                 notDoing: x.notDoing.slice(0, 10),
@@ -493,7 +493,7 @@ export const saveStrategy = internalMutation({
                 risks: x.risks.slice(0, 6),
                 plays: expertPlays,
                 economics: x.economics,
-                ...(growthPlanV8 ? { growthPlanV8 } : {}),
+                ...(growthPlanV9 ? { growthPlanV9 } : {}),
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),

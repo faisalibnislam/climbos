@@ -1,4 +1,5 @@
 import { PlaySchema, PlaysOutputSchema } from "./specs";
+import type { Play, PlaysOutput } from "./specs";
 
 // The forecast engine deliberately writes null when it has no forecast basis.
 const PersistedPlaySchema = PlaySchema.extend({
@@ -64,10 +65,16 @@ export function serializeCurrentExpertGrowthPayload(plays: unknown, economics: u
   return JSON.stringify({ plays, economics });
 }
 
+export function buildCurrentExpertGrowthPayload(plays: unknown, economics: unknown): { plays: Play[]; economics: PlaysOutput["economics"] } | undefined {
+  if (!economics || typeof economics !== "object" || !("sources" in economics) || !Array.isArray(plays)) return undefined;
+  assertCurrentExpertGrowthPayload(plays, economics);
+  return { plays: plays as Play[], economics: economics as PlaysOutput["economics"] };
+}
+
 export function parseCurrentExpertGrowthPayload(value: unknown): { plays: unknown[]; economics: Record<string, unknown> } | null {
-  if (typeof value !== "string") return null;
   try {
-    const parsed = JSON.parse(value) as { plays?: unknown; economics?: unknown };
+    const parsed = (typeof value === "string" ? JSON.parse(value) : value) as { plays?: unknown; economics?: unknown } | null;
+    if (!parsed || typeof parsed !== "object") return null;
     if (!Array.isArray(parsed.plays) || !parsed.economics || typeof parsed.economics !== "object") return null;
     assertCurrentExpertGrowthPayload(parsed.plays, parsed.economics);
     return { plays: parsed.plays, economics: parsed.economics as Record<string, unknown> };

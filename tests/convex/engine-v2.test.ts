@@ -134,8 +134,8 @@ describe("Engine v2 wiring", () => {
     // The expert plan fields are saved.
     const strategy = await t.run(async (ctx) => ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first());
     expect(strategy?.expert?.diagnosis).toContain("fake-v1");
-    expect(strategy?.expert?.version).toBe(8);
-    expect(typeof strategy?.expert?.growthPlanV8).toBe("string");
+    expect(strategy?.expert?.version).toBe(9);
+    expect(strategy?.expert?.growthPlanV9).toMatchObject({ plays: expect.any(Array), economics: expect.any(Object) });
     expect(strategy?.expert?.weekOneChecklist.length).toBeGreaterThan(0);
     // Forecasts are computed in code from each play's model and ranges (never written by the model).
     const plays = strategy?.expert?.plays as { p10: number; p50: number; p90: number }[];

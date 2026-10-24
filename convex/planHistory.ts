@@ -105,6 +105,7 @@ export const restore = mutation({
         }
       }
       if (!expert.diagnosis && !expert.northStar) expert = from.expert && take.size === PLAN_PARTS.length ? from.expert : expert;
+      if (expert && take.has("plays")) expert.version = from.expert?.version ?? 0;
     }
     // Restored channels start over: they become active again only when this version is approved.
     const channels = pick("channels", (s) => s.channels).map((c) => {

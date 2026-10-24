@@ -5,9 +5,10 @@ import { parseCurrentExpertGrowthPayload } from "./growthPlanPersistence";
  * engine version. Existing rows predate this field and are treated as legacy
  * version 0; their payload is preserved so older plans remain readable.
  */
-export const EXPERT_PLAN_SCHEMA_VERSION = 8;
+export const EXPERT_PLAN_SCHEMA_VERSION = 9;
 /** Last schema whose growth fields were stored only in the legacy untyped slots. */
 export const LEGACY_EXPERT_PLAN_SCHEMA_VERSION = 7;
+export const EXPERT_PLAN_JSON_ENVELOPE_VERSION = 8;
 
 export type SavedExpertPlan = Record<string, unknown> & { version: number };
 
@@ -18,8 +19,8 @@ export function readExpertPlan<T extends Record<string, unknown>>(expert: T): T 
     ...expert,
     version: safeVersion,
   };
-  if (safeVersion === EXPERT_PLAN_SCHEMA_VERSION) {
-    const current = parseCurrentExpertGrowthPayload(expert.growthPlanV8);
+  if (safeVersion === EXPERT_PLAN_SCHEMA_VERSION || safeVersion === EXPERT_PLAN_JSON_ENVELOPE_VERSION) {
+    const current = parseCurrentExpertGrowthPayload(safeVersion === EXPERT_PLAN_SCHEMA_VERSION ? expert.growthPlanV9 : expert.growthPlanV8);
     if (current) return { ...base, plays: current.plays, economics: current.economics };
     const invalid = { ...base, growthPlanInvalid: true } as Record<string, unknown> & { version: number };
     delete invalid.plays;

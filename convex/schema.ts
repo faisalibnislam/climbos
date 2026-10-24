@@ -2,6 +2,93 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const growthProvenanceValidator = v.union(v.literal("owner"), v.literal("research"), v.literal("benchmark"), v.literal("planned"), v.literal("assumption"));
+const growthTagCheckValidator = v.union(v.literal("owner_input"), v.literal("source_verified"), v.literal("retrieved"), v.literal("reported"));
+const growthSourceTagValidator = v.object({
+  source: growthProvenanceValidator,
+  ref: v.string(),
+  quote: v.optional(v.string()),
+  population: v.optional(v.string()),
+  denominator: v.optional(v.string()),
+  period: v.optional(v.string()),
+  check: v.optional(growthTagCheckValidator),
+  checkedBy: v.optional(v.string()),
+  confirmedAt: v.optional(v.number()),
+  access: v.optional(v.union(v.literal("read"), v.literal("search_only"), v.literal("unavailable"), v.literal("not_in_search"))),
+  receipt: v.optional(v.object({ fetchedAt: v.number(), contentHash: v.string() })),
+  replaced: v.optional(v.object({ value: v.number(), source: v.string() })),
+});
+const growthStepValidator = v.object({
+  name: v.string(),
+  rate: v.number(),
+  low: v.number(),
+  high: v.number(),
+  source: growthProvenanceValidator,
+  ref: v.string(),
+  quote: v.optional(v.string()),
+  population: v.optional(v.string()),
+  denominator: v.optional(v.string()),
+  period: v.optional(v.string()),
+  baselineRate: v.optional(v.number()),
+  check: v.optional(growthTagCheckValidator),
+  checkedBy: v.optional(v.string()),
+  access: v.optional(v.union(v.literal("read"), v.literal("search_only"), v.literal("unavailable"), v.literal("not_in_search"))),
+  receipt: v.optional(v.object({ fetchedAt: v.number(), contentHash: v.string() })),
+});
+const growthPlayValidator = v.object({
+  id: v.optional(v.string()),
+  name: v.string(),
+  oneLiner: v.string(),
+  kind: v.union(v.literal("bankable"), v.literal("creative"), v.literal("moonshot")),
+  audience: v.string(),
+  trigger: v.string(),
+  hook: v.string(),
+  mechanic: v.string(),
+  assetUsed: v.string(),
+  route: v.string(),
+  funnel: v.array(v.string()),
+  unit: v.string(),
+  p10: v.number(),
+  p50: v.number(),
+  p90: v.number(),
+  forecastUncertainty: v.optional(v.union(v.null(), v.object({
+    rangeMethod: v.union(v.literal("input_scenario"), v.literal("single_scenario")),
+    variedDrivers: v.array(v.string()),
+    statisticalInterval: v.literal("not_estimated"),
+    calibratedToBusiness: v.literal(false),
+    timing: v.object({ reachRamp: v.union(v.literal("modeled"), v.literal("immediate_assumed")), paidConversionLag: v.union(v.literal("modeled"), v.literal("none_assumed")) }),
+    omittedFactors: v.array(v.union(v.literal("seasonality"), v.literal("execution_variation"), v.literal("model_error"))),
+  }))),
+  financialEvidence: v.optional(v.union(v.null(), v.object({ status: v.union(v.literal("checked_inputs"), v.literal("conditional_scenario"), v.literal("unlabelled_scenario")), assumed: v.array(v.string()), unchecked: v.array(v.string()), planned: v.array(v.string()) }))),
+  horizonDays: v.number(),
+  confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+  biggestUnknown: v.string(),
+  test: v.string(),
+  killIf: v.string(),
+  scaleIf: v.string(),
+  scores: v.array(v.number()),
+  firstActionToday: v.string(),
+  actionContract: v.object({
+    diagnosis: v.string(), intendedEffect: v.string(), evidenceBasis: v.union(v.literal("assumption"), v.literal("inference"), v.literal("measured"), v.literal("owner_report"), v.literal("source_claim")), evidenceNote: v.string(), evidenceRefs: v.array(v.string()), targetOrAsset: v.string(), resourcePlan: v.string(), executionCapability: v.union(v.literal("owner"), v.literal("climbos"), v.literal("existing_integration"), v.literal("external_setup"), v.literal("unknown")), dependencies: v.array(v.string()),
+    measurement: v.object({ metric: v.string(), baseline: v.string(), target: v.string(), windowDays: v.number(), source: v.string() }),
+  }),
+  actionReadiness: v.optional(v.object({ status: v.union(v.literal("safe_to_start"), v.literal("depends_on_input")), reasons: v.array(v.string()) })),
+  climbosCanDo: v.string(),
+  model: v.object({
+    weeklyReach: v.number(), weeklyReachLow: v.number(), weeklyReachHigh: v.number(), rampWeeks: v.optional(v.number()), salesLagDays: v.optional(v.number()), reachSource: growthSourceTagValidator, steps: v.array(growthStepValidator), monthlySpendUsd: v.number(), spendSource: growthSourceTagValidator, ownerHoursPerWeek: v.number(), otherMonthlyUsd: v.optional(v.number()), otherSource: v.optional(growthSourceTagValidator), hoursSource: growthSourceTagValidator,
+  }),
+  sensitivity: v.optional(v.array(v.object({ driver: v.string(), metric: v.union(v.literal("customers"), v.literal("net_contribution_12m")), atLow: v.number(), atMode: v.number(), atHigh: v.number() }))),
+  cacRange: v.optional(v.union(v.null(), v.object({ p10: v.union(v.number(), v.null()), p50: v.union(v.number(), v.null()), p90: v.union(v.number(), v.null()) }))),
+});
+const growthPlanV9Validator = v.object({
+  plays: v.array(growthPlayValidator),
+  economics: v.object({
+    revenuePerCustomerMonthUsd: v.number(), grossMargin: v.number(), monthlyChurn: v.number(), basis: v.string(), currency: v.optional(v.string()), assumed: v.optional(v.array(v.string())), ownerHourUsd: v.optional(v.number()),
+    ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
+    sources: v.object({ revenue: growthSourceTagValidator, margin: growthSourceTagValidator, churn: growthSourceTagValidator, ownerHour: v.optional(growthSourceTagValidator) }),
+  }),
+});
+
 /**
  * ClimbOS data model. Every tenant-owned table carries `orgId` and is indexed
  * by it first. Queries must go through the guards in `lib/tenancy.ts`; no
@@ -1426,8 +1513,10 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
-        /** Strictly validated v8 growth-plan payload; legacy fields above remain for historical compatibility. */
+        /** Previous v8 JSON envelope; accepted for historical compatibility. */
         growthPlanV8: v.optional(v.string()),
+        /** Nested Convex-validated current growth plan; replaces the JSON envelope for new writes. */
+        growthPlanV9: v.optional(growthPlanV9Validator),
         /** Plan quality, separate from the run finishing (passed / provisional / needs_input / failed). */
         quality: v.optional(
           v.object({
