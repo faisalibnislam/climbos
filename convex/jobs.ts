@@ -692,7 +692,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 10,
+    snapshotVersion: 11,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -711,7 +711,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 10,
+    snapshotVersion: 11,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -730,6 +730,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       summary: job.business.summary ?? null,
       currency: job.business.currency ?? null,
     } : null,
+    ownerAcquisitionTypes: job.business?.acquisition?.typesSource === "owner" ? [...job.business.acquisition.types].sort() : null,
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
     brandProfile: job.brand ? {
       voice: job.brand.voice,

@@ -764,7 +764,7 @@ function planStaleInputs(
   businessFactVersions: { id: string; updatedAt: number }[] = [],
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null,
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -773,6 +773,7 @@ function planStaleInputs(
   const hasGoalSnapshot = (snapshot?.snapshotVersion ?? 0) >= 8;
   const hasProfileAndFactSnapshot = (snapshot?.snapshotVersion ?? 0) >= 9;
   const hasBrandSnapshot = (snapshot?.snapshotVersion ?? 0) >= 10;
+  const hasOwnerAcquisitionTypeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 11;
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.
@@ -781,7 +782,7 @@ function planStaleInputs(
     funnel: hasFunnelSnapshot ? JSON.stringify(savedFunnel) !== JSON.stringify(currentFunnel) : Boolean(business?.funnel && business.funnel.updatedAt > strategy.createdAt),
     // Goals are replaced when edited; legacy plans fall back to their bound goal ID.
     goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
-    businessProfile: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never),
+    businessProfile: (hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never)) || (hasOwnerAcquisitionTypeSnapshot && canonicalJson(snapshot?.ownerAcquisitionTypes as never) !== canonicalJson((business?.acquisition?.typesSource === "owner" ? [...business.acquisition.types].sort() : null) as never)),
     businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
     brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
   };
