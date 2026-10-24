@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
+import { LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, outreachCohortMature, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
 
 /**
  * Loop 2 — learn from results. Weekly, every workspace's real outcomes
@@ -30,8 +30,12 @@ async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
     .order("desc")
     .take(3000);
   const firstSends = new Map<string, { campaignId: Id<"outboundCampaigns">; prospectId: Id<"prospects">; sentAt: number }>();
+  const latestCampaignSend = new Map<string, number>();
   for (const send of sends) {
-    if (send.status !== "sent" || send.step !== 0 || send.sentAt === undefined) continue;
+    if (send.status !== "sent" || send.sentAt === undefined) continue;
+    const campaignKey = String(send.campaignId);
+    latestCampaignSend.set(campaignKey, Math.max(latestCampaignSend.get(campaignKey) ?? 0, send.sentAt));
+    if (send.step !== 0) continue;
     const key = String(send.prospectId);
     const previous = firstSends.get(key);
     if (!previous || send.sentAt < previous.sentAt) firstSends.set(key, { campaignId: send.campaignId, prospectId: send.prospectId, sentAt: send.sentAt });
@@ -40,6 +44,9 @@ async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
   for (const send of firstSends.values()) {
     const prospect = await ctx.db.get(send.prospectId);
     if (!prospect || prospect.orgId !== orgId || prospect.campaignId !== send.campaignId) continue;
+    const campaign = await ctx.db.get(send.campaignId);
+    if (!campaign || campaign.orgId !== orgId) continue;
+    if (!outreachCohortMature({ sendingStatus: campaign.sending?.status, lastSentAt: campaign.sending?.lastSentAt, latestObservedSentAt: latestCampaignSend.get(String(send.campaignId)) ?? send.sentAt, now: Date.now() })) continue;
     const cohort = cohorts.get(String(send.campaignId)) ?? { contacted: 0, replied: 0, booked: 0 };
     cohort.contacted += 1;
     // Stage is a current-state field. Only its own transition timestamp can

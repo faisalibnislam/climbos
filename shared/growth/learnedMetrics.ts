@@ -6,6 +6,20 @@
  */
 
 export type MetricWindow = "120d" | "lifetime";
+export const OUTREACH_REPLY_WINDOW_DAYS = 21;
+const DAY_MS = 86_400_000;
+
+/** Don't count a stopped outreach campaign until its reply-watch window closes. */
+export function outreachCohortMature(input: {
+  sendingStatus?: "on" | "paused" | "done";
+  lastSentAt?: number;
+  latestObservedSentAt: number;
+  now: number;
+}): boolean {
+  if (input.sendingStatus === "on") return false;
+  const lastSentAt = input.lastSentAt ?? input.latestObservedSentAt;
+  return input.now - lastSentAt >= OUTREACH_REPLY_WINDOW_DAYS * DAY_MS;
+}
 
 export interface MetricDef {
   label: string;
@@ -13,15 +27,17 @@ export interface MetricDef {
   counts: string;
   window: MetricWindow;
   minTrials: number;
+  /** Optional maturity rule for outcome cohorts. */
+  maturity?: string;
 }
 
 export const LEARN_WINDOW_DAYS = 120;
 
 export const METRIC_DEFS: Record<string, MetricDef> = {
   // Any reply, including "no thanks": not a measure of interest on its own.
-  outreach_reply: { label: "Outreach emails → any reply", counts: "first emails sent → prospects who replied (any reply, including no)", window: "120d", minTrials: 30 },
-  outreach_booking: { label: "Outreach replies → booked calls", counts: "replies → booked or won", window: "120d", minTrials: 5 },
-  outreach_booked: { label: "Outreach emails → booked calls", counts: "first emails sent → booked or won", window: "120d", minTrials: 30 },
+  outreach_reply: { label: "Outreach emails → any reply", counts: "first emails sent → prospects who replied (any reply, including no)", window: "120d", minTrials: 30, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
+  outreach_booking: { label: "Outreach replies → booked calls", counts: "replies → booked or won", window: "120d", minTrials: 5, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
+  outreach_booked: { label: "Outreach emails → booked calls", counts: "first emails sent → booked or won", window: "120d", minTrials: 30, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
   booking_attended: { label: "Booked calls → attended", counts: "calls with an outcome → attended", window: "120d", minTrials: 5 },
   landing_lead: { label: "Landing page views → leads", counts: "page views → leads, both all-time counters", window: "lifetime", minTrials: 50 },
   chat_lead: { label: "Website chats → email captured", counts: "chats → chats with an email", window: "120d", minTrials: 10 },
@@ -81,7 +97,7 @@ export function rateLine(metric: string, scope: "own" | { workspaces: number; la
   const def = METRIC_DEFS[metric];
   const rate = r.trials ? r.successes / r.trials : 0;
   const ci = wilson90(r.successes, r.trials);
-  const window = def.window === "120d" ? `last ${LEARN_WINDOW_DAYS} days` : "all time";
+  const window = `${def.window === "120d" ? `last ${LEARN_WINDOW_DAYS} days` : "all time"}${def.maturity ? `; ${def.maturity}` : ""}`;
   const range = ci ? `, 90% range ${pct(ci.low)}–${pct(ci.high)}` : "";
   if (scope === "own") return `- ${def.label}: THIS BUSINESS ${pct(rate)} (${r.successes}/${r.trials}, ${window}${range}) [first-party counts of ${def.counts}; observed, not proof of cause]`;
   return `- ${def.label}: ClimbOS ${scope.label} ${pct(rate)} (${scope.workspaces} workspaces, n=${r.trials}, ${window}) [pooled counts; other businesses' offers and audiences differ]`;

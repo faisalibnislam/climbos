@@ -18,15 +18,16 @@ describe("learning from results", () => {
         sequence: [],
         ownerNotes: [],
         excluded: [],
+        sending: { status: "done", startedAt: now - 60 * 86_400_000, startedBy: u.userId as Id<"users">, senderName: "Owner", company: "Cohort Co", address: "owner@example.com", firstSentAt: now - 60 * 86_400_000, lastSentAt: now - 35 * 86_400_000 },
         createdBy: u.userId as Id<"users">,
         createdAt: now - 200 * 86_400_000,
         updatedAt: now,
       });
       const cases = [
-        { company: "Old stage", stage: "booked" as const, sentAt: now - 1_000, stageUpdatedAt: now - 2_000, updatedAt: now, createdAt: now - 100_000 },
-        { company: "New stage", stage: "booked" as const, sentAt: now - 1_000, stageUpdatedAt: now, updatedAt: now, createdAt: now - 100_000 },
+        { company: "Old stage", stage: "booked" as const, sentAt: now - 60 * 86_400_000, stageUpdatedAt: now - 61 * 86_400_000, updatedAt: now, createdAt: now - 100_000 },
+        { company: "New stage", stage: "booked" as const, sentAt: now - 60 * 86_400_000, stageUpdatedAt: now - 59 * 86_400_000, updatedAt: now, createdAt: now - 100_000 },
         // Queued long ago but delivered inside the window: the delivery belongs in the cohort.
-        { company: "Late delivery", stage: "contacted" as const, sentAt: now - 1_000, stageUpdatedAt: now - 1_000, updatedAt: now - 1_000, createdAt: now - 200 * 86_400_000 },
+        { company: "Late delivery", stage: "contacted" as const, sentAt: now - 60 * 86_400_000, stageUpdatedAt: now - 60 * 86_400_000, updatedAt: now - 60 * 86_400_000, createdAt: now - 200 * 86_400_000 },
       ];
       for (const [index, item] of cases.entries()) {
         const prospectId = await ctx.db.insert("prospects", {
@@ -62,6 +63,41 @@ describe("learning from results", () => {
           createdAt: item.createdAt,
         });
       }
+
+      const activeCampaignId = await ctx.db.insert("outboundCampaigns", {
+        orgId: orgId as Id<"organizations">,
+        title: "Still sending",
+        brief: { who: "owners", where: "UK", count: 1 },
+        status: "review",
+        sequence: [],
+        ownerNotes: [],
+        excluded: [],
+        sending: { status: "on", startedAt: now - 60 * 86_400_000, startedBy: u.userId as Id<"users">, senderName: "Owner", company: "Cohort Co", address: "owner@example.com", firstSentAt: now - 60 * 86_400_000, lastSentAt: now - 60 * 86_400_000 },
+        createdBy: u.userId as Id<"users">,
+        createdAt: now - 200 * 86_400_000,
+        updatedAt: now,
+      });
+      const activeProspectId = await ctx.db.insert("prospects", {
+        orgId: orgId as Id<"organizations">,
+        campaignId: activeCampaignId,
+        company: "Active campaign",
+        domain: "active.example.com",
+        website: "https://active.example.com",
+        location: "UK",
+        sizeBand: "small",
+        why: "Test fixture",
+        evidence: [],
+        trigger: "Test",
+        fit: 1,
+        timing: 1,
+        contact: "Owner",
+        firstLine: "Hello",
+        stage: "contacted",
+        stageUpdatedAt: now - 60 * 86_400_000,
+        createdAt: now - 200 * 86_400_000,
+        updatedAt: now - 60 * 86_400_000,
+      });
+      await ctx.db.insert("outboundSends", { orgId: orgId as Id<"organizations">, campaignId: activeCampaignId, prospectId: activeProspectId, step: 0, to: "active@example.com", scheduledFor: now - 60 * 86_400_000, status: "sent", sentAt: now - 60 * 86_400_000, attempts: 1, createdAt: now - 200 * 86_400_000 });
     });
     const { counts } = await t.query(internal.learning.countsForOrg, { orgId: orgId as Id<"organizations"> });
     expect(counts.outreach_reply).toEqual({ trials: 3, successes: 1 });

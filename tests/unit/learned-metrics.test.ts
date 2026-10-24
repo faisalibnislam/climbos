@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { learningCounts, METRIC_DEFS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
+import { learningCounts, METRIC_DEFS, outreachCohortMature, OUTREACH_REPLY_WINDOW_DAYS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
 
 /** S4 (REQ-LEARN-01..03): windows match, reply ≠ interest, booked ≠ attended, counts with ranges. */
 const empty = { outreach: [], bookingOutcomes: [], landing: [], chats: { total: 0, withEmail: 0 }, reviews: { sent: 0, clicked: 0 }, bio: null };
@@ -19,6 +19,16 @@ describe("learned metrics", () => {
     expect(c.outreach_booked).toEqual({ trials: 200, successes: 2 });
     expect(c.booking_attended).toEqual({ trials: 3, successes: 1 });
     expect(METRIC_DEFS.outreach_reply.label).toMatch(/any reply/);
+    expect(METRIC_DEFS.outreach_reply.maturity).toContain(`${OUTREACH_REPLY_WINDOW_DAYS}-day`);
+  });
+
+  it("waits for outreach campaigns to stop and for the reply-watch window to close", () => {
+    const now = Date.UTC(2026, 9, 24);
+    const days = 86_400_000;
+    expect(outreachCohortMature({ sendingStatus: "on", lastSentAt: now - 90 * days, latestObservedSentAt: now - 90 * days, now })).toBe(false);
+    expect(outreachCohortMature({ sendingStatus: "paused", lastSentAt: now - 20 * days, latestObservedSentAt: now - 30 * days, now })).toBe(false);
+    expect(outreachCohortMature({ sendingStatus: "done", lastSentAt: now - 21 * days, latestObservedSentAt: now - 30 * days, now })).toBe(true);
+    expect(outreachCohortMature({ latestObservedSentAt: now - 20 * days, now })).toBe(false);
   });
 
   it("successes can't exceed trials; empty denominators give no rate", () => {
