@@ -175,6 +175,15 @@ export const decide = mutation({
     const { user } = await requireStaff(ctx, "features");
     const p = await ctx.db.get(id);
     if (!p) throw appError("NOT_FOUND", "Gone.");
+    if (decision === "approved") {
+      const result = p.test;
+      if (p.status !== "proposed" || !result || result.error || result.baseline === undefined || result.variant === undefined) {
+        throw appError("INVALID", "A proposal needs a completed, error-free comparison before it can be approved.");
+      }
+      if (result.variant <= result.baseline) {
+        throw appError("INVALID", "The proposed rule did not improve the current screening score. Keep it out of the live playbook.");
+      }
+    }
     await ctx.db.patch(id, { status: decision, decidedBy: user._id, decidedAt: Date.now() });
   },
 });
