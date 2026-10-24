@@ -46,4 +46,25 @@ describe("first recorded paying customers", () => {
     expect(metric.total).toBe(0);
     expect(metric.sourceName).toBeNull();
   });
+
+  it("keeps identical provider customer IDs separate instead of merging unrelated billing customers", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "provider-ids@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Provider IDs Co" });
+    const now = Date.now();
+
+    await t.mutation(internal.analytics.ingestRevenue, {
+      orgId: orgId as Id<"organizations">,
+      events: [
+        { source: "stripe", sourceEventId: "stripe-event", occurredAt: now - DAY, customerRef: "customer-7", currency: "USD", amountMinor: 1_000, refundedMinor: 0, kind: "order" },
+        { source: "polar", sourceEventId: "polar-event", occurredAt: now - DAY, customerRef: "customer-7", currency: "USD", amountMinor: 1_000, refundedMinor: 0, kind: "order" },
+      ],
+    });
+
+    const view = await owner.client.query(api.analytics.overview, { slug, days: 30 });
+    const metric = view!.metrics.find((m) => m.key === "paid_conversions")!;
+    expect(metric.total).toBe(2);
+    expect(metric.definition).toMatch(/source-scoped customer IDs/);
+    expect(metric.definition).toMatch(/same person across billing systems may count more than once/);
+  });
 });

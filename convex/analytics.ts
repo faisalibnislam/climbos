@@ -15,7 +15,7 @@ const DAY = 86_400_000;
 export const METRICS = {
   visits: { label: "Website visits", unit: "count", definition: "Sessions reported by your analytics.", source: "Google Analytics 4" },
   signups: { label: "Sign-ups", unit: "count", definition: "Key events you confirmed as a sign-up (e.g. account created).", source: "Google Analytics 4" },
-  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct customer IDs whose first positive, non-refund payment in imported billing data falls in this period. Payments without a customer ID are excluded; incomplete billing history can make this count low.", source: "Billing" },
+  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first positive, non-refund payment in imported billing data falls in this period. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
   revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing" },
 } as const;
 export type MetricKey = keyof typeof METRICS;
@@ -154,13 +154,14 @@ async function firstRecordedPayerDays(
     const date = dayKey(r.occurredAt, timezone);
     return date >= from && date <= to;
   });
-  const customerRefs = [...new Set(inRange.map((r) => r.customerRef).filter((ref): ref is string => Boolean(ref)))];
+  const customerKeys = [...new Set(inRange.flatMap((event) => event.customerRef ? [`${event.source}\u0000${event.customerRef}`] : []))];
   const counts = new Map<string, number>();
   let historyPartial = false;
-  for (const customerRef of customerRefs.slice(0, 2_000)) {
+  for (const key of customerKeys.slice(0, 2_000)) {
+    const [source, customerRef] = key.split("\u0000", 2);
     const history = await ctx.db
       .query("revenueEvents")
-      .withIndex("by_org_customer_occurred", (q) => q.eq("orgId", orgId).eq("customerRef", customerRef))
+      .withIndex("by_org_source_customer_occurred", (q) => q.eq("orgId", orgId).eq("source", source).eq("customerRef", customerRef))
       .filter((q) => q.neq(q.field("kind"), "refund"))
       .take(1_000);
     if (history.length >= 1_000) historyPartial = true;
@@ -172,9 +173,9 @@ async function firstRecordedPayerDays(
   }
   return {
     counts,
-    hasIdentifiedCustomers: customerRefs.length > 0,
+    hasIdentifiedCustomers: customerKeys.length > 0,
     isFixture: inRange.some((r) => r.isFixture),
-    partial: rows.length >= 10_000 || customerRefs.length > 2_000 || historyPartial,
+    partial: rows.length >= 10_000 || customerKeys.length > 2_000 || historyPartial,
     freshness: Math.max(0, ...rows.map((r) => r.ingestedAt)),
   };
 }

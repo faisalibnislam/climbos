@@ -2382,6 +2382,7 @@ export default defineSchema({
   })
     .index("by_org_occurred", ["orgId", "occurredAt"])
     .index("by_org_customer_occurred", ["orgId", "customerRef", "occurredAt"])
+    .index("by_org_source_customer_occurred", ["orgId", "source", "customerRef", "occurredAt"])
     .index("by_org_source_event", ["orgId", "source", "sourceEventId"]),
 
   touches: defineTable({
