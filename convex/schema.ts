@@ -913,9 +913,9 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_created", ["createdAt"]),
 
-  /** Learning from results: first-party rates, per workspace and pooled by business type (anonymized, k ≥ 5). */
+  /** Learning from results: first-party rates, per workspace and k-anonymous business-type or owner-reported-stage cohorts. */
   learnedRates: defineTable({
-    /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled). */
+    /** "org:<id>" (that workspace only), "type:<businessType>", or "stage:<businessType>:<stage>" (pooled, k ≥ 10). */
     scope: v.string(),
     metric: v.string(),
     workspaces: v.number(),

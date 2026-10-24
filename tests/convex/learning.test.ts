@@ -106,7 +106,7 @@ describe("learning from results", () => {
     expect(counts.outreach_booked).toEqual({ trials: 3, successes: 1 });
   });
 
-  it("measures each workspace and pools by type only with 5+ workspaces", async () => {
+  it("uses a stage-matched pool only when its own k-anonymity threshold is met, then falls back by type", async () => {
     const t = setup();
     const orgs: Id<"organizations">[] = [];
     for (let i = 0; i < 10; i++) {
@@ -120,10 +120,29 @@ describe("learning from results", () => {
     }
     await t.action(internal.learning.recompute, {});
     expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "all"))).toBe(false);
+    // All ten have the same business type, but split into two stage cohorts of five.
+    await t.run(async (ctx) => {
+      const businesses = await ctx.db.query("businesses").collect();
+      for (const [index, business] of businesses.entries()) {
+        if (!orgs.some((id) => id === business.orgId)) continue;
+        await ctx.db.patch(business._id, { lifecycleStage: { stage: index < 5 ? "growth" : "maturity", provenance: "owner_reported", updatedAt: Date.now() } });
+      }
+    });
+    await t.action(internal.learning.recompute, {});
     const ctx0 = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
     expect(ctx0).toContain("THIS BUSINESS 5%");
+    expect(ctx0).toContain("other businesses (stage not matched)");
     expect(ctx0).toMatch(/~100\/~1000, 10\+ workspaces/);
     expect(ctx0).toMatch(/each workspace contributes at most 100 trials/);
+    expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "stage:other:growth"))).toBe(false);
+    // Once ten records share an owner-reported stage, prefer that narrower cohort.
+    await t.run(async (ctx) => {
+      const businesses = await ctx.db.query("businesses").collect();
+      for (const business of businesses) if (orgs.some((id) => id === business.orgId)) await ctx.db.patch(business._id, { lifecycleStage: { stage: "growth", provenance: "owner_reported", updatedAt: Date.now() } });
+    });
+    await t.action(internal.learning.recompute, {});
+    const stageContext = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
+    expect(stageContext).toContain("other businesses at the owner-reported growth stage");
     // With only 9 contributing, nothing pooled is published.
     await t.run(async (ctx) => {
       const p = await ctx.db.query("landingPages").collect();
