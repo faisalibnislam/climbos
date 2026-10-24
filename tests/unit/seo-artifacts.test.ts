@@ -11,7 +11,7 @@ describe("SEO answer-first artifact export", () => {
       secondaryKeywords: ["service intake"],
       searchIntent: "how to create a client intake form",
       outline: [{ heading: "Start with the next step", points: ["Ask only what is needed"] }],
-      internalLinks: ["/templates"],
+      internalLinks: ["https://example.com/templates"],
       draft: "Keep the process short and explain what happens after submission.",
       answerFirst: "A good intake form collects only the information needed for the next service step.",
       faqs: [{ question: "What should it ask?", answer: "Ask for details needed to deliver the service.", factIndexes: [0], sourceUrls: ["https://example.com/intake-guide"] }],
@@ -30,6 +30,8 @@ describe("SEO answer-first artifact export", () => {
     expect(artifact.body).toContain("[Source](https://example.com/intake-guide)");
     expect(artifact.body).toContain("## Verified facts");
     expect(artifact.body).toContain("## Original contribution");
+    expect(artifact.body).toContain("## Suggested internal links");
+    expect(artifact.body).toContain("[https://example.com/templates](https://example.com/templates)");
     expect(artifact.body).toContain("Confirm the actual response-time promise");
     expect(artifact.body).toContain("## Measurement plan");
     expect(artifact.body).toContain("## Recommended action: refresh existing page");

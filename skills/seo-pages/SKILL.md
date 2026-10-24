@@ -65,7 +65,7 @@ When something is missing:
    - Meta description: about 150–160 characters that answer and give a reason to click. Google often rewrites it, so make the opening paragraph strong too.
    - Slug: short, lowercase, hyphenated, the core topic only, no dates.
 
-8. **Plan internal links.** Link up to the cluster hub (the main service page), across to 2–3 sibling pages, and down to the money page or booking page, with descriptive anchor text. List 2–3 existing pages that should link to the new page, with the anchor to use. Keep the cluster tight around what the business sells and where.
+8. **Plan internal links.** Link up to the cluster hub (the main service page), across to 2–3 sibling pages, and down to the money page or booking page, with descriptive anchor text. List only exact same-site URLs directly observed during this run; never guess a path or use an external page as an internal link. ClimbOS validates each destination against the current run's pages and omits unverified links. List 2–3 existing pages that should link to the new page only when their exact observed URLs are available. Keep the cluster tight around what the business sells and where.
 
 9. **Use honest schema only.** Mark up only what is visible on the page: Organization or LocalBusiness, Service, Product and Offer, BreadcrumbList, Article with author. FAQPage only for real visible FAQs; it rarely earns rich results for most sites now, so expect no SERP gain. Never add review markup for the business's own reviews about itself; Google ignores self-serving review markup for local businesses and organisations.
 

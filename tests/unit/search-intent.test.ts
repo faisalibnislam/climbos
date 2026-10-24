@@ -22,7 +22,7 @@ describe("search intent stage", () => {
       secondaryKeywords: [],
       searchIntent: "Compare scheduling pricing and start a free trial",
       outline: [],
-      internalLinks: [],
+      internalLinks: ["https://example.com/pricing"],
       draft: "",
       factIndexes: [],
       pageType: "pricing",
@@ -51,7 +51,7 @@ describe("search intent stage", () => {
       secondaryKeywords: [],
       searchIntent: "pricing",
       outline: [],
-      internalLinks: [],
+      internalLinks: ["https://example.com/pricing"],
       draft: "",
       factIndexes: [],
       pageType: "pricing",
@@ -68,7 +68,7 @@ describe("search intent stage", () => {
       targetPageUrl: "https://example.com/pricing",
       recommendationReason: "The existing pricing page serves the same purchase intent.",
     });
-    const input = { task: "SEO", brief: "", facts: ["Owner confirmed plans are monthly."], availableSourceUrls: ["https://example.com/pricing"] };
+    const input = { task: "SEO", brief: "", facts: ["Owner confirmed plans are monthly."], businessWebsite: "https://www.example.com", availableSourceUrls: ["https://example.com/pricing"] };
     expect(lintSeoEvidence(out, input)).toMatchObject([
       { rule: "fact_reference", path: "citableClaims[0].factIndexes" },
       { rule: "citation", path: "citableClaims[0].sourceUrls" },
@@ -76,6 +76,11 @@ describe("search intent stage", () => {
     const valid = SeoBriefV2Schema.parse({ ...out, citableClaims: [{ ...out.citableClaims[0], factIndexes: [0], sourceUrls: ["https://example.com/pricing"] }] });
     expect(lintSeoEvidence(valid, input)).toEqual([]);
     expect(lintSeoRecommendation(valid, input)).toEqual([]);
+    const unsafeLinks = SeoBriefV2Schema.parse({ ...valid, internalLinks: ["https://other.example/pricing", "https://example.com/unread"] });
+    expect(lintSeoEvidence(unsafeLinks, input)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rule: "citation", path: "internalLinks[1]" }),
+      expect.objectContaining({ rule: "seo_internal_link", path: "internalLinks[0]" }),
+    ]));
     const inventedTarget = SeoBriefV2Schema.parse({ ...valid, targetPageUrl: "https://example.com/unknown" });
     expect(lintSeoRecommendation(inventedTarget, input)).toMatchObject([{ rule: "citation", path: "targetPageUrl" }]);
     const missingTarget = SeoBriefV2Schema.parse({ ...valid, targetPageUrl: "" });

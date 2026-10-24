@@ -1732,14 +1732,25 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
     ...out.faqs.flatMap((faq, i) => faq.sourceUrls.map((url) => ({ url, path: `faqs[${i}].sourceUrls` }))),
     ...out.citableClaims.flatMap((claim, i) => claim.sourceUrls.map((url) => ({ url, path: `citableClaims[${i}].sourceUrls` }))),
   ];
-  const citationIssues = lintAvailableSourceUrls(sourceRefs, input);
+  const internalLinkRefs = out.internalLinks.map((url, i) => ({ url, path: `internalLinks[${i}]` }));
+  const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
+  const internalLinkHostIssues = internalLinkRefs.flatMap(({ url, path }) => {
+    const linkHost = domainOf(url);
+    return businessHost && linkHost === businessHost ? [] : [{
+      severity: "error" as const,
+      rule: "seo_internal_link",
+      message: "An internal link must be an exact observed URL on this business's own website. Leave it out when the destination is not known.",
+      path,
+    }];
+  });
+  const citationIssues = lintAvailableSourceUrls([...sourceRefs, ...internalLinkRefs], input);
   const claimIssues = out.citableClaims.flatMap((claim, i) => claim.factIndexes.length || claim.sourceUrls.length ? [] : [{
     severity: "error" as const,
     rule: "citation",
     message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
     path: `citableClaims[${i}]`,
   }]);
-  return [...factIndexes, ...citationIssues, ...claimIssues];
+  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues];
 }
 
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
