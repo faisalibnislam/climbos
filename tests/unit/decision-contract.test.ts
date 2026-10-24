@@ -42,6 +42,15 @@ describe("decision contract flag", () => {
     expect(portfolio(lintPlays([play()], econ, { decisionContract: true }))).toEqual([]);
   });
 
+  it("hard-fails a bare channel label while accepting a business-specific mechanic", () => {
+    const generic = play({ mechanic: "Use influencers", audience: "Everyone", hook: "Build awareness", firstActionToday: "Find influencers" });
+    const concrete = play({ mechanic: "Send 10 local coach YouTubers a tracked invite to the existing booking-workshop page.", audience: "Local coaches who publish scheduling advice", firstActionToday: "Select 10 coach channels from the researched list and draft the workshop invite." });
+    const genericIssues = lintPlays([generic], econ, { decisionContract: true });
+    expect(genericIssues.some((issue) => issue.rule === "generic_action" && issue.severity === "error")).toBe(true);
+    expect(lintPlays([concrete], econ, { decisionContract: true }).some((issue) => issue.rule === "generic_action")).toBe(false);
+    expect(playsTask({ scorecard: "", insights: "" })).toContain("A channel name is not a deliverable");
+  });
+
   it("on: still at most 4 plays, one moonshot, and 'bankable' must be predictable", () => {
     expect(portfolio(lintPlays(["Referral ask", "Partner webinar", "Directory listing", "Review request", "Local press"].map((n) => play({ name: n, mechanic: `${n} campaign` })), econ, { decisionContract: true })).length).toBe(1);
     expect(portfolio(lintPlays([play({ kind: "moonshot" }), play({ kind: "moonshot", name: "Billboard stunt", mechanic: "Guerrilla billboard near the stadium" })], econ, { decisionContract: true })).length).toBe(1);

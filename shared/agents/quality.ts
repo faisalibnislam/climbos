@@ -16,7 +16,7 @@ import type { Assessment, LintIssue } from "./types";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact"]);
+export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
