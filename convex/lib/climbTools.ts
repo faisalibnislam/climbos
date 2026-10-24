@@ -50,6 +50,29 @@ function short(s: unknown, n = 280): string {
 
 const tool = <I extends z.ZodType>(t: ClimbTool<I>) => t as unknown as ClimbTool;
 
+/** Validate and bound tool results before they re-enter the model context as untrusted data. */
+export function encodeToolOutput(output: unknown, maxChars = 7_800): string {
+  let normalized: unknown;
+  try {
+    const encoded = JSON.stringify(output ?? { ok: true }, (_key, value: unknown) => {
+      if (typeof value === "number" && !Number.isFinite(value)) throw new Error("non-finite number");
+      if (typeof value === "bigint" || typeof value === "function" || typeof value === "symbol") throw new Error("non-JSON value");
+      return value;
+    });
+    if (typeof encoded !== "string") throw new Error("empty result");
+    normalized = JSON.parse(encoded);
+  } catch {
+    throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  }
+  const checked = z.json().safeParse(normalized);
+  if (!checked.success) throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  // Escape '<' so untrusted tool text cannot close the surrounding trust boundary.
+  const safe = JSON.stringify(checked.data).replace(/</g, "\\u003c");
+  if (safe.length <= maxChars) return safe;
+  const previewChars = Math.max(0, maxChars - 100);
+  return JSON.stringify({ truncated: true, preview: safe.slice(0, previewChars), note: "Tool result exceeded the context limit; preview only." });
+}
+
 /** A time as the owner reads it: in the workspace's timezone (UTC if it's unknown). */
 export function localTime(ms: number, timeZone = "UTC"): string {
   const fmt = (tz: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(ms));

@@ -9,7 +9,7 @@ import { action, internalMutation, internalQuery, mutation, query, type ActionCt
 import { createRunWithReservation, estimateRun, type PlannedStep } from "./engine";
 import { claudeUsageRecords } from "./lib/usage";
 import { audit } from "./lib/audit";
-import { climbToolDefs, localTime, safeAppPath, toolByName, type Caller } from "./lib/climbTools";
+import { climbToolDefs, encodeToolOutput, localTime, safeAppPath, toolByName, type Caller } from "./lib/climbTools";
 import { CLIMB_CONFIG } from "./lib/climbConfig";
 import type { MessageParam, ToolDef, ToolResultBlock } from "../shared/ai/types";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -322,9 +322,10 @@ export const respond = action({
         const stepMsg = await ctx.runMutation(internal.climb.write, { orgId: m.orgId, userId: m.userId, role: "step", text: tool.doing, status: "working", runId });
         try {
           const out = await tool.run!(caller, slug, input as never);
+          const encodedOut = encodeToolOutput(out);
           links.push(...linksFrom(slug, out));
           await ctx.runMutation(internal.climb.patch, { messageId: stepMsg, status: "done", detail: summarizeToolResult(out) });
-          results.push({ type: "tool_result", tool_use_id: tu.id, content: `<untrusted_content source="${tool.name}">\n${JSON.stringify(out ?? { ok: true }).slice(0, 8000)}\n</untrusted_content>` });
+          results.push({ type: "tool_result", tool_use_id: tu.id, content: `<untrusted_content source="${tool.name}">\n${encodedOut}\n</untrusted_content>` });
         } catch (e) {
           const msg = ((e as { data?: { message?: string } }).data?.message ?? (e as Error).message ?? "failed").slice(0, 300);
           await ctx.runMutation(internal.climb.patch, { messageId: stepMsg, status: "failed", text: `${tool.doing}: ${msg}` });
