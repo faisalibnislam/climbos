@@ -42,4 +42,10 @@ describe("experiment feasibility", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toMatch(/from your measured purchase rate/);
   });
+  it("sizes qualified-lead experiments on the measured lead qualification rate", () => {
+    const e = exp({ population: "About 50 leads a week", durationDays: 7, primaryMetric: "qualified leads" });
+    const issues = lintExperimentFeasibility({ experiments: [e] }, { funnelRates: { lead: 0.1, qualification: 0.2, activation: 0.5, purchase: 0.3 } });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/from your measured qualification rate/);
+  });
 });

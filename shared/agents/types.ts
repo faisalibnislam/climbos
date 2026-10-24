@@ -120,7 +120,7 @@ export interface PlanConstraints {
   /** The weakest link computed from the owner's numbers; the plays must work on it. */
   diagnosis?: Diagnosis;
   /** The owner's measured funnel rates (lead, activation, purchase) for sizing tests on real baselines. */
-  funnelRates?: { lead?: number; activation?: number; purchase?: number };
+  funnelRates?: { lead?: number; qualification?: number; activation?: number; purchase?: number };
   /** Playbooks the business isn't eligible for now (ids and reasons); plays can't rely on them. */
   ineligiblePlaybooks?: { id: string; reasons: string[] }[];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diagnose, diagnosisBrief, lintDiagnosisFit, playStage } from "../../shared/agents/diagnosis";
+import { diagnose, diagnosisBrief, funnelRatesOf, lintDiagnosisFit, playStage } from "../../shared/agents/diagnosis";
 import { choosePlaybooks, eligibility, lintEligibility, lintEligibilityIds, playbookBrief, PLAYBOOKS, type PlaybookContext } from "../../shared/playbooks/contracts";
 
 /** Cycle 2: diagnosis decided in code from the owner's numbers; playbooks gated by typed contracts. */
@@ -60,6 +60,36 @@ describe("diagnosis", () => {
   });
   it("activated users who don't pay point to conversion", () => {
     expect(diagnose({ funnel: { leads: 100, activated: 60, newCustomers: 3 }, types: ["b2b_saas"] }).constraint).toBe("conversion");
+  });
+  it("keeps owner-defined lead qualification as its own measured step without inventing a benchmark", () => {
+    const d = diagnose({
+      funnel: {
+        periodDays: 30,
+        visitors: 1_000,
+        leads: 100,
+        qualifiedLeads: 20,
+        qualificationDefinition: "Has a current project and budget",
+        activated: 10,
+        newCustomers: 3,
+        signupKind: "trial_no_card",
+      },
+      types: ["b2b_saas"],
+    });
+    expect(d.readings.find((reading) => reading.stage === "qualification")).toMatchObject({
+      observed: "20 of 100 leads met the owner's qualification rule",
+      rate: 0.2,
+      verdict: "unknown",
+      reference: null,
+      definition: "Has a current project and budget",
+    });
+    expect(d.readings.find((reading) => reading.stage === "activation")).toMatchObject({ rate: 0.5, observed: "10 of 20 qualified leads reached first value" });
+    expect(diagnosisBrief(d)).toMatch(/owner-defined as "Has a current project and budget"/);
+    expect(funnelRatesOf(d)).toMatchObject({ lead: 0.1, qualification: 0.2, activation: 0.5, purchase: 0.3 });
+  });
+  it("rejects qualification counts that do not nest or have no owner definition", () => {
+    expect(diagnose({ funnel: { periodDays: 30, leads: 20, qualifiedLeads: 21, qualificationDefinition: "Has a current project", activated: 8 } })).toMatchObject({ status: "conflicting_inputs" });
+    expect(diagnose({ funnel: { periodDays: 30, leads: 20, qualifiedLeads: 8, activated: 4 } })).toMatchObject({ status: "conflicting_inputs" });
+    expect(diagnose({ funnel: { periodDays: 30, leads: 20, qualifiedLeads: 8, qualificationDefinition: "Has a current project", activated: 9 } })).toMatchObject({ status: "conflicting_inputs" });
   });
   it("healthy conversion with few visitors is demand", () => {
     expect(diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10, signupKind: "trial_no_card" }, types: ["b2b_saas"] }).constraint).toBe("demand");

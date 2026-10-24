@@ -30,7 +30,11 @@ export interface OwnerFunnel {
   visitors?: number;
   /** Signups, trials, leads or inquiries. */
   leads?: number;
-  /** Leads who reached first value: got the result they came for (booked, attended, first report used), not just finished setup. */
+  /** Leads that met the owner's explicit definition of a qualified prospect. */
+  qualifiedLeads?: number;
+  /** Owner's operational definition for qualifiedLeads; never supplied by the model. */
+  qualificationDefinition?: string;
+  /** When qualification is tracked, count first value only among qualified leads. */
   activated?: number;
   /**
    * What the owner counted as "activated" (blog research BRP-07, Elena Verna: activation is value
@@ -56,7 +60,7 @@ export interface DiagnosisContext {
 }
 
 export interface StageReading {
-  stage: "reach" | "lead" | "activation" | "purchase" | "retention" | "capacity";
+  stage: "reach" | "lead" | "qualification" | "activation" | "purchase" | "retention" | "capacity";
   /** e.g. "12 of 100 leads reached first value". */
   observed: string;
   rate: number | null;
@@ -70,6 +74,8 @@ export interface StageReading {
   /** The period is shorter than the sales cycle: purchases are still arriving. */
   immature?: boolean;
   referenceId?: string;
+  /** The exact owner-provided rule used to count qualified leads. */
+  definition?: string;
 }
 
 export interface Hypothesis {
@@ -160,10 +166,15 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   // 0. Do the counts nest? Contradictions are resolved before anything is read from them.
   const gt = (a: number | undefined, b: number | undefined) => a !== undefined && b !== undefined && a > b;
   if (gt(f.leads, f.visitors)) conflicts.push(`${f.leads} leads but only ${f.visitors} visitors: check what each counts (visitors may be one channel only).`);
+  if (f.qualifiedLeads !== undefined && f.leads === undefined) conflicts.push("Qualified leads were reported without the total number of leads; give both counts for the same period.");
+  if (gt(f.qualifiedLeads, f.leads)) conflicts.push(`${f.qualifiedLeads} qualified leads but only ${f.leads} total leads: check the counts.`);
+  if (f.qualifiedLeads !== undefined && f.activated !== undefined && f.activated > f.qualifiedLeads) conflicts.push(`${f.activated} qualified leads reached first value but only ${f.qualifiedLeads} qualified leads were counted.`);
+  if (f.qualifiedLeads !== undefined && !f.qualificationDefinition?.trim()) conflicts.push("Qualified leads need the owner's rule for what counts as qualified.");
+  if (f.qualificationDefinition && f.qualifiedLeads === undefined) conflicts.push("A qualification rule was given without a qualified-lead count.");
   if (gt(f.activated, f.leads)) conflicts.push(`${f.activated} reached first value but only ${f.leads} leads: one of the two counts is off.`);
   if (gt(f.newCustomers, f.leads) && f.leads !== undefined) conflicts.push(`${f.newCustomers} new customers but only ${f.leads} leads: some buyers may skip the lead step, or a count is off.`);
   if (gt(f.newCustomers, f.activated) && !gt(f.newCustomers, f.leads)) conflicts.push(`${f.newCustomers} paid but only ${f.activated} reached first value: either people pay before first value (then first value isn't on the path to paying) or a count is off.`);
-  for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isSafeInteger(n) && n >= 0 && n <= 100_000_000)) conflicts.push(`${k} must be a whole count between 0 and 100,000,000.`);
+  for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, qualifiedLeads: f.qualifiedLeads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isSafeInteger(n) && n >= 0 && n <= 100_000_000)) conflicts.push(`${k} must be a whole count between 0 and 100,000,000.`);
   if (f.periodDays !== undefined && !(Number.isFinite(f.periodDays) && f.periodDays > 0)) conflicts.push("The measurement period must be a number of days greater than zero.");
   if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null && !(Number.isFinite(ctx.monthlyChurn) && ctx.monthlyChurn >= 0 && ctx.monthlyChurn <= 1)) conflicts.push("Monthly churn must be a share between 0 and 100%.");
   if (ctx.salesCycleDays !== undefined && !(Number.isFinite(ctx.salesCycleDays) && ctx.salesCycleDays > 0)) conflicts.push("Sales cycle length must be a number of days greater than zero.");
@@ -217,7 +228,10 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     return r;
   };
   const lead = link("lead", f.leads, f.visitors, "visitors became leads or signups");
-  const act = link("activation", f.activated, f.leads, "leads reached first value");
+  const qualification = link("qualification", f.qualifiedLeads, f.leads, "leads met the owner's qualification rule");
+  if (qualification && f.qualificationDefinition) qualification.definition = f.qualificationDefinition;
+  const activationDenominator = f.qualifiedLeads ?? f.leads;
+  const act = link("activation", f.activated, activationDenominator, f.qualifiedLeads === undefined ? "leads reached first value" : "qualified leads reached first value");
   const buyFromActive = gt(f.newCustomers, f.activated) ? null : link("purchase", f.newCustomers, f.activated, "activated leads paid", undefined, true);
   // Overall lead → paid has a reference for SaaS by signup model; it tells whether activation × purchase is weak at all.
   const saasRef = saas ? conversionReference(f.signupKind) : null;
@@ -226,6 +240,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 
   if (f.visitors === undefined) missing.push("visitors in the period");
   if (f.leads === undefined) missing.push("signups or leads");
+  if (f.qualifiedLeads !== undefined && !f.qualificationDefinition?.trim()) missing.push("the owner's rule for what makes a lead qualified");
   if (f.activated === undefined) missing.push("how many reached first value");
   if (f.newCustomers === undefined) missing.push("new paying customers");
   if (saas && !saasRef && overall !== null) missing.push("whether a signup is a free plan, a trial without a card, or a trial with a card (picks the reference)");
@@ -233,7 +248,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 
   const capR = readings.find((r) => r.stage === "capacity");
   const retR = readings.find((r) => r.stage === "retention");
-  const measuredLinks = [lead, act, buyFromActive].filter(Boolean).length + (overallReading ? 1 : 0);
+  const measuredLinks = [lead, qualification, act, buyFromActive].filter(Boolean).length + (overallReading ? 1 : 0);
   // A setup count isn't value received: it can't make the diagnosis "measured" on its own (BRP-07).
   const setupCount = f.activated !== undefined && (f.activationKind === "setup" || f.activationKind === "unknown");
   if (setupCount) missing.push("a first-value event (the count given is setup or unclear, not value received)");
@@ -261,12 +276,21 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 
   // Customers a month per +1 point at each link (other rates held): shows the lowest rate isn't automatically the biggest lever.
   const leverage: NonNullable<Diagnosis["leverage"]> = [];
-  const down = (stage: "lead" | "activation" | "purchase") => (stage === "lead" ? (act && buyFromActive ? act.rate! * buyFromActive.rate! : overall) : stage === "activation" ? (buyFromActive?.rate ?? null) : 1);
+  const down = (stage: "lead" | "qualification" | "activation" | "purchase") => {
+    if (stage === "lead") return qualification && act && buyFromActive ? qualification.rate! * act.rate! * buyFromActive.rate! : act && buyFromActive ? act.rate! * buyFromActive.rate! : overall;
+    if (stage === "qualification") return act && buyFromActive ? act.rate! * buyFromActive.rate! : null;
+    if (stage === "activation") return buyFromActive?.rate ?? null;
+    return 1;
+  };
   if (lead && f.visitors) {
     const d = down("lead");
     if (d !== null) leverage.push({ stage: "lead", perPoint: r2(perMonth(f.visitors) * 0.01 * d) });
   }
-  if (act && f.leads && buyFromActive) leverage.push({ stage: "activation", perPoint: r2(perMonth(f.leads) * 0.01 * buyFromActive.rate!) });
+  if (qualification && f.leads) {
+    const d = down("qualification");
+    if (d !== null) leverage.push({ stage: "qualification", perPoint: r2(perMonth(f.leads) * 0.01 * d) });
+  }
+  if (act && activationDenominator && buyFromActive) leverage.push({ stage: "activation", perPoint: r2(perMonth(activationDenominator) * 0.01 * buyFromActive.rate!) });
   if (buyFromActive && f.activated !== undefined) leverage.push({ stage: "purchase", perPoint: r2(perMonth(f.activated) * 0.01) });
 
   const hyp = (constraint: BindingConstraint, observation: string, probability: number | null, support: string[], against: string[]): Hypothesis => ({ constraint, observation, probability, support, against, discriminate: DISCRIMINATE[constraint] ?? "Collect one more period of the same counts." });
@@ -322,7 +346,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 /** The diagnosis as the plays and plan agents read it. */
 export function diagnosisBrief(d: Diagnosis): string {
   const reading = (r: StageReading) =>
-    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
+    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.definition ? `; owner-defined as ${JSON.stringify(r.definition)}` : ""}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
   const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
   if (d.status === "conflicting_inputs")
     return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");
@@ -374,9 +398,9 @@ export function lintDiagnosisFit(plays: { name?: string; kind?: string; oneLiner
 }
 
 /** The owner's measured rates by stage, for sizing tests on real baselines (plan experiment lint). */
-export function funnelRatesOf(d: Diagnosis | undefined): { lead?: number; activation?: number; purchase?: number } | undefined {
+export function funnelRatesOf(d: Diagnosis | undefined): { lead?: number; qualification?: number; activation?: number; purchase?: number } | undefined {
   if (!d) return undefined;
-  const out: { lead?: number; activation?: number; purchase?: number } = {};
-  for (const r of d.readings) if (r.rate !== null && (r.stage === "lead" || r.stage === "activation" || r.stage === "purchase")) out[r.stage] = r.rate;
+  const out: { lead?: number; qualification?: number; activation?: number; purchase?: number } = {};
+  for (const r of d.readings) if (r.rate !== null && (r.stage === "lead" || r.stage === "qualification" || r.stage === "activation" || r.stage === "purchase")) out[r.stage] = r.rate;
   return Object.keys(out).length ? out : undefined;
 }

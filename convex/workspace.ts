@@ -623,21 +623,25 @@ export const setUnitEconomics = mutation({
 
 /** The owner's last-period funnel: the plan's diagnosis reads the weakest link from it (shared/agents/diagnosis.ts). */
 export const setFunnel = mutation({
-  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))), signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))) },
-  handler: async (ctx, { slug, periodDays, activationKind, signupKind, ...counts }) => {
+  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), qualifiedLeads: v.optional(v.number()), qualificationDefinition: v.optional(v.string()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))), signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))) },
+  handler: async (ctx, { slug, periodDays, activationKind, signupKind, qualificationDefinition, ...counts }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
     if (!(periodDays >= 7 && periodDays <= 365)) throw appError("INVALID", "Pick a period between 7 and 365 days.");
     for (const [k, n] of Object.entries(counts)) if (n !== undefined && !(Number.isInteger(n) && n >= 0 && n <= 100_000_000)) throw appError("INVALID", `${k} must be a whole number.`);
-    const { visitors, leads, activated, newCustomers } = counts;
+    const { visitors, leads, qualifiedLeads, activated, newCustomers } = counts;
+    const qualificationRule = qualificationDefinition?.trim();
+    if (qualificationRule && (qualificationRule.length < 5 || qualificationRule.length > 160 || /[\r\n]/.test(qualificationRule))) throw appError("INVALID", "The qualification rule must be one short sentence (5–160 characters).");
+    if (qualifiedLeads !== undefined && (leads === undefined || !qualificationRule)) throw appError("INVALID", "Enter the total leads and a clear rule for what counts as qualified before adding a qualified-lead count.");
+    if (qualificationRule && qualifiedLeads === undefined) throw appError("INVALID", "Add the qualified-lead count for the period using this rule.");
     // Each step can't exceed the one before it (when both are given).
-    const order = [visitors, leads, activated, newCustomers];
+    const order = qualifiedLeads === undefined ? [visitors, leads, activated, newCustomers] : [visitors, leads, qualifiedLeads, activated, newCustomers];
     for (let i = 1; i < order.length; i++) {
       const prev = order.slice(0, i).reverse().find((x) => x !== undefined);
-      if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ activated ≥ new customers).");
+      if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ qualified leads ≥ first value ≥ paying customers).");
     }
-    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, ...(activationKind ? { activationKind } : {}), ...(signupKind ? { signupKind } : {}), updatedAt: Date.now() } });
+    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, ...(qualificationRule ? { qualificationDefinition: qualificationRule } : {}), ...(activationKind ? { activationKind } : {}), ...(signupKind ? { signupKind } : {}), updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.funnel", subjectType: "business", subjectId: business._id, summary: "Funnel numbers updated." });
   },
 });

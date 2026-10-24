@@ -382,6 +382,8 @@ export default defineSchema({
         periodDays: v.number(),
         visitors: v.optional(v.number()),
         leads: v.optional(v.number()),
+        qualifiedLeads: v.optional(v.number()),
+        qualificationDefinition: v.optional(v.string()),
         activated: v.optional(v.number()),
         newCustomers: v.optional(v.number()),
         /** What was counted as activated: value received, a habit, setup only, or unclear. */

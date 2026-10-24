@@ -985,7 +985,7 @@ const HARM_STOP = /\b(complain\w*|refund\w*|unsubscrib\w*|cancel\w*|churn\w*|err
 const STOP_WORD = /\b(stop|pause|halt|switch off|turn off|roll back)\b/i;
 
 /** The owner's measured funnel rates, by the kind of metric a test targets (shared/agents/diagnosis.ts readings). */
-export type FunnelRates = { lead?: number; activation?: number; purchase?: number };
+export type FunnelRates = { lead?: number; qualification?: number; activation?: number; purchase?: number };
 
 /**
  * The baseline in the population's own unit (decision books: Kohavi Ch 17, the denominator must be the unit
@@ -996,7 +996,7 @@ function inPopulationUnits(base: { rate: number; kind: string } | null, populati
   if (!base || !rates) return base;
   const visitors = /\b(visit\w*|views?|sessions?|traffic|page ?views?)\b/i.test(population);
   if (!visitors || base.kind === "lead") return base;
-  const chain = base.kind === "activation" ? [rates.lead, rates.activation] : [rates.lead, rates.activation ?? 1, rates.purchase];
+  const chain = base.kind === "qualification" ? [rates.lead, rates.qualification] : base.kind === "activation" ? [rates.lead, rates.qualification ?? 1, rates.activation] : [rates.lead, rates.qualification ?? 1, rates.activation ?? 1, rates.purchase];
   // A link missing: the per-lead rate is an upper bound on the per-visitor rate, so it still proves a test can't finish (never that it can).
   if (chain.some((r) => r === undefined)) return base;
   const rate = chain.reduce<number>((acc, r) => acc * (r as number), 1);
@@ -1007,7 +1007,7 @@ function inPopulationUnits(base: { rate: number; kind: string } | null, populati
 function baselineFor(metric: string, rates: FunnelRates | undefined): { rate: number; kind: string } | null {
   if (!rates) return null;
   const m = metric.toLowerCase();
-  const pick = /\b(activat\w*|first value|onboard\w*|set ?up)\b/.test(m) ? "activation" : /\b(paid|pay\w*|purchas\w*|customers?|bookings?|booked|sales?|subscri\w*|orders?|upgrade\w*)\b/.test(m) ? "purchase" : /\b(sign-?ups?|leads?|trials?|inquir\w*|enquir\w*|registrations?)\b/.test(m) ? "lead" : null;
+  const pick = /\b(qualif\w* leads?|screened leads?)\b/.test(m) ? "qualification" : /\b(activat\w*|first value|onboard\w*|set ?up)\b/.test(m) ? "activation" : /\b(paid|pay\w*|purchas\w*|customers?|bookings?|booked|sales?|subscri\w*|orders?|upgrade\w*)\b/.test(m) ? "purchase" : /\b(sign-?ups?|leads?|trials?|inquir\w*|enquir\w*|registrations?)\b/.test(m) ? "lead" : null;
   const rate = pick ? rates[pick as keyof FunnelRates] : undefined;
   return pick && rate !== undefined && rate > 0 && rate < 1 ? { rate, kind: pick } : null;
 }
