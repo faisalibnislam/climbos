@@ -2381,6 +2381,7 @@ export default defineSchema({
     ingestedAt: v.number(),
   })
     .index("by_org_occurred", ["orgId", "occurredAt"])
+    .index("by_org_customer_occurred", ["orgId", "customerRef", "occurredAt"])
     .index("by_org_source_event", ["orgId", "source", "sourceEventId"]),
 
   touches: defineTable({

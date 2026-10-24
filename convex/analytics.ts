@@ -15,7 +15,7 @@ const DAY = 86_400_000;
 export const METRICS = {
   visits: { label: "Website visits", unit: "count", definition: "Sessions reported by your analytics.", source: "Google Analytics 4" },
   signups: { label: "Sign-ups", unit: "count", definition: "Key events you confirmed as a sign-up (e.g. account created).", source: "Google Analytics 4" },
-  paid_conversions: { label: "New paying customers", unit: "count", definition: "Paid orders or first subscription payments from your billing system, deduplicated.", source: "Billing" },
+  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct customer IDs whose first positive, non-refund payment in imported billing data falls in this period. Payments without a customer ID are excluded; incomplete billing history can make this count low.", source: "Billing" },
   revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing" },
 } as const;
 export type MetricKey = keyof typeof METRICS;
@@ -125,19 +125,58 @@ async function rematerializeRevenueDay(ctx: MutationCtx, orgId: Id<"organization
     .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", start).lt("occurredAt", end))
     .take(10_000);
   let revenue = 0;
-  let conversions = 0;
   for (const e of events) {
     if (dayKey(e.occurredAt, timezone) !== day || e.currency !== currency) continue;
     if (e.kind === "refund") revenue -= Math.abs(e.amountMinor);
-    else {
-      revenue += e.amountMinor - e.refundedMinor;
-      conversions++;
-    }
+    else revenue += e.amountMinor - e.refundedMinor;
   }
   await upsertDailyImpl(ctx, orgId, "billing", "observed", [
     { metricKey: "revenue", date: day, value: revenue },
-    { metricKey: "paid_conversions", date: day, value: conversions },
   ]);
+}
+
+/** First recorded paying customer, counted once per customer ID across imported billing history. */
+async function firstRecordedPayerDays(
+  ctx: { db: QueryCtx["db"] },
+  orgId: Id<"organizations">,
+  from: string,
+  to: string,
+  timezone: string,
+): Promise<{ counts: Map<string, number>; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; freshness: number }> {
+  // Include a UTC day on either side; `from`/`to` are business-local dates.
+  const fromMs = Date.parse(`${from}T00:00:00Z`) - DAY;
+  const toMs = Date.parse(`${to}T23:59:59.999Z`) + DAY;
+  const rows = await ctx.db
+    .query("revenueEvents")
+    .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", fromMs).lte("occurredAt", toMs))
+    .take(10_000);
+  const inRange = rows.filter((r) => {
+    const date = dayKey(r.occurredAt, timezone);
+    return date >= from && date <= to;
+  });
+  const customerRefs = [...new Set(inRange.map((r) => r.customerRef).filter((ref): ref is string => Boolean(ref)))];
+  const counts = new Map<string, number>();
+  let historyPartial = false;
+  for (const customerRef of customerRefs.slice(0, 2_000)) {
+    const history = await ctx.db
+      .query("revenueEvents")
+      .withIndex("by_org_customer_occurred", (q) => q.eq("orgId", orgId).eq("customerRef", customerRef))
+      .filter((q) => q.neq(q.field("kind"), "refund"))
+      .take(1_000);
+    if (history.length >= 1_000) historyPartial = true;
+    const first = history.find((event) => event.amountMinor - event.refundedMinor > 0);
+    if (!first) continue;
+    const firstDay = dayKey(first.occurredAt, timezone);
+    if (firstDay < from || firstDay > to) continue;
+    counts.set(firstDay, (counts.get(firstDay) ?? 0) + 1);
+  }
+  return {
+    counts,
+    hasIdentifiedCustomers: customerRefs.length > 0,
+    isFixture: inRange.some((r) => r.isFixture),
+    partial: rows.length >= 10_000 || customerRefs.length > 2_000 || historyPartial,
+    freshness: Math.max(0, ...rows.map((r) => r.ingestedAt)),
+  };
 }
 
 export const markCsvConnected = internalMutation({
@@ -204,7 +243,30 @@ export const overview = query({
         isFixture: cur.isFixture,
         currency: key === "revenue" ? org.currency : null,
         timezone: org.timezone,
+        partial: false as boolean,
+        partialReason: null as string | null,
       });
+    }
+
+    const yesterday = addDays(today, -1);
+    const payerHistory = await firstRecordedPayerDays(ctx, org._id, prevFrom, yesterday, org.timezone);
+    const payerPoints = [];
+    for (let date = from; date <= yesterday; date = addDays(date, 1)) payerPoints.push({ date, value: payerHistory.counts.get(date) ?? 0 });
+    const previousEnd = addDays(from, -1);
+    const previousPayers = [...payerHistory.counts.entries()].reduce((sum, [date, count]) => date >= prevFrom && date <= previousEnd ? sum + count : sum, 0);
+    const payerMetric = metrics.find((metric) => metric.key === "paid_conversions");
+    if (payerMetric) {
+      payerMetric.label = METRICS.paid_conversions.label;
+      payerMetric.definition = METRICS.paid_conversions.definition;
+      payerMetric.hasData = payerHistory.hasIdentifiedCustomers;
+      payerMetric.total = payerPoints.reduce((sum, point) => sum + point.value, 0);
+      payerMetric.previousTotal = historyLimited ? null : previousPayers;
+      payerMetric.points = payerPoints;
+      payerMetric.freshness = payerHistory.freshness || null;
+      payerMetric.sourceName = payerHistory.hasIdentifiedCustomers ? "Billing" : null;
+      payerMetric.isFixture = payerHistory.isFixture;
+      payerMetric.partial = payerHistory.partial;
+      payerMetric.partialReason = payerHistory.partial ? "The billing history window exceeded the calculation limit; this customer count may be incomplete." : null;
     }
 
     // Attribution: billing revenue is the truth; ad-platform claims shown separately.
