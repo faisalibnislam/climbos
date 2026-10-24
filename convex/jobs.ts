@@ -105,7 +105,7 @@ import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth } from "../shared/agents/goal";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
-import { searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
+import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
@@ -1472,17 +1472,11 @@ export const createContent = internalAction({
               : "DIRECT SITE PAGE OBSERVATIONS: no business website is recorded.";
           const observedSiteUrls = siteInventory?.pages.filter((page) => page.status === "ok").map((page) => page.url) ?? [];
           const searchConsole = await ctx.runQuery(internal.searchConsole.latestForOrg, { orgId: job.org._id });
-          const searchConsoleContext = searchConsole
-            ? [
-                `SEARCH CONSOLE OBSERVATIONS for ${searchConsole.property}, ${searchConsole.startDate} through ${searchConsole.endDate} (data state: ${searchConsole.dataState}; ${searchConsole.rowCount} stored rows${searchConsole.truncated ? "; result set was truncated to the top rows" : ""}):`,
-                ...searchConsole.rows
-                  .slice()
-                  .sort((a, b) => b.impressions - a.impressions)
-                  .slice(0, 40)
-                  .map((row) => `Query: ${row.query} · page: ${row.page} · clicks: ${row.clicks} · impressions: ${row.impressions} · CTR: ${(row.ctr * 100).toFixed(1)}% · average position: ${row.position.toFixed(1)}`),
-                "Interpret these as observed performance for this connected property and date window, not market-wide demand, complete query coverage, proof of indexing, or proof that a page change caused results. Use query wording as examples from observed search traffic; do not generalize it to all customers. These metrics do not mean the listed page content was fetched or reviewed.",
-              ].join("\n")
-            : "SEARCH CONSOLE OBSERVATIONS: none available for this business. Do not claim that query demand or page performance was measured.";
+          const searchConsoleContext = searchConsoleSeoContext(
+            searchConsole,
+            job.business?.website,
+            siteInventory?.pages.filter((page) => page.status === "ok").map((page) => page.url) ?? [],
+          );
           const seoEvidenceContext = `${inventoryContext}\n\n${searchConsoleContext}`;
           const out = await runAgentTask<SeoBriefOutput>(
             ctx,

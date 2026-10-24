@@ -7,7 +7,7 @@ import * as metaAds from "../../shared/integrations/metaAds";
 import * as resend from "../../shared/integrations/resendMarketing";
 import * as searchConsole from "../../shared/integrations/searchConsole";
 import * as stripe from "../../shared/integrations/stripeRevenue";
-import { searchConsoleStrategyContext } from "../../shared/agents/searchConsoleEvidence";
+import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../../shared/agents/searchConsoleEvidence";
 import type { ApprovedAction, FetchLike } from "../../shared/integrations/types";
 
 // ---------------------------------------------------------------------------
@@ -636,5 +636,25 @@ describe("ga4 + searchConsole", () => {
     expect(context).not.toContain("query 15");
     expect(searchConsoleStrategyContext(snapshot, "https://other.example/")).toContain("were not used because the selected property does not match");
     expect(searchConsoleStrategyContext(snapshot, undefined)).toContain("no recorded website to verify against");
+  });
+
+  it("limits SEO brief metrics to the matching property and pages fetched in this run", () => {
+    const snapshot = {
+      property: "sc-domain:example.com",
+      startDate: "2026-07-24",
+      endDate: "2026-10-21",
+      dataState: "final" as const,
+      rowCount: 2,
+      truncated: false,
+      rows: [
+        { query: "tracked page query", page: "https://www.example.com/services/", clicks: 4, impressions: 40, ctr: 0.1, position: 5 },
+        { query: "unread page query", page: "https://example.com/blog/", clicks: 9, impressions: 90, ctr: 0.1, position: 4 },
+      ],
+    };
+    const context = searchConsoleSeoContext(snapshot, "https://example.com/", ["https://example.com/services/#contact"]);
+    expect(context).toContain("tracked page query");
+    expect(context).not.toContain("unread page query");
+    expect(searchConsoleSeoContext(snapshot, "https://other.example/", ["https://example.com/services/"])).toContain("property does not match");
+    expect(searchConsoleSeoContext(snapshot, "https://example.com/", [])).toContain("none of its returned page rows match a page successfully fetched");
   });
 });
