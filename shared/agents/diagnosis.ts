@@ -155,12 +155,18 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (gt(f.newCustomers, f.leads) && f.leads !== undefined) conflicts.push(`${f.newCustomers} new customers but only ${f.leads} leads: some buyers may skip the lead step, or a count is off.`);
   if (gt(f.newCustomers, f.activated) && !gt(f.newCustomers, f.leads)) conflicts.push(`${f.newCustomers} paid but only ${f.activated} reached first value: either people pay before first value (then first value isn't on the path to paying) or a count is off.`);
   for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isFinite(n) && n >= 0)) conflicts.push(`${k} must be a count of zero or more.`);
+  if (ctx.newCustomersPerMonth !== undefined && ctx.newCustomersPerMonth !== null && !(Number.isFinite(ctx.newCustomersPerMonth) && ctx.newCustomersPerMonth >= 0)) conflicts.push("Capacity must be a number of zero or more new customers a month.");
 
   // Capacity binds before anything else: more demand can't be served.
   const cap = ctx.newCustomersPerMonth;
-  if (cap && f.newCustomers !== undefined && f.newCustomers >= 0) {
-    const use = perMonth(f.newCustomers) / cap;
-    readings.push({ stage: "capacity", observed: `${Math.round(perMonth(f.newCustomers))} new customers a month against room for ${cap}`, rate: use, reference: null, verdict: use >= 0.8 ? "weak" : "ok" });
+  if (cap !== undefined && cap !== null && Number.isFinite(cap) && cap >= 0) {
+    if (cap === 0) {
+      readings.push({ stage: "capacity", observed: "no capacity for new customers (owner reported a limit of 0 per month)", rate: null, reference: null, verdict: "weak" });
+    } else if (f.newCustomers !== undefined && Number.isFinite(f.newCustomers) && f.newCustomers >= 0) {
+      const monthly = perMonth(f.newCustomers);
+      const use = monthly / cap;
+      readings.push({ stage: "capacity", observed: `${Math.round(monthly)} new customers a month against room for ${cap}`, rate: use, reference: null, verdict: use >= 0.8 ? "weak" : "ok" });
+    }
   }
   // Retention: only against a reference that exists (SaaS).
   if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null) {
@@ -231,11 +237,11 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     rules: [...new Set(rules)],
   });
 
-  if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, ["Capacity is at least 80% used."], [COMPETING.delivery])]);
   if (conflicts.length) {
     missing.unshift(...conflicts.map((c) => `Resolve: ${c}`));
     return out("unknown", "conflicting_inputs", []);
   }
+  if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, [capR.rate === null ? "The owner reported no capacity for additional customers." : "Capacity is at least 80% used."], [COMPETING.delivery])]);
   if (retR?.verdict === "weak") return out("retention", "supported", [hyp("retention", retR.observed, null, [`Above the ${REFERENCES.saasChurn.text}.`], [COMPETING.retention])]);
 
   // Is lead → paid weak at all? Only with a reference for this signup model, and only on posterior evidence.

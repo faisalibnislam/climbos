@@ -13,6 +13,17 @@ describe("diagnosis", () => {
   it("capacity binds before anything else (EV09-like)", () => {
     expect(diagnose({ funnel: { newCustomers: 9 }, newCustomersPerMonth: 10 }).constraint).toBe("delivery");
   });
+  it("treats a confirmed zero-customer capacity as a delivery constraint without creating infinite rates", () => {
+    const d = diagnose({ newCustomersPerMonth: 0 });
+    expect(d).toMatchObject({ constraint: "delivery", status: "supported" });
+    expect(d.readings.find((reading) => reading.stage === "capacity")).toMatchObject({ rate: null, verdict: "weak" });
+    expect(d.hypotheses?.[0]?.support).toContain("The owner reported no capacity for additional customers.");
+    expect(JSON.parse(JSON.stringify(d))).toMatchObject({ constraint: "delivery" });
+  });
+  it("resolves invalid capacity inputs instead of treating them as measurements", () => {
+    expect(diagnose({ newCustomersPerMonth: Number.NaN })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+    expect(diagnose({ funnel: { visitors: 10, leads: 12 }, newCustomersPerMonth: 0 })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+  });
   it("SaaS churn above the reference is a retention problem", () => {
     expect(diagnose({ monthlyChurn: 0.12, types: ["b2b_saas"] }).constraint).toBe("retention");
     expect(diagnose({ monthlyChurn: 0.12, types: ["local_services"] }).constraint).toBe("unknown");
