@@ -76,8 +76,8 @@ describe("horizon and locked numbers", () => {
 
   it("locked numbers keep the owner goal and use its horizon", () => {
     const text = lockedNumbers({ economics: econ, plays }, { statement: "Reach 50 customers", target: { metric: "customers", baseline: 20, desired: 50, mode: "total" }, horizonDays: 60 });
-    expect(text).toMatch(/TOTAL: ≈\S+ new customers in 60 days/);
-    expect(text).toMatch(/by day 60: what these plays support/);
+    expect(text).toMatch(/TOTAL: ≈\S+ modeled customer outcomes in 60 days/);
+    expect(text).toMatch(/Modeled portfolio outcome = ≈\S+ customer outcomes by day 60/);
     expect(text).toMatch(/OWNER GOAL .*"Reach 50 customers" within 60 days/);
     expect(text).toMatch(/GOAL GAP/);
     expect(playsGoalGap({ economics: econ, plays }, { target: { metric: "customers", baseline: 20, desired: 50, mode: "total" }, horizonDays: 60 }).state).not.toBe("unknown");

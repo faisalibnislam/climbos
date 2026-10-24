@@ -227,6 +227,17 @@ describe("experiment feasibility uses the population's own denominator (Kohavi C
 });
 
 describe("follow-up reading (ADM exercise sets)", () => {
+  it("labels portfolio customer totals when they mix attributed and modeled baseline-delta outcomes", () => {
+    const attributed = play("New search channel", { monthlySpendUsd: 0, ownerHoursPerWeek: 0, steps: [{ name: "paid", rate: 0.05 }] });
+    const baselineDelta = play("Checkout improvement", { monthlySpendUsd: 100, ownerHoursPerWeek: 0, steps: [{ name: "paid", rate: 0.2, baselineRate: 0.1 }] });
+    expect(portfolioRange({ economics: econ, plays: [attributed] }).outcomeBasis).toBe("attributed_only");
+    expect(portfolioRange({ economics: econ, plays: [baselineDelta] }).outcomeBasis).toBe("modeled_baseline_delta");
+    expect(portfolioRange({ economics: econ, plays: [attributed, baselineDelta] }).outcomeBasis).toBe("mixed");
+    const selected = selectPortfolio({ economics: econ, plays: [attributed, baselineDelta] }, {})!;
+    expect(selected.outcomeBasis).toBe("mixed");
+    expect(selected.basis).toContain("not a causal lift estimate");
+  });
+
   it("huge counts don't rank two links that convert within 10% of each other", () => {
     const d = diagnose({ funnel: { leads: 100_000, activated: 30_000, newCustomers: 8_850 }, types: ["b2b_saas"] });
     expect(d.status).toBe("ambiguous");

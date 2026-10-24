@@ -515,6 +515,29 @@ export function combinePlays(values: number[], stages: string[]): number {
   return portfolioCustomers([...free, ...groups.values()], PLAY_OVERLAP) ?? 0;
 }
 
+export type PortfolioOutcomeBasis = "attributed_only" | "modeled_baseline_delta" | "mixed";
+
+function portfolioOutcomeBasis(plays: PlayLike[]): PortfolioOutcomeBasis {
+  const modeled = plays.filter((p) => p.model?.steps?.length);
+  const withBaseline = modeled.filter((p) => p.model.steps.some((step) => step.baselineRate !== undefined)).length;
+  if (withBaseline === 0) return "attributed_only";
+  if (withBaseline === modeled.length) return "modeled_baseline_delta";
+  return "mixed";
+}
+
+export interface PortfolioRange {
+  p10: number;
+  p50: number;
+  p90: number;
+  outcomeBasis: PortfolioOutcomeBasis;
+}
+
+function portfolioOutcomeNote(basis: PortfolioOutcomeBasis): string {
+  if (basis === "modeled_baseline_delta") return "All counts are modeled deltas against supplied baselines, not experimentally measured causal lift";
+  if (basis === "mixed") return "Counts mix play-attributed forecasts with modeled baseline deltas, so the combined total is not a causal lift estimate";
+  return "Counts are play-attributed forecasts; causal incremental lift is not estimated";
+}
+
 /** Each play's seeded draws, shuffled with its own seed so plays pair at random (independent); null when no play has ranges. */
 function pairedDraws(ps: PlayLike[]): number[][] | null {
   const draws = ps.map((p) => simulateSamples(p.model, (p.horizonDays > 0 ? p.horizonDays : 90) / 7, `${p.name}|${p.kind}`));
@@ -536,16 +559,17 @@ function pairedDraws(ps: PlayLike[]): number[][] | null {
  * P50 combines the most-likely counts (the same basis as cost per customer). P10/P90 come from joint seeded draws,
  * assuming plays vary independently, rather than adding every play's P10 (or P90) as if all fail (or win) together.
  */
-export function portfolioRange(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): { p10: number; p50: number; p90: number } {
+export function portfolioRange(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): PortfolioRange {
   const ps = out.plays.filter((p) => p.model?.steps?.length).map((p) => (horizonDays ? { ...p, horizonDays } : p));
-  if (!ps.length) return { p10: 0, p50: 0, p90: 0 };
+  const outcomeBasis = portfolioOutcomeBasis(ps);
+  if (!ps.length) return { p10: 0, p50: 0, p90: 0, outcomeBasis };
   const stages = ps.map(stageOfPlay);
   const heads = ps.map((p) => playMaths(p, out.economics).headline);
   const p50 = combinePlays(heads.map((h) => h.p50), stages);
   const cols = pairedDraws(ps);
-  if (!cols) return { p10: Math.min(p50, combinePlays(heads.map((h) => h.p10), stages)), p50, p90: Math.max(p50, combinePlays(heads.map((h) => h.p90), stages)) };
+  if (!cols) return { p10: Math.min(p50, combinePlays(heads.map((h) => h.p10), stages)), p50, p90: Math.max(p50, combinePlays(heads.map((h) => h.p90), stages)), outcomeBasis };
   const totals = Array.from({ length: RUNS }, (_, i) => combinePlays(cols.map((c) => c[i]), stages)).sort((a, b) => a - b);
-  return { p10: Math.min(p50, quantile(totals, 0.1)), p50, p90: Math.max(p50, quantile(totals, 0.9)) };
+  return { p10: Math.min(p50, quantile(totals, 0.1)), p50, p90: Math.max(p50, quantile(totals, 0.9)), outcomeBasis };
 }
 
 /** Mean combined customers over the same seeded joint draws used for portfolio ranking. */
@@ -573,6 +597,8 @@ function expectedCombinedDraws(cols: number[][], indexes: number[], stages: stri
 export interface PortfolioChoice {
   /** Play names in the best feasible set. */
   selected: string[];
+  /** Whether its modeled customers are attributed conversions, baseline deltas, or a mix. */
+  outcomeBasis: PortfolioOutcomeBasis;
   customers: number;
   spendUsdMonth: number;
   ownerHoursWeek: number;
@@ -601,6 +627,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   if (!ps.length) return null;
   const ms = ps.map((p) => playMaths({ ...p, horizonDays: h }, out.economics));
   const stages = ps.map(stageOfPlay);
+  const outcomeBasis = portfolioOutcomeBasis(ps);
   const value = customerValue(out.economics);
   const capLimit = limits.newCustomersPerMonth !== undefined ? limits.newCustomersPerMonth * (h / 30) : undefined;
   const losers = new Set(ms.flatMap((m, i) => (m.profitable === false && ps[i].kind !== "moonshot" ? [i] : [])));
@@ -635,6 +662,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   if (!best)
     return {
       selected: [],
+      outcomeBasis,
       customers: 0,
       spendUsdMonth: 0,
       expectedCustomers: 0,
@@ -643,13 +671,14 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
       allFit: false,
       left: all.map((i) => ({ name: ps[i].name, why: opts.length ? "every set's expected contribution is below its cost" : leftWhy(i) })),
       runnerUp: opts[0] ? { selected: opts[0].idx.map((i) => ps[i].name), customers: opts[0].customers, netUsd: opts[0].net } : null,
-      basis: opts.length ? `Doing nothing new beats every set at expected values under the current inputs: run only capped tests that measure the deciding input first. ${portfolioEvidenceNote(ps, out.economics)}` : "No play fits the limits on its own.",
+      basis: opts.length ? `Doing nothing new beats every set at expected values under the current inputs: run only capped tests that measure the deciding input first. ${portfolioOutcomeNote(outcomeBasis)}. ${portfolioEvidenceNote(ps, out.economics)}` : `No play fits the limits on its own. ${portfolioOutcomeNote(outcomeBasis)}.`,
     };
   const key = (o: Opt) => o.idx.join(",");
   // The strongest alternative must beat the choice on something (more customers, less cash or fewer hours); a set worse on every count isn't a trade-off (Kochenderfer Ex 14.5).
   const runner = opts.find((o) => key(o) !== key(best) && (o.expectedCustomers > best.expectedCustomers + 1e-9 || o.spend < best.spend - 1e-9 || o.hours < best.hours - 1e-9)) ?? null;
   return {
     selected: best.idx.map((i) => ps[i].name),
+    outcomeBasis: portfolioOutcomeBasis(best.idx.map((i) => ps[i])),
     customers: best.customers,
     spendUsdMonth: best.spend,
     ownerHoursWeek: best.hours,
@@ -658,7 +687,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     left: all.filter((i) => !best.idx.includes(i)).map((i) => ({ name: ps[i].name, why: leftWhy(i) })),
     runnerUp: runner ? { selected: runner.idx.map((i) => ps[i].name), customers: runner.customers, netUsd: runner.net } : null,
     expectedCustomers: best.expectedCustomers,
-    basis: `${value === null ? "Ranked by expected customers over the input ranges (what a customer is worth is unknown)." : "Ranked by expected contribution in the horizon minus cost, over the input ranges."} ${portfolioEvidenceNote(best.idx.map((i) => ps[i]), out.economics)}`,
+    basis: `${value === null ? "Ranked by expected customers over the input ranges (what a customer is worth is unknown)." : "Ranked by expected contribution in the horizon minus cost, over the input ranges."} ${portfolioOutcomeNote(portfolioOutcomeBasis(best.idx.map((i) => ps[i])))}. ${portfolioEvidenceNote(best.idx.map((i) => ps[i]), out.economics)}`,
   };
 }
 
@@ -693,6 +722,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   const h = goal?.horizonDays || (own.length === 1 ? own[0] : 90);
   const atH = out.plays.map((p) => playMaths({ ...p, horizonDays: h }, out.economics));
   const { p50: total, p10: low, p90: high } = portfolioRange(out, h);
+  const outcomeBasis = portfolioOutcomeBasis(out.plays);
   const cost = atH.reduce((s, m) => s + m.costUsd, 0);
   const spend = out.plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
   const e = out.economics;
@@ -709,9 +739,9 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
     ...rows.flatMap(({ m }) => m.sensitivity.slice(0, 3).map((s) => `- SENSITIVITY · ${m.name} · ${s.driver} (one input at a time, not a joint forecast): ${s.metric === "net_contribution_12m" ? "12-month net contribution" : "customers"} is ${s.metric === "net_contribution_12m" ? usd(s.atLow) : roundCount(s.atLow)} at low, ${s.metric === "net_contribution_12m" ? usd(s.atMode) : roundCount(s.atMode)} at most-likely, ${s.metric === "net_contribution_12m" ? usd(s.atHigh) : roundCount(s.atHigh)} at high.`)),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     "- Timing assumptions: specified ramp and sales lag are applied to customer forecasts; costs still cover the full planned period. Missing ramp or lag means immediate full volume or immediate paid conversion.",
-    `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
+    `- TOTAL: ≈${roundCount(total)} modeled customer outcomes in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per modeled outcome ${usd(total > 0 ? cost / total : null)}. ${portfolioOutcomeNote(outcomeBasis)}.`,
     ...portfolioLine(out, { ...(limits ?? {}), horizonDays: h }, usd),
-    `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,
+    `- Modeled portfolio outcome = ≈${Math.round(total)} customer outcomes by day ${h}: ${portfolioOutcomeNote(outcomeBasis)}; it is a scenario, not the owner's goal.`,
     ...(goal ? goalLines(goal.statement, playsGoalGap(out, goal)) : []),
   ].join("\n");
 }
