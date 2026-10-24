@@ -167,7 +167,7 @@ Issue 08's engine-side capacity guard now blocks net-new acquisition channels wh
 | REQ-COPY-02 | partial | S8 | `jobs.ts` `planContext` | No angle-selection step |
 | REQ-COPY-03 | partial | S8 | skills, `runtime.ts` | Prompt only |
 | REQ-COPY-04 | partial | S8 | `specs.ts:840-851` | |
-| REQ-COPY-05 | partial | S8 | `artifactVersions.claimFactIds` | |
+| REQ-COPY-05 / AEO 354 | partial | S8 | `factIndexes.ts` `lintFactIndexes`, `artifactVersions.claimFactIds` | SEO, social, ads and email outputs now fail lint when they cite fact indexes outside the exact input list; valid indexes are already resolved to tenant fact IDs when artifacts are saved. **Gap:** this verifies reference integrity, not that the cited fact semantically proves each sentence. |
 | REQ-COPY-06 | partial | S8 | `lint.ts:10` | Banned list only |
 | REQ-COPY-07 | partial | S8 | `specs.ts:692` | Exact duplicates only |
 | REQ-COPY-08 | partial | S8 | `brand.ts`, `voiceSamples` | No consent, no applied-rule record |

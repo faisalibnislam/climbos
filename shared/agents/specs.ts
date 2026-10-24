@@ -26,6 +26,7 @@ import type { ModelKey } from "../economics/rates";
 import { skillRubric } from "../skills";
 import { lintEvidenceStrength } from "./evidenceKind";
 import { inferSearchIntentStage } from "./searchIntent";
+import { lintFactIndexes } from "./factIndexes";
 import { lintDiagnosisFit } from "./diagnosis";
 import { lintEligibilityIds } from "../playbooks/contracts";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
@@ -164,7 +165,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.3-sensitivity-claims";
+export const ENGINE_VERSION = "v3.4-fact-reference-guards";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1065,6 +1066,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
     const path = `posts[${i}]`;
     issues.push(
       ...lintCopy({ body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
       // Briefs and alt text are complete too: no owner questions hidden in them.
       ...lintCopy({ title: p.title, hook: p.hook, visualBrief: p.visualBrief, altText: p.altText, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...maxLength(p.body, lim.body, `${path}.body`, "Post"),
@@ -1104,7 +1106,7 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) })];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintFactIndexes(out.factIndexes, input.facts.length)];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1161,7 +1163,8 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
 function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
-  return lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) });
+  const factIndexes = (out as { factIndexes?: number[] }).factIndexes ?? [];
+  return [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) }), ...lintFactIndexes(factIndexes, input.facts.length)];
 }
 
 export function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIssue[] {
