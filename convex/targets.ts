@@ -7,6 +7,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { startCampaign } from "./outbound";
+import { expertPlaysOf } from "../shared/agents/planCompatibility";
 
 /**
  * S6 behind the `plan_targets` engine flag (REQ-TARGET-01..06, REQ-UX-02/03):
@@ -20,7 +21,7 @@ export const FLAG = "plan_targets";
 const hasTargets = (org: Doc<"organizations">) => Boolean(org.engineFlags?.includes(FLAG));
 
 type StoredPlay = PlayText & { id?: string };
-const playsOf = (s: Doc<"strategies">): StoredPlay[] => ((s.expert?.plays ?? []) as StoredPlay[]).filter((p) => p && typeof p.name === "string");
+const playsOf = (s: Doc<"strategies">): StoredPlay[] => (expertPlaysOf(s.expert) as StoredPlay[]).filter((p) => p && typeof p.name === "string");
 
 async function campaignsOf(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">) {
   return ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).order("desc").take(50);

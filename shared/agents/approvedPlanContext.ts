@@ -1,3 +1,5 @@
+import { readExpertPlan } from "./planCompatibility";
+
 export interface ApprovedPlanContextInput {
   status: string;
   version: number;
@@ -26,7 +28,7 @@ const clean = (value: unknown, max = 500): string => typeof value === "string" ?
 /** A bounded, provenance-labeled summary of the exact owner-approved plan. */
 export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinnedAtLaunch?: boolean } = {}): string {
   if (plan.status !== "approved" && !(plan.status === "superseded" && opts.pinnedAtLaunch)) return "";
-  const expert = plan.expert && typeof plan.expert === "object" ? plan.expert as PlanDetail : {};
+  const expert = plan.expert && typeof plan.expert === "object" ? readExpertPlan(plan.expert as Record<string, unknown>) as PlanDetail : {};
   const snapshotId = clean(expert.snapshot?.snapshotId, 100) || "unavailable for this legacy plan";
   const lines = [
     `Plan version: ${plan.version}; context snapshot: ${snapshotId}`,

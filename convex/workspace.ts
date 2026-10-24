@@ -23,7 +23,7 @@ import { canDriveWork, type QualityState } from "../shared/agents/quality";
 import { applyOwnerEconomics, decisionQuestions, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
-import { readExpertPlan } from "../shared/agents/planCompatibility";
+import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 
 /** Everything the Today screen needs, in one bounded query. */
@@ -145,7 +145,7 @@ export const today = query({
             status: strategy.status,
             version: strategy.version,
             summary: strategy.summary,
-            opportunities: projectGrowthOpportunities((strategy.expert?.plays ?? []) as OpportunityPlayInput[]),
+            opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
           }
         : null,
       cards: [...cards, ...running]
@@ -285,7 +285,7 @@ export const startPlay = mutation({
     if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before starting this play.");
-    const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
+    const play = (expertPlaysOf(s.expert) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
   },
@@ -297,7 +297,7 @@ export const askAboutOpportunity = mutation({
   handler: async (ctx, { slug, strategyId, opportunityId, question }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const strategy = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
-    const play = ((strategy.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience?: string; hook?: string; firstActionToday?: string; biggestUnknown?: string; model?: { reachSource?: { source?: string; ref?: string; quote?: string }; steps?: { source?: string; ref?: string; quote?: string }[] } }[]).find((item) => item.id === opportunityId);
+    const play = (expertPlaysOf(strategy.expert) as { id?: string; name: string; oneLiner: string; audience?: string; hook?: string; firstActionToday?: string; biggestUnknown?: string; model?: { reachSource?: { source?: string; ref?: string; quote?: string }; steps?: { source?: string; ref?: string; quote?: string }[] } }[]).find((item) => item.id === opportunityId);
     if (!play) throw appError("NOT_FOUND", "That opportunity isn't in this plan.");
     const ownerQuestion = question?.trim().slice(0, 500) || "Why is this a good opportunity for my business?";
     const evidence = [play.model?.reachSource, ...(play.model?.steps ?? [])]

@@ -3,6 +3,7 @@ import { checkInvariants } from "../../shared/economics/ledger";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ledgerOf } from "../../convex/lib/periods";
+import { readExpertPlan } from "../../shared/agents/planCompatibility";
 import { asNewUser, setup, type T } from "./helpers";
 
 /**
@@ -135,10 +136,13 @@ describe("Engine v2 wiring", () => {
     const strategy = await t.run(async (ctx) => ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first());
     expect(strategy?.expert?.diagnosis).toContain("fake-v1");
     expect(strategy?.expert?.version).toBe(9);
-    expect(strategy?.expert?.growthPlanV9).toMatchObject({ plays: expect.any(Array), economics: expect.any(Object) });
-    expect(strategy?.expert?.weekOneChecklist.length).toBeGreaterThan(0);
+    const expert = readExpertPlan(strategy!.expert as Record<string, unknown>);
+    expect(expert.growthPlanV9).toMatchObject({ plays: expect.any(Array), economics: expect.any(Object) });
+    expect(strategy?.expert?.plays).toBeUndefined();
+    expect(strategy?.expert?.economics).toBeUndefined();
+    expect((expert.weekOneChecklist as unknown[]).length).toBeGreaterThan(0);
     // Forecasts are computed in code from each play's model and ranges (never written by the model).
-    const plays = strategy?.expert?.plays as { p10: number; p50: number; p90: number }[];
+    const plays = expert.plays as { p10: number; p50: number; p90: number }[];
     expect(plays.length).toBe(2);
     for (const p of plays) {
       expect(p.p10).toBeLessThan(p.p50);
@@ -176,10 +180,10 @@ describe("Engine v2 wiring", () => {
     expect(strategy?.expert?.snapshot?.insightsHash).toMatch(/^[a-f0-9]{64}$/);
     expect(strategy?.expert?.snapshot?.sourceUrls).toContain("https://example.com");
     // Every input keeps its source; the "assumed" list is derived from the tags.
-    const econ = strategy?.expert?.economics as { sources: Record<string, { source: string }>; assumed: string[] };
+    const econ = expert.economics as { sources: Record<string, { source: string }>; assumed: string[] };
     expect(econ.sources.revenue.source).toBe("research");
     expect(econ.assumed).toEqual(["margin", "churn"]);
-    expect((strategy?.expert?.plays as { model: { reachSource: { source: string } } }[])[0].model.reachSource.source).toBe("assumption");
+    expect((expert.plays as { model: { reachSource: { source: string } } }[])[0].model.reachSource.source).toBe("assumption");
   });
 
   it("revises when the review fails, reserving each extra round first, and keeps the better version", async () => {

@@ -95,6 +95,7 @@ import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
+import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth } from "../shared/agents/goal";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
@@ -1699,11 +1700,12 @@ export const chatIntent = internalAction({
     const job = await loadContext(ctx, runId);
     if (!job) return;
     const wc = await ctx.runQuery(internal.workspace.wishContext, { orgId: job.org._id });
+    const expert = job.strategy?.expert ? readExpertPlan(job.strategy.expert as unknown as Record<string, unknown>) : null;
     const plan = job.strategy
       ? [
           `CURRENT GROWTH PLAN (${job.strategy.status}): ${job.strategy.summary.slice(0, 600)}`,
           `Priorities: ${job.strategy.channels.map((c) => `${c.priority}. ${c.name} (${c.status})`).join("; ").slice(0, 600)}`,
-          job.strategy.expert ? `North Star: ${job.strategy.expert.northStar.metric} → ${job.strategy.expert.northStar.target}. Not doing: ${job.strategy.expert.notDoing.map((n) => n.channel).join(", ")}` : "",
+          expert ? `North Star: ${(expert.northStar as { metric: string }).metric} → ${(expert.northStar as { target: string }).target}. Not doing: ${(expert.notDoing as { channel: string }[]).map((n) => n.channel).join(", ")}` : "",
         ]
           .filter(Boolean)
           .join("\n")

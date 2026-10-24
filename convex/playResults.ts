@@ -8,6 +8,7 @@ import { forecastCalibration, playActuals, resultsLine, retentionActuals, type P
 import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
 import type { PlayModel } from "../shared/agents/economics";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
+import { expertPlaysOf } from "../shared/agents/planCompatibility";
 
 /**
  * Learning from outcomes (spec §28): the owner logs what each play did each
@@ -27,7 +28,7 @@ export function weekOf(t: number): number {
 type SavedPlay = { name: string; id?: string; model?: PlayModel; p10?: number; p50?: number; p90?: number; horizonDays?: number };
 
 function playsOf(s: Doc<"strategies">): SavedPlay[] {
-  return ((s.expert?.plays ?? []) as SavedPlay[]).filter((p) => p.model?.steps?.length);
+  return (expertPlaysOf(s.expert) as SavedPlay[]).filter((p) => p.model?.steps?.length);
 }
 
 async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; retention: RetentionActuals; entries: Doc<"playResults">[]; forecast: { p10: number; p90: number }; horizonWeeks: number }[]> {

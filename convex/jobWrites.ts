@@ -2,7 +2,7 @@ import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
-import { EXPERT_PLAN_SCHEMA_VERSION, LEGACY_EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
+import { EXPERT_PLAN_SCHEMA_VERSION, LEGACY_EXPERT_PLAN_SCHEMA_VERSION, expertPlaysOf } from "../shared/agents/planCompatibility";
 import { buildCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
@@ -381,7 +381,7 @@ export const saveInsights = internalMutation({
  */
 export function withPlayIds<P extends { name: string; id?: string }>(plays: P[], prior: Doc<"strategies">[]): (P & { id: string })[] {
   const known = new Map<string, string>();
-  for (const s of [...prior].reverse()) for (const p of (s.expert?.plays ?? []) as { name?: string; id?: string }[]) if (p.id && p.name) known.set(p.name.trim().toLowerCase(), p.id);
+  for (const s of [...prior].reverse()) for (const p of expertPlaysOf(s.expert) as { name?: string; id?: string }[]) if (p.id && p.name) known.set(p.name.trim().toLowerCase(), p.id);
   const used = new Set<string>();
   return plays.map((p) => {
     let id = p.id ?? known.get(p.name.trim().toLowerCase());
@@ -491,9 +491,7 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: expertPlays,
-                economics: x.economics,
-                ...(growthPlanV9 ? { growthPlanV9 } : {}),
+                ...(growthPlanV9 ? { growthPlanV9 } : { plays: expertPlays, economics: x.economics }),
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { expertPlaysOf, readExpertPlan } from "../../shared/agents/planCompatibility";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /** Plan version history: every version listed with why it changed and who approved it; restore makes a new version for approval. */
@@ -73,7 +74,8 @@ describe("Plan version history", () => {
     // Restoring plays from an older schema keeps that part's own payload version.
     await t.run(async (ctx) => {
       const legacy = (await ctx.db.get(v1.id))!;
-      const expert = { ...legacy.expert!, version: 7 } as Record<string, unknown>;
+      const decoded = readExpertPlan(legacy.expert!);
+      const expert = { ...decoded, version: 7 } as Record<string, unknown>;
       delete expert.growthPlanV8;
       delete expert.growthPlanV9;
       await ctx.db.patch(legacy._id, { expert: expert as never });
@@ -122,7 +124,7 @@ describe("Plan version history", () => {
     const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
     expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
     expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     await expect(w.client.mutation(api.workspace.startPlay, {
       slug: w.slug,
@@ -138,7 +140,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
@@ -171,7 +173,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 1_000, leads: 20, activated: 10, newCustomers: 5 });
@@ -188,7 +190,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.orgs.setGoal, { slug: w.slug, kind: "more_sales", statement: "Increase monthly sales", target: { metric: "revenue_month", baseline: 1_000, desired: 2_000, mode: "incremental" }, horizonDays: 120, monthlyAdBudget: 125 });
@@ -205,7 +207,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, businessType: "services" });
@@ -239,7 +241,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await t.run(async (ctx) => {
@@ -269,7 +271,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await t.run(async (ctx) => {
@@ -301,7 +303,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     expect((saved?.expert?.snapshot as { marketChangeVersions?: unknown[] } | undefined)?.marketChangeVersions).toEqual([]);
 
@@ -345,7 +347,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.brand.update, { slug: w.slug, voice: "Friendly and practical", toneWords: ["helpful"], colors: [], doNots: ["No unsupported claims"], approvedExamples: ["We make the next step clear."] });
@@ -362,7 +364,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.acquisition.setTypes, { slug: w.slug, types: ["mobile_app"] });
@@ -379,7 +381,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await w.client.mutation(api.acquisition.setDimension, { slug: w.slug, key: "geography", value: "local" });
@@ -396,7 +398,7 @@ describe("Plan version history", () => {
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
-    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
     await t.run((ctx) => ctx.db.insert("connections", {

@@ -29,3 +29,14 @@ export function readExpertPlan<T extends Record<string, unknown>>(expert: T): T 
   }
   return base;
 }
+
+export function expertPlaysOf(expert: unknown): unknown[] {
+  if (!expert || typeof expert !== "object" || Array.isArray(expert)) return [];
+  const readable = readExpertPlan(expert as Record<string, unknown>);
+  return Array.isArray(readable.plays) ? readable.plays : [];
+}
+
+export function expertEconomicsOf(expert: unknown): unknown | null {
+  if (!expert || typeof expert !== "object" || Array.isArray(expert)) return null;
+  return readExpertPlan(expert as Record<string, unknown>).economics ?? null;
+}
