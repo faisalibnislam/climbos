@@ -14,6 +14,10 @@ describe("research source assessment", () => {
     expect(records).toContain('"owner report" is not independent verification');
     expect(OPERATING_RULES).toContain("not that its offer works");
     expect(OPERATING_RULES).toContain("use numbers only when supplied");
+    expect(OPERATING_RULES).toContain("BUSINESS TRUTH");
+    expect(OPERATING_RULES).toContain("BUSINESS PERFORMANCE");
+    expect(OPERATING_RULES).toContain("GENERAL GUIDANCE");
+    expect(OPERATING_RULES).toContain("One tenant's result must not become a universal rule");
     expect(CRITIC_RULES).toContain("a weak page alone is not proof that the underlying business is unviable");
     expect(CRITIC_RULES).not.toContain("Details stated in the brief (name, website, offers) are known facts");
   });

@@ -2,8 +2,28 @@ import { describe, expect, it } from "vitest";
 import library from "@shared/knowledge/growthLibrary.generated.json";
 import { formatGrowthKnowledge, growthKnowledgeContext, knowledgeReferenceSet, retrieveGrowthKnowledge } from "@shared/knowledge/retrieve";
 import { sourceFreshness } from "@shared/knowledge/freshness";
+import { formatBusinessKnowledgeLayers, KNOWLEDGE_LAYER_POLICY } from "@shared/knowledge/layers";
 
 describe("growth intelligence retrieval", () => {
+  it("keeps business truth, business performance, and general guidance in separate authority layers", () => {
+    const business = formatBusinessKnowledgeLayers(
+      ["Owner-reported: the team can spend 4 hours a week."],
+      ["Observed billing: 3 first recorded payers; last-touch only."],
+    );
+    expect(business).toContain("BUSINESS TRUTH (Layer 1");
+    expect(business).toContain("BUSINESS PERFORMANCE (Layer 2");
+    expect(business).toContain("Owner-reported");
+    expect(business).toContain("Observed billing");
+    expect(KNOWLEDGE_LAYER_POLICY).toContain("GENERAL GUIDANCE");
+    expect(KNOWLEDGE_LAYER_POLICY).toContain("Observational association is not causal lift");
+    expect(KNOWLEDGE_LAYER_POLICY).toContain("One tenant's result must not become a universal rule");
+  });
+
+  it("does not fill an absent performance layer with invented evidence", () => {
+    const business = formatBusinessKnowledgeLayers(["Business name: Example Co."], []);
+    expect(business).toContain("No first-party performance outcomes were supplied for this run; leave performance unknown.");
+  });
+
   it("indexes the committed books and reference playbooks with their source hashes", () => {
     expect(library.edition).toBe("October 2026");
     expect(library.records.filter((record) => record.kind === "playbook")).toHaveLength(28);
