@@ -44,6 +44,10 @@ export interface PlayModel {
   weeklyReach: number;
   weeklyReachLow?: number;
   weeklyReachHigh?: number;
+  /** Weeks to reach the stated weekly reach; omitted means immediate full volume. */
+  rampWeeks?: number;
+  /** Delay from reaching a prospect to a paying customer; omitted means no modeled lag. */
+  salesLagDays?: number;
   steps: PlayStep[];
   monthlySpendUsd: number;
   ownerHoursPerWeek: number;
@@ -166,6 +170,20 @@ export interface PlaySensitivity {
 const rateOf = (r: number | undefined | null): number => (typeof r === "number" && Number.isFinite(r) && r >= 0 && r <= 1 ? r : NaN);
 const DAYS_PER_MONTH = 365.25 / 12;
 
+/** Equivalent full-volume weeks that can produce paid customers before the horizon closes. */
+export function effectiveCustomerWeeks(m: Pick<PlayModel, "rampWeeks" | "salesLagDays">, horizonWeeks: number): number {
+  const weeks = Math.max(0, horizonWeeks);
+  const lag = Math.max(0, m.salesLagDays ?? 0) / 7;
+  const eligibleWeeks = Math.max(0, weeks - lag);
+  const ramp = Math.max(0, m.rampWeeks ?? 0);
+  if (eligibleWeeks === 0) return 0;
+  if (ramp === 0) return eligibleWeeks;
+  // Integrate a linear reach ramp from zero to steady weekly volume.
+  return eligibleWeeks <= ramp
+    ? (eligibleWeeks * eligibleWeeks) / (2 * ramp)
+    : ramp / 2 + eligibleWeeks - ramp;
+}
+
 /** Monthly churn: a known value (zero included), else from months retained, else unknown (null), never zero by default (REQ-MATH-02). */
 export function churnOf(e: Economics): number | null {
   if (typeof e.monthlyChurn === "number") return Number.isNaN(rateOf(e.monthlyChurn)) ? null : e.monthlyChurn;
@@ -215,13 +233,13 @@ export function simulateCustomers(m: PlayModel, weeks: number, seed: string): { 
 function baselineCustomers(m: PlayModel, weeks: number): number {
   if (!m.steps.some((s) => s.baselineRate !== undefined)) return 0;
   const rates = m.steps.map((s) => rateOf(s.baselineRate ?? s.rate));
-  return rates.some(Number.isNaN) ? 0 : (funnelCustomers(Math.max(0, m.weeklyReach), rates) ?? 0) * weeks;
+  return rates.some(Number.isNaN) ? 0 : (funnelCustomers(Math.max(0, m.weeklyReach), rates) ?? 0) * effectiveCustomerWeeks(m, weeks);
 }
 
 /** Most-likely customers only (no draws). */
 function customersPoint(m: PlayModel, weeks: number): number {
   if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return 0;
-  return Math.max(0, (funnelCustomers(Math.max(0, m.weeklyReach), m.steps.map((s) => s.rate)) ?? 0) * weeks - baselineCustomers(m, weeks));
+  return Math.max(0, (funnelCustomers(Math.max(0, m.weeklyReach), m.steps.map((s) => s.rate)) ?? 0) * effectiveCustomerWeeks(m, weeks) - baselineCustomers(m, weeks));
 }
 
 /** Local, one-variable-at-a-time sensitivity; never presents a joint forecast. */
@@ -264,10 +282,11 @@ function playSensitivity(p: PlayLike, e: Economics, weeks: number, cost: number)
 /** Seeded draws of a play's customers (sorted), or the point value when it has no ranges. Extra customers only when baselines are given. */
 export function simulateSamples(m: PlayModel, weeks: number, seed: string): number[] | number {
   const reach = Math.max(0, m.weeklyReach);
+  const customerWeeks = effectiveCustomerWeeks(m, weeks);
   // Invalid rates give no forecast (lint reports them); nothing is reinterpreted.
   if (m.steps.some((s) => Number.isNaN(rateOf(s.rate)))) return 0;
   const base = baselineCustomers(m, weeks);
-  const point = Math.max(0, (funnelCustomers(reach, m.steps.map((s) => s.rate)) ?? 0) * weeks - base);
+  const point = Math.max(0, (funnelCustomers(reach, m.steps.map((s) => s.rate)) ?? 0) * customerWeeks - base);
   const ranged = m.weeklyReachLow !== undefined || m.steps.some((s) => s.low !== undefined || s.high !== undefined);
   if (!ranged) return point;
   const rng = createRng(seedOf(seed));
@@ -275,9 +294,9 @@ export function simulateSamples(m: PlayModel, weeks: number, seed: string): numb
   const rH = Math.max(reach, m.weeklyReachHigh ?? reach);
   const out: number[] = [];
   // Baseline people per reached person (Π baseline rates): scales with each draw's reach.
-  const basePer = reach > 0 ? base / (reach * weeks) : 0;
+  const basePer = reach > 0 && customerWeeks > 0 ? base / (reach * customerWeeks) : 0;
   for (let i = 0; i < RUNS; i++) {
-    const people = tri(rng.next(), rL, reach, rH) * weeks;
+    const people = tri(rng.next(), rL, reach, rH) * customerWeeks;
     let c = people;
     for (const s of m.steps) {
       const mode = s.rate;
@@ -301,7 +320,8 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   const invalidInputs = [...p.model.steps.filter((s) => Number.isNaN(rateOf(s.rate))).map((s) => s.name), ...(Number.isNaN(rateOf(e.grossMargin)) ? ["margin"] : [])];
   const rates = p.model.steps.map((s) => rateOf(s.rate));
   const incremental = p.model.steps.some((s) => s.baselineRate !== undefined);
-  const customers = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * weeks - baselineCustomers(p.model, weeks));
+  const customerWeeks = effectiveCustomerWeeks(p.model, weeks);
+  const customers = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * customerWeeks - baselineCustomers(p.model, weeks));
   const draws = opts.pointOnly ? customersPoint(p.model, weeks) : simulateSamples(p.model, weeks, `${p.name}|${p.kind}`);
   const range = typeof draws === "number" ? { p10: draws, p50: draws, p90: draws } : { p10: quantile(draws, 0.1), p50: quantile(draws, 0.5), p90: quantile(draws, 0.9) };
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
@@ -584,9 +604,10 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis; simulated CAC P10–P90 ${usd(m.cacRange.p10)}–${usd(m.cacRange.p90)}${m.cacRange.p90 === null ? ", unbounded when a draw has no customers" : ""}), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
+      ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis; simulated CAC P10–P90 ${usd(m.cacRange.p10)}–${usd(m.cacRange.p90)}${m.cacRange.p90 === null ? ", unbounded when a draw has no customers" : ""}), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${p.model.rampWeeks ? `; reach ramps to full volume over ${p.model.rampWeeks} weeks` : ""}${p.model.salesLagDays ? `; allows ${p.model.salesLagDays} days for paid conversion` : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
     ...rows.flatMap(({ m }) => m.sensitivity.slice(0, 3).map((s) => `- SENSITIVITY · ${m.name} · ${s.driver} (one input at a time, not a joint forecast): ${s.metric === "net_contribution_12m" ? "12-month net contribution" : "customers"} is ${s.metric === "net_contribution_12m" ? usd(s.atLow) : roundCount(s.atLow)} at low, ${s.metric === "net_contribution_12m" ? usd(s.atMode) : roundCount(s.atMode)} at most-likely, ${s.metric === "net_contribution_12m" ? usd(s.atHigh) : roundCount(s.atHigh)} at high.`)),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
+    "- Timing assumptions: specified ramp and sales lag are applied to customer forecasts; costs still cover the full planned period. Missing ramp or lag means immediate full volume or immediate paid conversion.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
     ...portfolioLine(out, { ...(limits ?? {}), horizonDays: h }, usd),
     `- North Star target = ≈${Math.round(total)} new customers by day ${h}: what these plays support (a scenario), not the owner's goal.`,

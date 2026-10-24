@@ -6,7 +6,7 @@ import { breakevenCpc, cacMedia, clicks, contributionMonth, contributionOver, fu
 /** S3 (REQ-MATH): the spec §8.3 reference fixture plus the edge cases. */
 const DAYS_PER_MONTH = 365.25 / 12;
 const ref = { revenuePerCustomerMonthUsd: 30, grossMargin: 0.8, monthlyChurn: 0.05, basis: "reference" };
-const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps: { name: string; rate: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number }> = {}) => {
+const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps: { name: string; rate: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number; rampWeeks: number; salesLagDays: number }> = {}) => {
   const horizonDays = over.horizonDays ?? DAYS_PER_MONTH;
   return {
     name: "Search ads",
@@ -14,7 +14,7 @@ const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps
     unit: "paying customers",
     horizonDays,
     // 300 clicks over one month, spread by week.
-    model: { weeklyReach: over.weeklyReach ?? 300 / (DAYS_PER_MONTH / 7), steps: over.steps ?? [{ name: "signup", rate: 0.08 }, { name: "paid", rate: 0.25 }], monthlySpendUsd: over.monthlySpendUsd ?? 600, ownerHoursPerWeek: over.ownerHoursPerWeek ?? 0 },
+    model: { weeklyReach: over.weeklyReach ?? 300 / (DAYS_PER_MONTH / 7), steps: over.steps ?? [{ name: "signup", rate: 0.08 }, { name: "paid", rate: 0.25 }], monthlySpendUsd: over.monthlySpendUsd ?? 600, ownerHoursPerWeek: over.ownerHoursPerWeek ?? 0, ...(over.rampWeeks !== undefined ? { rampWeeks: over.rampWeeks } : {}), ...(over.salesLagDays !== undefined ? { salesLagDays: over.salesLagDays } : {}) },
   };
 };
 
@@ -120,6 +120,28 @@ describe("edge cases", () => {
     expect(three.costUsd / week.costUsd).toBeCloseTo(3 / 7, 10);
     // Spend follows calendar months (30.44 days), not 4.33 weeks.
     expect(playMaths(refPlay(), ref).costUsd).toBeCloseTo(600, 6);
+  });
+
+  it("models gradual reach and paid-conversion lag without discounting the planned cost", () => {
+    const base = refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 },], monthlySpendUsd: 700 });
+    const immediate = playMaths(base, ref);
+    const ramped = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, rampWeeks: 4 }), ref);
+    const delayed = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, salesLagDays: 7 }), ref);
+    const both = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, rampWeeks: 4, salesLagDays: 7 }), ref);
+    expect(immediate.customers).toBeCloseTo(40, 9);
+    expect(ramped.customers).toBeCloseTo(20, 9);
+    expect(delayed.customers).toBeCloseTo(30, 9);
+    expect(both.customers).toBeCloseTo(11.25, 9);
+    expect([ramped.costUsd, delayed.costUsd, both.costUsd]).toEqual([immediate.costUsd, immediate.costUsd, immediate.costUsd]);
+    expect(lockedNumbers({ economics: ref, plays: [refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], rampWeeks: 4, salesLagDays: 7 })] })).toContain("reach ramps to full volume over 4 weeks; allows 7 days for paid conversion");
+  });
+
+  it("does not count paid conversions that fall after the forecast horizon", () => {
+    const p = refPlay({ horizonDays: 7, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], salesLagDays: 7 });
+    const m = playMaths(p, ref);
+    expect(m.customers).toBe(0);
+    expect(m.costUsd).toBeGreaterThan(0);
+    expect(m.cacUsd).toBeNull();
   });
 
   it("unprofitable action is a hard economics finding", () => {

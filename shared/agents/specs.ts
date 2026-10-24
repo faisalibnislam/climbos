@@ -119,6 +119,9 @@ export const PlaySchema = z.object({
     weeklyReach: z.number(),
     weeklyReachLow: z.number(),
     weeklyReachHigh: z.number(),
+    /** Optional scenario inputs; omitted values mean immediate scale and paid conversion. */
+    rampWeeks: z.number().min(0).max(365).optional().describe("Weeks until this play reaches its planned weekly reach. Include only when supported by business evidence or an explicitly labeled scenario assumption."),
+    salesLagDays: z.number().min(0).max(365).optional().describe("Days from reaching a prospect to paid conversion. Include only when supported by business evidence or an explicitly labeled scenario assumption."),
     reachSource: SourceTagSchema,
     /**
      * Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from.
@@ -170,7 +173,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.16-material-conflict-gate";
+export const ENGINE_VERSION = "v3.17-ramp-and-sales-lag";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
