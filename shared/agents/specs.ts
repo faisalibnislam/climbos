@@ -511,7 +511,26 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
       recommendation: z.string(),
       priority: z.enum(["high", "medium", "low"]),
     })).max(12),
-    contentMixSuggestions: z.array(z.string()).max(8),
+    contentMixSuggestions: z.array(z.object({
+      platform: z.enum(["instagram", "facebook", "linkedin", "x", "tiktok", "youtube", "pinterest"]),
+      format: z.string().trim().min(2).max(80),
+      concept: z.string().trim().min(8).max(240),
+      fitHypothesis: z.string().trim().min(8).max(300),
+      basis: z.enum(["sampled_post_pattern", "business_fit_hypothesis"]),
+      sourceArtifactIds: z.array(z.string()).max(3),
+      testSignal: z.string().trim().min(2).max(160),
+    }).superRefine((suggestion, ctx) => {
+      if (suggestion.basis === "sampled_post_pattern" && suggestion.sourceArtifactIds.length === 0) {
+        ctx.addIssue({ code: "custom", path: ["sourceArtifactIds"], message: "A sampled-post pattern must cite at least one supplied post ID." });
+      }
+    })).max(8),
+    /** Attached by the trusted audit pipeline after model output is validated. */
+    reviewedPosts: z.array(z.object({
+      sourceArtifactId: z.string(),
+      platform: z.string().max(40),
+      sourceType: z.enum(["climbos", "facebook", "instagram"]),
+      sourceUrl: z.string().optional(),
+    })).max(30).optional(),
     coverage: z.array(z.object({
       source: z.enum(["climbos", "facebook", "instagram", "linkedin"]),
       state: z.enum(["reviewed", "not_connected", "not_authorized", "unavailable", "no_posts"]),
@@ -1870,7 +1889,32 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   };
   out.findings.forEach((finding, i) => checkQuote(finding.sourceUrl, finding.evidenceQuote, `findings[${i}].evidenceQuote`));
   out.prioritizedFixes.forEach((fix, i) => checkQuote(fix.pageUrl, fix.evidenceQuote, `prioritizedFixes[${i}].evidenceQuote`));
-  return [...lintAvailableSourceUrls(refs, input), ...quoteIssues, ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
+  const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
+  const suppliedPosts = new Map<string, string>();
+  if (socialBlock?.[1]) {
+    try {
+      const rows: unknown = JSON.parse(socialBlock[1]);
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (!row || typeof row !== "object") continue;
+          const post = row as { artifactId?: unknown; platform?: unknown };
+          if (typeof post.artifactId === "string" && typeof post.platform === "string") suppliedPosts.set(post.artifactId, post.platform);
+        }
+      }
+    } catch {
+      // Malformed supplied context must not validate model-selected post references.
+    }
+  }
+  const socialSourceIssues: LintIssue[] = [];
+  out.socialReview.findings.forEach((finding, i) => {
+    if (suppliedPosts.get(finding.sourceArtifactId) !== finding.platform) {
+      socialSourceIssues.push({ severity: "error", rule: "social_post_source", message: "Social findings must cite the exact supplied post ID and its platform.", path: `socialReview.findings[${i}].sourceArtifactId` });
+    }
+  });
+  out.socialReview.contentMixSuggestions.forEach((suggestion, i) => suggestion.sourceArtifactIds.forEach((id, sourceIndex) => {
+    if (!suppliedPosts.has(id)) socialSourceIssues.push({ severity: "error", rule: "social_post_source", message: "Content-mix evidence must use a post ID supplied to this audit.", path: `socialReview.contentMixSuggestions[${i}].sourceArtifactIds[${sourceIndex}]` });
+  }));
+  return [...lintAvailableSourceUrls(refs, input), ...quoteIssues, ...socialSourceIssues, ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
 }
 
 /* ---------------- Rubrics ---------------- */

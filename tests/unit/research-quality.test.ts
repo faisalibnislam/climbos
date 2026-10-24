@@ -159,13 +159,19 @@ describe("research source assessment", () => {
     ]);
   });
 
-  it("requires social recommendations to carry an artifact source and keeps format ideas separate", () => {
+  it("requires platform-specific social ideas and binds sampled-post patterns to supplied evidence", () => {
+    const socialPost = { artifactId: "artifact-1", platform: "linkedin" };
+    const socialInput = { task: "Review social posts", brief: "Example Co", facts: [], untrustedContext: `<untrusted_content source="conversion_audit_social_posts">${JSON.stringify([socialPost])}</untrusted_content>` };
+    const suggestion = { platform: "linkedin", format: "customer-question text post", concept: "Answer one common onboarding question in a short post.", fitHypothesis: "A practical answer may suit the buyer's evaluation stage; this is not performance evidence.", basis: "sampled_post_pattern", sourceArtifactIds: ["artifact-1"], testSignal: "Qualified replies; establish a baseline first." };
     const parsed = ConversionAuditV2Schema.parse({
       findings: [], quickWins: [], clarityVerdict: "The offer is specific.", messageMatch: "Not measured.", prioritizedFixes: [],
-      socialReview: { summary: "Reviewed two published posts.", findings: [{ sourceArtifactId: "artifact-1", platform: "linkedin", observation: "Both posts use the same format.", recommendation: "Test a customer-question post.", priority: "medium" }], contentMixSuggestions: ["Try an educational carousel as a hypothesis."] },
+      socialReview: { summary: "Reviewed one published post.", findings: [{ sourceArtifactId: "artifact-1", platform: "linkedin", observation: "The sample uses one format.", recommendation: "Test a customer-question post.", priority: "medium" }], contentMixSuggestions: [suggestion] },
     });
     expect(parsed.socialReview.findings[0]?.sourceArtifactId).toBe("artifact-1");
-    expect(parsed.socialReview.contentMixSuggestions).toHaveLength(1);
+    expect(lintConversionAuditSources(parsed, socialInput)).toEqual([]);
+    const wrongSource = ConversionAuditV2Schema.parse({ ...parsed, socialReview: { ...parsed.socialReview, contentMixSuggestions: [{ ...suggestion, sourceArtifactIds: ["invented-post"] }] } });
+    expect(lintConversionAuditSources(wrongSource, socialInput)).toMatchObject([{ severity: "error", rule: "social_post_source", path: "socialReview.contentMixSuggestions[0].sourceArtifactIds[0]" }]);
+    expect(() => ConversionAuditV2Schema.parse({ ...parsed, socialReview: { ...parsed.socialReview, contentMixSuggestions: [{ ...suggestion, sourceArtifactIds: [] }] } })).toThrow();
     expect(() => ConversionAuditV2Schema.parse({ findings: [], quickWins: [], clarityVerdict: "", messageMatch: "", prioritizedFixes: [], socialReview: { summary: "", findings: [{ platform: "linkedin", observation: "x", recommendation: "y", priority: "low" }], contentMixSuggestions: [] } })).toThrow();
   });
 

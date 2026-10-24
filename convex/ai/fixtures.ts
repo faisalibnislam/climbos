@@ -279,7 +279,7 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         prioritizedFixes: [
           { fix: "Make the next step clear on the homepage.", pageUrl: ctx.website ?? "", why: "A visitor should be able to tell what to do after understanding the offer.", effort: "small", expectedEffect: "Visitors may find the next step more easily; any conversion effect is unknown.", contentStructure: ["Main benefit", "What the visitor can do", "One next step"], sampleCopy: "Start with the form your business needs.", uxChanges: ["Keep the primary next step consistent between the headline and button."], measurementPlan: "Record the current qualified signup rate and its denominator before the change; compare the same metric and traffic source afterward." },
         ],
-        socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: ["Test a platform-native educational post and compare qualified responses with the current baseline."] },
+        socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: [{ platform: "linkedin", format: "educational text post", concept: "Answer one question a likely buyer asks before choosing a form tool.", fitHypothesis: "A practical explanation could fit a business buyer; this demo is not evidence about the workspace or expected results.", basis: "business_fit_hypothesis", sourceArtifactIds: [], testSignal: "Track qualified replies after establishing a baseline." }] },
       };
     case "retention_plan":
       return {
