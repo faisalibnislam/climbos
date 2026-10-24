@@ -109,7 +109,7 @@ describe("learning from results", () => {
   it("measures each workspace and pools by type only with 5+ workspaces", async () => {
     const t = setup();
     const orgs: Id<"organizations">[] = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const u = await asNewUser(t, `learn${i}@example.com`);
       const { orgId } = await u.client.mutation(api.orgs.createWorkspace, { businessName: `Learn ${i}` });
       orgs.push(orgId as Id<"organizations">);
@@ -122,11 +122,12 @@ describe("learning from results", () => {
     expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "all"))).toBe(false);
     const ctx0 = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
     expect(ctx0).toContain("THIS BUSINESS 5%");
-    expect(ctx0).toMatch(/5 workspaces, n=500/);
-    // With only 4 contributing, nothing pooled is published.
+    expect(ctx0).toMatch(/~100\/~1000, 10\+ workspaces/);
+    expect(ctx0).toMatch(/each workspace contributes at most 100 trials/);
+    // With only 9 contributing, nothing pooled is published.
     await t.run(async (ctx) => {
       const p = await ctx.db.query("landingPages").collect();
-      await ctx.db.patch(p[4]._id, { views: 0, leads: 0 });
+      await ctx.db.patch(p[9]._id, { views: 0, leads: 0 });
     });
     await t.action(internal.learning.recompute, {});
     expect(await t.query(internal.learning.contextFor, { orgId: orgs[0] })).not.toMatch(/workspaces, n=/);

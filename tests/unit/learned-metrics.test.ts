@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { learningCounts, METRIC_DEFS, outreachCohortMature, OUTREACH_REPLY_WINDOW_DAYS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
+import { boundedPoolContribution, learningCounts, METRIC_DEFS, outreachCohortMature, OUTREACH_REPLY_WINDOW_DAYS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
 
 /** S4 (REQ-LEARN-01..03): windows match, reply ≠ interest, booked ≠ attended, counts with ranges. */
 const empty = { outreach: [], bookingOutcomes: [], landing: [], chats: { total: 0, withEmail: 0 }, reviews: { sent: 0, clicked: 0 }, bio: null };
@@ -53,6 +53,14 @@ describe("learned metrics", () => {
     expect(line).toMatch(/4\/10 minimum trials/);
     expect(line).toMatch(/cautious planning rate .* Wilson lower bound/);
     expect(line).toMatch(/observed, not proof of cause/);
+  });
+
+  it("bounds a workspace's pooled influence and rounds pooled counts for release", () => {
+    expect(boundedPoolContribution(1_000, 100)).toEqual({ trials: 100, successes: 10 });
+    const line = rateLine("landing_lead", { label: "agency businesses", workspaces: 17 }, { trials: 1_000, successes: 95 });
+    expect(line).toContain("10% (~100/~1000, 10+ workspaces");
+    expect(line).not.toContain("95/1000");
+    expect(line).toContain("at most 100 trials");
   });
 });
 

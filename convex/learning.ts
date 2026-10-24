@@ -2,16 +2,16 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, outreachCohortMature, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
+import { boundedPoolContribution, LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, outreachCohortMature, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
 
 /**
  * Loop 2 — learn from results. Weekly, every workspace's real outcomes
  * (replies, bookings, leads, clicks) become rates the planner uses before
- * vendor benchmarks. Pooled rates by business type are anonymous: only counts,
- * and only published when at least 5 workspaces contribute.
+ * vendor benchmarks. Pooled rates by business type contain only bounded,
+ * rounded counts and require at least 10 contributing workspaces.
  */
 
-const K_ANON = 5;
+const K_ANON = 10;
 const DAY = 86_400_000;
 const WINDOW = LEARN_WINDOW_DAYS * DAY;
 
@@ -126,10 +126,11 @@ export const recompute = internalAction({
         // only mature samples are eligible to contribute to cross-workspace pools.
         rows.push({ scope: `org:${orgId}`, metric, workspaces: 1, ...x });
         if (x.trials < METRICS[metric].minTrials) continue;
+        const contribution = boundedPoolContribution(x.trials, x.successes);
         for (const scope of [`type:${type}`]) {
           const k = `${scope}|${metric}`;
           const p = pooled.get(k) ?? { workspaces: 0, trials: 0, successes: 0 };
-          pooled.set(k, { workspaces: p.workspaces + 1, trials: p.trials + x.trials, successes: p.successes + x.successes });
+          pooled.set(k, { workspaces: p.workspaces + 1, trials: p.trials + contribution.trials, successes: p.successes + contribution.successes });
         }
       }
     }

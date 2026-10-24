@@ -32,6 +32,13 @@ export interface MetricDef {
 }
 
 export const LEARN_WINDOW_DAYS = 120;
+export const MAX_POOLED_TRIALS_PER_WORKSPACE = 100;
+
+/** Bound one workspace's influence before pooling; keep an approximately proportional success count. */
+export function boundedPoolContribution(trials: number, successes: number, maxTrials = MAX_POOLED_TRIALS_PER_WORKSPACE): { trials: number; successes: number } {
+  if (!(trials > maxTrials)) return { trials: Math.max(0, trials), successes: Math.min(Math.max(0, trials), Math.max(0, successes)) };
+  return { trials: maxTrials, successes: Math.min(maxTrials, Math.max(0, Math.round((successes / trials) * maxTrials))) };
+}
 
 export const METRIC_DEFS: Record<string, MetricDef> = {
   // Any reply, including "no thanks": not a measure of interest on its own.
@@ -107,5 +114,9 @@ export function rateLine(metric: string, scope: "own" | { workspaces: number; la
       : "";
     return `- ${def.label}: THIS BUSINESS ${pct(rate)} (${r.successes}/${r.trials}, ${window}${range}${cautious}) [first-party counts of ${def.counts}; observed, not proof of cause]`;
   }
-  return `- ${def.label}: ClimbOS ${scope.label} ${pct(rate)} (${scope.workspaces} workspaces, n=${r.trials}, ${window}) [pooled counts; compare offer, channel, audience, market and stage before transferring]`;
+  const roundedPct = (x: number) => `${Math.round(x / 0.05) * 5}%`;
+  const roundedCount = (x: number) => Math.round(x / 10) * 10;
+  const workspaceBand = scope.workspaces >= 20 ? `${Math.floor(scope.workspaces / 10) * 10}+` : "10+";
+  const pooledRange = ci ? `, rounded 90% range ${roundedPct(ci.low)}–${roundedPct(ci.high)}` : "";
+  return `- ${def.label}: ClimbOS ${scope.label} ${roundedPct(rate)} (~${roundedCount(r.successes)}/~${roundedCount(r.trials)}, ${workspaceBand} workspaces, ${window}${pooledRange}) [privacy-rounded pooled counts; each workspace contributes at most ${MAX_POOLED_TRIALS_PER_WORKSPACE} trials; compare offer, channel, audience, market and stage before transferring]`;
 }
