@@ -1075,6 +1075,8 @@ export default defineSchema({
     lastHash: v.optional(v.string()),
     /** Normalised text of the last check (homepage + pricing), for the next diff. */
     lastText: v.optional(v.string()),
+    /** Pages included in lastText, retained so future change summaries can cite their origin. */
+    lastSourceUrls: v.optional(v.array(v.string())),
     lastError: v.optional(v.string()),
     createdAt: v.number(),
   })
@@ -1088,6 +1090,8 @@ export default defineSchema({
     summary: v.string(),
     bullets: v.array(v.string()),
     soWhat: v.optional(v.string()),
+    /** Pages fetched for the comparison; the model summary is an interpretation of these sources. */
+    sourceUrls: v.optional(v.array(v.string())),
     at: v.number(),
   }).index("by_org_at", ["orgId", "at"]),
 

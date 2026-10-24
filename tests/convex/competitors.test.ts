@@ -43,7 +43,11 @@ describe("competitor watch", () => {
     o = await owner.client.query(api.competitors.overview, { slug });
     expect(o.changes).toHaveLength(1);
     expect(o.changes[0].name).toBe("Rival");
+    expect(o.changes[0].sourceUrls).toEqual(["https://rival.example"]);
+    expect(o.changes[0].at).toBeTruthy();
     const report = await owner.client.query(api.reports.weekly, { slug });
     expect(report.competitors).toHaveLength(1);
+    expect(report.competitors[0].sourceUrls).toEqual(["https://rival.example"]);
+    expect(report.competitors[0].observedAt).toBeTruthy();
   });
 });

@@ -40,7 +40,7 @@ export interface WeeklyReport {
   lines: ReportLine[];
   next: string[];
   /** Competitor watch: what changed this week. */
-  competitors?: { name: string; summary: string }[];
+  competitors?: { name: string; summary: string; sourceUrls?: string[]; observedAt?: number }[];
 }
 
 const LABELS: Record<keyof WeekCounts, string> = {

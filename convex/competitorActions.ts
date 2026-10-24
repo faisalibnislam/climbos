@@ -25,11 +25,12 @@ export async function readSitePage(url: string): Promise<{ page: ExtractedPage; 
 }
 
 /** Homepage plus the pricing page if the homepage links to one (own fetcher, no credits). */
-export async function readSite(url: string): Promise<{ text: string } | { error: string }> {
+export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[] } | { error: string }> {
   const home = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
   if (!home?.ok) return { error: home?.error ?? "Couldn't reach the site" };
   const page = extractPageContent(home.body, home.finalUrl, { maxTextChars: 20_000, maxLinks: 80 });
   const parts = [page.title, page.metaDescription, ...page.headings.map((h) => h.text), page.text];
+  const sourceUrls = [home.finalUrl];
   const pricing = page.links.map((l) => l.url).find((u) => {
     try {
       return new URL(u).origin === new URL(home.finalUrl).origin && /pricing|plans|price/i.test(new URL(u).pathname);
@@ -41,10 +42,11 @@ export async function readSite(url: string): Promise<{ text: string } | { error:
     const p = await safeFetchPage({ url: pricing, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
     if (p?.ok) {
       const pp = extractPageContent(p.body, p.finalUrl, { maxTextChars: 20_000 });
+      sourceUrls.push(p.finalUrl);
       parts.push("PRICING PAGE", ...pp.headings.map((h) => h.text), pp.text, ...pp.jsonLdPrices.map((x) => `${x.name ?? "Offer"}: ${x.price} ${x.currency ?? ""}`));
     }
   }
-  return { text: parts.filter(Boolean).join("\n") };
+  return { text: parts.filter(Boolean).join("\n"), sourceUrls: [...new Set(sourceUrls)] };
 }
 
 const Summary = z.object({ changed: z.boolean(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().optional() });
@@ -58,9 +60,9 @@ export const check = internalAction({
   args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")) },
   handler: async (ctx, { orgId, watchIds }) => {
     const watches = await ctx.runQuery(internal.competitors.watchesFor, { watchIds });
-    const changed: { id: Id<"competitorWatches">; name: string; before: string[]; after: string[] }[] = [];
+    const changed: { id: Id<"competitorWatches">; name: string; before: string[]; after: string[]; sourceUrls: string[] }[] = [];
     for (const w of watches) {
-      const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${w.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}` } : await readSite(w.url);
+      const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${w.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}`, sourceUrls: [w.url] } : await readSite(w.url);
       if ("error" in site) {
         await ctx.runMutation(internal.competitors.saveCheck, { watchId: w._id, error: site.error });
         continue;
@@ -69,9 +71,9 @@ export const check = internalAction({
       const hash = await textHash(lines);
       if (w.lastHash && w.lastHash !== hash && w.lastText) {
         const before = w.lastText.split("\n");
-        if (meaningful(diffLines(before, lines))) changed.push({ id: w._id, name: w.name, before, after: lines });
+        if (meaningful(diffLines(before, lines))) changed.push({ id: w._id, name: w.name, before, after: lines, sourceUrls: [...new Set([...(w.lastSourceUrls ?? [w.url]), ...site.sourceUrls])] });
       }
-      await ctx.runMutation(internal.competitors.saveCheck, { watchId: w._id, hash, text: lines.join("\n") });
+      await ctx.runMutation(internal.competitors.saveCheck, { watchId: w._id, hash, text: lines.join("\n"), sourceUrls: site.sourceUrls });
     }
     if (!changed.length) return;
     const runId = await ctx.runMutation(internal.competitors.startSummaryRun, { orgId, count: changed.length });
@@ -91,7 +93,7 @@ export const check = internalAction({
       if (!r.ok) continue;
       const parsed = Summary.safeParse(r.output);
       if (!parsed.success || !parsed.data.changed || !parsed.data.summary.trim()) continue;
-      await ctx.runMutation(internal.competitors.recordChange, { orgId, watchId: c.id, name: c.name, summary: parsed.data.summary, bullets: parsed.data.bullets, soWhat: parsed.data.soWhat });
+      await ctx.runMutation(internal.competitors.recordChange, { orgId, watchId: c.id, name: c.name, summary: parsed.data.summary, bullets: parsed.data.bullets, soWhat: parsed.data.soWhat, sourceUrls: c.sourceUrls });
       ok++;
     }
     await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified", userMessage: ok ? undefined : "No meaningful changes this time." });

@@ -23,12 +23,12 @@ export const overview = query({
     const watches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    const watched = new Set(watches.map((w) => w.url));
+    const watched = new Set(watches.map((w) => normaliseUrl(w.url) ?? w.url));
     const suggested = (business?.insights?.competitors ?? []).filter((c) => c.url && !watched.has(normaliseUrl(c.url) ?? "")).map((c) => ({ name: c.name, url: c.url! }));
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
-      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, at: c.at })),
+      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], at: c.at })),
       suggested: suggested.slice(0, 6),
     };
   },
@@ -92,10 +92,10 @@ export const watchesFor = internalQuery({
 });
 
 export const saveCheck = internalMutation({
-  args: { watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), error: v.optional(v.string()) },
-  handler: async (ctx, { watchId, hash, text, error }) => {
+  args: { watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), error: v.optional(v.string()) },
+  handler: async (ctx, { watchId, hash, text, sourceUrls, error }) => {
     if (!(await ctx.db.get(watchId))) return;
-    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastError: undefined });
+    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastSourceUrls: sourceUrls?.slice(0, 5), lastError: undefined });
   },
 });
 
@@ -114,10 +114,10 @@ export const startSummaryRun = internalMutation({
 });
 
 export const recordChange = internalMutation({
-  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()) },
+  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())) },
   handler: async (ctx, a) => {
     const now = Date.now();
-    await ctx.db.insert("competitorChanges", { ...a, summary: a.summary.slice(0, 300), bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)), soWhat: a.soWhat?.slice(0, 300), at: now });
+    await ctx.db.insert("competitorChanges", { ...a, sourceUrls: a.sourceUrls?.slice(0, 5), summary: a.summary.slice(0, 300), bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)), soWhat: a.soWhat?.slice(0, 300), at: now });
     await notifyOwners(ctx, a.orgId, `${a.name}: ${a.summary}`.slice(0, 240));
   },
 });

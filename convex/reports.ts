@@ -89,7 +89,11 @@ export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, we
       creditsLeft: balance.available,
     },
   });
-  return { ...report, competitors: changes.map((c) => ({ name: c.name, summary: c.summary })) };
+  const competitors = await Promise.all(changes.map(async (c) => {
+    const watch = await ctx.db.get(c.watchId);
+    return { name: c.name, summary: c.summary, sourceUrls: c.sourceUrls ?? (watch ? [watch.url] : []), observedAt: c.at };
+  }));
+  return { ...report, competitors };
 }
 
 export const weekly = query({
@@ -137,7 +141,7 @@ export const sendWeeklyReportFor = internalAction({
     const { orgName, emails } = await ctx.runQuery(internal.notifications.recipientsFor, { orgId, purpose: "digest", cadence: "weekly" });
     const url = `${process.env.SITE_URL ?? "https://climbos.app"}/app/${data.slug}/results/week`;
     const r = data.report;
-    const md = [r.headline, "", ...r.lines.map((l) => `- **${l.label}:** ${l.value}${l.change ? ` (${l.change > 0 ? "+" : ""}${l.change})` : ""}`), ...(r.competitors?.length ? ["", "## Competitors", ...r.competitors.map((c) => `- **${c.name}:** ${c.summary}`)] : []), ...(r.next.length ? ["", "## Next week", ...r.next.map((n) => `- [ ] ${n}`)] : []), "", `[Open in ClimbOS](${url})`].join("\n");
+    const md = [r.headline, "", ...r.lines.map((l) => `- **${l.label}:** ${l.value}${l.change ? ` (${l.change > 0 ? "+" : ""}${l.change})` : ""}`), ...(r.competitors?.length ? ["", "## Competitors", ...r.competitors.map((c) => `- **${c.name}:** ${c.summary}${c.sourceUrls?.length ? ` [Source](${c.sourceUrls[0]})` : ""}`)] : []), ...(r.next.length ? ["", "## Next week", ...r.next.map((n) => `- [ ] ${n}`)] : []), "", `[Open in ClimbOS](${url})`].join("\n");
     if (data.folevi) await ctx.runAction(internal.airlyActions.saveReportToFolevi, { orgId, title: `${orgName}: week of ${new Date(r.weekStart).toISOString().slice(0, 10)}`, markdown: md, key: `climbos-week-${orgId}-${r.weekStart}` });
     if (!emails.length) return false;
     const mail = weeklyReportEmail({ orgName, report: data.report, url });
