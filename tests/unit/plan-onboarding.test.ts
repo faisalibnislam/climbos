@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLIMB_TOOLS, localTime } from "../../convex/lib/climbTools";
+import { CLIMB_TOOLS, climbToolDefs, localTime } from "../../convex/lib/climbTools";
 import { localWeek, weekStartIn, weekStartUtc } from "../../shared/report/weekly";
 import { wishesFrom } from "../../src/components/app/wish/pairing";
 
@@ -65,8 +65,31 @@ describe("Climb AI times and costs", () => {
   it("rejects dates it can't read, and summarizes schedules in local time", () => {
     const schedule = CLIMB_TOOLS.find((t) => t.name === "schedule_draft")!;
     expect(schedule.input.safeParse({ artifactId: "x", when: "next tuesday-ish" }).success).toBe(false);
+    expect(schedule.input.safeParse({ artifactId: "x", when: "2026-02-31T09:00:00Z" }).success).toBe(false);
+    expect(schedule.input.safeParse({ artifactId: "x", when: "2026-10-20T09:00:00+15:00" }).success).toBe(false);
     const ok = schedule.input.parse({ artifactId: "x", when: "2026-10-20T09:00:00+01:00" });
     expect(schedule.summarize!(ok, { timeZone: "Europe/London" })).toMatch(/Tue, Oct 20.*9:00\s?AM/);
+  });
+
+  it("bounds read and research inputs before dispatch", () => {
+    const input = (name: string) => CLIMB_TOOLS.find((tool) => tool.name === name)!.input;
+    expect(input("list_drafts").safeParse({ limit: 26 }).success).toBe(false);
+    expect(input("list_drafts").safeParse({ limit: 10 }).success).toBe(true);
+    expect(input("get_results").safeParse({ days: 6 }).success).toBe(false);
+    expect(input("get_results").safeParse({ days: 365 }).success).toBe(true);
+    expect(input("get_weekly_report").safeParse({ weeksAgo: 13 }).success).toBe(false);
+    expect(input("find_customers").safeParse({ count: 31 }).success).toBe(false);
+    expect(input("review_prospects").safeParse({ prospectIds: [] , stage: "approved" }).success).toBe(false);
+  });
+
+  it("constrains autopilot schedules and exports valid model tool schemas", () => {
+    const autopilot = CLIMB_TOOLS.find((tool) => tool.name === "set_autopilot")!.input;
+    const base = { enabled: true, mode: "always_ask" as const };
+    expect(autopilot.safeParse({ ...base, channels: [{ channel: "linkedin", postsPerWeek: 7 }] }).success).toBe(false);
+    expect(autopilot.safeParse({ ...base, channels: [{ channel: "linkedin", postsPerWeek: 6 }, { channel: "linkedin", postsPerWeek: 1 }] }).success).toBe(false);
+    expect(autopilot.safeParse({ ...base, channels: [{ channel: "linkedin", postsPerWeek: 6 }, { channel: "instagram", postsPerWeek: 6 }, { channel: "facebook", postsPerWeek: 6 }, { channel: "tiktok", postsPerWeek: 4 }] }).success).toBe(false);
+    expect(autopilot.safeParse({ ...base, channels: [{ channel: "linkedin", postsPerWeek: 2 }] }).success).toBe(true);
+    expect(() => climbToolDefs({ ui: true })).not.toThrow();
   });
 
   it("asks before refreshing the plan, with the credit cost", () => {

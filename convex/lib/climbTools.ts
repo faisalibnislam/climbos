@@ -66,16 +66,52 @@ const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), chan
 const HttpUrlSchema = z.string().url().refine((value) => {
   return isHttpUrl(value);
 }, "Expected an HTTP(S) URL");
-const ImageListOutputSchema = z.object({ website: z.string().nullable(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.json().nullable() })) });
-const InboxOutputSchema = z.object({ open: z.number().int().nonnegative(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
-const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
-const CompetitorsOutputSchema = z.object({ watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema })), changes: z.array(z.json()) });
-const LinksOutputSchema = z.object({ weekTotal: z.number(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
+const ImageListOutputSchema = z.object({ website: z.string().nullable(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.json().nullable() })) });
+const InboxOutputSchema = z.object({ openReturned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
+const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), truncated: z.boolean(), coverage: z.string(), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
+const CompetitorsOutputSchema = z.object({
+  watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
+  changes: z.array(z.json()),
+  suggested: z.array(z.json()),
+  coverage: z.object({ watched: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(), changesReturned: z.number().int().nonnegative(), changesTruncated: z.boolean(), note: z.string() }),
+});
+const LinksOutputSchema = z.object({ weekTotal: z.number(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
 const OverviewOutputSchema = z.object({ business: z.json(), goal: z.json(), plan: z.json(), waitingForApproval: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string() })), approvalsCount: z.number(), next: z.array(z.json()), recentJobs: z.array(z.object({ id: z.string(), title: z.string(), status: z.string() })), paused: z.boolean() });
 const PlanOutputSchema = z.object({ goal: z.json(), plan: z.json().optional(), status: z.string().optional(), summary: z.string().optional(), diagnosis: z.string().optional(), northStar: z.json().optional(), plays: z.array(z.json()).optional(), weekOne: z.array(z.string()).optional(), channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(), experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional() });
 const AutopilotOutputSchema = z.object({ settings: z.json(), trust: z.array(z.json()), connected: z.array(z.string()), weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })) });
+const ResultsOutputSchema = z.object({
+  span: z.number().int().min(7).max(365),
+  historyLimited: z.boolean(),
+  from: z.string(),
+  to: z.string(),
+  currency: z.string(),
+  timezone: z.string(),
+  isDemo: z.boolean(),
+  metrics: z.array(z.object({
+    key: z.enum(["visits", "signups", "paid_conversions", "revenue"]),
+    label: z.string(),
+    unit: z.string(),
+    definition: z.string(),
+    source: z.string(),
+    hasData: z.boolean(),
+    total: z.number(),
+    previousTotal: z.number().nullable(),
+    points: z.array(z.object({ date: z.string(), value: z.number() })),
+    freshness: z.number().nullable(),
+    sourceName: z.string().nullable(),
+    isFixture: z.boolean(),
+    currency: z.string().nullable(),
+    timezone: z.string(),
+    partial: z.boolean(),
+    partialReason: z.string().nullable(),
+  })),
+  attribution: z.object({ lastTouch: z.json().nullable(), firstTouch: z.json().nullable(), note: z.string() }),
+  platformClaims: z.json().nullable(),
+  forecasts: z.array(z.object({ id: z.string(), metricKey: z.string(), status: z.string(), horizonDays: z.number(), createdAt: z.number(), isFixture: z.boolean() })),
+  gaps: z.array(z.object({ metric: z.string(), message: z.string(), fix: z.string() })),
+});
 const JobOutputSchema = z.object({ id: z.string(), title: z.string(), kind: z.string(), status: z.string(), roles: z.array(z.string()), brief: z.string().nullable(), createdAt: z.number(), updatedAt: z.number(), estimateMicros: z.number(), actualMicros: z.number(), userMessage: z.string().nullable(), isFixture: z.boolean(), engine: z.string().nullable(), output: z.string().nullable(), steps: z.array(z.object({ label: z.string(), status: z.string(), role: z.string().nullable(), kind: z.string() })), artifacts: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), kind: z.string() })) });
-const ProspectOutputSchema = z.object({ status: z.string(), icp: z.string().nullable(), prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })), emails: z.array(z.object({ day: z.number(), subject: z.string() })), bookingPage: z.string().nullable(), upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })), pipeline: z.json() });
+const ProspectOutputSchema = z.object({ status: z.string(), icp: z.string().nullable(), prospectCount: z.number().int().nonnegative(), prospectsTruncated: z.boolean(), prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.string(), fit: z.json(), timing: z.json() })), emails: z.array(z.object({ day: z.number(), subject: z.string() })), bookingPage: z.string().nullable(), upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })), pipeline: z.json() });
 const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
 const RunIdOutputSchema = z.object({ runId: z.string() });
 const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
@@ -89,6 +125,28 @@ function isHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isIsoDateTimeWithOffset(value: string): boolean {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!parts || !Number.isFinite(Date.parse(value))) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText = "0", zone, , offsetHourText = "0", offsetMinuteText = "0"] = parts;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const calendar = new Date(0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  calendar.setUTCHours(0, 0, 0, 0);
+  const offsetHours = Number(offsetHourText);
+  const offsetMinutes = Number(offsetMinuteText);
+  return calendar.getUTCFullYear() === year
+    && calendar.getUTCMonth() === month - 1
+    && calendar.getUTCDate() === day
+    && Number(hourText) <= 23
+    && Number(minuteText) <= 59
+    && Number(secondText) <= 59
+    && offsetMinutes <= 59
+    && (zone === "Z" || offsetHours < 14 || (offsetHours === 14 && offsetMinutes === 0));
 }
 
 /** URL-bearing fields from tools must not smuggle script, data, or credential URLs into either agent surface. */
@@ -189,7 +247,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Content items (posts, ads, emails, pages), newest first. Filter by status: in_review (waiting for approval), approved, scheduled, published, draft, failed.",
     risk: "read",
     doing: "Looking at your content",
-    input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().optional() }),
+    input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().int().min(1).max(25).optional() }),
     output: DraftListOutputSchema,
     run: async (c, slug, i) => {
       const page = await c.query(api.content.list, { slug, status: i.status, paginationOpts: { numItems: Math.min(i.limit ?? 12, 25), cursor: null } });
@@ -242,7 +300,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Business results over the last N days (traffic, leads, sales and what the team attributes to which channel), with data freshness.",
     risk: "read",
     doing: "Checking your results",
-    input: z.object({ days: z.number().optional() }),
+    input: z.object({ days: z.number().int().min(7).max(365).optional() }),
+    output: ResultsOutputSchema,
     run: async (c, slug, i) => c.query(api.analytics.overview, { slug, days: i.days ?? 30 }),
   }),
   tool({
@@ -273,7 +332,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     output: ImageListOutputSchema,
     run: async (c, slug, i) => {
       const l = await c.query(api.assets.list, { slug, kind: i.kind });
-      return { website: l.website, images: l.assets.slice(0, 40).map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
+      const images = l.assets.slice(0, 40);
+      return { website: l.website, returned: l.assets.length, truncated: l.assets.length > images.length || l.assets.length >= 200, coverage: "Newest 40 assets from a source capped at 200; older assets may be omitted.", images: images.map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
     },
   }),
   tool({
@@ -303,6 +363,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
       return {
         status: o.campaign?.status ?? "none",
         icp: o.campaign?.icp?.summary ?? null,
+        prospectCount: o.prospects.length,
+        prospectsTruncated: o.prospects.length > 40,
         prospects: o.prospects.slice(0, 40).map((p) => ({ id: p.id, company: p.company, why: short(p.why, 140), stage: p.stage, fit: p.fit, timing: p.timing })),
         emails: o.campaign?.sequence.map((s) => ({ day: s.day, subject: s.subject })) ?? [],
         bookingPage: o.page ? `/book/${o.page.slug}` : null,
@@ -322,7 +384,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     output: InboxOutputSchema,
     run: async (c, slug) => {
       const items = await c.query(api.inbox.list, { slug, box: "open" });
-      return { open: items.length, items: items.slice(0, 25).map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
+      const shown = items.slice(0, 25);
+      return { openReturned: items.length, truncated: items.length > shown.length || items.length >= 150, coverage: "Newest 25 open messages from a source capped at 150; older messages may be omitted.", items: shown.map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
     },
   }),
 
@@ -336,7 +399,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     output: PipelineOutputSchema,
     run: async (c, slug) => {
       const p = await c.query(api.crm.list, { slug });
-      return { totals: p.totals, deals: p.deals.slice(0, 40).map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
+      const deals = p.deals.slice(0, 40);
+      return { totals: p.totals, truncated: p.deals.length > deals.length || p.deals.length >= 500, coverage: "Newest 40 deals from a source capped at 500; older deals may be omitted.", deals: deals.map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
     },
   }),
 
@@ -346,7 +410,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "This week's (or a past week's) outcomes vs the week before, competitor changes and what needs the owner.",
     risk: "read",
     doing: "Reading the weekly report",
-    input: z.object({ weeksAgo: z.number().optional() }),
+    input: z.object({ weeksAgo: z.number().int().min(0).max(12).optional() }),
     output: WeeklyReportOutputSchema,
     run: async (c, slug, i) => c.query(api.reports.weekly, { slug, weeksAgo: i.weeksAgo }),
   }),
@@ -361,7 +425,22 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     output: CompetitorsOutputSchema,
     run: async (c, slug) => {
       const o = await c.query(api.competitors.overview, { slug });
-      return { watching: o.watches.map((w) => ({ name: w.name, url: w.url })), changes: o.changes.slice(0, 10) };
+      const failed = o.watches.filter((w) => Boolean(w.lastError)).length;
+      const pending = o.watches.filter((w) => !w.lastError && !w.lastCheckedAt).length;
+      const changes = o.changes.slice(0, 10);
+      return {
+        watching: o.watches.map((w) => ({ name: w.name, url: w.url, status: w.lastError ? "error" as const : w.lastCheckedAt ? "checked" as const : "pending" as const, lastCheckedAt: w.lastCheckedAt, lastError: w.lastError ? short(w.lastError, 200) : null })),
+        changes,
+        suggested: o.suggested,
+        coverage: {
+          watched: o.watches.length,
+          failed,
+          pending,
+          changesReturned: changes.length,
+          changesTruncated: o.changes.length > changes.length || o.changes.length >= 30,
+          note: "No change record means none is recorded in the returned history, not proof that a competitor made no change. Sites with error or pending status were not verified successfully.",
+        },
+      };
     },
   }),
 
@@ -375,7 +454,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     output: LinksOutputSchema,
     run: async (c, slug) => {
       const l = await c.query(api.links.list, { slug });
-      return { weekTotal: l.weekTotal, links: l.links.slice(0, 30).map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
+      const links = l.links.slice(0, 30);
+      return { weekTotal: l.weekTotal, returned: l.links.length, truncated: l.links.length > links.length || l.links.length >= 300, coverage: "Newest 30 links from a source capped at 300; older links may be omitted.", links: links.map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
     },
   }),
 
@@ -386,7 +466,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Research companies that need this business (public web, with evidence) and write the cold emails. Nothing is sent.",
     risk: "draft",
     doing: "Finding customers",
-    input: z.object({ who: z.string().optional(), where: z.string().optional(), count: z.number().optional() }),
+    input: z.object({ who: z.string().max(300).optional(), where: z.string().max(120).optional(), count: z.number().int().min(5).max(30).optional() }),
     output: CampaignStartOutputSchema,
     run: async (c, slug, i) => c.mutation(api.outbound.start, { slug, who: i.who, where: i.where, count: i.count }),
   }),
@@ -396,7 +476,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Mark prospects approved (ready to email) or skipped. Only changes the list; nothing is sent.",
     risk: "draft",
     doing: "Updating your prospect list",
-    input: z.object({ prospectIds: z.array(z.string()), stage: z.enum(["approved", "skipped"]) }),
+    input: z.object({ prospectIds: z.array(z.string()).min(1).max(200), stage: z.enum(["approved", "skipped"]) }),
     output: OkOutputSchema,
     run: async (c, slug, i) => c.mutation(api.outbound.setStage, { slug, prospectIds: i.prospectIds as Id<"prospects">[], stage: i.stage }),
   }),
@@ -517,7 +597,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Schedule an approved draft to publish at a time (ISO 8601 with timezone).",
     risk: "confirm",
     doing: "Scheduling",
-    input: z.object({ artifactId, when: z.string().refine((s) => Number.isFinite(Date.parse(s)), "Use a full date and time with its offset, like 2026-10-20T09:00:00+01:00.") }),
+    input: z.object({ artifactId, when: z.string().refine(isIsoDateTimeWithOffset, "Use a real ISO 8601 date and time with a valid timezone offset, like 2026-10-20T09:00:00+01:00.") }),
     summarize: (i, c) => `Schedule it for ${localTime(Date.parse(i.when), c?.timeZone)}.`,
     run: async (c, slug, i) => c.mutation(api.content.schedule, { slug, artifactId: i.artifactId as Id<"artifacts">, when: Date.parse(i.when) }),
   }),
@@ -547,7 +627,12 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Turn autopilot on or off, or change its mode, channels and posts per week.",
     risk: "confirm",
     doing: "Updating autopilot",
-    input: z.object({ enabled: z.boolean(), mode: z.enum(["always_ask", "trust_ladder", "auto"]), channels: z.array(z.object({ channel: z.enum(CHANNELS), postsPerWeek: z.number().min(0).max(6) })) }),
+    input: z.object({ enabled: z.boolean(), mode: z.enum(["always_ask", "trust_ladder", "auto"]), channels: z.array(z.object({ channel: z.enum(CHANNELS), postsPerWeek: z.number().int().min(0).max(6) })).max(CHANNELS.length) }).superRefine((value, ctx) => {
+      const channels = value.channels.map((item) => item.channel);
+      if (new Set(channels).size !== channels.length) ctx.addIssue({ code: "custom", message: "Choose each channel once.", path: ["channels"] });
+      if (value.channels.reduce((sum, item) => sum + item.postsPerWeek, 0) > 21) ctx.addIssue({ code: "custom", message: "Keep it to 21 posts a week or fewer.", path: ["channels"] });
+      if (value.enabled && value.channels.every((item) => item.postsPerWeek === 0)) ctx.addIssue({ code: "custom", message: "Pick at least one post per week when autopilot is on.", path: ["channels"] });
+    }),
     summarize: (i) => (i.enabled ? `Autopilot on (${i.mode.replace("_", " ")}): ${i.channels.map((c) => `${c.channel} ${c.postsPerWeek}/week`).join(", ")}.` : "Turn autopilot off. Scheduled posts stay scheduled."),
     run: async (c, slug, i) => {
       const cur = await c.query(api.autopilot.get, { slug });
