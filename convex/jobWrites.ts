@@ -3,6 +3,7 @@ import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
 import { EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
+import { assertCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
@@ -468,6 +469,7 @@ export const saveStrategy = internalMutation({
             expert: (() => {
               const x = s as unknown as StrategyV2;
               const savedPlays = (x.plays ?? []).slice(0, 4);
+              assertCurrentExpertGrowthPayload(savedPlays, x.economics);
               const ownerEconomics = x.snapshot?.ownerEconomics as { newCustomersPerMonth?: unknown } | undefined;
               const monthlyBudget = typeof x.snapshot?.monthlyAdBudget === "number" ? x.snapshot.monthlyAdBudget : minorToMajor(goal.monthlyAdBudgetMinor, goal.currency);
               const decisionAnalysis = x.decision && x.economics && savedPlays.length
