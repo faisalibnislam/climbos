@@ -62,8 +62,16 @@ export type InsightsV2 = z.infer<typeof InsightsV2Schema>;
  * limits, e.g. spend or hours), or an assumption (ref = ""). ClimbOS checks these tags after writing.
  */
 export const ProvenanceSchema = z.enum(PROVENANCE);
-/** quote: for research, the exact sentence from the page that states the number (≤ 200 characters); "" otherwise. */
-export const SourceTagSchema = z.object({ source: ProvenanceSchema, ref: z.string(), quote: z.string() });
+/** Research context is copied from the same cited evidence; verifier checks each item before a rate is called sourced. */
+export const SourceTagSchema = z.object({
+  source: ProvenanceSchema,
+  ref: z.string(),
+  /** For research, the exact sentence from the page that states the number (≤ 200 characters); "" otherwise. */
+  quote: z.string(),
+  population: z.string().max(120).optional(),
+  denominator: z.string().max(120).optional(),
+  period: z.string().max(80).optional(),
+});
 
 export const PlaySchema = z.object({
   name: z.string(),
@@ -109,7 +117,7 @@ export const PlaySchema = z.object({
      * Funnel steps from reach to a paying customer; rate = most-likely share passing (0–1), low/high = the cited range; source = where the rate came from.
      * baselineRate = today's rate at a step the play changes (onboarding, checkout, follow-up), so only the extra customers count.
      */
-    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string(), quote: z.string(), baselineRate: z.number().optional() })),
+    steps: z.array(z.object({ name: z.string(), rate: z.number(), low: z.number(), high: z.number(), source: ProvenanceSchema, ref: z.string(), quote: z.string(), population: z.string().max(120).optional(), denominator: z.string().max(120).optional(), period: z.string().max(80).optional(), baselineRate: z.number().optional() })),
     monthlySpendUsd: z.number(),
     spendSource: SourceTagSchema,
     ownerHoursPerWeek: z.number(),
@@ -365,15 +373,22 @@ export function lintCitations(plays: { funnel: string[] }[], evidence: string): 
 }
 
 /** Every sourced number names its source; research must be a page the writer actually read. */
-type LintTag = { source: string; ref: string; quote?: string };
-export function lintProvenance(out: { economics: { sources?: Record<string, LintTag> }; plays: { model?: { reachSource?: LintTag; spendSource?: LintTag; hoursSource?: LintTag; steps?: { name: string; source?: string; ref?: string; quote?: string }[] } }[] }, evidence: string): LintIssue[] {
+type LintTag = { source?: string; ref?: string; quote?: string; population?: string; denominator?: string; period?: string };
+export function lintProvenance(out: { economics: { sources?: Record<string, LintTag> }; plays: { model?: { reachSource?: LintTag; spendSource?: LintTag; hoursSource?: LintTag; steps?: ({ name: string } & LintTag)[] } }[] }, evidence: string): LintIssue[] {
   const ev = evidence.toLowerCase().replace(/https?:\/\/(www\.)?/g, "");
   const issues: LintIssue[] = [];
-  const check = (t: { source?: string; ref?: string; quote?: string } | undefined, path: string, what: string) => {
+  const check = (t: LintTag | undefined, path: string, what: string) => {
     if (!t?.source) return; // older outputs carry no tags
     const ref = (t.ref ?? "").trim();
     if ((t.source === "research" || t.source === "benchmark") && !ref) issues.push({ severity: "error", rule: "provenance", message: `${what}: name the ${t.source === "research" ? "page" : "benchmark"} it came from, or mark it as an assumption.`, path });
     if (t.source === "research" && ref && !(t.quote ?? "").trim()) issues.push({ severity: "error", rule: "provenance", message: `${what}: copy the exact sentence from the page that states this number into "quote", or mark it as an assumption.`, path });
+    if (t.source === "research" && ref) {
+      const missing: string[] = [];
+      if (!t.population?.trim()) missing.push("population");
+      if (!t.period?.trim()) missing.push("period");
+      if (path.includes(".steps[") && !t.denominator?.trim()) missing.push("denominator");
+      if (missing.length) issues.push({ severity: "error", rule: "provenance", message: `${what}: name the source's ${missing.join(", ")} so ClimbOS can check the rate applies.`, path });
+    }
     if (t.source === "research" && ref) {
       const domain = ref.toLowerCase().replace(/https?:\/\/(www\.)?/, "").match(/([a-z0-9-]+\.)+[a-z]{2,}/)?.[0];
       if (domain && !ev.includes(domain)) issues.push({ severity: "error", rule: "provenance", message: `${what}: "${domain}" isn't in your research notes. Cite a page you read, call it a benchmark with its name, or mark it as an assumption.`, path });
@@ -523,7 +538,7 @@ export function lintAssetsFirst(plays: { assetUsed: string; test: string; firstA
     }
     const most = added.reduce((a, b) => (b.count > a.count ? b : a));
     if (most.count < 2) return;
-    const baseline = [p.assetUsed, p.test, p.mechanic ?? "", ...(p.funnel ?? []).filter((l) => !/assumption/i.test(l)), ...(p.model?.reachSource && ["owner", "research"].includes(p.model.reachSource.source) ? [p.model.reachSource.quote ?? ""] : [])]
+    const baseline = [p.assetUsed, p.test, p.mechanic ?? "", ...(p.funnel ?? []).filter((l) => !/assumption/i.test(l)), ...(p.model?.reachSource?.source && ["owner", "research"].includes(p.model.reachSource.source) ? [p.model.reachSource.quote ?? ""] : [])]
       .flatMap((t) => sentences(t ?? ""))
       .some((s) => DEMAND.test(s) && !NEGATED.test(s));
     if (!baseline) {

@@ -11,7 +11,7 @@ const econ = (revenue: number, quote: string): Economics => ({
   grossMargin: 0.8,
   monthlyChurn: 0.05,
   basis: "",
-  sources: { revenue: { source: "research", ref: URL, quote } },
+  sources: { revenue: { source: "research", ref: URL, quote, population: "Pro", period: "month" } },
 });
 const revenueTag = (e: Economics, pages: Record<string, string | null>, searched?: string[]) =>
   verifyTags({ economics: e, plays: [] }, { pages, searched, fetchedAt: 1_700_000_000_000 }).economics.sources!.revenue!;
@@ -42,8 +42,8 @@ describe("S2 provenance", () => {
   });
 
   it("the model can't write its own check, stamp, access or receipt", () => {
-    const parsed = SourceTagSchema.parse({ source: "research", ref: URL, quote: "q", check: "source_verified", checkedBy: "climbos-provenance-1", access: "read", receipt: { fetchedAt: 1, contentHash: "x" } });
-    expect(parsed).toEqual({ source: "research", ref: URL, quote: "q" });
+    const parsed = SourceTagSchema.parse({ source: "research", ref: URL, quote: "q", population: "Pro", period: "month", check: "source_verified", checkedBy: "climbos-provenance-1", access: "read", receipt: { fetchedAt: 1, contentHash: "x" } });
+    expect(parsed).toEqual({ source: "research", ref: URL, quote: "q", population: "Pro", period: "month" });
   });
 
   it("owner-confirmed zero churn is kept, with the value it replaced", () => {

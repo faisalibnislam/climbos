@@ -31,6 +31,12 @@ export interface SourceTag {
   ref: string;
   /** Research only: the exact sentence from the page that states the number. */
   quote?: string;
+  /** Research only: the population this figure describes, copied from the cited evidence. */
+  population?: string;
+  /** Research only: denominator for a rate/share, copied from the cited evidence. */
+  denominator?: string;
+  /** Research only: the measurement period, copied from the cited evidence. */
+  period?: string;
   check?: TagCheck;
   checkedBy?: string;
   /** Owner inputs: when the owner confirmed the value. */
@@ -47,6 +53,9 @@ export type InputSource = Provenance | "unlabelled";
 export interface ReadTag {
   source: InputSource;
   ref: string;
+  population?: string;
+  denominator?: string;
+  period?: string;
   /** Owner, research and benchmark tags carry how they were checked ("reported" when unchecked or older). */
   check?: TagCheck;
   confirmedAt?: number;
@@ -70,7 +79,13 @@ function stamped(t: SourceTag, check: TagCheck): SourceTag {
 function read(t: Partial<SourceTag> | undefined): ReadTag {
   if (!t || !(PROVENANCE as readonly string[]).includes(t.source ?? "")) return UNLABELLED;
   const source = t.source as Provenance;
-  const tag: ReadTag = { source, ref: (t.ref ?? "").slice(0, 200) };
+  const tag: ReadTag = {
+    source,
+    ref: (t.ref ?? "").slice(0, 200),
+    ...(t.population ? { population: t.population.slice(0, 120) } : {}),
+    ...(t.denominator ? { denominator: t.denominator.slice(0, 120) } : {}),
+    ...(t.period ? { period: t.period.slice(0, 80) } : {}),
+  };
   // A claim counts as checked only with ClimbOS's stamp; anything else (older plans, forged values) is model-reported.
   if (CLAIMS.has(source)) tag.check = t.checkedBy === CHECK_STAMP && t.check && CHECKS.has(t.check) ? t.check : "reported";
   // "Owner" without a stamped owner input was never confirmed.
@@ -135,6 +150,14 @@ function quoteHasValue(quote: string, unit: Unit, value: number, low?: number, h
   return low !== undefined && high !== undefined && low !== high && ns.some((n) => close(n, low)) && ns.some((n) => close(n, high));
 }
 
+function quoteHasPhrase(quote: string, phrase: string | undefined): boolean {
+  if (!phrase?.trim()) return false;
+  const normalizePhrase = (s: string) => norm(s).replace(/[^a-z0-9%$£€ ]/g, " ").replace(/\s+/g, " ").trim();
+  const normalizedQuote = normalizePhrase(quote);
+  const normalizedPhrase = normalizePhrase(phrase);
+  return Boolean(normalizedPhrase) && ` ${normalizedQuote} `.includes(` ${normalizedPhrase} `);
+}
+
 const STOP = new Set(["to", "the", "a", "an", "of", "and", "or", "per", "from", "rate", "step"]);
 /** The quote names the metric: a word from the step's name, or the metric's own words. */
 function quoteNamesMetric(quote: string, metricWords: string[]): boolean {
@@ -184,13 +207,25 @@ function checkResearch(t: SourceTag, c: Claim, ctx: VerifyContext): SourceTag {
   const withAccess: SourceTag = { ...t, access, ...(typeof page === "string" ? { receipt: { fetchedAt: ctx.fetchedAt ?? 0, contentHash: textHash(page) } } : {}) };
   if (!page || !quote) return stamped(withAccess, "reported");
   if (!norm(page).includes(norm(quote))) return stamped(withAccess, "retrieved");
+  // A matching number is not transferable until the source quote also names its population,
+  // denominator where applicable, and period. Missing context stays visible as unchecked.
+  if (!quoteHasPhrase(quote, t.population) || !quoteHasPhrase(quote, t.period) || (c.unit === "share" && !quoteHasPhrase(quote, t.denominator))) {
+    return stamped(withAccess, "retrieved");
+  }
   const [v, low, high] = c.values;
   return stamped(withAccess, quoteHasValue(quote, c.unit, v, low, high) && quoteNamesMetric(quote, c.metricWords) ? "source_verified" : "retrieved");
 }
 
 function verifyTag(t: SourceTag | undefined, c: Claim, ctx: VerifyContext): SourceTag | undefined {
   if (!t) return t;
-  const base: SourceTag = { source: t.source, ref: t.ref, ...(t.quote ? { quote: t.quote.slice(0, 300) } : {}) };
+  const base: SourceTag = {
+    source: t.source,
+    ref: t.ref,
+    ...(t.quote ? { quote: t.quote.slice(0, 300) } : {}),
+    ...(t.population ? { population: t.population.slice(0, 120) } : {}),
+    ...(t.denominator ? { denominator: t.denominator.slice(0, 120) } : {}),
+    ...(t.period ? { period: t.period.slice(0, 80) } : {}),
+  };
   switch (t.source) {
     case "owner": {
       // A budget cap or time limit isn't the owner choosing this allocation.
@@ -244,8 +279,8 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
         reachSource: verifyTag(m.reachSource, { values: [m.weeklyReach, m.weeklyReachLow, m.weeklyReachHigh], unit: "count", metricWords: ["visit", "users", "member", "subsc", "follo", "reach", "audie", "searc", "month", "week"], kind: "input" }, ctx),
         steps: m.steps.map((st) => {
           if (!st.source) return st;
-          const t = verifyTag({ source: st.source, ref: st.ref ?? "", quote: st.quote }, { values: [st.rate, st.low, st.high], unit: "share", metricWords: [...wordsOf(st.name), "conve", "rate", "reply", "open", "click", "signu", "trial", "close", "book"], kind: "input" }, ctx)!;
-          return { ...st, source: t.source, ref: t.ref, quote: t.quote, check: t.check, checkedBy: t.checkedBy, access: t.access, receipt: t.receipt };
+          const t = verifyTag({ source: st.source, ref: st.ref ?? "", quote: st.quote, population: st.population, denominator: st.denominator, period: st.period }, { values: [st.rate, st.low, st.high], unit: "share", metricWords: [...wordsOf(st.name), "conve", "rate", "reply", "open", "click", "signu", "trial", "close", "book"], kind: "input" }, ctx)!;
+          return { ...st, source: t.source, ref: t.ref, quote: t.quote, population: t.population, denominator: t.denominator, period: t.period, check: t.check, checkedBy: t.checkedBy, access: t.access, receipt: t.receipt };
         }),
         spendSource: verifyTag(m.spendSource, { values: [m.monthlySpendUsd, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx),
         hoursSource: verifyTag(m.hoursSource, { values: [m.ownerHoursPerWeek, undefined, undefined], unit: "count", metricWords: [], kind: "allocation" }, ctx),
@@ -277,7 +312,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
   const econ = economicsSources(e);
   const rows: InputRow[] = [
     { key: "reach", label: "Weekly reach", value: m.weeklyReach, low: m.weeklyReachLow, high: m.weeklyReachHigh, unit: "people_week", tag: read(m.reachSource), drives: "customers" },
-    ...m.steps.map((s, i): InputRow => ({ key: `step${i}`, label: s.name, value: s.rate, low: s.low, high: s.high, unit: "share", tag: read(s.source ? { source: s.source, ref: s.ref ?? "", check: s.check, checkedBy: s.checkedBy } : undefined), drives: "customers" })),
+    ...m.steps.map((s, i): InputRow => ({ key: `step${i}`, label: s.name, value: s.rate, low: s.low, high: s.high, unit: "share", tag: read(s.source ? { source: s.source, ref: s.ref ?? "", population: s.population, denominator: s.denominator, period: s.period, check: s.check, checkedBy: s.checkedBy } : undefined), drives: "customers" })),
     { key: "spend", label: "Monthly spend", value: m.monthlySpendUsd, unit: "usd_month", tag: read(m.spendSource), drives: "cost" },
     { key: "hours", label: "Your hours a week", value: m.ownerHoursPerWeek, unit: "hours_week", tag: read(m.hoursSource), drives: "cost" },
     { key: "revenue", label: "Revenue per customer", value: e.revenuePerCustomerMonthUsd, unit: "usd_month", tag: econ.revenue, drives: "cost" },

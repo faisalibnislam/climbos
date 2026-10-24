@@ -97,7 +97,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
           weeklyReachHigh: 130,
           reachSource: { source: "assumption", ref: "", quote: "" },
           steps: [
-            { name: "reply", rate: 0.1, low: 0.05, high: 0.15, source: "research", ref: "https://example.com", quote: "Replies run about 10% for warm lists." },
+            { name: "reply", rate: 0.1, low: 0.05, high: 0.15, source: "research", ref: "https://example.com", quote: "Replies run about 10% for warm lists out of 100 delivered messages during 2025.", population: "warm lists", denominator: "100 delivered messages", period: "2025" },
             { name: "paid", rate: 0.1, low: 0.05, high: 0.2, source: "assumption", ref: "", quote: "" },
           ],
           monthlySpendUsd: 0,
@@ -117,7 +117,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         scores: [4, predictability, 3, 3, 3, 4, 5, distinctiveness],
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
-      (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month." }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
+      (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month.", population: "Plans", period: "month" }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
     // Growth plan: a dated action, not only measurement, and a route to the page (plan lint: never data-only, distribution).
     const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown; channels?: { cites?: string[] }[]; audiences?: { cites?: string[] }[]; experiments?: { population?: string; durationDays?: number; guardrails?: string[] }[] };

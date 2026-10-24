@@ -32,6 +32,9 @@ export interface PlayStep {
   source?: Provenance;
   ref?: string;
   quote?: string;
+  population?: string;
+  denominator?: string;
+  period?: string;
   check?: TagCheck;
   checkedBy?: string;
   access?: SourceTag["access"];

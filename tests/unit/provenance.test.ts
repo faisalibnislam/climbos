@@ -80,7 +80,7 @@ describe("input provenance", () => {
     const bad = { economics: { sources: { revenue: { source: "benchmark", ref: "" } } }, plays: [{ model: { reachSource: { source: "research", ref: "https://unknown.example.org/x" }, steps: [{ name: "reply", source: "assumption", ref: "" }] } }] };
     const issues = lintProvenance(bad, "Sources: https://formkit.app");
     // Benchmark without a name; research from a page not read, and without a quote.
-    expect(issues.map((i) => i.path)).toEqual(["economics.sources.revenue", "plays[0].model.reachSource", "plays[0].model.reachSource"]);
+    expect(issues.map((i) => i.path)).toEqual(["economics.sources.revenue", "plays[0].model.reachSource", "plays[0].model.reachSource", "plays[0].model.reachSource"]);
     expect(lintProvenance({ economics: {}, plays: [{ model: { steps: [{ name: "reply" }] } }] }, "")).toEqual([]); // older outputs
   });
 });
@@ -88,13 +88,13 @@ describe("input provenance", () => {
 describe("adversarial source checks", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Loose = (out: unknown, ctx: { pages: Record<string, string | null>; owner?: Record<string, number> }) => any;
-  type Tag = { source: "owner" | "research" | "benchmark" | "planned" | "assumption"; ref: string; quote?: string };
+  type Tag = { source: "owner" | "research" | "benchmark" | "planned" | "assumption"; ref: string; quote?: string; population?: string; denominator?: string; period?: string };
   const econ = (sources: Record<string, Tag>) => ({ revenuePerCustomerMonthUsd: 29, grossMargin: 0.8, monthlyChurn: 0.05, basis: "", sources });
-  const onePlay = (step: Partial<{ rate: number; low: number; high: number; source: Tag["source"]; ref: string; quote: string; name: string }>, extra: Record<string, unknown> = {}) => ({
+  const onePlay = (step: Partial<{ rate: number; low: number; high: number; source: Tag["source"]; ref: string; quote: string; name: string; population: string; denominator: string; period: string }>, extra: Record<string, unknown> = {}) => ({
     economics: econ({}),
     plays: [{ model: { weeklyReach: 250, weeklyReachLow: 200, weeklyReachHigh: 300, steps: [{ name: "trial to paid", rate: 0.15, low: 0.1, high: 0.2, source: "research" as const, ref: "https://formkit.app/pricing", quote: "", ...step }], monthlySpendUsd: 0, ownerHoursPerWeek: 0, ...extra } }],
   });
-  const PAGE = "Pricing. Pro costs $29 per month. Trial to paid conversion is 15% for teams. 15% off annual plans. 80% of our customers are agencies. Serving 29 countries.";
+  const PAGE = "Pricing. Pro costs $29 per month. Trial to paid conversion is 15% for teams out of trial starters in Q1 2026. 15% off annual plans. 80% of our customers are agencies. Serving 29 countries.";
 
   it("owner: coincidental numbers in facts never confirm; only structured owner metrics do", async () => {
     const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
@@ -122,7 +122,9 @@ describe("adversarial source checks", () => {
     const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
     const pages = { [urlKey("https://formkit.app/pricing")]: PAGE };
     const check = (step: Parameters<typeof onePlay>[0]) => verifyTags(onePlay(step), { pages }).plays[0].model.steps[0].check;
-    expect(check({ quote: "Trial to paid conversion is 15% for teams." })).toBe("source_verified");
+    expect(check({ quote: "Trial to paid conversion is 15% for teams out of trial starters in Q1 2026.", population: "teams", denominator: "trial starters", period: "Q1 2026" })).toBe("source_verified");
+    expect(check({ quote: "Trial to paid conversion is 15% for teams." })).toBe("retrieved"); // context not supplied
+    expect(check({ quote: "Trial to paid conversion is 15% for teams out of trial starters in Q1 2026.", population: "teams", denominator: "paid customers", period: "Q1 2026" })).toBe("retrieved"); // wrong denominator
     // Same number, unrelated passage (a discount): the metric isn't named.
     expect(check({ quote: "15% off annual plans." })).toBe("retrieved");
     // Coincidence: "80% of customers are agencies" for an 80% rate.
@@ -139,7 +141,7 @@ describe("adversarial source checks", () => {
     const { urlKey } = await import("../../shared/agents/provenance");
     const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
     const tag = (quote: string, page = PAGE) =>
-      verifyTags({ economics: econ({ revenue: { source: "research", ref: "https://formkit.app/pricing", quote } }), plays: [] }, { pages: { [urlKey("https://formkit.app/pricing")]: page } }).economics.sources?.revenue?.check;
+      verifyTags({ economics: econ({ revenue: { source: "research", ref: "https://formkit.app/pricing", quote, population: "Pro", period: "month" } }), plays: [] }, { pages: { [urlKey("https://formkit.app/pricing")]: page } }).economics.sources?.revenue?.check;
     expect(tag("Pro costs $29 per month.")).toBe("source_verified");
     expect(tag("Serving 29 countries.")).toBe("retrieved"); // no currency, no period
     expect(tag("Pro costs $29 per year.", "Pro costs $29 per year.")).toBe("retrieved"); // yearly, not monthly
