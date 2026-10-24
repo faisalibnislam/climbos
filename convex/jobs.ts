@@ -871,8 +871,9 @@ export const onboardingResearch = internalAction({
         profile: JSON.stringify(profile),
       });
 
-      // Speed: a first take on what we see while the deep research runs (5-10 minutes).
-      await quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${reportDropped("first take profile", fitJson(profile, 5000, "profile"))}`);
+      // Start the first take as soon as the profile is saved. It writes its own
+      // preview while deeper business intelligence runs below.
+      const firstTake = quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${reportDropped("first take profile", fitJson(profile, 5000, "profile"))}`);
 
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
       const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${reportDropped("insights profile", fitJson(profile, 6000, "profile"))}`;
@@ -894,6 +895,7 @@ export const onboardingResearch = internalAction({
         { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
       );
       await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
+      await firstTake;
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
     }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));
   },
