@@ -112,11 +112,13 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
     capabilities: [
       { id: "search_console.list_sites", kind: "read", label: "See your Search Console sites", description: "Lists the sites you have verified in Search Console." },
       { id: "search_console.read_performance", kind: "read", label: "Read search performance", description: "Clicks, impressions, CTR and position by date, query and page." },
+      { id: "search_console.inspect_url", kind: "read", label: "Inspect one page's indexed status", description: "Owner-triggered read of Google's indexed URL state for one page inside the selected property." },
     ],
     requiredEnv: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
     requiredReviewSteps: ["Google OAuth consent screen verification for webmasters.readonly (sensitive scope)"],
     docs: [
       fact({ fact: "searchAnalytics.query", value: "POST https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query (rowLimit 1..25,000, startRow)", docsUrl: "https://developers.google.com/webmaster-tools/v1/searchanalytics/query", verified: true }),
+      fact({ fact: "urlInspection.index.inspect", value: "POST https://searchconsole.googleapis.com/v1/urlInspection/index:inspect; inspect one URL inside the exact selected property", docsUrl: "https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect", verified: true }),
       fact({ fact: "sites.list", value: "GET https://www.googleapis.com/webmasters/v3/sites", docsUrl: "https://developers.google.com/webmaster-tools/v1/sites/list", verified: true }),
       fact({ fact: "OAuth scope", value: "https://www.googleapis.com/auth/webmasters.readonly", docsUrl: "https://developers.google.com/webmaster-tools/v1/searchanalytics/query", verified: true }),
     ],

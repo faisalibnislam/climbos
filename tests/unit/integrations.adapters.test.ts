@@ -561,6 +561,24 @@ describe("ga4 + searchConsole", () => {
     expect(JSON.parse(calls[1]?.body ?? "{}")).toMatchObject({ rowLimit: 2, startRow: 2, dimensions: ["date", "query", "page"] });
   });
 
+  it("inspects only a URL inside the selected property and returns Google's indexed snapshot", async () => {
+    const { fetchImpl, calls } = scripted([{
+      match: "urlInspection/index:inspect",
+      respond: json(200, { inspectionResult: {
+        inspectionResultLink: "https://search.google.com/search-console/inspect?resource_id=sc-domain%3Aexample.com&id=page",
+        indexStatusResult: { verdict: "PASS", coverageState: "Submitted and indexed", robotsTxtState: "ALLOWED", indexingState: "INDEXING_ALLOWED", pageFetchState: "SUCCESSFUL", lastCrawlTime: "2026-10-22T10:00:00Z", googleCanonical: "https://example.com/pricing", userCanonical: "https://example.com/pricing" },
+      } }),
+    }]);
+    const result = await searchConsole.inspectSearchUrl({ accessToken: "t", siteUrl: "sc-domain:example.com", inspectionUrl: "https://example.com/pricing#plans", fetchImpl });
+    expect(result).toMatchObject({ ok: true, data: { inspectionUrl: "https://example.com/pricing", verdict: "PASS", coverageState: "Submitted and indexed", robotsTxtState: "ALLOWED", indexingState: "INDEXING_ALLOWED", pageFetchState: "SUCCESSFUL", lastCrawlTime: "2026-10-22T10:00:00Z" } });
+    expect(calls[0]?.url).toBe("https://searchconsole.googleapis.com/v1/urlInspection/index:inspect");
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toMatchObject({ siteUrl: "sc-domain:example.com", inspectionUrl: "https://example.com/pricing", languageCode: "en-US" });
+
+    const denied = await searchConsole.inspectSearchUrl({ accessToken: "t", siteUrl: "sc-domain:example.com", inspectionUrl: "https://attacker.example/pricing", fetchImpl });
+    expect(denied).toMatchObject({ ok: false, retryable: false });
+    expect(calls).toHaveLength(1);
+  });
+
   it("matches a Search Console property only to the recorded site scope", () => {
     expect(searchConsole.searchConsolePropertyMatchesWebsite("sc-domain:example.com", "https://shop.example.com/pricing")).toBe(true);
     expect(searchConsole.searchConsolePropertyMatchesWebsite("https://www.example.com/", "https://www.example.com/pricing")).toBe(true);

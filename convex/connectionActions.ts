@@ -17,7 +17,7 @@ import {
 import { parseRevenueCsv } from "../shared/integrations/csvRevenue";
 import { classifyStripeKey, importStripeRevenue } from "../shared/integrations/stripeRevenue";
 import { listSegments } from "../shared/integrations/resendMarketing";
-import { listSites as listSearchConsoleSites, querySearchAnalytics } from "../shared/integrations/searchConsole";
+import { inspectSearchUrl, listSites as listSearchConsoleSites, querySearchAnalytics, searchConsolePropertyMatchesWebsite, type SearchUrlInspection } from "../shared/integrations/searchConsole";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
@@ -361,6 +361,29 @@ export const selectSearchConsoleSite = action({
     if (!selected) throw appError("INVALID", "Reconnect Search Console and choose the property again.");
     await ctx.scheduler.runAfter(0, internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
     return { ok: true, siteUrl: site.siteUrl };
+  },
+});
+
+/** Owner-triggered, single-URL read of Google's indexed snapshot for the selected property. */
+export const inspectSearchConsoleUrl = action({
+  args: { slug: v.string(), pageUrl: v.string() },
+  handler: async (ctx: ActionCtx, { slug, pageUrl }): Promise<SearchUrlInspection & { inspectedAt: number; property: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't inspect a live Search Console property.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture || !connection.externalAccountId) {
+      throw appError("INVALID", "Connect Search Console and select a property before checking a page.");
+    }
+    const page = pageUrl.trim();
+    if (!searchConsolePropertyMatchesWebsite(connection.externalAccountId, page)) {
+      throw appError("INVALID", "Enter a page inside the Search Console property selected for this business.");
+    }
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("INVALID", "Search Console access expired. Reconnect the account.");
+    const result = await inspectSearchUrl({ accessToken, siteUrl: connection.externalAccountId, inspectionUrl: page });
+    if (!result.ok) throw appError("INVALID", "Google Search Console couldn't inspect that page. Check the URL and property access, then try again.");
+    return { ...result.data, inspectedAt: Date.now(), property: connection.externalAccountId };
   },
 });
 

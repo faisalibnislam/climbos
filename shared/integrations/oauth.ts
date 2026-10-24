@@ -75,6 +75,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderConfig["id"], OAuthProviderCon
 export const CAPABILITY_SCOPES = {
   "ga4.read_reports": ["https://www.googleapis.com/auth/analytics.readonly"],
   "search_console.read_performance": ["https://www.googleapis.com/auth/webmasters.readonly"],
+  "search_console.inspect_url": ["https://www.googleapis.com/auth/webmasters.readonly"],
   // Google Ads has a single scope for both read and write.
   "google_ads.read_metrics": ["https://www.googleapis.com/auth/adwords"],
   "google_ads.create_paused_campaign": ["https://www.googleapis.com/auth/adwords"],

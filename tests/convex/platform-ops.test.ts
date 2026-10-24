@@ -408,3 +408,30 @@ describe("status page", () => {
     expect(await today()).toBe("down");
   });
 });
+
+describe("Search Console URL inspection", () => {
+  it("limits inspection to one owner-triggered URL inside the selected tenant property", async () => {
+    const t = setup();
+    const owner = await owned(t, "url-inspection-owner@example.com", "Search Company");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: owner.orgId,
+      userId: owner.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    });
+    await t.mutation(internal.connections.selectSearchConsoleSite, {
+      orgId: owner.orgId, connectionId, siteUrl: "sc-domain:example.com", accountLabel: "sc-domain:example.com",
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ inspectionResult: {
+      indexStatusResult: { verdict: "PASS", coverageState: "Submitted and indexed", robotsTxtState: "ALLOWED", indexingState: "INDEXING_ALLOWED", pageFetchState: "SUCCESSFUL" },
+    } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await owner.client.action(api.connectionActions.inspectSearchConsoleUrl, { slug: owner.slug, pageUrl: "https://www.example.com/pricing" });
+    expect(result).toMatchObject({ property: "sc-domain:example.com", inspectionUrl: "https://www.example.com/pricing", verdict: "PASS", pageFetchState: "SUCCESSFUL" });
+    await expect(owner.client.action(api.connectionActions.inspectSearchConsoleUrl, { slug: owner.slug, pageUrl: "https://other.example/pricing" })).rejects.toThrow(/inside the Search Console property/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

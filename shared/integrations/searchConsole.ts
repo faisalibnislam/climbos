@@ -9,6 +9,7 @@ import type { AdapterOptions, PaginationResult, ReadResult } from "./types";
 
 export const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 export const SEARCH_CONSOLE_MAX_ROW_LIMIT = 25_000;
+const URL_INSPECTION_ENDPOINT = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type SearchDimension = "date" | "query" | "page" | "country" | "device" | "searchAppearance";
@@ -24,6 +25,68 @@ export interface SearchAnalyticsRow {
   impressions: number;
   ctr: number;
   position: number;
+}
+
+export interface SearchUrlInspection {
+  inspectionUrl: string;
+  verdict: string;
+  coverageState: string;
+  robotsTxtState: string;
+  indexingState: string;
+  pageFetchState: string;
+  lastCrawlTime?: string;
+  googleCanonical?: string;
+  userCanonical?: string;
+  inspectionResultLink?: string;
+}
+
+/** Read the last indexed URL state for one URL inside the exact selected property. */
+export async function inspectSearchUrl(input: AdapterOptions & {
+  accessToken: string;
+  siteUrl: string;
+  inspectionUrl: string;
+  languageCode?: string;
+}): Promise<ReadResult<SearchUrlInspection>> {
+  let page: URL;
+  try {
+    page = new URL(input.inspectionUrl);
+  } catch {
+    return { ok: false, retryable: false, providerMessage: "Enter a complete page URL." };
+  }
+  if ((page.protocol !== "http:" && page.protocol !== "https:") || page.username || page.password || page.href.length > 2_048) {
+    return { ok: false, retryable: false, providerMessage: "The page URL must be a public HTTP or HTTPS URL without credentials." };
+  }
+  page.hash = "";
+  if (!searchConsolePropertyMatchesWebsite(input.siteUrl, page.toString())) {
+    return { ok: false, retryable: false, providerMessage: "The page URL must be inside the Search Console property selected for this business." };
+  }
+  const out = await requestJson({
+    url: URL_INSPECTION_ENDPOINT,
+    method: "POST",
+    headers: auth(input.accessToken),
+    body: { inspectionUrl: page.toString(), siteUrl: input.siteUrl, languageCode: input.languageCode ?? "en-US" },
+    fetchImpl: input.fetchImpl,
+    timeoutMs: input.timeoutMs,
+  });
+  if (out.kind !== "ok") return readFailure(out);
+  const root = isRecord(out.data) && isRecord(out.data.inspectionResult) ? out.data.inspectionResult : {};
+  const index = isRecord(root.indexStatusResult) ? root.indexStatusResult : {};
+  const optional = (key: string) => asString(index[key])?.slice(0, 2_000);
+  return {
+    ok: true,
+    data: {
+      inspectionUrl: page.toString(),
+      verdict: asString(index.verdict) ?? "VERDICT_UNSPECIFIED",
+      coverageState: asString(index.coverageState)?.slice(0, 500) ?? "No coverage detail was returned.",
+      robotsTxtState: asString(index.robotsTxtState) ?? "ROBOTS_TXT_STATE_UNSPECIFIED",
+      indexingState: asString(index.indexingState) ?? "INDEXING_STATE_UNSPECIFIED",
+      pageFetchState: asString(index.pageFetchState) ?? "PAGE_FETCH_STATE_UNSPECIFIED",
+      ...(optional("lastCrawlTime") ? { lastCrawlTime: optional("lastCrawlTime") } : {}),
+      ...(optional("googleCanonical") ? { googleCanonical: optional("googleCanonical") } : {}),
+      ...(optional("userCanonical") ? { userCanonical: optional("userCanonical") } : {}),
+      ...(asString(root.inspectionResultLink)?.startsWith("https://search.google.com/") ? { inspectionResultLink: asString(root.inspectionResultLink)!.slice(0, 2_000) } : {}),
+    },
+  };
 }
 
 /** Check whether a Search Console property can describe the recorded business website. */
