@@ -8,6 +8,7 @@ import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { findConflicts } from "../shared/agents/conflicts";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 
 /**
  * Self-improvement loop 1 — keep researching each business. Weekly, ClimbOS
@@ -40,10 +41,36 @@ export const facts = query({
     }
     const order = { needs_review: 0, edited: 1, confirmed: 1, rejected: 2 } as const;
     rows.sort((a, b) => order[a.reviewState] - order[b.reviewState] || b.updatedAt - a.updatedAt);
+    const groupedFacts = groupExactDuplicateFacts(rows.map((fact) => ({
+      ...fact,
+      id: String(fact._id),
+      state: fact.reviewState,
+    })));
+    const sourceIds = [...new Set(groupedFacts.flatMap(({ primary, duplicates }) => [primary, ...duplicates].flatMap((fact) => fact.sourceIds.map(String))))];
+    const sourceIdSet = new Set(sourceIds);
+    const sourceMap = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number; status: string }>();
+    const sources = await ctx.db.query("factSources").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(1000);
+    for (const source of sources) if (source.orgId === org._id && sourceIdSet.has(String(source._id))) {
+      sourceMap.set(String(source._id), { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt, status: source.status });
+    }
     return {
       website: business.website ?? null,
       siteCheckedAt: business.siteCheckedAt ?? null,
-      facts: rows.map((f) => ({ id: f._id, category: f.category, statement: f.statement, state: f.reviewState, provenance: f.provenance, replaces: f.replacesFactId ?? null, updatedAt: f.updatedAt })),
+      facts: groupedFacts.map(({ primary, duplicates }) => {
+        const members = [primary, ...duplicates];
+        const mergedSourceIds = [...new Set(members.flatMap((fact) => fact.sourceIds.map(String)))];
+        return {
+          id: primary._id,
+          duplicateIds: duplicates.map((fact) => fact._id),
+          category: primary.category,
+          statement: primary.statement,
+          state: primary.reviewState,
+          provenance: primary.provenance,
+          replaces: primary.replacesFactId ?? null,
+          updatedAt: primary.updatedAt,
+          sources: mergedSourceIds.map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+        };
+      }),
       conflicts: conflicts.map((conflict) => ({
         ...conflict,
         facts: conflict.factIds.map((id) => {
@@ -67,12 +94,17 @@ export const confirmUpdate = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const f = assertSameOrg(await ctx.db.get(factId), org._id, "fact");
     const now = Date.now();
-    await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: now });
-    if (f.replacesFactId) {
-      const old = await ctx.db.get(f.replacesFactId);
+    const businessFacts = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", f.businessId)).take(300);
+    const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
+      .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(f._id)));
+    const targets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [f];
+    for (const target of targets) await ctx.db.patch(target._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: now });
+    const replacedIds = [...new Set(targets.flatMap((target) => target.replacesFactId ? [String(target.replacesFactId)] : []))];
+    for (const replacedId of replacedIds) {
+      const old = await ctx.db.get(ctx.db.normalizeId("businessFacts", replacedId) as Id<"businessFacts">);
       if (old && old.orgId === org._id) await ctx.db.patch(old._id, { reviewState: "rejected", updatedBy: user._id, updatedAt: now });
     }
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "fact.confirm", subjectType: "fact", subjectId: f._id, summary: "Fact confirmed." });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "fact.confirm", subjectType: "fact", subjectId: f._id, summary: `Fact confirmed${targets.length > 1 ? ` with ${targets.length - 1} duplicate${targets.length === 2 ? "" : "s"}` : ""}.` });
   },
 });
 

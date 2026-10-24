@@ -18,6 +18,7 @@ import { createOnboardingPeriod } from "./lib/periods";
 import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { can } from "../shared/policy";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 
 function slugify(name: string): string {
   const base = name
@@ -367,14 +368,18 @@ export const reviewFact = mutation({
   },
   handler: async (ctx, args) => {
     const { fact, user, org } = await requireFactInOrg(ctx, args.slug, args.factId);
+    const businessFacts = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", fact.businessId)).take(300);
+    const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
+      .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(fact._id)));
+    const reviewTargets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [fact];
     if (args.action === "edit") {
       const statement = args.statement?.trim().slice(0, 400);
       if (!statement) throw appError("INVALID", "The fact can't be empty.");
-      await ctx.db.patch(fact._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, updatedAt: Date.now() });
     } else {
-      await ctx.db.patch(fact._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, updatedAt: Date.now() });
     }
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed.` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed${reviewTargets.length > 1 ? ` with ${reviewTargets.length - 1} duplicate${reviewTargets.length === 2 ? "" : "s"}` : ""}.` });
   },
 });
 

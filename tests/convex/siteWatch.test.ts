@@ -51,6 +51,36 @@ describe("site watch (keeps researching the business)", () => {
     })]);
   });
 
+  it("shows exact duplicates as one fact with all source history and reviews the group together", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "duplicate-facts@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    const business = await t.run(async (ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first());
+    expect(business).toBeTruthy();
+    const ids = await t.run(async (ctx) => {
+      const now = Date.now();
+      const sourceA = await ctx.db.insert("factSources", { orgId: orgId as Id<"organizations">, businessId: business!._id, kind: "website", url: "https://site.example/pricing", fetchedAt: now - 100, status: "ok", expiresAt: now + 1000 });
+      const sourceB = await ctx.db.insert("factSources", { orgId: orgId as Id<"organizations">, businessId: business!._id, kind: "website", url: "https://site.example/plans", fetchedAt: now, status: "ok", expiresAt: now + 1000 });
+      const first = await ctx.db.insert("businessFacts", { orgId: orgId as Id<"organizations">, businessId: business!._id, category: "pricing", statement: "Pro plan costs $20 per month.", confidence: "medium", reviewState: "needs_review", provenance: "researched", sourceIds: [sourceA], createdAt: now - 100, updatedAt: now - 100 });
+      const second = await ctx.db.insert("businessFacts", { orgId: orgId as Id<"organizations">, businessId: business!._id, category: "pricing", statement: "  PRO plan costs $20 per month? ", confidence: "medium", reviewState: "needs_review", provenance: "researched", sourceIds: [sourceB], createdAt: now, updatedAt: now });
+      return { first, second, sourceA, sourceB };
+    });
+
+    const before = await owner.client.query(api.siteWatch.facts, { slug });
+    expect(before?.facts).toHaveLength(1);
+    expect(before?.facts[0]).toMatchObject({
+      id: ids.second,
+      duplicateIds: [ids.first],
+      state: "needs_review",
+      sources: expect.arrayContaining([expect.objectContaining({ url: "https://site.example/pricing" }), expect.objectContaining({ url: "https://site.example/plans" })]),
+    });
+    await owner.client.mutation(api.orgs.reviewFact, { slug, factId: ids.second, action: "confirm" });
+    expect(await t.run(async (ctx) => [await ctx.db.get(ids.first), await ctx.db.get(ids.second)])).toEqual([
+      expect.objectContaining({ reviewState: "confirmed" }),
+      expect.objectContaining({ reviewState: "confirmed" }),
+    ]);
+  });
+
   it("queues a permission-checked, bounded homepage readiness scan", async () => {
     const t = setup();
     const owner = await asNewUser(t, "readiness@example.com");
