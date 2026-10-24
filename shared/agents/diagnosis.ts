@@ -101,6 +101,18 @@ export interface NextMeasurement {
   priority: "decision_critical" | "useful";
 }
 
+/** Goal-relative scenario from an owner-entered customer target and funnel counts. */
+export interface CustomerGoalPace {
+  currentCustomersPerMonth: number;
+  targetCustomersPerMonth: number;
+  gapPerMonth: number;
+  visitorToCustomerRate: { observed: number; likely: { low: number; high: number } } | null;
+  /** Posterior probability that the current visitor volume cannot meet the goal at the observed funnel rate. */
+  probabilityCurrentReachBelowGoal: number | null;
+  /** These figures describe the current funnel and are not a forecast or proof of cause. */
+  basis: "owner_goal_and_counts_current_scenario";
+}
+
 export interface Diagnosis {
   /** The binding constraint, or unknown when the owner's numbers can't tell. */
   constraint: BindingConstraint | "unknown";
@@ -127,6 +139,8 @@ export interface Diagnosis {
   leverage?: { stage: StageReading["stage"]; perPoint: number }[];
   /** Rules used, with versions (references.ts). */
   rules?: string[];
+  /** Quantifies a customer goal against current counts without declaring a root cause. */
+  customerGoalPace?: CustomerGoalPace;
 }
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -253,6 +267,23 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 
   const capR = readings.find((r) => r.stage === "capacity");
   const retR = readings.find((r) => r.stage === "retention");
+  let customerGoalPace: CustomerGoalPace | undefined;
+  if (ctx.customerTargetPerMonth !== undefined && f.newCustomers !== undefined) {
+    const currentCustomersPerMonth = r2(perMonth(f.newCustomers));
+    const visitorToCustomerRate = f.visitors !== undefined && f.visitors > 0 && f.newCustomers <= f.visitors
+      ? betaPosterior(f.newCustomers, f.visitors)
+      : null;
+    const visitorsPerMonth = f.visitors !== undefined ? perMonth(f.visitors) : 0;
+    const requiredRate = visitorsPerMonth > 0 ? Math.min(1, ctx.customerTargetPerMonth / visitorsPerMonth) : null;
+    customerGoalPace = {
+      currentCustomersPerMonth,
+      targetCustomersPerMonth: r2(ctx.customerTargetPerMonth),
+      gapPerMonth: r2(ctx.customerTargetPerMonth - currentCustomersPerMonth),
+      visitorToCustomerRate: visitorToCustomerRate ? { observed: r2(visitorToCustomerRate.successes / visitorToCustomerRate.trials), likely: { low: r2(visitorToCustomerRate.low), high: r2(visitorToCustomerRate.high) } } : null,
+      probabilityCurrentReachBelowGoal: visitorToCustomerRate && requiredRate !== null ? r2(probBelow(visitorToCustomerRate, requiredRate)) : null,
+      basis: "owner_goal_and_counts_current_scenario",
+    };
+  }
   const measuredLinks = [lead, qualification, act, buyFromActive].filter(Boolean).length + (overallReading ? 1 : 0);
   // A setup count isn't value received: it can't make the diagnosis "measured" on its own (BRP-07).
   const setupCount = f.activated !== undefined && (f.activationKind === "setup" || f.activationKind === "unknown");
@@ -310,6 +341,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     hypotheses,
     ...(conflicts.length ? { conflicts } : {}),
     ...(leverage.length ? { leverage } : {}),
+    ...(customerGoalPace ? { customerGoalPace } : {}),
     rules: [...new Set(rules)],
   });
 
@@ -346,7 +378,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (f.visitors !== undefined && f.leads !== undefined && f.newCustomers !== undefined && weakOverall === false && ctx.customerTargetPerMonth !== undefined && ctx.customerTargetPerMonth > 0) {
     const currentCustomersPerMonth = perMonth(f.newCustomers);
     if (currentCustomersPerMonth < ctx.customerTargetPerMonth) {
-      const goalMeasurement = f.visitors > 0 ? probBelow(betaPosterior(f.newCustomers, f.visitors), Math.min(1, ctx.customerTargetPerMonth / perMonth(f.visitors))) : f.newCustomers === 0 ? 1 : 0;
+      const goalMeasurement = customerGoalPace?.probabilityCurrentReachBelowGoal ?? 0;
       if (goalMeasurement >= T.weakAt) {
         const h = hyp(
           "demand",
@@ -377,12 +409,15 @@ export function diagnosisBrief(d: Diagnosis): string {
   const reading = (r: StageReading) =>
     `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.definition ? `; owner-defined as ${JSON.stringify(r.definition)}` : ""}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
   const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
+  const pace = d.customerGoalPace ? [
+    `CUSTOMER GOAL PACE (owner goal + current counts; scenario, not a forecast): about ${d.customerGoalPace.currentCustomersPerMonth}/month now against ${d.customerGoalPace.targetCustomersPerMonth}/month needed (${d.customerGoalPace.gapPerMonth > 0 ? `short by ${d.customerGoalPace.gapPerMonth}` : d.customerGoalPace.gapPerMonth < 0 ? `above by ${Math.abs(d.customerGoalPace.gapPerMonth)}` : "at the goal pace"}${d.customerGoalPace.gapPerMonth === 0 ? "" : "/month"}).${d.customerGoalPace.visitorToCustomerRate ? ` Visitor → paying-customer rate: ${pct(d.customerGoalPace.visitorToCustomerRate.observed)} observed, likely ${pct(d.customerGoalPace.visitorToCustomerRate.likely.low)}–${pct(d.customerGoalPace.visitorToCustomerRate.likely.high)} under a uniform-prior model; P(current visitor volume falls short of the goal) = ${d.customerGoalPace.probabilityCurrentReachBelowGoal === null ? "unknown" : pct(d.customerGoalPace.probabilityCurrentReachBelowGoal)}.` : " A comparable visitor → paying-customer count is unavailable, so no conversion scenario is calculated."} This compares the owner goal with current data; it does not show why the gap exists or which channel will close it.`,
+  ] : [];
   if (d.status === "conflicting_inputs")
     return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");
   if (d.constraint === "unknown") {
     const hyps = d.hypotheses?.length ? [`Competing hypotheses (none established): ${d.hypotheses.map((h) => `${h.constraint}${h.probability !== null ? ` (P weaker ${h.probability})` : ""}`).join(" vs ")}. To tell them apart: ${d.hypotheses[0].discriminate}`] : [];
     const next = d.nextMeasurement ? [`NEXT MEASUREMENT (${d.nextMeasurement.priority === "decision_critical" ? "needed before a firm decision" : "most useful next"}): ${d.nextMeasurement.action} Why: ${d.nextMeasurement.reason}`] : [];
-    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
+    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...pace, ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
   }
   const goalGap = d.hypotheses?.find((h) => h.goalGap)?.goalGap;
   const alt = d.hypotheses?.slice(1).filter((h) => h.probability !== null);
@@ -390,6 +425,7 @@ export function diagnosisBrief(d: Diagnosis): string {
     goalGap
       ? `DIAGNOSIS (computed from owner-reported goal and funnel data): current customer volume is about ${goalGap.currentCustomersPerMonth}/month against a goal pace of ${goalGap.targetCustomersPerMonth}/month. At today's visitor volume, there is ${pct(goalGap.probabilityVisitorToCustomerRateBelowNeeded)} probability that the visitor → paying-customer rate is below what the goal needs. This supports a reach/volume gap but does not establish its cause.`
       : `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the numbers point to ${d.constraint} as the weakest link. This is an observation about where people drop, not a proven cause.`,
+    ...pace,
     ...d.readings.map(reading),
     ...(alt?.length ? [`Alternative still possible: ${alt.map((h) => `${h.constraint} (P weaker ${h.probability})`).join(", ")}.`] : []),
     ...lever,

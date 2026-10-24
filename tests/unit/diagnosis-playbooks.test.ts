@@ -101,6 +101,7 @@ describe("diagnosis", () => {
       hypotheses: [{ goalGap: { currentCustomersPerMonth: 10, targetCustomersPerMonth: 20, probabilityVisitorToCustomerRateBelowNeeded: expect.any(Number) } }],
     });
     expect(diagnosisBrief(diagnose({ ...inputs, customerTargetPerMonth: 20 }))).toMatch(/supports a reach\/volume gap but does not establish its cause/);
+    expect(diagnose({ ...inputs, customerTargetPerMonth: 10 })).toMatchObject({ customerGoalPace: { currentCustomersPerMonth: 10, targetCustomersPerMonth: 10, gapPerMonth: 0 } });
     const uncertain = diagnose({ ...inputs, customerTargetPerMonth: 10.5 });
     expect(uncertain).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", nextMeasurement: { priority: "decision_critical" } });
     expect(uncertain.nextMeasurement?.reason).toMatch(/Do not prescribe more traffic from this count alone/);
@@ -110,6 +111,12 @@ describe("diagnosis", () => {
     const unknownModel = diagnose({ funnel: { visitors: 300, leads: 40, newCustomers: 10 }, types: ["b2b_saas"] });
     expect(unknownModel.constraint).toBe("unknown");
     expect(unknownModel.missing.join(" ")).toMatch(/free plan, a trial without a card/);
+  });
+  it("reports goal-relative funnel math for non-SaaS without claiming demand is the root cause", () => {
+    const d = diagnose({ funnel: { periodDays: 30, visitors: 3_000, leads: 400, newCustomers: 100 }, types: ["local_services"], customerTargetPerMonth: 150 });
+    expect(d).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", customerGoalPace: { currentCustomersPerMonth: 100, targetCustomersPerMonth: 150, gapPerMonth: 50, visitorToCustomerRate: { observed: 0.03 } } });
+    expect(d.customerGoalPace?.probabilityCurrentReachBelowGoal).toBeGreaterThan(0.9);
+    expect(diagnosisBrief(d)).toMatch(/does not show why the gap exists or which channel will close it/);
   });
   it("no numbers → unknown, with what to measure (never a guess)", () => {
     const d = diagnose({});
