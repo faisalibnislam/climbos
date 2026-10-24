@@ -1210,12 +1210,12 @@ export const buildStrategy = internalAction({
         adjustments = adjustmentsFrom(fit);
         channelSummary = fit.summary.slice(0, 3);
       }
-      // S5 flag (REQ-STRAT-03): cash, owner time, sales cycle and capability limits apply before ranking.
-      const limits = hasFlag(job, "decision_contract") ? {
+      // Hard owner limits apply before ranking for every plan. Unknown inputs stay unknown.
+      const limits = {
         ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek,
         newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
         connected: job.capabilities.connected,
-      } : undefined;
+      };
       // A supported diagnosis can change which channels lead the shortlist; an uncertain one never forces a ranking change.
       const scored = scoreChannels(profile, adjustments, undefined, limits, diagnosis.status === "supported" && diagnosis.constraint !== "unknown" ? diagnosis.constraint : undefined);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;

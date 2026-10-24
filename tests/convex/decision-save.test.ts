@@ -95,7 +95,7 @@ describe("decision contract persistence", () => {
     expect(view!.channels.find((c) => c.id === "P01")?.limits.some((l) => l.kind === "cash" && l.verdict === "blocked")).toBe(true);
   });
 
-  it("a plan without the flag saves no decision and no limits (default path unchanged)", async () => {
+  it("a plan without the structured-decision flag still saves and applies known hard limits", async () => {
     const t = setup();
     const owner = await asNewUser(t, "nodecision@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Plain Co" });
@@ -105,13 +105,18 @@ describe("decision contract persistence", () => {
       runId: await run(t, id),
       strategy: strategy({}),
       factIds: [],
-      acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile: { types: ["b2b_saas"], dims: {} }, adjustments: [], summary: [] }),
+      acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile: { types: ["b2b_saas"], dims: {} }, adjustments: [], summary: [], limits: { ownerHoursPerWeek: 0, newCustomersPerMonth: 0 } }),
     });
     const saved = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", id)).first())!);
     expect(saved.expert?.decision).toBeUndefined();
     expect(saved.expert?.decisionAnalysis).toBeUndefined();
-    expect(saved.acquisition?.limits).toBeUndefined();
+    expect(saved.acquisition?.limits).toEqual({ ownerHoursPerWeek: 0, newCustomersPerMonth: 0 });
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", id)).first();
+      if (!business) throw new Error("Business not found");
+      await ctx.db.patch(business._id, { unitEconomics: { ownerHoursPerWeek: 0, newCustomersPerMonth: 0, updatedAt: Date.now() } });
+    });
     const view = await owner.client.query(api.acquisition.view, { slug });
-    expect(view!.channels.every((c) => c.limits.length === 0)).toBe(true);
+    expect(view!.channels.some((c) => c.limits.some((limit) => limit.kind === "capacity" && limit.verdict === "blocked"))).toBe(true);
   });
 });

@@ -48,7 +48,7 @@ export const view = query({
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
     const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, typesSource: business.acquisition.typesSource ?? "inferred", dims: business.acquisition.dims, channelPreferences: business.acquisition.channelPreferences } : planned ? { types: planned.profile.types, typesSource: planned.profile.typesSource ?? "inferred", dims: planned.profile.dims } : null;
     const profile = profileFrom({ saved, legacyType: business.businessType, currency: goal.currency ?? business.currency, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy, priceUsdMonth: business.unitEconomics?.revenuePerCustomerMonthUsd ?? (planned?.profile as { priceUsdMonth?: number } | undefined)?.priceUsdMonth });
-    // decision_contract plans: the same hard limits as the plan, with today's connections.
+    // Apply saved owner limits consistently on the Channels view; connections stay live.
     const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
     const limits = planned?.limits ? {
       ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined,

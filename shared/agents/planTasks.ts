@@ -10,7 +10,7 @@ import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 const INTEL = "BUSINESS INTELLIGENCE (researched earlier; competitors, customer language, objections, gaps):";
 
 /** Default portfolio policy (REQ-STRAT-04/05, REQ-OUT-03/04); structured decision fields remain feature-flagged. */
-export const DECISION_CONTRACT = `STRATEGY POLICY: choose the smallest set of plays (1 to 4) that addresses this business's best-supported binding constraint. Usually choose one primary move, one supporting move and necessary maintenance. Fixing the offer, conversion, retention or capacity can outrank new acquisition when that is the constraint. Use creative plays only when the mechanism fits this business; novelty and channel count earn nothing. If the plays can't reach the goal, don't stretch the numbers: show the gap and name the constraint.`;
+export const DECISION_CONTRACT = `STRATEGY POLICY (overrides any fixed channel mix in the skill): choose the smallest set of plays (1 to 4) that addresses this business's best-supported binding constraint. Usually choose one primary move, one supporting move and necessary maintenance. Fixing the offer, conversion, retention or capacity can outrank new acquisition when that is the constraint. Use creative plays only when the mechanism fits this business; novelty and channel count earn nothing. If the plays can't reach the goal, don't stretch the numbers: show the gap and name the constraint.`;
 
 export function playsTask(o: { scorecard: string; insights: string; horizonDays?: number; engines?: string; decisionContract?: boolean }): string {
   const h = o.horizonDays || 90;
