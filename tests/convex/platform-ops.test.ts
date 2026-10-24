@@ -302,9 +302,14 @@ describe("connections", () => {
 
     expect(await other.client.query(api.searchConsole.observations, { slug: other.slug })).toBeNull();
     expect((await owner.client.query(api.searchConsole.observations, { slug: owner.slug }))?.rows).toMatchObject([{ query: "climbing shoes" }]);
+    const history = await owner.client.query(api.searchConsole.history, { slug: owner.slug });
+    expect(history).toMatchObject([{ id: snapshotId, property: "https://example.com/", rowCount: 1 }]);
+    expect(await other.client.query(api.searchConsole.snapshot, { slug: other.slug, snapshotId })).toBeNull();
+    expect((await owner.client.query(api.searchConsole.snapshot, { slug: owner.slug, snapshotId }))?.rows).toMatchObject([{ query: "climbing shoes" }]);
     await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://not-authorized.example/" })).rejects.toThrow("Choose a property returned by the connected Search Console account.");
     await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://example.com/" })).resolves.toMatchObject({ ok: true, siteUrl: "https://example.com/" });
     expect((await t.query(internal.connections.connectionFor, { orgId: owner.orgId, provider: "search_console" }))!.externalAccountId).toBe("https://example.com/");
+    expect((await owner.client.query(api.connections.list, { slug: owner.slug })).items.find((item) => item.provider === "search_console")?.connection).toMatchObject({ externalAccountId: "https://example.com/" });
     expect((await t.query(internal.connections.connectionFor, { orgId: other.orgId, provider: "search_console" }))).toBeNull();
     expect(await t.query(internal.connections.getSecret, { connectionId })).not.toBeNull();
   });

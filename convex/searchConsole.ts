@@ -103,3 +103,47 @@ export const observations = query({
     };
   },
 });
+
+/** Recent completed rolling-window snapshots retained for owner review. */
+export const history = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const snapshots = await ctx.db.query("searchConsoleSnapshots")
+      .withIndex("by_org_fetched", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(20);
+    return snapshots.filter((item) => item.status === "complete").slice(0, 3).map((item) => ({
+      id: item._id,
+      property: item.property,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      fetchedAt: item.fetchedAt,
+      rowCount: item.rowCount,
+      truncated: item.truncated,
+      dataState: item.dataState,
+    }));
+  },
+});
+
+/** Tenant-scoped details for one retained snapshot in the owner-visible history. */
+export const snapshot = query({
+  args: { slug: v.string(), snapshotId: v.id("searchConsoleSnapshots") },
+  handler: async (ctx, { slug, snapshotId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const snapshot = await ctx.db.get(snapshotId);
+    if (!snapshot || snapshot.orgId !== org._id || snapshot.status !== "complete") return null;
+    const rows = await ctx.db.query("searchConsoleRows").withIndex("by_snapshot", (q) => q.eq("snapshotId", snapshot._id)).take(2_000);
+    return {
+      id: snapshot._id,
+      property: snapshot.property,
+      startDate: snapshot.startDate,
+      endDate: snapshot.endDate,
+      fetchedAt: snapshot.fetchedAt,
+      dataState: snapshot.dataState,
+      rowCount: snapshot.rowCount,
+      truncated: snapshot.truncated,
+      rows: rows.map(({ _id: _rowId, _creationTime: _createdAt, orgId: _orgId, snapshotId: _snapshotId, ...row }) => row),
+    };
+  },
+});

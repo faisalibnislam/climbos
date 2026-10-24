@@ -252,6 +252,7 @@ export const list = query({
             ? {
                 status: conn.status,
                 accountLabel: conn.accountLabel ?? null,
+                externalAccountId: conn.externalAccountId ?? null,
                 lastSyncAt: conn.lastSyncAt ?? null,
                 expiresAt: conn.expiresAt ?? null,
                 isFixture: conn.isFixture,

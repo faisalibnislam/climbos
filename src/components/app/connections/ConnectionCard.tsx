@@ -43,6 +43,7 @@ import { ApiKeyDialog } from "./ApiKeyDialog";
 import { AudienceSummary, ContactsCsvDialog } from "./ContactsCsvDialog";
 import { CAPABILITY_STATE, CONNECTION_STATUS, isPast, SYNCABLE, type CapabilityState } from "./labels";
 import { RevenueCsvDialog } from "./RevenueCsvDialog";
+import { SearchConsoleSetup } from "./SearchConsoleSetup";
 
 export type ConnectionsData = FunctionReturnType<typeof api.connections.list>;
 export type ConnectionItem = ConnectionsData["items"][number];
@@ -196,6 +197,15 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       </div>
 
       {item.provider === "crm_csv" ? <AudienceSummary slug={slug} /> : null}
+      {item.provider === "search_console" ? (
+        <SearchConsoleSetup
+          slug={slug}
+          connected={connected}
+          canManage={canManage}
+          isDemo={isDemo || Boolean(conn?.isFixture)}
+          selectedProperty={"externalAccountId" in (conn ?? {}) ? conn?.externalAccountId ?? null : null}
+        />
+      ) : null}
 
       <div aria-live="polite">
         {problem ? (
