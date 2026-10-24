@@ -10,6 +10,16 @@ import type { RoleKey } from "../economics/roles";
 
 const confidence = z.enum(["high", "medium", "low"]);
 const factCategory = z.enum(["product", "audience", "pricing", "brand", "offer", "proof", "competitor", "other"]);
+export const SWOT_DIMENSIONS = ["strength", "weakness", "opportunity", "threat"] as const;
+export const SwotEvidenceSchema = z.object({
+  dimension: z.enum(SWOT_DIMENSIONS),
+  /** Must match one legacy SWOT statement exactly so the evidence survives old consumers. */
+  finding: z.string().max(300),
+  basis: z.enum(["owner_report", "source_claim", "measured", "research", "inference"]),
+  evidenceRefs: z.array(z.string()).max(8),
+  strategicImplication: z.string().max(400),
+  confidence,
+});
 
 export const BusinessProfileSchema = z.object({
   name: z.string(),
@@ -53,6 +63,8 @@ export const BusinessInsightsSchema = z.object({
     opportunities: z.array(z.string()),
     threats: z.array(z.string()),
   }),
+  /** Additive structured support; absent on legacy insight records. */
+  swotEvidence: z.array(SwotEvidenceSchema).max(16).optional(),
   journey: z.array(z.object({ stage: z.string(), observation: z.string(), opportunity: z.string() })),
   opportunities: z.array(z.object({ title: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]) })),
 });

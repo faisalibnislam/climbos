@@ -16,6 +16,7 @@ import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
   BusinessInsightsSchema,
+  SwotEvidenceSchema,
   ConversionAuditSchema,
   EmailSequenceSchema,
   RetentionPlanSchema,
@@ -50,6 +51,7 @@ import { routeModels } from "./routes";
 const force = z.enum(["push", "pull", "anxiety", "habit"]);
 
 export const InsightsV2Schema = BusinessInsightsSchema.extend({
+  swotEvidence: z.array(SwotEvidenceSchema).max(16),
   competitors: z.array(
     BusinessInsightsSchema.shape.competitors.element.extend({
       kind: z.enum(["direct", "adjacent"]),
@@ -1247,7 +1249,7 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
   });
 }
 
-export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps">, input: AgentInput): LintIssue[] {
+export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -1260,7 +1262,53 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
     ["gaps", out.gaps],
   ];
   refs.push(...groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))));
-  return lintAvailableSourceUrls(refs, input);
+  const factCount = input.facts.length;
+  const swotIssues: LintIssue[] = [];
+  const dimensions = {
+    strength: { statements: out.swot.strengths, path: "strengths" },
+    weakness: { statements: out.swot.weaknesses, path: "weaknesses" },
+    opportunity: { statements: out.swot.opportunities, path: "opportunities" },
+    threat: { statements: out.swot.threats, path: "threats" },
+  };
+  const represented = new Set<string>();
+  out.swotEvidence.forEach((finding, index) => {
+    const path = `swotEvidence[${index}]`;
+    const dimensionRows = dimensions[finding.dimension].statements;
+    if (!dimensionRows.includes(finding.finding)) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Each evidence record must match a statement in its SWOT section exactly.", path: `${path}.finding` });
+    }
+    represented.add(`${finding.dimension}\u0000${finding.finding}`);
+    if (!finding.strategicImplication.trim()) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Explain the decision or action this finding could change.", path: `${path}.strategicImplication` });
+    }
+    if (finding.basis !== "inference" && finding.evidenceRefs.length === 0) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "A non-inference SWOT finding needs a traceable fact or source.", path: `${path}.evidenceRefs` });
+    }
+    const hasFact = finding.evidenceRefs.some((ref) => /^fact:\d+$/i.test(ref.trim()));
+    const hasPage = finding.evidenceRefs.some((ref) => /^https?:\/\//i.test(ref.trim()));
+    if ((finding.basis === "owner_report" || finding.basis === "measured") && !hasFact) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Owner reports and measured findings must point to a supplied fact record.", path: `${path}.evidenceRefs` });
+    }
+    if (finding.basis === "research" && !hasPage) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "A research finding must cite a page read in this run.", path: `${path}.evidenceRefs` });
+    }
+    for (const ref of finding.evidenceRefs) {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      if (fact) {
+        if (Number(fact[1]) >= factCount) swotIssues.push({ severity: "error", rule: "citation", message: `Evidence reference "${ref}" is outside this run's confirmed fact list.`, path: `${path}.evidenceRefs` });
+      } else if (/^https?:\/\//i.test(ref.trim())) {
+        refs.push({ url: ref, path: `${path}.evidenceRefs` });
+      } else {
+        swotIssues.push({ severity: "error", rule: "citation", message: "Use fact:N or a page URL read in this run.", path: `${path}.evidenceRefs` });
+      }
+    }
+  });
+  for (const [dimension, section] of Object.entries(dimensions)) section.statements.forEach((finding) => {
+    if (!represented.has(`${dimension}\u0000${finding}`)) {
+      swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Give this SWOT statement a source or label it as an inference, and explain its strategic implication.", path: `swot.${section.path}` });
+    }
+  });
+  return [...lintAvailableSourceUrls(refs, input), ...swotIssues];
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */

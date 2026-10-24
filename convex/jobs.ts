@@ -1034,11 +1034,10 @@ export const onboardingResearch = internalAction({
         insightsSpec(),
         agentInput(
           job,
-          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
+          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. For every SWOT statement, identify its dimension (strength/weakness are internal; opportunity/threat are external), match the statement exactly in swotEvidence, state its evidence basis (owner report, source claim, measured result, research, or inference), cite only fact:N from the supplied confirmed facts or a page URL read in this run, and explain the strategic implication. Use inference with no citation when direct evidence is missing; never turn website marketing claims into verified strengths or treat a hypothesis as a market fact.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
           {
             untrustedContext: pagesText,
             availableSourceUrls: pages.filter((p) => p.status === "ok").map((p) => p.url),
-            facts: profile.facts.map((f) => f.statement),
             research: researchFor("business_insights", { website: business.website, businessName: business.name }),
           },
         ),
@@ -1196,7 +1195,7 @@ export const buildStrategy = internalAction({
           context: "",
           ctx: fixtureCtx(job),
           text:
-        `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? reportDropped("plan fallback insights", fitJson({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, opportunities: insights.opportunities }, 6000, "insights")) : "(none yet)"}`,
+        `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, guardrails, duration and stopping rule. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions. Treat SWOT evidence and implications as hypotheses unless their cited sources support the claim; use them to compare options and trade-offs, not as a list of proven advantages.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? reportDropped("plan fallback insights", fitJson({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, swotEvidence: insights.swotEvidence, opportunities: insights.opportunities }, 6000, "insights")) : "(none yet)"}`,
         },
         planMeta,
       );

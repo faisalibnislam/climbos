@@ -452,6 +452,14 @@ export default defineSchema({
           opportunities: v.array(v.string()),
           threats: v.array(v.string()),
         }),
+        swotEvidence: v.optional(v.array(v.object({
+          dimension: v.union(v.literal("strength"), v.literal("weakness"), v.literal("opportunity"), v.literal("threat")),
+          finding: v.string(),
+          basis: v.union(v.literal("owner_report"), v.literal("source_claim"), v.literal("measured"), v.literal("research"), v.literal("inference")),
+          evidenceRefs: v.array(v.string()),
+          strategicImplication: v.string(),
+          confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+        }))),
         journey: v.array(v.object({ stage: v.string(), observation: v.string(), opportunity: v.string() })),
         opportunities: v.array(v.object({ title: v.string(), why: v.string(), effort: v.string() })),
         /** Engine v2 expert research: alternatives, customer language, objections, gaps. */
