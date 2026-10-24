@@ -113,7 +113,22 @@ export const StrategySchema = z.object({
       hypothesis: z.string(),
       population: z.string(),
       method: z.enum(["holdout", "ab_split", "pre_post_observational", "export_instructions"]),
+      /** Person/account/session/etc. assigned; use an explicit not-applicable value for non-assignment methods. */
+      assignmentUnit: z.string(),
+      assignmentMethod: z.enum(["randomized", "deterministic_hash", "platform_randomized", "matched", "owner_selected", "time_based", "not_applicable"]),
       primaryMetric: z.string(),
+      primaryMetricType: z.enum(["binary_rate", "count", "continuous", "monetary"]),
+      denominator: z.string(),
+      /** Null means no business-specific measured baseline is available; never silently substitute a prior. */
+      baselineRate: z.number().nullable(),
+      baselineProvenance: z.enum(["measured", "owner_report", "source_reported", "unknown"]),
+      /** Input fact IDs or exact evidence URLs supporting a non-null baseline; empty when unknown. */
+      baselineEvidenceRefs: z.array(z.string()),
+      baselineBasis: z.string(),
+      minimumMeaningfulEffect: z.object({ value: z.number().nullable(), unit: z.string(), basis: z.string() }),
+      /** Null is allowed when no reliable estimate exists; basis must say why. */
+      plannedSamplePerArm: z.number().nullable(),
+      plannedSampleBasis: z.string(),
       guardrails: z.array(z.string()),
       durationDays: z.number(),
       stoppingRule: z.string(),

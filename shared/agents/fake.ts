@@ -128,9 +128,22 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month.", population: "Plans", period: "month" }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
     // Growth plan: a dated action, not only measurement, and a route to the page (plan lint: never data-only, distribution).
-    const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown; channels?: { cites?: string[] }[]; audiences?: { cites?: string[] }[]; experiments?: { population?: string; durationDays?: number; guardrails?: string[] }[] };
+    const plan = output as { weekOneChecklist?: unknown; diagnosis?: unknown; channels?: { cites?: string[] }[]; audiences?: { cites?: string[] }[]; experiments?: { method?: string; assignmentUnit?: string; assignmentMethod?: string; primaryMetricType?: string; denominator?: string; baselineRate?: number | null; baselineProvenance?: string; baselineEvidenceRefs?: string[]; baselineBasis?: string; minimumMeaningfulEffect?: { value: number | null; unit: string; basis: string }; plannedSamplePerArm?: number | null; plannedSampleBasis?: string; population?: string; durationDays?: number; guardrails?: string[] }[] };
     // A split or holdout test says how many are eligible (plan lint: experiment feasibility).
     if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of plan.experiments ?? []) if (x && typeof x === "object") {
+        // Keep the fake strategy scenario honest: without a measured baseline or MDE, it is an observational pilot, not a powered split.
+        x.method = "pre_post_observational";
+        x.assignmentUnit = "Not applicable; consecutive observed cohorts";
+        x.assignmentMethod = "not_applicable";
+        x.primaryMetricType = "binary_rate";
+        x.denominator = "eligible people observed in each cohort window";
+        x.baselineRate = null;
+        x.baselineProvenance = "unknown";
+        x.baselineEvidenceRefs = [];
+        x.baselineBasis = "Fake scenario has no observed baseline; establish it before interpretation.";
+        x.minimumMeaningfulEffect = { value: null, unit: "absolute_rate", basis: "No owner threshold in fake scenario." };
+        x.plannedSamplePerArm = null;
+        x.plannedSampleBasis = "Observational fake scenario; no powered-sample claim.";
         x.population = "About 1,500 eligible visitors a week (estimate)";
         x.durationDays = 14;
         x.guardrails = ["Unsubscribes stay under 1% (estimate)"];

@@ -992,9 +992,6 @@ function eligibleCount(population: string): { n: number; per: "week" | "month" |
   return { n, per };
 }
 
-/** Assumed big-swing test for the feasibility gate when the metric's baseline is unknown: 10% → 15%. Generous on purpose. */
-const FEASIBILITY_BASELINE = 0.1;
-const FEASIBILITY_MDE = 0.05;
 /** "Stop when it's significant": peeking, which makes a fixed-horizon p-value meaningless (BK06 Ch 3). */
 const PEEKING = /\b(as soon as|once|when|until)\b[^.]{0,40}\bsignifican/i;
 /** A stop rule about harm (a guardrail) may stop early: Microsoft ExP auto-stops for harm (blog research BRP-21). */
@@ -1036,7 +1033,7 @@ function baselineFor(metric: string, rates: FunnelRates | undefined): { rate: nu
  * to finish even for a big swing, sized on the metric's real baseline when the
  * owner measured it. It must not stop on significance; stopping for harm is allowed.
  */
-export function lintExperimentFeasibility(out: { experiments?: { name: string; method: string; population: string; durationDays: number; stoppingRule: string; primaryMetric?: string; guardrails?: string[] }[] }, c?: { funnelRates?: FunnelRates }): LintIssue[] {
+export function lintExperimentFeasibility(out: { experiments?: { name: string; method: string; population: string; durationDays: number; stoppingRule: string; primaryMetric?: string; primaryMetricType?: "binary_rate" | "count" | "continuous" | "monetary"; assignmentUnit?: string; assignmentMethod?: string; denominator?: string; baselineRate?: number | null; baselineProvenance?: "measured" | "owner_report" | "source_reported" | "unknown"; baselineEvidenceRefs?: string[]; baselineBasis?: string; minimumMeaningfulEffect?: { value: number | null; unit: string; basis: string }; plannedSamplePerArm?: number | null; plannedSampleBasis?: string; guardrails?: string[] }[] }, c?: { funnelRates?: FunnelRates }): LintIssue[] {
   const issues: LintIssue[] = [];
   (out.experiments ?? []).forEach((e, i) => {
     const path = `experiments[${i}]`;
@@ -1047,6 +1044,38 @@ export function lintExperimentFeasibility(out: { experiments?: { name: string; m
     const guards = (e.guardrails ?? []).filter((g) => g.trim());
     if (!guards.length || guards.length > 3 || !guards.every((g) => /\d/.test(g)))
       issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" needs 1–3 guardrails, each with a number that marks harm (e.g. "unsubscribes above 1%", "refunds above 3%").`, path: `${path}.guardrails` });
+    const preregistration: [string, boolean][] = [
+      ["assignmentUnit", Boolean(e.assignmentUnit?.trim())],
+      ["assignmentMethod", Boolean(e.assignmentMethod && e.assignmentMethod !== "not_applicable")],
+      ["primaryMetricType", Boolean(e.primaryMetricType)],
+      ["denominator", Boolean(e.denominator?.trim())],
+      ["baselineBasis", Boolean(e.baselineBasis?.trim())],
+      ["baselineEvidenceRefs", e.baselineProvenance === "unknown" ? (e.baselineEvidenceRefs?.length ?? 0) === 0 : Boolean(e.baselineEvidenceRefs?.length)],
+      ["minimumMeaningfulEffect.basis", Boolean(e.minimumMeaningfulEffect?.basis.trim())],
+      ["plannedSampleBasis", Boolean(e.plannedSampleBasis?.trim())],
+    ];
+    for (const [field, present] of preregistration) {
+      if (!present) issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" must declare ${field} before a split or holdout starts. Use an explicit unknown reason instead of guessing.`, path: `${path}.${field}` });
+    }
+    if (e.primaryMetricType === "binary_rate" && e.baselineRate !== null && e.baselineRate !== undefined && (!(e.baselineRate > 0 && e.baselineRate < 1) || e.baselineProvenance === "unknown" || !e.baselineProvenance))
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" has a baseline that is outside (0, 1) or lacks a measured, owner-reported or source-reported basis.`, path: `${path}.baselineRate` });
+    if (e.primaryMetricType === "binary_rate" && (e.baselineRate === null || e.baselineRate === undefined || e.baselineProvenance === "unknown"))
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" has no supported binary baseline. Measure it first or choose a method that does not claim a powered split.`, path: `${path}.baselineRate` });
+    const mde = e.minimumMeaningfulEffect?.value;
+    if (e.primaryMetricType === "binary_rate" && (mde === null || mde === undefined || !(mde > 0) || e.minimumMeaningfulEffect?.unit !== "absolute_rate"))
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" needs a positive minimum meaningful effect in absolute_rate units for binary-rate sizing.`, path: `${path}.minimumMeaningfulEffect` });
+    if (!Number.isInteger(e.plannedSamplePerArm) || (e.plannedSamplePerArm ?? 0) <= 0)
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" needs a positive whole-number planned sample per arm; explain its calculation and limits.`, path: `${path}.plannedSamplePerArm` });
+    if (preregistration.some(([, present]) => !present) || !e.primaryMetricType || (e.primaryMetricType === "binary_rate" && (e.baselineRate == null || e.baselineProvenance === "unknown" || !(e.baselineEvidenceRefs?.length))) || !e.minimumMeaningfulEffect?.basis.trim() || !Number.isInteger(e.plannedSamplePerArm) || (e.plannedSamplePerArm ?? 0) <= 0) return;
+    if (e.primaryMetricType === "binary_rate" && mde != null && e.baselineRate != null && e.baselineRate + mde >= 1) {
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" baseline plus minimum meaningful effect must stay below 100%.`, path: `${path}.minimumMeaningfulEffect` });
+      return;
+    }
+    const measured = inPopulationUnits(baselineFor(e.primaryMetric ?? "", c?.funnelRates), e.population, c?.funnelRates);
+    if (measured && e.primaryMetricType === "binary_rate" && e.baselineRate != null && Math.abs(measured.rate - e.baselineRate) > 0.0005) {
+      issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" baseline must match from your measured ${measured.kind} rate (${Math.round(measured.rate * 1000) / 10}%) available to this plan.`, path: `${path}.baselineRate` });
+      return;
+    }
     const cnt = eligibleCount(e.population);
     if (!cnt) {
       issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" is a ${e.method === "ab_split" ? "split" : "holdout"} test but doesn't say how many people are eligible (e.g. "about 400 visitors a week"). Without it, nobody can tell if it can finish.`, path: `${path}.population` });
@@ -1054,14 +1083,14 @@ export function lintExperimentFeasibility(out: { experiments?: { name: string; m
     }
     const days = Math.max(1, e.durationDays);
     const available = cnt.per === "week" ? cnt.n * (days / 7) : cnt.n === 0 ? 0 : cnt.per === "month" ? cnt.n * (days / 30) : cnt.n;
-    // Sized on the owner's measured rate for this kind of metric when known (a 50% relative swing); otherwise the generous default.
-    const base = inPopulationUnits(baselineFor(e.primaryMetric ?? "", c?.funnelRates), e.population, c?.funnelRates);
-    const p0 = base ? base.rate : FEASIBILITY_BASELINE;
-    const mde = base ? Math.min(base.rate * 0.5, 0.99 - base.rate) : FEASIBILITY_MDE;
-    const need = sampleSize({ baseline: p0, minDetectable: mde }).total;
-    const swing = `${Math.round(p0 * 1000) / 10}% → ${Math.round((p0 + mde) * 1000) / 10}%`;
-    if (available < need)
-      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available)} people in ${days} days; even a big swing (${swing}${base ? `, from your measured ${base.kind} rate` : ""}) needs about ${need}. Use a before/after labelled observational, interviews or an assisted pilot, or test a step with more volume.`, path });
+    const sizingBaseline = measured?.rate ?? e.baselineRate;
+    if (e.primaryMetricType === "binary_rate" && sizingBaseline !== undefined && sizingBaseline !== null && mde !== null && mde !== undefined && mde > 0 && sizingBaseline + mde < 1) {
+      const needPerArm = sampleSize({ baseline: sizingBaseline, minDetectable: mde }).perArm;
+      if ((e.plannedSamplePerArm ?? 0) < needPerArm) issues.push({ severity: "error", rule: "experiment_preregistration", message: `"${e.name}" plans ${e.plannedSamplePerArm} per arm, but its stated baseline and minimum meaningful effect need about ${needPerArm} per arm at the default two-sided 5% alpha and 80% power.`, path: `${path}.plannedSamplePerArm` });
+      if (available / 2 < e.plannedSamplePerArm!) issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available / 2)} people per arm in ${days} days, below its predeclared target of ${e.plannedSamplePerArm}. Use a baseline week, a before/after labelled observational method, interviews or an assisted pilot.`, path });
+    } else if (available / 2 < (e.plannedSamplePerArm ?? Infinity)) {
+      issues.push({ severity: "error", rule: "experiment_feasibility", message: `"${e.name}" reaches about ${Math.round(available / 2)} people per arm in ${days} days, below its predeclared target of ${e.plannedSamplePerArm}.`, path });
+    }
   });
   return issues;
 }
