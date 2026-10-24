@@ -282,9 +282,11 @@ export interface ChannelLimits {
   ownerHoursPerWeek?: number;
   /** Providers with status "connected" (null when unknown). */
   connected?: readonly string[] | null;
+  /** Owner-confirmed maximum number of additional customers the business can serve monthly. */
+  newCustomersPerMonth?: number;
 }
 
-export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability";
+export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability" | "measurement" | "capacity";
 /** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs a connection first. */
 export interface LimitCheck {
   kind: LimitKind;
@@ -316,6 +318,14 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
   else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
   const need = MIN_OWNER_HOURS[c.exec];
   if (l.ownerHoursPerWeek !== undefined && need > l.ownerHoursPerWeek) out.push({ kind: "owner_time", verdict: "blocked", reason: `Needs about ${need} of your hours a week; you have ${l.ownerHoursPerWeek}.` });
+  // Don't acquire new buyers when the owner says there is no delivery capacity.
+  // Existing/returning-customer work can still improve value without adding net-new customers.
+  if (l.newCustomersPerMonth === 0 && !ownBase(c)) out.push({ kind: "capacity", verdict: "blocked", reason: "You said you cannot take on any new customers this month; improve delivery, retention or pricing before creating more demand." });
+  // Paid media without conversion tracking cannot be evaluated for customer economics.
+  // This gate is only supplied for an owner-confirmed "none" value; inferred or unknown tracking stays a question.
+  if (p.dims.tracking?.source === "owner" && p.dims.tracking.value === "none" && ["paid_search", "paid_social", "retargeting"].includes(c.family)) {
+    out.push({ kind: "measurement", verdict: "blocked", reason: "Set up conversion tracking before paying for traffic, so the test can measure qualified leads or customers rather than clicks alone." });
+  }
   const cycle = CYCLE_DAYS[dim(p, "salesCycle") ?? ""];
   if (cycle !== undefined && !ownBase(c)) {
     const first = LEARN_DAYS[c.learn] + cycle;

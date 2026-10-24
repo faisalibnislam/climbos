@@ -1328,7 +1328,10 @@ export default defineSchema({
         adjustments: v.any(),
         summary: v.array(v.string()),
         /** decision_contract plans: the limits applied before ranking (REQ-STRAT-03); connections are read live. */
-        limits: v.optional(v.object({ ownerHoursPerWeek: v.union(v.number(), v.null()) })),
+        limits: v.optional(v.object({
+          ownerHoursPerWeek: v.union(v.number(), v.null()),
+          newCustomersPerMonth: v.optional(v.union(v.number(), v.null())),
+        })),
       }),
     ),
     reviewDate: v.string(),

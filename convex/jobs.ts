@@ -985,7 +985,11 @@ export const buildStrategy = internalAction({
         channelSummary = fit.summary.slice(0, 3);
       }
       // S5 flag (REQ-STRAT-03): cash, owner time, sales cycle and capability limits apply before ranking.
-      const limits = hasFlag(job, "decision_contract") ? { ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek, connected: job.capabilities.connected } : undefined;
+      const limits = hasFlag(job, "decision_contract") ? {
+        ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek,
+        newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+        connected: job.capabilities.connected,
+      } : undefined;
       const scored = scoreChannels(profile, adjustments, undefined, limits);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
       const cycleDays = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
@@ -1053,7 +1057,7 @@ export const buildStrategy = internalAction({
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: planSnapshot(job, insightsBrief.length), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
-        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null } } : {}) }),
+        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null } } : {}) }),
         evidence: JSON.stringify(
           buildPlanEvidence({
             skillIds: [...(playsMeta.skills ?? []), ...(planMeta.skills ?? [])],
