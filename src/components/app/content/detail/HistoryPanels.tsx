@@ -100,9 +100,38 @@ export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
           return (
             <li key={f.id} className="flex flex-col gap-1.5">
               <span className="text-sm text-ink">{f.statement}</span>
-              <Badge tone={s.tone} className="self-start">
-                {s.label}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge tone={s.tone}>{s.label}</Badge>
+                <Badge tone={f.provenance === "owner_supplied" ? "blue" : "neutral"}>
+                  {f.provenance === "owner_supplied" ? "Owner supplied" : f.provenance === "demo_fixture" ? "Demo data" : "Researched"}
+                </Badge>
+                <Badge tone={f.confidence === "high" ? "green" : f.confidence === "medium" ? "amber" : "neutral"}>
+                  {f.confidence} confidence
+                </Badge>
+                <Badge tone="neutral">{f.category}</Badge>
+                {f.verifiedAt ? <span className="text-xs text-ink-3">Verified {formatDateTime(f.verifiedAt)}</span> : null}
+              </div>
+              {f.sources.length > 0 ? (
+                <ul className="flex flex-col gap-2 border-l-2 border-line pl-3">
+                  {f.sources.map((source, index) => (
+                    <li key={`${f.id}-${index}`} className="flex flex-col gap-1">
+                      <span className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
+                        {source.url ? (
+                          <a href={source.url} target="_blank" rel="noreferrer noopener" className="break-all text-link hover:underline">
+                            {source.title || source.url}
+                          </a>
+                        ) : <span>{source.title || (source.kind === "owner_text" ? "Owner note" : "Uploaded source")}</span>}
+                        <span>Captured {formatDateTime(source.fetchedAt)}</span>
+                        {source.expired ? <Badge tone="amber">May be out of date</Badge> : null}
+                        {source.status !== "ok" ? <Badge tone="amber">{source.status.replaceAll("_", " ")}</Badge> : null}
+                      </span>
+                      {source.excerpt ? <span className="text-xs text-ink-3">{source.excerpt}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : f.provenance === "researched" ? (
+                <span className="text-xs text-amber-800">No source record is attached to this fact.</span>
+              ) : null}
             </li>
           );
         })}

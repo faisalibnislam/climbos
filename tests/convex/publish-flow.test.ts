@@ -163,6 +163,63 @@ describe("publishing lifecycle", () => {
     expect(versions[0]?.contentHash).not.toBe(versions[1]?.contentHash);
   });
 
+  it("shows only same-business evidence sources on the artifact review screen", async () => {
+    const t = setup();
+    const w = await workspace(t, "fact-source-review@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const foreign = await workspace(t, "foreign-fact-source@flow.example");
+    const factId = await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      const foreignBusiness = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", foreign.orgId)).first())!;
+      const localSourceId = await ctx.db.insert("factSources", {
+        orgId: w.orgId,
+        businessId: business._id,
+        kind: "website",
+        url: "https://flow.example/pricing",
+        title: "Pricing page",
+        excerpt: "Plans are billed monthly.",
+        fetchedAt: Date.now() - 1_000,
+        status: "ok",
+        expiresAt: Date.now() + 60_000,
+      });
+      const foreignSourceId = await ctx.db.insert("factSources", {
+        orgId: foreign.orgId,
+        businessId: foreignBusiness._id,
+        kind: "website",
+        url: "https://private.example/secret",
+        fetchedAt: Date.now(),
+        status: "ok",
+        expiresAt: Date.now() + 60_000,
+      });
+      const id = await ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId: business._id,
+        category: "pricing",
+        statement: "Plans are billed monthly.",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "researched",
+        sourceIds: [localSourceId, foreignSourceId],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      await ctx.db.patch(version!._id, { claimFactIds: [id] });
+      return id;
+    });
+
+    const view = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(view.facts).toContainEqual(expect.objectContaining({
+      id: factId,
+      category: "pricing",
+      confidence: "high",
+      provenance: "researched",
+      sources: [expect.objectContaining({ url: "https://flow.example/pricing", expired: false })],
+    }));
+    expect(JSON.stringify(view.facts)).not.toContain("private.example");
+  });
+
   it("a repeat call on an already-attempted approval settles the post instead of leaving it sending", async () => {
     const t = setup();
     const w = await workspace(t);

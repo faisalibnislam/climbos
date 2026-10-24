@@ -177,7 +177,20 @@ export const get = query({
     const facts = [];
     for (const id of factIds.slice(0, 40)) {
       const f = await ctx.db.get(id);
-      if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, reviewState: f.reviewState });
+      if (!f || f.orgId !== org._id || f.businessId !== a.businessId) continue;
+      const sources = await Promise.all(f.sourceIds.slice(0, 3).map((sourceId) => ctx.db.get(sourceId)));
+      facts.push({
+        id: f._id,
+        statement: f.statement,
+        reviewState: f.reviewState,
+        category: f.category,
+        confidence: f.confidence,
+        provenance: f.provenance,
+        verifiedAt: f.verifiedAt ?? null,
+        sources: sources.flatMap((source) => source && source.orgId === org._id && source.businessId === a.businessId
+          ? [{ kind: source.kind, url: source.url ?? null, title: source.title ?? null, excerpt: source.excerpt ?? null, fetchedAt: source.fetchedAt, expiresAt: source.expiresAt, expired: source.expiresAt < Date.now(), status: source.status }]
+          : []),
+      });
     }
     const target = DIRECT_PUBLISH[a.channel];
     const conn = target
