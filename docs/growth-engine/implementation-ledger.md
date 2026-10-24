@@ -42,6 +42,8 @@ The same source-scoped identity rule now applies to Issue 26/29's first-recorded
 
 Monthly cohort size, repeat activity, and cohort revenue now use the same source-scoped customer identity. Equal provider IDs no longer merge unrelated people into one retention history; cross-provider person resolution remains unverified.
 
+Issue 127's cohort revenue now subtracts separate refund events from the matching source-scoped customer/order cohort and month, while refunds do not count as retained payment activity. Unmatched refunds remain outside customer cohorts rather than being guessed onto a customer.
+
 Billing attribution also scopes customer touches and refund/order matching by source. New revenue imports and demo touches store their source; a legacy touch without source is used only if the customer reference appears in one source in the current revenue set. When that legacy identity is ambiguous, the event remains unattributed rather than receiving another provider's channel credit.
 
 Issue 58 now receives a bounded 365-day tagged-source concentration summary in agent context when non-demo billing events include recognized UTM platforms. It reports top-one/top-three share among positive net revenue assigned to recognized tags and the number of tagged conversions, with explicit association and completeness limits. This cannot detect untagged or offline dependency, policy exposure, or the full platform mix; it must not be treated as proof of causation or as a standalone diversification recommendation.

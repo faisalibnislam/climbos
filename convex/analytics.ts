@@ -382,6 +382,7 @@ export const cohorts = query({
     const result = computeCohorts(rows.map((row) => ({
       source: row.source,
       customerRef: row.customerRef,
+      orderRef: row.orderRef,
       occurredAt: row.occurredAt,
       amountMinor: row.amountMinor,
       refundedMinor: row.refundedMinor,

@@ -11,6 +11,7 @@ export interface CohortPayment {
   /** Provider namespace for customerRef; optional only for legacy callers. */
   source?: string;
   customerRef?: string;
+  orderRef?: string;
   occurredAt: number;
   amountMinor: number;
   refundedMinor: number;
@@ -54,22 +55,45 @@ export function computeCohorts(
     const customer = customerKey(p);
     if (!firstMonth.has(customer)) firstMonth.set(customer, idx);
   }
+  const customerByOrder = new Map<string, string>();
+  for (const p of valid) {
+    if (!p.orderRef || !p.customerRef) continue;
+    const key = `${p.source ?? ""}\u0000${p.currency}\u0000${p.orderRef}`;
+    if (!customerByOrder.has(key)) customerByOrder.set(key, customerKey(p));
+  }
   const cohorts = new Map<number, { members: Set<string>; active: Map<number, Set<string>>; revenue: Map<number, number> }>();
   for (const [customer, idx] of firstMonth) {
     const c = cohorts.get(idx) ?? { members: new Set(), active: new Map(), revenue: new Map() };
     c.members.add(customer);
     cohorts.set(idx, c);
   }
-  for (const p of valid) {
-    const customer = customerKey(p);
+  const ledger: { payment: CohortPayment; customer: string; netMinor: number; isRefund: boolean }[] = valid.map((payment) => ({
+    payment,
+    customer: customerKey(payment),
+    netMinor: payment.amountMinor - payment.refundedMinor,
+    isRefund: false,
+  }));
+  for (const refund of payments) {
+    if (refund.kind !== "refund" || refund.currency !== options.currency) continue;
+    const customer = refund.customerRef
+      ? customerKey(refund)
+      : refund.orderRef
+        ? customerByOrder.get(`${refund.source ?? ""}\u0000${refund.currency}\u0000${refund.orderRef}`)
+        : undefined;
+    if (customer && firstMonth.has(customer)) ledger.push({ payment: refund, customer, netMinor: -Math.abs(refund.amountMinor), isRefund: true });
+  }
+
+  for (const { payment: p, customer, netMinor, isRefund } of ledger) {
     const start = firstMonth.get(customer)!;
     const k = monthIndex(monthKey(p.occurredAt)) - start;
     if (k < 0 || k >= maxMonths) continue;
     const c = cohorts.get(start)!;
-    const set = c.active.get(k) ?? new Set<string>();
-    set.add(customer);
-    c.active.set(k, set);
-    c.revenue.set(k, (c.revenue.get(k) ?? 0) + p.amountMinor - p.refundedMinor);
+    if (!isRefund) {
+      const set = c.active.get(k) ?? new Set<string>();
+      set.add(customer);
+      c.active.set(k, set);
+    }
+    c.revenue.set(k, (c.revenue.get(k) ?? 0) + netMinor);
   }
   return [...cohorts.entries()]
     .sort((a, b) => a[0] - b[0])

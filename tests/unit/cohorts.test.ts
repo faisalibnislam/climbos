@@ -23,7 +23,7 @@ describe("monthly cohorts", () => {
     expect(july.size).toBe(3);
     expect(july.activeCustomers).toEqual([3, 2, 1, null]);
     expect(july.retention[1]).toBeCloseTo(2 / 3, 9);
-    expect(july.revenueMinor).toEqual([7500, 5000, 2500, null]);
+    expect(july.revenueMinor).toEqual([7500, 5000, 0, null]);
     expect(done[1].activeCustomers).toEqual([1, 1, null, null]);
   });
 
@@ -43,5 +43,17 @@ describe("monthly cohorts", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ size: 2, activeCustomers: [2, 1, null], retention: [1, 0.5, null], revenueMinor: [3_000, 1_000, null] });
+  });
+
+  it("subtracts source- and order-matched refunds from cohort revenue without calling refunds retained activity", () => {
+    const result = computeCohorts([
+      pay("same-id", "2026-07-05", 10_000, { source: "stripe", orderRef: "order-1" }),
+      { source: "stripe", orderRef: "order-1", occurredAt: d("2026-08-05"), amountMinor: 3_000, refundedMinor: 0, kind: "refund", currency: "USD" },
+      pay("same-id", "2026-07-06", 20_000, { source: "polar", orderRef: "order-1" }),
+      { source: "unknown-provider", orderRef: "order-1", occurredAt: d("2026-08-05"), amountMinor: 7_000, refundedMinor: 0, kind: "refund", currency: "USD" },
+    ], { currency: "USD", nowMs: d("2026-09-02"), maxMonths: 3 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ size: 2, activeCustomers: [2, 0, null], revenueMinor: [30_000, -3_000, null] });
   });
 });
