@@ -3185,7 +3185,7 @@ export default defineSchema({
     business: v.optional(
       v.object({ name: v.string(), summary: v.string(), audience: v.string(), category: v.string() }),
     ),
-    facts: v.array(v.object({ statement: v.string(), sourceUrl: v.optional(v.string()), confidence: v.string() })),
+    facts: v.array(v.object({ statement: v.string(), sourceUrl: v.optional(v.string()), confidence: v.string(), category: v.optional(v.union(v.literal("product"), v.literal("audience"), v.literal("pricing"), v.literal("brand"), v.literal("offer"), v.literal("proof"), v.literal("competitor"), v.literal("other"))) })),
     ideas: v.array(
       v.object({ title: v.string(), channel: v.string(), why: v.string(), firstStep: v.string(), role: v.string() }),
     ),

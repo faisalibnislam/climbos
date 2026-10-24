@@ -11,6 +11,8 @@ import { appError, requireOrgAccess } from "./lib/tenancy";
 
 const PER_IP_PER_DAY = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FACT_DAYS = 30;
+const FACT_CATEGORIES = new Set(["product", "audience", "pricing", "brand", "offer", "proof", "competitor", "other"]);
 export const PREVIEW_MAX_COST_MICROS = 30_000; // $0.03 reserved per preview
 export const DEFAULT_PREVIEW_DAILY_BUDGET_MICROS = 5_000_000; // $5 per day across all visitors
 
@@ -154,7 +156,7 @@ export const update = internalMutation({
         v.object({ name: v.string(), summary: v.string(), audience: v.string(), category: v.string() }),
       ),
       facts: v.optional(
-        v.array(v.object({ statement: v.string(), sourceUrl: v.optional(v.string()), confidence: v.string() })),
+        v.array(v.object({ statement: v.string(), sourceUrl: v.optional(v.string()), confidence: v.string(), category: v.optional(v.union(v.literal("product"), v.literal("audience"), v.literal("pricing"), v.literal("brand"), v.literal("offer"), v.literal("proof"), v.literal("competitor"), v.literal("other"))) })),
       ),
       ideas: v.optional(
         v.array(
@@ -190,14 +192,55 @@ export const update = internalMutation({
 export const claim = mutation({
   args: { token: v.string(), orgId: v.id("organizations") },
   handler: async (ctx, { token, orgId }) => {
-    const access = await requireOrgAccess(ctx, { orgId }, "edit");
+    const { org } = await requireOrgAccess(ctx, { orgId }, "edit");
     const p = await ctx.db
       .query("previews")
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
-    if (!p || p.status !== "done" || p.claimedByOrgId) return { imported: 0 };
-    await ctx.db.patch(p._id, { claimedByOrgId: access.org._id });
-    return { imported: p.facts.length, website: p.website, goal: p.goal };
+    if (!p || p.status !== "done" || p.claimedByOrgId || p.expiresAt < Date.now()) return { imported: 0 };
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    const host = (value: string | undefined) => {
+      try { return value ? new URL(value).hostname.toLowerCase().replace(/^www\./u, "") : null; }
+      catch { return null; }
+    };
+    // The public preview can only be carried into the workspace for the same
+    // site. If the owner changed the URL during sign-up, the normal research
+    // workflow will read the new site instead.
+    if (!business || !host(p.website) || host(business.website) !== host(p.website)) return { imported: 0 };
+
+    const facts = p.facts.slice(0, 8).filter((fact) => fact.statement.trim());
+    if (facts.length) {
+      const fetchedAt = p.createdAt;
+      const sourceId = await ctx.db.insert("factSources", {
+        orgId: org._id,
+        businessId: business._id,
+        kind: "website",
+        url: p.website,
+        title: "ClimbOS public website preview",
+        fetchedAt,
+        status: "ok",
+        expiresAt: fetchedAt + FACT_DAYS * DAY_MS,
+      });
+      for (const fact of facts) {
+        const category = fact.category && FACT_CATEGORIES.has(fact.category) ? fact.category : "other";
+        const confidence = fact.confidence === "high" || fact.confidence === "medium" ? fact.confidence : "low";
+        await ctx.db.insert("businessFacts", {
+          orgId: org._id,
+          businessId: business._id,
+          category: category as "product" | "audience" | "pricing" | "brand" | "offer" | "proof" | "competitor" | "other",
+          statement: fact.statement.trim().slice(0, 400),
+          confidence,
+          reviewState: "needs_review",
+          provenance: "researched",
+          sourceIds: [sourceId],
+          createdAt: fetchedAt,
+          updatedAt: fetchedAt,
+        });
+      }
+      await ctx.db.patch(business._id, { researchStatus: "partial", updatedAt: Date.now() });
+    }
+    await ctx.db.patch(p._id, { claimedByOrgId: org._id });
+    return { imported: facts.length, website: p.website, goal: p.goal };
   },
 });
 
