@@ -487,6 +487,8 @@ export interface ExtractedPage {
   links: Array<{ url: string; text: string }>;
   jsonLdPrices: JsonLdPrice[];
   jsonLdTypes: string[];
+  /** JSON parse failures among the first 50 application/ld+json script blocks inspected. */
+  jsonLdScriptParseErrors?: number;
   text: string;
   truncated: boolean;
 }
@@ -535,15 +537,18 @@ export function extractPageContent(
   // JSON-LD first (before scripts are removed).
   const jsonLdPrices: JsonLdPrice[] = [];
   const jsonLdTypes = new Set<string>();
+  let jsonLdScriptParseErrors = 0;
+  let jsonLdScriptsParsed = 0;
   const ldRe = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi;
   let ld: RegExpExecArray | null;
-  while ((ld = ldRe.exec(src)) !== null) {
+  while ((ld = ldRe.exec(src)) !== null && jsonLdScriptsParsed < 50) {
+    jsonLdScriptsParsed++;
     try {
       const data = JSON.parse((ld[1] ?? "").trim()) as unknown;
       collectJsonLdPrices(data, jsonLdPrices, undefined, 0);
       collectJsonLdTypes(data, jsonLdTypes, 0);
     } catch {
-      /* ignore malformed JSON-LD */
+      jsonLdScriptParseErrors++;
     }
   }
 
@@ -642,6 +647,7 @@ export function extractPageContent(
   }
 
   const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
+  if (jsonLdScriptParseErrors) page.jsonLdScriptParseErrors = jsonLdScriptParseErrors;
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
   if (canonicalUrl) page.canonicalUrl = canonicalUrl;

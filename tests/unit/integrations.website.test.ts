@@ -255,6 +255,12 @@ describe("extractPageContent", () => {
     expect(page.truncated).toBe(true);
     expect(page.links.length).toBe(50);
   });
+
+  it("counts malformed JSON-LD blocks without treating them as absent markup", () => {
+    const page = extractPageContent('<script type="application/ld+json">{"@type": "Product", }</script>', "https://example.com/product");
+    expect(page.jsonLdScriptParseErrors).toBe(1);
+    expect(page.jsonLdTypes).toEqual([]);
+  });
 });
 
 describe("firecrawl", () => {

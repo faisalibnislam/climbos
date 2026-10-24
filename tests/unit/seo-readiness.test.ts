@@ -23,6 +23,14 @@ describe("homepage search readiness", () => {
     expect(JSON.stringify(findings)).not.toMatch(/rank|citation|score/i);
   });
 
+  it("distinguishes malformed JSON-LD from absent structured data", () => {
+    const findings = assessSearchReadiness(page({ title: "Guide", metaDescription: "A guide", text: "Useful page text. ".repeat(20), jsonLdScriptParseErrors: 2 }));
+    expect(findings.map((finding) => finding.id)).toContain("invalid-json-ld");
+    expect(findings.map((finding) => finding.id)).not.toContain("no-structured-data");
+    expect(findings.find((finding) => finding.id === "invalid-json-ld")).toMatchObject({ level: "attention", evidence: expect.stringContaining("2") });
+    expect(JSON.stringify(findings)).not.toMatch(/will rank|will be cited|citation rate/i);
+  });
+
   it("flags heading hierarchy gaps and multiple H1 headings", () => {
     const findings = assessSearchReadiness(page({
       title: "Gym", metaDescription: "Climb", text: "text ".repeat(80),
