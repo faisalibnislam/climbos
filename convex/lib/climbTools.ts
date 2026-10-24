@@ -63,6 +63,14 @@ const CalcOutputSchema = z.union([
 ]);
 const DraftListOutputSchema = z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), kind: z.string(), status: z.string(), scheduledFor: z.string().nullable() }));
 const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), scheduledFor: z.string().nullable(), version: z.number().optional(), headline: z.string().nullable().optional(), body: z.string().optional(), callToAction: z.string().nullable().optional(), hashtags: z.array(z.string()).optional(), image: z.string().nullable().optional(), unsupportedClaims: z.array(z.string()).optional() });
+const HttpUrlSchema = z.string().url().refine((value) => {
+  try { return ["https:", "http:"].includes(new URL(value).protocol); } catch { return false; }
+}, "Expected an HTTP(S) URL");
+const ImageListOutputSchema = z.object({ website: z.string().nullable(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.json().nullable() })) });
+const InboxOutputSchema = z.object({ open: z.number().int().nonnegative(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
+const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
+const CompetitorsOutputSchema = z.object({ watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema })), changes: z.array(z.json()) });
+const LinksOutputSchema = z.object({ weekTotal: z.number(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
 
 /** Validate and bound tool results before they re-enter the model context as untrusted data. */
 export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema?: z.ZodType): string {
@@ -219,6 +227,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Looking at your images",
     input: z.object({ kind: z.enum(["screenshot", "product_photo", "upload", "ai_image"]).optional() }),
+    output: ImageListOutputSchema,
     run: async (c, slug, i) => {
       const l = await c.query(api.assets.list, { slug, kind: i.kind });
       return { website: l.website, images: l.assets.slice(0, 40).map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
@@ -265,6 +274,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your inbox",
     input: z.object({}),
+    output: InboxOutputSchema,
     run: async (c, slug) => {
       const items = await c.query(api.inbox.list, { slug, box: "open" });
       return { open: items.length, items: items.slice(0, 25).map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
@@ -278,6 +288,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your pipeline",
     input: z.object({}),
+    output: PipelineOutputSchema,
     run: async (c, slug) => {
       const p = await c.query(api.crm.list, { slug });
       return { totals: p.totals, deals: p.deals.slice(0, 40).map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
@@ -301,6 +312,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your competitors",
     input: z.object({}),
+    output: CompetitorsOutputSchema,
     run: async (c, slug) => {
       const o = await c.query(api.competitors.overview, { slug });
       return { watching: o.watches.map((w) => ({ name: w.name, url: w.url })), changes: o.changes.slice(0, 10) };
@@ -314,6 +326,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your link clicks",
     input: z.object({}),
+    output: LinksOutputSchema,
     run: async (c, slug) => {
       const l = await c.query(api.links.list, { slug });
       return { weekTotal: l.weekTotal, links: l.links.slice(0, 30).map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
