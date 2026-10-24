@@ -303,6 +303,13 @@ export function factsBlock(facts: { statement: string; category: string; kind?: 
   return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last update` : ""}) ${f.statement}`).join("\n")}`;
 }
 
+/** Stale facts inform what to recheck, but are excluded from the evidence list used to ground claims. */
+export function staleFactsBlock(facts: { statement: string; category: string; freshness: { daysOld: number } }[]): string {
+  if (!facts.length) return "";
+  const rows = facts.map((f) => `- (${f.category}; last confirmed ${f.freshness.daysOld} days ago) ${f.statement}`).join("\n");
+  return `FRESHNESS RULE: The following previously confirmed facts are past their category review interval. Their present accuracy is unknown. Do not cite them as current facts or use them to justify current price, product, offer, or market decisions. Recheck a material item using current evidence or ask the owner.\n${untrusted("stale business facts", rows, 5_000)}`;
+}
+
 /**
  * Removes fact-index markers like " [2]" or "[0][3]" from every string in a
  * model answer. Facts are linked through structured index fields; bare

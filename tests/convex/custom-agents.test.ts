@@ -111,7 +111,8 @@ describe("custom specialist profiles", () => {
     const matching = context?.facts.filter((fact) => fact.category === "product" && /10 paid customers/i.test(fact.statement)) ?? [];
     expect(matching).toHaveLength(1);
     expect(matching[0]?.statement).toBe(" OUR PRODUCT HAS 10 PAID CUSTOMERS! ");
-    expect(context?.facts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))?.freshness).toMatchObject({ reviewSuggested: true, daysOld: 61 });
+    expect(context?.facts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))).toBeUndefined();
+    expect(context?.staleFacts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))?.freshness).toMatchObject({ reviewSuggested: true, daysOld: 61 });
     const stored = await t.run(async (ctx) => (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).collect()).filter((fact) => /10 paid customers/i.test(fact.statement)));
     expect(stored).toHaveLength(2);
     expect(stored.every((fact) => fact.orgId === orgId)).toBe(true);

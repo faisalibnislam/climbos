@@ -16,6 +16,7 @@ import {
   type ChatIntentOutput,
   type EmailSequenceOutput,
   factsBlock,
+  staleFactsBlock,
   stripFactMarkers,
   type SeoBriefOutput,
   type SocialPostsOutput,
@@ -569,6 +570,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     conflictsLine(job),
     job.resultsText ?? "",
     factsBlock(job.facts),
+    job.staleFacts.length ? staleFactsBlock(job.staleFacts) : "",
   ]
     .filter(Boolean)
     .join("\n");

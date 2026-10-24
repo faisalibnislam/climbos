@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evidenceKind, lintEvidenceStrength } from "../../shared/agents/evidenceKind";
 import { lintPlatformEligibility, platformNotes } from "../../shared/acquisition/platformRules";
-import { factsBlock } from "../../shared/ai/tasks";
+import { factsBlock, staleFactsBlock } from "../../shared/ai/tasks";
 
 /** Slices 6 and 9: evidence strength in code (EV02, EV10, EV18, EV27, EV31); platform rules for planning (EV05). */
 describe("evidence kind", () => {
@@ -20,6 +20,13 @@ describe("evidence kind", () => {
   it("marks old facts for review without treating age as proof they are wrong", () => {
     expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 61, reviewSuggested: true } }])).toContain("review suggested, 61 days since last update");
     expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 10, reviewSuggested: false } }])).toMatch(/\[0\] \(pricing\) Pro costs/);
+  });
+  it("keeps stale facts out of the current fact index and labels their accuracy unknown", () => {
+    const stale = staleFactsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 61 } }]);
+    expect(stale).toContain("present accuracy is unknown");
+    expect(stale).toMatch(/do not cite them as current facts/i);
+    expect(stale).toContain("<untrusted_content source=\"stale business facts\">");
+    expect(factsBlock([])).not.toContain("$20");
   });
   it("blocks proof-of-demand language when only opinions and site claims exist", () => {
     const f = [{ path: "summary", text: "Demand is proven: customers love the idea." }];
