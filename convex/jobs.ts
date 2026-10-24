@@ -1170,11 +1170,11 @@ export const createContent = internalAction({
             job,
             0,
             seoSpec(),
-            agentInput(job, `Plan and draft one genuinely helpful page targeting a real, high-intent search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+            agentInput(job, `Plan and draft one genuinely helpful page targeting a real search a likely customer makes. Include the title (≤ 60 characters), meta description (≤ 155 characters), outline and a full first draft. Also provide: (1) answerFirst, a concise direct answer before supporting detail; (2) 3-5 FAQs based on questions found in this run's research or confirmed customer language; and (3) up to 5 standalone citableClaims about this business, each supported by confirmed fact indexes or exact source URLs read in this run. Put all used business fact indexes in factIndexes. For general FAQs, leave references empty rather than inventing sources. Do not present SEO or AI-answer formatting as a ranking guarantee.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
               research: researchFor("seo_brief", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
             }),
             startedAt,
-            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft. Classify the searcher's stage as awareness, evaluation, purchase, or unclear; base it on the query evidence, and make the content and next step fit that stage.\n\n${businessBrief(job)}${brief}` },
+            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft. Also provide an answer-first direct response, 3-5 FAQs grounded in queries or confirmed customer language, and up to 5 standalone citable business claims with confirmed fact indexes or exact URLs from this run. Leave references empty for general FAQs; never invent citations. Classify the searcher's stage as awareness, evaluation, purchase, or unclear; base it on query evidence, and make the content and next step fit. Answer structure is for readers; it does not guarantee search or AI citations.\n\n${businessBrief(job)}${brief}` },
           );
           items = seoToArtifacts(out);
         }

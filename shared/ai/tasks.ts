@@ -149,6 +149,12 @@ export const SeoBriefSchema = z.object({
   outline: z.array(z.object({ heading: z.string(), points: z.array(z.string()) })),
   internalLinks: z.array(z.string()),
   draft: z.string(),
+  /** A concise, direct answer to the target query before supporting detail. */
+  answerFirst: z.string(),
+  /** Questions grounded in observed queries or customer language where available. */
+  faqs: z.array(z.object({ question: z.string(), answer: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
+  /** Standalone business statements that can be quoted accurately, traceable to facts or read sources. */
+  citableClaims: z.array(z.object({ statement: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
   factIndexes: z.array(z.number()),
 });
 export type SeoBriefOutput = z.infer<typeof SeoBriefSchema>;

@@ -161,6 +161,7 @@ Issue 08's engine-side capacity guard now blocks net-new acquisition channels wh
 | REQ-SEO-01 | partial | S9 | `specs.ts:225` | Page type only |
 | REQ-SEO-02 | missing | S9 | — | |
 | REQ-SEO-03 | partial | S9 | `tasks.ts:143` | The draft is always written |
+| AEO 351/354/355 | partial | S9 | `SeoBriefSchema`, `specs.ts` `lintSeoEvidence`, `jobs.ts`, `jobWrites.ts` `seoToArtifacts` | SEO output now carries answer-first text, FAQs based on observed query/customer language, and standalone citable claims with fact indexes or exact read URLs. Invalid references fail quality checks and the article artifact includes the material. **Gap:** question demand and semantic support are not independently verified; fact density auditing, technical structure checks, and observed AI-search visibility remain unbuilt. |
 | REQ-SEO-04 | blocked + missing | S10 | — | No CMS adapter. Needs a WordPress sandbox |
 | REQ-SEO-05 | partial | S9 | `shared/integrations/searchConsole.ts` | Adapter not called from `convex/` |
 | REQ-COPY-01 | partial | S8 | `specs.ts:195-229` | Per-channel schemas. No unified brief |

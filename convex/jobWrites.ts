@@ -666,15 +666,20 @@ export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, 
 }
 
 export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageStorageId">[] {
+  const linked = (text: string, urls: string[]) => `${text}${urls.length ? ` ${urls.map((url) => `[Source](${url})`).join(" ")}` : ""}`;
+  const outline = out.outline.map((o) => `## ${o.heading}\n${o.points.map((p) => `- ${p}`).join("\n")}`).join("\n\n");
+  const faqs = out.faqs.length ? `## Frequently asked questions\n\n${out.faqs.map((faq) => `### ${faq.question}\n\n${linked(faq.answer, faq.sourceUrls)}`).join("\n\n")}` : "";
+  const citableClaims = out.citableClaims.length ? `## Verified facts\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
+  const factIndexes = [...new Set([...out.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
   return [
     {
       kind: "blog_post",
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: `${out.outline.map((o) => `## ${o.heading}\n${o.points.map((p) => `- ${p}`).join("\n")}`).join("\n\n")}\n\n---\n\n${out.draft}`,
+      body: [`## Quick answer\n\n${out.answerFirst}`, outline, "---", out.draft, faqs, citableClaims].filter(Boolean).join("\n\n"),
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
-      factIndexes: out.factIndexes,
+      factIndexes,
       role: "seo_specialist",
     },
   ];

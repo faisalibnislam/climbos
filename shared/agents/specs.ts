@@ -165,7 +165,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.4-fact-reference-guards";
+export const ENGINE_VERSION = "v3.5-answer-first-content";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1128,8 +1128,7 @@ function lintGeneric(out: unknown, input: AgentInput): LintIssue[] {
 }
 
 /** Source links in business intelligence must be among the pages supplied to this exact run. */
-export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps">, input: AgentInput): LintIssue[] {
-  const normalize = (raw: string): string | null => {
+function normalizeSourceUrl(raw: string): string | null {
     try {
       const u = new URL(raw);
       if (u.protocol !== "https:" && u.protocol !== "http:") return null;
@@ -1140,13 +1139,21 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
     } catch {
       return null;
     }
-  };
+}
+
+export function lintAvailableSourceUrls(refs: { url: string; path: string }[], input: AgentInput): LintIssue[] {
   const sourceCandidates = [
     ...(input.availableSourceUrls ?? []),
     ...(input.precomputedResearch?.sources ?? []).map((s) => s.url),
   ];
-  const available = new Set(sourceCandidates.map(normalize).filter((x): x is string => Boolean(x)));
-  const issues: LintIssue[] = [];
+  const available = new Set(sourceCandidates.map(normalizeSourceUrl).filter((x): x is string => Boolean(x)));
+  return refs.flatMap(({ url, path }) => {
+    const source = normalizeSourceUrl(url);
+    return source && available.has(source) ? [] : [{ severity: "error" as const, rule: "citation", message: `This citation points to a page that was not present in this run's supplied sources. Use a page ClimbOS read, or leave the citation out.`, path }];
+  });
+}
+
+export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps">, input: AgentInput): LintIssue[] {
   const groups: [string, { sourceUrl: string }[]][] = [
     ["competitors", out.competitors],
     ["alternatives", out.alternatives],
@@ -1154,11 +1161,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "altern
     ["objections", out.objections],
     ["gaps", out.gaps],
   ];
-  for (const [group, rows] of groups) rows.forEach((row, i) => {
-    const source = normalize(row.sourceUrl);
-    if (!source || !available.has(source)) issues.push({ severity: "error", rule: "citation", message: `This ${group === "vocPhrases" ? "customer quote" : group === "competitors" ? "competitor finding" : "finding"} cites a page that was not present in this run's supplied sources. Use a source ClimbOS provided, or leave the finding out.`, path: `${group}[${i}].sourceUrl` });
-  });
-  return issues;
+  return lintAvailableSourceUrls(groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))), input);
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
@@ -1171,6 +1174,25 @@ export function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIss
   const inferred = inferSearchIntentStage(`${out.primaryKeyword} ${out.searchIntent} ${out.intentEvidence}`, out.pageType);
   if (inferred === "unclear" || out.intentStage === inferred) return [];
   return [{ severity: "error", rule: "search_intent", message: `The page is labeled ${out.intentStage}, but its keyword and intent evidence indicate ${inferred} intent. Match the content and next step to the searcher's stage.`, path: "intentStage" }];
+}
+
+export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
+  const factIndexes: LintIssue[] = [
+    ...out.faqs.flatMap((faq, i) => lintFactIndexes(faq.factIndexes, input.facts.length, `faqs[${i}].factIndexes`)),
+    ...out.citableClaims.flatMap((claim, i) => lintFactIndexes(claim.factIndexes, input.facts.length, `citableClaims[${i}].factIndexes`)),
+  ];
+  const sourceRefs = [
+    ...out.faqs.flatMap((faq, i) => faq.sourceUrls.map((url) => ({ url, path: `faqs[${i}].sourceUrls` }))),
+    ...out.citableClaims.flatMap((claim, i) => claim.sourceUrls.map((url) => ({ url, path: `citableClaims[${i}].sourceUrls` }))),
+  ];
+  const citationIssues = lintAvailableSourceUrls(sourceRefs, input);
+  const claimIssues = out.citableClaims.flatMap((claim, i) => claim.factIndexes.length || claim.sourceUrls.length ? [] : [{
+    severity: "error" as const,
+    rule: "citation",
+    message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
+    path: `citableClaims[${i}]`,
+  }]);
+  return [...factIndexes, ...citationIssues, ...claimIssues];
 }
 
 /* ---------------- Rubrics ---------------- */
@@ -1359,7 +1381,7 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
       skills: ["seo-pages", "copy-fundamentals"],
       schema: SeoBriefV2Schema,
       rubric: rubricOf("seo-pages"),
-      lint: (out, input) => [...lintPublishable(out, input), ...lintSearchIntent(out), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintSearchIntent(out), ...lintSeoEvidence(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
     },
     o,
@@ -1714,7 +1736,7 @@ Only report what you actually found, with URLs.`,
       return {
         maxSearches: 5,
         maxFetches: 4,
-        brief: `Search the target query and close variants. Record what currently ranks (page types, angles, gaps), whether an AI Overview appears, and the questions searchers ask. Fetch the top 2-3 results to see what they cover and miss.`,
+        brief: `Search the target query and close variants. Record what currently ranks (page types, angles, gaps), whether an AI Overview appears, and related questions people ask. Look for customer language in relevant discussions or reviews when available. Fetch the top 2-3 results to see what they cover and miss. Save exact source URLs and distinguish what you observed from what you infer.`,
       };
     case "ad_drafts":
       return {

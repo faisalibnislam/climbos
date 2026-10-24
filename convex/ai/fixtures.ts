@@ -209,6 +209,13 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
         internalLinks: ["/templates", "/pricing"],
         draft: `A ${topic} should be short, clear and lead to an obvious next step...\n\n(Draft continues — review before publishing.)`,
+        answerFirst: `A useful ${topic} collects only the information needed for the next step and makes that step clear.`,
+        faqs: [
+          { question: `What should a ${topic} include?`, answer: "Start with only the details needed to complete the task, then explain what happens after submission.", factIndexes: [], sourceUrls: [] },
+          { question: `How can I make a ${topic} easier to complete?`, answer: "Use plain labels, remove questions that do not change the next step, and test it on a phone.", factIndexes: [], sourceUrls: [] },
+          { question: `When should I add payment fields?`, answer: "Add payment when the form is part of a purchase or booking flow, and state the price and refund terms before submission.", factIndexes: [], sourceUrls: [] },
+        ],
+        citableClaims: ctx.facts.length ? [{ statement: ctx.facts[0].statement, factIndexes: [0], sourceUrls: [] }] : [],
         factIndexes: ctx.facts.length ? [0] : [],
       };
       return out;
