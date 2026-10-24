@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import type { Id } from "@convex/_generated/dataModel";
 import { RefreshCw, Search } from "@/components/icons";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
@@ -57,11 +58,18 @@ export default function SearchReadinessPage() {
 }
 
 function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolean }) {
-  const report = useQuery(api.aiSearchVisibility.report, { slug, days: 90 });
+  const panels = useQuery(api.aiSearchVisibility.listPanels, { slug });
+  const [panelId, setPanelId] = useState<Id<"aiSearchPanels"> | "all">("all");
+  const report = useQuery(api.aiSearchVisibility.report, { slug, days: 90, compareToPreviousWindow: true, ...(panelId !== "all" ? { panelId } : {}) });
   const record = useMutation(api.aiSearchVisibility.recordObservation);
+  const createPanel = useMutation(api.aiSearchVisibility.createPanel);
   const [provider, setProvider] = useState("chatgpt");
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
+  const [panelQueryKey, setPanelQueryKey] = useState("choose");
+  const [panelName, setPanelName] = useState("");
+  const [panelQuestions, setPanelQuestions] = useState("");
+  const [creatingPanel, setCreatingPanel] = useState(false);
   const [status, setStatus] = useState("answered");
   const [mentioned, setMentioned] = useState("unknown");
   const [sentiment, setSentiment] = useState("unknown");
@@ -69,16 +77,36 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
   const [competitors, setCompetitors] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [saving, setSaving] = useState(false);
-  const submit = async () => {
+  const selectedPanelQuery = report?.panel?.queries?.find((item) => item.key === panelQueryKey);
+  const makePanel = async () => {
+    setCreatingPanel(true);
+    try {
+      const queries = panelQuestions.split(/\n+/u).map((item) => item.trim()).filter(Boolean).map((item) => ({
+        provider: provider as "chatgpt" | "gemini" | "perplexity" | "google_ai_overview" | "other",
+        query: item,
+        ...(location.trim() ? { location: location.trim() } : {}),
+      }));
+      const id = await createPanel({ slug, name: panelName, queries });
+      setPanelId(id);
+      setPanelQueryKey("choose");
+      setPanelName("");
+      setPanelQuestions("");
+      toast({ tone: "success", title: "Comparable question panel created" });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally { setCreatingPanel(false); }
+  };
+  const submit = async (checkedAt: number) => {
     setSaving(true);
     try {
       const answered = status === "answered";
       await record({
         slug,
-        provider: provider as "chatgpt" | "gemini" | "perplexity" | "google_ai_overview" | "other",
-        query,
-        ...(location.trim() ? { location: location.trim() } : {}),
-        checkedAt: Date.now(),
+        ...(panelId !== "all" && selectedPanelQuery ? { panelId, panelQueryKey } : {}),
+        provider: (selectedPanelQuery?.provider ?? provider) as "chatgpt" | "gemini" | "perplexity" | "google_ai_overview" | "other",
+        query: selectedPanelQuery?.query ?? query,
+        ...((selectedPanelQuery?.location ?? location.trim()) ? { location: selectedPanelQuery?.location ?? location.trim() } : {}),
+        checkedAt,
         answerStatus: status as "answered" | "no_answer" | "failed",
         brandMention: answered ? mentioned as "yes" | "no" | "unknown" : "unknown",
         sentiment: answered && mentioned === "yes" ? sentiment as "positive" | "neutral" | "negative" | "mixed" | "unknown" : "unknown",
@@ -93,6 +121,8 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
     } finally { setSaving(false); }
   };
   const percent = (rate: { rate: number | null } | null) => rate?.rate === null || !rate ? "Not enough labeled answers" : `${Math.round(rate.rate * 100)}% of recorded samples`;
+  const percentValue = (value: number | null | undefined) => value === null || value === undefined ? "Not enough labeled answers" : `${Math.round(value * 100)}%`;
+  const pointChange = (value: number | null) => value === null ? "Not comparable" : `${value > 0 ? "+" : ""}${Math.round(value * 100)} percentage points`;
   const knownMentionAnswers = report?.observations.filter((item) => item.answerStatus === "answered" && item.brandMention !== "unknown") ?? [];
   const businessMentions = knownMentionAnswers.filter((item) => item.brandMention === "yes").length;
   return (
@@ -100,11 +130,30 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
       <div><h2 className="heading-card">AI answer visibility</h2><p className="mt-1 text-sm text-ink-3">Record what you observe when checking the same customer questions in AI search tools. These are your samples, not a complete measure of any platform.</p></div>
       <Callout tone="info">For platform-reported citation data, <a href="https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Bing Webmaster Tools AI Performance</a> reports cited pages and grounding queries. ClimbOS does not currently connect to or import that report automatically. Search Console and website analytics remain separate from these manually observed samples.</Callout>
       <Card><CardContent className="flex flex-col gap-4">
+        <div><h3 className="text-sm font-semibold text-ink">Track a consistent question set</h3><p className="mt-1 text-sm text-ink-3">A panel keeps the provider, questions, and market fixed so later checks can be compared. Repeated manual checks are still samples, not a platform-wide visibility rate.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Saved question panel"><Select value={panelId} onValueChange={(value) => { setPanelId(value === "all" ? "all" : value as Id<"aiSearchPanels">); setPanelQueryKey("choose"); }} options={[{ value: "all", label: "All observations" }, ...(panels ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.queryCount} questions` }))]} disabled={!canEdit || panels === undefined} /></Field>
+          {panelId !== "all" ? <Field label="Question in this panel"><Select value={panelQueryKey} onValueChange={(value) => { setPanelQueryKey(value); const selected = report?.panel?.queries?.find((item) => item.key === value); if (selected) { setProvider(selected.provider); setQuery(selected.query); setLocation(selected.location ?? ""); } }} options={[{ value: "choose", label: "Choose a saved question" }, ...(report?.panel?.queries ?? []).map((item) => ({ value: item.key, label: `${item.provider.replaceAll("_", " ")} · ${item.query}${item.location ? ` · ${item.location}` : ""}` }))]} disabled={!canEdit || !report?.panel} /></Field> : <p className="self-end text-xs text-ink-3">Create a panel below to compare repeat checks of the same questions.</p>}
+        </div>
+        {canEdit ? <details className="rounded-xl border border-line p-3">
+          <summary className="cursor-pointer text-sm font-medium text-ink">Create a question panel</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Field label="Panel name"><Input value={panelName} onChange={(event) => setPanelName(event.target.value)} maxLength={120} placeholder="Core buyer questions" /></Field>
+            <Field label="Provider for these questions"><Select value={provider} onValueChange={setProvider} options={[{ value: "chatgpt", label: "ChatGPT search" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Other" }]} /></Field>
+            <div className="sm:col-span-2"><Field label="Questions (one per line)"><Textarea value={panelQuestions} onChange={(event) => setPanelQuestions(event.target.value)} rows={4} maxLength={20_000} placeholder={"Best [category] for [buyer]?\nHow does [business] compare with alternatives?"} /></Field></div>
+            <Field label="Market for all questions (optional)"><Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={160} placeholder="e.g. Dhaka, Bangladesh" /></Field>
+            <div className="flex items-end"><Button size="sm" loading={creatingPanel} disabled={!panelName.trim() || !panelQuestions.split(/\n+/u).some((item) => item.trim())} onClick={() => void makePanel()}>Save question panel</Button></div>
+          </div>
+        </details> : null}
+      </CardContent></Card>
+      <Card><CardContent className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-ink">Record one observed answer</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="AI search tool"><Select value={provider} onValueChange={setProvider} options={[{ value: "chatgpt", label: "ChatGPT search" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Other" }]} disabled={!canEdit} /></Field>
-          <Field label="Question you checked"><Input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={500} placeholder="e.g. Best accounting software for a small design studio" disabled={!canEdit} /></Field>
-          <Field label="Location or market (optional)"><Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={160} placeholder="e.g. Dhaka, Bangladesh" disabled={!canEdit} /></Field>
+              {selectedPanelQuery ? <p className="text-sm text-ink-2 sm:col-span-2">Recording the saved question: <strong>{selectedPanelQuery.query}</strong> · {selectedPanelQuery.provider.replaceAll("_", " ")}{selectedPanelQuery.location ? ` · ${selectedPanelQuery.location}` : ""}</p> : <>
+            <Field label="AI search tool"><Select value={provider} onValueChange={setProvider} options={[{ value: "chatgpt", label: "ChatGPT search" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Other" }]} disabled={!canEdit} /></Field>
+            <Field label="Question you checked"><Input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={500} placeholder="e.g. Best accounting software for a small design studio" disabled={!canEdit} /></Field>
+            <Field label="Location or market (optional)"><Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={160} placeholder="e.g. Dhaka, Bangladesh" disabled={!canEdit} /></Field>
+          </>}
           <Field label="Answer status"><Select value={status} onValueChange={setStatus} options={[{ value: "answered", label: "Answer shown" }, { value: "no_answer", label: "No answer shown" }, { value: "failed", label: "Check failed" }]} disabled={!canEdit} /></Field>
           {status === "answered" ? <>
             <Field label="Was the business mentioned?"><Select value={mentioned} onValueChange={setMentioned} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "unknown", label: "Not sure" }]} disabled={!canEdit} /></Field>
@@ -114,10 +163,11 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
             <Field label="Short answer excerpt"><Textarea value={excerpt} onChange={(event) => setExcerpt(event.target.value)} rows={3} maxLength={6000} disabled={!canEdit} placeholder="Paste enough of the answer to review this observation" /></Field>
           </> : null}
         </div>
-        <div><Button size="sm" disabled={!canEdit || !query.trim() || (status === "answered" && !excerpt.trim())} loading={saving} onClick={() => void submit()}>Save observation</Button></div>
+        <div><Button size="sm" disabled={!canEdit || (panelId !== "all" ? !selectedPanelQuery : !query.trim()) || (status === "answered" && !excerpt.trim())} loading={saving} onClick={() => void submit(Date.now())}>Save observation</Button></div>
       </CardContent></Card>
-      {report === undefined ? <p className="text-sm text-ink-3">Loading recorded observations…</p> : report.observationCount === 0 ? <EmptyState icon={<Search />} title="No AI-search observations yet" body="Save a few results for a consistent set of questions to establish an owner-observed baseline." /> : <>
+      {report === undefined ? <p className="text-sm text-ink-3">Loading recorded observations…</p> : report.observationCount === 0 ? <EmptyState icon={<Search />} title={panelId !== "all" ? "No checks in this panel yet" : "No AI-search observations yet"} body={panelId !== "all" ? "Choose a saved question above, check it in the named tool, and record what the answer shows." : "Save a few results for a consistent set of questions to establish an owner-observed baseline."} /> : <>
         <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Recorded sample summary · last {report.windowDays} days</h3><p className="mt-1 text-sm text-ink-3">{report.observationCount} observation{report.observationCount === 1 ? "" : "s"}{report.truncated ? " shown (older samples are not included in this view)" : ""}. The sample is owner-recorded and is not a platform-wide rate.</p></div><dl className="grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs text-ink-3">Answered checks</dt><dd className="text-ink-2">{report.panelSummary.answered} of {report.observationCount}</dd></div><div><dt className="text-xs text-ink-3">Business mentioned</dt><dd className="text-ink-2">{knownMentionAnswers.length ? `${businessMentions} of ${knownMentionAnswers.length} answers with a known mention result` : "No labeled answers yet"}</dd></div><div><dt className="text-xs text-ink-3">Cited own-site answers</dt><dd className="text-ink-2">{report.panelSummary.observedFirstPartyCitationRate ? percent(report.panelSummary.observedFirstPartyCitationRate) : "No website recorded"}</dd></div></dl></CardContent></Card>
+        {report.comparison ? <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Observed period comparison</h3><p className="mt-1 text-sm text-ink-3">Prior {report.windowDays}-day sample: {report.comparison.baselineObservationCount}; current sample: {report.comparison.currentObservationCount}. Descriptive only; it does not show that a website or content change caused a visibility change.</p></div>{report.comparison.queryChanges.length ? <ul className="flex flex-col gap-2">{report.comparison.queryChanges.slice(0, 10).map((change) => <li key={`${change.provider}:${change.query}:${change.location ?? ""}`} className="rounded-lg bg-surface-2 p-3"><p className="text-sm font-medium text-ink">{change.query}</p><p className="mt-1 text-xs text-ink-3">{change.provider.replaceAll("_", " ")}{change.location ? ` · ${change.location}` : ""}</p><dl className="mt-2 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="text-ink-3">Prior mention rate</dt><dd className="text-ink-2">{percentValue(change.baseline?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Current mention rate</dt><dd className="text-ink-2">{percentValue(change.current?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Observed change</dt><dd className="text-ink-2">{pointChange(change.brandMentionRateChange)}</dd></div></dl></li>)}</ul> : <p className="text-sm text-ink-3">No question has labeled answers in both periods yet.</p>}{report.comparison.truncated ? <p className="text-xs text-ink-3">The comparison is truncated to the latest recorded samples.</p> : null}</CardContent></Card> : null}
         <div className="flex flex-col gap-2">{report.observations.slice(0, 10).map((item) => <Card key={item.id}><CardContent className="flex flex-col gap-2"><div className="flex flex-wrap justify-between gap-2"><span className="text-xs font-medium text-ink">{item.provider.replaceAll("_", " ")} · {item.answerStatus.replaceAll("_", " ")}</span><span className="text-xs text-ink-3">{relativeTime(item.checkedAt)}</span></div><p className="text-sm text-ink">{item.query}</p><p className="text-xs text-ink-3">Business mentioned: {item.brandMention}{item.citedUrls.length ? ` · Cited pages: ${item.citedUrls.length}` : " · No citation recorded"}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{item.citedUrls.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-ink-3 underline underline-offset-2">{url}</a>)}</div></CardContent></Card>)}</div>
       </>}
     </section>
