@@ -30,4 +30,26 @@ describe("homepage search readiness", () => {
     }));
     expect(findings.map((finding) => finding.id)).toEqual(["multiple-h1", "heading-order"]);
   });
+
+  it("reports observable indexing and AI-search crawler barriers without predicting visibility", () => {
+    const findings = assessSearchReadiness(page({ robotsDirectives: "index, nofollow, noindex" }), {
+      httpStatus: 200,
+      canonicalUrl: "https://other.example/",
+      pageUrl: "https://site.example/",
+      robotsDirectives: "index, nofollow, noindex",
+      robotsFileStatus: "available",
+      crawlerChecks: [{ crawler: "Googlebot", allowed: true }, { crawler: "Bingbot", allowed: false }, { crawler: "OAI-SearchBot", allowed: false }],
+    });
+    expect(findings.map((finding) => finding.id)).toEqual(expect.arrayContaining(["page-noindex", "cross-site-canonical", "robots-bingbot", "robots-oai-searchbot"]));
+    expect(JSON.stringify(findings)).not.toMatch(/will rank|will be cited|citation rate/i);
+  });
+
+  it("does not treat a failed robots.txt check as crawler permission", () => {
+    const findings = assessSearchReadiness(page(), {
+      httpStatus: 200, pageUrl: "https://site.example/", robotsFileStatus: "unavailable",
+      crawlerChecks: [{ crawler: "Googlebot", allowed: false }, { crawler: "Bingbot", allowed: false }, { crawler: "OAI-SearchBot", allowed: false }],
+    });
+    expect(findings.map((finding) => finding.id)).toEqual(expect.arrayContaining(["robots-unavailable"]));
+    expect(findings.map((finding) => finding.id)).not.toEqual(expect.arrayContaining(["robots-googlebot", "robots-bingbot", "robots-oai-searchbot"]));
+  });
 });

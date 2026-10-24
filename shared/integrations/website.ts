@@ -548,14 +548,14 @@ export function extractPageContent(
   const title = titleMatch ? stripTags(titleMatch[1] ?? "").slice(0, 500) : undefined;
 
   let metaDescription: string | undefined;
-  let robotsDirectives: string | undefined;
+  const robotsDirectives: string[] = [];
   const og: Record<string, string> = {};
   for (const tag of src.match(/<meta\b[^>]*>/gi) ?? []) {
     const a = parseAttributes(tag);
     const content = (a.content ?? "").trim().slice(0, 1000);
     if (!content) continue;
     if (a.name?.toLowerCase() === "description" && metaDescription === undefined) metaDescription = content;
-    if (["robots", "googlebot"].includes(a.name?.toLowerCase() ?? "") && robotsDirectives === undefined) robotsDirectives = content.toLowerCase();
+    if (["robots", "googlebot"].includes(a.name?.toLowerCase() ?? "")) robotsDirectives.push(content.toLowerCase());
     const prop = (a.property ?? a.name ?? "").toLowerCase();
     if (prop.startsWith("og:") && !(prop in og) && Object.keys(og).length < 30) og[prop] = content;
   }
@@ -628,7 +628,7 @@ export function extractPageContent(
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
   if (canonicalUrl) page.canonicalUrl = canonicalUrl;
-  if (robotsDirectives) page.robotsDirectives = robotsDirectives;
+  if (robotsDirectives.length) page.robotsDirectives = [...new Set(robotsDirectives)].join(", ");
   return page;
 }
 

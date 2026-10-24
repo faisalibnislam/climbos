@@ -909,7 +909,7 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, outline, "---", out.draft, faqs, citableClaims].filter(Boolean).join("\n\n"),
+      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, `## Original contribution\n\n${out.originalContribution}`, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
       destinationUrl: out.recommendedAction === "refresh_existing_page" && out.targetPageUrl ? out.targetPageUrl : undefined,
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
       factIndexes,

@@ -457,6 +457,9 @@ export const SeoBriefV2Schema = SeoBriefSchema.extend({
   recommendedAction: z.enum(["refresh_existing_page", "create_new_page"]),
   targetPageUrl: z.string(),
   recommendationReason: z.string(),
+  originalContribution: z.string().min(8),
+  ownerEvidenceNeeded: z.array(z.string()),
+  measurementPlan: z.string().min(8),
 });
 
 export const ConversionAuditV2Schema = ConversionAuditSchema.extend({

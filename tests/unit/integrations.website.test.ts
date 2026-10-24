@@ -205,6 +205,7 @@ describe("extractPageContent", () => {
     <title>Acme &amp; Co — Climbing Shoes</title>
     <meta name="description" content="Best shoes &quot;ever&quot;">
     <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="max-snippet:-1">
     <link rel="canonical" href="/climbing-shoes">
     <meta property="og:title" content="Acme OG">
     <meta property="og:image" content="https://cdn.example.com/a.jpg">
@@ -224,7 +225,7 @@ describe("extractPageContent", () => {
     const page = extractPageContent(html, "https://example.com/shoes");
     expect(page.title).toBe("Acme & Co — Climbing Shoes");
     expect(page.metaDescription).toBe('Best shoes "ever"');
-    expect(page.robotsDirectives).toBe("index,follow");
+    expect(page.robotsDirectives).toBe("index,follow, max-snippet:-1");
     expect(page.canonicalUrl).toBe("https://example.com/climbing-shoes");
     expect(page.og["og:title"]).toBe("Acme OG");
     expect(page.headings).toEqual([

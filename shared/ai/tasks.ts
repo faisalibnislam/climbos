@@ -191,6 +191,12 @@ export const SeoBriefSchema = z.object({
   answerFirst: z.string(),
   /** Questions grounded in observed queries or customer language where available. */
   faqs: z.array(z.object({ question: z.string(), answer: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
+  /** Concrete information gain: the business-specific evidence or useful answer this page adds beyond a generic summary. */
+  originalContribution: z.string(),
+  /** Specific owner-supplied material required before a genuinely original page can be finalized. Empty only when none is needed. */
+  ownerEvidenceNeeded: z.array(z.string()),
+  /** What to measure after review/publication; this is a plan, never a forecast or guarantee. */
+  measurementPlan: z.string(),
   /** Standalone business statements that can be quoted accurately, traceable to facts or read sources. */
   citableClaims: z.array(z.object({ statement: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
   factIndexes: z.array(z.number()),

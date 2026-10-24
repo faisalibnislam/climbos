@@ -8,9 +8,33 @@ export type ReadinessFinding = {
   nextStep: string;
 };
 
+export type CrawlerCheck = { crawler: "Googlebot" | "Bingbot" | "OAI-SearchBot"; allowed: boolean };
+export type TechnicalEvidence = {
+  httpStatus: number;
+  canonicalUrl?: string;
+  pageUrl: string;
+  robotsDirectives?: string;
+  robotsFileStatus: "available" | "not_found" | "unavailable";
+  crawlerChecks: CrawlerCheck[];
+};
+
 /** Observable page checks only. This deliberately does not predict ranking or citation. */
-export function assessSearchReadiness(page: ExtractedPage): ReadinessFinding[] {
+export function assessSearchReadiness(page: ExtractedPage, technical?: TechnicalEvidence): ReadinessFinding[] {
   const findings: ReadinessFinding[] = [];
+  if (technical) {
+    if (technical.httpStatus < 200 || technical.httpStatus >= 300) findings.push({ id: "http-status", level: "attention", title: "Homepage did not return a successful response", evidence: `The checked page returned HTTP ${technical.httpStatus}.`, nextStep: "Check the public homepage response and redirect destination, then confirm the page is available to visitors and crawlers." });
+    const directives = (technical.robotsDirectives ?? "").split(/[\s,]+/).map((item) => item.trim().toLowerCase());
+    if (directives.includes("noindex") || directives.includes("none")) findings.push({ id: "page-noindex", level: "attention", title: "A page directive asks crawlers not to index this page", evidence: `The homepage includes the directive “${directives.includes("none") ? "none" : "noindex"}” (${technical.robotsDirectives}).`, nextStep: "If you want this homepage in search results, review and remove the noindex directive." });
+    if (technical.canonicalUrl) {
+      try {
+        if (new URL(technical.canonicalUrl).origin !== new URL(technical.pageUrl).origin) findings.push({ id: "cross-site-canonical", level: "check", title: "The homepage canonical points to another site", evidence: `The declared canonical is ${technical.canonicalUrl}.`, nextStep: "Confirm this cross-site canonical is intentional; otherwise set it to the preferred URL for this homepage." });
+      } catch { /* malformed values are not actionable evidence */ }
+    }
+    if (technical.robotsFileStatus === "available") for (const crawler of technical.crawlerChecks) {
+      if (!crawler.allowed) findings.push({ id: `robots-${crawler.crawler.toLowerCase()}`, level: "attention", title: `${crawler.crawler} is disallowed by robots.txt`, evidence: `The fetched robots.txt rules disallow ${crawler.crawler} from the homepage path.`, nextStep: `If you want ${crawler.crawler} to discover or cite this public page, review the matching robots.txt rule.` });
+    }
+    if (technical.robotsFileStatus === "unavailable") findings.push({ id: "robots-unavailable", level: "check", title: "Crawler rules could not be verified", evidence: "ClimbOS could not retrieve a successful robots.txt response for the homepage site.", nextStep: "Check that robots.txt is reachable. This check cannot verify CDN, firewall, or crawler IP rules." });
+  }
   if (!page.title?.trim()) findings.push({ id: "missing-title", level: "attention", title: "Page title is missing", evidence: "No document title was found in the homepage HTML.", nextStep: "Add a short, specific title that describes the business and its main offer." });
   else if (page.title.trim().length > 60) findings.push({ id: "long-title", level: "check", title: "Page title may be hard to scan", evidence: `The title has ${page.title.trim().length} characters.`, nextStep: "Review whether the title can describe the page more directly and briefly." });
   if (!page.metaDescription?.trim()) findings.push({ id: "missing-description", level: "attention", title: "Search description is missing", evidence: "No meta description was found in the homepage HTML.", nextStep: "Write a plain-language summary of the offer and who it helps." });
