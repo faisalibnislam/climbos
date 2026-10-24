@@ -127,6 +127,11 @@ describe("Plan version history", () => {
     expect(refreshed.strategy?.expert?.portfolioComparisons).toMatchObject({ horizonDays: 90 });
     expect(refreshed.strategy?.expert?.portfolioComparisons?.modeledPlayCount).toBeGreaterThan(0);
     expect(refreshed.strategy?.expert?.portfolioComparisons?.playAttributed?.objective).toBe("play_attributed");
+    expect(refreshed.planImpact?.plays.length).toBeGreaterThan(0);
+    expect(refreshed.planImpact?.plays.some((play) => play.before.p50 !== null && play.after.p50 !== null && play.economicsBefore && play.economicsAfter)).toBe(true);
+    expect(refreshed.planImpact?.plays.some((play) => play.economicsBefore && play.economicsAfter && (play.economicsBefore.cacUsd !== play.economicsAfter.cacUsd || play.economicsBefore.paybackMonths !== play.economicsAfter.paybackMonths || play.economicsBefore.profitable !== play.economicsAfter.profitable))).toBe(true);
+    expect(refreshed.planImpact?.portfolio.before).toBeTruthy();
+    expect(refreshed.planImpact?.portfolio.after).toBeTruthy();
     const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     await expect(w.client.mutation(api.workspace.startPlay, {

@@ -20,7 +20,7 @@ import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
-import { applyOwnerEconomics, decisionQuestions, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
+import { applyOwnerEconomics, decisionQuestions, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
@@ -654,6 +654,7 @@ export const plan = query({
       : null;
     const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
     const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false };
+    const requiresRefresh = staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch || staleInputs.marketChanges;
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const portfolioLimits = {
       ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
@@ -662,6 +663,35 @@ export const plan = query({
       horizonDays: goal?.horizonDays,
     };
     const currentPortfolio = currentPlays ? selectPortfolio(currentPlays, portfolioLimits) : null;
+    const savedPlayForecasts = Array.isArray(expert?.plays) ? expert.plays as Record<string, unknown>[] : [];
+    const currentPlayForecasts = currentPlays?.plays as (Record<string, unknown> & { p10?: number; p50?: number; p90?: number })[] | undefined;
+    const planImpact = requiresRefresh && currentPlayForecasts?.length
+      ? {
+          currency: goal?.currency ?? org.currency,
+          plays: currentPlayForecasts.map((after) => {
+            const id = typeof after.id === "string" ? after.id : typeof after.name === "string" ? after.name : "";
+            const before = savedPlayForecasts.find((play) => (typeof play.id === "string" ? play.id : typeof play.name === "string" ? play.name : "") === id);
+            const value = (play: Record<string, unknown> | undefined, key: "p10" | "p50" | "p90") => typeof play?.[key] === "number" && Number.isFinite(play[key]) ? play[key] as number : null;
+            const beforeMath = before && expert?.economics && before.model ? playMaths(before as unknown as PlayLike, expert.economics as Economics) : null;
+            const afterMath = currentEconomics && after.model ? playMaths(after as unknown as PlayLike, currentEconomics as Economics) : null;
+            return {
+              id,
+              name: typeof after.name === "string" ? after.name : id,
+              before: { p10: value(before, "p10"), p50: value(before, "p50"), p90: value(before, "p90") },
+              after: { p10: value(after, "p10"), p50: value(after, "p50"), p90: value(after, "p90") },
+              economicsBefore: beforeMath ? { cacUsd: beforeMath.cacUsd, paybackMonths: beforeMath.paybackMonths, profitable: beforeMath.profitable } : null,
+              economicsAfter: afterMath ? { cacUsd: afterMath.cacUsd, paybackMonths: afterMath.paybackMonths, profitable: afterMath.profitable } : null,
+            };
+          }),
+          portfolio: {
+            before: expert?.portfolio && typeof expert.portfolio === "object" ? {
+              selected: Array.isArray((expert.portfolio as Record<string, unknown>).selected) ? (expert.portfolio as { selected: string[] }).selected : [],
+              customers: typeof (expert.portfolio as Record<string, unknown>).customers === "number" ? (expert.portfolio as { customers: number }).customers : null,
+            } : null,
+            after: currentPortfolio ? { selected: currentPortfolio.selected, customers: currentPortfolio.customers } : null,
+          },
+        }
+      : null;
     const portfolioComparisons = currentPlays ? {
       horizonDays: goal?.horizonDays ?? 90,
       modeledPlayCount: currentPlays.plays.filter((play) => play.model?.steps?.length).length,
@@ -698,6 +728,7 @@ export const plan = query({
             } : null,
           }
         : null,
+      planImpact,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
       questions: Array.isArray(expert?.plays) && expert.plays.length && expert.economics ? decisionQuestions({ economics: expert.economics as Economics, plays: expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
@@ -705,7 +736,7 @@ export const plan = query({
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
-      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch || staleInputs.marketChanges },
+      staleInputs: { ...staleInputs, requiresRefresh },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,

@@ -13,6 +13,7 @@ import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import type { Economics } from "../../../../../shared/agents/economics";
+import { formatMoney } from "../../../../../shared/economics/currency";
 import type { KnowledgeReferenceSet } from "../../../../../shared/knowledge/retrieve";
 import { FunnelNumbers, SharpenPlan } from "@/components/app/plan/SharpenPlan";
 import type { QualityFix, QualityState } from "../../../../../shared/agents/quality";
@@ -79,6 +80,59 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpact"]> }) {
+  const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+  const changed = impact.plays.filter((play) =>
+    play.before.p10 !== play.after.p10 || play.before.p50 !== play.after.p50 || play.before.p90 !== play.after.p90
+      || Boolean(play.economicsBefore && play.economicsAfter && (play.economicsBefore.cacUsd !== play.economicsAfter.cacUsd || play.economicsBefore.paybackMonths !== play.economicsAfter.paybackMonths || play.economicsBefore.profitable !== play.economicsAfter.profitable)),
+  );
+  const portfolioChanged = impact.portfolio.before && impact.portfolio.after
+    ? impact.portfolio.before.selected.join("\u0000") !== impact.portfolio.after.selected.join("\u0000")
+      || impact.portfolio.before.customers !== impact.portfolio.after.customers
+    : false;
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div>
+          <h2 className="heading-section">What changed in the modeled outlook</h2>
+          <p className="mt-1 text-sm text-ink-2">The saved play models stay fixed while current unit economics and portfolio limits are recalculated. Changes to your funnel, research, business facts, brand, or tools need a full plan refresh and are not represented here. These are scenarios, not actual results or a refreshed recommendation.</p>
+        </div>
+        {changed.length ? (
+          <div className="flex flex-col gap-2">
+            {changed.map((play) => (
+              <div key={play.id} className="grid gap-1 rounded-[var(--radius-control)] border border-line p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <p className="min-w-0 text-sm font-medium">{play.name}</p>
+                <p className="text-xs tabular-nums text-ink-2">
+                  P10 / P50 / P90 customers: {play.before.p10 === null ? "—" : formatter.format(play.before.p10)} / {play.before.p50 === null ? "—" : formatter.format(play.before.p50)} / {play.before.p90 === null ? "—" : formatter.format(play.before.p90)}
+                  <span aria-hidden="true"> → </span>
+                  {play.after.p10 === null ? "—" : formatter.format(play.after.p10)} / {play.after.p50 === null ? "—" : formatter.format(play.after.p50)} / {play.after.p90 === null ? "—" : formatter.format(play.after.p90)}
+                  {play.economicsBefore && play.economicsAfter ? (
+                    <span className="block mt-1">
+                      CAC {play.economicsBefore.cacUsd === null ? "unknown" : formatMoney(play.economicsBefore.cacUsd, impact.currency)} → {play.economicsAfter.cacUsd === null ? "unknown" : formatMoney(play.economicsAfter.cacUsd, impact.currency)}
+                      {" · "}payback {play.economicsBefore.paybackMonths === null ? "unknown" : `${formatter.format(play.economicsBefore.paybackMonths)} mo`} → {play.economicsAfter.paybackMonths === null ? "unknown" : `${formatter.format(play.economicsAfter.paybackMonths)} mo`}
+                      {" · "}payback verdict {play.economicsBefore.profitable === null ? "unknown" : play.economicsBefore.profitable ? "within horizon" : "outside horizon"} → {play.economicsAfter.profitable === null ? "unknown" : play.economicsAfter.profitable ? "within horizon" : "outside horizon"}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-ink-2">No play forecast changed in the fields this view can recalculate. Other changed inputs may affect the written recommendation after the plan is refreshed.</p>}
+        {impact.portfolio.after ? (
+          <div className="rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm">
+            <p className="font-medium">Portfolio choice</p>
+            <p className="mt-1 text-ink-2">
+              {impact.portfolio.before
+                ? <>{portfolioChanged ? "Saved choice" : "Choice unchanged"}: {impact.portfolio.before.selected.join(" + ") || "No selected plays"} ({impact.portfolio.before.customers === null ? "customers unavailable" : `${formatter.format(impact.portfolio.before.customers)} modeled customers`}) <span aria-hidden="true">→</span> {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers).</>
+                : <>Saved portfolio comparison unavailable; current choice: {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers).</>}
+            </p>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -179,6 +233,7 @@ function PlanScreen({ slug }: { slug: string }) {
           Changed since this plan was prepared: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
         </Callout>
       ) : null}
+      {s && plan.planImpact && !olderView ? <PlanImpactSummary impact={plan.planImpact} /> : null}
 
       <SectionBoundary label="plan progress">
         <StrategyRunWatcher
