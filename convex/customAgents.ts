@@ -63,6 +63,7 @@ export const list = query({
     const { org, role, user } = await requireOrgAccess(ctx, { slug }, "view");
     const agents = await ctx.db.query("customAgents").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+    const feedbackSince = Date.now() - 90 * 86_400_000;
     return {
       canManage: ["owner", "admin", "editor"].includes(role),
       archetypes: [...AGENT_ARCHETYPE_BY_ID.values()],
@@ -71,6 +72,8 @@ export const list = query({
         const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", monthStart)).take(501);
         const usedMicros = runs.length > 500 ? (monthlyCap === null ? null : creditsToMicros(monthlyCap)) : runs.reduce((sum, run) => sum + (["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status) ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros), 0);
         const activity = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id)).order("desc").take(8);
+        const feedbackRows = await ctx.db.query("customAgentFeedback").withIndex("by_agent_created", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", feedbackSince)).order("desc").take(101);
+        const feedbackSample = feedbackRows.slice(0, 100);
         const recentRuns = await Promise.all(activity.map(async (run) => {
           const feedback = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
           return { id: run._id, title: run.title, status: run.status, estimateCredits: microsToCredits(run.estimateMicros), actualCredits: microsToCredits(run.actualMicros), createdAt: run.createdAt, rating: feedback?.rating ?? null, feedbackNote: feedback?.note ?? null };
@@ -78,6 +81,7 @@ export const list = query({
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
           maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, modelRouting, status, updatedAt, recentRuns,
+          ownerReportedFeedback: { windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, capped: feedbackRows.length > 100 },
         };
       })),
     };
