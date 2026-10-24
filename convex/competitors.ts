@@ -25,7 +25,7 @@ export const overview = query({
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const suggested = selectWatchCandidates(
-      (business?.insights?.competitors ?? []).flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl }] : []),
+      (business?.insights?.competitors ?? []).flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
       business?.website,
       watches.map((w) => w.url),
       6,

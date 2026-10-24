@@ -77,6 +77,7 @@ describe("competitor watch", () => {
           { name: "Our own comparison page", url: "https://owner.example/compare/rival", sourceUrl: "https://owner.example/compare/rival", note: "Comparison page" },
           { name: "Directory listing", url: "https://g2.com/products/rival", sourceUrl: "https://g2.com/products/rival", note: "Directory" },
           { name: "Rival", url: "https://www.rival.example/pricing", sourceUrl: "https://rival.example/pricing", note: "Sourced rival" },
+          { name: "Adjacent", url: "https://adjacent.example", sourceUrl: "https://adjacent.example", note: "Related tool", kind: "adjacent" },
           { name: "Duplicate", url: "http://rival.example/", sourceUrl: "https://rival.example/", note: "Duplicate host" },
         ],
         positioning: "",

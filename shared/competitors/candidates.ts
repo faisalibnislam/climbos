@@ -3,6 +3,7 @@ export interface CompetitorCandidate {
   name: string;
   url: string;
   sourceUrl?: string;
+  kind?: "direct" | "adjacent";
 }
 
 const DIRECTORY_HOSTS = [
@@ -54,9 +55,9 @@ export function selectWatchCandidates(
     const name = candidate.name.trim().slice(0, 80);
     const host = canonicalCompetitorHost(candidate.url);
     const source = candidate.sourceUrl ? canonicalCompetitorHost(candidate.sourceUrl) : null;
-    if (!name || !host || !source || isDirectory(host) || (ownHost && sameSite(host, ownHost)) || seen.has(host)) continue;
+    if (!name || !host || !source || candidate.kind === "adjacent" || isDirectory(host) || (ownHost && sameSite(host, ownHost)) || seen.has(host)) continue;
     seen.add(host);
-    selected.push({ name, url: `https://${host}`, sourceUrl: candidate.sourceUrl });
+    selected.push({ name, url: `https://${host}`, sourceUrl: candidate.sourceUrl, ...(candidate.kind ? { kind: candidate.kind } : {}) });
     if (selected.length >= Math.max(0, Math.floor(limit))) break;
   }
   return selected;

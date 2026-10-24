@@ -247,10 +247,11 @@ export const saveInsights = internalMutation({
     const business = await ctx.db.get(businessId);
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
     const i = JSON.parse(insights) as BusinessInsights;
+    const v2Competitors = (i as unknown as Partial<InsightsV2>).competitors;
     await ctx.db.patch(businessId, {
       insights: {
         audiences: i.audiences.slice(0, 5),
-        competitors: i.competitors.slice(0, 6).map((c) => ({ name: c.name, url: c.url || undefined, note: c.note, sourceUrl: c.sourceUrl || undefined })),
+        competitors: i.competitors.slice(0, 6).map((c, index) => ({ name: c.name, url: c.url || undefined, note: c.note, sourceUrl: c.sourceUrl || undefined, kind: v2Competitors?.[index]?.kind })),
         positioning: i.positioning,
         pricingNotes: i.pricingNotes,
         swot: {

@@ -12,6 +12,7 @@ describe("competitor watch candidates", () => {
         { name: "Our comparison page", url: "https://www.owner.example/compare/rival", sourceUrl: "https://owner.example/compare/rival" },
         { name: "Rival listing", url: "https://g2.com/products/rival", sourceUrl: "https://g2.com/products/rival" },
         { name: "Rival", url: "https://www.rival.example/pricing", sourceUrl: "https://rival.example/pricing" },
+        { name: "Adjacent tool", url: "https://adjacent.example/", sourceUrl: "https://adjacent.example/", kind: "adjacent" },
         { name: "Duplicate", url: "http://rival.example/", sourceUrl: "https://rival.example/" },
         { name: "No source", url: "https://other.example/" },
         { name: "Other", url: "https://other.example/", sourceUrl: "https://research.example/other" },

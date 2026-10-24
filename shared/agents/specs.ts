@@ -48,7 +48,12 @@ import { routeModels } from "./routes";
 const force = z.enum(["push", "pull", "anxiety", "habit"]);
 
 export const InsightsV2Schema = BusinessInsightsSchema.extend({
-  alternatives: z.array(z.object({ name: z.string(), kind: z.enum(["competitor", "diy", "hire", "marketplace", "do_nothing", "other"]), evidence: z.string(), sourceUrl: z.string() })),
+  competitors: z.array(
+    BusinessInsightsSchema.shape.competitors.element.extend({
+      kind: z.enum(["direct", "adjacent"]),
+    }),
+  ),
+  alternatives: z.array(z.object({ name: z.string(), kind: z.enum(["competitor", "adjacent", "diy", "hire", "marketplace", "do_nothing", "other"]), evidence: z.string(), sourceUrl: z.string() })),
   vocPhrases: z.array(z.object({ phrase: z.string(), theme: z.string(), sourceUrl: z.string() })),
   objections: z.array(z.object({ objection: z.string(), force, counter: z.string(), sourceUrl: z.string() })),
   gaps: z.array(z.object({ gap: z.string(), evidence: z.string(), risk: z.string(), sourceUrl: z.string() })),
@@ -165,7 +170,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.12-additional-capacity-semantics";
+export const ENGINE_VERSION = "v3.13-competitor-classification";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1782,7 +1787,7 @@ Only report what you actually found, with URLs.`,
         maxSearches: 8,
         maxFetches: 8,
         brief: `For ${ctx.businessName}${site}:
-1. Competitive set: 3-5 direct competitors customers actually consider, plus 2-3 real alternatives (DIY, hiring, marketplaces, doing nothing). For each competitor capture their homepage headline/claim, entry price and offer, and one weakness customers mention.
+1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors.
 2. Voice of customer: find reviews and forum threads (G2/Capterra/Trustpilot/Google reviews/Reddit/app stores, whichever fit this business type) about this business and its top competitors. Collect 15-30 short verbatim phrases with URLs: why people switch, what almost stopped them, outcomes they describe, words they use for the problem.
 3. Gaps: values customers mention that no competitor leads with; offers nobody makes (guarantee, fixed price, fast start); channels competitors are absent from. Note evidence for each.`,
       };
