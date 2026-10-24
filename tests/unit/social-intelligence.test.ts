@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { researchFor, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
 import type { AgentInput } from "../../shared/agents/types";
 import { planJob } from "../../convex/lib/jobPlans";
+import { socialToArtifacts } from "../../convex/jobWrites";
 
 describe("social intelligence routing", () => {
   it("loads the shared business-fit playbook for post writing and review", () => {
@@ -84,8 +85,27 @@ describe("social intelligence routing", () => {
       })),
     };
     const issues = spec.lint?.(output as never, input) ?? [];
-    expect(issues.some((issue) => issue.rule === "trend_source" && issue.path === "posts[0].body")).toBe(true);
+    expect(issues.some((issue) => issue.rule === "trend_source" && issue.path === "posts[0].trendSourceUrl")).toBe(true);
     expect(issues.some((issue) => issue.rule === "platform_adaptation" && issue.path === "posts[1].body")).toBe(true);
+
+    const sourceUrl = "https://trends.example/current";
+    const citedInput: AgentInput = { ...input, availableSourceUrls: [sourceUrl] };
+    const citedOutput = {
+      ...output,
+      copyBrief: { ...copyBrief, supportingSourceUrls: [sourceUrl] },
+      posts: output.posts.map((post) => ({ ...post, trendSourceUrl: sourceUrl })),
+    };
+    const citedIssues = spec.lint?.(citedOutput as never, citedInput) ?? [];
+    expect(citedIssues.some((issue) => issue.rule === "trend_source" || issue.rule === "citation")).toBe(false);
+    expect(socialToArtifacts(citedOutput as never, 1).map((artifact) => artifact.copyBrief?.supportingSourceUrls)).toEqual([
+      [sourceUrl], [sourceUrl],
+    ]);
+
+    const mismatchedOutput = {
+      ...citedOutput,
+      posts: citedOutput.posts.map((post) => ({ ...post, trendSourceUrl: "https://other.example/trend" })),
+    };
+    expect((spec.lint?.(mismatchedOutput as never, citedInput) ?? []).some((issue) => issue.rule === "citation")).toBe(true);
   });
 
   it("warns on a mismatched channel when single-channel publishing binds the final artifact to the selected channel", () => {

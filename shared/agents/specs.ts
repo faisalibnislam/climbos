@@ -416,6 +416,8 @@ export const SocialPostsV2Schema = z.object({
     SocialPostsSchema.shape.posts.element.extend({
       /** Internal strategy cue shown to the owner; keep it to one specific idea. */
       angle: copyAngleSchema,
+      /** Exact run-supplied source for this post's trend or meme reference. */
+      trendSourceUrl: z.string().url().optional(),
       format: postFormat,
       hook: z.string(),
       slides: z.array(z.object({ heading: z.string(), body: z.string() })),
@@ -1380,14 +1382,19 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
   issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
   const requested = new Set(requestedChannels);
   const normalizedPosts = out.posts.map((post, index) => ({ post, index, tokens: copyTokens(`${post.title}\n${post.hook}\n${post.body}`) }));
+  const trendReferences: { url: string; path: string }[] = [];
   normalizedPosts.forEach(({ post, index }) => {
     if (requested.size && !requested.has(post.channel)) {
       issues.push({ severity: requestedChannels.length === 1 ? "warn" : "error", rule: "unexpected_channel", message: `This draft targets ${post.channel}, which was not selected for this task. Draft only for the requested platforms.`, path: `posts[${index}].channel` });
     }
-    if (/\b(?:trend(?:ing)?|meme|viral)\b/i.test(`${post.title} ${post.hook} ${post.body} ${post.angle}`) && !out.copyBrief.supportingSourceUrls.length) {
-      issues.push({ severity: "error", rule: "trend_source", message: "A trend or meme-inspired post needs an exact source URL from this run; otherwise use an evergreen idea.", path: `posts[${index}].body` });
+    const trendPath = `posts[${index}].trendSourceUrl`;
+    const namesTrend = /\b(?:trend(?:ing)?|meme|viral)\b/i.test(`${post.title} ${post.hook} ${post.body} ${post.angle}`);
+    if (namesTrend && !post.trendSourceUrl) {
+      issues.push({ severity: "error", rule: "trend_source", message: "Each trend or meme-inspired post needs its own exact source URL from this run; otherwise use an evergreen idea.", path: trendPath });
     }
+    if (post.trendSourceUrl) trendReferences.push({ url: post.trendSourceUrl, path: trendPath });
   });
+  issues.push(...lintAvailableSourceUrls(trendReferences, input));
   for (let i = 0; i < normalizedPosts.length; i += 1) {
     const left = normalizedPosts[i]!;
     if (left.tokens.length < 8) continue;
