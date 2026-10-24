@@ -455,4 +455,45 @@ describe("Plan version history", () => {
 
     expect(await t.mutation(internal.migrations.expertGrowthPlansToV9, { limit: 100 })).toMatchObject({ migrated: 0, done: true });
   });
+
+  it("inventories legacy growth plans read-only across cursor pages", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-plan-inventory@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const original = await t.run((ctx) => ctx.db.get(plan.id));
+    const decoded = readExpertPlan(original!.expert!);
+
+    await t.run(async (ctx) => {
+      const { _id: _id1, _creationTime: _created1, ...base } = original!;
+      const insert = async (expert: Record<string, unknown> | undefined) => ctx.db.insert("strategies", { ...base, expert: expert as never });
+
+      const legacyValid = { ...decoded, version: 7 } as Record<string, unknown>;
+      delete legacyValid.growthPlanV8;
+      delete legacyValid.growthPlanV9;
+      await insert(legacyValid);
+
+      const legacyInvalid = { ...legacyValid, plays: [], economics: {} };
+      await insert(legacyInvalid);
+      await insert({ ...decoded, version: 10 });
+      await insert(undefined);
+    });
+
+    const first = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2 });
+    expect(first.scanned).toBe(2);
+    expect(first.done).toBe(false);
+    expect(first.cursor).toBeTruthy();
+    const second = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2, cursor: first.cursor! });
+    const third = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2, cursor: second.cursor! });
+    expect(third.done).toBe(true);
+    const counts = [first, second, third].reduce((total, page) => {
+      for (const [key, value] of Object.entries(page.counts)) total[key as keyof typeof total] += value;
+      return total;
+    }, { missingExpert: 0, currentValid: 0, currentInvalid: 0, legacyMigratable: 0, legacyInvalid: 0, futureUnsupported: 0 });
+    expect(counts).toEqual({ missingExpert: 1, currentValid: 1, currentInvalid: 0, legacyMigratable: 1, legacyInvalid: 1, futureUnsupported: 1 });
+
+    const after = await t.run((ctx) => ctx.db.get(plan.id));
+    expect(after!.expert).toEqual(original!.expert);
+  });
 });

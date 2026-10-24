@@ -1,8 +1,19 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { ensureAccountForOwner } from "./lib/accounts";
 import { EXPERT_PLAN_JSON_ENVELOPE_VERSION, EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { buildCurrentExpertGrowthPayload, parseCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
+
+function expertVersion(expert: Record<string, unknown>): number {
+  const value = expert.version;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
+function legacyExpertGrowthPayload(expert: Record<string, unknown>, version: number) {
+  return version === EXPERT_PLAN_JSON_ENVELOPE_VERSION
+    ? parseCurrentExpertGrowthPayload(expert.growthPlanV8)
+    : parseCurrentExpertGrowthPayload({ plays: expert.plays, economics: expert.economics });
+}
 
 /**
  * 18 Oct 2026: shared accounts. Give every customer workspace its owner's
@@ -55,17 +66,14 @@ export const expertGrowthPlansToV9 = internalMutation({
     for (const strategy of page.page) {
       const expert = strategy.expert as Record<string, unknown> | undefined;
       if (!expert) continue;
-      const rawVersion = expert.version;
-      const version = typeof rawVersion === "number" && Number.isSafeInteger(rawVersion) && rawVersion >= 0 ? rawVersion : 0;
+      const version = expertVersion(expert);
       if (version === EXPERT_PLAN_SCHEMA_VERSION) continue;
       if (version > EXPERT_PLAN_JSON_ENVELOPE_VERSION) {
         skippedUnsupported++;
         continue;
       }
 
-      const legacyPayload = version === EXPERT_PLAN_JSON_ENVELOPE_VERSION
-        ? parseCurrentExpertGrowthPayload(expert.growthPlanV8)
-        : parseCurrentExpertGrowthPayload({ plays: expert.plays, economics: expert.economics });
+      const legacyPayload = legacyExpertGrowthPayload(expert, version);
       if (!legacyPayload) {
         skippedInvalid++;
         continue;
@@ -96,5 +104,43 @@ export const expertGrowthPlansToV9 = internalMutation({
       done: page.isDone,
       cursor: page.isDone ? null : page.continueCursor,
     };
+  },
+});
+
+/** Read-only paginated inventory; inspect every page before deciding whether to run the migration. */
+export const expertGrowthPlanInventory = internalQuery({
+  args: { cursor: v.optional(v.string()), limit: v.optional(v.number()) },
+  handler: async (ctx, { cursor, limit }) => {
+    const pageSize = Number.isSafeInteger(limit) ? Math.max(1, Math.min(500, limit!)) : 100;
+    const page = await ctx.db.query("strategies").paginate({ numItems: pageSize, cursor: cursor ?? null });
+    const counts = {
+      missingExpert: 0,
+      currentValid: 0,
+      currentInvalid: 0,
+      legacyMigratable: 0,
+      legacyInvalid: 0,
+      futureUnsupported: 0,
+    };
+
+    for (const strategy of page.page) {
+      const expert = strategy.expert as Record<string, unknown> | undefined;
+      if (!expert) {
+        counts.missingExpert++;
+        continue;
+      }
+      const version = expertVersion(expert);
+      if (version === EXPERT_PLAN_SCHEMA_VERSION) {
+        if (parseCurrentExpertGrowthPayload(expert.growthPlanV9)) counts.currentValid++;
+        else counts.currentInvalid++;
+      } else if (version > EXPERT_PLAN_JSON_ENVELOPE_VERSION) {
+        counts.futureUnsupported++;
+      } else {
+        const legacyPayload = legacyExpertGrowthPayload(expert, version);
+        if (legacyPayload && buildCurrentExpertGrowthPayload(legacyPayload.plays, legacyPayload.economics)) counts.legacyMigratable++;
+        else counts.legacyInvalid++;
+      }
+    }
+
+    return { scanned: page.page.length, counts, done: page.isDone, cursor: page.isDone ? null : page.continueCursor };
   },
 });
