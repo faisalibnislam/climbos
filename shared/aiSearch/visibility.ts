@@ -30,6 +30,7 @@ export interface ObservedRate {
   trials: number;
   rate: number | null;
   interval95: WilsonInterval | null;
+  intervalMethod: "wilson_score_independence_assumption" | null;
 }
 
 export interface AiSearchVisibilityRow {
@@ -54,8 +55,8 @@ export interface AiSearchPanelSummary {
   queryCount: number;
   businessMentionAnswers: number;
   competitorMentionEvents: number;
-  mentionShareDenominatorEvents: number;
-  observedMentionEventShare: ObservedRate;
+  answersWithKnownBrandOrCompetitorMention: number;
+  businessShareAmongAnswersWithKnownBrandOrCompetitorMention: ObservedRate;
   firstPartyCitationAnswers: number | null;
   observedFirstPartyCitationRate: ObservedRate | null;
   competitorMentionAnswers: { name: string; answers: number }[];
@@ -83,6 +84,7 @@ export function observedRate(successes: number, trials: number): ObservedRate {
     trials,
     rate: trials > 0 ? successes / trials : null,
     interval95: wilsonInterval(successes, trials),
+    intervalMethod: trials > 0 ? "wilson_score_independence_assumption" : null,
   };
 }
 
@@ -177,12 +179,14 @@ export function summarizeAiSearchPanel(
   const businessMentionAnswers = knownMentions.filter((row) => row.brandMention === "yes").length;
   const competitorAnswerCounts = new Map<string, { name: string; answers: number }>();
   let competitorMentionEvents = 0;
-  let knownCompetitorMentionEvents = 0;
+  let answersWithKnownBrandOrCompetitorMention = 0;
 
   for (const row of answered) {
     const uniqueNames = new Set(row.competitorMentions.map(cleanKey).filter(Boolean));
     competitorMentionEvents += uniqueNames.size;
-    if (row.brandMention !== "unknown") knownCompetitorMentionEvents += uniqueNames.size;
+    if (row.brandMention !== "unknown" && (row.brandMention === "yes" || uniqueNames.size > 0)) {
+      answersWithKnownBrandOrCompetitorMention += 1;
+    }
     for (const normalizedName of uniqueNames) {
       const name = row.competitorMentions.find((item) => cleanKey(item) === normalizedName)!.trim();
       const current = competitorAnswerCounts.get(normalizedName) ?? { name, answers: 0 };
@@ -194,8 +198,6 @@ export function summarizeAiSearchPanel(
   const citationAnswers = businessWebsite
     ? answered.filter((row) => row.citedUrls.some((url) => sameBusinessDomain(url, businessWebsite))).length
     : null;
-  const mentionTrials = businessMentionAnswers + knownCompetitorMentionEvents;
-
   return {
     observations: observations.length,
     answered: answered.length,
@@ -204,8 +206,8 @@ export function summarizeAiSearchPanel(
     queryCount: new Set(observations.map((row) => `${row.provider}\u0000${cleanKey(row.query)}\u0000${cleanKey(row.location ?? "")}`)).size,
     businessMentionAnswers,
     competitorMentionEvents,
-    mentionShareDenominatorEvents: mentionTrials,
-    observedMentionEventShare: observedRate(businessMentionAnswers, mentionTrials),
+    answersWithKnownBrandOrCompetitorMention,
+    businessShareAmongAnswersWithKnownBrandOrCompetitorMention: observedRate(businessMentionAnswers, answersWithKnownBrandOrCompetitorMention),
     firstPartyCitationAnswers: citationAnswers,
     observedFirstPartyCitationRate: citationAnswers === null ? null : observedRate(citationAnswers, answered.length),
     competitorMentionAnswers: [...competitorAnswerCounts.values()].sort((a, b) => b.answers - a.answers || a.name.localeCompare(b.name)),
@@ -213,7 +215,7 @@ export function summarizeAiSearchPanel(
     limitations: [
       "Each recorded answer has equal weight; this does not weight queries by customer demand or commercial importance.",
       "Competitor mentions include only names entered by the observer and may omit alternatives.",
-      "Repeated checks are not independent samples of all answers; the result is not market share or a causal effect.",
+      "Wilson intervals are nominal and assume independent observations; repeated prompts or platform changes can violate this assumption. The result is not market share.",
       "A citation or mention is not evidence of visits, leads, customers, or revenue impact.",
     ],
   };

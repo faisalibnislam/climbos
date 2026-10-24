@@ -18,7 +18,7 @@ describe("AI search visibility observations", () => {
     const interval = wilsonInterval(0, 1);
     expect(interval?.low).toBe(0);
     expect(interval?.high).toBeGreaterThan(0.5);
-    expect(observedRate(0, 0)).toEqual({ successes: 0, trials: 0, rate: null, interval95: null });
+    expect(observedRate(0, 0)).toEqual({ successes: 0, trials: 0, rate: null, interval95: null, intervalMethod: null });
     expect(wilsonInterval(2, 1)).toBeNull();
   });
 
@@ -54,7 +54,7 @@ describe("AI search visibility observations", () => {
 
     expect(rows[0]).toMatchObject({
       samples: { answered: 1, noAnswer: 1, failed: 1 },
-      brandMentions: { successes: 0, trials: 0, rate: null, interval95: null },
+      brandMentions: { successes: 0, trials: 0, rate: null, interval95: null, intervalMethod: null },
       firstPartyCitations: { successes: 0, trials: 1, rate: 0 },
     });
   });
@@ -81,8 +81,8 @@ describe("AI search visibility observations", () => {
       queryCount: 3,
       businessMentionAnswers: 2,
       competitorMentionEvents: 4,
-      mentionShareDenominatorEvents: 6,
-      observedMentionEventShare: { successes: 2, trials: 6, rate: 2 / 6 },
+      answersWithKnownBrandOrCompetitorMention: 3,
+      businessShareAmongAnswersWithKnownBrandOrCompetitorMention: { successes: 2, trials: 3, rate: 2 / 3 },
       firstPartyCitationAnswers: 3,
       observedFirstPartyCitationRate: { successes: 3, trials: 3, rate: 1 },
       evidenceBasis: "owner_observed",
@@ -94,7 +94,7 @@ describe("AI search visibility observations", () => {
   it("does not calculate mention share when brand mention labeling is unknown", () => {
     const panel = summarizeAiSearchPanel([row({ brandMention: "unknown", sentiment: "unknown" })]);
     expect(panel.competitorMentionEvents).toBe(1);
-    expect(panel.mentionShareDenominatorEvents).toBe(0);
-    expect(panel.observedMentionEventShare.rate).toBeNull();
+    expect(panel.answersWithKnownBrandOrCompetitorMention).toBe(0);
+    expect(panel.businessShareAmongAnswersWithKnownBrandOrCompetitorMention.rate).toBeNull();
   });
 });

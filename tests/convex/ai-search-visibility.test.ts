@@ -58,7 +58,7 @@ describe("AI search visibility observations", () => {
       queryCount: 2,
       businessMentionAnswers: 1,
       competitorMentionEvents: 2,
-      observedMentionEventShare: { successes: 1, trials: 3, rate: 1 / 3 },
+      businessShareAmongAnswersWithKnownBrandOrCompetitorMention: { successes: 1, trials: 2, rate: 0.5 },
     });
     expect(report.summary[0]).toMatchObject({
       provider: "chatgpt",
