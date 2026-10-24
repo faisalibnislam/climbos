@@ -29,12 +29,14 @@ async function brandFor(ctx: MutationCtx, orgId: Id<"organizations">): Promise<D
 export const get = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const b = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const pending = (await ctx.db.query("voiceSamples").withIndex("by_org_used", (q) => q.eq("orgId", org._id).eq("used", false)).take(50)).length;
     return {
       exists: Boolean(b),
+      canEdit: role === "owner" || role === "admin" || role === "editor",
+      canManageVoiceLearning: role === "owner" || role === "admin",
       voice: b?.voice ?? "",
       toneWords: b?.toneWords ?? [],
       colors: b?.colors ?? [],

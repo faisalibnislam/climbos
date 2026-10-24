@@ -23,7 +23,7 @@ describe("brand kit + voice learning", () => {
     });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"], voiceLearningEnabled: true });
     let b = await owner.client.query(api.brand.get, { slug });
-    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], voiceLearningEnabled: true });
+    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], voiceLearningEnabled: true, canEdit: true, canManageVoiceLearning: true });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm"], colors: ["#123456"], doNots: ["No emojis"] });
     expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual(["Example with spacing", "Second example", "Third example"]);
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: [] });
@@ -39,6 +39,24 @@ describe("brand kit + voice learning", () => {
     expect(b.pending).toBe(0);
     await owner.client.mutation(api.brand.removeRule, { slug, index: 0 });
     expect((await owner.client.query(api.brand.get, { slug })).learnedRules.length).toBe(b.learnedRules.length - 1);
+  });
+
+  it("exposes brand editing permissions and protects owner-only style consent", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "brand-access-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Brand Access Co" });
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
+      await ctx.db.insert("brandProfiles", { orgId: orgId as Id<"organizations">, businessId: business!._id, voice: "Plain", toneWords: [], colors: [], doNots: [], updatedAt: Date.now() });
+    });
+    const editor = await asNewUser(t, "brand-access-editor@example.com");
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: editor.userId as Id<"users">, role: "editor", status: "active", createdAt: Date.now() }));
+    expect(await editor.client.query(api.brand.get, { slug })).toMatchObject({ canEdit: true, canManageVoiceLearning: false });
+    await expect(editor.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], approvedExamples: ["Must be owner approved"] })).rejects.toThrow(/Only an owner or admin can approve brand examples/);
+    await expect(editor.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], voiceLearningEnabled: true })).rejects.toThrow(/Only an owner or admin can change voice learning consent/);
+    const viewer = await asNewUser(t, "brand-access-viewer@example.com");
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: viewer.userId as Id<"users">, role: "viewer", status: "active", createdAt: Date.now() }));
+    expect(await viewer.client.query(api.brand.get, { slug })).toMatchObject({ canEdit: false, canManageVoiceLearning: false });
   });
 
   it("keeps voice learning off by default and deletes samples and rules when consent is withdrawn", async () => {
