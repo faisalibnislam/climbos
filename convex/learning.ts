@@ -21,17 +21,35 @@ export const METRICS: Record<string, { label: string; minTrials: number }> = Obj
 /** Raw counts with each window stated (REQ-LEARN-01): lifetime counters are only divided by lifetime counts. */
 async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: number): Promise<RawLearningInputs> {
   const outreach: RawLearningInputs["outreach"] = [];
-  for (const camp of await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).take(50)) {
-    const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", camp._id).gte("createdAt", since)).take(3000);
-    const contacted = new Set(sends.filter((s) => s.status === "sent" && s.step === 0).map((s) => s.prospectId));
-    if (!contacted.size) continue;
-    const prospects = (await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", camp._id)).take(500)).filter((p) => contacted.has(p._id));
-    outreach.push({
-      contacted: contacted.size,
-      replied: prospects.filter((p) => ["replied", "booked", "won"].includes(p.stage)).length,
-      booked: prospects.filter((p) => p.stage === "booked" || p.stage === "won").length,
-    });
+  // Use delivery time, not queue creation time: queued emails can wait, fail, or
+  // be sent after the learning window. Only the first successfully sent step
+  // starts a prospect's measured cohort.
+  const sends = await ctx.db
+    .query("outboundSends")
+    .withIndex("by_org_sent", (q) => q.eq("orgId", orgId).gte("sentAt", since).lte("sentAt", Date.now()))
+    .take(3000);
+  const firstSends = new Map<string, { campaignId: Id<"outboundCampaigns">; prospectId: Id<"prospects">; sentAt: number }>();
+  for (const send of sends) {
+    if (send.status !== "sent" || send.step !== 0 || send.sentAt === undefined) continue;
+    const key = String(send.prospectId);
+    const previous = firstSends.get(key);
+    if (!previous || send.sentAt < previous.sentAt) firstSends.set(key, { campaignId: send.campaignId, prospectId: send.prospectId, sentAt: send.sentAt });
   }
+  const cohorts = new Map<string, { contacted: number; replied: number; booked: number }>();
+  for (const send of firstSends.values()) {
+    const prospect = await ctx.db.get(send.prospectId);
+    if (!prospect || prospect.orgId !== orgId || prospect.campaignId !== send.campaignId) continue;
+    const cohort = cohorts.get(String(send.campaignId)) ?? { contacted: 0, replied: 0, booked: 0 };
+    cohort.contacted += 1;
+    // Stage is a current-state field. Its timestamp must follow contact or it
+    // may describe an earlier CRM event unrelated to this outreach cohort.
+    if (prospect.updatedAt >= send.sentAt) {
+      if (["replied", "booked", "won"].includes(prospect.stage)) cohort.replied += 1;
+      if (prospect.stage === "booked" || prospect.stage === "won") cohort.booked += 1;
+    }
+    cohorts.set(String(send.campaignId), cohort);
+  }
+  outreach.push(...cohorts.values());
   const bookings = await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", orgId).gte("startAt", since).lte("startAt", Date.now())).take(2000);
   const landing = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)).map((p) => ({ views: p.views, leads: p.leads }));
   const threads = await ctx.db.query("chatThreads").withIndex("by_org_last", (q) => q.eq("orgId", orgId).gte("lastAt", since)).take(2000);

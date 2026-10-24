@@ -4,6 +4,69 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup } from "./helpers";
 
 describe("learning from results", () => {
+  it("uses actual first-send time and excludes CRM stages recorded before contact", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "learn-cohort@example.com");
+    const { orgId } = await u.client.mutation(api.orgs.createWorkspace, { businessName: "Cohort Co" });
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const campaignId = await ctx.db.insert("outboundCampaigns", {
+        orgId: orgId as Id<"organizations">,
+        title: "Test campaign",
+        brief: { who: "owners", where: "UK", count: 3 },
+        status: "review",
+        sequence: [],
+        ownerNotes: [],
+        excluded: [],
+        createdBy: u.userId as Id<"users">,
+        createdAt: now - 200 * 86_400_000,
+        updatedAt: now,
+      });
+      const cases = [
+        { company: "Old stage", stage: "booked" as const, sentAt: now - 1_000, updatedAt: now - 2_000, createdAt: now - 100_000 },
+        { company: "New stage", stage: "booked" as const, sentAt: now - 1_000, updatedAt: now, createdAt: now - 100_000 },
+        // Queued long ago but delivered inside the window: the delivery belongs in the cohort.
+        { company: "Late delivery", stage: "contacted" as const, sentAt: now - 1_000, updatedAt: now - 1_000, createdAt: now - 200 * 86_400_000 },
+      ];
+      for (const [index, item] of cases.entries()) {
+        const prospectId = await ctx.db.insert("prospects", {
+          orgId: orgId as Id<"organizations">,
+          campaignId,
+          company: item.company,
+          domain: `${index}.example.com`,
+          website: `https://${index}.example.com`,
+          location: "UK",
+          sizeBand: "small",
+          why: "Test fixture",
+          evidence: [],
+          trigger: "Test",
+          fit: 1,
+          timing: 1,
+          contact: "Owner",
+          firstLine: "Hello",
+          stage: item.stage,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        });
+        await ctx.db.insert("outboundSends", {
+          orgId: orgId as Id<"organizations">,
+          campaignId,
+          prospectId,
+          step: 0,
+          to: `${index}@example.com`,
+          scheduledFor: item.sentAt,
+          status: "sent",
+          sentAt: item.sentAt,
+          attempts: 1,
+          createdAt: item.createdAt,
+        });
+      }
+    });
+    const { counts } = await t.query(internal.learning.countsForOrg, { orgId: orgId as Id<"organizations"> });
+    expect(counts.outreach_reply).toEqual({ trials: 3, successes: 1 });
+    expect(counts.outreach_booked).toEqual({ trials: 3, successes: 1 });
+  });
+
   it("measures each workspace and pools by type only with 5+ workspaces", async () => {
     const t = setup();
     const orgs: Id<"organizations">[] = [];
