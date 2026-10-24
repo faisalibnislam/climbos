@@ -271,13 +271,15 @@ export const startPlay = mutation({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
     const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
-    const staleInputs = planStaleInputs(s, business, goal, businessFactVersions);
+    const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
+    const staleInputs = planStaleInputs(s, business, goal, businessFactVersions, brand);
     if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -495,6 +497,7 @@ export const plan = query({
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
     const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+    const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const experiments = strategy
       ? (
           await ctx.db
@@ -517,7 +520,7 @@ export const plan = query({
     const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
-    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false };
+    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
       ? selectPortfolio(currentPlays, {
@@ -562,7 +565,7 @@ export const plan = query({
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
-      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts },
+      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
@@ -671,13 +674,15 @@ export const decidePlan = mutation({
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
       const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
       const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
-      const staleInputs = planStaleInputs(s, business, goal, businessFactVersions);
+      const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
+      const staleInputs = planStaleInputs(s, business, goal, businessFactVersions, brand);
       if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -757,8 +762,9 @@ function planStaleInputs(
   business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
   businessFactVersions: { id: string; updatedAt: number }[] = [],
-): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[] } | undefined;
+  brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null,
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -766,6 +772,7 @@ function planStaleInputs(
   const hasFunnelSnapshot = (snapshot?.snapshotVersion ?? 0) >= 7;
   const hasGoalSnapshot = (snapshot?.snapshotVersion ?? 0) >= 8;
   const hasProfileAndFactSnapshot = (snapshot?.snapshotVersion ?? 0) >= 9;
+  const hasBrandSnapshot = (snapshot?.snapshotVersion ?? 0) >= 10;
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.
@@ -776,6 +783,7 @@ function planStaleInputs(
     goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
     businessProfile: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never),
     businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
+    brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
   };
 }
 
@@ -788,6 +796,17 @@ function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "websi
     businessType: business.businessType,
     summary: business.summary ?? null,
     currency: business.currency ?? null,
+  };
+}
+
+function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null): unknown {
+  if (!brand) return null;
+  return {
+    voice: brand.voice,
+    toneWords: [...brand.toneWords],
+    colors: [...brand.colors],
+    doNots: [...brand.doNots],
+    learnedRules: (brand.learnedRules ?? []).map(({ text }) => text),
   };
 }
 

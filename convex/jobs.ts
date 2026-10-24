@@ -692,11 +692,11 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 9,
+    snapshotVersion: 10,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
-    brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, doNots: job.brand.doNots, updatedAt: job.brand.updatedAt } : null,
+    brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, colors: job.brand.colors, doNots: job.brand.doNots, learnedRules: job.brand.learnedRules ?? [], updatedAt: job.brand.updatedAt } : null,
     goal,
     goalKind: job.goal?.kind ?? null,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
@@ -711,7 +711,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 9,
+    snapshotVersion: 10,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -731,6 +731,13 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       currency: job.business.currency ?? null,
     } : null,
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
+    brandProfile: job.brand ? {
+      voice: job.brand.voice,
+      toneWords: [...job.brand.toneWords],
+      colors: [...job.brand.colors],
+      doNots: [...job.brand.doNots],
+      learnedRules: (job.brand.learnedRules ?? []).map(({ text }) => text),
+    } : null,
     staleFactIds: staleFacts.map(({ id }) => id),
     contradictions,
     insightsChars: insights.length,
