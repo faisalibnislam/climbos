@@ -70,6 +70,26 @@ describe("competitor watch", () => {
     expect(report.competitors[0].observedAt).toBeTruthy();
   });
 
+  it("bundles multiple competitor changes into one owner notice", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "watch-digest@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Digest Co" });
+    await makePaid(t, orgId);
+    await owner.client.mutation(api.competitors.add, { slug, name: "Rival A", url: "rival-a.example" });
+    await owner.client.mutation(api.competitors.add, { slug, name: "Rival B", url: "rival-b.example" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers); // Establish each free baseline.
+
+    process.env.CLIMBOS_FAKE_SITE_TEXT = "Plans from $14/mo\nNew: free migration for every new customer this autumn";
+    await t.mutation(internal.competitors.weekly, {});
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const notices = await t.run(async (ctx) => (await ctx.db.query("notices").collect()).filter((notice) => notice.userId === owner.userId && notice.href.endsWith("/competitors")));
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.text).toContain("2 watched competitor sites");
+    const overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.changes).toHaveLength(2);
+  });
+
   it("shows sourced watch candidates while filtering self, directory, and duplicate domains", async () => {
     const t = setup();
     const owner = await asNewUser(t, "competitor-candidates@example.com");

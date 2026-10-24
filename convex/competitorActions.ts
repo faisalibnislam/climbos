@@ -141,6 +141,7 @@ export const check = internalAction({
       });
       ok++;
     }
+    if (ok > 0) await ctx.runMutation(internal.competitors.notifyDigest, { orgId, count: ok });
     await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified", userMessage: ok ? undefined : "No meaningful changes this time." });
   },
 });

@@ -126,6 +126,8 @@ Business-insight evidence links are now checked against the exact site pages and
 
 The attached improvement brief's Issue 57 now has a tenant-scoped, trailing-365-day customer-concentration signal in agent context, computed from deduplicated non-demo billing events in the business currency. It reports top-one/top-three shares, identified-revenue coverage, and a bounded-read warning without exposing customer identifiers. Customer and order IDs are scoped to each billing source to avoid false cross-provider matches, so the same real person may count more than once. This is descriptive billing concentration, not contractual exposure, a forecast, causal attribution, or evidence that diversification is feasible; materiality still needs business context and owner judgment.
 
+Issue 9 now sends one owner notice after each competitor-watch run that produces meaningful summaries, with the number of affected watched sites and a link to the sourced report. Per-competitor change records remain available in the report; empty runs send no digest. This bundles notices within a run but does not debounce separate runs across time.
+
 The same source-scoped identity rule now applies to Issue 26/29's first-recorded-paying-customer metric. Its history lookup uses a new `(org, source, customer, occurredAt)` index so an equal ID from a different billing provider cannot make a paying customer disappear from the count. Refund-only activity no longer makes the metric claim it has paying-customer data. Cross-provider identity resolution remains unavailable and is disclosed in the metric definition.
 
 Monthly cohort size, repeat activity, and cohort revenue now use the same source-scoped customer identity. Equal provider IDs no longer merge unrelated people into one retention history; cross-provider person resolution remains unverified.
@@ -379,7 +381,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 | REQ-UX-06 | partial | S2 | `ExpertPlan.tsx` | Source, check and page-access labels plus replaced values. No source inspection drawer |
 | REQ-UX-07 | partial | S4/S15 | `workspace.ts` `staleInputs`, `planImpact`, `decidePlan`, `startPlay`; `src/app/app/[organization]/plan/page.tsx`; `src/components/app/plan/PlanActions.tsx` | The latest plan names stale inputs, blocks approval/start until refresh, and compares saved vs current deterministic P10/P50/P90 play forecasts, CAC/payback verdicts, and portfolio selection when available. The comparison labels scenarios as modeled, not actual, and the previous approved plan remains in use. **Remaining:** map and verify every material stale input against every dependent outcome; inputs not fed into the saved play model still require a refreshed plan to update written recommendations and forecasts. |
 | REQ-UX-08 | partial | S15 | `workspace.ts:22` | |
-| REQ-UX-09 | partial | S7/S15 | `crons.ts:46`, `competitors.ts:118` | Competitors notify on every change |
+| REQ-UX-09 | partial | S7/S15 | `crons.ts`, `competitorActions.ts`, `competitors.ts` `notifyDigest` | Each completed competitor-watch run with meaningful changes sends one owner digest, naming the number of watched sites with summaries; individual sourced changes remain in the report. No digest is sent when a run finds no meaningful changes. A test covers two changes producing one notice. **Remaining:** separate runs are not time-debounced, and owners cannot configure digest cadence. |
 | REQ-UX-10 | partial | S15 | `shared/a11y`, e2e | |
 
 ### Engineering

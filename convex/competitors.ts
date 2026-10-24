@@ -223,7 +223,18 @@ export const recordChange = internalMutation({
       } : undefined,
       at: now,
     });
-    await notifyOwners(ctx, a.orgId, `${a.name}: ${a.summary}`.slice(0, 240));
+  },
+});
+
+/** One digest per completed competitor-watch run, even when several sites changed. */
+export const notifyDigest = internalMutation({
+  args: { orgId: v.id("organizations"), count: v.number() },
+  handler: async (ctx, { orgId, count }) => {
+    if (!Number.isSafeInteger(count) || count < 1) return;
+    const org = await ctx.db.get(orgId);
+    if (!org) return;
+    const sites = count === 1 ? "one watched competitor site" : `${Math.min(count, 5)} watched competitor sites`;
+    await notifyOwners(ctx, orgId, `ClimbOS found meaningful changes across ${sites}. Review the dated sources and summaries.`);
   },
 });
 
