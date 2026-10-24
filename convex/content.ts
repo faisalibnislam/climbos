@@ -142,9 +142,13 @@ export const get = query({
       .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
       .order("desc")
       .take(50);
-    const factIds = versions[0]?.claimFactIds ?? [];
+    const current = versions[0];
+    const copyBriefFactIds = current?.copyBrief
+      ? [...current.copyBrief.offerFactIds, ...current.copyBrief.proofFactIds, ...current.copyBrief.supportingFactIds]
+      : [];
+    const factIds = Array.from(new Set([...(current?.claimFactIds ?? []), ...copyBriefFactIds]));
     const facts = [];
-    for (const id of factIds.slice(0, 20)) {
+    for (const id of factIds.slice(0, 40)) {
       const f = await ctx.db.get(id);
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, reviewState: f.reviewState });
     }

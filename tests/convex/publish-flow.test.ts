@@ -135,12 +135,16 @@ describe("publishing lifecycle", () => {
     const t = setup();
     const w = await workspace(t, "copy-brief@flow.example");
     const artifactId = await draft(t, w.orgId, "facebook");
+    const supportingFactId = await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      return ctx.db.insert("businessFacts", { orgId: w.orgId, businessId: business._id, category: "audience", statement: "Customers book through the website.", confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+    });
     const copyBrief = {
       reader: "Local service owners", situation: "They need qualified bookings", awarenessStage: "problem_aware", relationshipStage: "unknown",
-      objective: "Request a consultation", offerFactIds: [], problemJob: "Choose a provider", trigger: "An active need", centralIdea: "Make the next step clear",
+      objective: "Request a consultation", offerFactIds: [supportingFactId], problemJob: "Choose a provider", trigger: "An active need", centralIdea: "Make the next step clear",
       objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: "facebook", format: "single image", deliveryContext: "Organic post",
       brandVoice: "Clear and practical", approvedExamples: [], cta: "Ask for details", afterAction: "Reply to the inquiry", trackingMetric: "Qualified inquiries",
-      trackingMethod: "Unknown", supportingFactIds: [], supportingSourceUrls: [], unknowns: ["Availability"],
+      trackingMethod: "Unknown", supportingFactIds: [supportingFactId], supportingSourceUrls: ["https://example.com/trends/dated-format"], unknowns: ["Availability"],
     };
     await t.run(async (ctx) => {
       const artifact = await ctx.db.get(artifactId);
@@ -152,6 +156,7 @@ describe("publishing lifecycle", () => {
     await w.owner.client.mutation(api.content.edit, { slug: w.slug, artifactId, body: "An edited draft with its strategy context.", hashtags: [] });
     const updated = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
     expect(updated.current?.copyBrief).toEqual(copyBrief);
+    expect(updated.facts).toContainEqual(expect.objectContaining({ id: supportingFactId, statement: "Customers book through the website." }));
     const versions = await t.run(async (ctx) => ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", artifactId)).collect());
     expect(versions).toHaveLength(2);
     expect(versions[1]?.copyBrief).toEqual(copyBrief);
