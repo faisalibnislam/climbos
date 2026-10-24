@@ -1286,6 +1286,12 @@ function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = [];
   issues.push(...lintDistinctAngles(out.posts.map((p, i) => ({ path: `posts[${i}].angle`, angle: p.angle }))));
   issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
+  issues.push(...lintEmbeddedUrls(out.posts.flatMap((p, i) => [
+    { path: `posts[${i}].title`, text: p.title },
+    { path: `posts[${i}].hook`, text: p.hook },
+    { path: `posts[${i}].body`, text: p.body },
+    { path: `posts[${i}].firstComment`, text: p.firstComment },
+  ]), input));
   out.posts.forEach((p, i) => {
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
@@ -1331,7 +1337,10 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintRepeatedCopyPieces([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}]`, text: `${ad.headlines.join(" ")} ${ad.descriptions.join(" ")}` })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}]`, text: `${ad.headline} ${ad.primaryText} ${ad.description}` }))]), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintRepeatedCopyPieces([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}]`, text: `${ad.headlines.join(" ")} ${ad.descriptions.join(" ")}` })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}]`, text: `${ad.headline} ${ad.primaryText} ${ad.description}` }))]), ...lintEmbeddedUrls([
+    ...out.searchAds.flatMap((ad, i) => ad.headlines.concat(ad.descriptions).map((text) => ({ path: `searchAds[${i}]`, text }))),
+    ...out.metaAds.flatMap((ad, i) => [ad.primaryText, ad.headline, ad.description].map((text) => ({ path: `metaAds[${i}]`, text }))),
+  ], input), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1351,12 +1360,6 @@ function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
 /** Ad destinations must be a safe web URL on the business site or explicitly supplied by the owner. */
 function lintAdDestinations(out: AdDraftsV2, input: AgentInput): LintIssue[] {
   const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
-  const ownerUrls = new Set(
-    [...(input.task.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [])]
-      .map((url) => url.replace(/[.,;!?]+$/, ""))
-      .map(normalizeSourceUrl)
-      .filter((url): url is string => Boolean(url)),
-  );
   const issues: LintIssue[] = [];
   out.searchAds.forEach((ad, index) => {
     const path = `searchAds[${index}].finalUrl`;
@@ -1365,26 +1368,44 @@ function lintAdDestinations(out: AdDraftsV2, input: AgentInput): LintIssue[] {
       if (!businessHost) issues.push({ severity: "error", rule: "ad_destination", message: "Provide the business website or an explicit destination URL before creating this ad.", path });
       return;
     }
-    let parsed: URL;
-    try {
-      parsed = new URL(raw);
-    } catch {
-      issues.push({ severity: "error", rule: "ad_destination", message: "Ad destinations must be absolute HTTPS URLs.", path });
-      return;
-    }
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
-      issues.push({ severity: "error", rule: "ad_destination", message: "Ad destinations must use HTTPS and cannot contain embedded credentials.", path });
-      return;
-    }
-    const normalized = normalizeSourceUrl(raw);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    const belongsToBusiness = businessHost !== null && (host === businessHost || host.endsWith(`.${businessHost}`));
-    const explicitlyProvided = normalized !== null && ownerUrls.has(normalized);
-    if (!belongsToBusiness && !explicitlyProvided) {
-      issues.push({ severity: "error", rule: "ad_destination", message: "This destination is outside the business website and was not explicitly supplied in the task. Use the business site or provide the approved destination URL.", path });
-    }
+    issues.push(...lintOneOutboundUrl(raw, path, input, "ad_destination"));
   });
   return issues;
+}
+
+function ownerSuppliedTaskUrls(input: AgentInput): Set<string> {
+  return new Set(
+    (input.ownerSuppliedUrls ?? [])
+      .map((url) => url.replace(/[.,;!?]+$/, ""))
+      .map(normalizeSourceUrl)
+      .filter((url): url is string => Boolean(url)),
+  );
+}
+
+function lintOneOutboundUrl(rawUrl: string, path: string, input: AgentInput, rule = "copy_link"): LintIssue[] {
+  const raw = rawUrl.replace(/[.,;!?]+$/, "");
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return [{ severity: "error", rule, message: "Links in ready-to-use copy must be absolute HTTPS URLs.", path }];
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+    return [{ severity: "error", rule, message: "Links in ready-to-use copy must use HTTPS and cannot contain embedded credentials.", path }];
+  }
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
+  const isBusinessHost = businessHost !== null && (host === businessHost || host.endsWith(`.${businessHost}`));
+  const url = normalizeSourceUrl(raw);
+  if (isBusinessHost || (url !== null && ownerSuppliedTaskUrls(input).has(url))) return [];
+  return [{ severity: "error", rule, message: "This link is outside the business website and was not explicitly supplied by the owner. Use the business site or provide the approved URL.", path }];
+}
+
+export function lintEmbeddedUrls(fields: { path: string; text: string }[], input: AgentInput): LintIssue[] {
+  return fields.flatMap(({ path, text }) => {
+    const matches = [...text.matchAll(/https?:\/\/[^\s<>"')\]]+/gi)];
+    return matches.flatMap((match) => lintOneOutboundUrl(match[0], path, input));
+  });
 }
 
 function lintGeneric(out: unknown, input: AgentInput): LintIssue[] {
@@ -1879,7 +1900,12 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
+        { path: `emails[${i}].subject`, text: email.subject },
+        { path: `emails[${i}].previewText`, text: email.previewText },
+        { path: `emails[${i}].body`, text: email.body },
+        { path: `emails[${i}].callToAction`, text: email.callToAction },
+      ]), input), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
     },
     o,
     "lean",

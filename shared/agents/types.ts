@@ -89,6 +89,8 @@ export interface AgentInput {
   availableSourceUrls?: string[];
   /** First-party website on the current business record; used to validate outbound destinations. */
   businessWebsite?: string;
+  /** Exact URLs copied from the owner's request; external destinations need this provenance. */
+  ownerSuppliedUrls?: string[];
   /** Facts the critic must check claims against (statements). */
   facts: string[];
   /** Hard limits the output is checked against in code (spec §13). */

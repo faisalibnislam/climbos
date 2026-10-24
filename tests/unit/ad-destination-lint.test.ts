@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adsSpec } from "../../shared/agents/specs";
+import { adsSpec, lintEmbeddedUrls } from "../../shared/agents/specs";
 import type { AgentInput } from "../../shared/agents/types";
 
 const base: AgentInput = {
@@ -32,13 +32,20 @@ describe("ad destination validation", () => {
     expect(destinationIssues("http://example.com")).toMatchObject([{ rule: "ad_destination" }]);
   });
 
-  it("allows an exact external URL supplied in the task", () => {
-    const input = { ...base, task: "Send visitors to https://booking.example.net/consultation for booking." };
+  it("allows an exact external URL supplied in the owner's request", () => {
+    const input = { ...base, ownerSuppliedUrls: ["https://booking.example.net/consultation"] };
     expect(destinationIssues("https://booking.example.net/consultation", input)).toEqual([]);
   });
 
   it("requires a known destination when neither a URL nor website is supplied", () => {
     expect(destinationIssues("", { ...base, businessWebsite: undefined })).toMatchObject([{ rule: "ad_destination" }]);
     expect(destinationIssues("", base)).toEqual([]); // the artifact builder falls back to the business website
+  });
+
+  it("checks embedded campaign links and uses only owner-supplied external URLs as approval", () => {
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://example.com/book" }], base)).toEqual([]);
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], base)).toMatchObject([{ rule: "copy_link" }]);
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], { ...base, ownerSuppliedUrls: ["https://booking.example.net/consultation"] })).toEqual([]);
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Visit http://example.com/book" }], base)).toMatchObject([{ rule: "copy_link" }]);
   });
 });

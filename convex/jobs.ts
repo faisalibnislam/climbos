@@ -522,6 +522,11 @@ function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}):
   return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...extra };
 }
 
+/** Preserve destination provenance separately from sources in the generated plan/research context. */
+function ownerSuppliedUrls(text?: string): string[] {
+  return [...(text?.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [])].map((url) => url.replace(/[.,;!?]+$/, ""));
+}
+
 /** The owner's cash and time limits, checked in code against every plan. */
 /** Engine rollout flags (REQ-ENG-01): per workspace, staff-set; the old path is the default. */
 function hasFlag(job: JobCtx, flag: string): boolean {
@@ -1348,6 +1353,7 @@ export const createContent = internalAction({
             agentInput(
               job,
               `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Before drafting, choose a specific positioning or customer-language angle for each piece; return that reader-facing idea in its angle field, in 12 words or fewer, and vary the angles across the set. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${imagesBrief}${planContext(job)}`,
+              { ownerSuppliedUrls: ownerSuppliedUrls(args.brief) },
             ),
             startedAt,
             {
@@ -1370,6 +1376,7 @@ export const createContent = internalAction({
             0,
             adsSpec(),
             agentInput(job, `Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within the owner's budget. Choose and return one specific positioning/customer-language angle for each ad in its angle field (12 words or fewer). Ads are created paused and only go live after the owner approves them.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+              ownerSuppliedUrls: ownerSuppliedUrls(args.brief),
               research: researchFor("ad_drafts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
             }),
             startedAt,
@@ -1382,7 +1389,7 @@ export const createContent = internalAction({
             job,
             0,
             emailSpec(),
-            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Return one campaign angle and a distinct specific angle for each email (12 words or fewer per angle), selected from positioning, customer language, use case, objection, trigger or proof. Use {{first_name}} with a safe fallback. One idea and one call to action per email.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`),
+            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Return one campaign angle and a distinct specific angle for each email (12 words or fewer per angle), selected from positioning, customer language, use case, objection, trigger or proof. Use {{first_name}} with a safe fallback. One idea and one call to action per email.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, { ownerSuppliedUrls: ownerSuppliedUrls(args.brief) }),
             startedAt,
             { task: "email_sequence", context: "", ctx: fx, text: `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}` },
           );
