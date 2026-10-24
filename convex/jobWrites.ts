@@ -205,7 +205,7 @@ export const jobContext = internalQuery({
       org,
       business,
       /** Recent, source-backed competitor page changes are market signals, not customer evidence. */
-      marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
+      marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, suggestedAction, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, suggestedAction: suggestedAction ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
       facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),

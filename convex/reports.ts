@@ -91,7 +91,7 @@ export async function reportBetween(ctx: QueryCtx, org: Doc<"organizations">, we
   });
   const competitors = await Promise.all(changes.map(async (c) => {
     const watch = await ctx.db.get(c.watchId);
-    return { name: c.name, summary: c.summary, sourceUrls: c.sourceUrls ?? (watch ? [watch.url] : []), observedAt: c.at };
+    return { name: c.name, summary: c.summary, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? (watch ? [watch.url] : []), observedAt: c.at };
   }));
   return { ...report, competitors };
 }

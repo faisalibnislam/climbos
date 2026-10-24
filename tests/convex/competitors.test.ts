@@ -51,6 +51,13 @@ describe("competitor watch", () => {
     expect(o.changes).toHaveLength(1);
     expect(o.changes[0].name).toBe("Rival");
     expect(o.changes[0].sourceUrls).toEqual(["https://rival.example"]);
+    expect(o.changes[0].suggestedAction).toMatchObject({
+      action: "Test clearer migration support",
+      firstStep: expect.stringContaining("Ask five recent prospects"),
+      successMetric: expect.stringContaining("Qualified inquiries"),
+      reviewAfterDays: 14,
+      caveat: expect.stringContaining("does not show"),
+    });
     const evidence = o.changes[0].evidence;
     expect(evidence).not.toBeNull();
     if (!evidence) throw new Error("Expected stored changed-line evidence.");

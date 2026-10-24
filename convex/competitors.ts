@@ -40,7 +40,7 @@ export const overview = query({
         status: business.competitorResearchLastStatus ?? null,
       } : null,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
-      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
+      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
   },
@@ -190,7 +190,7 @@ export const startSummaryRun = internalMutation({
     const org = await ctx.db.get(orgId);
     if (!org) return null;
     try {
-      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 700 })), meters: {}, isFixture: org.kind === "demo" });
+      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 1_000 })), meters: {}, isFixture: org.kind === "demo" });
     } catch {
       return null;
     }
@@ -198,7 +198,11 @@ export const startSummaryRun = internalMutation({
 });
 
 export const recordChange = internalMutation({
-  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })) },
+  args: {
+    orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()),
+    suggestedAction: v.optional(v.object({ action: v.string(), firstStep: v.string(), successMetric: v.string(), reviewAfterDays: v.number(), caveat: v.string() })),
+    sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })),
+  },
   handler: async (ctx, a) => {
     const watch = await ctx.db.get(a.watchId);
     if (!watch || watch.orgId !== a.orgId) throw appError("NOT_FOUND", "Competitor watch not found.");
@@ -210,6 +214,13 @@ export const recordChange = internalMutation({
       summary: a.summary.slice(0, 300),
       bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)),
       soWhat: a.soWhat?.slice(0, 300),
+      suggestedAction: a.suggestedAction ? {
+        action: a.suggestedAction.action.slice(0, 120),
+        firstStep: a.suggestedAction.firstStep.slice(0, 240),
+        successMetric: a.suggestedAction.successMetric.slice(0, 160),
+        reviewAfterDays: Math.max(7, Math.min(90, Math.floor(a.suggestedAction.reviewAfterDays))),
+        caveat: a.suggestedAction.caveat.slice(0, 240),
+      } : undefined,
       at: now,
     });
     await notifyOwners(ctx, a.orgId, `${a.name}: ${a.summary}`.slice(0, 240));

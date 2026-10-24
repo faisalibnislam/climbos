@@ -1426,6 +1426,8 @@ export default defineSchema({
     summary: v.string(),
     bullets: v.array(v.string()),
     soWhat: v.optional(v.string()),
+    /** Model-drafted bounded test idea; always requires owner review and does not alter the plan. */
+    suggestedAction: v.optional(v.object({ action: v.string(), firstStep: v.string(), successMetric: v.string(), reviewAfterDays: v.number(), caveat: v.string() })),
     /** Pages fetched for the comparison; the model summary is an interpretation of these sources. */
     sourceUrls: v.optional(v.array(v.string())),
     /** Exact changed text retained as source evidence for the model's summary. */

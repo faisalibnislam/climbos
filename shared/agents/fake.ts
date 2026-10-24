@@ -74,6 +74,20 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
+    if (lastUser.includes("COMPETITOR:") && output && typeof output === "object" && "suggestedAction" in output) {
+      const proposal = output as { changed?: boolean; summary?: string; bullets?: string[]; soWhat?: string; suggestedAction?: unknown };
+      proposal.changed = true;
+      proposal.summary = "The competitor added a free migration offer.";
+      proposal.bullets = ["Added a free migration offer for new customers."];
+      proposal.soWhat = "Check whether migration effort is a concern for your own buyers before responding.";
+      proposal.suggestedAction = {
+        action: "Test clearer migration support",
+        firstStep: "Ask five recent prospects what makes switching feel difficult.",
+        successMetric: "Qualified inquiries that mention migration support",
+        reviewAfterDays: 14,
+        caveat: "One competitor page change does not show that your customers want this offer.",
+      };
+    }
     // The fake has no source bundle to support SWOT claims. Return an honest
     // empty SWOT instead of fabricating evidence just to exercise the schema.
     const insights = output as { swot?: { strengths?: unknown[]; weaknesses?: unknown[]; opportunities?: unknown[]; threats?: unknown[] }; swotEvidence?: unknown[]; swotMoves?: unknown[] };

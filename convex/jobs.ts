@@ -518,11 +518,11 @@ function planContext(job: JobCtx): string {
 function marketChangeContext(job: JobCtx): string {
   const rows = job.marketChanges.slice(0, 6);
   if (!rows.length) return "";
-  const context = rows.map(({ at, name, summary, bullets, soWhat, sourceUrls, evidence }) => ({
-    observedAt: new Date(at).toISOString(), name, summary, bullets, interpretation: soWhat, sourceUrls,
+  const context = rows.map(({ at, name, summary, bullets, soWhat, suggestedAction, sourceUrls, evidence }) => ({
+    observedAt: new Date(at).toISOString(), name, summary, bullets, interpretation: soWhat, suggestedTestIdea: suggestedAction, sourceUrls,
     changedPageText: evidence,
   }));
-  return `\n\nRECENT MONITORED COMPETITOR PAGE CHANGES (source-reported changes; summaries and implications are model interpretations, not verified customer preferences, demand, or competitive performance). Use only as a signal to reassess strategy; cite the provided pages and changed text when making a specific statement. Do not claim why customers choose a competitor from these changes alone.\n${untrusted("competitor market signals", JSON.stringify(context), 5_000)}`;
+  return `\n\nRECENT MONITORED COMPETITOR PAGE CHANGES (source-reported changes; summaries, implications, and suggested test ideas are model interpretations, not verified customer preferences, demand, or competitive performance). Treat a suggested test as an unapproved hypothesis. Use only as a signal to reassess strategy; cite the provided pages and changed text when making a specific statement. Do not claim why customers choose a competitor from these changes alone.\n${untrusted("competitor market signals", JSON.stringify(context), 5_000)}`;
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
