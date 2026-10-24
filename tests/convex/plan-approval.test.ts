@@ -105,6 +105,10 @@ describe("Plan approval starts the work", () => {
       expect(card!.status).toBe("running");
       expect(JSON.parse(card!.payload).strategyId).toBe(s._id);
     }
+    const firstPlanRun = cards.find((card) => card?.runId)?.runId;
+    expect(firstPlanRun).toBeTruthy();
+    const planBoundContext = await t.query(internal.jobWrites.jobContext, { runId: firstPlanRun! });
+    expect(planBoundContext?.strategy?._id).toBe(s._id);
     await t.finishAllScheduledFunctions(() => undefined);
     const done = await t.run(async (ctx) => Promise.all(runnable.map((c) => ctx.db.get(c.cardId!))));
     expect(done.every((c) => c!.status === "done")).toBe(true);

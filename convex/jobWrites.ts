@@ -83,7 +83,18 @@ export const jobContext = internalQuery({
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(10);
-    const strategy = recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
+    let requestedStrategyId: string | undefined;
+    try {
+      const input = JSON.parse(run.input) as { strategyId?: unknown };
+      if (typeof input?.strategyId === "string") requestedStrategyId = input.strategyId;
+    } catch {
+      // Legacy and non-JSON run inputs do not name a plan.
+    }
+    const requestedId = requestedStrategyId ? ctx.db.normalizeId("strategies", requestedStrategyId) : null;
+    const requestedStrategy = requestedId ? await ctx.db.get(requestedId) : null;
+    const strategy = requestedStrategy?.orgId === org._id
+      ? requestedStrategy
+      : recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();

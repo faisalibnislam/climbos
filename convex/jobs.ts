@@ -91,6 +91,7 @@ import { estimateRun } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
+import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -463,9 +464,12 @@ async function runAgentTask<T>(
 /** The approved positioning and customer language, so content carries the plan. */
 function planContext(job: JobCtx): string {
   const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
-  if (!insights) return "";
-  const pick = (k: string) => (insights[k] ? `${k}: ${reportDropped(`plan context ${k}`, fitJson(insights[k], 3000, k))}` : "");
-  return `\n\nPOSITIONING AND CUSTOMER LANGUAGE (from research):\n${[pick("positioningStatement") || pick("positioning"), pick("vocPhrases"), pick("objections"), pick("audiences")].filter(Boolean).join("\n")}`;
+  const pick = (k: string) => (insights?.[k] ? `${k}: ${reportDropped(`plan context ${k}`, fitJson(insights[k], 3000, k))}` : "");
+  const researchContext = [pick("positioningStatement") || pick("positioning"), pick("vocPhrases"), pick("objections"), pick("audiences")].filter(Boolean).join("\n");
+  const approved = job.strategy?.status === "approved" ? approvedPlanContext(job.strategy as never) : "";
+  const planContextText = approved ? `\n\nAPPROVED GROWTH PLAN (saved plan version and context snapshot):\n${untrusted("approved plan", approved, 6_000)}` : "";
+  const researchText = researchContext ? `\n\nPOSITIONING AND CUSTOMER LANGUAGE (from research):\n${researchContext}` : "";
+  return `${planContextText}${researchText}`;
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
