@@ -15,6 +15,7 @@ import { can } from "@shared/policy";
 import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/searchConsole";
 import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
 import { AI_DATA_USE_CONTROLS } from "@shared/seo/readiness";
+import { parseGoogleAiReportCsv } from "@shared/aiSearch/googleReportCsv";
 
 export default function SearchReadinessPage() {
   const { organization: slug } = useParams<{ organization: string }>();
@@ -106,6 +107,8 @@ export default function SearchReadinessPage() {
 function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdit: boolean; website: string | null }) {
   const panels = useQuery(api.aiSearchVisibility.listPanels, { slug });
   const searchConsole = useQuery(api.searchConsole.observations, { slug });
+  const googleAiReport = useQuery(api.aiSearchVisibility.latestGoogleAiReport, { slug });
+  const importGoogleAiReport = useMutation(api.aiSearchVisibility.importGoogleAiReport);
   const matchedProperty = Boolean(searchConsole && website && searchConsolePropertyMatchesWebsite(searchConsole.property, website));
   const querySuggestions = matchedProperty && searchConsole ? planAiSearchQueries(searchConsole.rows) : [];
   const [panelId, setPanelId] = useState<Id<"aiSearchPanels"> | "all">("all");
@@ -134,6 +137,8 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
   const [changeSummary, setChangeSummary] = useState("");
   const [expectedSignal, setExpectedSignal] = useState("");
   const [affectedPages, setAffectedPages] = useState("");
+  const [googleReportKind, setGoogleReportKind] = useState<"search" | "discover">("search");
+  const [importingGoogleReport, setImportingGoogleReport] = useState(false);
   const selectedPanelQuery = report?.panel?.queries?.find((item) => item.key === panelQueryKey);
   const addObservedQueries = () => {
     const selected = querySuggestions.filter((item) => selectedObservedQueries.includes(item.query)).map((item) => item.query);
@@ -204,6 +209,19 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
       toast({ tone: "danger", title: errorMessage(error) });
     } finally { setSavingIntervention(false); }
   };
+  const importGoogleReportFile = async (file: File | undefined) => {
+    if (!file) return;
+    setImportingGoogleReport(true);
+    try {
+      if (!matchedProperty || !searchConsole) throw new Error("Connect Search Console and select the property that matches this business website first.");
+      const parsed = parseGoogleAiReportCsv(await file.text());
+      if (!parsed.ok) throw new Error(parsed.error);
+      const result = await importGoogleAiReport({ slug, property: searchConsole.property, report: googleReportKind, dimension: parsed.dimension, rows: parsed.rows });
+      toast({ tone: "success", title: `Imported ${result.rowCount} Google AI-search rows`, description: "Saved separately from manually observed AI answers." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally { setImportingGoogleReport(false); }
+  };
   const percent = (rate: { rate: number | null } | null) => rate?.rate === null || !rate ? "Not enough labeled answers" : `${Math.round(rate.rate * 100)}% of recorded samples`;
   const percentValue = (value: number | null | undefined) => value === null || value === undefined ? "Not enough labeled answers" : `${Math.round(value * 100)}%`;
   const pointChange = (value: number | null) => value === null ? "Not comparable" : `${value > 0 ? "+" : ""}${Math.round(value * 100)} percentage points`;
@@ -213,6 +231,22 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
     <section className="flex flex-col gap-3">
       <div><h2 className="heading-card">AI answer visibility</h2><p className="mt-1 text-sm text-ink-3">Record what you observe when checking the same customer questions in AI search tools. These are your samples, not a complete measure of any platform.</p></div>
       <Callout tone="info">For platform-reported citation data, <a href="https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Bing Webmaster Tools AI Performance</a> reports cited pages and grounding queries. ClimbOS does not currently connect to or import that report automatically. Search Console and website analytics remain separate from these manually observed samples.</Callout>
+      <Card><CardContent className="flex flex-col gap-3">
+        <div><h3 className="text-sm font-semibold text-ink">Google generative-search report</h3><p className="mt-1 text-sm text-ink-3">Import a table CSV exported from Google Search Console. ClimbOS does not receive this dedicated report through its current Search Console API connection.</p></div>
+        {canEdit ? <div className="flex flex-wrap items-end gap-3">
+          <Field label="Google report"><Select value={googleReportKind} onValueChange={(value) => setGoogleReportKind(value as "search" | "discover")} options={[{ value: "search", label: "Search AI features" }, { value: "discover", label: "Discover AI features" }]} /></Field>
+          <Field label="Exported table CSV"><input type="file" accept=".csv,text/csv" aria-label="Import Google generative AI report CSV" disabled={importingGoogleReport || !matchedProperty} onChange={(event) => { void importGoogleReportFile(event.target.files?.[0]); event.currentTarget.value = ""; }} className="block max-w-sm rounded-lg border border-line-strong bg-surface p-1 text-sm text-ink file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-surface-2 file:px-2.5" /></Field>
+          {importingGoogleReport ? <span className="pb-2 text-xs text-ink-3">Importing…</span> : null}
+        </div> : null}
+        {!matchedProperty ? <p className="text-xs text-ink-3">Connect Search Console and select a property that matches the business website to enable import.</p> : <p className="text-xs text-ink-3">Export one table at a time (Pages, Dates, Countries, or Devices), in English, up to 1,000 rows and 2 MB. The selected property is checked again when saving.</p>}
+        {googleAiReport ? <div className="rounded-lg bg-surface-2 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium text-ink">Latest import · {googleAiReport.report === "search" ? "Search" : "Discover"} · by {googleAiReport.dimension}</p><span className="text-xs text-ink-3">{googleAiReport.rowCount.toLocaleString()} rows · {new Date(googleAiReport.importedAt).toLocaleString()}</span></div>
+          <p className="mt-1 break-all text-xs text-ink-3">{googleAiReport.property}</p>
+          <ul className="mt-2 grid gap-1 text-xs text-ink-2 sm:grid-cols-2">{googleAiReport.rows.slice(0, 10).map((row) => <li key={row.dimensionValue} className="flex justify-between gap-3"><span className="min-w-0 truncate">{row.dimensionValue}</span><span className="shrink-0 tabular-nums">{row.impressions.toLocaleString()} impressions</span></li>)}</ul>
+          {googleAiReport.rowCount > 10 ? <p className="mt-1 text-xs text-ink-3">Showing 10 of {googleAiReport.rowCount} imported rows.</p> : null}
+          <p className="mt-2 text-xs text-ink-3">{googleAiReport.note}</p>
+        </div> : null}
+      </CardContent></Card>
       <Card><CardContent className="flex flex-col gap-4">
         <div><h3 className="text-sm font-semibold text-ink">Track a consistent question set</h3><p className="mt-1 text-sm text-ink-3">A panel keeps the provider, questions, and market fixed so later checks can be compared. Repeated manual checks are still samples, not a platform-wide visibility rate.</p></div>
         <div className="grid gap-3 sm:grid-cols-2">

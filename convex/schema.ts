@@ -4572,6 +4572,24 @@ export default defineSchema({
     .index("by_org_page", ["orgId", "page"])
     .index("by_org_query", ["orgId", "query"]),
 
+  /** Owner-imported Google Search Console generative-AI report table; not API-synced. */
+  googleAiSearchImports: defineTable({
+    orgId: v.id("organizations"),
+    property: v.string(),
+    report: v.union(v.literal("search"), v.literal("discover")),
+    dimension: v.union(v.literal("page"), v.literal("date"), v.literal("country"), v.literal("device")),
+    rowCount: v.number(),
+    importedAt: v.number(),
+    importedBy: v.id("users"),
+  }).index("by_org_imported", ["orgId", "importedAt"]),
+
+  googleAiSearchRows: defineTable({
+    orgId: v.id("organizations"),
+    importId: v.id("googleAiSearchImports"),
+    dimensionValue: v.string(),
+    impressions: v.number(),
+  }).index("by_import", ["importId"]),
+
   /** Owner-reported dispositions for exact findings in a verified website-audit run. */
   seoOpportunityStates: defineTable({
     orgId: v.id("organizations"),

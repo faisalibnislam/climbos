@@ -3,6 +3,7 @@ import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiS
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
+import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
 
 const MAX_OBSERVATIONS = 500;
 const MAX_QUERY = 500;
@@ -15,6 +16,7 @@ const MAX_PANEL_NAME = 120;
 const MAX_INTERVENTION_SUMMARY = 1_000;
 const MAX_EXPECTED_SIGNAL = 500;
 const MAX_INTERVENTION_PAGES = 20;
+const MAX_IMPORTED_REPORT_ROWS = 1_000;
 
 function safeHttpUrl(raw: string): string | null {
   try {
@@ -81,6 +83,61 @@ export const createPanel = mutation({
       createdBy: user._id,
       createdAt: Date.now(),
     });
+  },
+});
+
+/** Save a bounded owner-uploaded export from Google's dedicated generative-AI report. */
+export const importGoogleAiReport = mutation({
+  args: {
+    slug: v.string(),
+    property: v.string(),
+    report: v.union(v.literal("search"), v.literal("discover")),
+    dimension: v.union(v.literal("page"), v.literal("date"), v.literal("country"), v.literal("device")),
+    rows: v.array(v.object({ dimensionValue: v.string(), impressions: v.number() })),
+  },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "search_console")).first();
+    if (!connection || connection.status !== "connected" || connection.isFixture || connection.externalAccountId !== args.property) {
+      throw appError("INVALID", "Select the connected Search Console property before importing its report export.");
+    }
+    if (!args.rows.length || args.rows.length > MAX_IMPORTED_REPORT_ROWS) throw appError("INVALID", `Import 1–${MAX_IMPORTED_REPORT_ROWS.toLocaleString()} rows at a time.`);
+    const deduped = new Map<string, number>();
+    for (const row of args.rows) {
+      const value = row.dimensionValue.trim();
+      if (!value || value.length > 2_000 || !Number.isFinite(row.impressions) || row.impressions < 0) throw appError("INVALID", "Report rows must have a dimension value and non-negative finite impressions.");
+      if (args.dimension === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw appError("INVALID", "Date values must use YYYY-MM-DD.");
+      if (args.dimension === "page") {
+        let url: URL;
+        try { url = new URL(value); } catch { throw appError("INVALID", "Every page row must contain a valid public URL."); }
+        if (url.username || url.password || !searchConsolePropertyMatchesWebsite(args.property, value)) throw appError("INVALID", "Every page URL must be public and belong to the selected Search Console property.");
+      }
+      deduped.set(value, (deduped.get(value) ?? 0) + row.impressions);
+    }
+    if (deduped.size > MAX_IMPORTED_REPORT_ROWS) throw appError("INVALID", "The export contains too many unique rows.");
+    const importedAt = Date.now();
+    const importId = await ctx.db.insert("googleAiSearchImports", { orgId: org._id, property: args.property, report: args.report, dimension: args.dimension, rowCount: deduped.size, importedAt, importedBy: user._id });
+    for (const [dimensionValue, impressions] of deduped) await ctx.db.insert("googleAiSearchRows", { orgId: org._id, importId, dimensionValue, impressions });
+    const imports = await ctx.db.query("googleAiSearchImports").withIndex("by_org_imported", (q) => q.eq("orgId", org._id)).order("desc").take(20);
+    for (const old of imports.filter((item) => item._id !== importId).slice(2)) {
+      const rows = await ctx.db.query("googleAiSearchRows").withIndex("by_import", (q) => q.eq("importId", old._id)).take(MAX_IMPORTED_REPORT_ROWS);
+      for (const row of rows) await ctx.db.delete(row._id);
+      await ctx.db.delete(old._id);
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "ai_search.google_report_imported", subjectType: "business", subjectId: String(importId), summary: `Imported ${deduped.size} rows from Google's generative-AI Search Console report.` });
+    return { importId, rowCount: deduped.size };
+  },
+});
+
+/** Latest owner-imported Google report; kept separate from owner-observed AI answer samples. */
+export const latestGoogleAiReport = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const report = await ctx.db.query("googleAiSearchImports").withIndex("by_org_imported", (q) => q.eq("orgId", org._id)).order("desc").first();
+    if (!report) return null;
+    const rows = await ctx.db.query("googleAiSearchRows").withIndex("by_import", (q) => q.eq("importId", report._id)).take(MAX_IMPORTED_REPORT_ROWS);
+    return { ...report, rows: rows.map(({ _id: _id, _creationTime: _creationTime, orgId: _orgId, importId: _importId, ...row }) => row), note: "Owner-imported Search Console report data. Impressions are Google-reported appearances, not clicks, rankings, exact queries, or business outcomes. Aggregation depends on the selected dimension." };
   },
 });
 

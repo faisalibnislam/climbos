@@ -3,6 +3,27 @@ import { api } from "../../convex/_generated/api";
 import { setup, asNewUser } from "./helpers";
 
 describe("AI search visibility observations", () => {
+  it("imports bounded Google AI report rows only for the exact connected property", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "google-ai-report-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Example Co" });
+    const connectionId = await t.run(async (ctx) => {
+      return await ctx.db.insert("connections", { orgId, provider: "search_console", status: "connected", externalAccountId: "sc-domain:example.com", accountType: "search_console_property", scopes: ["search_console.read_performance"], isFixture: false, createdBy: owner.userId, createdAt: Date.now(), updatedAt: Date.now() });
+    });
+    expect(connectionId).toBeTruthy();
+    await expect(owner.client.mutation(api.aiSearchVisibility.importGoogleAiReport, {
+      slug, property: "sc-domain:other.com", report: "search", dimension: "page", rows: [{ dimensionValue: "https://example.com/pricing", impressions: 5 }],
+    })).rejects.toThrow(/Select the connected Search Console property/);
+    await owner.client.mutation(api.aiSearchVisibility.importGoogleAiReport, {
+      slug, property: "sc-domain:example.com", report: "search", dimension: "page", rows: [{ dimensionValue: "https://www.example.com/pricing", impressions: 5 }],
+    });
+    await expect(owner.client.mutation(api.aiSearchVisibility.importGoogleAiReport, {
+      slug, property: "sc-domain:example.com", report: "search", dimension: "page", rows: [{ dimensionValue: "https://elsewhere.example/pricing", impressions: 5 }],
+    })).rejects.toThrow(/must be public and belong to the selected Search Console property/);
+    const imported = await owner.client.query(api.aiSearchVisibility.latestGoogleAiReport, { slug });
+    expect(imported).toMatchObject({ property: "sc-domain:example.com", report: "search", dimension: "page", rowCount: 1, rows: [{ dimensionValue: "https://www.example.com/pricing", impressions: 5 }] });
+  });
+
   it("stores tenant-owned observations and reports sampled mention/citation rates separately", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ai-search-owner@example.com");
