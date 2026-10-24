@@ -1559,6 +1559,26 @@ export default defineSchema({
     .index("by_org", ["orgId"])
     .index("by_strategy", ["strategyId"]),
 
+  /** Sampled AI-search answers, entered from observations; separate from content-readiness heuristics and business outcomes. */
+  aiSearchObservations: defineTable({
+    orgId: v.id("organizations"),
+    provider: v.union(v.literal("chatgpt"), v.literal("gemini"), v.literal("perplexity"), v.literal("google_ai_overview"), v.literal("other")),
+    query: v.string(),
+    location: v.optional(v.string()),
+    checkedAt: v.number(),
+    answerStatus: v.union(v.literal("answered"), v.literal("no_answer"), v.literal("failed")),
+    brandMention: v.union(v.literal("yes"), v.literal("no"), v.literal("unknown")),
+    sentiment: v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative"), v.literal("mixed"), v.literal("unknown")),
+    citedUrls: v.array(v.string()),
+    competitorMentions: v.array(v.string()),
+    answerExcerpt: v.optional(v.string()),
+    evidenceBasis: v.literal("owner_observed"),
+    enteredBy: v.id("users"),
+    enteredAt: v.number(),
+  })
+    .index("by_org_checked", ["orgId", "checkedAt"])
+    .index("by_org_query_checked", ["orgId", "query", "checkedAt"]),
+
   campaigns: defineTable({
     orgId: v.id("organizations"),
     strategyId: v.optional(v.id("strategies")),
