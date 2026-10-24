@@ -83,9 +83,10 @@ describe("money keeps the workspace currency", () => {
     const e: Economics = { revenuePerCustomerMonthUsd: 600, grossMargin: 0.8, monthlyChurn: 0.05, basis: "", currency: "BDT", ownerHourUsd: 100 };
     const plays = [{ name: "Ads", kind: "bankable", horizonDays: 90, model: { weeklyReach: 10, steps: [{ name: "pay", rate: 0.001 }], monthlySpendUsd: 50_000, ownerHoursPerWeek: 1 } }];
     const issues = lintEconomics({ economics: e, plays: plays as never });
-    const loses = issues.find((i) => /Loses money/.test(i.message));
+    const loses = issues.find((i) => /Does not pay back under the current scenario/.test(i.message));
     expect(loses?.message).toMatch(/৳|BDT/);
     expect(loses?.message).not.toMatch(/\$/);
+    expect(loses?.severity).toBe("warn");
   });
 });
 

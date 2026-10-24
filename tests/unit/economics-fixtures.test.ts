@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { churnOf, customerValue, lintEconomics, lockedNumbers, monthlyContribution, playMaths } from "../../shared/agents/economics";
+import { CHECK_STAMP } from "../../shared/agents/provenance";
 import { lintFeasibility } from "../../shared/agents/specs";
 import { breakevenCpc, cacMedia, clicks, contributionMonth, contributionOver, funnelCustomers, paybackSimple, paybackWithChurn } from "../../shared/growth/calc";
 
@@ -144,11 +145,36 @@ describe("edge cases", () => {
     expect(m.cacUsd).toBeNull();
   });
 
-  it("unprofitable action is a hard economics finding", () => {
+  it("downgrades an unprofitable result based on unlabeled inputs to a conditional warning", () => {
     const losing = refPlay({ monthlySpendUsd: 6000 });
     const m = playMaths(losing, ref);
     expect(m.profitable).toBe(false);
-    expect(lintEconomics({ economics: ref, plays: [losing] }).some((l) => l.rule === "economics" && /Loses money/.test(l.message))).toBe(true);
+    expect(m.financialEvidence.status).toBe("unlabelled_scenario");
+    expect(lintEconomics({ economics: ref, plays: [losing] })).toContainEqual(expect.objectContaining({ severity: "warn", rule: "economics", message: expect.stringContaining("Does not pay back under the current scenario") }));
+  });
+
+  it("keeps a hard loss finding only when the inputs are explicitly checked", () => {
+    const tag = { source: "owner" as const, ref: "Owner confirmed", check: "owner_input" as const, checkedBy: CHECK_STAMP };
+    const e = { ...ref, sources: { revenue: tag, margin: tag, churn: tag, ownerHour: tag } };
+    const losing = {
+      ...refPlay({ monthlySpendUsd: 6000, ownerHoursPerWeek: 0 }),
+      model: { ...refPlay({ monthlySpendUsd: 6000, ownerHoursPerWeek: 0 }).model, reachSource: tag, spendSource: tag, hoursSource: tag, steps: [{ name: "signup", rate: 0.08, source: "owner" as const, ref: tag.ref, check: tag.check, checkedBy: CHECK_STAMP }, { name: "paid", rate: 0.25, source: "owner" as const, ref: tag.ref, check: tag.check, checkedBy: CHECK_STAMP }] },
+    };
+    const m = playMaths(losing, e);
+    const issue = lintEconomics({ economics: e, plays: [losing] }).find((l) => l.rule === "economics" && /Loses money/.test(l.message));
+    expect(m.financialEvidence.status).toBe("checked_inputs");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("publishes structured conditional evidence for assumed and unchecked inputs", () => {
+    const tagged = {
+      ...refPlay(),
+      model: { ...refPlay().model, reachSource: { source: "benchmark" as const, ref: "Industry report" }, spendSource: { source: "planned" as const, ref: "Plan" }, hoursSource: { source: "assumption" as const, ref: "" }, steps: [{ name: "paid", rate: 0.2, source: "research" as const, ref: "https://example.test" }] },
+    };
+    const e = { ...ref, sources: { revenue: { source: "benchmark" as const, ref: "Industry report" }, margin: { source: "benchmark" as const, ref: "Industry report" }, churn: { source: "benchmark" as const, ref: "Industry report" } } };
+    const m = playMaths(tagged, e);
+    expect(m.financialEvidence).toMatchObject({ status: "conditional_scenario", assumed: ["Your hours a week"], unchecked: expect.arrayContaining(["Weekly reach", "paid", "Revenue per customer", "Margin", "Monthly churn"]), planned: ["Monthly spend"] });
+    expect(lockedNumbers({ economics: e, plays: [tagged] })).toContain("Financial comparison: conditional scenario");
   });
 
   it("no customers: no cost per customer, no verdict, flagged", () => {

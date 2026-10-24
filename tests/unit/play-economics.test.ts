@@ -41,6 +41,7 @@ describe("growth maths in code", () => {
       timing: { reachRamp: "immediate_assumed", paidConversionLag: "none_assumed" },
       omittedFactors: ["seasonality", "execution_variation", "model_error"],
     });
+    expect(out.plays[0].financialEvidence).toMatchObject({ status: "unlabelled_scenario" });
   });
 
   it("separates named input scenarios from statistical uncertainty and reports modeled timing", () => {
@@ -67,11 +68,11 @@ describe("growth maths in code", () => {
     expect(lockedNumbers({ economics, plays: [ranged] })).toContain("not a joint forecast");
   });
 
-  it("rejects money-losing plays and bad ranges", () => {
+  it("flags conditional money-losing scenarios and bad ranges", () => {
     const losing = play({ model: { weeklyReach: 100, steps: [{ name: "click", rate: 0.02 }, { name: "paid", rate: 0.01 }], monthlySpendUsd: 600, ownerHoursPerWeek: 0 } });
     const badRange = play({ model: { ...play().model, steps: [{ name: "reply", rate: 0.02, low: 0.03, high: 0.05 }] } });
     const issues = lintEconomics({ economics: econ, plays: [losing, badRange] });
-    expect(issues.some((i) => /Loses money/.test(i.message))).toBe(true);
+    expect(issues.some((i) => i.severity === "warn" && /Does not pay back under the current scenario/.test(i.message))).toBe(true);
     expect(issues.some((i) => /low ≤ rate ≤ high/.test(i.message) && i.path === "plays[1].model.steps")).toBe(true);
     expect(lintEconomics({ economics: econ, plays: [play()] })).toEqual([]);
   });

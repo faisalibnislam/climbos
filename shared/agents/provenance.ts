@@ -319,7 +319,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
     { key: "margin", label: "Margin", value: e.grossMargin, unit: "share", tag: econ.margin, drives: "cost" },
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
-  if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(undefined), drives: "cost" });
+  if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(m.otherSource), drives: "cost" });
   if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: ownerHourOf(e), unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
   return rows;
 }
@@ -331,6 +331,14 @@ export interface ForecastBasis {
   assumed: string[];
   /** Labels of sourced inputs not verified (model-reported research, unmatched pages, benchmarks, unconfirmed owner values). */
   unchecked: string[];
+}
+
+export interface FinancialEvidence {
+  /** Evidence quality for a scenario's money comparison; this is not a probability or outcome forecast. */
+  status: "checked_inputs" | "conditional_scenario" | "unlabelled_scenario";
+  assumed: string[];
+  unchecked: string[];
+  planned: string[];
 }
 
 function basisOf(rows: InputRow[]): ForecastBasis {
@@ -345,6 +353,21 @@ function basisOf(rows: InputRow[]): ForecastBasis {
 export function forecastBasis(p: PlayLike, e: Economics): { customers: ForecastBasis; cost: ForecastBasis } {
   const rows = playInputs(p, e);
   return { customers: basisOf(rows.filter((r) => r.drives === "customers")), cost: basisOf(rows) };
+}
+
+/** Evidence status for the inputs used to compare fully loaded cost with customer value. */
+export function financialEvidence(p: PlayLike, e: Economics): FinancialEvidence {
+  const rows = playInputs(p, e);
+  const assumed = rows.filter((r) => r.tag.source === "assumption").map((r) => r.label);
+  const unchecked = rows.filter((r) => r.tag.check === "reported" || r.tag.check === "retrieved").map((r) => r.label);
+  const planned = rows.filter((r) => r.tag.source === "planned").map((r) => r.label);
+  const unlabelled = rows.filter((r) => r.tag.source === "unlabelled").map((r) => r.label);
+  return {
+    status: unlabelled.length ? "unlabelled_scenario" : assumed.length || unchecked.length || planned.length ? "conditional_scenario" : "checked_inputs",
+    assumed,
+    unchecked,
+    planned,
+  };
 }
 
 export const BASIS_LABEL: Record<BasisKind, string> = {

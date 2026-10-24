@@ -1,6 +1,6 @@
 import { formatMoney, thresholdIn } from "../economics/currency";
 import type { LintIssue } from "./types";
-import { CHECK_STAMP, economicsSources, forecastBasis, type EconomicsSources, type Provenance, type SourceTag, type TagCheck } from "./provenance";
+import { CHECK_STAMP, economicsSources, financialEvidence, forecastBasis, type EconomicsSources, type FinancialEvidence, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
 import { goalGap, goalLines, type GoalGap, type GoalTarget } from "./goal";
 import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
@@ -53,6 +53,8 @@ export interface PlayModel {
   ownerHoursPerWeek: number;
   /** Monthly non-media costs (tools, freelancers, creative); part of cost per customer (blog research BRP-17, Skok's fully loaded CAC). */
   otherMonthlyUsd?: number;
+  /** Where the monthly non-media cost came from. */
+  otherSource?: SourceTag;
   /** Where reach, spend and owner hours came from (newer plans). */
   reachSource?: SourceTag;
   spendSource?: SourceTag;
@@ -156,6 +158,8 @@ export interface PlayMaths {
   lossChance: number | null;
   /** One-input-at-a-time outcome ranges. `atLow`/`atHigh` refer to the input, not best/worst outcome. */
   sensitivity: PlaySensitivity[];
+  /** Evidence quality of the inputs behind the money comparison, separate from scenario arithmetic. */
+  financialEvidence: FinancialEvidence;
 }
 
 export interface PlaySensitivity {
@@ -394,6 +398,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     breakevenCustomers: valueUsd !== null && valueUsd > 0 ? costUsd / valueUsd : null,
     lossChance: valueUsd === null || typeof draws === "number" ? null : Math.round((draws.filter((c) => c * valueUsd < costUsd).length / draws.length) * 1000) / 1000,
     sensitivity: playSensitivity(p, e, weeks, costUsd),
+    financialEvidence: financialEvidence(p, e),
   };
 }
 
@@ -403,14 +408,14 @@ export function roundCount(n: number): number {
 }
 
 /** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
-export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null })[] } {
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null })[] } {
   return {
     ...out,
     plays: out.plays.map((p) => {
       // Older plays without a model keep the forecast they were saved with.
-      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null, forecastUncertainty: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null };
+      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null, forecastUncertainty: null, financialEvidence: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange, forecastUncertainty: forecastUncertainty(p.model) };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange, forecastUncertainty: forecastUncertainty(p.model), financialEvidence: m.financialEvidence };
     }),
   };
 }
@@ -437,8 +442,11 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
       issues.push({ severity: "warn", rule: "economics", message: `"${p.name}" changes an existing step but gives no baselineRate, so its forecast counts every customer through that step, including those who'd have come anyway. Give today's rate at the step it changes.`, path: `${path}.model.steps` });
     if (p.model.steps.some((s) => s.baselineRate !== undefined && !(s.baselineRate >= 0 && s.baselineRate <= 1))) issues.push({ severity: "error", rule: "economics", message: "baselineRate is a share between 0 and 1.", path: `${path}.model.steps` });
     const m = playMaths(p, e);
-    if (m.profitable === false && p.kind !== "moonshot")
-      issues.push({ severity: "error", rule: "economics", message: `Loses money: cost per customer ${usd(m.cacUsd)} (spend + owner time at ${usd(ownerHourOf(e))}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months. Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
+    if (m.profitable === false && p.kind !== "moonshot") {
+      const conditional = m.financialEvidence.status !== "checked_inputs";
+      const basis = conditional ? ` This is conditional on the current inputs (${m.financialEvidence.status.replaceAll("_", " ")}; assumed: ${m.financialEvidence.assumed.join(", ") || "none"}; unchecked: ${m.financialEvidence.unchecked.join(", ") || "none"}; planned: ${m.financialEvidence.planned.join(", ") || "none"}).` : "";
+      issues.push({ severity: conditional ? "warn" : "error", rule: "economics", message: `${conditional ? "Does not pay back under the current scenario" : "Loses money"}: cost per customer ${usd(m.cacUsd)} (spend + owner time at ${usd(ownerHourOf(e))}/h) vs ${usd(m.valueUsd)} a customer earns in ${PAYBACK_HORIZON_MONTHS} months.${basis} Don't raise reach or rates to make it pass. Verify an input (owner number or a cited page), cut spend or hours, target higher-value customers, make it a capped test with a stop rule, or drop it.`, path });
+    }
   });
   return issues;
 }
@@ -560,7 +568,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
   // Doing nothing new is always an option: a set whose expected contribution is below its cost loses to it (Hubbard Ch 14; Kochenderfer Ch 6).
   const best = opts[0] && (opts[0].net === null || opts[0].net >= 0) ? opts[0] : undefined;
-  const leftWhy = (i: number) => (losers.has(i) ? "loses money at its most-likely rates" : "doesn't fit with the others under the budget, hours or capacity");
+  const leftWhy = (i: number) => (losers.has(i) ? ms[i].financialEvidence.status === "checked_inputs" ? "loses money at its most-likely rates" : "does not pay back under its current scenario inputs" : "doesn't fit with the others under the budget, hours or capacity");
   const all = ps.map((_, i) => i);
   if (!best)
     return {
@@ -573,7 +581,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
       allFit: false,
       left: all.map((i) => ({ name: ps[i].name, why: opts.length ? "every set's expected contribution is below its cost" : leftWhy(i) })),
       runnerUp: opts[0] ? { selected: opts[0].idx.map((i) => ps[i].name), customers: opts[0].customers, netUsd: opts[0].net } : null,
-      basis: opts.length ? "Doing nothing new beats every set at expected values: run only capped tests that measure the deciding input first." : "No play fits the limits on its own.",
+      basis: opts.length ? `Doing nothing new beats every set at expected values under the current inputs: run only capped tests that measure the deciding input first. ${portfolioEvidenceNote(ps, out.economics)}` : "No play fits the limits on its own.",
     };
   const key = (o: Opt) => o.idx.join(",");
   // The strongest alternative must beat the choice on something (more customers, less cash or fewer hours); a set worse on every count isn't a trade-off (Kochenderfer Ex 14.5).
@@ -588,7 +596,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     left: all.filter((i) => !best.idx.includes(i)).map((i) => ({ name: ps[i].name, why: leftWhy(i) })),
     runnerUp: runner ? { selected: runner.idx.map((i) => ps[i].name), customers: runner.customers, netUsd: runner.net } : null,
     expectedCustomers: best.expectedCustomers,
-    basis: value === null ? "Ranked by expected customers over the input ranges (what a customer is worth is unknown)." : "Ranked by expected contribution in the horizon minus cost, over the input ranges.",
+    basis: `${value === null ? "Ranked by expected customers over the input ranges (what a customer is worth is unknown)." : "Ranked by expected contribution in the horizon minus cost, over the input ranges."} ${portfolioEvidenceNote(best.idx.map((i) => ps[i]), out.economics)}`,
   };
 }
 
@@ -664,9 +672,18 @@ function sourcesLine(e: Economics): string {
 function basisNote(p: PlayLike, e: Economics): string {
   const b = forecastBasis(p, e).customers;
   const unchecked = b.unchecked.length ? ` Unchecked sources: ${b.unchecked.join(", ")}.` : "";
-  if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).${unchecked}`;
-  if (b.kind === "sourced_estimate") return `Forecast basis: estimate from cited sources, not yet from this business's results.${unchecked}`;
-  return "Forecast basis: scenario from the play's own inputs (sources not labelled).";
+  const f = financialEvidence(p, e);
+  const finance = ` Financial comparison: ${f.status.replaceAll("_", " ")}; ${f.assumed.length ? `assumed ${f.assumed.join(", ")}` : "no assumed inputs"}${f.unchecked.length ? `; unchecked ${f.unchecked.join(", ")}` : ""}${f.planned.length ? `; planned ${f.planned.join(", ")}` : ""}.`;
+  if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).${unchecked}${finance}`;
+  if (b.kind === "sourced_estimate") return `Forecast basis: estimate from cited sources, not yet from this business's results.${unchecked}${finance}`;
+  return `Forecast basis: scenario from the play's own inputs (sources not labelled).${finance}`;
+}
+
+function portfolioEvidenceNote(plays: PlayLike[], e: Economics): string {
+  const statuses = plays.map((p) => financialEvidence(p, e).status);
+  if (statuses.every((s) => s === "checked_inputs")) return "The selected comparison uses inputs checked by owner confirmation or source review; results still are not calibrated to observed outcomes.";
+  if (statuses.includes("unlabelled_scenario")) return "At least one input is unlabeled, so this is a scenario comparison and not a firm money decision.";
+  return "At least one input is assumed, planned, or unchecked, so this is a conditional scenario comparison and not a firm money decision.";
 }
 
 const KEY_OF = { revenuePerCustomerMonthUsd: "revenue", grossMargin: "margin", monthlyChurn: "churn" } as const;
