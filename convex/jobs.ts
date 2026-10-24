@@ -1174,7 +1174,7 @@ export const createContent = internalAction({
               research: researchFor("seo_brief", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
             }),
             startedAt,
-            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft.\n\n${businessBrief(job)}${brief}` },
+            { task: "seo_brief", context: "", ctx: fx, text: `TASK: Plan and draft one helpful page targeting a real search a likely customer makes. Include title (≤ 60 chars), meta description (≤ 155 chars), outline and a first draft. Classify the searcher's stage as awareness, evaluation, purchase, or unclear; base it on the query evidence, and make the content and next step fit that stage.\n\n${businessBrief(job)}${brief}` },
           );
           items = seoToArtifacts(out);
         }

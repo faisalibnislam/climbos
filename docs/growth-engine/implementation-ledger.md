@@ -173,6 +173,7 @@ Issue 08's engine-side capacity guard now blocks net-new acquisition channels wh
 | REQ-COPY-08 | partial | S8 | `brand.ts`, `voiceSamples` | No consent, no applied-rule record |
 | REQ-COPY-09 / Issue 87 | partial | S8 | `specs.ts` `verifiedCapabilityEvidence`, `lint.ts` `claimEvidence`, `lintClaims` | Publishable copy's high-risk claim ledger excludes website claims, stated opinions, and untrusted context as proof. It blocks unsupported speed, scale, leadership, certification, automation and named integration claims unless permitted facts substantiate them. **Gap:** not every feature promise is semantically matched yet. |
 | REQ-COPY-10 / Issue 88 | partial | S8 | `evidenceKind.ts` `trustPostureContext`, `jobs.ts` `businessBrief` | Agents now receive a deterministic evidence posture: use matching observed proof carefully, or build proof when it is absent; unknown reputation is not mislabeled as a new or established brand. **Gap:** ClimbOS has no explicit brand-age or reputation input yet. |
+| REQ-SEO-03 / Issue 89 | partial | S9 | `searchIntent.ts`, `SeoBriefV2Schema`, `jobs.ts` SEO task | SEO briefs now label awareness, evaluation, purchase, or unclear intent, infer a stage from query evidence with a page-type fallback, and fail lint when the declared stage conflicts. **Gap:** lexical rules cannot fully understand ambiguous queries; unclear stays valid. |
 
 ### API, automation, reviews
 

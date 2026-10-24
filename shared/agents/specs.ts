@@ -25,6 +25,7 @@ import {
 import type { ModelKey } from "../economics/rates";
 import { skillRubric } from "../skills";
 import { lintEvidenceStrength } from "./evidenceKind";
+import { inferSearchIntentStage } from "./searchIntent";
 import { lintDiagnosisFit } from "./diagnosis";
 import { lintEligibilityIds } from "../playbooks/contracts";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
@@ -305,6 +306,7 @@ export const EmailSequenceV2Schema = EmailSequenceSchema.extend({
 
 export const SeoBriefV2Schema = SeoBriefSchema.extend({
   pageType: z.enum(["comparison", "alternatives", "service_location", "pricing", "how_to", "product", "category", "other"]),
+  intentStage: z.enum(["awareness", "evaluation", "purchase", "unclear"]),
   intentEvidence: z.string(),
   eeatSignals: z.array(z.string()),
 });
@@ -1162,6 +1164,12 @@ function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) });
 }
 
+function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIssue[] {
+  const inferred = inferSearchIntentStage(`${out.primaryKeyword} ${out.searchIntent} ${out.intentEvidence}`, out.pageType);
+  if (inferred === "unclear" || out.intentStage === inferred) return [];
+  return [{ severity: "error", rule: "search_intent", message: `The page is labeled ${out.intentStage}, but its keyword and intent evidence indicate ${inferred} intent. Match the content and next step to the searcher's stage.`, path: "intentStage" }];
+}
+
 /* ---------------- Rubrics ---------------- */
 
 /** A primary skill's rubric, with other skills' checklists available to the critic via criticSkills. */
@@ -1348,7 +1356,7 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
       skills: ["seo-pages", "copy-fundamentals"],
       schema: SeoBriefV2Schema,
       rubric: rubricOf("seo-pages"),
-      lint: (out, input) => [...lintPublishable(out, input), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintSearchIntent(out), ...maxLength(out.title, 65, "title", "Title"), ...maxLength(out.metaDescription, 160, "metaDescription", "Meta description")],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
     },
     o,
