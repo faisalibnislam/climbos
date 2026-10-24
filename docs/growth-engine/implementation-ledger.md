@@ -133,7 +133,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 5. **S6 gaps.**
    - Only one target search runs at a time (the one-campaign pipeline). Approval auto-starts the first target-heavy play; the others start from the play card.
    - Partnerships, communities, podcasts and directories reuse the company/creator search; they have no dedicated schemas (REQ-TARGET-01 table).
-   - Creator scouting now captures a proposed, explicitly unconfirmed collaboration concept and stores audience wording and language only when each exact value appears in observations from its cited public URL; these fields flow through campaign and plan-target reads. It still lacks audience-engagement evidence normalization, checking a sample of the creator's real content before drafting, and collaboration status/outcome tracking (REQ-CREATOR-01/05/06). Today doesn't list targets yet (REQ-UX-08).
+   - Creator scouting captures source-bound audience wording/language and an unconfirmed collaboration concept. An append-only tenant-scoped lifecycle log now records owner-reported milestones, format, agreed value, publication URL and period/denominator-aware outcome metrics, then gives bounded, explicitly non-causal history to future creator searches. It still lacks structured engagement evidence and a content-example review before drafting (REQ-CREATOR-01/05/06). Today doesn't list targets yet (REQ-UX-08).
 6. **S7** competitor discovery is next in program order.
 7. **Opting in a workspace:** run `npx convex run engineFlags:setEngineFlag '{"orgId":"…","flag":"decision_contract","on":true}'` (and the same with `"plan_targets"`). This needs owner approval because it runs against the deployment.
 
@@ -235,7 +235,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 | REQ-CREATOR-03 | missing | S6 | — | |
 | REQ-CREATOR-04 | missing | S6 | — | (No fraud claims are made either) |
 | REQ-CREATOR-05 | partial | S6 | outreach `firstLines` | No check against a real content example |
-| REQ-CREATOR-06 | missing | S6 | `links` table only | |
+| REQ-CREATOR-06 | partial | S6 | `creatorCollaborationReports`, `outbound.ts` `recordCreatorCollaboration`/`creatorCollaborationHistory`/`campaignContext`, `jobs.ts` `findCustomers` | An append-only, tenant-scoped owner report is linked to the creator, campaign and (when applicable) the exact strategy/play. It records lifecycle status, format, agreed and actual cost in the business currency, published content URL, and optional count/rate/amount metrics with period, eligible/exposed counts, denominator for rates, and optional source URL. Later creator research receives the latest 30 workspace reports labeled owner-reported and explicitly non-causal; no cross-workspace pooling or automatic outreach occurs. **Gap:** owner-facing UI and broader downstream strategy learning from those reports remain. |
 
 ### SEO, copy
 

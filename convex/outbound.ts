@@ -9,6 +9,7 @@ import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
 import { citedCreatorFact, creatorIdentity } from "../shared/growth/targets";
+import { expertPlaysOf } from "../shared/agents/planCompatibility";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -266,6 +267,134 @@ export const setReplyDisposition = mutation({
   },
 });
 
+/** Append a creator collaboration status/result report; this records owner input and sends nothing. */
+export const recordCreatorCollaboration = mutation({
+  args: {
+    slug: v.string(),
+    prospectId: v.id("prospects"),
+    campaignId: v.optional(v.id("outboundCampaigns")),
+    status: v.union(v.literal("discussion_started"), v.literal("interested"), v.literal("negotiating"), v.literal("agreed"), v.literal("content_published"), v.literal("completed"), v.literal("declined"), v.literal("cancelled")),
+    format: v.optional(v.union(v.literal("paid"), v.literal("gifted"), v.literal("affiliate"), v.literal("co_created"), v.literal("event"), v.literal("other"))),
+    agreedValueMinor: v.optional(v.number()),
+    actualCostMinor: v.optional(v.number()),
+    publishedUrl: v.optional(v.string()),
+    metric: v.optional(v.object({
+      name: v.string(),
+      kind: v.union(v.literal("count"), v.literal("rate"), v.literal("amount")),
+      value: v.number(),
+      unit: v.string(),
+      denominator: v.optional(v.number()),
+      eligible: v.optional(v.number()),
+      exposed: v.optional(v.number()),
+      periodStartAt: v.number(),
+      periodEndAt: v.number(),
+      sourceUrl: v.optional(v.string()),
+    })),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, a) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const prospect = assertSameOrg(await ctx.db.get(a.prospectId), org._id, "prospect");
+    const candidateCampaign = a.campaignId ? await ctx.db.get(a.campaignId) : await ctx.db.get(prospect.campaignId);
+    const campaign = assertSameOrg(candidateCampaign, org._id, "campaign");
+    if (campaign.kind !== "creators") throw appError("INVALID", "Collaboration tracking is only available for creator targets.");
+    if (campaign._id !== prospect.campaignId && (!campaign.playId || !(prospect.playIds ?? []).includes(campaign.playId))) throw appError("INVALID", "That creator isn't linked to this campaign's play.");
+    if (Boolean(campaign.strategyId) !== Boolean(campaign.playId)) throw appError("INVALID", "The creator campaign has incomplete plan linkage; contact support before reporting against it.");
+    if (campaign.strategyId && campaign.playId) {
+      const strategy = assertSameOrg(await ctx.db.get(campaign.strategyId), org._id, "plan");
+      if (!(expertPlaysOf(strategy.expert) as { id?: string }[]).some((play) => play.id === campaign.playId)) throw appError("INVALID", "The creator play is no longer available in that plan.");
+    }
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (a.agreedValueMinor !== undefined && (!Number.isSafeInteger(a.agreedValueMinor) || a.agreedValueMinor < 0 || a.agreedValueMinor > 1_000_000_000_000)) throw appError("INVALID", "Agreed value must be a nonnegative amount in minor currency units.");
+    if (a.actualCostMinor !== undefined && (!Number.isSafeInteger(a.actualCostMinor) || a.actualCostMinor < 0 || a.actualCostMinor > 1_000_000_000_000)) throw appError("INVALID", "Actual cost must be a nonnegative amount in minor currency units.");
+    if ((a.agreedValueMinor !== undefined || a.actualCostMinor !== undefined) && !business?.currency) throw appError("INVALID", "Set the business currency before recording a collaboration value or cost.");
+    if (a.publishedUrl !== undefined && !validPublicHttpUrl(a.publishedUrl)) throw appError("INVALID", "Published content needs a valid HTTP or HTTPS URL.");
+
+    let metric: Doc<"creatorCollaborationReports">["metric"];
+    if (a.metric) {
+      const m = a.metric;
+      if (!m.name.trim() || m.name.length > 100 || !m.unit.trim() || m.unit.length > 40) throw appError("INVALID", "Add a short metric name and unit.");
+      if (!Number.isFinite(m.value) || m.value < 0 || m.value > 1_000_000_000_000) throw appError("INVALID", "Metric value must be a finite nonnegative number.");
+      if (!Number.isSafeInteger(m.periodStartAt) || !Number.isSafeInteger(m.periodEndAt) || m.periodStartAt > m.periodEndAt || m.periodEndAt > Date.now()) throw appError("INVALID", "Metric period must be valid and cannot end in the future.");
+      if (m.kind === "count" && !Number.isSafeInteger(m.value)) throw appError("INVALID", "Count metrics must be whole numbers.");
+      if (m.kind === "rate" && (m.value > 1 || !Number.isSafeInteger(m.denominator) || (m.denominator ?? 0) < 1)) throw appError("INVALID", "Rate metrics must be between 0 and 1 and include a whole-number denominator.");
+      if (m.denominator !== undefined && (!Number.isSafeInteger(m.denominator) || m.denominator < 1)) throw appError("INVALID", "A metric denominator must be a positive whole number.");
+      if ((m.eligible === undefined) !== (m.exposed === undefined) || (m.eligible !== undefined && (!Number.isSafeInteger(m.eligible) || m.eligible < 0 || !Number.isSafeInteger(m.exposed) || (m.exposed ?? 0) < 0 || m.exposed! > m.eligible))) throw appError("INVALID", "Eligible and exposed counts must be provided together, as whole numbers, with exposed no greater than eligible.");
+      if (m.kind === "amount" && !business?.currency) throw appError("INVALID", "Set the business currency before recording a monetary result.");
+      if (m.sourceUrl !== undefined && !validPublicHttpUrl(m.sourceUrl)) throw appError("INVALID", "A metric source needs a valid HTTP or HTTPS URL.");
+      metric = {
+        name: m.name.trim().slice(0, 100), kind: m.kind, value: m.value, unit: m.unit.trim().slice(0, 40),
+        ...(m.denominator !== undefined ? { denominator: m.denominator } : {}),
+        ...(m.eligible !== undefined ? { eligible: m.eligible } : {}),
+        ...(m.exposed !== undefined ? { exposed: m.exposed } : {}),
+        ...(m.kind === "amount" && business?.currency ? { currency: business.currency } : {}),
+        periodStartAt: m.periodStartAt, periodEndAt: m.periodEndAt,
+        ...(m.sourceUrl ? { sourceUrl: m.sourceUrl.trim().slice(0, 500) } : {}),
+      };
+    }
+
+    const reportId = await ctx.db.insert("creatorCollaborationReports", {
+      orgId: org._id,
+      prospectId: prospect._id,
+      campaignId: campaign._id,
+      ...(campaign.strategyId ? { strategyId: campaign.strategyId } : {}),
+      ...(campaign.playId ? { playId: campaign.playId } : {}),
+      status: a.status,
+      ...(a.format ? { format: a.format } : {}),
+      ...(a.agreedValueMinor !== undefined ? { agreedValueMinor: a.agreedValueMinor } : {}),
+      ...(a.actualCostMinor !== undefined ? { actualCostMinor: a.actualCostMinor } : {}),
+      ...((a.agreedValueMinor !== undefined || a.actualCostMinor !== undefined || a.metric?.kind === "amount") && business?.currency ? { currency: business.currency } : {}),
+      ...(a.publishedUrl ? { publishedUrl: a.publishedUrl.trim().slice(0, 500) } : {}),
+      ...(metric ? { metric } : {}),
+      ...(a.note?.trim() ? { note: a.note.trim().slice(0, 500) } : {}),
+      basis: "owner_reported",
+      reportedBy: user._id,
+      createdAt: Date.now(),
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "creator.collaboration_reported", subjectType: "prospects", subjectId: prospect._id, summary: `Recorded creator collaboration status: ${a.status.replaceAll("_", " ")}.` });
+    return { reportId, basis: "owner_reported" as const };
+  },
+});
+
+/** Read the append-only collaboration history for one creator target. */
+export const creatorCollaborationHistory = query({
+  args: { slug: v.string(), prospectId: v.id("prospects") },
+  handler: async (ctx, { slug, prospectId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const prospect = assertSameOrg(await ctx.db.get(prospectId), org._id, "prospect");
+    const campaign = assertSameOrg(await ctx.db.get(prospect.campaignId), org._id, "campaign");
+    if (campaign.kind !== "creators") throw appError("INVALID", "Collaboration history is only available for creator targets.");
+    return (await ctx.db.query("creatorCollaborationReports").withIndex("by_prospect_created", (q) => q.eq("prospectId", prospect._id)).order("desc").take(50))
+      .filter((report) => report.orgId === org._id)
+      .map((report) => ({
+        id: report._id,
+        campaignId: report.campaignId,
+        status: report.status,
+        strategyId: report.strategyId ?? null,
+        playId: report.playId ?? null,
+        format: report.format ?? null,
+        agreedValueMinor: report.agreedValueMinor ?? null,
+        actualCostMinor: report.actualCostMinor ?? null,
+        currency: report.currency ?? null,
+        publishedUrl: report.publishedUrl ?? null,
+        metric: report.metric ?? null,
+        note: report.note ?? null,
+        basis: report.basis,
+        createdAt: report.createdAt,
+        basisLabel: "Owner reported; not independently verified",
+      }));
+  },
+});
+
+function validPublicHttpUrl(input: string): boolean {
+  try {
+    const url = new URL(input.trim());
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 export const updateFirstLine = mutation({
   args: { slug: v.string(), prospectId: v.id("prospects"), firstLine: v.string() },
   handler: async (ctx, { slug, prospectId, firstLine }) => {
@@ -466,7 +595,15 @@ export const campaignContext = internalQuery({
       .query("prospects")
       .withIndex("by_org_stage", (q) => q.eq("orgId", c.orgId))
       .take(500);
-    return { brief: c.brief, kind: c.kind ?? "customers", knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200) };
+    const kind = c.kind ?? "customers";
+    const collaborationHistory = kind === "creators"
+      ? await Promise.all((await ctx.db.query("creatorCollaborationReports").withIndex("by_org_created", (q) => q.eq("orgId", c.orgId)).order("desc").take(30)).map(async (report) => {
+        const prospect = await ctx.db.get(report.prospectId);
+        if (!prospect || prospect.orgId !== c.orgId) return null;
+        return { creator: prospect.company, profile: prospect.website, campaignId: report.campaignId, status: report.status, strategyId: report.strategyId ?? null, playId: report.playId ?? null, format: report.format ?? null, agreedValueMinor: report.agreedValueMinor ?? null, actualCostMinor: report.actualCostMinor ?? null, currency: report.currency ?? null, publishedUrl: report.publishedUrl ?? null, metric: report.metric ?? null, note: report.note ?? null, basis: report.basis, reportedAt: report.createdAt };
+      }))
+      : [];
+    return { brief: c.brief, kind, knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200), collaborationHistory: collaborationHistory.filter((item): item is NonNullable<typeof item> => Boolean(item)) };
   },
 });
 

@@ -1022,6 +1022,50 @@ export default defineSchema({
     .index("by_org_domain", ["orgId", "domain"])
     .index("by_org_email", ["orgId", "publicEmail"]),
 
+  /** Append-only, owner-reported lifecycle and outcome notes for creator collaborations. */
+  creatorCollaborationReports: defineTable({
+    orgId: v.id("organizations"),
+    prospectId: v.id("prospects"),
+    campaignId: v.id("outboundCampaigns"),
+    strategyId: v.optional(v.id("strategies")),
+    playId: v.optional(v.string()),
+    status: v.union(
+      v.literal("discussion_started"),
+      v.literal("interested"),
+      v.literal("negotiating"),
+      v.literal("agreed"),
+      v.literal("content_published"),
+      v.literal("completed"),
+      v.literal("declined"),
+      v.literal("cancelled"),
+    ),
+    format: v.optional(v.union(v.literal("paid"), v.literal("gifted"), v.literal("affiliate"), v.literal("co_created"), v.literal("event"), v.literal("other"))),
+    agreedValueMinor: v.optional(v.number()),
+    actualCostMinor: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    publishedUrl: v.optional(v.string()),
+    metric: v.optional(v.object({
+      name: v.string(),
+      kind: v.union(v.literal("count"), v.literal("rate"), v.literal("amount")),
+      value: v.number(),
+      unit: v.string(),
+      denominator: v.optional(v.number()),
+      eligible: v.optional(v.number()),
+      exposed: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      periodStartAt: v.number(),
+      periodEndAt: v.number(),
+      sourceUrl: v.optional(v.string()),
+    })),
+    note: v.optional(v.string()),
+    /** These entries are explicitly owner-reported, even if a source link is attached. */
+    basis: v.literal("owner_reported"),
+    reportedBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_prospect_created", ["prospectId", "createdAt"]),
+
   /** Engine lab (self-improvement loop 3): playbook rules proposed from reviews, A/B tested, approved in /ops. */
   engineProposals: defineTable({
     agentId: v.string(),

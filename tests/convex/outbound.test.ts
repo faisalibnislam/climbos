@@ -142,4 +142,47 @@ describe("outbound", () => {
       collaborationConcept: expect.stringContaining("Proposed"),
     });
   });
+
+  it("records an append-only creator collaboration lifecycle and returns it as owner-reported context", async () => {
+    const t = setup();
+    const w = await workspace(t, "creator-collaboration@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "creators", count: 5 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    let view = await w.client.query(api.outbound.get, { slug: w.slug });
+    const creator = view.prospects[0];
+    const now = Date.now();
+    await expect(w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "agreed", format: "paid",
+      metric: { name: "Click-through rate", kind: "rate", value: 0.04, unit: "rate", periodStartAt: now - 7 * 86_400_000, periodEndAt: now },
+    })).rejects.toThrow(/denominator/);
+
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "agreed", format: "paid", agreedValueMinor: 25_000,
+      actualCostMinor: 20_000,
+      metric: { name: "Click-through rate", kind: "rate", value: 0.04, unit: "rate", denominator: 1_000, eligible: 1_500, exposed: 1_000, periodStartAt: now - 7 * 86_400_000, periodEndAt: now, sourceUrl: "https://creator.example/insights" },
+      note: "Owner-entered from the creator's report.",
+    });
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "content_published", format: "paid", publishedUrl: "https://creator.example/post-1",
+    });
+
+    const history = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: creator.id });
+    expect(history).toHaveLength(2);
+    expect(history[0]).toMatchObject({ status: "content_published", basis: "owner_reported", basisLabel: "Owner reported; not independently verified" });
+    expect(history[1]).toMatchObject({ status: "agreed", agreedValueMinor: 25_000, actualCostMinor: 20_000, currency: "USD", basis: "owner_reported", metric: { value: 0.04, denominator: 1_000, eligible: 1_500, exposed: 1_000 } });
+    const campaign = await t.run((ctx) => ctx.db.query("outboundCampaigns").first());
+    const context = await t.query(internal.outbound.campaignContext, { campaignId: campaign!._id });
+    expect(context?.collaborationHistory[0]).toMatchObject({ creator: creator.company, status: "content_published", basis: "owner_reported" });
+    expect(await t.run((ctx) => ctx.db.query("outboundSends").collect())).toHaveLength(0);
+
+    const other = await workspace(t, "creator-collaboration-other@example.com");
+    await expect(other.client.query(api.outbound.creatorCollaborationHistory, { slug: other.slug, prospectId: creator.id })).rejects.toThrow();
+    await expect(other.client.mutation(api.outbound.recordCreatorCollaboration, { slug: other.slug, prospectId: creator.id, status: "interested" })).rejects.toThrow();
+
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "customers", count: 5 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    view = await w.client.query(api.outbound.get, { slug: w.slug });
+    expect(view.campaign?.kind).toBe("customers");
+    await expect(w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: view.prospects[0].id, status: "interested" })).rejects.toThrow(/only available for creator targets/);
+  });
 });

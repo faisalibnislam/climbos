@@ -90,6 +90,9 @@ describe("plan targets (flagged)", () => {
     const listed = view!.pl_creators1.targets;
     expect(listed.find((x) => x.name.includes("benflows"))).toMatchObject({ suppressed: true, contactRoute: "none" });
     expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, collaborationConcept: expect.stringContaining("Proposed") });
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: mia._id, campaignId: view!.pl_creators1.campaignId!, status: "agreed", format: "co_created" });
+    const collaboration = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: mia._id });
+    expect(collaboration[0]).toMatchObject({ strategyId: w.strategyId, playId: "pl_creators1", campaignId: view!.pl_creators1.campaignId, status: "agreed" });
 
     // A refreshed plan keeps the play ID, so it keeps the targets and doesn't start a duplicate search.
     const v2 = await t.run(async (ctx) => {
