@@ -1,9 +1,14 @@
 import { v } from "convex/values";
 import { AGENT_ACTIONS, AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { creditsToMicros, microsToCredits } from "../shared/economics";
-import { mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+
+const DAY = 86_400_000;
+const triggerDelay = (trigger: "manual" | "daily" | "weekly") => trigger === "daily" ? DAY : trigger === "weekly" ? 7 * DAY : null;
 
 const permission = v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval"));
 const knowledgeSource = v.union(v.literal("growth_library"));
@@ -13,7 +18,7 @@ const DRAFT = new Set(AGENT_ACTIONS.filter((kind) => !["ad_change", "email_send"
 function cleanConfiguration(input: {
   archetypeId: string; name: string; objective: string; instructions: string;
   allowedActions: string[]; knowledge: string[]; permission: "read_only" | "draft" | "request_approval";
-  maxRunCredits: number; monthlyBudgetCredits?: number; maxActionsPerRun: number; successMetric: string;
+  maxRunCredits: number; monthlyBudgetCredits?: number; maxActionsPerRun: number; successMetric: string; trigger?: "manual" | "daily" | "weekly";
 }) {
   const archetype = AGENT_ARCHETYPE_BY_ID.get(input.archetypeId);
   if (!archetype) throw appError("INVALID", "Choose one of the ClimbOS specialist roles.");
@@ -45,7 +50,7 @@ function cleanConfiguration(input: {
     monthlyBudgetCredits,
     maxActionsPerRun,
     successMetric: input.successMetric.trim().slice(0, 300),
-    trigger: "manual" as const,
+    trigger: input.trigger ?? "manual",
     modelRouting: "automatic" as const,
   };
 }
@@ -55,6 +60,7 @@ const configArgs = {
   allowedActions: v.array(v.string()), knowledge: v.array(knowledgeSource), permission,
   maxRunCredits: v.number(), maxActionsPerRun: v.number(), successMetric: v.string(),
   monthlyBudgetCredits: v.optional(v.number()),
+  trigger: v.optional(v.union(v.literal("manual"), v.literal("daily"), v.literal("weekly"))),
 };
 
 export const list = query({
@@ -67,7 +73,7 @@ export const list = query({
     return {
       canManage: ["owner", "admin", "editor"].includes(role),
       archetypes: [...AGENT_ARCHETYPE_BY_ID.values()],
-      agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, successMetric, trigger, modelRouting, status, updatedAt }) => {
+      agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, successMetric, trigger, nextTriggerAt, modelRouting, status, updatedAt }) => {
         const monthlyCap = monthlyBudgetCredits ?? null;
         const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", monthStart)).take(501);
         const usedMicros = runs.length > 500 ? (monthlyCap === null ? null : creditsToMicros(monthlyCap)) : runs.reduce((sum, run) => sum + (["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status) ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros), 0);
@@ -80,7 +86,7 @@ export const list = query({
         }));
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
-          maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, modelRouting, status, updatedAt, recentRuns,
+          maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, nextTriggerAt: nextTriggerAt ?? null, modelRouting, status, updatedAt, recentRuns,
           workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, capped: feedbackRows.length > 100 },
         };
       })),
@@ -96,7 +102,8 @@ export const create = mutation({
     if (existing.length >= 30) throw appError("LIMIT_REACHED", "A workspace can have up to 30 specialist profiles.");
     const config = cleanConfiguration(args);
     const now = Date.now();
-    const id = await ctx.db.insert("customAgents", { orgId: org._id, ...config, status: "active", createdBy: user._id, updatedBy: user._id, createdAt: now, updatedAt: now });
+    const delay = triggerDelay(config.trigger);
+    const id = await ctx.db.insert("customAgents", { orgId: org._id, ...config, ...(delay ? { nextTriggerAt: now + delay } : {}), status: "active", createdBy: user._id, updatedBy: user._id, createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.created", subjectType: "customAgent", subjectId: id, summary: `Created specialist profile "${config.name}".` });
     return { id };
   },
@@ -108,8 +115,11 @@ export const update = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const agent = assertSameOrg(await ctx.db.get(agentId), org._id, "specialist");
     if (agent.status !== "active") throw appError("INVALID", "Restore this specialist before editing it.");
-    const config = cleanConfiguration(args);
-    await ctx.db.patch(agentId, { ...config, updatedBy: user._id, updatedAt: Date.now() });
+    const config = cleanConfiguration({ ...args, trigger: args.trigger ?? agent.trigger });
+    const now = Date.now();
+    const delay = triggerDelay(config.trigger);
+    const nextTriggerAt = delay ? config.trigger !== agent.trigger || agent.nextTriggerAt === undefined ? now + delay : agent.nextTriggerAt : undefined;
+    await ctx.db.patch(agentId, { ...config, nextTriggerAt, updatedBy: user._id, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.updated", subjectType: "customAgent", subjectId: agentId, summary: `Updated specialist profile "${config.name}".` });
     return { id: agentId };
   },
@@ -120,7 +130,57 @@ export const archive = mutation({
   handler: async (ctx, { slug, agentId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const agent = assertSameOrg(await ctx.db.get(agentId), org._id, "specialist");
-    await ctx.db.patch(agentId, { status: agent.status === "active" ? "archived" : "active", updatedBy: user._id, updatedAt: Date.now() });
+    const status = agent.status === "active" ? "archived" : "active";
+    const now = Date.now();
+    const delay = triggerDelay(agent.trigger);
+    await ctx.db.patch(agentId, { status, nextTriggerAt: status === "active" && delay ? now + delay : undefined, updatedBy: user._id, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: agent.status === "active" ? "custom_agent.archived" : "custom_agent.restored", subjectType: "customAgent", subjectId: agentId, summary: `${agent.status === "active" ? "Archived" : "Restored"} specialist profile "${agent.name}".` });
+  },
+});
+
+/** Due profiles are claimed before dispatch so overlapping cron ticks cannot double-run them. */
+export const dueAgentIds = internalQuery({
+  args: { now: v.number() },
+  handler: async (ctx, { now }) => {
+    const daily = await ctx.db.query("customAgents").withIndex("by_status_trigger_next", (q) => q.eq("status", "active").eq("trigger", "daily").lte("nextTriggerAt", now)).take(50);
+    const weekly = await ctx.db.query("customAgents").withIndex("by_status_trigger_next", (q) => q.eq("status", "active").eq("trigger", "weekly").lte("nextTriggerAt", now)).take(50);
+    return [...daily, ...weekly].map((agent) => agent._id);
+  },
+});
+
+export const claimDueAgent = internalMutation({
+  args: { agentId: v.id("customAgents"), now: v.number() },
+  handler: async (ctx, { agentId, now }) => {
+    const agent = await ctx.db.get(agentId);
+    if (!agent || agent.status !== "active" || agent.trigger === "manual" || !agent.nextTriggerAt || agent.nextTriggerAt > now) return null;
+    const delay = triggerDelay(agent.trigger);
+    if (!delay) return null;
+    await ctx.db.patch(agentId, { nextTriggerAt: now + delay, updatedAt: now });
+    return { agentId };
+  },
+});
+
+/** Fire scheduled profiles through the existing metered chat workflow. Each run still creates reviewable action cards. */
+export const runScheduled = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const due: Id<"customAgents">[] = await ctx.runQuery(internal.customAgents.dueAgentIds, { now });
+    let started = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (const agentId of due) {
+      const claimed = await ctx.runMutation(internal.customAgents.claimDueAgent, { agentId, now });
+      if (!claimed) { skipped++; continue; }
+      try {
+        const result = await ctx.runMutation(internal.workspace.runScheduledCustomAgent, { agentId });
+        if (result.started) started++;
+        else skipped++;
+      } catch (error) {
+        failed++;
+        console.error("Scheduled specialist run failed", agentId, error);
+      }
+    }
+    return { due: due.length, started, skipped, failed };
   },
 });

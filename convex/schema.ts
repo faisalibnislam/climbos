@@ -1625,7 +1625,8 @@ export default defineSchema({
     monthlyBudgetCredits: v.optional(v.number()),
     maxActionsPerRun: v.number(),
     successMetric: v.string(),
-    trigger: v.literal("manual"),
+    trigger: v.union(v.literal("manual"), v.literal("daily"), v.literal("weekly")),
+    nextTriggerAt: v.optional(v.number()),
     modelRouting: v.literal("automatic"),
     status: v.union(v.literal("active"), v.literal("archived")),
     createdBy: v.id("users"),
@@ -1634,7 +1635,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org_updated", ["orgId", "updatedAt"])
-    .index("by_org_archetype", ["orgId", "archetypeId"]),
+    .index("by_org_archetype", ["orgId", "archetypeId"])
+    .index("by_status_trigger_next", ["status", "trigger", "nextTriggerAt"]),
 
   /** Human outcome notes on a specialist run; separates owner-reported results from platform measurements. */
   customAgentFeedback: defineTable({

@@ -46,6 +46,45 @@ describe("custom specialist profiles", () => {
     expect(saved.agents.find((agent) => agent.id === id)?.monthlyBudgetCredits).toBe(100);
   });
 
+  it("schedules daily profiles and preserves their trigger when older clients edit settings", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "scheduled-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const now = Date.now();
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile, trigger: "daily" });
+
+    let saved = await owner.client.query(api.customAgents.list, { slug });
+    expect(saved.agents.find((agent) => agent.id === id)).toMatchObject({ trigger: "daily", nextTriggerAt: expect.any(Number) });
+    expect(saved.agents.find((agent) => agent.id === id)!.nextTriggerAt).toBeGreaterThan(now);
+
+    await owner.client.mutation(api.customAgents.update, { slug, agentId: id, ...profile, name: "Updated by older settings" });
+    saved = await owner.client.query(api.customAgents.list, { slug });
+    expect(saved.agents.find((agent) => agent.id === id)).toMatchObject({ trigger: "daily", name: "Updated by older settings", nextTriggerAt: expect.any(Number) });
+  });
+
+  it("claims due profiles once and advances their next run before dispatch", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "claim-scheduled-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile, trigger: "daily" });
+    const now = Date.now();
+    await t.run(async (ctx) => { await ctx.db.patch(id, { nextTriggerAt: now - 1 }); });
+
+    expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([id]);
+    expect(await t.mutation(internal.customAgents.claimDueAgent, { agentId: id, now })).toEqual({ agentId: id });
+    expect(await t.mutation(internal.customAgents.claimDueAgent, { agentId: id, now })).toBeNull();
+    expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([]);
+  });
+
+  it("does not start scheduled work for demo workspaces", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "demo-scheduled-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile, trigger: "daily" });
+    const result = await t.mutation(internal.workspace.runScheduledCustomAgent, { agentId: id });
+    expect(result).toEqual({ started: false, reason: "workspace_unavailable" });
+  });
+
   it("binds runs to their tenant and records manual specialist identity", async () => {
     const t = setup();
     const alice = await asNewUser(t, "specialist-alice@example.com", { anonymous: true });

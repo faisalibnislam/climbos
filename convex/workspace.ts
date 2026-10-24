@@ -219,6 +219,27 @@ export const runCustomAgent = mutation({
   },
 });
 
+/** Scheduled custom-agent work is internal, metered, and produces suggestions for the member to review. */
+export const runScheduledCustomAgent = internalMutation({
+  args: { agentId: v.id("customAgents") },
+  handler: async (ctx, { agentId }) => {
+    const agent = await ctx.db.get(agentId);
+    if (!agent || agent.status !== "active" || agent.trigger === "manual") return { started: false, reason: "inactive" };
+    const org = await ctx.db.get(agent.orgId);
+    if (!org || org.deletedAt || org.kind === "demo" || org.emergencyStop?.active) return { started: false, reason: "workspace_unavailable" };
+    const memberships = await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(100);
+    const creator = memberships.find((membership) => membership.userId === agent.createdBy && membership.status === "active" && ["owner", "admin", "editor"].includes(membership.role));
+    const fallbackOwner = memberships.find((membership) => membership.status === "active" && membership.role === "owner" && membership.userId);
+    const userId = creator?.userId ?? fallbackOwner?.userId;
+    if (!userId) return { started: false, reason: "no_active_member" };
+    const recent = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", agent._id)).order("desc").take(5);
+    if (recent.some((run) => ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(run.status))) return { started: false, reason: "already_running" };
+    const request = `Scheduled ${agent.trigger} review. Use the latest approved plan, measured workspace results, and confirmed business facts. Objective: ${agent.objective}. Success measure: ${agent.successMetric}. Identify missing evidence clearly and prepare only the smallest useful next step. Do not publish, send, spend, or change external accounts.`;
+    await postChat(ctx, org, userId, request, agent._id);
+    return { started: true };
+  },
+});
+
 /** Record a workspace member's report of usefulness after a custom specialist run finishes. */
 export const rateCustomAgentRun = mutation({
   args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()) },

@@ -27,6 +27,8 @@ crons.daily("sync connections", { hourUTC: 6, minuteUTC: 0 }, internal.maintenan
 crons.daily("check token expiry", { hourUTC: 6, minuteUTC: 30 }, internal.maintenance.checkExpiry, {});
 // Social autopilot: plan next week for each enabled workspace (Thursday 9:00 local or later).
 crons.interval("autopilot planning", { minutes: 60 }, internal.autopilot.tick, {});
+// Scheduled custom-agent runs only prepare reviewable action cards; engine budgets still apply.
+crons.interval("scheduled specialist profiles", { minutes: 15 }, internal.customAgents.runScheduled, {});
 crons.interval("outbound: send due emails", { minutes: 5 }, internal.outboundSending.dispatch, {});
 crons.interval("push notifications", { minutes: 2 }, internal.push.fanout, {});
 crons.interval("status sample", { minutes: 5 }, internal.status.sample, {});
