@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lintClaims, lintCopy } from "../../shared/agents/lint";
-import { lintBorrowedUplift } from "../../shared/agents/specs";
+import { lintBorrowedUplift, verifiedCapabilityEvidence } from "../../shared/agents/specs";
+import type { EvidenceKind } from "../../shared/agents/evidenceKind";
 
 /** Slices 5 and 10: claims need support; other businesses' results are hypotheses, not forecasts (EV04, EV07, EV11, EV23, EV30). */
 describe("claim ledger", () => {
@@ -21,6 +22,18 @@ describe("claim ledger", () => {
   it("applies to all publishable copy", () => {
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "", publishable: true }).some((i) => i.rule === "unsupported_claim")).toBe(true);
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "" }).some((i) => i.rule === "unsupported_claim")).toBe(false);
+  });
+  it("does not let website promises or stated opinions verify marketing claims", () => {
+    const input = {
+      task: "Write marketing copy",
+      brief: "The site claims 24/7 chat support.",
+      facts: ["The site claims 24/7 chat support", "Customers said they would use chat support", "Owner confirmed live chat support 24/7"],
+      constraints: { factKinds: ["published", "stated", "owner"] as EvidenceKind[] },
+    };
+    const verified = verifiedCapabilityEvidence(input);
+    expect(verified).toBe("Owner confirmed live chat support 24/7");
+    expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: "", publishable: true })).toMatchObject([{ rule: "unsupported_claim" }]);
+    expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: verified, publishable: true })).toEqual([]);
   });
 });
 

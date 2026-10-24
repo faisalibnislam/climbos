@@ -39,9 +39,8 @@ const SUPERLATIVES = /\b(best|#1|number one|leading|top-rated|fastest|cheapest|m
 /**
  * Claim ledger (expansion slice 5; BK03 Ch 2 "your opinion isn't proof", BK02
  * Ch 10 "don't headline advantages you can't prove"): capability, scale and
- * leadership claims a buyer would rely on. Each needs the same claim in the
- * facts or research; otherwise it's an unsupported claim. `key` finds the
- * claim in the evidence.
+ * leadership claims a buyer would rely on. Each needs matching, permitted
+ * evidence; otherwise it's unsupported. `key` finds the claim in the evidence.
  */
 const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }[] = [
   { kind: "a speed or cost multiplier", re: /\b(\d+(?:\.\d+)?)\s?[x×]\s+(?:faster|quicker|cheaper|more|better|easier|less)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(".", "\\.")}\\s?[x×]`, "i") },
@@ -59,7 +58,7 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
     for (const c of CLAIMS) {
       const m = text.match(c.re);
       if (m && !c.key(m).test(evidence)) {
-        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no fact or research supports. Say what the product verifiably does, or drop it.`, path });
+        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
         break;
       }
     }
@@ -97,6 +96,8 @@ export interface CopyLintOptions {
   skip?: (path: string) => boolean;
   /** Text the numbers in the output must trace back to (facts, brief, research). */
   evidence?: string;
+  /** Evidence allowed to substantiate customer-facing product and performance claims. */
+  claimEvidence?: string;
   maxExclamations?: number;
   /** Max emoji per 150 characters (0 = no emoji). */
   emojiPer150?: number;
@@ -164,7 +165,9 @@ export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue
       issues.push({ severity: "warn", rule: "superlative", message: "Superlative claim (best, #1, leading…) needs a cited source or should go.", path });
     }
     if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
-    if (opts.publishable && opts.evidence !== undefined) issues.push(...lintClaims([{ path, text }], opts.evidence));
+    if (opts.publishable && (opts.claimEvidence !== undefined || opts.evidence !== undefined)) {
+      issues.push(...lintClaims([{ path, text }], opts.claimEvidence ?? opts.evidence ?? ""));
+    }
     if (opts.evidence !== undefined) {
       const untraced = untracedNumbers(text, opts.evidence, { labelled: opts.labelled });
       if (untraced.length)

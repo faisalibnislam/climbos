@@ -171,6 +171,7 @@ Issue 08's engine-side capacity guard now blocks net-new acquisition channels wh
 | REQ-COPY-06 | partial | S8 | `lint.ts:10` | Banned list only |
 | REQ-COPY-07 | partial | S8 | `specs.ts:692` | Exact duplicates only |
 | REQ-COPY-08 | partial | S8 | `brand.ts`, `voiceSamples` | No consent, no applied-rule record |
+| REQ-COPY-09 / Issue 87 | partial | S8 | `specs.ts` `verifiedCapabilityEvidence`, `lint.ts` `claimEvidence` | Publishable copy's high-risk claim ledger now excludes website claims, stated opinions, and untrusted context as proof; only confirmed facts with stronger evidence kinds can support those claims. **Gap:** the deterministic ledger covers selected high-risk claim patterns, not every possible feature promise or semantic mismatch. |
 
 ### API, automation, reviews
 
