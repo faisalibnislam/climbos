@@ -14,8 +14,9 @@ describe("learned metrics", () => {
   });
 
   it("any reply is labelled as any reply; bookings and attendance are separate rates", () => {
-    const c = learningCounts({ ...empty, outreach: [{ contacted: 200, replied: 10, booked: 2 }], bookingOutcomes: ["attended", "no_show", "no_show"] });
+    const c = learningCounts({ ...empty, outreach: [{ contacted: 200, replied: 10, qualified: 4, booked: 2 }], bookingOutcomes: ["attended", "no_show", "no_show"] });
     expect(c.outreach_reply).toEqual({ trials: 200, successes: 10 });
+    expect(c.outreach_qualified_reply).toEqual({ trials: 200, successes: 4 });
     expect(c.outreach_booked).toEqual({ trials: 200, successes: 2 });
     expect(c.booking_attended).toEqual({ trials: 3, successes: 1 });
     expect(METRIC_DEFS.outreach_reply.label).toMatch(/any reply/);

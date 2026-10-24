@@ -221,7 +221,11 @@ export const setStage = mutation({
     const now = Date.now();
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
-      await ctx.db.patch(p._id, { ...(p.stage !== stage ? { stage, stageUpdatedAt: now } : {}), updatedAt: now });
+      await ctx.db.patch(p._id, {
+        ...(p.stage !== stage ? { stage, stageUpdatedAt: now } : {}),
+        ...(stage === "contacted" ? { replyDisposition: undefined, replyDispositionUpdatedAt: undefined } : {}),
+        updatedAt: now,
+      });
       // Leaving the sequence: nothing more goes out.
       if (stage !== "approved" && stage !== "contacted") await cancelQueued(ctx, p._id);
       // Conversations move into the pipeline (CRM) automatically.
@@ -229,6 +233,33 @@ export const setStage = mutation({
       if (dealStage) await syncDealFromProspect(ctx, p, dealStage, "outbound");
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.stage", subjectType: "prospects", subjectId: String(prospectIds.length), summary: `${prospectIds.length} prospect${prospectIds.length === 1 ? "" : "s"} → ${stage}` });
+  },
+});
+
+/** Record a human judgment about a reply; generic "replied" stages are never treated as qualified by inference. */
+export const setReplyDisposition = mutation({
+  args: {
+    slug: v.string(),
+    prospectId: v.id("prospects"),
+    disposition: v.union(v.literal("qualified"), v.literal("not_qualified"), v.literal("unclear")),
+  },
+  handler: async (ctx, { slug, prospectId, disposition }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const prospect = assertSameOrg(await ctx.db.get(prospectId), org._id, "prospect");
+    if (!["replied", "booked", "won"].includes(prospect.stage)) {
+      throw appError("INVALID", "Record reply quality after the prospect has replied.");
+    }
+    const now = Date.now();
+    await ctx.db.patch(prospect._id, { replyDisposition: disposition, replyDispositionUpdatedAt: now, updatedAt: now });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "outbound.reply_disposition",
+      subjectType: "prospects",
+      subjectId: prospect._id,
+      summary: `Recorded a ${disposition.replaceAll("_", " ")} reply outcome for a prospect.`,
+    });
   },
 });
 

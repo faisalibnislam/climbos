@@ -184,7 +184,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-KNOW-04 | partial | S13 | `engineLab.ts:159-199` | No holdout |
 | REQ-KNOW-05 | partial | S13 | `playCatalogsFor` | No retrieval or citations |
 | REQ-LEARN-01 | done-fixture | S4 | `shared/growth/learnedMetrics.ts`, `convex/learning.ts` | Each metric states its window. Lifetime view counters are divided only by lifetime conversions; landing and bio are now "all time" (`learned-metrics.test.ts`) |
-| REQ-LEARN-02 | partial | S4 | `learnedMetrics.ts` | "Any reply" is labelled as such. Added emails→booked and booked→attended (`bookings.outcome`). **Gap:** no positive/negative reply classification; revenue/contribution per customer not tracked |
+| REQ-LEARN-02 | partial | S4 | `learnedMetrics.ts`, `outbound.setReplyDisposition`, `learning.ts` | Any reply remains distinct from an owner-reported qualified/not-qualified/unclear disposition; added emails→qualified reply. Booked→attended uses `bookings.outcome`. **Gap:** retained-customer revenue/contribution is not linked to play outcomes |
 | REQ-LEARN-03 | done-fixture | S4 | `learnedMetrics.ts` `rateLine`, `playResults.ts` | Counts, window, 90% Wilson range and "observed, not proof of cause". No "grade A". **Gap:** attribution method and lag aren't shown |
 | REQ-LEARN-04 | done-fixture | S4 | `convex/jobWrites.ts` `withPlayIds`, `convex/playResults.ts`, `playResults.playId` | Plays get stable IDs, carried to the next plan version by name. Results match by ID, so a rename keeps them (`play-results.test.ts`). Older rows match by name |
 | REQ-LEARN-05 | missing | S4 | `learning.ts:17` | minTrials only |

@@ -66,9 +66,11 @@ describe("outbound", () => {
 
     view = await w.client.query(api.outbound.get, { slug: w.slug });
     expect(view.prospects.find((p) => p.id === view.prospects[0].id)?.stage).toBe("booked");
+    await w.client.mutation(api.outbound.setReplyDisposition, { slug: w.slug, prospectId: view.prospects[0].id, disposition: "qualified" });
     expect(view.bookings).toHaveLength(1);
-    const stored = await t.run(async (ctx) => ctx.db.query("bookings").first());
+    const [stored, prospect] = await t.run(async (ctx) => Promise.all([ctx.db.query("bookings").first(), ctx.db.get(view.prospects[0].id)]));
     expect(stored?.emailCiphertext).not.toContain("ada@");
+    expect(prospect?.replyDisposition).toBe("qualified");
   });
 
   it("starts from a wish and links the card to the campaign", async () => {
@@ -95,6 +97,7 @@ describe("outbound", () => {
     const view = await w.client.query(api.outbound.get, { slug: w.slug });
     const other = await workspace(t, "ob-b@example.com");
     await expect(other.client.mutation(api.outbound.setStage, { slug: other.slug, prospectIds: [view.prospects[0].id], stage: "skipped" })).rejects.toThrow();
+    await expect(other.client.mutation(api.outbound.setReplyDisposition, { slug: other.slug, prospectId: view.prospects[0].id, disposition: "qualified" })).rejects.toThrow();
     await expect(other.client.query(api.outbound.get, { slug: w.slug })).rejects.toThrow();
   });
 

@@ -47,6 +47,7 @@ describe("learning from results", () => {
           firstLine: "Hello",
           stage: item.stage,
           stageUpdatedAt: item.stageUpdatedAt,
+          ...(index === 1 ? { replyDisposition: "qualified" as const, replyDispositionUpdatedAt: now - 58 * 86_400_000 } : {}),
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         });
@@ -101,6 +102,7 @@ describe("learning from results", () => {
     });
     const { counts } = await t.query(internal.learning.countsForOrg, { orgId: orgId as Id<"organizations"> });
     expect(counts.outreach_reply).toEqual({ trials: 3, successes: 1 });
+    expect(counts.outreach_qualified_reply).toEqual({ trials: 3, successes: 1 });
     expect(counts.outreach_booked).toEqual({ trials: 3, successes: 1 });
   });
 

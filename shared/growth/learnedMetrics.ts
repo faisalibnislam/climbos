@@ -36,6 +36,7 @@ export const LEARN_WINDOW_DAYS = 120;
 export const METRIC_DEFS: Record<string, MetricDef> = {
   // Any reply, including "no thanks": not a measure of interest on its own.
   outreach_reply: { label: "Outreach emails → any reply", counts: "first emails sent → prospects who replied (any reply, including no)", window: "120d", minTrials: 30, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
+  outreach_qualified_reply: { label: "Outreach emails → qualified reply", counts: "first emails sent → prospects whose reply was explicitly marked qualified by the owner", window: "120d", minTrials: 30, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
   outreach_booking: { label: "Outreach replies → booked calls", counts: "replies → booked or won", window: "120d", minTrials: 5, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
   outreach_booked: { label: "Outreach emails → booked calls", counts: "first emails sent → booked or won", window: "120d", minTrials: 30, maturity: `campaign stopped and ${OUTREACH_REPLY_WINDOW_DAYS}-day reply window elapsed` },
   booking_attended: { label: "Booked calls → attended", counts: "calls with an outcome → attended", window: "120d", minTrials: 5 },
@@ -47,7 +48,7 @@ export const METRIC_DEFS: Record<string, MetricDef> = {
 
 export interface RawLearningInputs {
   /** Per campaign: prospects sent a first email in the window, and their current stage. */
-  outreach: { contacted: number; replied: number; booked: number }[];
+  outreach: { contacted: number; replied: number; qualified: number; booked: number }[];
   /** Bookings in the window with a recorded outcome. */
   bookingOutcomes: ("attended" | "no_show")[];
   /** Lifetime counters per landing page. */
@@ -68,6 +69,7 @@ export function learningCounts(x: RawLearningInputs): Counts {
   };
   for (const o of x.outreach) {
     add("outreach_reply", o.contacted, o.replied);
+    add("outreach_qualified_reply", o.contacted, o.qualified);
     add("outreach_booking", o.replied, o.booked);
     add("outreach_booked", o.contacted, o.booked);
   }

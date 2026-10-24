@@ -40,20 +40,21 @@ async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
     const previous = firstSends.get(key);
     if (!previous || send.sentAt < previous.sentAt) firstSends.set(key, { campaignId: send.campaignId, prospectId: send.prospectId, sentAt: send.sentAt });
   }
-  const cohorts = new Map<string, { contacted: number; replied: number; booked: number }>();
+  const cohorts = new Map<string, { contacted: number; replied: number; qualified: number; booked: number }>();
   for (const send of firstSends.values()) {
     const prospect = await ctx.db.get(send.prospectId);
     if (!prospect || prospect.orgId !== orgId || prospect.campaignId !== send.campaignId) continue;
     const campaign = await ctx.db.get(send.campaignId);
     if (!campaign || campaign.orgId !== orgId) continue;
     if (!outreachCohortMature({ sendingStatus: campaign.sending?.status, lastSentAt: campaign.sending?.lastSentAt, latestObservedSentAt: latestCampaignSend.get(String(send.campaignId)) ?? send.sentAt, now: Date.now() })) continue;
-    const cohort = cohorts.get(String(send.campaignId)) ?? { contacted: 0, replied: 0, booked: 0 };
+    const cohort = cohorts.get(String(send.campaignId)) ?? { contacted: 0, replied: 0, qualified: 0, booked: 0 };
     cohort.contacted += 1;
     // Stage is a current-state field. Only its own transition timestamp can
     // show whether the current outcome followed this contact; unrelated edits
     // to the prospect record are not outcome evidence.
     if (prospect.stageUpdatedAt !== undefined && prospect.stageUpdatedAt >= send.sentAt) {
       if (["replied", "booked", "won"].includes(prospect.stage)) cohort.replied += 1;
+      if (["replied", "booked", "won"].includes(prospect.stage) && prospect.replyDisposition === "qualified" && prospect.replyDispositionUpdatedAt !== undefined && prospect.replyDispositionUpdatedAt >= send.sentAt) cohort.qualified += 1;
       if (prospect.stage === "booked" || prospect.stage === "won") cohort.booked += 1;
     }
     cohorts.set(String(send.campaignId), cohort);
