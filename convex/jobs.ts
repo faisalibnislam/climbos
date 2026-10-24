@@ -667,6 +667,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
   const performance = [
     ownerFunnelLine(b?.funnel),
     aiReferralSignalsLine(job.aiReferralSignals),
+    job.creatorOutcomeText ? `OWNER-REPORTED CREATOR COLLABORATION HISTORY (same workspace; newest bounded sample; not independently verified or causal): ${untrusted("creator collaboration reports", job.creatorOutcomeText, 3_000)}. Treat outcomes as context for a small test, not proof that creator marketing will work. Compare only reports with matching metric definitions, periods, denominators, markets, and offers; do not calculate rates or generalize from unmatched reports.` : "",
     customerConcentrationLine(job.customerConcentration),
     channelOutcomesLine(job.platformSourceConcentration, b?.unitEconomics?.grossMargin),
     refundExposureLine(job.refundExposure),

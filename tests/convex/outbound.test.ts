@@ -180,7 +180,21 @@ describe("outbound", () => {
     expect(context?.collaborationHistory[0]).toMatchObject({ creator: creator.company, status: "content_published", basis: "owner_reported" });
     expect(await t.run((ctx) => ctx.db.query("outboundSends").collect())).toHaveLength(0);
 
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    const strategyRun = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", w.orgId)).order("desc").collect()).find((run) => run.kind === "strategy"));
+    expect(strategyRun).toBeTruthy();
+    const strategyContext = await t.query(internal.jobWrites.jobContext, { runId: strategyRun!._id });
+    expect(strategyContext?.creatorOutcomeText).toContain(creator.company);
+    expect(strategyContext?.creatorOutcomeText).toContain("denominator");
+
     const other = await workspace(t, "creator-collaboration-other@example.com");
+    await makePaid(t, other.orgId);
+    await other.client.mutation(api.orgs.generatePlan, { slug: other.slug });
+    const otherStrategyRun = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", other.orgId)).order("desc").collect()).find((run) => run.kind === "strategy"));
+    const otherStrategyContext = await t.query(internal.jobWrites.jobContext, { runId: otherStrategyRun!._id });
+    expect(otherStrategyContext?.creatorOutcomeText).toBe("");
+
     await expect(other.client.query(api.outbound.creatorCollaborationHistory, { slug: other.slug, prospectId: creator.id })).rejects.toThrow();
     await expect(other.client.mutation(api.outbound.recordCreatorCollaboration, { slug: other.slug, prospectId: creator.id, status: "interested" })).rejects.toThrow();
 

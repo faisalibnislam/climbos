@@ -17,6 +17,7 @@ import { customerConcentration } from "../shared/attribution/concentration";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
+import { formatCreatorOutcomeContext } from "../shared/agents/creatorOutcomes";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import type {
@@ -197,6 +198,27 @@ export const jobContext = internalQuery({
         .take(1_000)));
     }
     const aiReferralSignals = { from: aiReferralFrom, to: aiReferralTo, providers: summarizeAiReferralRows(aiReferralRows) };
+    const creatorOutcomeRows = run.kind === "strategy" && !run.isFixture
+      ? await ctx.db.query("creatorCollaborationReports").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(30)
+      : [];
+    const creatorOutcomeReports = [];
+    for (const report of creatorOutcomeRows) {
+      if (report.orgId !== org._id) continue;
+      const [prospect, campaign] = await Promise.all([ctx.db.get(report.prospectId), ctx.db.get(report.campaignId)]);
+      if (!prospect || prospect.orgId !== org._id || !campaign || campaign.orgId !== org._id || campaign.kind !== "creators") continue;
+      creatorOutcomeReports.push({
+        creator: prospect.company,
+        status: report.status,
+        reportedAt: report.createdAt,
+        ...(report.format ? { format: report.format } : {}),
+        ...(report.agreedValueMinor !== undefined ? { agreedValueMinor: report.agreedValueMinor, currency: report.currency } : {}),
+        ...(report.actualCostMinor !== undefined ? { actualCostMinor: report.actualCostMinor, currency: report.currency } : {}),
+        ...(report.publishedUrl ? { publishedUrl: report.publishedUrl } : {}),
+        ...(report.metric ? { metric: report.metric } : {}),
+        ...(report.note ? { note: report.note } : {}),
+      });
+    }
+    const creatorOutcomeText = formatCreatorOutcomeContext(creatorOutcomeReports, 12);
     const refundExposureSignal = concentrationCurrency
       ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -204,6 +226,7 @@ export const jobContext = internalQuery({
       customerConcentration: concentration,
       platformSourceConcentration,
       aiReferralSignals,
+      creatorOutcomeText,
       refundExposure: refundExposureSignal,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
