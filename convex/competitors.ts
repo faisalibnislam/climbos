@@ -28,7 +28,7 @@ export const overview = query({
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
-      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], at: c.at })),
+      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
   },
@@ -114,10 +114,18 @@ export const startSummaryRun = internalMutation({
 });
 
 export const recordChange = internalMutation({
-  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())) },
+  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })) },
   handler: async (ctx, a) => {
     const now = Date.now();
-    await ctx.db.insert("competitorChanges", { ...a, sourceUrls: a.sourceUrls?.slice(0, 5), summary: a.summary.slice(0, 300), bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)), soWhat: a.soWhat?.slice(0, 300), at: now });
+    await ctx.db.insert("competitorChanges", {
+      ...a,
+      sourceUrls: a.sourceUrls?.slice(0, 5),
+      evidence: a.evidence ? { removed: a.evidence.removed.slice(0, 5).map((x) => x.slice(0, 300)), added: a.evidence.added.slice(0, 5).map((x) => x.slice(0, 300)) } : undefined,
+      summary: a.summary.slice(0, 300),
+      bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)),
+      soWhat: a.soWhat?.slice(0, 300),
+      at: now,
+    });
     await notifyOwners(ctx, a.orgId, `${a.name}: ${a.summary}`.slice(0, 240));
   },
 });

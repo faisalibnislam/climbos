@@ -44,6 +44,11 @@ describe("competitor watch", () => {
     expect(o.changes).toHaveLength(1);
     expect(o.changes[0].name).toBe("Rival");
     expect(o.changes[0].sourceUrls).toEqual(["https://rival.example"]);
+    const evidence = o.changes[0].evidence;
+    expect(evidence).not.toBeNull();
+    if (!evidence) throw new Error("Expected stored changed-line evidence.");
+    expect(evidence.added).toEqual(expect.arrayContaining(["Plans from $14/mo", "New: free migration for every new customer this autumn"]));
+    expect(evidence.removed).toContain("Plans from $10/mo");
     expect(o.changes[0].at).toBeTruthy();
     const report = await owner.client.query(api.reports.weekly, { slug });
     expect(report.competitors).toHaveLength(1);

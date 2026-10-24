@@ -93,7 +93,16 @@ export const check = internalAction({
       if (!r.ok) continue;
       const parsed = Summary.safeParse(r.output);
       if (!parsed.success || !parsed.data.changed || !parsed.data.summary.trim()) continue;
-      await ctx.runMutation(internal.competitors.recordChange, { orgId, watchId: c.id, name: c.name, summary: parsed.data.summary, bullets: parsed.data.bullets, soWhat: parsed.data.soWhat, sourceUrls: c.sourceUrls });
+      await ctx.runMutation(internal.competitors.recordChange, {
+        orgId,
+        watchId: c.id,
+        name: c.name,
+        summary: parsed.data.summary,
+        bullets: parsed.data.bullets,
+        soWhat: parsed.data.soWhat,
+        sourceUrls: c.sourceUrls,
+        evidence: { removed: d.removed, added: d.added },
+      });
       ok++;
     }
     await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified", userMessage: ok ? undefined : "No meaningful changes this time." });

@@ -1092,6 +1092,8 @@ export default defineSchema({
     soWhat: v.optional(v.string()),
     /** Pages fetched for the comparison; the model summary is an interpretation of these sources. */
     sourceUrls: v.optional(v.array(v.string())),
+    /** Exact changed text retained as source evidence for the model's summary. */
+    evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })),
     at: v.number(),
   }).index("by_org_at", ["orgId", "at"]),
 
