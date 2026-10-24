@@ -7,7 +7,7 @@ import * as metaAds from "../../shared/integrations/metaAds";
 import * as resend from "../../shared/integrations/resendMarketing";
 import * as searchConsole from "../../shared/integrations/searchConsole";
 import * as stripe from "../../shared/integrations/stripeRevenue";
-import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../../shared/agents/searchConsoleEvidence";
+import { searchConsoleRefreshCandidates, searchConsoleSeoContext, searchConsoleStrategyContext } from "../../shared/agents/searchConsoleEvidence";
 import type { ApprovedAction, FetchLike } from "../../shared/integrations/types";
 
 // ---------------------------------------------------------------------------
@@ -632,10 +632,30 @@ describe("ga4 + searchConsole", () => {
     expect(context).toContain("2026-07-24 through 2026-10-21");
     expect(context).toContain("top-row result was truncated");
     expect(context).toContain("not total search demand");
+    expect(context).toContain("PAGES TO REVIEW FIRST");
+    expect(context).toContain("review heuristic, not a benchmark");
     expect(context).toContain("untrusted_content source=\"Search Console query and page observations\"");
     expect(context).not.toContain("query 15");
     expect(searchConsoleStrategyContext(snapshot, "https://other.example/")).toContain("were not used because the selected property does not match");
     expect(searchConsoleStrategyContext(snapshot, undefined)).toContain("no recorded website to verify against");
+  });
+
+  it("ranks page refresh candidates from deduplicated, impression-weighted Search Console rows", () => {
+    const candidates = searchConsoleRefreshCandidates([
+      { query: "  one  ", page: "https://example.com/page-a/#section", clicks: 5, impressions: 100, ctr: 0.05, position: 4 },
+      { query: "one", page: "https://example.com/page-a/", clicks: 5, impressions: 100, ctr: 0.05, position: 4 }, // Replayed row is ignored.
+      { query: "two", page: "https://example.com/page-a", clicks: 2, impressions: 100, ctr: 0.02, position: 24 },
+      { query: "one", page: "https://example.com/page-b", clicks: 4, impressions: 40, ctr: 0.1, position: 21 }, // Outside the review band.
+      { query: "bad", page: "javascript:alert(1)", clicks: 9, impressions: 1000, ctr: 0.9, position: 5 },
+    ]);
+    expect(candidates).toEqual([{
+      page: "https://example.com/page-a",
+      queries: 2,
+      clicks: 7,
+      impressions: 200,
+      ctr: 0.035,
+      averagePosition: 14,
+    }]);
   });
 
   it("limits SEO brief metrics to the matching property and pages fetched in this run", () => {
