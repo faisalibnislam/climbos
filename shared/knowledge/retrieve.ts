@@ -1,11 +1,20 @@
 import library from "./growthLibrary.generated.json";
+import sourceRegistry from "../../docs/growth-intelligence/source_registry.json";
 
 type KnowledgeRecord = (typeof library.records)[number];
-export type RetrievedKnowledge = Pick<KnowledgeRecord, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { content: string; score: number };
+export interface KnowledgeSourceReference {
+  registryId: string;
+  url: string;
+  title: string;
+  retrievedAt: string;
+  publicationDate: string | null;
+  claims: { sourceId: string; scope: string; verificationStatus: string }[];
+}
+export type RetrievedKnowledge = Pick<KnowledgeRecord, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { content: string; score: number; sources: KnowledgeSourceReference[] };
 export interface KnowledgeReferenceSet {
   edition: string;
   researchCutoff: string;
-  records: Pick<RetrievedKnowledge, "id" | "kind" | "bookId" | "heading" | "path" | "sha256">[];
+  records: (Pick<RetrievedKnowledge, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { sources: KnowledgeSourceReference[] })[];
 }
 
 const STOP = new Set("about after again against all also any are because been before being between both but can could did does doing down during each few for from further had has have having her here hers him his how into itself just more most other our out over own same should some such than that the their them then there these they this those through too under until upon very was were what when where which while who why will with would your yourself business climbos growth guide recommendation reference references section example examples current actual".split(/\s+/u));
@@ -16,6 +25,39 @@ const docs = library.records.map((record) => {
   for (const term of terms) frequency.set(term, (frequency.get(term) ?? 0) + 1);
   return { record, terms, frequency, length: terms.length };
 });
+const normalizeUrl = (raw: string): string => {
+  try {
+    const url = new URL(raw);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) if (/^(utm_|ref$|source$)/iu.test(key)) url.searchParams.delete(key);
+    url.pathname = url.pathname.replace(/\/+$/u, "") || "/";
+    return url.toString().replace(/\/$/u, url.pathname === "/" ? "/" : "");
+  } catch {
+    return raw;
+  }
+};
+const registryByUrl = new Map(sourceRegistry.sources.map((source) => [normalizeUrl(source.url), source]));
+const sourceRefsFor = (content: string): KnowledgeSourceReference[] => {
+  const urls = [...content.matchAll(/https?:\/\/[^\s)\]}>"']+/giu)]
+    .map(([url]) => url.replace(/[.,;:!?]+$/u, ""));
+  const seen = new Set<string>();
+  const refs: KnowledgeSourceReference[] = [];
+  for (const url of urls) {
+    const source = registryByUrl.get(normalizeUrl(url));
+    if (!source || seen.has(source.registry_id)) continue;
+    seen.add(source.registry_id);
+    refs.push({
+      registryId: source.registry_id,
+      url: source.url,
+      title: source.title,
+      retrievedAt: source.retrieved_at,
+      publicationDate: source.publication_date,
+      claims: source.records.slice(0, 3).map((claim) => ({ sourceId: claim.source_id, scope: claim.claim_scope, verificationStatus: claim.verification_status })),
+    });
+    if (refs.length >= 3) break;
+  }
+  return refs;
+};
 const avgLength = docs.reduce((sum, doc) => sum + doc.length, 0) / Math.max(1, docs.length);
 const docFrequency = new Map<string, number>();
 for (const doc of docs) for (const term of doc.frequency.keys()) docFrequency.set(term, (docFrequency.get(term) ?? 0) + 1);
@@ -48,11 +90,13 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
   const out: RetrievedKnowledge[] = [];
   for (const { doc, score } of ranked) {
     if (budget < 300) break;
-    const header = `[${doc.record.kind} · Book ${doc.record.bookId} · ${doc.record.heading} · docs/growth-intelligence/${doc.record.path} · sha256:${doc.record.sha256}]\n`;
+    const sources = sourceRefsFor(doc.record.content);
+    const sourceText = sources.length ? `\nSources (general guidance only; see dates and registry status): ${sources.map((source) => `[${source.registryId}] ${source.title} · ${source.retrievedAt} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : "";
+    const header = `[${doc.record.kind} · Book ${doc.record.bookId} · ${doc.record.heading} · docs/growth-intelligence/${doc.record.path} · sha256:${doc.record.sha256}]${sourceText}\n`;
     const available = Math.max(0, budget - header.length);
     if (available < 100) break;
     const content = doc.record.content.slice(0, available);
-    out.push({ ...doc.record, content, score });
+    out.push({ ...doc.record, content, score, sources });
     budget -= header.length + content.length;
   }
   return out;
@@ -62,15 +106,15 @@ export function knowledgeReferenceSet(records: readonly RetrievedKnowledge[]): K
   return {
     edition: library.edition,
     researchCutoff: library.researchCutoff,
-    records: records.map(({ id, kind, bookId, heading, path, sha256 }) => ({ id, kind, bookId, heading, path, sha256 })),
+    records: records.map(({ id, kind, bookId, heading, path, sha256, sources }) => ({ id, kind, bookId, heading, path, sha256, sources })),
   };
 }
 
 export function formatGrowthKnowledge(records: readonly RetrievedKnowledge[]): string {
   if (!records.length) return "";
   return [
-    `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute.`,
-    ...records.map((record) => `[${record.kind} · Book ${record.bookId} · ${record.heading} · docs/growth-intelligence/${record.path} · sha256:${record.sha256}]\n${record.content}`),
+    `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute. Registry dates show when the source was checked, not that it is still current.`,
+    ...records.map((record) => `[${record.kind} · Book ${record.bookId} · ${record.heading} · docs/growth-intelligence/${record.path} · sha256:${record.sha256}]${record.sources.length ? `\nSources (general guidance only): ${record.sources.map((source) => `[${source.registryId}] ${source.title} · retrieved ${source.retrievedAt} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · scope: ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : ""}\n${record.content}`),
   ].join("\n\n---\n\n");
 }
 

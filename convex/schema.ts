@@ -1380,7 +1380,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15), v.literal(16)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1411,7 +1411,7 @@ export default defineSchema({
             knowledgeReferences: v.optional(v.object({
               edition: v.string(),
               researchCutoff: v.string(),
-              records: v.array(v.object({ id: v.string(), kind: v.string(), bookId: v.string(), heading: v.string(), path: v.string(), sha256: v.string() })),
+              records: v.array(v.object({ id: v.string(), kind: v.string(), bookId: v.string(), heading: v.string(), path: v.string(), sha256: v.string(), sources: v.optional(v.array(v.object({ registryId: v.string(), url: v.string(), title: v.string(), retrievedAt: v.string(), publicationDate: v.union(v.string(), v.null()), claims: v.array(v.object({ sourceId: v.string(), scope: v.string(), verificationStatus: v.string() })) }))) })),
             })),
             ownerEconomics: v.optional(v.any()),
             refundExposure: v.optional(v.object({

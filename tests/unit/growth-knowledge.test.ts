@@ -41,4 +41,16 @@ describe("growth intelligence retrieval", () => {
     expect(references.records[0]).not.toHaveProperty("score");
     expect(formatGrowthKnowledge(records)).toContain("reference guidance, not business evidence");
   });
+
+  it("carries dated source-registry citations with retrieved guidance and plan references", () => {
+    const records = retrieveGrowthKnowledge("distinctive activities strategic fit trade-offs", { limit: 3, maxChars: 3_500 });
+    const cited = records.find((record) => record.sources.length > 0);
+    expect(cited?.sources[0]).toMatchObject({ registryId: expect.stringMatching(/^SRC-/u), retrievedAt: "2026-10-19" });
+    expect(cited?.sources[0].claims[0]).toMatchObject({ sourceId: expect.stringMatching(/^B01-/u), scope: expect.any(String), verificationStatus: expect.any(String) });
+    const context = formatGrowthKnowledge(records);
+    expect(context).toContain("Sources (general guidance only)");
+    expect(context).toContain("Registry dates show when the source was checked");
+    const references = knowledgeReferenceSet(records);
+    expect(references.records.find((record) => record.sources.length > 0)?.sources[0].registryId).toMatch(/^SRC-/u);
+  });
 });
