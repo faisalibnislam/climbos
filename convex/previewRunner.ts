@@ -5,7 +5,7 @@ import { currentRateVersion } from "../shared/economics";
 import { BusinessProfileSchema, PreviewIdeasSchema, systemPrompt, untrusted, type BusinessProfile } from "../shared/ai/tasks";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
-import { callModel } from "./ai/providers";
+import { callModel, modelProviderConfigured } from "./ai/providers";
 import { researchWebsite } from "./ai/research";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -33,8 +33,8 @@ export const run = internalAction({
     const fail = async (message: string) => {
       await ctx.runMutation(internal.preview.update, { token, patch: { status: "failed", error: message } });
     };
-    if (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-      await fail("Live previews are warming up. Explore the full demo in the meantime.");
+    if (!modelProviderConfigured("gpt-6-luna")) {
+      await fail("OpenAI isn't configured for live previews yet. Explore the full demo in the meantime.");
       return;
     }
 
