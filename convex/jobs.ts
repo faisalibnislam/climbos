@@ -635,7 +635,7 @@ function uniqueSources(xs: { url: string; title?: string }[]): { url: string; ti
 }
 
 /** Owner-confirmed unit economics, stated as facts in the brief. */
-/** Confirmed facts that disagree (Book 14 §5): both stay, and the writer must not pick one silently. */
+/** Explicit offer facts that disagree (Book 14 §5): retain both and require owner confirmation. */
 function conflictsForJob(job: JobCtx) {
   // The general plan context is newest-first for deduplication. Present disagreements
   // in original creation order so same-time updates cannot flip owner-facing text.
@@ -647,7 +647,7 @@ function conflictsForJob(job: JobCtx) {
 
 function conflictsLine(job: JobCtx): string {
   const lines = conflictLines(conflictsForJob(job));
-  return lines.length ? `CONFLICTING FACTS (both confirmed; don't state either as settled, say which one a number uses or that the owner must confirm): ${lines.join("; ")}.` : "";
+  return lines.length ? `MATERIAL BUSINESS CONFLICTS (preserve both source records; neither value is settled. Ask the owner to confirm the current value before recommending dependent pricing, offer, or feature work): ${lines.join("; ")}.` : "";
 }
 
 /** Who the business can email, from ClimbOS's contacts and consent records (never assumed). */

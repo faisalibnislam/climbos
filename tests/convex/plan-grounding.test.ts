@@ -65,9 +65,13 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const s = await latestStrategy(t, w.orgId);
-    expect((s.expert as { quality?: { conflicts?: string[] } }).quality?.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    const quality = (s.expert as { quality?: { state?: string; reasons?: string[]; conflicts?: string[] } }).quality;
+    expect(quality?.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    expect(quality?.state).toBe("needs_input");
+    expect(quality?.reasons?.join(" ")).toMatch(/Confirm the current source and value/);
     const ev = await t.run(async (ctx) => ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first());
     expect((JSON.parse(ev!.data) as PlanEvidence).conflicts?.[0].factIds).toHaveLength(2);
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "approve" })).rejects.toThrow(/conflicting business information/);
   });
 
   it("the owner's funnel decides the weak link in code; playbooks are gated and saved with the plan (cycle 2)", async () => {

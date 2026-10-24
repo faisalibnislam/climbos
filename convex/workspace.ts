@@ -652,8 +652,10 @@ export const decidePlan = mutation({
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
       if (hasNewerOwnerEconomics(s, business?.unitEconomics)) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
     }
-    // A plan that failed ClimbOS's hard checks can be read and sent back, never approved into work.
-    if (decision === "approve" && !canDriveWork((s.expert as { quality?: { state: QualityState } } | undefined)?.quality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
+    // Hard failures and unresolved material fact conflicts must not reach execution.
+    const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
+    if (decision === "approve" && planQuality?.conflicts?.length) throw appError("INVALID", "This plan depends on conflicting business information. Confirm the current facts and refresh the plan before approving it.");
+    if (decision === "approve" && !canDriveWork(planQuality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
     const now = Date.now();
     // The decision follows the current approval rules: who may approve, and a binding that hasn't expired.
     const policy = await ctx.db

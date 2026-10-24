@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lintCites } from "../../shared/agents/specs";
 import { resolveCites } from "../../shared/agents/evidence";
 import { conflictLines, findConflicts } from "../../shared/agents/conflicts";
-import { planQuality, agentQuality } from "../../shared/agents/quality";
+import { canDriveWork, planQuality, agentQuality } from "../../shared/agents/quality";
 
 /** Items 8 and 9 (Book 14 §5): claims link to evidence; conflicting facts are kept and shown. */
 describe("channel and audience cites", () => {
@@ -52,22 +52,48 @@ describe("conflicting facts", () => {
       ]),
     ).toEqual([]);
   });
-  it("flags directly opposed feature statements, while ignoring different features", () => {
+  it("flags opposed feature statements across active and passive wording, while ignoring different features", () => {
     const conflicts = findConflicts([
       { id: "a", category: "product", statement: "Pro includes API access." },
-      { id: "b", category: "product", statement: "Pro does not include API access." },
+      { id: "b", category: "product", statement: "API access is not available on Pro." },
       { id: "c", category: "product", statement: "Pro supports SSO." },
     ]);
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]).toMatchObject({
       subject: "Feature availability · pro / api access",
-      values: ["Includes API access", "Does not include API access"],
+      values: ["Available: API access", "Not available: API access"],
       factIds: ["a", "b"],
     });
   });
-  it("conflicts are listed on the plan without changing its state", () => {
+  it("does not compare flat and per-seat prices as if their units matched", () => {
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Pro costs $19 per seat per month." },
+      { id: "b", category: "pricing", statement: "Pro costs $24/month." },
+    ])).toEqual([]);
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Pro costs $19 per seat per month." },
+      { id: "b", category: "pricing", statement: "Pro costs $24/seat/month." },
+    ])).toEqual([expect.objectContaining({
+      subject: "Pro price per seat per month",
+      values: ["$19/seat", "$24/seat"],
+      factIds: ["a", "b"],
+    })]);
+  });
+  it("flags even small exact price disagreements while ignoring formatting-only differences", () => {
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Pro costs $19.00 per month." },
+      { id: "b", category: "pricing", statement: "Pro costs USD 19 per month." },
+    ])).toEqual([]);
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Pro costs $19.00 per month." },
+      { id: "b", category: "pricing", statement: "Pro costs $19.01 per month." },
+    ])).toEqual([expect.objectContaining({ values: ["$19.00", "$19.01"] })]);
+  });
+  it("material conflicts need owner input and cannot drive work until resolved", () => {
     const q = planQuality([agentQuality("growth_plays", { critique: { gates: [], scores: [], strengths: [], fixes: [] }, lint: [], average: 4.5, minimum: 4, gatesPassed: true, ship: true }, 1, 3)], [], { conflicts: ["Pro price per month: $19 vs $24"] });
-    expect(q.state).toBe("passed");
+    expect(q.state).toBe("needs_input");
     expect(q.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    expect(q.reasons[0]).toMatch(/Confirm the current source and value/);
+    expect(canDriveWork(q)).toBe(false);
   });
 });

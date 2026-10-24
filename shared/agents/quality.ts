@@ -52,7 +52,7 @@ export interface PlanQuality {
   fixes?: QualityFix[];
   /** Inputs the plan had to work without (Book 14 §4: unknown is a state, not a default). Doesn't change the state. */
   unknowns?: string[];
-  /** Confirmed facts that disagree (e.g. two prices for one plan); the owner should settle them. */
+  /** Material pricing, trial, or feature facts that conflict; resolve before approving dependent work. */
   conflicts?: string[];
   agents: AgentQuality[];
 }
@@ -113,7 +113,13 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
   }
   const reasons: string[] = [...hardRules].map((r) => `Checks failed: ${LABEL[r] ?? r}.`);
   if (hardRules.size) return { version: 1, state: "failed", reasons, hard, ...(fixes.length ? { fixes } : {}), ...u, agents };
-  if (opts.economicsMissing) return { version: 1, state: "needs_input", reasons: ["What one customer is worth (price, margin or churn) is missing, so spending decisions wait for your numbers."], hard, ...u, agents };
+  if (opts.economicsMissing || opts.conflicts?.length) {
+    const reasons = [
+      ...(opts.conflicts?.length ? [`Business information conflicts on ${opts.conflicts.join("; ")}. Confirm the current source and value before approving work that depends on it.`] : []),
+      ...(opts.economicsMissing ? ["What one customer is worth (price, margin or churn) is missing, so spending decisions wait for your numbers."] : []),
+    ];
+    return { version: 1, state: "needs_input", reasons, hard, ...u, agents };
+  }
   const soft: string[] = [];
   if (agents.some((a) => !a.gatesPassed)) soft.push("The review didn't sign off on every required point.");
   else if (agents.some((a) => !a.shipped)) soft.push("The review scored some parts below the bar after the allowed revisions.");
@@ -123,10 +129,10 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
   return { version: 1, state: soft.length ? "provisional" : "passed", reasons: soft, hard, ...u, agents };
 }
 
-/** Plans in this state may be approved to start work (owner approval is still required). */
-export function canDriveWork(q: Pick<PlanQuality, "state"> | null | undefined): boolean {
+/** Owner approval is still required; hard failures and material fact conflicts cannot drive work. */
+export function canDriveWork(q: Pick<PlanQuality, "state"> & Partial<Pick<PlanQuality, "conflicts">> | null | undefined): boolean {
   // Older plans have no quality record: keep their behaviour.
-  return !q || q.state !== "failed";
+  return !q || (q.state !== "failed" && !q.conflicts?.length);
 }
 
 export const QUALITY_LABEL: Record<QualityState, string> = {
