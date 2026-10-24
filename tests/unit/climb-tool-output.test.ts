@@ -47,6 +47,35 @@ describe("Climb tool output boundary", () => {
     expect(() => encodeToolOutput({ approvalId: "approval_1", slot: "posted" }, 7_800, approve)).toThrow(/output contract/);
   });
 
+  it("keeps billing attribution and platform-reported claims structurally distinct", () => {
+    const output = toolByName("get_results")?.output;
+    const results = {
+      span: 30,
+      historyLimited: false,
+      from: "2026-09-24",
+      to: "2026-10-23",
+      currency: "USD",
+      timezone: "UTC",
+      isDemo: false,
+      metrics: [],
+      attribution: {
+        lastTouch: { model: "last_touch", reconciled: true, byCurrency: [{ currency: "USD", channels: [{ channel: "email", netRevenueMinor: 5000, conversions: 1 }], unattributed: { netRevenueMinor: 0, conversions: 0 }, totalNetBillingMinor: 5000, reconciled: true }] },
+        firstTouch: null,
+        note: "Billing revenue is source of truth; attribution describes association, not cause.",
+      },
+      platformClaims: {
+        platforms: [{ platform: "google_ads", label: "platform_reported", conversions: 2, conversionValueMinorByCurrency: { USD: 7000 }, firstDate: "2026-10-01", lastDate: "2026-10-02", days: 2 }],
+        warning: "Claims may overlap; do not add them together.",
+        adSpendMinor: 1000,
+      },
+      forecasts: [],
+      gaps: [],
+    };
+    expect(JSON.parse(encodeToolOutput(results, 7_800, output))).toEqual(results);
+    expect(() => encodeToolOutput({ ...results, platformClaims: { ...results.platformClaims, totalRevenueMinor: 7000 } }, 7_800, output)).toThrow(/output contract/);
+    expect(() => encodeToolOutput({ ...results, platformClaims: { ...results.platformClaims, platforms: [{ ...results.platformClaims.platforms[0], conversionValueMinorByCurrency: { USD: "7000" } }] } }, 7_800, output)).toThrow(/output contract/);
+  });
+
   it("rejects unsafe URL schemes in agent tool results", () => {
     const links = toolByName("get_links");
     expect(() => encodeToolOutput({ weekTotal: 0, links: [{ label: "bad", url: "javascript:alert(1)", clicks: 0, week: 0 }] }, 7_800, links?.output)).toThrow(/unsafe URL/);

@@ -114,6 +114,17 @@ const AutopilotOutputSchema = z.object({
   connected: z.array(z.string()),
   weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })),
 });
+const AttributionViewSchema = z.object({
+  model: z.enum(["last_touch", "first_touch"]),
+  reconciled: z.boolean(),
+  byCurrency: z.array(z.object({
+    currency: z.string(),
+    channels: z.array(z.object({ channel: z.string(), netRevenueMinor: z.number(), conversions: z.number() })),
+    unattributed: z.object({ netRevenueMinor: z.number(), conversions: z.number() }),
+    totalNetBillingMinor: z.number(),
+    reconciled: z.boolean(),
+  })),
+});
 const ResultsOutputSchema = z.object({
   span: z.number().int().min(7).max(365),
   historyLimited: z.boolean(),
@@ -140,8 +151,24 @@ const ResultsOutputSchema = z.object({
     partial: z.boolean(),
     partialReason: z.string().nullable(),
   })),
-  attribution: z.object({ lastTouch: z.json().nullable(), firstTouch: z.json().nullable(), note: z.string() }),
-  platformClaims: z.json().nullable(),
+  attribution: z.object({
+    lastTouch: AttributionViewSchema.nullable(),
+    firstTouch: AttributionViewSchema.nullable(),
+    note: z.string(),
+  }),
+  platformClaims: z.object({
+    platforms: z.array(z.object({
+      platform: z.string(),
+      label: z.literal("platform_reported"),
+      conversions: z.number(),
+      conversionValueMinorByCurrency: z.record(z.string(), z.number()),
+      firstDate: z.string().nullable(),
+      lastDate: z.string().nullable(),
+      days: z.number(),
+    }).strict()),
+    warning: z.string(),
+    adSpendMinor: z.number(),
+  }).strict().nullable(),
   forecasts: z.array(z.object({ id: z.string(), metricKey: z.string(), status: z.string(), horizonDays: z.number(), createdAt: z.number(), isFixture: z.boolean() })),
   gaps: z.array(z.object({ metric: z.string(), message: z.string(), fix: z.string() })),
 });
