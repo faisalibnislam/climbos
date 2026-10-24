@@ -271,6 +271,7 @@ export const startPlay = mutation({
     const staleInputs = planStaleInputs(s, business);
     if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -509,7 +510,7 @@ export const plan = query({
     const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
-    const staleInputs = strategy ? planStaleInputs(strategy, business) : { ownerEconomics: false, lifecycleStage: false };
+    const staleInputs = strategy ? planStaleInputs(strategy, business) : { ownerEconomics: false, lifecycleStage: false, funnel: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
       ? selectPortfolio(currentPlays, {
@@ -554,7 +555,7 @@ export const plan = query({
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
-      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage },
+      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
@@ -664,6 +665,7 @@ export const decidePlan = mutation({
       const staleInputs = planStaleInputs(s, business);
       if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -740,16 +742,26 @@ function hasNewerOwnerEconomics(
 
 function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert">,
-  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage"> | null,
-): { ownerEconomics: boolean; lifecycleStage: boolean } {
-  const snapshot = strategy.expert?.snapshot as { businessLifecycleStage?: { stage?: string } | null } | undefined;
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel"> | null,
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
+  const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
+  const currentFunnel = funnelDecisionValues(business?.funnel);
+  const hasFunnelSnapshot = (snapshot?.snapshotVersion ?? 0) >= 7;
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.
     lifecycleStage: snapshot ? savedStage !== currentStage : Boolean(currentStage && (business?.lifecycleStage?.updatedAt ?? 0) > strategy.createdAt),
+    // Compare decision values, not timestamps; legacy snapshots fall back to the saved input's update time.
+    funnel: hasFunnelSnapshot ? JSON.stringify(savedFunnel) !== JSON.stringify(currentFunnel) : Boolean(business?.funnel && business.funnel.updatedAt > strategy.createdAt),
   };
+}
+
+function funnelDecisionValues(funnel: Doc<"businesses">["funnel"] | null | undefined): unknown {
+  if (!funnel) return null;
+  return [funnel.periodDays, funnel.visitors ?? null, funnel.leads ?? null, funnel.qualifiedLeads ?? null, funnel.qualificationDefinition ?? null, funnel.activated ?? null, funnel.newCustomers ?? null, funnel.activationKind ?? null, funnel.signupKind ?? null];
 }
 
 /** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */

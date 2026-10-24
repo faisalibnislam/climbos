@@ -1374,7 +1374,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1392,6 +1392,7 @@ export default defineSchema({
             sourceUrls: v.array(v.string()),
             capabilities: v.array(v.string()),
             businessLifecycleStage: v.optional(v.union(v.object({ stage: v.string(), provenance: v.literal("owner_reported"), updatedAt: v.number() }), v.null())),
+            businessFunnel: v.optional(v.union(v.object({ periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), qualifiedLeads: v.optional(v.number()), qualificationDefinition: v.optional(v.string()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))), signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))), updatedAt: v.number() }), v.null())),
             knowledgeReferences: v.optional(v.object({
               edition: v.string(),
               researchCutoff: v.string(),

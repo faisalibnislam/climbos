@@ -129,7 +129,7 @@ describe("Plan version history", () => {
 
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, requiresRefresh: true });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, funnel: false, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business stage changed/);
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business stage changed/);
   });
@@ -139,11 +139,31 @@ describe("Plan version history", () => {
     const w = await workspace(t, "history-same-stage@example.com");
     await makePaid(t, w.orgId);
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    const funnel = { slug: w.slug, periodDays: 30, visitors: 100, leads: 20, activated: 10, newCustomers: 5 };
+    await w.client.mutation(api.workspace.setFunnel, funnel);
     await buildPlan(t, w);
     const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
 
     await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    await w.client.mutation(api.workspace.setFunnel, funnel);
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
-    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, requiresRefresh: false });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, requiresRefresh: false });
+  });
+
+  it("requires refresh when funnel measurements used by diagnosis change", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-funnel@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 1_000, leads: 20, activated: 10, newCustomers: 5 });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/funnel measurements changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/funnel measurements changed/);
   });
 });

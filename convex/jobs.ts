@@ -692,10 +692,10 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 6,
+    snapshotVersion: 7,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
-    business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
+    business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
     brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, doNots: job.brand.doNots, updatedAt: job.brand.updatedAt } : null,
     goal,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
@@ -710,7 +710,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 6,
+    snapshotVersion: 7,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -728,6 +728,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     sourceUrls: readUrls,
     capabilities,
     ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
+    ...(job.business?.funnel ? { businessFunnel: job.business.funnel } : { businessFunnel: null }),
     knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
     ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),
