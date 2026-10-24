@@ -2241,6 +2241,14 @@ export const ProspectsOutputSchema = z.object({
       audienceSize: z.object({ value: z.string().min(1).max(100), sourceUrl: z.string().url() }).optional(),
       /** Language stated or clearly labeled on a cited creator profile/content page. */
       contentLanguage: z.object({ value: z.string().min(1).max(80), sourceUrl: z.string().url() }).optional(),
+      /** Visible post metrics copied from each exact public content page; not evidence of audience quality or sales. */
+      contentSamples: z.array(z.object({
+        url: z.string().url(),
+        format: z.enum(["short_video", "long_video", "image", "text", "live", "other"]),
+        views: z.string().max(40).optional(),
+        likes: z.string().max(40).optional(),
+        comments: z.string().max(40).optional(),
+      })).max(5).optional(),
       /** A proposed collaboration, not a claim that the creator has agreed or performed. */
       collaborationConcept: z.string().max(240).optional(),
     }),
@@ -2341,6 +2349,19 @@ function lintCreators(out: ProspectsOutput, input: AgentInput): LintIssue[] {
       if (!detail) continue;
       if (!citedCreatorFact(detail, p.evidence)) {
         issues.push({ severity: "error", rule: "creator_fact_source", message: `${p.company}: ${field} must match text recorded from its exact cited evidence URL; leave it unknown if the source doesn't show it.`, path: `${path}.${field}` });
+      }
+    }
+    for (const [sampleIndex, sample] of (p.contentSamples ?? []).entries()) {
+      const samplePath = `${path}.contentSamples[${sampleIndex}]`;
+      const sourceText = p.evidence.find((e) => e.url === sample.url)?.observation;
+      if (!sourceText) {
+        issues.push({ severity: "error", rule: "creator_content_source", message: `${p.company}: each content sample must cite a content URL observed for this creator.`, path: `${samplePath}.url` });
+      }
+      for (const metric of ["views", "likes", "comments"] as const) {
+        const value = sample[metric]?.trim();
+        if (value && (!sourceText || !sourceText.toLowerCase().includes(value.toLowerCase()))) {
+          issues.push({ severity: "error", rule: "creator_content_metric_source", message: `${p.company}: ${metric} must match the exact wording observed on that content URL; omit it when not visible.`, path: `${samplePath}.${metric}` });
+        }
       }
     }
     if (p.publicEmail && !p.evidence.some((e) => e.observation.toLowerCase().includes(p.publicEmail.toLowerCase()))) {
@@ -2446,7 +2467,8 @@ Only report what you actually found, with URLs.`,
 1. Work out 3-5 audience niches from the positioning, then search the platforms that fit (Instagram, TikTok, YouTube, LinkedIn, X, newsletters, podcasts), creator lists and directories.
 2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, location if stated, recent activity, and one recent post that shows fit (URL + what it's about).
 3. Find the contact route: a business email published in bio/link-in-bio/site/media kit (copy verbatim), else the DM or form route. Never guess an email.
-4. Skip inactive accounts, bought-looking audiences, off-niche creators and anyone promoting a direct competitor. Gather ~1.5x what's needed; record a URL for every observation.`,
+4. For up to 5 recent content examples per creator, record the exact content URL, format, and visible views/likes/comments exactly as shown; omit metrics that aren't visible. Do not calculate engagement rates or infer audience quality, authenticity, reach, response, or sales from those counts.
+5. Skip inactive accounts, off-niche creators and anyone promoting a direct competitor. Do not label an audience as fake or bought without reliable evidence. Gather ~1.5x what's needed; record a URL for every observation.`,
       };
     case "conversion_audit":
       return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };

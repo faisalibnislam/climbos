@@ -9,6 +9,39 @@ export type TargetKind = "customers" | "creators";
 
 export interface CitedCreatorFact { value: string; sourceUrl: string }
 export interface CreatorEvidence { url: string; observation: string }
+export interface CreatorContentSample {
+  url: string;
+  format: "short_video" | "long_video" | "image" | "text" | "live" | "other";
+  views?: string;
+  likes?: string;
+  comments?: string;
+}
+
+function containsExactPhrase(source: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, "iu").test(source);
+}
+
+/** Keep at most five samples and accept visible counts only when the same URL's observation contains them verbatim. */
+export function citedCreatorContentSamples(value: unknown, evidence: readonly CreatorEvidence[]): CreatorContentSample[] {
+  if (!Array.isArray(value)) return [];
+  const accepted: CreatorContentSample[] = [];
+  for (const raw of value.slice(0, 5)) {
+    if (!raw || typeof raw !== "object") continue;
+    const sample = raw as Record<string, unknown>;
+    if (typeof sample.url !== "string" || !/^https?:\/\//i.test(sample.url)) continue;
+    if (!["short_video", "long_video", "image", "text", "live", "other"].includes(String(sample.format))) continue;
+    const source = evidence.find((item) => item.url === sample.url)?.observation;
+    if (!source) continue;
+    const result: CreatorContentSample = { url: sample.url.slice(0, 500), format: sample.format as CreatorContentSample["format"] };
+    for (const metric of ["views", "likes", "comments"] as const) {
+      const count = sample[metric];
+      if (typeof count === "string" && count.trim() && count.length <= 40 && containsExactPhrase(source, count.trim())) result[metric] = count.trim();
+    }
+    accepted.push(result);
+  }
+  return accepted;
+}
 
 /** Accept a creator metric/language only when its exact value appears in evidence from the same cited URL. */
 export function citedCreatorFact(value: unknown, evidence: readonly CreatorEvidence[]): CitedCreatorFact | null {
@@ -16,7 +49,7 @@ export function citedCreatorFact(value: unknown, evidence: readonly CreatorEvide
   const detail = value as { value?: unknown; sourceUrl?: unknown };
   if (typeof detail.value !== "string" || !detail.value.trim() || typeof detail.sourceUrl !== "string" || !/^https?:\/\//i.test(detail.sourceUrl)) return null;
   const text = evidence.find((item) => item.url === detail.sourceUrl)?.observation;
-  if (typeof text !== "string" || !text.toLowerCase().includes(detail.value.trim().toLowerCase())) return null;
+  if (typeof text !== "string" || !containsExactPhrase(text, detail.value.trim())) return null;
   return { value: detail.value.trim().slice(0, 100), sourceUrl: detail.sourceUrl.slice(0, 500) };
 }
 

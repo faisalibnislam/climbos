@@ -1012,6 +1012,14 @@ export default defineSchema({
     audienceSize: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
     /** Creator language copied from public profile/content evidence; absent means unknown. */
     contentLanguage: v.optional(v.object({ value: v.string(), sourceUrl: v.string() })),
+    /** Exact visible counts from a bounded set of public content examples; descriptive, not a performance forecast. */
+    contentSamples: v.optional(v.array(v.object({
+      url: v.string(),
+      format: v.union(v.literal("short_video"), v.literal("long_video"), v.literal("image"), v.literal("text"), v.literal("live"), v.literal("other")),
+      views: v.optional(v.string()),
+      likes: v.optional(v.string()),
+      comments: v.optional(v.string()),
+    }))),
     /** Suggested collaboration concept; this does not imply creator agreement. */
     collaborationConcept: v.optional(v.string()),
     createdAt: v.number(),

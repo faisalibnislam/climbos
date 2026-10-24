@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorContentSamples, citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
 import { creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
@@ -60,16 +60,32 @@ describe("source-bound creator facts (REQ-CREATOR-01)", () => {
     expect(citedCreatorFact({ value: "120k followers", sourceUrl: evidence[0].url }, evidence)).toBeNull();
     expect(citedCreatorFact({ value: "12k followers", sourceUrl: "https://other.example/profile" }, evidence)).toBeNull();
     expect(citedCreatorFact({ value: "12k followers", sourceUrl: "javascript:alert(1)" }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: evidence[0].url }, [{ url: evidence[0].url, observation: "112k followers" }])).toBeNull();
+  });
+  it("keeps visible post metrics only when the exact cited content observation contains them", () => {
+    const postUrl = "https://instagram.com/p/reel1";
+    const source = [...evidence, { url: postUrl, observation: "3.2k views, 210 likes, 14 comments" }];
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }], source)).toEqual([
+      { url: postUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" },
+    ]);
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "32k views" }], source)).toEqual([{ url: postUrl, format: "short_video" }]);
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "2k views" }], [{ url: postUrl, observation: "12k views" }])).toEqual([{ url: postUrl, format: "short_video" }]);
+    expect(citedCreatorContentSamples([{ url: "https://instagram.com/p/other", format: "short_video", likes: "210 likes" }], source)).toEqual([]);
   });
   it("hard-fails creator facts that don't match their cited page evidence", () => {
     const profile = "https://instagram.com/ana";
-    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile } };
+    const post = "https://instagram.com/p/ana1";
+    const fullEvidence = [...evidence, { url: post, observation: "3.2k views, 210 likes, 14 comments on a cooking reel" }];
+    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence: fullEvidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile }, contentSamples: [{ url: post, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }] };
     const output = { icp: { summary: "Cooking creators", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" }, prospects: [prospect, { ...prospect, company: "Bea", website: "https://instagram.com/bea" }, { ...prospect, company: "Cam", website: "https://instagram.com/cam" }], excluded: [] };
     const spec = creatorScoutSpec();
     const input = { task: "", brief: "", facts: [], untrustedContext: [] };
     expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_fact_source")).toBe(false);
     output.prospects[0].audienceSize = { value: "120k followers", sourceUrl: profile };
     expect(spec.lint!(output as never, input as never).filter((issue) => issue.rule === "creator_fact_source" && issue.path === "prospects[0].audienceSize")).toHaveLength(1);
+    output.prospects[0].audienceSize = { value: "12k followers", sourceUrl: profile };
+    output.prospects[0].contentSamples[0].views = "32k views";
+    expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_content_metric_source" && issue.path === "prospects[0].contentSamples[0].views")).toBe(true);
   });
 });
 

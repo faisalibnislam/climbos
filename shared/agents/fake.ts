@@ -180,9 +180,12 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       const tmpl = o.prospects[0];
       o.prospects = ["alpha", "beta", "gamma"].map((n, i) => {
         const evidenceUrl = `https://${n}.example.com/about`;
-        const prospect: Record<string, unknown> = { ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: evidenceUrl, observation: `${marker} observation; 12k followers; English-language tutorials.` }], publicEmail: "", fit: 80 - i * 10, timing: 60 };
+        const contentUrl = `https://${n}.example.com/posts/recent`;
+        const creatorOutput = "audienceSize" in tmpl;
+        const prospect: Record<string, unknown> = { ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: evidenceUrl, observation: `${marker} observation; 12k followers; English-language tutorials.` }, ...(creatorOutput ? [{ url: contentUrl, observation: "Recent tutorial; 3.2k views, 210 likes, 14 comments." }] : [])], publicEmail: "", fit: 80 - i * 10, timing: 60 };
         if ("audienceSize" in tmpl) prospect.audienceSize = { value: "12k followers", sourceUrl: evidenceUrl };
         if ("contentLanguage" in tmpl) prospect.contentLanguage = { value: "English", sourceUrl: evidenceUrl };
+        if ("contentSamples" in tmpl) prospect.contentSamples = [{ url: contentUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }];
         if ("collaborationConcept" in tmpl) prospect.collaborationConcept = "Proposed short tutorial; no agreement implied.";
         return prospect;
       });

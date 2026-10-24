@@ -34,7 +34,8 @@ async function workspace(t: T, email: string, flags: string[] = ["plan_targets"]
 
 const creator = (handle: string, email = "") => {
   const url = `https://www.instagram.com/${handle}/`;
-  return { company: `Creator ${handle}`, website: url, location: "London", sizeBand: "12k followers", why: "Teaches beginner flows", evidence: [{ url, observation: "12k followers; English-language recent class reel" }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined, audienceSize: { value: "12k followers", sourceUrl: url }, contentLanguage: { value: "English", sourceUrl: url }, collaborationConcept: "Proposed beginner class tutorial; no agreement implied." };
+  const postUrl = `https://www.instagram.com/p/${handle.replace(/[^a-z0-9]/gi, "")}/`;
+  return { company: `Creator ${handle}`, website: url, location: "London", sizeBand: "12k followers", why: "Teaches beginner flows", evidence: [{ url, observation: "12k followers; English-language profile" }, { url: postUrl, observation: "Recent class reel, 3.2k views, 210 likes, 14 comments" }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined, audienceSize: { value: "12k followers", sourceUrl: url }, contentLanguage: { value: "English", sourceUrl: url }, contentSamples: [{ url: postUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }], collaborationConcept: "Proposed beginner class tutorial; no agreement implied." };
 };
 const outreach = { sequence: [{ day: 0, subject: "Collab?", body: "{{firstLine}}", purpose: "open" }], firstLines: [], ownerNotes: [] };
 
@@ -80,7 +81,7 @@ describe("plan targets (flagged)", () => {
     const ana = rows.find((r) => r.domain === "instagram:studio.ana")!;
     expect(ana).toMatchObject({ stage: "contacted", playIds: ["pl_creators1"] }); // merged, stage kept
     const mia = rows.find((r) => r.domain === "instagram:mia.moves")!;
-    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"], audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" } });
+    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"], audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentSamples: [{ url: "https://www.instagram.com/p/miamoves/", format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }] });
     expect(mia.publicEmail).toBeUndefined(); // no email invented; the profile stays
 
 
@@ -89,7 +90,7 @@ describe("plan targets (flagged)", () => {
     expect(view!.pl_creators1).toMatchObject({ state: "needs_connection", counts: { found: 4, eligible: 2, contactable: 1, excluded: 1, inRelationship: 1 } });
     const listed = view!.pl_creators1.targets;
     expect(listed.find((x) => x.name.includes("benflows"))).toMatchObject({ suppressed: true, contactRoute: "none" });
-    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, collaborationConcept: expect.stringContaining("Proposed") });
+    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentSamples: [{ url: "https://www.instagram.com/p/miamoves/", views: "3.2k views", likes: "210 likes", comments: "14 comments" }], collaborationConcept: expect.stringContaining("Proposed") });
     await w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: mia._id, campaignId: view!.pl_creators1.campaignId!, status: "agreed", format: "co_created" });
     const collaboration = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: mia._id });
     expect(collaboration[0]).toMatchObject({ strategyId: w.strategyId, playId: "pl_creators1", campaignId: view!.pl_creators1.campaignId, status: "agreed" });

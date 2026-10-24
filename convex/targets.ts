@@ -84,6 +84,7 @@ export const forStrategy = query({
             handle: p.handle ?? null,
             audienceSize: p.audienceSize ?? null,
             contentLanguage: p.contentLanguage ?? null,
+            contentSamples: p.contentSamples ?? [],
             collaborationConcept: p.collaborationConcept ?? null,
             contactRoute: p.publicEmail && !suppressed.has(p._id) ? ("email" as const) : ("none" as const),
             suppressed: suppressed.has(p._id),
@@ -104,7 +105,7 @@ export interface PlayTargets {
   counts: { found: number; eligible: number; contactable: number; excluded: number; inRelationship: number };
   campaignId: Id<"outboundCampaigns"> | null;
   canStart: boolean;
-  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
+  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
 }
 
 async function isSuppressed(ctx: QueryCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {
